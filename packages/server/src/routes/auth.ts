@@ -568,11 +568,14 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 10_000);
 
+          // Not followed elsewhere: a redirect would take the password along, to wherever it points.
+          // An answer of 3xx is then no 200, and counts as a failed check.
           const homeResponse = await fetch(`https://${user.homeInstance}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: homeUsername, password }),
             signal: controller.signal,
+            redirect: 'manual',
           });
 
           clearTimeout(timeout);

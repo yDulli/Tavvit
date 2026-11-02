@@ -13,7 +13,9 @@ import { deleteAttachmentFiles } from '../../../utils/fileCleanup.js';
 import { rewriteRelayedMentions } from '../../../utils/federationMentions.js';
 import { sanitizeUser } from '../../../utils/sanitize.js';
 import { generateSnowflake } from '../../../utils/snowflake.js';
-import { mayPostSticker } from '../../../utils/remoteMedia.js';
+import { instanceOrigin, mayPostSticker, mediaOriginsFor, shownPicture } from '../../../utils/remoteMedia.js';
+import { relayedMimetype } from '../../../utils/uploadTypes.js';
+import { reactionLimitReached } from '../../../utils/reactions.js';
 import { connectionManager } from '../../../ws/handler.js';
 import { getDmMessageWithUser } from '../../dm.js';
 import { and, eq, isNull, or } from 'drizzle-orm';
@@ -23,6 +25,9 @@ import type { RelayDelivery } from './dispatch.js';
 import { buildDmMessagePayload, dmChannelMembers, isRelayTarget, isUrlFromPeer, mayRelayInto, memberWithIdentity, nonMemberRefusal, resolveLocalDmMessage, resolveRelayedReplyTarget } from '../dmChannels.js';
 import { attributionRefusal, extractDomain, relayActorOfUser, resolveOrCreateReplicatedUser, resolveRelayActor, sameRelayActor } from '../identity.js';
 import { hydrateReplicatedUserProfile } from '../profile.js';
+
+/** The most attachments of one relayed message this instance keeps and fetches. */
+const RELAYED_ATTACHMENTS_MAX = 25;
 
 export async function processCreateEvent(
   event: FederationRelayEvent,
@@ -87,7 +92,16 @@ export async function processCreateEvent(
       rejected.push({ messageId: event.messageId, reason: 'invalid_system_message' });
       return;
     }
-    systemContent = JSON.stringify(systemEvent);
+    // Whoever opens the conversation may fetch an invite's icon: a file of the space's instance or
+    // of the sender's, and nothing anywhere else (utils/remoteMedia.ts). Whether it is fetched
+    // without a yes is the reader's client's to decide (components/ui/Avatar.tsx).
+    let stored = systemEvent;
+    if (systemEvent.event === 'space_invite') {
+      const spaceOrigin = instanceOrigin(systemEvent.spaceInstanceOrigin);
+      const origins = spaceOrigin ? [...mediaOriginsFor(sourceInstance), spaceOrigin] : mediaOriginsFor(sourceInstance);
+      stored = { ...systemEvent, snapshot: { ...systemEvent.snapshot, icon: shownPicture(systemEvent.snapshot.icon, origins) } };
+    }
+    systemContent = JSON.stringify(stored);
   }
 
   // Resolve ALL participants to local users, auto-creating replicated stubs
@@ -216,10 +230,15 @@ export async function processCreateEvent(
   // file worker will UPDATE the filename to the local path after download.
   if (event.message.attachments && event.message.attachments.length > 0) {
     const now = Date.now();
-    for (const attachment of event.message.attachments) {
+    // Every attachment is a row and a download here. A person attaches a handful; past that, the
+    // rest of what a peer sends is left out rather than fetched.
+    if (event.message.attachments.length > RELAYED_ATTACHMENTS_MAX) {
+      console.warn(`[federation-relay] ${event.messageId} from ${extractDomain(sourceInstance)} named ${event.message.attachments.length} attachments; kept the first ${RELAYED_ATTACHMENTS_MAX}`);
+    }
+    for (const attachment of event.message.attachments.slice(0, RELAYED_ATTACHMENTS_MAX)) {
       if (!isUrlFromPeer(attachment.sourceUrl, peerOrigin)) {
         console.warn(
-          `[federation-relay] Rejecting attachment URL ${attachment.sourceUrl} — hostname does not match peer ${peerOrigin}`,
+          `[federation-relay] Rejecting attachment URL ${attachment.sourceUrl}: not an upload on peer ${peerOrigin}`,
         );
         continue;
       }
@@ -236,7 +255,8 @@ export async function processCreateEvent(
           uploaderId: null,
           filename: attachment.sourceUrl,
           originalName: attachment.originalName,
-          mimetype: attachment.mimetype,
+          // The peer's word only for a type this server knows (utils/uploadTypes.ts).
+          mimetype: relayedMimetype(attachment.mimetype, attachment.originalName),
           size: attachment.size,
           width: attachment.width ?? null,
           height: attachment.height ?? null,
@@ -258,7 +278,7 @@ export async function processCreateEvent(
           dmMessageId: localMessageId,
           sourceUrl: attachment.sourceUrl,
           originalName: attachment.originalName,
-          mimetype: attachment.mimetype,
+          mimetype: relayedMimetype(attachment.mimetype, attachment.originalName),
           size: attachment.size,
           status: 'pending',
           nextRetryAt: now,
@@ -767,6 +787,11 @@ export function processReactionAddEvent(
   const reactingUser = reactor.user;
   if (!mayPostSticker(event.reaction.emoji, reactingUser.id)) {
     rejected.push({ messageId: event.messageId, reason: 'sticker_elsewhere' });
+    return;
+  }
+  // As many different reactions as a message here may carry (utils/reactions.ts).
+  if (reactionLimitReached('dm', localMsg.id, event.reaction.emoji)) {
+    rejected.push({ messageId: event.messageId, reason: 'invalid_payload' });
     return;
   }
 

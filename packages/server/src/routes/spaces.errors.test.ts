@@ -31,6 +31,8 @@ vi.mock('../utils/auth.js', () => ({
 vi.mock('../ws/handler.js', () => ({
   connectionManager: {
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
     sendToSpace: vi.fn(),
     sendToUser: vi.fn(),
   },

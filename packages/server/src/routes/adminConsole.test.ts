@@ -40,6 +40,8 @@ vi.mock('../ws/handler.js', () => ({
     sendToAdmins: vi.fn(),
     sendToSpace: vi.fn(),
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
     closeSessionSockets: (...args: unknown[]) => closeSessionSockets(...args),
     getAllOnlineUserIds: () => onlineNow,
     socketCounts: () => ({ open: 0, people: 0 }),

@@ -53,12 +53,15 @@ vi.mock('../ws/handler.js', () => ({
     sendToSpace: (...args: unknown[]) => sendToSpace(...args),
     announceSpaceAccessChange: (...args: unknown[]) => announceSpaceAccessChange(...args),
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
     getAllOnlineUserIds: () => [],
   },
 }));
 
 vi.mock('../ws/events.js', () => ({
   checkVoicePermissions: vi.fn(),
+  disconnectMemberFromSpaceVoice: vi.fn(),
 }));
 
 function applyMigrations(db: Database.Database): void {

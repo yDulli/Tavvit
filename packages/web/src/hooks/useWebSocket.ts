@@ -42,6 +42,7 @@ import { handleUnauthorized } from '../api/client';
 import i18n from '../i18n';
 import { discoveryStatusKey, verificationStatusKey } from '../i18n/review';
 import { isDiscoveryStatus, isVerificationStatus } from '@backspace/shared/src/platform';
+import { WS_MAX_CLIENT_FRAME_BYTES } from '@backspace/shared/src/constants';
 import { useFederationStore } from '../stores/federationStore';
 import { notePendingOriginReady } from '../stores/pendingMessageRehydrate';
 import { useNotificationSettingsStore } from '../stores/notificationSettingsStore';
@@ -102,6 +103,12 @@ interface ConnectionState {
   socketToken: string | null;
   reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   token: string;
+  /**
+   * The server closed this socket because the account has too many open (`too_many_connections`).
+   * It is not tried again by itself: the account's windows would push each other out in turn.
+   * Reloading the page connects anew.
+   */
+  pushedOut?: boolean;
 }
 
 // '' = home instance, 'https://remote.example.com' = remote
@@ -1618,6 +1625,10 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
 
     case 'error': {
       console.error(`WebSocket error (${origin || 'home'}):`, event.message);
+      if (event.code === 'too_many_connections') {
+        const pushed = connections.get(origin);
+        if (pushed) pushed.pushedOut = true;
+      }
       // The token no longer opens this account. Unless this device already holds a newer
       // one (a password change in another tab), it is over: home signs out, another
       // instance's connection stops and says it needs signing in again.
@@ -1781,7 +1792,7 @@ function connectToOrigin(origin: string, token: string): void {
     stopHeartbeat(conn);
     // A connection dropped on purpose (by hand, or refused for good) keeps
     // the status that says why, and is not tried again.
-    const stillWanted = connections.get(origin) === conn && conn.token !== '';
+    const stillWanted = connections.get(origin) === conn && conn.token !== '' && conn.pushedOut !== true;
     // Mark remote instance as disconnected in instanceStore
     if (origin !== HOME_ORIGIN && stillWanted) {
       import('../stores/instanceStore').then(({ useInstanceStore }) => {
@@ -1859,7 +1870,9 @@ export function getHomeWsConnected(): boolean {
 export function wsSend(event: ClientEvent, origin: string = HOME_ORIGIN): boolean {
   const conn = connections.get(origin);
   if (conn?.ws && conn.ws.readyState === WebSocket.OPEN) {
-    conn.ws.send(JSON.stringify(event));
+    const frame = frameOf(event);
+    if (frame === null) return false;
+    conn.ws.send(frame);
     return true;
   }
   return false;
@@ -1867,11 +1880,26 @@ export function wsSend(event: ClientEvent, origin: string = HOME_ORIGIN): boolea
 
 /** Send an event to ALL connected WebSocket instances (home + remotes). */
 export function wsSendAll(event: ClientEvent): void {
+  const frame = frameOf(event);
+  if (frame === null) return;
   for (const [_origin, conn] of connections) {
     if (conn.ws && conn.ws.readyState === WebSocket.OPEN) {
-      conn.ws.send(JSON.stringify(event));
+      conn.ws.send(frame);
     }
   }
+}
+
+/**
+ * An event as a frame, or null when it is larger than a server takes: the server would close the
+ * socket (1009), and the client would reconnect and send it again.
+ */
+function frameOf(event: ClientEvent): string | null {
+  const frame = JSON.stringify(event);
+  // A UTF-16 unit is at most three bytes, so most frames need no counting.
+  if (frame.length * 3 <= WS_MAX_CLIENT_FRAME_BYTES) return frame;
+  if (new TextEncoder().encode(frame).length <= WS_MAX_CLIENT_FRAME_BYTES) return frame;
+  console.warn(`[ws] ${event.type} not sent: larger than the server takes`);
+  return null;
 }
 
 /**

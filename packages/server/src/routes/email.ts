@@ -11,6 +11,7 @@ import { config } from '../config.js';
 import { authenticate, hashPassword, requireAdmin, verifyPassword } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
 import { registerRawJsonBodyParser } from '../utils/jsonBody.js';
+import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { endOtherSessions } from '../utils/sessions.js';
 import { loginThrottle, loginThrottleKey } from '../utils/loginThrottle.js';
@@ -50,6 +51,23 @@ export async function addressAccepted(address: string): Promise<boolean> {
 
 const byClient = (request: FastifyRequest): string => request.ip;
 
+/**
+ * How often in a day one account may have mail sent for itself (an address change sends two, a
+ * resend one), and how many password resets one client address may ask for. Far below what the
+ * instance may send in a day (email/service.ts): one account trying ever new addresses, or one
+ * client asking resets for every member, would otherwise use up the day's budget, and nobody else
+ * would get a confirmation or a reset until the next.
+ */
+const DAY_MS = 24 * 60 * 60 * 1000;
+const accountMailRequests = createFixedWindowLimit({ max: 6, windowMs: DAY_MS });
+const resetRequestsByClient = createFixedWindowLimit({ max: 20, windowMs: DAY_MS });
+
+/** Tests only: a suite sends from one address all day long. */
+export function _resetMailRequestLimits(): void {
+  accountMailRequests.reset();
+  resetRequestsByClient.reset();
+}
+
 export async function emailRoutes(app: FastifyInstance): Promise<void> {
   // ─── Without an account ──────────────────────────────────────────────────
 
@@ -63,6 +81,8 @@ export async function emailRoutes(app: FastifyInstance): Promise<void> {
     if (state !== 'ok') return sendError(reply, 503, 'email_unavailable');
     const address = normalizeEmail(request.body?.email);
     if (!address) return sendError(reply, 400, 'email_invalid');
+    // About the client, not the address: the answer still says nothing about who has one.
+    if (!resetRequestsByClient.consume(request.ip)) return sendError(reply, 429, 'rate_limited');
     const locale = request.body?.locale;
     // After the answer: how long the work takes must not tell either.
     setImmediate(() => {
@@ -164,6 +184,7 @@ export async function emailRoutes(app: FastifyInstance): Promise<void> {
       const decision = mailDecision(user.emailVerifiedAt !== null ? 'change_email_confirm' : 'verify_email', address);
       if (decision === 'suppressed') return sendError(reply, 409, 'email_undeliverable');
       if (decision === 'cooldown' || decision === 'limit') return sendError(reply, 429, 'rate_limited');
+      if (!accountMailRequests.consume(user.id)) return sendError(reply, 429, 'rate_limited');
       // Last, so that nothing above can use up a code and then refuse.
       const refused = refuseWithoutSecondFactor(user, request.body?.twoFactorCode, request, reply);
       if (refused) return refused;
@@ -185,6 +206,7 @@ export async function emailRoutes(app: FastifyInstance): Promise<void> {
     const waiting = user.pendingEmail ?? (user.emailVerifiedAt === null ? user.email : null);
     if (!waiting) return sendError(reply, 409, 'email_nothing_to_confirm');
     const kind = user.pendingEmail !== null ? 'change_email_confirm' : 'verify_email';
+    if (!accountMailRequests.consume(user.id)) return sendError(reply, 429, 'rate_limited');
     const decision = sendConfirmationLink(user, waiting, kind, mailLocaleOf(user));
     if (decision === 'suppressed') return sendError(reply, 409, 'email_undeliverable');
     if (decision === 'cooldown' || decision === 'limit') return sendError(reply, 429, 'rate_limited');

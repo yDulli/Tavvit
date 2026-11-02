@@ -46,6 +46,8 @@ export async function keywordRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/users/@me/keyword-matches - Messages in this instance's spaces that hold one of the words, newest first
   app.get<{ Querystring: { before?: string; limit?: string } }>('/api/users/@me/keyword-matches', {
     preHandler: authenticate,
+    // Each page reads through the histories of every space the person is in.
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const { before } = request.query;
     if (before !== undefined && !/^\d{1,20}$/.test(before)) return sendError(reply, 400, 'validation_failed');

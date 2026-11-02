@@ -383,7 +383,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch<{ Body: UpdateUserRequest }>('/api/users/@me', { preHandler: authenticate }, async (request, reply) => {
-    const { displayName, avatar, banner, accentColor, accentColorSecondary, avatarColor, bio, pronouns, profileLinks, profileLayout, customStatus, customStatusExpiresInMinutes, status, replicatedInstances, homeUserId, profileUpdatedAt, showActivity } = request.body;
+    const { displayName, avatar, banner, accentColor, accentColorSecondary, avatarColor, bio, pronouns, profileLinks, profileLayout, customStatus, customStatusExpiresInMinutes, status, replicatedInstances, profileUpdatedAt, showActivity } = request.body;
     const db = getDb();
 
     const updateData: Record<string, string | null | undefined> = {};
@@ -654,14 +654,6 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
             );
           }
         }
-      }
-    }
-
-    if (homeUserId !== undefined) {
-      // Only allow setting homeUserId for replicated users (has homeInstance)
-      const currentUser = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
-      if (currentUser?.homeInstance && typeof homeUserId === 'string' && homeUserId.length > 0) {
-        updateData.homeUserId = homeUserId;
       }
     }
 

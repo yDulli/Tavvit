@@ -25,7 +25,7 @@ let tmpUploadDir: string;
 // so without this stub the outcome would depend on the machine having working
 // DNS. Resolve to a fixed public address and keep the redirect handling real.
 vi.mock('dns', () => ({
-  default: { promises: { lookup: async () => ({ address: '93.184.216.34', family: 4 }) } },
+  default: { promises: { lookup: async (_host: string, options?: { all?: boolean }) => (options?.all ? [{ address: '93.184.216.34', family: 4 }] : { address: '93.184.216.34', family: 4 }) } },
 }));
 
 vi.mock('../db/index.js', () => ({

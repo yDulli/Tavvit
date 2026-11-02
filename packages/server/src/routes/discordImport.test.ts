@@ -29,9 +29,11 @@ vi.mock('../ws/handler.js', () => ({
     sendToSpace: vi.fn(),
     announceSpaceAccessChange: (...args: unknown[]) => announceSpaceAccessChange(...args),
     addUserSpace: (...args: unknown[]) => addUserSpace(...args),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
   },
 }));
-vi.mock('../ws/events.js', () => ({ checkVoicePermissions: vi.fn() }));
+vi.mock('../ws/events.js', () => ({ checkVoicePermissions: vi.fn(), disconnectMemberFromSpaceVoice: vi.fn() }));
 vi.mock('../utils/discordTemplateFetch.js', () => ({ fetchDiscordTemplate: (...args: unknown[]) => fetchDiscordTemplate(...args) }));
 
 // Discord's permission bits the template below uses.

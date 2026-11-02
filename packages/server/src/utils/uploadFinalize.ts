@@ -15,24 +15,8 @@ import {
 } from './thumbnail.js';
 import { extractExtension } from './tusHooks.js';
 import { storedUploadName } from './uploadNames.js';
+import { mimetypeFromFilename } from './uploadTypes.js';
 
-// ─── Derive mimetype from metadata filename, falling back to octet-stream ───
-const EXT_MIMETYPES: Record<string, string> = {
-  '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.png': 'image/png', '.gif': 'image/gif', '.svg': 'image/svg+xml',
-  '.avif': 'image/avif', '.tiff': 'image/tiff', '.bmp': 'image/bmp',
-  '.ico': 'image/x-icon',
-  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
-  '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav',
-  '.flac': 'audio/flac', '.aac': 'audio/aac', '.opus': 'audio/opus',
-  '.weba': 'audio/webm', '.m4a': 'audio/mp4',
-  '.pdf': 'application/pdf',
-};
-
-function mimetypeFromFilename(originalName: string): string {
-  const ext = path.extname(originalName).toLowerCase();
-  return EXT_MIMETYPES[ext] ?? 'application/octet-stream';
-}
 
 export interface FinishedUpload {
   /** The complete file, in the staging directory. */

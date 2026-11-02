@@ -1,5 +1,6 @@
 import dns from 'dns';
 import { classifyAddress } from './ipClass.js';
+import { publicOnlyDispatcher } from './ssrf.js';
 import { config } from '../config.js';
 
 /**
@@ -56,14 +57,15 @@ export async function assertPeerOriginAllowed(origin: string, trust: OriginTrust
   // not accept them.
   const hostname = parsed.hostname.replace(/^\[|\]$/g, '');
 
-  let address: string;
+  let addresses: dns.LookupAddress[];
   try {
-    address = (await dns.promises.lookup(hostname)).address;
+    addresses = await dns.promises.lookup(hostname, { all: true });
   } catch {
     throw new Error(`Peer origin did not resolve: ${parsed.origin}`);
   }
 
-  if (classifyAddress(address) !== 'public') {
+  // Every address the name has: a public one beside a private one would otherwise be the way in.
+  if (addresses.length === 0 || addresses.some((entry) => classifyAddress(entry.address) !== 'public')) {
     throw new Error(`Peer origin is not reachable on the public internet: ${parsed.origin}`);
   }
 }
@@ -91,5 +93,8 @@ export async function federationFetch(
   }
   await assertPeerOriginAllowed(origin, trust);
   const target = new URL(path, origin).toString();
-  return fetch(target, { ...init, redirect: 'manual' });
+  // An origin a stranger asserted is held to public addresses when connecting too, not only when
+  // checked: the name is resolved again for the connection (utils/ssrf.ts, publicOnlyLookup).
+  const pinned = trust === 'asserted' && !config.federation.allowPrivatePeers;
+  return fetch(target, { ...init, redirect: 'manual', ...(pinned ? { dispatcher: publicOnlyDispatcher } : {}) });
 }

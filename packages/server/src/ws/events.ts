@@ -1,4 +1,4 @@
-import { addSpaceReaction, REACTION_EMOJI_MAX_LENGTH, removeSpaceReaction } from '../utils/reactions.js';
+import { addSpaceReaction, REACTION_EMOJI_MAX_LENGTH, REACTIONS_PER_MESSAGE_MAX, reactionLimitReached, removeSpaceReaction } from '../utils/reactions.js';
 import { mayPostSticker } from '../utils/remoteMedia.js';
 import { handleChannelPoke } from './channelPoke.js';
 import type { WebSocket } from 'ws';
@@ -37,6 +37,7 @@ import { memberActionRefusal, recordSlowmodePost, spaceMessageRefusal } from '..
 import { recordMessageDeleteAudit } from '../utils/auditLog.js';
 import { isPollMessage } from '../utils/polls.js';
 import { pushDmCall } from '../utils/pushDelivery.js';
+import { evictFromLiveKitRoom } from '../utils/livekitEviction.js';
 
 /**
  * Re-evaluate SPEAK permission for all participants in voice channels
@@ -397,6 +398,12 @@ function handleMessageEdit(event: Record<string, unknown>, userId: string): void
   }
   if (message.userId !== userId) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'You can only edit your own messages' });
+    return;
+  }
+  // As PATCH /api/messages/:id: only where the author may still write.
+  const editSpaceId = getChannelSpaceId(message.channelId);
+  if (!editSpaceId || !hasPermission(userId, editSpaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.SEND_MESSAGES, message.channelId)) {
+    refuseSpaceEvent(userId, 'missing_permission', { permission: 'SEND_MESSAGES' });
     return;
   }
   if (isPollMessage(messageId)) {
@@ -986,6 +993,8 @@ function handleDmTypingStart(event: Record<string, unknown>, userId: string, use
   if (!dmChannelId || typeof dmChannelId !== 'string') return;
 
   if (!isDmMember(dmChannelId, userId)) return;
+  // Someone blocked is not shown typing either (utils/blocks.ts).
+  if (oneOnOneBlockRefusal(dmChannelId, userId)) return;
 
   const key = `dm:${userId}:${dmChannelId}`;
   const existing = typingTimeouts.get(key);
@@ -1159,9 +1168,19 @@ function handleReactionAdd(event: Record<string, unknown>, userId: string): void
   // Read-only enforcement: a dead 1-on-1 thread (partner tombstoned) accepts no
   // reaction mutations — the relay would fan out to all peers via undefined origins.
   if (isDeadOneOnOne(dmMsg.dmChannelId, userId)) return;
+  // A block stops reactions as it stops messages, either way (utils/blocks.ts).
+  const blocked = oneOnOneBlockRefusal(dmMsg.dmChannelId, userId);
+  if (blocked) {
+    refuseSpaceEvent(userId, blocked);
+    return;
+  }
   // The other members' clients fetch a sticker reaction by themselves (utils/remoteMedia.ts).
   if (!mayPostSticker(emoji, userId)) {
     refuseSpaceEvent(userId, 'sticker_elsewhere');
+    return;
+  }
+  if (reactionLimitReached('dm', messageId, emoji)) {
+    refuseSpaceEvent(userId, 'reaction_limit_reached', { max: REACTIONS_PER_MESSAGE_MAX });
     return;
   }
 
@@ -1635,6 +1654,26 @@ function federatedCallStillLive(fedCall: FederatedCallEntry, userId: string, ws:
   return fedCall.state === 'ringing' || fedCall.joinedUserIds.length > 0;
 }
 
+/**
+ * The call hosted on a peer that `userId` may answer, decline or end (Path 2 of those events): one
+ * that rang them, that they are in, or of a conversation they belong to here; and when the event
+ * names a conversation, that one's. A call is found by its federated id, which anyone can work out
+ * from two public ids (utils/dmConversation.ts), so finding one proves nothing about who asks.
+ */
+function federatedCallFor(userId: string, federatedCallId: string | null, dmChannelId: string | null): FederatedCallEntry | undefined {
+  const fedCall = federatedCallId
+    ? connectionManager.getFederatedCall(federatedCallId)
+    : dmChannelId
+      ? connectionManager.getFederatedCallByDmChannel(dmChannelId)
+      : undefined;
+  if (!fedCall) return undefined;
+  if (dmChannelId && fedCall.dmChannelId !== null && fedCall.dmChannelId !== dmChannelId) return undefined;
+  const takesPart = fedCall.ringedUserIds.includes(userId)
+    || fedCall.joinedUserIds.includes(userId)
+    || (fedCall.dmChannelId !== null && isDmMember(fedCall.dmChannelId, userId));
+  return takesPart ? fedCall : undefined;
+}
+
 async function handleDmCallAccept(event: Record<string, unknown>, userId: string, ws: WebSocket): Promise<void> {
   let dmChannelId = (event.dmChannelId as string) || null;
   const federatedCallId = (event.federatedCallId as string) || null;
@@ -1672,11 +1711,7 @@ async function handleDmCallAccept(event: Record<string, unknown>, userId: string
   }
 
   // Path 2: Federated call (we're a remote instance)
-  const fedCall = federatedCallId
-    ? connectionManager.getFederatedCall(federatedCallId)
-    : dmChannelId
-      ? connectionManager.getFederatedCallByDmChannel(dmChannelId)
-      : undefined;
+  const fedCall = federatedCallFor(userId, federatedCallId, dmChannelId);
 
   if (fedCall) {
     // The member is in one call at a time: whatever voice they hold here, or
@@ -1779,11 +1814,7 @@ async function handleDmCallReject(event: Record<string, unknown>, userId: string
   }
 
   // Path 2: Federated call
-  const fedCall = federatedCallId
-    ? connectionManager.getFederatedCall(federatedCallId)
-    : dmChannelId
-      ? connectionManager.getFederatedCallByDmChannel(dmChannelId)
-      : undefined;
+  const fedCall = federatedCallFor(userId, federatedCallId, dmChannelId);
 
   if (fedCall) {
     const host = fedCall.federatedCallHost;
@@ -1874,11 +1905,7 @@ async function handleDmCallEnd(event: Record<string, unknown>, userId: string): 
   }
 
   // Path 2: Federated call
-  const fedCall = federatedCallId
-    ? connectionManager.getFederatedCall(federatedCallId)
-    : dmChannelId
-      ? connectionManager.getFederatedCallByDmChannel(dmChannelId)
-      : undefined;
+  const fedCall = federatedCallFor(userId, federatedCallId, dmChannelId);
 
   if (fedCall) {
     const host = fedCall.federatedCallHost;
@@ -2470,6 +2497,8 @@ function handleVoiceMove(event: Record<string, unknown>, userId: string): void {
     action: 'leave',
   });
   connectionManager.leaveRoom(oldChannelId, targetUserId);
+  // Out of the old call on LiveKit too, or a client that does not follow stays and listens there.
+  evictFromLiveKitRoom(targetUserId, oldChannelId);
 
   // Lazy-create target room and join
   connectionManager.createRoom(targetChannelId, 'space', { type: 'space', spaceId: meta.spaceId });
@@ -2566,6 +2595,8 @@ function disconnectFromSpaceVoice(spaceId: string, channelId: string, userId: st
     userId,
     channelId,
   });
+  // And out of the call itself: being told to go is a request a client need not follow.
+  evictFromLiveKitRoom(userId, channelId);
 }
 
 /**

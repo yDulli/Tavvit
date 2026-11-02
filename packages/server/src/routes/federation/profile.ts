@@ -65,11 +65,13 @@ export async function hydrateReplicatedUserProfile(
 
   // Resolve a snapshot asset to a local filename (preferred) or, on download
   // failure, fall back to the absolute URL so the avatar still renders while
-  // the home instance is reachable.
-  const resolveAsset = async (snapshot: string): Promise<string> => {
+  // the home instance is reachable: only an upload of that home, as for any
+  // picture an account may show (utils/remoteMedia.ts), and nothing otherwise.
+  const resolveAsset = async (snapshot: string): Promise<string | null> => {
     const absoluteUrl = buildAbsoluteUrl(snapshot);
     const localFile = await downloadProfileAsset(absoluteUrl, baseUrl);
-    return localFile ?? absoluteUrl;
+    if (localFile) return localFile;
+    return isUploadOn(absoluteUrl, mediaOriginsFor(user.homeInstance)) ? absoluteUrl : null;
   };
 
   const fills: Partial<Record<FillColumn, string>> = {};
@@ -89,9 +91,15 @@ export async function hydrateReplicatedUserProfile(
   // produced by that path must not be clobbered back to URLs either.
   if (!homeAnswered) {
     if (effectiveDisplayName && !user.displayName) fills.displayName = effectiveDisplayName;
-    if (profile.avatar && !user.avatar) fills.avatar = await resolveAsset(profile.avatar);
+    if (profile.avatar && !user.avatar) {
+      const avatar = await resolveAsset(profile.avatar);
+      if (avatar) fills.avatar = avatar;
+    }
     if (profile.avatarColor && !user.avatarColor) fills.avatarColor = profile.avatarColor;
-    if (profile.banner && !user.banner) fills.banner = await resolveAsset(profile.banner);
+    if (profile.banner && !user.banner) {
+      const banner = await resolveAsset(profile.banner);
+      if (banner) fills.banner = banner;
+    }
     if (profile.bio && !user.bio) fills.bio = profile.bio;
   }
 

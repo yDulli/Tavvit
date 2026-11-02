@@ -152,6 +152,8 @@ A server that delivers a file sees the address of whoever fetches it. Link previ
 
 ---
 
+Since 1.32.7 the client holds this rule wherever a picture is drawn, not only where the server already filters: `Avatar` shows the initials for a picture on a server the client does not talk to (`useConnectedOrigins`, kept by `stores/connectedOriginsStore.ts`) until the host is allowed; Outer Space cards wait for a yes for their icon and banner, and work out no colour before it; `/join/CODE@host` asks before fetching the invite from that host (`auth:join.elsewhere`); attachments of a peer not yet copied here, their spoiler preview included, wait as well. A space invite naming another instance is refused while federation is off. The privacy draft's sentence on content from other servers states what now holds everywhere.
+
 ## Source offer
 
 AGPL section 13 is met without any setup on an install from a release archive. `publish-source.sh` packs what the release shipped (its `MANIFEST`) into `data/downloads/source/<release name>.tar.gz`, served at `/downloads/source/`. `update.sh` and `install.sh` run it. It keeps the two newest archives, because until an update has proved itself the version before it may be the one running. It leaves out `.env` and `data/` whatever the manifest says, and takes `sudo` when `data/` belongs to the container's user.

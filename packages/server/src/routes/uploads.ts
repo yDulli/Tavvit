@@ -5,18 +5,8 @@ import { getDb, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
+import { mimetypeFromFilename, servedUploadType } from '../utils/uploadTypes.js';
 
-const EXT_MIMETYPES: Record<string, string> = {
-  '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.png': 'image/png', '.gif': 'image/gif', '.svg': 'image/svg+xml',
-  '.avif': 'image/avif', '.tiff': 'image/tiff', '.bmp': 'image/bmp',
-  '.ico': 'image/x-icon',
-  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
-  '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav',
-  '.flac': 'audio/flac', '.aac': 'audio/aac', '.opus': 'audio/opus',
-  '.weba': 'audio/webm', '.m4a': 'audio/mp4',
-  '.pdf': 'application/pdf',
-};
 
 /**
  * The one range of bytes a `Range` header asks for, clamped to the file (RFC 9110 §14.1.2):
@@ -55,24 +45,24 @@ export async function uploadRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 404, 'file_not_found');
     }
 
-    // Get mimetype from DB, falling back to extension-based lookup for thumbnails/orphans
+    // Get mimetype from DB, falling back to extension-based lookup for thumbnails/orphans. What is
+    // stored is not sent as it is (utils/uploadTypes.ts): a peer names the type of what it relays.
     const db = getDb();
     const attachment = db.select().from(schema.attachments).where(eq(schema.attachments.filename, safeName)).get();
     const originalName = attachment?.originalName ?? safeName;
-    const mimetype = attachment?.mimetype
-      ?? EXT_MIMETYPES[path.extname(safeName).toLowerCase()]
-      ?? 'application/octet-stream';
+    const served = servedUploadType(attachment?.mimetype ?? mimetypeFromFilename(safeName));
+    const mimetype = served.type;
 
     // Set caching and security headers
     reply.header('Cache-Control', 'public, max-age=31536000, immutable');
     reply.header('Content-Type', mimetype);
     reply.header('X-Content-Type-Options', 'nosniff');
-    reply.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'");
+    // `sandbox`: opened on its own in a tab, a file is no page of this origin, whatever it holds.
+    reply.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; sandbox");
     reply.header('X-Frame-Options', 'DENY');
 
-    // For non-media files and SVGs, force download instead of inline rendering
-    const isSvg = mimetype === 'image/svg+xml';
-    if (isSvg || (!mimetype.startsWith('image/') && !mimetype.startsWith('video/') && !mimetype.startsWith('audio/'))) {
+    // Anything but a picture, a video or a sound (an SVG included) is downloaded, not shown.
+    if (!served.inline) {
       reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(originalName)}"`);
     }
 

@@ -9,7 +9,8 @@ import {
   type FollowTargetSpace,
 } from '@backspace/shared/src/channelFollows.js';
 import { getDb, schema } from '../db/index.js';
-import { copyAttachments } from '../utils/attachmentCopies.js';
+import { releaseUpload, reserveUpload, uploadRefusal } from '../utils/accountLimits.js';
+import { copyAttachments, isOnThisDisk } from '../utils/attachmentCopies.js';
 import { auditChange, recordAudit } from '../utils/auditLog.js';
 import { authenticate } from '../utils/auth.js';
 import { resolveEmbeds } from '../utils/embedResolver.js';
@@ -113,31 +114,49 @@ export async function copyToFollowers(spaceId: string, message: MessageWithUser)
     const targetSpaceId = getChannelSpaceId(follow.targetChannelId);
     if (!targetSpaceId || targetSpaceId === spaceId) continue;
     if (automodRefusal(targetSpaceId, words)) continue;
+    // The copies count on whoever set the follow up (utils/accountLimits.ts), and are refused as an
+    // upload of theirs would be: then the post arrives without its files.
+    const bytes = files.filter(isOnThisDisk).reduce((sum, file) => sum + file.size, 0);
+    const reservation = `follow-${generateSnowflake()}`;
     let copies: Awaited<ReturnType<typeof copyAttachments>> = [];
-    try {
-      copies = await copyAttachments(files, { share: true });
-    } catch (err) {
-      console.error(`[follows] could not copy the files of ${message.id}:`, err);
+    const refusal = bytes > 0 ? uploadRefusal(follow.accountId, bytes) : null;
+    if (refusal) {
+      console.warn(`[follows] the files of ${message.id} did not go to ${follow.targetChannelId}: ${refusal}`);
+    } else if (bytes > 0) {
+      reserveUpload(reservation, follow.accountId, bytes);
+      try {
+        copies = await copyAttachments(files, { share: true });
+      } catch (err) {
+        console.error(`[follows] could not copy the files of ${message.id}:`, err);
+      }
     }
-    if (!content && !stored.cards && copies.length === 0) continue;
+    if (!content && !stored.cards && copies.length === 0) {
+      releaseUpload(reservation);
+      continue;
+    }
     const now = Date.now();
     const copyId = generateSnowflake();
-    db.transaction((tx) => {
-      tx.insert(schema.messages).values({
-        id: copyId,
-        channelId: follow.targetChannelId,
-        userId: follow.accountId,
-        content,
-        cards: stored.cards,
-        forwarded: true,
-        createdAt: now,
-      }).run();
-      for (const copy of copies) {
-        tx.insert(schema.attachments).values({ ...copy, id: generateSnowflake(), messageId: copyId, uploaderId: follow.accountId, createdAt: now }).run();
-      }
-      // A space or channel renamed since: its posts say so from now on.
-      tx.update(schema.users).set({ displayName: name }).where(eq(schema.users.id, follow.accountId)).run();
-    });
+    try {
+      db.transaction((tx) => {
+        tx.insert(schema.messages).values({
+          id: copyId,
+          channelId: follow.targetChannelId,
+          userId: follow.accountId,
+          content,
+          cards: stored.cards,
+          forwarded: true,
+          createdAt: now,
+        }).run();
+        for (const copy of copies) {
+          tx.insert(schema.attachments).values({ ...copy, id: generateSnowflake(), messageId: copyId, uploaderId: follow.accountId, createdAt: now }).run();
+        }
+        // A space or channel renamed since: its posts say so from now on.
+        tx.update(schema.users).set({ displayName: name }).where(eq(schema.users.id, follow.accountId)).run();
+      });
+    } finally {
+      // In the table now, where they count.
+      releaseUpload(reservation);
+    }
     const row = db.select().from(schema.messages).where(eq(schema.messages.id, copyId)).get();
     const [copy] = row ? hydrateChannelMessages(follow.targetChannelId, [row]) : [];
     if (!copy) continue;

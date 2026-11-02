@@ -6,6 +6,8 @@ import { getSpaceGradient } from '../../utils/gradients';
 import { bannerFill, lightFromColor } from '../../utils/placeLight';
 import { extractDominantColors, colorsToGradient } from '../../utils/colorExtractor';
 import { useSpaceJoin } from '../../hooks/useSpaceJoin';
+import { useConnectedOrigins } from '../../hooks/useConnectedOrigins';
+import { ExternalImage, useBlockedHost } from '../ui/ExternalMedia';
 import { BadgeList } from '../../badges/BadgeList';
 import { Icon } from '../ui/Icon';
 
@@ -68,13 +70,18 @@ export function SpaceCard({
   const iconUrl = space.icon
     ? (space.icon.startsWith('http') || space.icon.startsWith('/') ? space.icon : `/api/uploads/${space.icon}`)
     : null;
-  const bannerUrl = space.banner
+  const bannerAddress = space.banner
     ? (space.banner.startsWith('http') || space.banner.startsWith('/') ? space.banner : `/api/uploads/${space.banner}`)
     : null;
+  // An Outer Space card is a space on someone else's instance: its pictures wait for a yes, as
+  // anything from another server does (docs/systems/legal.md), unless this client talks to it.
+  const trustedOrigins = useConnectedOrigins();
+  const iconBlocked = useBlockedHost(iconUrl, trustedOrigins) !== null;
+  const bannerUrl = useBlockedHost(bannerAddress, trustedOrigins) === null ? bannerAddress : null;
 
   // Extract dominant colors from icon when no banner is set
   useEffect(() => {
-    if (bannerUrl || !iconUrl) return;
+    if (bannerUrl || !iconUrl || iconBlocked) return;
     let cancelled = false;
     extractDominantColors(iconUrl)
       .then(colors => {
@@ -82,7 +89,7 @@ export function SpaceCard({
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [iconUrl, bannerUrl]);
+  }, [iconUrl, bannerUrl, iconBlocked]);
 
   const handlePublicJoin = async () => {
     const full = await join();
@@ -137,7 +144,9 @@ export function SpaceCard({
 
       {/* Overlapping icon */}
       <div className="relative px-4 -mt-6 z-10">
-        {iconUrl ? (
+        {iconUrl && iconBlocked ? (
+          <ExternalImage src={iconUrl} alt={space.name} compact placeholderClassName="w-12 h-12 ring-[3px] ring-surface-chat" />
+        ) : iconUrl ? (
           <img
             src={iconUrl}
             alt={space.name}

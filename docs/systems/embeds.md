@@ -204,6 +204,10 @@ Outbound fetches use `safeFetch()` (`ssrf.ts`), which follows redirects **manual
 
 ---
 
+### Pinned addresses (1.32.7)
+
+Every connection `safeFetch` opens goes through `publicOnlyDispatcher`, an undici `Agent` whose `lookup` is `publicOnlyLookup`: a name is refused when ANY of its addresses is not public, and the addresses checked are the ones connected to. Before, the check resolved the name once and `fetch` resolved it again for the connection, so DNS rebinding, or a private address beside a public one, reached the server's own network, and `GET /api/utils/metadata` handed back what it read. `validateExternalUrl` checks every address as well. `federationFetch` pins the same way for an origin a stranger asserted while `FEDERATION_ALLOW_PRIVATE_PEERS` is off. `undici` is a direct dependency for this alone: it is what Node's fetch is built on, and the only way to hand it a lookup.
+
 ## 4. Metadata Fetching
 
 `metadataFetcher.ts:fetchUrlMetadata()`
@@ -310,6 +314,8 @@ If `effectiveEmbedType` remains `generic` after metadata fetch and no `title` wa
 Each embed gets a unique Snowflake ID. The `messageId` / `dmMessageId` field is set based on the `isDm` flag. All inserts are synchronous (Drizzle `.run()`).
 
 ---
+
+Since 1.32.7 the 5 second abort of `fetchUrlMetadata` covers the body as well as the headers: a server that answered at once and then sent a byte every few minutes held the connection and the half-read page for as long. At most 6 messages have their previews worked out at once and 300 wait (`resolveEmbeds`); past that a message gets no preview.
 
 ## 6. Image Dimension Probing
 
@@ -473,6 +479,8 @@ All embed cards share:
 - `referrerPolicy="no-referrer"` on all images
 
 ---
+
+Since 1.32.7 every link in a preview or a card passes `webAddress` (http and https only, `utils/webAddress.ts`) and every embedded player `playerAddress` (only `EMBED_FRAME_ORIGINS`, now in `packages/shared/src/constants.ts` and shared with the server's `frame-src`). What another instance sends arrives as it was sent; a `javascript:` or `data:` address is dropped there, not left to the CSP alone.
 
 ## Dimension reservation contract
 

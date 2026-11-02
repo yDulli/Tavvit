@@ -188,6 +188,8 @@ With `resend`, a US processor holds address, name and body for 30 days (the link
 
 ---
 
+Since 1.32.7 one account may have mail sent for itself at most 6 times a day (address changes, which send two mails, and resends), and one client address may ask for at most 20 password resets a day (`routes/email.ts`). Both sit far below the instance's budget: one account trying ever new addresses, or one client asking resets for every member, used up the day's budget, and nobody else got a confirmation or a reset until the next.
+
 ## Known limits
 
 - **Delivery is not proven.** Accepted is all this server knows. A mail in a spam folder looks like success; only test mailboxes show that.

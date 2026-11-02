@@ -12,6 +12,27 @@ export const DEFAULT_INSTANCE_NAME = 'Tavvit';
 /** The instance accent colour when the admin has not chosen one (`#rrggbb`). */
 export const DEFAULT_ACCENT_COLOR = '#7466e8';
 
+// ─── Embedded players ────────────────────────────────────────────────────────
+
+/**
+ * The origins of the players a link preview may embed (YouTube, Vimeo, Spotify): the server's
+ * `frame-src` (packages/server/src/utils/csp.ts), and the only frames the client draws.
+ */
+export const EMBED_FRAME_ORIGINS: readonly string[] = [
+  'https://www.youtube-nocookie.com',
+  'https://player.vimeo.com',
+  'https://open.spotify.com',
+];
+
+// ─── WebSocket ───────────────────────────────────────────────────────────────
+
+/**
+ * The largest frame a client may send over the socket, in bytes. The server closes a socket that
+ * sends a larger one (1009), signed in or not. The largest a client sends is a message of
+ * MAX_MESSAGE_LENGTH characters, under 30 KB even with every character escaped.
+ */
+export const WS_MAX_CLIENT_FRAME_BYTES = 64 * 1024;
+
 // ─── Streaming Constants ─────────────────────────────────────────────────────
 
 export const STANDARD_RESOLUTIONS = [540, 720, 1080, 1440, 2160] as const;
@@ -96,10 +117,18 @@ export function normalizeCategoryName(name: string): string {
 
 // ─── Group DM Constants ──────────────────────────────────────────────────────
 
+/**
+ * The largest upload a picture field takes: an account's or a member's picture or banner, a
+ * space's icon or banner, a group's icon. Only an image, and it is re-encoded to the field's size
+ * once set, so a field holds little however much was sent.
+ */
+export const PICTURE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+export const PICTURE_UPLOAD_MIME_PREFIX = 'image/';
+
 export const GROUP_DM_NAME_MAX_LENGTH = 50;
 export const GROUP_DM_NAME_MIN_LENGTH = 1;
-export const GROUP_DM_ICON_MAX_BYTES = 8 * 1024 * 1024; // 8 MB
-export const GROUP_DM_ICON_MIME_PREFIX = 'image/';
+export const GROUP_DM_ICON_MAX_BYTES = PICTURE_UPLOAD_MAX_BYTES;
+export const GROUP_DM_ICON_MIME_PREFIX = PICTURE_UPLOAD_MIME_PREFIX;
 
 // ─── Account Constants ───────────────────────────────────────────────────────
 

@@ -121,4 +121,4 @@ describe('space owner title', () => {
   });
 });
 
-vi.mock('../ws/events.js', () => ({ checkVoicePermissions: vi.fn() }));
+vi.mock('../ws/events.js', () => ({ checkVoicePermissions: vi.fn(), disconnectMemberFromSpaceVoice: vi.fn() }));

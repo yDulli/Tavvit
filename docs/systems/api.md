@@ -110,6 +110,12 @@ plus `retryAfter` in whole seconds, and the plugin's own `Retry-After` header.
 
 ---
 
+## Body size before authentication
+
+A request makes the server read more than 64 KiB of body (`ANONYMOUS_BODY_LIMIT`, `utils/bodyGuard.ts`) only once it has shown who sent it, in an `onRequest` hook that runs before Fastify reads the body: on a federation route, headers that name a known peer that is not revoked (`peerNamedByHeaders`, the signature over the body still follows the reading); on any other route, the credential `authenticate` checks, which the route checks again. Without a credential the answer is 413 for a stated length past the limit and 411 for a body without one. A route whose own `bodyLimit` is 64 KiB or less is not concerned, nor is any request that states a length within the limit. No public route needs more: the largest public body, a report, is 64 KiB.
+
+Limits added in 1.32.7: both message search routes 30 a minute and a query of at most 200 characters (`validation_failed`, field `q`); keyword matches and mentions 30 a minute; past 20 different reactions on one message `reaction_limit_reached` (`details.max`). `PATCH /api/users/@me` no longer takes `homeUserId`: a replica's home id comes only from what its home proves (docs/systems/federation.md, section 18).
+
 ## Auth (`routes/auth.ts`) — public, rate-limited
 ```
 POST /auth/register         { username, password, displayName?, avatarColor?, homeInstance?, homeUserId?, inviteToken?, email?, locale? } → { token, user }
@@ -476,6 +482,8 @@ PUT and DELETE answer `MessagePinState` and change nothing the second time. Each
 `POST /api/messages/:id/forward` and `POST /api/dm/messages/:id/forward` take `{ channelId }` or `{ dmChannelId }`, exactly one (`400 validation_failed`). The reader's rights at the source, and at the target SEND_MESSAGES, ATTACH_FILES when it has files, and the space's moderation rules (`spaceMessageRefusal`), or `dmPostRefusal` in a conversation. A system line is refused.
 
 The result is a new message of the person forwarding it with `forwarded: true`. It names neither the original nor its author. Mentions become plain names and `@everyone` gets a zero-width space, so it alerts nobody where it lands. Files are copied on disk (`COPYFILE_FICLONE`), because deleting a message deletes its files; a file from a peer not here yet is left out, and `400 attachment_invalid` when that leaves nothing. Both ends are on this instance.
+
+Since 1.32.7 a forward's files are hard links where the disk makes them, named like any upload, and count on the forwarder's storage: checked with `uploadRefusal` and held with `reserveUpload` until the rows are written, refused as an upload would be (413 `storage_limit_reached`, 507 `disk_full`).
 
 ## Deleting several messages (`routes/messages.ts`) — auth required
 

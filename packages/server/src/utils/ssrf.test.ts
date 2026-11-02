@@ -1,9 +1,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 
-const lookup = vi.fn<(host: string) => Promise<{ address: string; family: number }>>();
-vi.mock('dns', () => ({ default: { promises: { lookup: (h: string) => lookup(h) } } }));
+type Answer = { address: string; family: number };
+const lookup = vi.fn<(host: string) => Promise<Answer | Answer[]>>();
+const answersFor = async (host: string): Promise<Answer[]> => {
+  const answer = await lookup(host);
+  return Array.isArray(answer) ? answer : [answer];
+};
+// Both ways a name is resolved: the check before a request (promises) and the connection (callback).
+vi.mock('dns', () => ({
+  default: {
+    promises: {
+      lookup: async (host: string, options?: { all?: boolean }) => {
+        const answers = await answersFor(host);
+        return options?.all ? answers : answers[0];
+      },
+    },
+    lookup: (host: string, _options: unknown, callback: (err: Error | null, answers?: Answer[]) => void) => {
+      answersFor(host).then((answers) => callback(null, answers), (err: Error) => callback(err));
+    },
+  },
+}));
 
-const { validateExternalUrl, isPrivateIp } = await import('./ssrf.js');
+const { validateExternalUrl, isPrivateIp, publicOnlyLookup, safeFetch } = await import('./ssrf.js');
 
 describe('isPrivateIp', () => {
   it('still answers the addresses it always answered', () => {
@@ -71,5 +91,50 @@ describe('validateExternalUrl', () => {
   it('refuses non-http schemes before touching DNS', async () => {
     await expect(validateExternalUrl('file:///etc/passwd')).rejects.toThrow('Invalid URL scheme');
     expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it('refuses a name with a private address beside a public one', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }, { address: '127.0.0.1', family: 4 }]);
+    await expect(validateExternalUrl('https://mixed.example/x')).rejects.toThrow('Private IP not allowed');
+  });
+});
+
+describe('the connection, where a name is resolved a second time', () => {
+  beforeEach(() => {
+    lookup.mockReset();
+  });
+
+  const connectLookup = (all: boolean) => new Promise<{ err: NodeJS.ErrnoException | null; address: unknown; family?: number }>((done) => {
+    publicOnlyLookup('rebind.example', { all }, (err, address, family) => { done({ err, address, family }); });
+  });
+
+  it('is refused when the second answer is private, though the check saw a public one', async () => {
+    lookup.mockResolvedValueOnce({ address: '93.184.216.34', family: 4 }).mockResolvedValue({ address: '127.0.0.1', family: 4 });
+    await validateExternalUrl('https://rebind.example/x');
+    expect((await connectLookup(false)).err?.message).toMatch(/Private IP not allowed/);
+  });
+
+  it('gets the checked public addresses, one or all as it asks', async () => {
+    lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }, { address: '2606:4700::1111', family: 6 }]);
+    expect(await connectLookup(false)).toEqual({ err: null, address: '93.184.216.34', family: 4 });
+    expect((await connectLookup(true)).address).toHaveLength(2);
+  });
+
+  it('of safeFetch never reaches a server on this machine, whatever the check was told', async () => {
+    let reached = 0;
+    const server = http.createServer((_request, response) => { reached += 1; response.end('internal'); });
+    await new Promise<void>((resolve) => { server.listen(0, '127.0.0.1', resolve); });
+    const { port } = server.address() as AddressInfo;
+    try {
+      // The check is told `localhost` is public; the connection is told the truth.
+      lookup.mockResolvedValueOnce({ address: '93.184.216.34', family: 4 }).mockResolvedValue({ address: '127.0.0.1', family: 4 });
+      await expect(safeFetch(`http://localhost:${port}/`)).rejects.toThrow();
+      expect(reached).toBe(0);
+      // The same address without safeFetch is reached: the refusal above is the dispatcher's.
+      await (await fetch(`http://127.0.0.1:${port}/`)).text();
+      expect(reached).toBe(1);
+    } finally {
+      await new Promise<void>((resolve) => { server.close(() => resolve()); });
+    }
   });
 });

@@ -155,10 +155,13 @@ describe('asking for a copy', () => {
     expect(res.json().details.hours).toBe(24);
   });
 
-  it('lets someone try again straight away when the last one failed', async () => {
+  it('lets someone try again an hour after the last one failed, not at once', async () => {
     await ask();
     await built();
     testDb.update(schema.dataExports).set({ status: 'failed' }).run();
+    // Failing one on purpose must not make for a new archive on the disk as often as asked.
+    expect((await ask()).statusCode).toBe(429);
+    testDb.update(schema.dataExports).set({ createdAt: Date.now() - 61 * 60 * 1000 }).run();
     expect((await ask()).statusCode).toBe(202);
     await built();
   });

@@ -49,6 +49,7 @@ import { useSpaceStore, NotConnectedError } from '../stores/spaceStore';
 import { useExploreStore } from '../stores/exploreStore';
 import { useInstanceStore } from '../stores/instanceStore';
 import { JoinRequestRequiredError } from '../utils/joinErrors';
+import { useExternalMediaStore } from '../stores/externalMediaStore';
 
 const REMOTE = 'https://orbit.example';
 
@@ -107,6 +108,8 @@ beforeEach(() => {
   useSpaceStore.setState({ joinByCode } as never);
   useExploreStore.setState({ requestJoinSpace, myRequests: [] } as never);
   useInstanceStore.setState({ connectToRemote, instances: [] } as never);
+  // A yes given in one test is no yes in the next.
+  useExternalMediaStore.setState({ allowedHosts: [], alwaysAllow: false });
 });
 
 describe('JoinPage for a space joined by request', () => {
@@ -214,6 +217,8 @@ describe('JoinPage for a space joined by request', () => {
       .mockResolvedValueOnce({ id: 'jr-2', spaceId: 'R-REQ', status: 'pending' });
     renderAt('abc123@orbit.example');
 
+    // Opening the link tells the other server nothing until the visitor agrees.
+    await user.click(await screen.findByRole('button', { name: 'Show the invite' }));
     expect(await screen.findByText('Quiet Harbor')).toBeInTheDocument();
     expect(mockCreateApiClient).toHaveBeenCalledWith(REMOTE, expect.any(Function));
 

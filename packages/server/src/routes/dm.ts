@@ -4,6 +4,7 @@ import { accountNeedsVerifiedEmail } from '../email/gate.js';
 import { blockRefusal } from '../utils/blocks.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { eq, and, or, inArray, isNull } from 'drizzle-orm';
+import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
 import { insertDmMember, reopenClosedDmMembers, setDmMemberClosed } from '../utils/dmMemberClosed.js';
 import { authenticate } from '../utils/auth.js';
@@ -2057,6 +2058,9 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
     const ourOrigin = getOurOrigin();
     const spaceOrigin = body.spaceInstanceOrigin || ourOrigin;
     const isLocal = !body.spaceInstanceOrigin || body.spaceInstanceOrigin === ourOrigin;
+    // A space on another instance is one for this instance only with federation on. Without it the
+    // origin would be a request to wherever the sender points, and a card of whatever came back.
+    if (!isLocal && !config.federation.enabled) return sendError(reply, 400, 'invite_invalid');
     const snapshot = isLocal
       ? getLocalInviteSnapshot(body.inviteCode)
       : await fetchSpaceInviteSnapshot(spaceOrigin, body.inviteCode);

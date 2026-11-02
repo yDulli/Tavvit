@@ -1,4 +1,5 @@
 import { ExternalImage } from '../../ui/ExternalMedia';
+import { webAddress } from '../../../utils/webAddress';
 import React from 'react';
 import type { Embed } from '@backspace/shared';
 
@@ -28,7 +29,7 @@ export function GenericEmbed({ embed }: GenericEmbedProps) {
           </div>
         )}
         <a
-          href={embed.url}
+          href={webAddress(embed.url)}
           target="_blank"
           rel="noopener noreferrer"
           className="line-clamp-2 text-body font-medium leading-snug text-txt-primary hover:underline"

@@ -86,6 +86,7 @@ import { createWebDocuments, isStaticAssetPath, registerWebDocumentRoutes, sendI
 import { rateLimitsDisabled, warnIgnoredRateLimitSwitch } from './utils/rateLimitSwitch.js';
 import { trustProxyFor } from './utils/trustProxy.js';
 import { registerJsonBodyParser } from './utils/jsonBody.js';
+import { registerBodyGuard } from './utils/bodyGuard.js';
 import { getLocalInvitePreview } from './utils/spaceInviteSnapshot.js';
 import { uploadNameOf } from './utils/profileImageRefs.js';
 import { errorBody } from './utils/httpErrors.js';
@@ -94,6 +95,7 @@ import { registerCallRelayHooks } from './ws/events.js';
 import { resetStalePresenceOnBoot } from './utils/presenceBoot.js';
 
 import { registerWebSocket } from './ws/handler.js';
+import { WEBSOCKET_OPTIONS } from './ws/socketOptions.js';
 import path from 'path';
 import fs from 'fs';
 import { MESSAGE_PAGING_HEADER } from '@backspace/shared';
@@ -123,6 +125,8 @@ async function main(): Promise<void> {
 
   // An empty JSON body is no body, as before Fastify 5 (utils/jsonBody.ts).
   registerJsonBodyParser(app);
+  // A large body is read only from someone who has shown who they are (utils/bodyGuard.ts).
+  registerBodyGuard(app);
 
   // The origin is deliberately reflected rather than restricted to a peer
   // allowlist. Client federation has a browser on one instance call
@@ -266,19 +270,8 @@ async function main(): Promise<void> {
     }),
   });
 
-  // A large `ready` goes compressed: it is mostly the same few words over and over, and someone on
-  // a phone waits for all of it. Nothing small is, so a message costs what it did. See
-  // docs/systems/operations.md.
-  await app.register(websocket, {
-    options: {
-      perMessageDeflate: {
-        threshold: 32 * 1024,
-        serverNoContextTakeover: true,
-        clientNoContextTakeover: true,
-        zlibDeflateOptions: { level: 3 },
-      },
-    },
-  });
+  // The frame limit and compression: ws/socketOptions.ts.
+  await app.register(websocket, WEBSOCKET_OPTIONS);
 
   // Serve built frontend in production
   const webDistPath = path.resolve(import.meta.dirname ?? '.', '../../web/dist');

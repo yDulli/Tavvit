@@ -354,6 +354,8 @@ The server reaches LiveKit at `LIVEKIT_API_URL`, which `docker-compose.yml` sets
 
 ---
 
+Since 1.32.7 a member taken out of a space's voice (disconnected, moved, timed out, kicked, banned, or the space deleted) is also removed from that LiveKit room (`evictFromLiveKitRoom`, `utils/livekitEviction.ts`), and a moved member from the old one: `voice_disconnected` asks a client to go, and a client need not follow.
+
 ## Screen Sharing
 
 ### Resolution & Framerate Options

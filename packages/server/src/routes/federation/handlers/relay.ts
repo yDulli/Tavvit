@@ -64,9 +64,16 @@ export function registerRelayRoutes(app: FastifyInstance): void {
       // 3. Resolve the live (non-deleted) federated user.
       // Must filter isDeleted=0: after a prior deletion + re-federation,
       // multiple records share the same homeUserId (one deleted, one live).
+      // Only an account homed at the signing peer: an id is unique on its home only, and a peer
+      // speaks for its own people (resolveRelayActor, attributionRefusal).
+      const peerHome = normalizeOriginForCompare(peer.origin);
+      if (peerHome === null || normalizeOriginForCompare(homeInstance) !== peerHome) {
+        return reply.code(403).send({ error: 'A peer can only delete identities homed at it', statusCode: 403 });
+      }
       const user = db.select().from(schema.users)
         .where(and(eq(schema.users.homeUserId, homeUserId), eq(schema.users.isDeleted, 0)))
-        .get();
+        .all()
+        .find((row) => normalizeOriginForCompare(row.homeInstance) === peerHome);
 
       // Idempotent: no live user means already deleted or never existed
       if (!user) {

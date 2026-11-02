@@ -56,6 +56,8 @@ vi.mock('../utils/auth.js', async (importOriginal) => ({
 vi.mock('../ws/handler.js', () => ({
   connectionManager: {
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
     sendToSpace: vi.fn(),
     sendToUser: (...args: unknown[]) => sendToUser(...args),
     announceSpaceAccessChange: (...args: unknown[]) => announceSpaceAccessChange(...args),
@@ -66,6 +68,7 @@ vi.mock('../ws/handler.js', () => ({
 
 vi.mock('../ws/events.js', () => ({
   checkVoicePermissions: vi.fn(),
+  disconnectMemberFromSpaceVoice: vi.fn(),
 }));
 
 let app: FastifyInstance;

@@ -14,6 +14,7 @@ import { getOurOrigin } from '../utils/federationAuth.js';
 import { stickerAssetPath as assetPath } from '../utils/stickerAssets.js';
 import { sendError } from '../utils/httpErrors.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
+import { diskWouldFill } from '../utils/accountLimits.js';
 
 const tokenFor = (id: string) => `${STICKER_PREFIX}${getOurOrigin()}/api/stickers/assets/${id}.webp`;
 const MAX_STICKER_MB = MAX_STICKER_BYTES / (1024 * 1024);
@@ -32,10 +33,17 @@ const MAX_DECODED_PIXELS = 16_777_216;
  * budget is per account and not only the per-address HTTP limit.
  */
 const uploadLimit = createFixedWindowLimit({ max: STICKER_UPLOADS_PER_MINUTE, windowMs: 60_000 });
+/**
+ * New stickers one account may make in a day. A sticker taken out of a collection stays on disk
+ * until the janitor's grace has passed (utils/stickerAssets.ts), so making and removing them over
+ * and over would otherwise fill the disk at the speed of the per-minute limit.
+ */
+const dailyUploadLimit = createFixedWindowLimit({ max: 50, windowMs: 24 * 60 * 60 * 1000 });
 
 /** Tests only: forget every account's upload window. */
 export function _resetStickerUploadLimit(): void {
   uploadLimit.reset();
+  dailyUploadLimit.reset();
 }
 
 /** Thrown by `encodeSticker` for bytes that are not an accepted image. */
@@ -115,7 +123,7 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     const { image } = request.body;
     const name = normalizeStickerName(request.body.name);
     if (name === undefined) return sendError(reply, 400, 'sticker_name_invalid', { max: MAX_STICKER_NAME_LENGTH });
-    if (!uploadLimit.consume(request.userId)) return sendError(reply, 429, 'rate_limited');
+    if (!uploadLimit.consume(request.userId) || !dailyUploadLimit.consume(request.userId)) return sendError(reply, 429, 'rate_limited');
     // Refused before the decode; collectSticker checks again where the row is written.
     if (collectionSize(request.userId) >= MAX_PERSONAL_STICKERS) {
       return sendError(reply, 409, 'sticker_collection_full', { max: MAX_PERSONAL_STICKERS });
@@ -130,6 +138,8 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
       if (error instanceof StickerImageError) return sendError(reply, 400, 'sticker_invalid_image', { max: MAX_STICKER_MB });
       throw error;
     }
+    // The disk keeps its reserve for the database, as for any upload (utils/accountLimits.ts).
+    if (diskWouldFill(encoded.length)) return sendError(reply, 507, 'disk_full');
     const id = createHash('sha256').update(encoded).digest('hex');
     // The row is written, or made fresh again, before the file: the janitor
     // never removes an asset inside its grace period, so it cannot delete this

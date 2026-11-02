@@ -33,6 +33,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
+import { diskWouldFill } from './accountLimits.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -976,6 +977,11 @@ async function processFileQueueEntry(
   fileQueueAbortController = new AbortController();
 
   try {
+    // The disk keeps its reserve whoever sends: a file from a peer waits for room as an upload
+    // would (utils/accountLimits.ts), and is tried again later.
+    if (diskWouldFill(Math.max(entry.size, 0))) {
+      throw new Error(`No room on the disk for ${entry.originalName} from ${entry.sourceUrl}`);
+    }
     const response = await safeFetch(entry.sourceUrl, {
       signal: AbortSignal.any([
         fileQueueAbortController.signal,
@@ -997,8 +1003,22 @@ async function processFileQueueEntry(
     // Ensure upload directory exists
     fs.mkdirSync(config.uploadDir, { recursive: true });
 
-    // Stream the response body to disk
-    const nodeStream = Readable.fromWeb(response.body as ReadableStream);
+    // Stream the response body to disk, counted as it arrives: what the peer declared is the most
+    // it may send, and never more than an upload may be. Checking the size only once it is written
+    // would let a peer stream gigabytes onto the disk first.
+    const allowed = entry.size > 0 ? Math.min(entry.size, maxUploadSize) : maxUploadSize;
+    let received = 0;
+    const capped = new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        received += chunk.byteLength;
+        if (received > allowed) {
+          controller.error(new Error(`${entry.sourceUrl} sent more than the ${allowed} bytes it declared`));
+          return;
+        }
+        controller.enqueue(chunk);
+      },
+    });
+    const nodeStream = Readable.fromWeb((response.body as ReadableStream<Uint8Array>).pipeThrough(capped) as ReadableStream);
     const writeStream = fs.createWriteStream(localPath);
 
     try {

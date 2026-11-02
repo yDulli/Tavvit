@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { Embed } from '@backspace/shared';
 import { Icon } from '../../ui/Icon';
 import { providerLabel as labelOf } from './providerLabel';
+import { playerAddress, webAddress } from '../../../utils/webAddress';
 
 interface VideoEmbedProps {
   embed: Embed;
@@ -23,7 +24,7 @@ export function VideoEmbed({ embed }: VideoEmbedProps) {
           style={{ aspectRatio: '16/9' }}
         >
           <video
-            src={embed.url}
+            src={webAddress(embed.url)}
             controls
             preload="none"
             className="h-full w-full"
@@ -33,17 +34,18 @@ export function VideoEmbed({ embed }: VideoEmbedProps) {
     );
   }
 
-  // Provider iframe (YouTube / Vimeo)
+  // Provider iframe (YouTube / Vimeo), only on a player this app embeds (utils/webAddress.ts)
   const providerLabel = labelOf(embed.provider);
+  const player = playerAddress(embed.embedUrl);
 
   return (
     <div className="surface-card max-w-[400px] overflow-hidden rounded-lg">
       {/* 16:9 video area */}
       <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-        {isPlaying && embed.embedUrl ? (
+        {isPlaying && player ? (
           <iframe
             className="absolute inset-0 w-full h-full"
-            src={`${embed.embedUrl}?autoplay=1&origin=${encodeURIComponent(window.location.origin)}`}
+            src={`${player}?autoplay=1&origin=${encodeURIComponent(window.location.origin)}`}
             title={embed.title ?? t('embed.videoTitle')}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
@@ -92,7 +94,7 @@ export function VideoEmbed({ embed }: VideoEmbedProps) {
           )}
           {embed.title && (
             <a
-              href={embed.url}
+              href={webAddress(embed.url)}
               target="_blank"
               rel="noopener noreferrer"
               className="line-clamp-2 text-body font-medium leading-snug text-txt-primary hover:underline"

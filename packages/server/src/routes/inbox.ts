@@ -187,7 +187,8 @@ export function readerMessagesPage(
 export async function inboxRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: { before?: string; limit?: string } }>(
     '/api/users/@me/mentions',
-    { preHandler: authenticate },
+    // Each page reads through the histories of every space the person is in.
+    { preHandler: authenticate, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
     async (request, reply) => {
       const userId = request.userId!;
       const { before } = request.query;

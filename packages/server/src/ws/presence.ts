@@ -26,7 +26,7 @@ import { showReplicaChoice } from './replicaPresence.js';
 export function applyChosenStatus(userId: string, status: ChosenUserStatus): void {
   const db = getDb();
   const row = db
-    .select({ homeInstance: schema.users.homeInstance, federationHomeOrphaned: schema.users.federationHomeOrphaned })
+    .select({ homeInstance: schema.users.homeInstance, federationHomeOrphaned: schema.users.federationHomeOrphaned, chosenStatus: schema.users.chosenStatus })
     .from(schema.users)
     .where(eq(schema.users.id, userId))
     .get();
@@ -34,6 +34,9 @@ export function applyChosenStatus(userId: string, status: ChosenUserStatus): voi
 
   const ownsChoice = ownsChosenStatus(row);
   const connected = connectionManager.isUserOnline(userId);
+  // The same choice again changes nothing: no write, and nobody told. Each would otherwise be a
+  // write and a message to every friend and co-member, as often as a client sends it.
+  if (ownsChoice && row.chosenStatus === status && (!connected || connectionManager.getUserStatus(userId) === status)) return;
 
   if (ownsChoice && connected) {
     db.update(schema.users).set({ chosenStatus: status, status }).where(eq(schema.users.id, userId)).run();

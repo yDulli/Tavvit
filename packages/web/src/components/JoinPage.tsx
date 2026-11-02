@@ -16,6 +16,9 @@ import { isAlreadyMemberError, isJoinRequestPendingError, isNotRequestableError,
 import { sendInviteJoinRequest, type InviteRequestOutcome } from '../utils/inviteJoinRequest';
 import { FallbackNotice } from './modals/RemotePasswordStep';
 import { useFederationEnabled } from '../hooks/useFederationEnabled';
+import { useConnectedOrigins } from '../hooks/useConnectedOrigins';
+import { useExternalMediaStore } from '../stores/externalMediaStore';
+import { useBlockedHost } from './ui/ExternalMedia';
 
 type JoinPhase = 'preview' | 'connect' | 'fallback' | 'other-instance' | 'already-member' | 'request-sent';
 
@@ -105,9 +108,16 @@ export function JoinPage() {
     }
   }, [rawInviteCode]);
 
+  // An invite for a space elsewhere is fetched only once the visitor agrees to contact that
+  // server: opening a link on this instance must not tell another one their address
+  // (docs/systems/legal.md). The yes is the one for its pictures too.
+  const trustedOrigins = useConnectedOrigins();
+  const allowHost = useExternalMediaStore((s) => s.allowHost);
+  const hostAwaitingYes = useBlockedHost(parsed?.origin ? `${parsed.origin}/` : null, trustedOrigins);
+
   // Fetch preview on mount
   useEffect(() => {
-    if (!parsed) {
+    if (!parsed || hostAwaitingYes) {
       setIsLoadingPreview(false);
       return;
     }
@@ -135,7 +145,7 @@ export function JoinPage() {
     };
 
     fetchPreview();
-  }, [parsed]);
+  }, [parsed, hostAwaitingYes]);
 
   const previewError = !rawInviteCode
     ? t('auth:join.errors.noCode')
@@ -287,6 +297,25 @@ export function JoinPage() {
   } catch { /* ignore */ }
 
   const redirectParam = rawInviteCode ? `?redirect=/join/${encodeURIComponent(rawInviteCode)}` : '';
+
+  if (hostAwaitingYes) {
+    return (
+      <JoinFrame>
+        <div className={`${CARD} text-center`}>
+          <span aria-hidden="true" className="empty-state-icon mx-auto mb-4 text-txt-secondary">
+            <Icon name="globe" size={18} />
+          </span>
+          <h1 className="page-title mb-2">{t('auth:join.elsewhere.title')}</h1>
+          <p className="text-ui leading-[1.5] text-txt-secondary mb-6">
+            {t('auth:join.elsewhere.description', { host: hostAwaitingYes })}
+          </p>
+          <button type="button" onClick={() => allowHost(hostAwaitingYes)} className="btn-hero btn-lg">
+            {t('auth:join.elsewhere.show')}
+          </button>
+        </div>
+      </JoinFrame>
+    );
+  }
 
   // Loading state
   if (isLoadingPreview) {

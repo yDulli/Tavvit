@@ -36,6 +36,8 @@ vi.mock('../ws/handler.js', () => ({
     sendToUser: vi.fn(),
     sendToSpace: vi.fn(),
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
     getRoom: () => undefined,
   },
 }));

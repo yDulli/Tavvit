@@ -15,6 +15,7 @@ import {
   finishedUploadExceedsLimit,
   releaseUpload,
   reserveUpload,
+  touchUpload,
   uploadRefusal,
   type UploadRefusal,
 } from '../utils/accountLimits.js';
@@ -155,6 +156,8 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
         if (!isOwnerOfUpload(upload.metadata as UploadMetadata, userId)) {
           throw { status_code: 403, body: 'Forbidden: you do not own this upload' };
         }
+        // Bytes on their way: the upload keeps the room it reserved (utils/accountLimits.ts).
+        if (req.method === 'PATCH') touchUpload(uploadId);
       }
     },
 

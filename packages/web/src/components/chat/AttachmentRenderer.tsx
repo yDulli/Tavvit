@@ -6,6 +6,8 @@ import { useUIStore } from '../../stores/uiStore';
 import { useTransferStore } from '../../stores/transferStore';
 import { Icon, type IconName } from '../ui/Icon';
 import { Tooltip } from '../ui/Tooltip';
+import { ExternalGate, useBlockedHost } from '../ui/ExternalMedia';
+import { useConnectedOrigins } from '../../hooks/useConnectedOrigins';
 import { useFormatters } from '../../i18n/formatters';
 import { mediaBox } from './mediaBox';
 
@@ -260,11 +262,22 @@ export function AttachmentRenderer({ attachment, tile }: AttachmentRendererProps
   const { mimetype, originalName, size } = attachment;
   const [revealed, setRevealed] = useState(false);
 
+  // A file from a peer that has not arrived here yet is an address on that peer's server: fetched
+  // only after a yes, as anything from another server is (docs/systems/legal.md), unless this
+  // client talks to that server anyway. Downloading it stays a click of its own.
+  const trustedOrigins = useConnectedOrigins();
+  const attBlocked = useBlockedHost(attUrl, trustedOrigins);
+  const thumbBlocked = useBlockedHost(thumbUrl, trustedOrigins);
+  const gateUrl = attBlocked ? attUrl : thumbBlocked ? thumbUrl : null;
+  const gated = (node: React.ReactElement): React.ReactElement => (
+    gateUrl ? <ExternalGate url={gateUrl} trustedOrigins={trustedOrigins}>{node}</ExternalGate> : node
+  );
+
   if (attachment.spoiler && !revealed && (mimetype.startsWith('image/') || mimetype.startsWith('video/'))) {
     return (
       <SpoilerCover
         attachment={attachment}
-        previewUrl={thumbUrl ?? (mimetype.startsWith('image/') ? attUrl : null)}
+        previewUrl={gateUrl ? null : thumbUrl ?? (mimetype.startsWith('image/') ? attUrl : null)}
         tile={tile}
         onReveal={() => setRevealed(true)}
       />
@@ -328,7 +341,7 @@ export function AttachmentRenderer({ attachment, tile }: AttachmentRendererProps
   if (mimetype.startsWith('image/')) {
     const box = tile ? undefined : mediaBox(attachment.width, attachment.height);
     const shape = tile === 'wide' ? 'aspect-[4/3] w-full' : tile === 'square' ? 'aspect-square w-full' : 'max-w-[min(100%,400px)]';
-    return (
+    return gated(
       <div className={tile ? 'min-w-0' : 'max-w-fit'}>
         <button
           type="button"
@@ -347,27 +360,27 @@ export function AttachmentRenderer({ attachment, tile }: AttachmentRendererProps
           />
         </button>
         {federationInlineBadge && <div className="mt-1">{federationInlineBadge}</div>}
-      </div>
+      </div>,
     );
   }
 
   if (mimetype.startsWith('video/')) {
-    return (
+    return gated(
       <VideoAttachment
         attachment={attachment}
         attUrl={attUrl}
         thumbUrl={thumbUrl}
         federationInlineBadge={federationInlineBadge}
-      />
+      />,
     );
   }
 
   if (mimetype.startsWith('audio/') && attachment.voiceWaveform) {
-    return <VoiceMessagePlayer url={attUrl} bars={attachment.voiceWaveform} duration={attachment.duration} />;
+    return gated(<VoiceMessagePlayer url={attUrl} bars={attachment.voiceWaveform} duration={attachment.duration} />);
   }
 
   if (mimetype.startsWith('audio/')) {
-    return (
+    return gated(
       <div className="surface-card flex max-w-[400px] flex-col gap-2 rounded-lg p-2.5">
         <div className="flex items-center gap-2.5">
           <FileGlyph name="music" />
@@ -383,7 +396,7 @@ export function AttachmentRenderer({ attachment, tile }: AttachmentRendererProps
           <source src={attUrl} type={mimetype} />
           {t('chat:attachment.audio.unsupportedBrowser')}
         </audio>
-      </div>
+      </div>,
     );
   }
 

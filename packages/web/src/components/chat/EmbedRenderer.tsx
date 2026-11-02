@@ -5,6 +5,7 @@ import { VideoEmbed } from './embeds/VideoEmbed';
 import { ImageEmbed } from './embeds/ImageEmbed';
 import { RichEmbed } from './embeds/RichEmbed';
 import { ExternalGate } from '../ui/ExternalMedia';
+import { webAddress } from '../../utils/webAddress';
 
 interface EmbedRendererProps {
   embed: Embed;
@@ -25,7 +26,7 @@ export function EmbedRenderer({ embed }: EmbedRendererProps) {
         <div className="surface-card max-w-[400px] rounded-lg p-2.5">
           {embed.title && (
             <a
-              href={embed.url}
+              href={webAddress(embed.url)}
               target="_blank"
               rel="noopener noreferrer"
               className="mb-2 block truncate text-body font-medium text-txt-primary hover:underline"
@@ -35,7 +36,7 @@ export function EmbedRenderer({ embed }: EmbedRendererProps) {
           )}
           <ExternalGate url={embed.url}>
             <audio
-              src={embed.url}
+              src={webAddress(embed.url)}
               controls
               preload="metadata"
               className="h-8 w-full"

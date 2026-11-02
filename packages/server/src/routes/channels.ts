@@ -165,6 +165,30 @@ function setAnnouncementOverride(spaceId: string, channelId: string, closed: boo
   }
 }
 
+/** Whether a category has overrides of its own: then a channel moving in or out of it changes who may see and write there. */
+function categoryHasOverrides(categoryId: string | null | undefined): boolean {
+  if (!categoryId) return false;
+  return getDb().select({ categoryId: schema.categoryOverrides.categoryId }).from(schema.categoryOverrides)
+    .where(eq(schema.categoryOverrides.categoryId, categoryId)).get() !== undefined;
+}
+
+/** Whether a channel going from one category to another takes other overrides with it. */
+function moveChangesOverrides(from: string | null | undefined, to: string | null | undefined): boolean {
+  return (from ?? null) !== (to ?? null) && (categoryHasOverrides(from) || categoryHasOverrides(to));
+}
+
+/**
+ * Whether `userId` may change a channel's overrides without naming one: by moving it in or out of
+ * a category that has overrides, by deleting such a category with channels in it, or by turning a
+ * text channel into an announcement channel or back (setAnnouncementOverride). Each changes who
+ * may see or write there, so each takes what writing an override takes, MANAGE_ROLES
+ * (docs/systems/permissions.md), and not MANAGE_CHANNELS alone: a channel taken out of a private
+ * category would otherwise be open to everyone, history included.
+ */
+function mayChangeOverridesIndirectly(userId: string, spaceId: string): boolean {
+  return viewerReadsPermissionData(computePermissions(userId, spaceId));
+}
+
 /** Whether a category is private (`isHiddenFromEveryone` on its overrides). */
 function isCategoryPrivate(categoryId: string, spaceId: string): boolean {
   const overrides = getDb().select().from(schema.categoryOverrides)
@@ -501,7 +525,8 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const spaceId = channel.spaceId;
-    if (!hasPermission(request.userId, spaceId, PermissionBits.MANAGE_CHANNELS, id)) {
+    // Sight of the channel too: there is no implicit deny from VIEW_CHANNEL (docs/systems/permissions.md).
+    if (!hasPermission(request.userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.MANAGE_CHANNELS, id)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_CHANNELS' });
     }
 
@@ -575,6 +600,12 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 400, 'no_fields_to_update');
     }
 
+    const changesOverrides = (updates.type !== undefined && updates.type !== channel.type)
+      || (updates.categoryId !== undefined && moveChangesOverrides(channel.categoryId, updates.categoryId));
+    if (changesOverrides && !mayChangeOverridesIndirectly(request.userId, spaceId)) {
+      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
+    }
+
     db.update(schema.channels).set(updates).where(eq(schema.channels.id, id)).run();
 
     const updated = db.select().from(schema.channels).where(eq(schema.channels.id, id)).get();
@@ -634,7 +665,8 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const spaceId = channel.spaceId;
-    if (!hasPermission(request.userId, spaceId, PermissionBits.MANAGE_CHANNELS, id)) {
+    // Sight of the channel too: whoever cannot see it does not delete it with its history.
+    if (!hasPermission(request.userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.MANAGE_CHANNELS, id)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_CHANNELS' });
     }
 
@@ -1263,6 +1295,9 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     // can see them may change.
     const releasedChannels = db.select({ id: schema.channels.id, type: schema.channels.type }).from(schema.channels)
       .where(eq(schema.channels.categoryId, id)).all();
+    if (releasedChannels.length > 0 && categoryHasOverrides(id) && !mayChangeOverridesIndirectly(request.userId, spaceId)) {
+      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
+    }
 
     db.transaction((tx) => {
       // Null out categoryId on all channels in this category
@@ -1353,6 +1388,13 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       if (ch.categoryId !== null && !spaceCategoryIds.has(ch.categoryId)) {
         return sendError(reply, 400, 'category_not_in_space', { id: ch.categoryId });
       }
+    }
+
+    // A move into or out of a category with overrides changes who may see the channel.
+    const currentCategory = new Map(spaceChannels.map((ch) => [ch.id, ch.categoryId]));
+    const changesOverrides = channelUpdates.some((ch) => moveChangesOverrides(currentCategory.get(ch.id), ch.categoryId));
+    if (changesOverrides && !mayChangeOverridesIndirectly(request.userId, id)) {
+      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
     }
 
     // Apply all updates in a transaction

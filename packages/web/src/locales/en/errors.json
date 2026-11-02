@@ -344,6 +344,8 @@
   "data_export_too_soon": "You asked for a copy of your data less than a day ago. Try again in {{hours}} hours.",
   "data_export_not_ready": "There is no copy of your data to download.",
   "session_ended": "This session has ended. Please log in again.",
+  "too_many_connections": "Tavvit is open in too many places at once, so this one was disconnected. Reload to connect again.",
+  "reaction_limit_reached": "A message can have at most {{max}} different reactions.",
   "email_not_configured": "This server does not send email",
   "email_unavailable": "Email cannot be sent right now. Try again later.",
   "email_invalid": "That is not a valid email address",

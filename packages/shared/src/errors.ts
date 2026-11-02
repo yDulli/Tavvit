@@ -134,6 +134,8 @@ export const ERROR_CODES = [
   'moderation_reason_too_long',
   'ban_delete_window_invalid',
   'session_ended',
+  'too_many_connections',
+  'reaction_limit_reached',
   'data_export_too_soon',
   'data_export_not_ready',
   'terms_version_invalid',

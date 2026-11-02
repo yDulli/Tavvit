@@ -812,3 +812,5 @@ never passes, and it compiles no WebAssembly. The single `new Worker` and the
 single `WebAssembly.validate` in the built bundle come from
 `useWebSocket.ts` and from RNNoise's SIMD probe, which are the two directives
 already documented above.
+
+`undici` is a direct dependency of the server since 1.32.7, already present through cheerio: it is what Node's fetch is built on, and the only way to hand fetch a resolver, which `safeFetch` needs to connect only to the addresses it checked (docs/systems/embeds.md, "Pinned addresses"). Served uploads carry `sandbox` in their CSP (docs/systems/uploads.md).

@@ -43,6 +43,14 @@ The client reconnects after any close it did not ask for; the reconnect is then 
 
 To a socket that said `batch: true` at `auth`, the server may send `{ type: 'batch', events: [...] }`, which is those events, in that order, as if they had come alone. A new message and its `channel_unread_count` go this way, and presence with 100 or more people connected, after waiting up to half a second (operations.md). A client from before this, and a bot, gets each in a frame of its own. Frames of 32 KB and more go compressed (`permessage-deflate`), which every WebSocket client does by itself.
 
+## Frame size and sockets per account
+
+A client frame is at most `WS_MAX_CLIENT_FRAME_BYTES`, 64 KiB unpacked (`packages/shared/src/constants.ts`, `ws/socketOptions.ts`). `ws` closes a socket that sends a larger one with 1009, before `auth` as after it. The largest frame a client sends is a message of 4000 characters, under 30 KB even escaped; the client sends nothing past the limit (`frameOf`, `hooks/useWebSocket.ts`). While a socket's `ready` waits its turn, at most 32 frames and 64 KiB are held for it.
+
+One account keeps at most 10 sockets (`MOST_SOCKETS_PER_ACCOUNT`, `ws/handler.ts`). When an eleventh connects, the oldest is sent `error` `too_many_connections` and closed. A client told that does not reconnect by itself (`pushedOut`) until the page is loaded again, so the account's windows do not push each other out in turn.
+
+A member who leaves, is kicked or banned, and every member of a deleted space, is taken out of the space's audience at once (`ConnectionManager.removeUserSpace`): no more `sendToSpace` events for it, no presence of its members by way of it, no thread of it open. They are taken out of its voice too, LiveKit included (docs/systems/voice.md).
+
 ## Client → Server
 
 ### Messages

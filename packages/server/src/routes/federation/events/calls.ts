@@ -1,5 +1,5 @@
 import { getDb, schema } from '../../../db/index.js';
-import { getOurOrigin } from '../../../utils/federationAuth.js';
+import { getOurOrigin, normalizeOriginForCompare } from '../../../utils/federationAuth.js';
 import { fanOutCallEvent } from '../../../utils/callFanout.js';
 import { connectionManager } from '../../../ws/handler.js';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
@@ -81,6 +81,23 @@ function applyRelayedGroupLeave(
  * ringing, so nobody's ring stops for it. The value only decides whose other
  * sessions stop ringing; it authorizes nothing.
  */
+/**
+ * Whether the actor a peer names is a member of the conversation `dmChannelId` here. A call is
+ * found by its federated id, which anyone can work out from two public ids
+ * (utils/dmConversation.ts), so without this a peer could answer, decline or end a call between
+ * two people of this instance, or one of a conversation it has nobody in.
+ */
+function actorIsMember(actor: RelayActor, dmChannelId: string, db: ReturnType<typeof getDb>): boolean {
+  const resolved = resolveRelayActor(actor, db);
+  return resolved.kind === 'found' && isDmMember(dmChannelId, resolved.user.id);
+}
+
+/** Whether a relayed call event comes from the instance that hosts the call: only the host changes a call's state here. */
+function fromCallHost(fedCall: FederatedCallEntry, sourceInstance: string): boolean {
+  const host = normalizeOriginForCompare(fedCall.federatedCallHost);
+  return host !== null && host === normalizeOriginForCompare(sourceInstance);
+}
+
 function answererOf(call: FederationCallPayload): FederatedIdentity | null {
   const named = call.answeredBy;
   if (named && typeof named.homeUserId === 'string' && named.homeUserId.length > 0
@@ -319,6 +336,10 @@ export function processDmCallAcceptEvent(
   // Check if we're the HOST (have a VoiceRoom)
   const room = dmChannelId ? connectionManager.getRoom(dmChannelId) : undefined;
   if (room && room.roomType === 'dm') {
+    if (!actorIsMember(event.call.acceptor, dmChannelId!, db)) {
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
     const meta = room.metadata as DmRoomMeta;
 
     if (meta.state === 'ringing') {
@@ -385,6 +406,10 @@ export function processDmCallAcceptEvent(
   } else {
     // We're a REMOTE instance receiving fan-out — transition local state
     const fedCall = connectionManager.getFederatedCall(event.federatedId);
+    if (fedCall && !fromCallHost(fedCall, sourceInstance)) {
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
     if (fedCall) {
       // Only broadcast if transitioning from ringing → active.
       // If already active (e.g., we initiated the accept and the host is fanning out back),
@@ -433,6 +458,10 @@ export function processDmCallRejectEvent(
 
   const room = dmChannelId ? connectionManager.getRoom(dmChannelId) : undefined;
   if (room && room.roomType === 'dm') {
+    if (!actorIsMember(event.call.rejector, dmChannelId!, db)) {
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
     const meta = room.metadata as DmRoomMeta;
     const hostCallerId = meta.callerId;
     const localDmId = dmChannelId!;
@@ -459,6 +488,10 @@ export function processDmCallRejectEvent(
     );
   } else {
     const fedCall = connectionManager.getFederatedCall(event.federatedId);
+    if (fedCall && !fromCallHost(fedCall, sourceInstance)) {
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
     if (fedCall) {
       connectionManager.sendToFederatedCallUsers(event.federatedId, {
         type: 'dm_call_rejected',
@@ -499,6 +532,10 @@ export function processDmCallEndEvent(
 
   const room = dmChannelId ? connectionManager.getRoom(dmChannelId) : undefined;
   if (room && room.roomType === 'dm') {
+    if (!actorIsMember(event.call.endedBy, dmChannelId!, db)) {
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
     const meta = room.metadata as DmRoomMeta;
     const hostCallerId = meta.callerId;
     const localDmId = dmChannelId!;
@@ -525,6 +562,10 @@ export function processDmCallEndEvent(
     );
   } else {
     const fedCall = connectionManager.getFederatedCall(event.federatedId);
+    if (fedCall && !fromCallHost(fedCall, sourceInstance)) {
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
     if (fedCall) {
       connectionManager.sendToFederatedCallUsers(event.federatedId, {
         type: 'dm_call_ended',
@@ -587,6 +628,11 @@ export function processDmTypingStartEvent(
     return;
   }
   const typingUser = typer.user;
+  // Only a member is shown typing in a conversation.
+  if (!isDmMember(channel.id, typingUser.id)) {
+    rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+    return;
+  }
 
   // Broadcast dm_typing to local DM members (excluding the typer)
   const dmMembers = db.select()

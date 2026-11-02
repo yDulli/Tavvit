@@ -1,6 +1,8 @@
 import React from 'react';
 import type { User } from '@backspace/shared';
 import { getAvatarGradient, getSpaceGradient } from '../../utils/gradients';
+import { useConnectedOrigins } from '../../hooks/useConnectedOrigins';
+import { useBlockedHost } from './ExternalMedia';
 
 interface AvatarProps {
   src?: string | null;
@@ -80,6 +82,14 @@ function getDotMetrics(avatarSize: number, ringWidth: number = 0) {
 
 export function Avatar({ src, name, size = 40, status, className = '', onClick, user, userId, ring, avatarColor, palette = 'user' }: AvatarProps) {
   const initials = name.charAt(0).toUpperCase();
+  const address = src
+    ? ((src.startsWith('http') || src.startsWith('blob:') || src.startsWith('data:') || src.startsWith('/')) ? src : `/api/uploads/${src}`)
+    : null;
+  // A picture on a server this client does not talk to waits for a yes like anything else from
+  // there (docs/systems/legal.md): the initials stand in, and that server learns nothing. What the
+  // server lets through is checked there too (utils/remoteMedia.ts); this holds wherever it is not.
+  const blocked = useBlockedHost(address, useConnectedOrigins()) !== null;
+  const shown = blocked ? null : address;
   const fontPx = Math.round(size * 0.4);
   const gradient = palette === 'space'
     ? getSpaceGradient(userId, name, avatarColor)
@@ -115,10 +125,9 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
           ...maskStyle,
         }}
       >
-        {src ? (
+        {shown ? (
           <img
-            src={(src.startsWith('http') || src.startsWith('blob:') || src.startsWith('data:') || src.startsWith('/'))
-              ? src : `/api/uploads/${src}`}
+            src={shown}
             alt={name}
             loading="lazy"
             className="w-full h-full object-cover"
@@ -134,8 +143,8 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
           />
         ) : null}
         <div
-          className={`avatar-fallback w-full h-full flex items-center justify-center font-semibold text-white ${src ? 'hidden' : 'flex'}`}
-          style={{ background: gradient.gradient, fontSize: fontPx, borderRadius: innerRadius, ...(src ? { display: 'none' } : {}) }}
+          className={`avatar-fallback w-full h-full flex items-center justify-center font-semibold text-white ${shown ? 'hidden' : 'flex'}`}
+          style={{ background: gradient.gradient, fontSize: fontPx, borderRadius: innerRadius, ...(shown ? { display: 'none' } : {}) }}
         >
           {initials}
         </div>

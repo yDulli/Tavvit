@@ -2,6 +2,7 @@ import type { Attachment } from '@backspace/shared';
 import type { MessageCard } from '@backspace/shared/src/cards';
 import { AttachmentRenderer } from './AttachmentRenderer';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { webAddress } from '../../utils/webAddress';
 
 function CardView({ card, attachments, channelId }: { card: MessageCard; attachments: readonly Attachment[]; channelId?: string | null | undefined }) {
   const image = card.imageAttachmentId ? attachments.find((attachment) => attachment.id === card.imageAttachmentId && attachment.mimetype.startsWith('image/')) : undefined;
@@ -9,8 +10,8 @@ function CardView({ card, attachments, channelId }: { card: MessageCard; attachm
     <article className="surface-card min-w-0 rounded-lg border-l-2 px-3 py-2.5" style={card.color ? { borderLeftColor: card.color } : undefined}>
       {card.title && (
         <p className="text-ui font-semibold break-words text-txt-primary">
-          {card.url
-            ? <a href={card.url} target="_blank" rel="noopener noreferrer nofollow" className="text-txt-link hover:underline">{card.title}</a>
+          {webAddress(card.url)
+            ? <a href={webAddress(card.url)} target="_blank" rel="noopener noreferrer nofollow" className="text-txt-link hover:underline">{card.title}</a>
             : card.title}
         </p>
       )}

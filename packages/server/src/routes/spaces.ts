@@ -13,7 +13,7 @@ import { isMember, isSpaceOwner, isBanned, hasPermission, computePermissions, Pe
 import { DEFAULT_EVERYONE_PERMISSIONS, ALL_PERMISSIONS, permissionsToString, stringToPermissions, parsePermissionString, roleBitsChangeRefusal, idsHiddenFromEveryone, rolePermissionsVersion, type HeldBitsRefusal } from '@backspace/shared/src/permissions.js';
 import { connectionManager } from '../ws/handler.js';
 import { deleteAttachmentFiles, deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
-import { pictureFileReleasable, profilePictureOf, uploadNameOf } from '../utils/profileImageRefs.js';
+import { pictureFileReleasable, profilePictureOf, releaseMemberPictures, uploadNameOf } from '../utils/profileImageRefs.js';
 import { resizeProfileImage } from '../utils/thumbnail.js';
 import {
   discoveryStatusOf,
@@ -46,7 +46,7 @@ import {
   type CreateSpaceInviteRequest,
 } from '@backspace/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
-import { checkVoicePermissions } from '../ws/events.js';
+import { checkVoicePermissions, disconnectMemberFromSpaceVoice } from '../ws/events.js';
 import { channelToWire, memberStaffBadges, memberToWire, spaceToWire } from '../utils/spaceWire.js';
 import { dropHeldTimeout, holdDepartingTimeout, restoreHeldTimeout } from '../utils/spaceModeration.js';
 import {
@@ -849,6 +849,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     const spaceBanner = server.banner;
     const hadOpenReview = isOpenReview(verificationStatusOf(server), discoveryStatusOf(server));
 
+    const memberPictures = db.select({ userId: schema.spaceMembers.userId, avatar: schema.spaceMembers.avatar, banner: schema.spaceMembers.banner })
+      .from(schema.spaceMembers).where(eq(schema.spaceMembers.spaceId, id)).all();
+
     // Delete all channels (messages cascade), members, folder refs, read states, then space atomically
     db.transaction((tx) => {
       // Clean up read_states for all channels in this space (no FK cascade — channelId is plain text)
@@ -870,9 +873,15 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     // Clean up all attachment files from disk
     deleteAttachmentFiles(attachmentRows);
 
-    // Clean up space icon/banner files nothing else shows.
+    // Clean up space icon/banner files nothing else shows, and the members' own pictures.
     for (const picture of [uploadNameOf(spaceIcon), uploadNameOf(spaceBanner)]) {
       if (picture && pictureFileReleasable(picture)) deleteUploadFile(picture);
+    }
+    releaseMemberPictures(memberPictures);
+    // Nobody is in its voice or told about it any more.
+    for (const member of memberPictures) {
+      disconnectMemberFromSpaceVoice(id, member.userId);
+      connectionManager.removeUserSpace(member.userId, id);
     }
 
     return reply.code(200).send({ success: true });
@@ -1200,12 +1209,11 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     // Leaving does not lift a timeout: it is put back if they join again.
     holdDepartingTimeout(id, uid);
 
-    db.delete(schema.spaceMembers)
-      .where(and(
-        eq(schema.spaceMembers.spaceId, id),
-        eq(schema.spaceMembers.userId, uid),
-      ))
-      .run();
+    const departing = and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, uid));
+    const departingPictures = db.select({ avatar: schema.spaceMembers.avatar, banner: schema.spaceMembers.banner })
+      .from(schema.spaceMembers).where(departing).all();
+    db.delete(schema.spaceMembers).where(departing).run();
+    releaseMemberPictures(departingPictures);
 
     // Clean up any voice restrictions for the removed member
     db.delete(schema.voiceRestrictions).where(
@@ -1242,6 +1250,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       spaceId: id,
       userId: uid,
     });
+    // Out of its voice, and no longer told what its members are told.
+    disconnectMemberFromSpaceVoice(id, uid);
+    connectionManager.removeUserSpace(uid, id);
 
     return reply.code(200).send({ success: true });
   });
@@ -1783,6 +1794,10 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     // Fetch channel IDs before the transaction for read_states cleanup
     const banChannelIds = db.select({ id: schema.channels.id })
       .from(schema.channels).where(eq(schema.channels.spaceId, id)).all().map(c => c.id);
+    const bannedPictures = db.select({ avatar: schema.spaceMembers.avatar, banner: schema.spaceMembers.banner })
+      .from(schema.spaceMembers)
+      .where(and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, targetId)))
+      .all();
 
     db.transaction((tx) => {
       // Insert ban record
@@ -1823,6 +1838,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       // A ban drops a timeout, one held from an earlier leave included.
       dropHeldTimeout(id, targetId, tx);
     });
+    releaseMemberPictures(bannedPictures);
 
     recordAudit({
       spaceId: id, actorId: request.userId, action: 'member_ban',
@@ -1853,6 +1869,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       spaceId: id,
       reason,
     });
+    // Out of its voice, and no longer told what its members are told.
+    disconnectMemberFromSpaceVoice(id, targetId);
+    connectionManager.removeUserSpace(targetId, id);
 
     return reply.code(200).send({ success: true });
   });

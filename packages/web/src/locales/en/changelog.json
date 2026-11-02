@@ -4,6 +4,16 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.32.7": {
+      "title": "Security fixes",
+      "items": {
+        "privacy": "Pictures and invites from other servers wait for your yes before they load, in invite cards, in Outer Space and on links to an invite elsewhere too.",
+        "limits": "The server refuses oversized requests before it reads them, and no account can fill its disk by forwarding or uploading over and over.",
+        "moderation": "Someone kicked or banned is out of the space's voice and news at once and can no longer edit old messages. Taking a channel out of a private category takes the right to manage roles.",
+        "previews": "Link previews and media files can no longer be turned against the server's own network.",
+        "federation": "Between servers, only those taking part may answer or end a call, and an account can no longer claim someone else's identity."
+      }
+    },
     "1.32.6": {
       "title": "A fix for starting",
       "items": {

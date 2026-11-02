@@ -23,7 +23,7 @@ import {
   type ThreadRow,
 } from '../utils/threads.js';
 import { recordSocketAddress } from './socketAddress.js';
-import { computeChannelPermissionsFor, computePermissions, computeSpacePermissionsFor, PermissionBits, permissionsToString } from '../utils/permissions.js';
+import { computeChannelPermissionsFor, computePermissions, computeSpacePermissionsFor, getChannelSpaceId, PermissionBits, permissionsToString } from '../utils/permissions.js';
 import { idsHiddenFromEveryone } from '@backspace/shared/src/permissions.js';
 import type {
   User,
@@ -161,6 +161,9 @@ const batchFrame = (events: readonly string[]): string => `{"type":"batch","even
 const PRESENCE_BATCH_FROM_PEOPLE = 100;
 const PRESENCE_BATCH_MS = 500;
 
+/** The most sockets one account keeps open at once: every tab, the desktop app and phones, with room to spare. */
+const MOST_SOCKETS_PER_ACCOUNT = 10;
+
 class ConnectionManager implements ReplicaSessionHost {
   // What each socket authenticated with (see `closeSessionSockets`, `revalidateSockets`).
   private socketAccess: WeakMap<WebSocket, SocketAccess> = new WeakMap();
@@ -221,7 +224,17 @@ class ConnectionManager implements ReplicaSessionHost {
     if (!this.connections.has(userId)) {
       this.connections.set(userId, new Set());
     }
-    this.connections.get(userId)!.add(ws);
+    const sockets = this.connections.get(userId)!;
+    // Every socket is sent, and compresses, everything its account is sent, so one token opening
+    // thousands would cost everyone. Past the limit the oldest goes, and is told so: it does not
+    // come back by itself, or the account's windows would push each other out in turn.
+    while (sockets.size >= MOST_SOCKETS_PER_ACCOUNT) {
+      const oldest = sockets.values().next().value;
+      if (!oldest) break;
+      sockets.delete(oldest);
+      refuseSocket(oldest, 'too_many_connections', 'Tavvit is open in too many places at once');
+    }
+    sockets.add(ws);
     this.wsToUser.set(ws, userId);
 
     // If they were pending offline, cancel it!
@@ -493,6 +506,24 @@ class ConnectionManager implements ReplicaSessionHost {
     // this fires exactly once per genuine join. Space creation hits this too but
     // produces an empty snapshot, which is not sent.
     this.pushSpaceVoiceState(userId, spaceId);
+  }
+
+  /**
+   * The user no longer belongs to `spaceId`: they left, were kicked or banned, or the space is
+   * gone. Their sockets stop hearing what goes to its members (sendToSpace), the presence of its
+   * members among it (onlineProfileTargets), and the threads of it they had open. Without this an
+   * open socket kept all of that until it reconnected, which nothing made it do. Call it after
+   * the last event the user should still get about the space.
+   */
+  removeUserSpace(userId: string, spaceId: string): void {
+    this.userSpaces.get(userId)?.delete(spaceId);
+    for (const ws of this.connections.get(userId) ?? []) {
+      const watched = this.threadWatchers.get(ws);
+      if (!watched) continue;
+      const watchedSpace = getChannelSpaceId(watched);
+      // A thread of this space, or of no space any more.
+      if (watchedSpace === null || watchedSpace === spaceId) this.threadWatchers.delete(ws);
+    }
   }
 
   /**
@@ -2279,8 +2310,13 @@ function inTurnForReady(job: () => void): void {
   }
 }
 
-/** What a client may say while its `ready` waits its turn. It has no reason to say much. */
+/**
+ * What a client may say while its `ready` waits its turn. It has no reason to say much, and its
+ * token is not checked until then, so a stranger could otherwise park 32 full frames per socket
+ * for as long as the queue is long.
+ */
 const MOST_HELD_FRAMES = 32;
+const MOST_HELD_BYTES = 64 * 1024;
 
 export async function registerWebSocket(app: FastifyInstance): Promise<void> {
   app.get('/ws', { websocket: true }, (socket, request) => {
@@ -2290,6 +2326,7 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
     let authenticated = false;
     let authAsked = false;
     const heldFrames: Record<string, unknown>[] = [];
+    let heldBytes = 0;
     let userId: string | undefined;
     let username: string | undefined;
     let isFederated = false;
@@ -2309,6 +2346,7 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
       // the closing handshake can take a client as long as it likes.
       if (ws.readyState !== ws.OPEN) return;
       let parsed: Record<string, unknown>;
+      const frameBytes = typeof data === 'string' ? Buffer.byteLength(data) : data.length;
       try {
         const raw = typeof data === 'string' ? data : data.toString('utf-8');
         parsed = JSON.parse(raw) as Record<string, unknown>;
@@ -2324,7 +2362,10 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
         if (authAsked) {
           // Its `ready` is waiting its turn. A ping needs no account to answer.
           if (parsed.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
-          else if (heldFrames.length < MOST_HELD_FRAMES) heldFrames.push(parsed);
+          else if (heldFrames.length < MOST_HELD_FRAMES && heldBytes + frameBytes <= MOST_HELD_BYTES) {
+            heldFrames.push(parsed);
+            heldBytes += frameBytes;
+          }
           return;
         }
         // First message must be auth

@@ -22,6 +22,7 @@ import { and, eq, lt, sql } from 'drizzle-orm';
 import type { DataExportStatus } from '@backspace/shared';
 import { config } from '../config.js';
 import { getDb, getRawDb, schema } from '../db/index.js';
+import { diskWouldFill } from './accountLimits.js';
 import { emojiFilePath } from './emojiImage.js';
 import { uploadNameOf } from './profileImageRefs.js';
 import { generateSnowflake } from './snowflake.js';
@@ -31,6 +32,8 @@ import { stickerAssetPath } from './stickerAssets.js';
 const EXPORT_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 /** How often one account may ask. Building a copy is real work; a person needs one rarely. */
 const EXPORT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+/** How long after a failed one the next may be asked for (requestDataExport). */
+const FAILED_EXPORT_COOLDOWN_MS = 60 * 60 * 1000;
 /** A build that started before this long ago was cut off by a restart. */
 const EXPORT_STALE_MS = 60 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
@@ -284,6 +287,9 @@ async function buildArchive(userId: string, target: string): Promise<void> {
       total += size;
       entries.push(file);
     }
+    // The archive takes its size again on the disk, for a week: not past the reserve the database
+    // writes into (utils/accountLimits.ts). It fails, and can be asked for again later.
+    if (diskWouldFill(total)) throw new Error('No room on the disk for the archive');
 
     const readme = path.join(work, 'README.txt');
     await writeFile(readme, [
@@ -343,13 +349,18 @@ function enqueueBuild(id: string, userId: string): Promise<void> {
 
 export type DataExportRefusal = { hours: number };
 
-/** Starts a new export, or says how long until the person may ask again. A failed one does not count. */
+/**
+ * Starts a new export, or says how long until the person may ask again. A failed one waits an hour:
+ * failing one on purpose, by deleting something while it is built, must not make for a new
+ * archive on the disk as often as one is asked for.
+ */
 export function requestDataExport(userId: string, now: number = Date.now()): { refused: DataExportRefusal } | { done: Promise<void> } {
   const db = getDb();
   const latest = db.select().from(schema.dataExports).where(eq(schema.dataExports.userId, userId))
     .orderBy(sql`${schema.dataExports.createdAt} DESC`).get();
-  if (latest && latest.status !== 'failed' && now - latest.createdAt < EXPORT_COOLDOWN_MS) {
-    return { refused: { hours: Math.ceil((EXPORT_COOLDOWN_MS - (now - latest.createdAt)) / (60 * 60 * 1000)) } };
+  const cooldown = latest?.status === 'failed' ? FAILED_EXPORT_COOLDOWN_MS : EXPORT_COOLDOWN_MS;
+  if (latest && now - latest.createdAt < cooldown) {
+    return { refused: { hours: Math.ceil((cooldown - (now - latest.createdAt)) / (60 * 60 * 1000)) } };
   }
   for (const old of db.select({ id: schema.dataExports.id }).from(schema.dataExports).where(eq(schema.dataExports.userId, userId)).all()) {
     void rm(zipFilePath(old.id), { force: true }).catch(() => {});

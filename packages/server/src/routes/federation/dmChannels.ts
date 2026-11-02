@@ -1,5 +1,6 @@
 import { getDb, schema } from '../../db/index.js';
 import { getOurOrigin } from '../../utils/federationAuth.js';
+import { instanceOrigin, isUploadOn } from '../../utils/remoteMedia.js';
 import { relayTargetOrigins } from '../../utils/federationOutbox.js';
 import { sanitizeUser } from '../../utils/sanitize.js';
 import { extractDomain, relayActorOfUser, sameRelayActor, type RelayActor } from './identity.js';
@@ -43,16 +44,13 @@ export function buildDmMessagePayload(
 
 
 /**
- * Validate that a URL's hostname matches the peer origin's hostname (SSRF protection).
+ * Whether a file a peer names is an uploaded file of that peer: on its origin (scheme, host and
+ * port, not only the host name) and at an upload's address. A peer could otherwise name any
+ * port or path of its host, for this server to fetch and for readers to be shown.
  */
 export function isUrlFromPeer(sourceUrl: string, peerOrigin: string): boolean {
-  try {
-    const sourceHost = new URL(sourceUrl).hostname;
-    const peerHost = new URL(peerOrigin).hostname;
-    return sourceHost === peerHost;
-  } catch {
-    return false;
-  }
+  const origin = instanceOrigin(peerOrigin);
+  return origin !== null && isUploadOn(sourceUrl, [origin]);
 }
 
 

@@ -17,7 +17,7 @@ let sqlite: Database.Database;
 let testDb: TestDb;
 
 vi.mock('dns', () => ({
-  default: { promises: { lookup: async () => ({ address: '93.184.216.34', family: 4 }) } },
+  default: { promises: { lookup: async (_host: string, options?: { all?: boolean }) => (options?.all ? [{ address: '93.184.216.34', family: 4 }] : { address: '93.184.216.34', family: 4 }) } },
 }));
 
 vi.mock('../db/index.js', () => ({ getDb: () => testDb, schema }));

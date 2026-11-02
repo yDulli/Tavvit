@@ -344,6 +344,8 @@
   "data_export_too_soon": "你在不到一天前已请求过数据副本。请在 {{hours}} 小时后重试。",
   "data_export_not_ready": "没有可下载的数据副本。",
   "session_ended": "此会话已结束。请重新登录。",
+  "too_many_connections": "Tavvit 同时在太多地方打开，因此此处已断开连接。请重新加载以再次连接。",
+  "reaction_limit_reached": "一条消息最多可以有 {{max}} 种不同的表情回应。",
   "email_not_configured": "此服务器不发送邮件",
   "email_unavailable": "目前无法发送邮件。请稍后再试。",
   "email_invalid": "这不是有效的邮箱地址",

@@ -178,6 +178,17 @@ describe('authenticateS2SPeer', () => {
     expect(JSON.parse(res.body)).toEqual({ error: 'Rate limit exceeded', statusCode: 429 });
   });
 
+  it('counts a peer by the address it comes from, so whoever names a peer spends no budget of that peer', async () => {
+    seedPeer('active');
+    const keys: string[] = [];
+    const app = await buildApp({ rateLimiter: { limited: (key) => { keys.push(key); return false; } } });
+    const body = { hello: 'world' };
+    await app.inject({ method: 'POST', url: '/probe', headers: signedHeaders(JSON.stringify(body)), payload: JSON.stringify(body), remoteAddress: '198.51.100.7' });
+    await app.inject({ method: 'POST', url: '/probe', headers: signedHeaders(JSON.stringify(body)), payload: JSON.stringify(body), remoteAddress: '203.0.113.9' });
+    expect(new Set(keys).size).toBe(2);
+    expect(keys.every((key) => key.includes('198.51.100.7') || key.includes('203.0.113.9'))).toBe(true);
+  });
+
   it('rate-limit fires BEFORE signature verification (verifyPeerSignature not reached)', async () => {
     seedPeer('active');
     const app = await buildApp({ rateLimiter: { limited: () => true, retryAfterSeconds: 60 } });

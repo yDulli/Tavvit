@@ -37,6 +37,8 @@ vi.mock('../ws/handler.js', () => ({
     sendToUser: (userId: string, event: { type: string; user?: Record<string, unknown> }) => { sockets.updated.push({ userId, event }); },
     sendToSpace: vi.fn(),
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
     getRoom: () => undefined,
   },
 }));
@@ -51,7 +53,7 @@ function applyMigrations(db: Database.Database): void {
 }
 
 const { drainEmailOutbox, setEmailTransportForTests } = await import('../email/service.js');
-const { emailRoutes } = await import('./email.js');
+const { emailRoutes, _resetMailRequestLimits } = await import('./email.js');
 const { authRoutes } = await import('./auth.js');
 const { userRoutes } = await import('./users.js');
 const { instanceRoutes } = await import('./instance.js');
@@ -130,6 +132,7 @@ beforeEach(async () => {
   testDb.insert(schema.users).values({ id: 'root', username: 'root', passwordHash, createdAt: 1, isAdmin: 1 }).run();
   mail = memoryMail();
   setEmailTransportForTests(mail.transport);
+  _resetMailRequestLimits();
   app = Fastify();
   await app.register(authRoutes);
   await app.register(userRoutes);
@@ -493,6 +496,16 @@ describe('limits', () => {
     }
     sqlite.prepare('UPDATE email_outbox SET created_at = created_at - 120000').run();
     expect((await app.inject({ method: 'POST', url: '/api/users/@me/email/resend', headers: as(token) })).statusCode).toBe(429);
+  });
+
+  it('keeps one account from spending the day\'s mail on ever new addresses', async () => {
+    const token = await signIn();
+    const answers: number[] = [];
+    for (let attempt = 0; attempt < 7; attempt += 1) {
+      answers.push((await setAddress(token, `alice+${attempt}@example.com`)).statusCode);
+    }
+    expect(answers.slice(0, 6)).toEqual([200, 200, 200, 200, 200, 200]);
+    expect(answers[6]).toBe(429);
   });
 
   it('does not repeat a reset within the minute, and the first link stays good', async () => {

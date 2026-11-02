@@ -158,7 +158,7 @@ export async function forumRoutes(app: FastifyInstance): Promise<void> {
       .from(schema.channels).where(eq(schema.channels.id, id)).get();
     if (!channel) return sendError(reply, 404, 'channel_not_found');
     const { spaceId } = channel;
-    if (!hasPermission(request.userId, spaceId, PermissionBits.MANAGE_CHANNELS, id)) {
+    if (!hasPermission(request.userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.MANAGE_CHANNELS, id)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_CHANNELS' });
     }
     if (channel.type !== 'forum') return sendError(reply, 400, 'forum_required');

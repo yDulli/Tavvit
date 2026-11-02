@@ -38,6 +38,8 @@ vi.mock('../utils/auth.js', () => ({
 vi.mock('../ws/handler.js', () => ({
   connectionManager: {
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
     sendToSpace: vi.fn(),
     sendToUser: vi.fn(),
     // An edit that moves a review tells the admins the queue's size (utils/reviewNotify.ts).

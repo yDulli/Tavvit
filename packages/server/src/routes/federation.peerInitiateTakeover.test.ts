@@ -21,7 +21,7 @@ let testDb: TestDb;
 // ensurePeered resolves an asserted origin before it sends anything to it.
 // This suite is about who owns a pending row, not address policy.
 vi.mock('dns', () => ({
-  default: { promises: { lookup: async () => ({ address: '93.184.216.34', family: 4 }) } },
+  default: { promises: { lookup: async (_host: string, options?: { all?: boolean }) => (options?.all ? [{ address: '93.184.216.34', family: 4 }] : { address: '93.184.216.34', family: 4 }) } },
 }));
 
 vi.mock('../db/index.js', () => ({

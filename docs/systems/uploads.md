@@ -819,3 +819,19 @@ A voice message is an ordinary audio attachment that carries its waveform: `atta
 The message goes out as a pending bubble, as with any file, so it survives a slow upload. The waveform travels with the attachment: REST, socket, the DM relay (`FederationRelayAttachment.voiceWaveform`, checked again on arrival), and a forward copies it.
 
 **Playing** (`VoiceMessagePlayer`): play and pause, the bars to jump around in (a slider, with arrow keys for five seconds), the time, and 1, 1.5 or 2 times the speed. An audio attachment with no waveform keeps the normal player.
+
+## Limits on every writer (1.32.7)
+
+Every path that writes a file now keeps to the account's storage, the disk's reserve, or both:
+
+- **Forwards:** copies are hard links named by `storedUploadName`, count on the forwarder, and are checked and held as uploads are (`routes/forward.ts`). A copy that cannot be a link is made only while the disk keeps its reserve (`DiskFullError`, `utils/attachmentCopies.ts`).
+- **Follow copies:** the copies an announcement follow brings count on whoever set the follow up (`storageAccountOf`, `channel_follows.created_by`) and are checked before copying; refused, the post arrives without its files. Before, deleting the original freed the poster's storage while the hard-linked file stayed.
+- **Picture fields:** an own upload goes into a field only as an image of at most `PICTURE_UPLOAD_MAX_BYTES` (8 MB), and `resizeProfileImage` always writes it anew at the field's size. Setting a field drops the upload's record, so before, any upload of any size could be made to count for nothing. A member's own picture and banner for a space are deleted when the membership goes: leave, kick, ban, space deletion (`releaseMemberPictures`).
+- **Animated profile pictures** (`POST /api/users/@me/profile-image`) are counted and refused as uploads, and named like them.
+- **Stickers:** at most 50 new ones a day per account, and none past the disk reserve.
+- **Uploads under way** keep their reservation for 15 minutes without bytes (`touchUpload` on every PATCH), not for the whole tus expiry: started and never sent, a few of them refused every upload on the instance for a day.
+- **Data exports** stop before writing past the disk reserve; after a failed one the next waits an hour.
+- **Files from peers** are counted as they arrive and stop at the declared size, never past `MAX_UPLOAD_SIZE`; they wait while the disk is at its reserve. At most 25 attachments of one relayed message are kept.
+- **Media work:** sharp reads at most 120 megapixels for an upload's thumbnail and 64 for a picture field, every frame together; at most two media jobs (sharp or ffmpeg) run at once. ffmpeg and ffprobe open only the file, as one of the containers in `FFMPEG_INPUT_LIMITS` (`-protocol_whitelist file`, `-format_whitelist`): no HLS or concat playlist can make the server fetch an address or read another file.
+
+**Serving:** the stored type is no longer sent as it is (`utils/uploadTypes.ts`). Only a known type is sent, shown in the page when it is a picture, a video or a sound (never SVG) and downloaded otherwise; anything else goes as `application/octet-stream`, downloaded. The type a peer gives a relayed file is kept only when it is a known one (`relayedMimetype`). Every response carries `sandbox` in its CSP, so a file opened on its own is no page of this origin.

@@ -75,7 +75,8 @@ describe('POST /api/users/@me/profile-image', () => {
     const res = await post({ kind: 'avatar', image: (await gif()).toString('base64'), crop });
     expect(res.statusCode).toBe(201);
     const { filename } = res.json();
-    expect(filename).toMatch(/^\d+\.webp$/);
+    // A name nobody can count through, as every upload has (utils/uploadNames.ts).
+    expect(filename).toMatch(/^\d+-[0-9a-f]{32}\.webp$/);
 
     const stored = await readFile(path.join(settings.uploadDir, filename));
     const meta = await sharp(stored, { animated: true }).metadata();

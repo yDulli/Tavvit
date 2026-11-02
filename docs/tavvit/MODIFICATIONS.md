@@ -93,6 +93,15 @@ The extras (1.25.0): voice messages recorded in the browser with a waveform and 
 
 Bots and API (1.26.0): accounts run from a program, deny by default on every route and socket event, a token shown once, a switch for the operator (off by default), a developer page, an invite page, slash commands, and a guide with an example bot in `docs/bots/`. Also: writing in a channel now takes VIEW_CHANNEL as well as SEND_MESSAGES.
 
+Security fixes (1.32.7), after a second public report and a sweep of the whole code in eight areas:
+- **Address leaks:** pictures, invite icons, Outer Space cards, invites to other servers and files from peers wait for a yes in the client, `Avatar` included (`docs/systems/legal.md`).
+- **Requests from strangers:** a body past 64 KiB is read only from someone who has shown who they are (`utils/bodyGuard.ts`). A socket frame is at most 64 KiB, and an account keeps at most 10 sockets (`docs/systems/websocket.md`).
+- **Storage:** every writer keeps to the account's storage and the disk's reserve: forwards, follow copies, picture fields, profile pictures, stickers, exports, files from peers and uploads under way (`docs/systems/uploads.md`).
+- **Outbound requests:** `safeFetch` connects only to the addresses it checked, which closes DNS rebinding (`docs/systems/embeds.md`), and ffmpeg opens only the file.
+- **Rights:** moves and type changes that alter a channel's overrides need `MANAGE_ROLES`, and channel edits need sight of the channel (`docs/systems/permissions.md`). Removed members can no longer edit their messages, are out of the space's events and voice, LiveKit included, and lose their pictures for it.
+- **Federation:** calls, identities, attachment types and home ids (`docs/systems/federation.md`, section 18).
+- **Limits:** mail per account and per client, search, reactions per message and presence repeats.
+
 A fix for starting (1.32.6): 1.32.5 did not start where mail goes through Resend. The webhook's plugin scope added a JSON parser of its own under the root's custom one, which Fastify 5 refuses at startup; `registerRawJsonBodyParser` (`utils/jsonBody.ts`) removes the inherited parser in that scope first. `scripts/release-check.mjs` gained the step `boot`, which starts the server as the Docker image does with every optional part configured (`docs/systems/deployment.md`, "Checking a release").
 
 More security work (1.32.5): the server runs on Fastify 5, whose client address now also requires the connecting proxy to be on a private network (`docs/systems/web-security.md`, "The client address"); `DISABLE_RATE_LIMITS` is ignored in production; a `Permissions-Policy` header; files of messages from before 1.32.4 get names nobody can guess, a batch an hour (`docs/systems/uploads.md`); the desktop app no longer lets the page register global shortcuts that would hear typing in other programs (`docs/systems/desktop-security.md`, "Global shortcuts"); a detached account's pictures are no longer trusted on the domain it used to live on.

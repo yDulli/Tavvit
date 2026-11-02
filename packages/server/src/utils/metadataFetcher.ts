@@ -17,6 +17,8 @@ export interface UrlMetadata {
 
 export async function fetchUrlMetadata(url: string): Promise<UrlMetadata | null> {
   const controller = new AbortController();
+  // For the whole page, its body included: a server that answers at once and then sends a byte
+  // every few minutes would otherwise hold the connection and the half-read page for as long.
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
     const response = await safeFetch(url, {
@@ -25,7 +27,6 @@ export async function fetchUrlMetadata(url: string): Promise<UrlMetadata | null>
       },
       signal: controller.signal,
     });
-    clearTimeout(timeout);
 
     if (!response.ok) {
       return null;

@@ -115,7 +115,39 @@ export function embedRowToEmbed(row: typeof schema.embeds.$inferSelect): Embed {
 
 // ─── Embed Resolution ─────────────────────────────────────────────────────
 
+/**
+ * Messages whose previews are worked out at once, and how many may wait their turn. Each holds
+ * connections to other people's servers for seconds, and a message can be sent twice a second:
+ * one account posting links could otherwise open thousands of fetches at once. Past the waiting
+ * room a message gets no preview, which is all that is lost.
+ */
+const EMBED_JOBS_AT_ONCE = 6;
+const EMBED_JOBS_WAITING_MAX = 300;
+let embedJobsRunning = 0;
+const embedJobsWaiting: Array<() => void> = [];
+
 export async function resolveEmbeds(
+  messageId: string,
+  content: string | null,
+  channelId: string,
+  isDm: boolean,
+  spaceId: string | null,
+): Promise<void> {
+  if (extractUrls(content).length === 0) return;
+  if (embedJobsRunning < EMBED_JOBS_AT_ONCE) embedJobsRunning += 1;
+  else if (embedJobsWaiting.length >= EMBED_JOBS_WAITING_MAX) return;
+  else await new Promise<void>((resolve) => { embedJobsWaiting.push(resolve); });
+  try {
+    await resolveEmbedsNow(messageId, content, channelId, isDm, spaceId);
+  } finally {
+    // A waiting message takes this one's place; only when none waits is the place free.
+    const next = embedJobsWaiting.shift();
+    if (next) next();
+    else embedJobsRunning -= 1;
+  }
+}
+
+async function resolveEmbedsNow(
   messageId: string,
   content: string | null,
   channelId: string,

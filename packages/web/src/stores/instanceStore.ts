@@ -22,6 +22,7 @@ import { connectInstance, disconnectInstance as disconnectWs, disconnectAllRemot
 // dmOriginFailover lazily reads useInstanceStore/useSpaceStore/useChatStore at call time,
 // so a static import here does not create an import-time cycle.
 import { useUIStore } from './uiStore';
+import { useConnectedOriginsStore } from './connectedOriginsStore';
 import { homeHostOf, homeIdentityOf, parseFederatedUsername } from '../utils/identity';
 import { isMyFederatedIdentity } from '../utils/selfStatus';
 // The registry's `errorMessage` carries one of these codes, never a sentence:
@@ -1433,13 +1434,8 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
               // Non-critical — keep cached label
             }
 
-            // Backfill homeUserId if missing (existing federated users before this field existed)
-            if (user.homeInstance && !user.homeUserId) {
-              const homeUser = useAuthStore.getState().user;
-              if (homeUser) {
-                client.users.update({ homeUserId: homeUser.id }).catch(() => {});
-              }
-            }
+            // A missing home id is filled in between the instances, from what the home proves
+            // (backfillHomeUserId): an account cannot name its own, or it could name someone else's.
 
             // Backfill cached username if stale after server-side migration
             // (e.g. "test" was renamed to "test@nova.ddns.net")
@@ -1525,6 +1521,16 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
     // Token cache preserved — scoped per user, survives logout for seamless reconnect
   },
 }));
+
+// What may be fetched from another instance without asking: the servers this client talks to
+// anyway (hooks/useConnectedOrigins.ts).
+function publishConnectedOrigins(instances: readonly ConnectedInstance[]): void {
+  useConnectedOriginsStore.getState().setOrigins(instances.map((instance) => instance.origin).filter(Boolean));
+}
+publishConnectedOrigins(useInstanceStore.getState().instances);
+useInstanceStore.subscribe((state, previous) => {
+  if (state.instances !== previous.instances) publishConnectedOrigins(state.instances);
+});
 
 // ─── Shared connect path ─────────────────────────────────────────────────────
 

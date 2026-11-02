@@ -58,6 +58,7 @@ vi.mock('../ws/handler.js', () => ({
 
 vi.mock('../ws/events.js', () => ({
   checkVoicePermissions: vi.fn(),
+  disconnectMemberFromSpaceVoice: vi.fn(),
 }));
 
 vi.mock('../utils/embedResolver.js', async (importActual) => {

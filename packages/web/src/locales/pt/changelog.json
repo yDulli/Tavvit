@@ -4,6 +4,16 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.32.7": {
+      "title": "Correções de segurança",
+      "items": {
+        "privacy": "Imagens e convites de outros servidores esperam o seu sim antes de carregar, também em cartões de convite, no Outer Space e em links para um convite em outro lugar.",
+        "limits": "O servidor recusa pedidos grandes demais antes de lê-los, e nenhuma conta consegue mais encher o disco encaminhando ou enviando arquivos repetidamente.",
+        "moderation": "Quem é expulso ou banido sai na hora do chat de voz e das novidades do espaço e não pode mais editar mensagens antigas. Tirar um canal de uma categoria privada exige a permissão de gerenciar cargos.",
+        "previews": "Prévias de links e arquivos de mídia não podem mais ser usados contra a rede do próprio servidor.",
+        "federation": "Entre servidores, só quem participa pode atender ou encerrar uma chamada, e uma conta não pode mais se passar por outra pessoa."
+      }
+    },
     "1.32.6": {
       "title": "Uma correção na inicialização",
       "items": {

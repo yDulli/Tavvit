@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const lookup = vi.fn<(host: string) => Promise<{ address: string; family: number }>>();
-vi.mock('dns', () => ({ default: { promises: { lookup: (h: string) => lookup(h) } } }));
+vi.mock('dns', () => ({ default: { promises: { lookup: async (h: string, options?: { all?: boolean }) => { const answer = await lookup(h); return options?.all ? [answer] : answer; } } } }));
 
 const allowPrivate = vi.fn<() => boolean>(() => false);
 const federationOn = vi.fn<() => boolean>(() => true);

@@ -344,6 +344,8 @@
   "data_export_too_soon": "Você pediu uma cópia dos seus dados há menos de um dia. Tente de novo em {{hours}} horas.",
   "data_export_not_ready": "Não há cópia dos seus dados para baixar.",
   "session_ended": "Esta sessão terminou. Entre novamente.",
+  "too_many_connections": "O Tavvit está aberto em lugares demais ao mesmo tempo, por isso este foi desconectado. Recarregue para se conectar de novo.",
+  "reaction_limit_reached": "Uma mensagem pode ter no máximo {{max}} reações diferentes.",
   "email_not_configured": "Este servidor não envia e-mails",
   "email_unavailable": "Não é possível enviar e-mails agora. Tente de novo mais tarde.",
   "email_invalid": "Esse não é um endereço de e-mail válido",

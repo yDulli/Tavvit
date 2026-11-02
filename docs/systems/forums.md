@@ -66,6 +66,8 @@ The list stays live for whoever has the forum open: `thread_updated` goes to eve
 
 Each space sees a follow in its own audit log, under its own channel with the other end beside it (`channel_follow_create`, `channel_follow_delete`). The maker's id is cleared by `tombstoneUser` and the follow goes on, since it belongs to the two channels. `channel-follows-made.jsonl` in the personal export lists the follows someone made. An account of kind `follow` is removed by the sweep with the webhook accounts once it wrote nothing and nothing follows through it.
 
+The files of a copy count on whoever set the follow up (`utils/accountLimits.ts`) and are refused as an upload of theirs would be; then the post arrives without its files (1.32.7).
+
 ## Every check of a channel's type
 
 Going through them is what makes a new type safe. What each says now:

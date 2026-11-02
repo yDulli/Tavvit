@@ -4,6 +4,16 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.32.7": {
+      "title": "Sicherheitskorrekturen",
+      "items": {
+        "privacy": "Bilder und Einladungen von anderen Servern warten auf dein Ja, bevor sie laden, auch in Einladungskarten, im Outer Space und bei Links zu einer Einladung anderswo.",
+        "limits": "Der Server lehnt übergroße Anfragen ab, bevor er sie liest, und kein Konto kann seine Festplatte mehr durch wiederholtes Weiterleiten oder Hochladen füllen.",
+        "moderation": "Wer rausgeworfen oder gebannt wird, ist sofort aus dem Voice-Chat und den Neuigkeiten des Space raus und kann alte Nachrichten nicht mehr bearbeiten. Einen Kanal aus einer privaten Kategorie zu nehmen, braucht das Recht, Rollen zu verwalten.",
+        "previews": "Link-Vorschauen und Mediendateien lassen sich nicht mehr gegen das eigene Netz des Servers richten.",
+        "federation": "Zwischen Servern dürfen nur Beteiligte einen Anruf annehmen oder beenden, und ein Konto kann sich nicht mehr als jemand anderes ausgeben."
+      }
+    },
     "1.32.6": {
       "title": "Eine Korrektur beim Start",
       "items": {

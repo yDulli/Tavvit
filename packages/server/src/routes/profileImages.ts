@@ -13,6 +13,8 @@ import { getDb, schema } from '../db/index.js';
 import { authenticate, requireLocalUser } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
 import { generateSnowflake } from '../utils/snowflake.js';
+import { uploadRefusal } from '../utils/accountLimits.js';
+import { storedUploadName } from '../utils/uploadNames.js';
 import { ProfileImageError, renderAnimatedProfileImage } from '../utils/profileImage.js';
 
 /**
@@ -70,8 +72,13 @@ export async function profileImageRoutes(app: FastifyInstance): Promise<void> {
       throw err;
     }
 
+    // Counted and refused as an upload is: the file is the account's until a picture field takes it.
+    const refusal = uploadRefusal(request.userId, output.length);
+    if (refusal) return sendError(reply, refusal === 'disk_full' ? 507 : 413, refusal);
+
     const id = generateSnowflake();
-    const filename = `${id}.webp`;
+    // A name nobody can guess, as any upload has (utils/uploadNames.ts).
+    const filename = storedUploadName(id, '.webp');
     fs.mkdirSync(config.uploadDir, { recursive: true });
     const filepath = path.join(config.uploadDir, filename);
     fs.writeFileSync(filepath, output);

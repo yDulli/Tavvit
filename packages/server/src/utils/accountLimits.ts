@@ -24,23 +24,36 @@ export type UploadRefusal = 'storage_limit_reached' | 'disk_full';
  */
 const underWay = new Map<string, { account: string; size: number; expiresAt: number }>();
 
-/** Whose room an upload takes: a bot's files count on the person who runs it, who could otherwise multiply theirs. */
+/**
+ * Whose room an upload takes: a bot's files count on the person who runs it, who could otherwise
+ * multiply theirs, and the copies a follow brings into a channel on the person who set it up
+ * (routes/channelFollows.ts): otherwise posting a file, letting a follow of one's own copy it and
+ * deleting the original would free the room while the file stays, over and over.
+ */
 function storageAccountOf(userId: string): string {
-  const bot = getDb().select({ ownerId: schema.bots.ownerId }).from(schema.bots).where(eq(schema.bots.id, userId)).get();
-  return bot?.ownerId ?? userId;
+  const db = getDb();
+  const bot = db.select({ ownerId: schema.bots.ownerId }).from(schema.bots).where(eq(schema.bots.id, userId)).get();
+  if (bot) return bot.ownerId;
+  const follow = db.select({ createdBy: schema.channelFollows.createdBy }).from(schema.channelFollows)
+    .where(eq(schema.channelFollows.accountId, userId)).get();
+  return follow?.createdBy ?? userId;
 }
 
 /**
- * What the account keeps in files, with those of its bots. A file it holds through several
- * messages counts once, and a copy it forwarded counts too: otherwise forwarding a file and
- * deleting the original would free the room while the file stays. Copies fetched from another
- * instance (`source_url`) are not this account's upload here.
+ * What the account keeps in files, with those of its bots and of the follows it set up. A file it
+ * holds through several messages counts once, and a copy it forwarded counts too: otherwise
+ * forwarding a file and deleting the original would free the room while the file stays. Copies
+ * fetched from another instance (`source_url`) are not this account's upload here.
  */
 function storageUsedByAccount(account: string): number {
   const row = getDb().get<{ used: number }>(sql`
     SELECT COALESCE(SUM(size), 0) AS used FROM (
       SELECT MAX(size) AS size FROM attachments
-      WHERE (uploader_id = ${account} OR uploader_id IN (SELECT id FROM bots WHERE owner_id = ${account}))
+      WHERE (
+          uploader_id = ${account}
+          OR uploader_id IN (SELECT id FROM bots WHERE owner_id = ${account})
+          OR uploader_id IN (SELECT account_id FROM channel_follows WHERE created_by = ${account})
+        )
         AND source_url IS NULL
       GROUP BY filename
     )
@@ -67,7 +80,7 @@ export function storageUsage(userId: string): StorageUsage {
 }
 
 /** True when `bytes` more would leave the disk without its reserve. A disk that cannot be asked is no reason to refuse. */
-function diskWouldFill(bytes: number): boolean {
+export function diskWouldFill(bytes: number): boolean {
   try {
     const stats = fs.statfsSync(config.tusUploadDir);
     const reserve = Math.min(DISK_RESERVE_BYTES, stats.blocks * stats.bsize * DISK_RESERVE_SHARE);
@@ -101,8 +114,22 @@ export function uploadRefusal(userId: string, size: number, now: number = Date.n
   return null;
 }
 
+/**
+ * How long an upload under way keeps its room without bytes arriving. Started and never sent, it
+ * would otherwise hold its declared size for a day (TUS_EXPIRATION_HOURS), against the account and
+ * against the disk everyone shares, so that a few such starts refused every upload on the
+ * instance. A paused upload that comes back later is checked again when it finishes.
+ */
+const RESERVATION_IDLE_MS = 15 * 60 * 1000;
+
 export function reserveUpload(uploadId: string, userId: string, size: number, now: number = Date.now()): void {
-  underWay.set(uploadId, { account: storageAccountOf(userId), size, expiresAt: now + config.tusExpirationMs });
+  underWay.set(uploadId, { account: storageAccountOf(userId), size, expiresAt: now + Math.min(RESERVATION_IDLE_MS, config.tusExpirationMs) });
+}
+
+/** Bytes arrived for `uploadId`: it keeps its room for another while. */
+export function touchUpload(uploadId: string, now: number = Date.now()): void {
+  const upload = underWay.get(uploadId);
+  if (upload) upload.expiresAt = now + Math.min(RESERVATION_IDLE_MS, config.tusExpirationMs);
 }
 
 export function releaseUpload(uploadId: string): void {

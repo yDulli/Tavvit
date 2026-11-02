@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useInstanceStore } from '../stores/instanceStore';
+import { useConnectedOriginsStore } from '../stores/connectedOriginsStore';
 
 /**
  * The origins this client already talks to: this page's and every instance the person is signed
@@ -7,9 +7,6 @@ import { useInstanceStore } from '../stores/instanceStore';
  * is fetched (docs/systems/legal.md, "Content from other servers"); any other server does.
  */
 export function useConnectedOrigins(): readonly string[] {
-  const instances = useInstanceStore((s) => s.instances);
-  return useMemo(
-    () => [window.location.origin, ...instances.map((instance) => instance.origin).filter(Boolean)],
-    [instances],
-  );
+  const origins = useConnectedOriginsStore((s) => s.origins);
+  return useMemo(() => [window.location.origin, ...origins], [origins]);
 }

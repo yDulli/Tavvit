@@ -14,6 +14,30 @@ import { getDb, schema } from '../db/index.js';
  * ends, which is rare, and never holds up what asked for it. A call hosted by another instance
  * is that instance's to end.
  */
+/**
+ * Puts someone out of one room on this instance's LiveKit: the voice channel of a space they were
+ * disconnected from, moved out of, timed out, kicked or banned from (ws/events.ts,
+ * disconnectFromSpaceVoice). Their client is told to leave as well, but a client that does not
+ * listen would stay in the room, and hear it, for as long as it liked.
+ */
+export function evictFromLiveKitRoom(userId: string, roomName: string): void {
+  const { apiUrl, url, apiKey, apiSecret } = config.livekit;
+  const host = apiUrl ?? url;
+  if (!host || !apiKey || !apiSecret) return;
+
+  void (async () => {
+    try {
+      const client = new RoomServiceClient(host, apiKey, apiSecret);
+      for (const participant of await client.listParticipants(roomName)) {
+        if (participant.identity.startsWith(`${userId}:`)) await client.removeParticipant(roomName, participant.identity);
+      }
+    } catch (err) {
+      // A room LiveKit has already closed has nobody in it.
+      console.warn(`[livekit] Could not put ${userId} out of ${roomName}: ${(err as Error).message}`);
+    }
+  })();
+}
+
 export function evictFromLiveKit(userId: string): void {
   const { apiUrl, url, apiKey, apiSecret } = config.livekit;
   const host = apiUrl ?? url;

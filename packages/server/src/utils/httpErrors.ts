@@ -432,6 +432,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   moderation_reason_too_long: 'A reason can be at most {{max}} characters.',
   ban_delete_window_invalid: 'Choose one of the offered time spans.',
   session_ended: 'This session has ended. Please log in again.',
+  too_many_connections: 'Tavvit is open in too many places at once, so this one was disconnected. Reload to connect again.',
+  reaction_limit_reached: 'A message can have at most {{max}} different reactions.',
   data_export_too_soon: 'You asked for a copy of your data less than a day ago. Try again in {{hours}} hours.',
   data_export_not_ready: 'There is no copy of your data to download.',
   terms_version_invalid: 'That version of the terms is not the one in force.',

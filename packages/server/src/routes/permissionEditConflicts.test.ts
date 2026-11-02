@@ -45,6 +45,8 @@ vi.mock('../utils/auth.js', () => ({
 vi.mock('../ws/handler.js', () => ({
   connectionManager: {
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
     sendToSpace: vi.fn(),
     sendToChannel: vi.fn(),
     announceSpaceAccessChange: vi.fn(),
@@ -55,6 +57,7 @@ vi.mock('../ws/handler.js', () => ({
 
 vi.mock('../ws/events.js', () => ({
   checkVoicePermissions: vi.fn(),
+  disconnectMemberFromSpaceVoice: vi.fn(),
 }));
 
 function applyMigrations(db: Database.Database): void {

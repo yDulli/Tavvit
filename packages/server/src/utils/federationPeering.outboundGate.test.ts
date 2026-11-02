@@ -24,9 +24,12 @@ const LOOPBACK_HOST = 'lan-only.example';
 vi.mock('dns', () => ({
   default: {
     promises: {
-      lookup: async (host: string) => (host === LOOPBACK_HOST
-        ? { address: '127.0.0.1', family: 4 }
-        : { address: '93.184.216.34', family: 4 }),
+      lookup: async (host: string, options?: { all?: boolean }) => {
+        const answer = host === LOOPBACK_HOST
+          ? { address: '127.0.0.1', family: 4 }
+          : { address: '93.184.216.34', family: 4 };
+        return options?.all ? [answer] : answer;
+      },
     },
   },
 }));

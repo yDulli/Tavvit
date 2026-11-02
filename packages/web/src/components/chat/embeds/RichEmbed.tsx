@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { Embed } from '@backspace/shared';
 import { Icon } from '../../ui/Icon';
 import { providerLabel as labelOf } from './providerLabel';
+import { playerAddress } from '../../../utils/webAddress';
 
 interface RichEmbedProps {
   embed: Embed;
@@ -29,13 +30,15 @@ export function RichEmbed({ embed }: RichEmbedProps) {
 
   const providerLabel = labelOf(embed.provider);
 
-  if (!embed.embedUrl) return null;
+  // Only a player of the providers this app embeds, whatever the embed says (utils/webAddress.ts).
+  const player = playerAddress(embed.embedUrl);
+  if (!player) return null;
 
   return (
     <div className="surface-card max-w-[400px] overflow-hidden rounded-lg">
       {isLoaded ? (
         <iframe
-          src={embed.embedUrl}
+          src={player}
           title={embed.title ?? providerLabel ?? t('embed.frameTitle')}
           height={iframeHeight}
           className="w-full block"

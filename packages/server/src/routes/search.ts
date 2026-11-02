@@ -24,13 +24,19 @@ interface AroundQuery {
   limit?: string;
 }
 
+/** The longest text searched for: a sentence, and no scan of the history for a page of it. */
+const SEARCH_QUERY_MAX_LENGTH = 200;
+
 export async function searchRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/channels/:id/search — Search messages in a space channel
   app.get<{ Params: { id: string }; Querystring: SearchQuery }>('/api/channels/:id/search', {
     preHandler: authenticate,
+    // A search reads through whole histories: far fewer of them than of anything else.
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const { id } = request.params;
     const { q, from, has, before, after } = request.query;
+    if (typeof q === 'string' && q.length > SEARCH_QUERY_MAX_LENGTH) return sendError(reply, 400, 'validation_failed', { field: 'q' });
     const offset = Math.max(Number(request.query.offset) || 0, 0);
     const limit = Math.min(Math.max(Number(request.query.limit) || 25, 1), 50);
 
@@ -130,9 +136,12 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/dm/:id/search — Search messages in a DM channel
   app.get<{ Params: { id: string }; Querystring: SearchQuery }>('/api/dm/:id/search', {
     preHandler: authenticate,
+    // A search reads through whole histories: far fewer of them than of anything else.
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     const { id } = request.params;
     const { q, from, has, before, after } = request.query;
+    if (typeof q === 'string' && q.length > SEARCH_QUERY_MAX_LENGTH) return sendError(reply, 400, 'validation_failed', { field: 'q' });
     const offset = Math.max(Number(request.query.offset) || 0, 0);
     const limit = Math.min(Math.max(Number(request.query.limit) || 25, 1), 50);
 

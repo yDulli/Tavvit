@@ -11,36 +11,76 @@ sharp.cache(false);
 const execFile = promisify(execFileCb);
 const FFMPEG_TIMEOUT = 10_000; // 10 seconds
 
+/**
+ * What ffmpeg and ffprobe may open for an uploaded file, before its `-i`: the file itself, read as
+ * one of the containers people send. ffmpeg picks a demuxer by content, not by name, so a "video"
+ * holding an HLS or concat playlist would otherwise make the server fetch whatever address it
+ * names, or read other files on its disk, and hand back what it found as a thumbnail.
+ */
+export const FFMPEG_INPUT_LIMITS: readonly string[] = [
+  '-protocol_whitelist', 'file',
+  '-format_whitelist', 'mov,mp4,m4a,3gp,3g2,mj2,matroska,webm,avi,mpegts,mpeg,flv,ogg,wav,mp3,flac,aac,asf,caf,aiff,w64,amr',
+];
+
 let ffmpegAvailable: boolean | null = null;
+
+/** The most pixels an upload's thumbnail is made from: a phone's 108-megapixel photo, and no bomb. */
+const UPLOAD_INPUT_PIXELS = 120_000_000;
+/** The most pixels a picture field's image may have, every frame of an animation together. */
+const PICTURE_INPUT_PIXELS = 64_000_000;
+
+/**
+ * Decoding and encoding media for uploads runs at most this many at once; the rest wait their
+ * turn. Each holds a thread or a process for seconds, so uploads finishing side by side, crafted
+ * or not, would otherwise take the whole machine, and with it every other request.
+ */
+const MEDIA_JOBS_AT_ONCE = 2;
+let mediaJobsRunning = 0;
+const mediaJobsWaiting: Array<() => void> = [];
+
+async function mediaJob<T>(job: () => Promise<T>): Promise<T> {
+  if (mediaJobsRunning < MEDIA_JOBS_AT_ONCE) mediaJobsRunning += 1;
+  else await new Promise<void>((resolve) => { mediaJobsWaiting.push(resolve); });
+  try {
+    return await job();
+  } finally {
+    // A waiting job takes this one's place; only when none waits is the place free.
+    const next = mediaJobsWaiting.shift();
+    if (next) next();
+    else mediaJobsRunning -= 1;
+  }
+}
 
 const PROFILE_LIMITS = { avatar: 256, icon: 256, banner: 1280 } as const;
 
 /**
- * Resize a profile image (avatar, icon, or banner) to the target max dimension.
- * Preserves animated GIF frames. No-op if the image is already small enough.
- * Writes to a temp file then atomically renames to avoid corruption.
+ * Re-encode a profile image (avatar, icon, or banner), down to the target max dimension when it is
+ * larger. Preserves animated GIF frames. Always written anew, small or not: what a picture field
+ * holds is then pixels of that size and nothing else, however much the upload carried
+ * (utils/profileImageRefs.ts). Writes to a temp file then atomically renames to avoid corruption.
  */
 export async function resizeProfileImage(
   filepath: string,
   type: 'avatar' | 'icon' | 'banner',
 ): Promise<void> {
   const maxDim = PROFILE_LIMITS[type];
-  try {
-    const image = sharp(filepath, { animated: true });
-    const metadata = await image.metadata();
-    if (!metadata.width || metadata.width <= maxDim) return;
+  await mediaJob(async () => {
+    try {
+      const metadata = await sharp(filepath, { animated: true, limitInputPixels: PICTURE_INPUT_PIXELS }).metadata();
+      if (!metadata.width) return;
 
-    const tmpPath = filepath + '.tmp';
-    await sharp(filepath, { animated: true })
-      .resize({ width: maxDim, withoutEnlargement: true })
-      .toFile(tmpPath);
-    fs.renameSync(tmpPath, filepath);
-  } catch (err) {
-    // Non-fatal — the original file is still intact
-    console.error('Profile image resize failed (non-fatal) for %s:', path.basename(filepath), err);
-    // Clean up temp file if it was partially written
-    try { fs.unlinkSync(filepath + '.tmp'); } catch { /* ignore */ }
-  }
+      const tmpPath = filepath + '.tmp';
+      await sharp(filepath, { animated: true, limitInputPixels: PICTURE_INPUT_PIXELS })
+        .resize({ width: maxDim, withoutEnlargement: true })
+        .toFile(tmpPath);
+      fs.renameSync(tmpPath, filepath);
+    } catch (err) {
+      // Non-fatal — the original file is still intact
+      console.error('Profile image resize failed (non-fatal) for %s:', path.basename(filepath), err);
+      // Clean up temp file if it was partially written
+      try { fs.unlinkSync(filepath + '.tmp'); } catch { /* ignore */ }
+    }
+  });
 }
 
 const RESIZABLE_MIMETYPES = new Set([
@@ -82,34 +122,35 @@ export async function generateThumbnail(
 ): Promise<string | null> {
   if (!isResizableImage(mimetype)) return null;
 
-  try {
-    const image = sharp(originalPath);
-    const metadata = await image.metadata();
+  return mediaJob(async () => {
+    try {
+      const metadata = await sharp(originalPath, { limitInputPixels: UPLOAD_INPUT_PIXELS }).metadata();
 
-    // Skip if the original is already small enough
-    if (!metadata.width || metadata.width <= THUMBNAIL_MAX_WIDTH) {
+      // Skip if the original is already small enough
+      if (!metadata.width || metadata.width <= THUMBNAIL_MAX_WIDTH) {
+        return null;
+      }
+
+      // Skip animated images — Sharp would flatten to a single static frame
+      if (metadata.pages && metadata.pages > 1) {
+        return null;
+      }
+
+      const originalFilename = path.basename(originalPath);
+      const thumbName = thumbFilename(originalFilename);
+      const thumbPath = path.join(uploadDir, thumbName);
+
+      await sharp(originalPath, { limitInputPixels: UPLOAD_INPUT_PIXELS })
+        .resize({ width: THUMBNAIL_MAX_WIDTH, withoutEnlargement: true })
+        .webp({ quality: THUMBNAIL_QUALITY })
+        .toFile(thumbPath);
+
+      return thumbName;
+    } catch (err) {
+      console.error('Thumbnail generation failed (non-fatal):', err);
       return null;
     }
-
-    // Skip animated images — Sharp would flatten to a single static frame
-    if (metadata.pages && metadata.pages > 1) {
-      return null;
-    }
-
-    const originalFilename = path.basename(originalPath);
-    const thumbName = thumbFilename(originalFilename);
-    const thumbPath = path.join(uploadDir, thumbName);
-
-    await sharp(originalPath)
-      .resize({ width: THUMBNAIL_MAX_WIDTH, withoutEnlargement: true })
-      .webp({ quality: THUMBNAIL_QUALITY })
-      .toFile(thumbPath);
-
-    return thumbName;
-  } catch (err) {
-    console.error('Thumbnail generation failed (non-fatal):', err);
-    return null;
-  }
+  });
 }
 
 /** Check if ffmpeg/ffprobe are available on the system PATH. Caches result. */
@@ -138,15 +179,17 @@ export async function probeImageDimensions(filepath: string): Promise<{ width: n
   }
 }
 
-/** Extract dimensions and/or duration from a video or audio file using ffprobe. */
-export async function probeMediaMeta(
-  filepath: string,
-  mimetype: string,
-): Promise<{ width?: number; height?: number; duration?: number; codec?: string } | null> {
-  if (!(await checkFfmpeg())) return null;
+type MediaMeta = { width?: number; height?: number; duration?: number; codec?: string };
 
+/** Extract dimensions and/or duration from a video or audio file using ffprobe. */
+export async function probeMediaMeta(filepath: string, mimetype: string): Promise<MediaMeta | null> {
+  if (!(await checkFfmpeg())) return null;
+  return mediaJob(() => probeMediaMetaNow(filepath, mimetype));
+}
+
+async function probeMediaMetaNow(filepath: string, mimetype: string): Promise<MediaMeta | null> {
   try {
-    const result: { width?: number; height?: number; duration?: number; codec?: string } = {};
+    const result: MediaMeta = {};
 
     // Video dimensions + codec (stream-level). The codec drives web-playability
     // classification (see utils/mediaPlayable.ts) so the client can render a
@@ -158,6 +201,7 @@ export async function probeMediaMeta(
           '-select_streams', 'v:0',
           '-show_entries', 'stream=width,height,codec_name',
           '-of', 'json',
+          ...FFMPEG_INPUT_LIMITS,
           '-i', filepath,
         ], { timeout: FFMPEG_TIMEOUT });
 
@@ -179,6 +223,7 @@ export async function probeMediaMeta(
         '-v', 'error',
         '-show_entries', 'format=duration',
         '-of', 'json',
+        ...FFMPEG_INPUT_LIMITS,
         '-i', filepath,
       ], { timeout: FFMPEG_TIMEOUT });
 
@@ -201,12 +246,14 @@ export async function probeMediaMeta(
  * Uses -ss before -i for fast keyframe seeking.
  * ffmpeg auto-rotation is on by default, so portrait mobile videos produce correctly oriented frames.
  */
-export async function generateVideoThumbnail(
-  filepath: string,
-  uploadDir: string,
-): Promise<{ thumbnailFilename: string; width: number; height: number } | null> {
-  if (!(await checkFfmpeg())) return null;
+type VideoThumbnail = { thumbnailFilename: string; width: number; height: number };
 
+export async function generateVideoThumbnail(filepath: string, uploadDir: string): Promise<VideoThumbnail | null> {
+  if (!(await checkFfmpeg())) return null;
+  return mediaJob(() => generateVideoThumbnailNow(filepath, uploadDir));
+}
+
+async function generateVideoThumbnailNow(filepath: string, uploadDir: string): Promise<VideoThumbnail | null> {
   try {
     // Try extracting frame at 1 second, fall back to 0 for short videos
     let frameBuffer: Buffer | null = null;
@@ -215,6 +262,7 @@ export async function generateVideoThumbnail(
       try {
         const { stdout } = await execFile('ffmpeg', [
           '-ss', seekTime,
+          ...FFMPEG_INPUT_LIMITS,
           '-i', filepath,
           '-frames:v', '1',
           '-f', 'image2pipe',
@@ -235,7 +283,7 @@ export async function generateVideoThumbnail(
     if (!frameBuffer) return null;
 
     // Read the frame's actual dimensions (rotation-corrected by ffmpeg)
-    const frameImage = sharp(frameBuffer);
+    const frameImage = sharp(frameBuffer, { limitInputPixels: UPLOAD_INPUT_PIXELS });
     const frameMeta = await frameImage.metadata();
     if (!frameMeta.width || !frameMeta.height) return null;
 
@@ -247,7 +295,7 @@ export async function generateVideoThumbnail(
     const thumbName = thumbFilename(originalFilename);
     const thumbPath = path.join(uploadDir, thumbName);
 
-    await sharp(frameBuffer)
+    await sharp(frameBuffer, { limitInputPixels: UPLOAD_INPUT_PIXELS })
       .resize({ width: THUMBNAIL_MAX_WIDTH, withoutEnlargement: true })
       .webp({ quality: THUMBNAIL_QUALITY })
       .toFile(thumbPath);

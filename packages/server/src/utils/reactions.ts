@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors.js';
 import { getDb, schema } from '../db/index.js';
 import { connectionManager } from '../ws/handler.js';
@@ -12,6 +12,32 @@ type MessageRow = typeof schema.messages.$inferSelect;
 
 /** Long enough for any emoji, a custom one's name and a sticker's token, and no way to store an essay. */
 export const REACTION_EMOJI_MAX_LENGTH = 128;
+
+/** The most different reactions one message carries: more than anyone reads, and no wall of them. */
+export const REACTIONS_PER_MESSAGE_MAX = 20;
+
+/**
+ * Whether `emoji` would be one different reaction too many on a message. One already there may
+ * always be added to: the limit is on kinds, so that one account cannot hang thousands of strings
+ * on a message for everyone to load.
+ */
+export function reactionLimitReached(kind: 'space' | 'dm', messageId: string, emoji: string): boolean {
+  const db = getDb();
+  if (kind === 'space') {
+    const present = db.select({ id: schema.reactions.id }).from(schema.reactions)
+      .where(and(eq(schema.reactions.messageId, messageId), eq(schema.reactions.emoji, emoji))).get();
+    if (present) return false;
+    const kinds = db.select({ n: sql<number>`COUNT(DISTINCT ${schema.reactions.emoji})` }).from(schema.reactions)
+      .where(eq(schema.reactions.messageId, messageId)).get();
+    return (kinds?.n ?? 0) >= REACTIONS_PER_MESSAGE_MAX;
+  }
+  const present = db.select({ id: schema.dmReactions.id }).from(schema.dmReactions)
+    .where(and(eq(schema.dmReactions.dmMessageId, messageId), eq(schema.dmReactions.emoji, emoji))).get();
+  if (present) return false;
+  const kinds = db.select({ n: sql<number>`COUNT(DISTINCT ${schema.dmReactions.emoji})` }).from(schema.dmReactions)
+    .where(eq(schema.dmReactions.dmMessageId, messageId)).get();
+  return (kinds?.n ?? 0) >= REACTIONS_PER_MESSAGE_MAX;
+}
 
 export interface ReactionRefusal {
   status: number;
@@ -35,6 +61,9 @@ export function addSpaceReaction(message: MessageRow, userId: string, emoji: str
   if (held) return held;
   // Everyone who sees the message fetches a sticker reaction by themselves (utils/remoteMedia.ts).
   if (!mayPostSticker(emoji, userId)) return { status: 400, code: 'sticker_elsewhere' };
+  if (reactionLimitReached('space', message.id, emoji)) {
+    return { status: 400, code: 'reaction_limit_reached', details: { max: REACTIONS_PER_MESSAGE_MAX } };
+  }
 
   const db = getDb();
   const reactionId = generateSnowflake();

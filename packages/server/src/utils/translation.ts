@@ -149,7 +149,8 @@ function charge(userId: string, chars: number, now: number): void {
     for (const [id, entry] of spent) if (entry.day !== day) spent.delete(id);
   }
   const entry = spent.get(userId);
-  spent.set(userId, { day, chars: (entry && entry.day === day ? entry.chars : 0) + chars });
+  // Never below none: a refund that comes after midnight gives back nothing of the new day.
+  spent.set(userId, { day, chars: Math.max(0, (entry && entry.day === day ? entry.chars : 0) + chars) });
 }
 
 export type TranslationOutcome =
@@ -181,8 +182,17 @@ export async function translateContent(
   const chars = texts.reduce((sum, text) => sum + text.length, 0);
   if (chars > charsLeft(userId, now)) return { ok: false, code: 'translation_limit_reached' };
 
-  const { texts: translated, source } = await askProvider(texts, target);
+  // Charged before the provider is asked, so that requests side by side cannot each pass the
+  // check and all be paid for by the operator; given back when the provider fails.
   charge(userId, chars, now);
+  let provided: Awaited<ReturnType<typeof askProvider>>;
+  try {
+    provided = await askProvider(texts, target);
+  } catch (error) {
+    charge(userId, -chars, now);
+    throw error;
+  }
+  const { texts: translated, source } = provided;
   const sourceLanguage = source ? primaryLanguage(source) : null;
   const sameLanguage = sourceLanguage === target;
   const answer: TranslateMessageResponse = {

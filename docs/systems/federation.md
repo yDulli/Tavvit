@@ -2304,6 +2304,17 @@ If the `federation_mutation_log` table exists but is empty, populates it with `c
 
 ---
 
+## 18. Checks added in 1.32.7
+
+- **Bodies:** a body larger than 64 KiB is read only when the federation headers name a known peer that is not revoked (`utils/bodyGuard.ts`, `peerNamedByHeaders`).
+- **Rate limits before the signature** count a peer per claimed origin and client address, so naming a peer in a header no longer spends that peer's budget.
+- **Calls:** `dm_call_accept`, `dm_call_reject` and `dm_call_end` relayed for a call hosted here need an actor who is a member of the conversation here; for a call hosted elsewhere they must come from its host. A relayed `dm_typing_start` needs a member. On the socket, `federatedCallFor` gives a member only a call that rang them, that they are in, or of a conversation they belong to: a call's federated id can be worked out from two public ids, so finding a call proved nothing.
+- **Identity deletion** (`DELETE /api/federation/identity`) deletes only an identity homed at the signing peer.
+- **Attachments:** at most 25 per relayed message; `isUrlFromPeer` needs the peer's full origin and an upload's address; the type is kept only when known (`relayedMimetype`); downloads are counted as they arrive and stop at the declared size; the disk reserve holds.
+- **Pictures:** a relayed space invite keeps its icon only as an upload of the space's instance or the sender's; a profile snapshot's picture falls back to its address only when it is an upload of the account's home.
+- **Home ids:** `PATCH /api/users/@me` no longer sets `homeUserId`. A replica's home id comes only from proven registration, reattach or `backfillHomeUserId`; before, a replica could name someone else's id and be taken for them.
+- **Self-heal login** to the home instance does not follow redirects, which would take the password along.
+
 ## Known Issues
 
 See `docs/federation-production-roadmap.md` for open items (FED-001 through FED-013).

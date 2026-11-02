@@ -58,6 +58,7 @@ vi.mock('../ws/handler.js', () => ({
     clearVoiceWs: vi.fn(),
     clearVoiceUserStatus: vi.fn(),
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
     announceSpaceAccessChange: vi.fn(),
     getUserSpaceEntries: () => new Map<string, Set<string>>().entries(),
     pushSpaceVoiceState: vi.fn(),

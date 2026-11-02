@@ -51,6 +51,8 @@ const checkVoicePermissions = vi.fn<(spaceId: string) => void>();
 vi.mock('../ws/handler.js', () => ({
   connectionManager: {
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
     announceSpaceAccessChange: vi.fn(),
     sendToSpace: (spaceId: string, event: SentEvent) => sendToSpace(spaceId, event),
     sendToChannel: vi.fn(),
@@ -65,6 +67,7 @@ vi.mock('../ws/handler.js', () => ({
 
 vi.mock('../ws/events.js', () => ({
   checkVoicePermissions: (spaceId: string) => checkVoicePermissions(spaceId),
+  disconnectMemberFromSpaceVoice: vi.fn(),
 }));
 
 function applyMigrations(db: Database.Database): void {

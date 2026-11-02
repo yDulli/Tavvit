@@ -637,6 +637,12 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     if (message.userId !== request.userId) {
       return sendError(reply, 403, 'message_edit_not_author');
     }
+    // Only where the author may still write: a member who was kicked or banned, or who lost sight
+    // of the channel or the right to write in it, does not rewrite what everyone else still reads.
+    const editSpaceId = getChannelSpaceId(message.channelId);
+    if (!editSpaceId || !hasPermission(request.userId, editSpaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.SEND_MESSAGES, message.channelId)) {
+      return sendError(reply, 403, 'missing_permission', { permission: 'SEND_MESSAGES' });
+    }
     // Its question does not change under the votes already cast.
     if (isPollMessage(id)) {
       return sendError(reply, 403, 'poll_not_editable');

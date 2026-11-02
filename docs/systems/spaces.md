@@ -679,6 +679,8 @@ Every link is a row of `space_invites` (`utils/spaceInvites.ts`). `spaces.invite
 
 The dialog (`MemberRemovalDialog`) asks for an optional reason, kept in the audit log and, for a ban, in the Bans tab. The person is not told. A ban can also take their recent messages with it, from the last hour, day or week: at most 5000, newest first, with their attachments, announced per channel as `messages_deleted` and recorded as `messages_bulk_delete`. It needs BAN_MEMBERS, not MANAGE_MESSAGES: it is part of the ban.
 
+Since 1.32.7 a removed member (left, kicked, banned), and every member of a deleted space, is taken out of the space's socket audience at once (`removeUserSpace`) and out of its voice, LiveKit included; their own picture and banner for the space are deleted (`releaseMemberPictures`).
+
 ## Settings tabs
 
 What a person sees follows what they may do, and a tab they may not use is not shown. **Your settings** is for everyone: notifications, their profile here, and Leave (not for the owner). **Overview, Access, Invites, Discovery and Moderation** need MANAGE_SPACE. **Members** needs one of MANAGE_ROLES, KICK_MEMBERS or BAN_MEMBERS. Access holds the visibility and, with its count beside the tab, the join requests. The server checks every one of these again; the tabs only spare people what they cannot use.

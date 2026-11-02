@@ -51,9 +51,11 @@ vi.mock('../ws/handler.js', () => ({
     forceDisconnectUser: vi.fn(),
     announceSpaceAccessChange: vi.fn(),
     addUserSpace: vi.fn(),
+    removeUserSpace: vi.fn(),
+    getUserRoom: () => undefined,
   },
 }));
-vi.mock('../ws/events.js', () => ({ checkVoicePermissions: vi.fn() }));
+vi.mock('../ws/events.js', () => ({ checkVoicePermissions: vi.fn(), disconnectMemberFromSpaceVoice: vi.fn() }));
 // The pictures here are placeholders, not images: fitting them is not under test.
 vi.mock('../utils/thumbnail.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../utils/thumbnail.js')>()),

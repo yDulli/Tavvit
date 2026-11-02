@@ -1553,7 +1553,6 @@ export interface UpdateUserRequest {
   customStatusExpiresInMinutes?: number | null;
   status?: ChosenUserStatus;
   replicatedInstances?: ReplicatedInstance[];
-  homeUserId?: string;
   profileUpdatedAt?: number;
   showActivity?: boolean;
 }

@@ -35,6 +35,25 @@ export interface S2SAuthOptions {
 }
 
 /**
+ * Whether a request's federation headers name a peer this instance knows and has not revoked:
+ * all that can be known before its body is read. utils/bodyGuard.ts asks it before reading a
+ * body larger than a stranger may send. Every endpoint's own check (the signature over the body
+ * among it) still follows the reading; this only keeps a stranger from making the server read.
+ */
+export function peerNamedByHeaders(request: FastifyRequest): boolean {
+  const fedHeaders = parseFederationHeaders(
+    request.headers as Record<string, string | string[] | undefined>,
+  );
+  if (!fedHeaders) return false;
+  const peer = getDb()
+    .select({ status: schema.federationPeers.status })
+    .from(schema.federationPeers)
+    .where(eq(schema.federationPeers.origin, fedHeaders.origin))
+    .get();
+  return peer !== undefined && peer.status !== 'revoked';
+}
+
+/**
  * Result of {@link authenticateS2SPeer}. On `ok: false` a reply has ALREADY been
  * sent — the caller MUST `return` immediately without touching `reply` again.
  */
@@ -102,8 +121,10 @@ export function authenticateS2SPeer(
     return { ok: false };
   }
 
-  // 3. Rate-limit BEFORE signature verification (avoid HMAC work on a flood).
-  if (opts.rateLimiter && opts.rateLimiter.limited(peer.origin)) {
+  // 3. Rate-limit BEFORE signature verification (avoid HMAC work on a flood). Counted for the
+  // peer as seen from this address: before the signature the origin is only what the request
+  // claims, and a count for the origin alone let anyone spend a real peer's budget by naming it.
+  if (opts.rateLimiter && opts.rateLimiter.limited(`${peer.origin} ${request.ip}`)) {
     reply.code(429);
     if (opts.rateLimiter.retryAfterSeconds !== undefined) {
       reply.header('Retry-After', String(opts.rateLimiter.retryAfterSeconds));

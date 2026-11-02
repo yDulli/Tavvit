@@ -1,7 +1,9 @@
 import path from 'node:path';
 import { and, eq, isNotNull, isNull, or } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { PICTURE_UPLOAD_MAX_BYTES, PICTURE_UPLOAD_MIME_PREFIX } from '@backspace/shared/src/constants.js';
 import { getDb, schema } from '../db/index.js';
+import { deleteUploadFile } from './fileCleanup.js';
 import { isUploadOn, mediaOriginsFor } from './remoteMedia.js';
 
 // The pictures accounts, space profiles, spaces and group DMs show
@@ -89,11 +91,28 @@ export function pictureFileReleasable(filename: string): boolean {
 }
 
 /**
+ * Deletes the files member rows showed as their own picture and banner, once the rows are gone. A
+ * member's picture is shown by that row alone, so left behind, joining a space, setting one and
+ * leaving again would pile up files nobody pays for (utils/accountLimits.ts). The rows are read
+ * before they are deleted, and this runs after.
+ */
+export function releaseMemberPictures(rows: ReadonlyArray<{ avatar: string | null; banner: string | null }>): void {
+  for (const row of rows) {
+    for (const name of [uploadNameOf(row.avatar), uploadNameOf(row.banner)]) {
+      if (name && pictureFileReleasable(name)) deleteUploadFile(name);
+    }
+  }
+}
+
+/**
  * The bare upload name `userId` may put in a picture field that holds
- * `current`: a file they uploaded themselves that no message holds, or the file
- * the field already shows. Undefined for anything else, so nobody points a
- * field at someone else's file, which the field would then resize and, once
- * replaced, delete.
+ * `current`: an image they uploaded themselves, no larger than a picture field
+ * takes, that no message holds; or the file the field already shows. Undefined
+ * for anything else, so nobody points a field at someone else's file, which the
+ * field would then resize and, once replaced, delete. Setting a field drops the
+ * upload's record, and with it what the file counts on the account's storage:
+ * without the type and the size, any upload of any size could be made to count
+ * for nothing (utils/accountLimits.ts).
  */
 export function ownProfileUploadOf(value: string, userId: string, current: string | null): string | undefined {
   const name = uploadNameOf(value);
@@ -102,7 +121,7 @@ export function ownProfileUploadOf(value: string, userId: string, current: strin
   // A file another picture field already shows belongs to that field, even
   // where its upload record survived (one set before records were dropped).
   if (profileImageInUse(name)) return undefined;
-  const upload = getDb().select({ id: schema.attachments.id }).from(schema.attachments)
+  const upload = getDb().select({ mimetype: schema.attachments.mimetype, size: schema.attachments.size }).from(schema.attachments)
     .where(and(
       eq(schema.attachments.filename, name),
       eq(schema.attachments.uploaderId, userId),
@@ -110,7 +129,8 @@ export function ownProfileUploadOf(value: string, userId: string, current: strin
       isNull(schema.attachments.dmMessageId),
     ))
     .get();
-  return upload ? name : undefined;
+  if (!upload) return undefined;
+  return upload.mimetype.startsWith(PICTURE_UPLOAD_MIME_PREFIX) && upload.size <= PICTURE_UPLOAD_MAX_BYTES ? name : undefined;
 }
 
 /** What a picture field keeps, and the file of this instance it newly shows. */

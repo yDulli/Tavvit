@@ -19,6 +19,7 @@
  *
  * See docs/systems/web-security.md.
  */
+import { EMBED_FRAME_ORIGINS } from '@backspace/shared/src/constants.js';
 
 export interface CspInput {
   /** `config.livekit.url`. Absent, empty or unparseable means voice is off. */
@@ -35,13 +36,10 @@ export interface CspInput {
 /**
  * The exact origins `utils/embedClassifier.ts` produces `embedUrl` values for.
  * `frame-src` defaults to `default-src`, so without these three the YouTube,
- * Vimeo and Spotify embeds render as blank boxes.
+ * Vimeo and Spotify embeds render as blank boxes. In shared, because the
+ * client draws a player only from these (utils/webAddress.ts).
  */
-export const EMBED_FRAME_ORIGINS: readonly string[] = [
-  'https://www.youtube-nocookie.com',
-  'https://player.vimeo.com',
-  'https://open.spotify.com',
-];
+export { EMBED_FRAME_ORIGINS };
 
 /** Path of the in-app violation sink. Must match routes/cspReport.ts. */
 export const CSP_REPORT_PATH = '/api/csp-report';
