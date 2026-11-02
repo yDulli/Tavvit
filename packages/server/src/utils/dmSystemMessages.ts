@@ -1,4 +1,5 @@
 import type { DmSystemEvent } from '@backspace/shared';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 
 /**
  * DM system messages on the server: the one place their content is written,
@@ -20,7 +21,9 @@ export function dmSystemContent(event: DmSystemEvent): string {
  */
 export function dmSystemName(user: { displayName: string | null; username: string } | null | undefined): string {
   if (!user) return 'Unknown';
-  if (user.displayName) return user.displayName;
+  // Shown as the characters it is, whatever a stored or relayed name holds (shared/src/profileFields.ts).
+  const shown = user.displayName ? withoutUnsafeCharacters(user.displayName) : '';
+  if (shown) return shown;
   const at = user.username.indexOf('@');
   const handle = at === -1 ? user.username : user.username.slice(0, at);
   return handle || 'Unknown';

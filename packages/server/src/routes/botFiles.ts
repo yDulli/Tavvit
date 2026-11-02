@@ -6,7 +6,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
-import { uploadRefusal, type UploadRefusal } from '../utils/accountLimits.js';
+import { finishedUploadExceedsLimit, releaseUpload, reserveUpload, uploadRefusal, type UploadRefusal } from '../utils/accountLimits.js';
 import { authenticate } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
 import { generateSnowflake } from '../utils/snowflake.js';
@@ -37,49 +37,56 @@ export async function botFileRoutes(app: FastifyInstance): Promise<void> {
       .from(schema.instanceSettings).where(eq(schema.instanceSettings.id, 1)).get();
     const maxSize = settings?.max ?? config.maxUploadSize;
 
-    // Said early when the request says how long it is, so nothing is written for nothing.
-    const announced = Number(request.headers['content-length']);
-    if (Number.isFinite(announced) && announced > 0) {
-      const early = uploadRefusal(bot.id, Math.min(announced, maxSize));
-      if (early) return refused(reply, early);
-    }
-
     if (!request.isMultipart()) return sendError(reply, 400, 'validation_failed', { field: 'file' });
-    const part = await request.file({ limits: { files: 1, fileSize: maxSize } });
-    if (!part) return sendError(reply, 400, 'validation_failed', { field: 'file' });
 
-    fs.mkdirSync(config.tusUploadDir, { recursive: true });
-    const stagedPath = path.join(config.tusUploadDir, `bot-${generateSnowflake()}`);
-    const forget = () => fs.rmSync(stagedPath, { force: true });
+    // The room it may take is held before a byte is written, as for any upload (utils/accountLimits.ts):
+    // what the request says it is, or the largest file when it says nothing, and never more.
+    // Uploads sent side by side then cannot all pass the same check.
+    const announced = Number(request.headers['content-length']);
+    const held = Number.isFinite(announced) && announced > 0 ? Math.min(announced, maxSize) : maxSize;
+    const early = uploadRefusal(bot.id, held);
+    if (early) return refused(reply, early);
+    const uploadId = `bot-${generateSnowflake()}`;
+    reserveUpload(uploadId, bot.id, held);
     try {
-      await pipeline(part.file, fs.createWriteStream(stagedPath));
-    } catch (err) {
-      forget();
-      throw err;
-    }
-    if (part.file.truncated) {
-      forget();
-      return sendError(reply, 413, 'upload_too_large', { max: maxSize });
-    }
+      const part = await request.file({ limits: { files: 1, fileSize: held } });
+      if (!part) return sendError(reply, 400, 'validation_failed', { field: 'file' });
 
-    const size = fs.statSync(stagedPath).size;
-    if (size === 0) {
-      forget();
-      return sendError(reply, 400, 'validation_failed', { field: 'file' });
-    }
-    const refusal = uploadRefusal(bot.id, size);
-    if (refusal) {
-      forget();
-      return refused(reply, refusal);
-    }
+      fs.mkdirSync(config.tusUploadDir, { recursive: true });
+      const stagedPath = path.join(config.tusUploadDir, uploadId);
+      const forget = () => fs.rmSync(stagedPath, { force: true });
+      try {
+        await pipeline(part.file, fs.createWriteStream(stagedPath));
+      } catch (err) {
+        forget();
+        throw err;
+      }
+      if (part.file.truncated) {
+        forget();
+        return sendError(reply, 413, 'upload_too_large', { max: maxSize });
+      }
 
-    const attachment = await finalizeUpload({
-      srcPath: stagedPath,
-      snowflakeId: generateSnowflake(),
-      uploaderId: bot.id,
-      originalName: part.filename || 'upload',
-      size,
-    });
-    return reply.code(201).send(attachment);
+      const size = fs.statSync(stagedPath).size;
+      if (size === 0) {
+        forget();
+        return sendError(reply, 400, 'validation_failed', { field: 'file' });
+      }
+      // Checked again as written: a restart forgot what was held, or the limit went down.
+      if (finishedUploadExceedsLimit(bot.id, size)) {
+        forget();
+        return refused(reply, 'storage_limit_reached');
+      }
+
+      const attachment = await finalizeUpload({
+        srcPath: stagedPath,
+        snowflakeId: generateSnowflake(),
+        uploaderId: bot.id,
+        originalName: part.filename || 'upload',
+        size,
+      });
+      return reply.code(201).send(attachment);
+    } finally {
+      releaseUpload(uploadId);
+    }
   });
 }

@@ -25,6 +25,7 @@ import {
   queuedOnce,
   reaimed,
   rowFor,
+  deliverAmongFriends,
 } from './helpers/dmScope.js';
 import { registerLocal, createFederatedUser, type TestUser } from './helpers/testUsers.js';
 import type { SpawnedInstance } from './helpers/twoInstanceHarness.js';
@@ -127,7 +128,7 @@ async function kickAndTransfer(): Promise<{ kick: FederationRelayEvent; transfer
   const [group] = await groupDelivered(A, alice, [
     { id: carol.id },
     { id: bobOnA, homeUserId: bob.id, homeInstance: B.domain },
-  ], relayToB);
+  ], relayToB, B);
   const kicked = await fetch(`${A.origin}/api/dm/${group}/members/${carol.id}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${alice.token}` },
@@ -174,7 +175,7 @@ beforeAll(async () => {
   [, carolGroupFid] = await groupDelivered(A, carol, [
     { id: rowFor(A, bob.id), homeUserId: bob.id, homeInstance: B.domain },
     { id: rowFor(A, erin.id), homeUserId: erin.id, homeInstance: B.domain },
-  ], relayToB);
+  ], relayToB, B);
 }, 120_000);
 
 afterAll(async () => {
@@ -199,7 +200,8 @@ describe('federation e2e — legitimate member_add events are applied', () => {
     // it from the roster, the second is an incremental add from a member.
     const adds = queuedOnce(A, groupOnA, 'member_add');
     expect(adds).toHaveLength(2);
-    const res = await relayToB(adds);
+    // bob and erin are alice's friends on B too, as across instances they would be.
+    const res = await deliverAmongFriends(B, alice, A, [bob.id, erin.id], relayToB, adds);
     expect(res.body?.rejected).toEqual([]);
     expect(memberIds(B, onB(groupFid))).toEqual(
       [rowFor(B, alice.id), rowFor(B, carol.id), bob.id, rowFor(B, cora.id)].sort(),

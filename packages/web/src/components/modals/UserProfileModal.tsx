@@ -35,6 +35,8 @@ import { useShownStatus } from '../../hooks/useShownStatus';
 import { ProfileRoles } from '../ui/ProfileRoles';
 import { Icon } from '../ui/Icon';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { ProfileBanner } from '../ui/ProfileBanner';
+import { GatedPicture } from '../ui/ExternalMedia';
 
 type Tab = 'about' | 'friends' | 'spaces';
 
@@ -291,15 +293,7 @@ export function UserProfileModal() {
         style={theme ? { backgroundImage: cardTint(theme), borderColor: cardEdge(theme) } : undefined}
       >
         {/* Banner; the compact layout has none, and its close button sits on the header */}
-        {look.banner && (
-          <div
-            className={`${look.banner} flex-shrink-0${bannerSrc ? '' : ' banner-depth'}`}
-            style={bannerSrc
-              ? { backgroundImage: `url(${bannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-              : { background: bannerFallback }
-            }
-          />
-        )}
+        {look.banner && <ProfileBanner className={`${look.banner} flex-shrink-0`} src={bannerSrc} fallback={bannerFallback} />}
         {/* Over a banner, which can be any picture, the close control carries its own dark ground. */}
         <button
           type="button"
@@ -479,20 +473,24 @@ export function UserProfileModal() {
                       className="list-row w-full text-left"
                     >
                       <div className="relative shrink-0">
-                        {space.icon ? (
-                          <img
-                            src={space.icon.startsWith('http') ? space.icon : spaceApi.uploads.url(space.icon)}
-                            alt={space.name}
-                            className="w-8 h-8 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-ui font-semibold text-white"
-                            style={{ background: getSpaceGradient(space.id, space.name, space.avatarColor).gradient }}
-                          >
-                            {space.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
+                        {(() => {
+                          const letter = (
+                            <div
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-ui font-semibold text-white"
+                              style={{ background: getSpaceGradient(space.id, space.name, space.avatarColor).gradient }}
+                            >
+                              {space.name.charAt(0).toUpperCase()}
+                            </div>
+                          );
+                          return space.icon ? (
+                            <GatedPicture
+                              src={space.icon.startsWith('http') ? space.icon : spaceApi.uploads.url(space.icon)}
+                              alt={space.name}
+                              className="w-8 h-8 rounded-lg object-cover"
+                              whileBlocked={letter}
+                            />
+                          ) : letter;
+                        })()}
                       </div>
                       <div className="min-w-0 flex flex-col">
                         <span className="text-ui font-medium text-txt-primary truncate">

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useSpaceJoin } from '../../hooks/useSpaceJoin';
 import { getSpaceGradient } from '../../utils/gradients';
 import type { TaggedExploreSpace } from '../../stores/exploreStore';
+import { GatedPicture } from '../ui/ExternalMedia';
 
 export function ExploreSpacePreviewCard({
   space,
@@ -42,16 +43,19 @@ export function ExploreSpacePreviewCard({
     <div className="surface-card rounded-lg transition-colors hover:border-border-soft px-3 py-2.5">
       <div className="flex items-center gap-3">
         {/* Icon */}
-        {iconUrl ? (
-          <img src={iconUrl} alt={space.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-        ) : (
-          <div
-            className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-body font-semibold text-white/90"
-            style={{ background: fallbackGradient }}
-          >
-            {space.name.charAt(0).toUpperCase()}
-          </div>
-        )}
+        {(() => {
+          const letter = (
+            <div
+              className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center text-body font-semibold text-white/90"
+              style={{ background: fallbackGradient }}
+            >
+              {space.name.charAt(0).toUpperCase()}
+            </div>
+          );
+          return iconUrl
+            ? <GatedPicture src={iconUrl} alt={space.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" whileBlocked={letter} />
+            : letter;
+        })()}
 
         {/* Name + meta */}
         <div className="min-w-0 flex-1">

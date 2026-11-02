@@ -371,6 +371,22 @@ const TEST_LIVEKIT = {
 } as const;
 
 /** Boot home + N remotes. All instances ready before the function returns. */
+/**
+ * Test routing of one instance (utils/federationOwnNames.ts): where it dials the others, and the
+ * addresses it is itself dialled at besides its name.
+ */
+export async function setTestRouting(
+  inst: SpawnedInstance,
+  routing: { entries?: Record<string, string>; ownNames?: string[] },
+): Promise<void> {
+  const res = await fetch(`${inst.origin}/api/admin/test/federation/dial-map`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(routing),
+  });
+  if (!res.ok) throw new Error(`test routing for ${inst.domain} refused: ${res.status}`);
+}
+
 export async function bootHomePlusRemotes(
   remoteCount: number,
   options: BootOptions = {},
@@ -416,6 +432,13 @@ export async function bootHomePlusRemotes(
     });
     remotes.push(r);
   }
+
+  // Each instance names itself by its DOMAIN, which resolves nowhere; a handshake's check calls
+  // that name back (peerHandshake.ts), so every instance is told where the others really are, and
+  // that the loopback address it is dialled at is one of its own names.
+  const everyone = [home, ...remotes];
+  const entries = Object.fromEntries(everyone.map((inst) => [`https://${inst.domain}`, inst.origin]));
+  for (const inst of everyone) await setTestRouting(inst, { entries, ownNames: [inst.origin] });
 
   let cleanedUp = false;
   const cleanup = async () => {

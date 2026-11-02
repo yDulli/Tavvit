@@ -7,6 +7,7 @@ import { recordAudit } from '../utils/auditLog.js';
 import { authenticate } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
 import { getMember, hasPermission, PermissionBits } from '../utils/permissions.js';
+import { memberActionRefusal } from '../utils/spaceModeration.js';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { connectionManager } from '../ws/handler.js';
@@ -120,6 +121,9 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
     if (!hasPermission(request.userId, id, PermissionBits.MANAGE_EVENTS)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_EVENTS' });
     }
+    // The whole space hears of it: a member action (utils/spaceModeration.ts).
+    const held = memberActionRefusal(id, request.userId);
+    if (held) return sendError(reply, held.status, held.code, held.details);
     const now = Date.now();
     const cleaned = cleanEvent(id, request.userId, request.body, now);
     if ('refused' in cleaned) return sendError(reply, cleaned.refused.status, cleaned.refused.code, cleaned.refused.details);
@@ -150,6 +154,8 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
     const row = eventOf(request.params.id);
     if (!row) return sendError(reply, 404, 'event_not_found');
     if (!canManage(row, request.userId)) return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_EVENTS' });
+    const held = memberActionRefusal(row.spaceId, request.userId);
+    if (held) return sendError(reply, held.status, held.code, held.details);
     const cleaned = cleanEvent(row.spaceId, request.userId, request.body, Date.now());
     if ('refused' in cleaned) return sendError(reply, cleaned.refused.status, cleaned.refused.code, cleaned.refused.details);
 
@@ -183,22 +189,31 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
     const row = eventOf(request.params.id);
     if (!row) return sendError(reply, 404, 'event_not_found');
     if (!getMember(row.spaceId, request.userId)) return sendError(reply, 403, 'not_space_member');
-    getDb().insert(schema.spaceEventRsvps)
+    // Saying one goes is something one does in the space, as writing is (utils/spaceModeration.ts).
+    const refusal = memberActionRefusal(row.spaceId, request.userId);
+    if (refusal) return sendError(reply, refusal.status, refusal.code, refusal.details);
+    const added = getDb().insert(schema.spaceEventRsvps)
       .values({ eventId: row.id, userId: request.userId, createdAt: Date.now() })
       .onConflictDoNothing()
       .run();
-    announce(row);
+    // The space hears of a change, and of nothing when there was none.
+    if (added.changes > 0) announce(row);
     return reply.code(200).send(toWire(row, goingCounts([row.id]).get(row.id) ?? 0, true));
   });
 
   // DELETE /api/events/:id/rsvp - Not going after all
-  app.delete<{ Params: { id: string } }>('/api/events/:id/rsvp', { preHandler: authenticate }, async (request, reply) => {
+  app.delete<{ Params: { id: string } }>('/api/events/:id/rsvp', {
+    preHandler: authenticate,
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const row = eventOf(request.params.id);
     if (!row) return sendError(reply, 404, 'event_not_found');
-    getDb().delete(schema.spaceEventRsvps)
+    // Only those in the space read its events, here as everywhere else.
+    if (!getMember(row.spaceId, request.userId)) return sendError(reply, 403, 'not_space_member');
+    const removed = getDb().delete(schema.spaceEventRsvps)
       .where(and(eq(schema.spaceEventRsvps.eventId, row.id), eq(schema.spaceEventRsvps.userId, request.userId)))
       .run();
-    announce(row);
+    if (removed.changes > 0) announce(row);
     return reply.code(200).send(toWire(row, goingCounts([row.id]).get(row.id) ?? 0, false));
   });
 

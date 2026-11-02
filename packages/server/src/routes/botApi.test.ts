@@ -51,7 +51,7 @@ vi.mock('../utils/thumbnail.js', () => ({
   probeImageDimensions: vi.fn().mockResolvedValue(null),
   probeMediaMeta: vi.fn().mockResolvedValue(null),
   generateVideoThumbnail: vi.fn().mockResolvedValue(null),
-  resizeProfileImage: vi.fn().mockResolvedValue(undefined),
+  resizeProfileImage: vi.fn().mockResolvedValue(true),
   thumbFilename: (name: string) => `${name}_thumb.webp`,
 }));
 

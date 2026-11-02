@@ -1,11 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import fs from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import { asc, eq, sql } from 'drizzle-orm';
-import { SOUNDBOARD_LIMITS, type SpaceSound, type SpaceSoundRequest } from '@backspace/shared/src/soundboard.js';
-import { config } from '../config.js';
+import { normalizeSoundName, SOUNDBOARD_LIMITS, type SpaceSound, type SpaceSoundRequest } from '@backspace/shared/src/soundboard.js';
 import { getDb, schema } from '../db/index.js';
+import { releaseUpload, reserveUpload, uploadRefusal } from '../utils/accountLimits.js';
 import { recordAudit } from '../utils/auditLog.js';
 import { authenticate } from '../utils/auth.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
@@ -13,6 +11,7 @@ import { sendError } from '../utils/httpErrors.js';
 import { getChannelSpaceId, getMember, hasPermission, PermissionBits } from '../utils/permissions.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { memberActionRefusal } from '../utils/spaceModeration.js';
+import { soundDir, soundFilePath } from '../utils/soundFiles.js';
 import { probeMediaMeta } from '../utils/thumbnail.js';
 import { connectionManager } from '../ws/handler.js';
 
@@ -22,14 +21,6 @@ const playLimit = createFixedWindowLimit({ max: SOUNDBOARD_LIMITS.PLAYS_PER_WIND
 
 export function _resetSoundboardLimitForTests(): void {
   playLimit.reset();
-}
-
-export function soundDir(): string {
-  return path.join(config.uploadDir, 'sounds');
-}
-
-export function soundFilePath(id: string): string {
-  return path.join(soundDir(), `${id}.audio`);
 }
 
 /**
@@ -48,35 +39,8 @@ export function sniffAudio(bytes: Uint8Array): string | null {
   return null;
 }
 
-/** Files whose sound is gone: deleting a space takes the rows and leaves these. Run at the start. */
-export function removeUnusedSoundFiles(): number {
-  let names: string[];
-  try {
-    names = fs.readdirSync(soundDir());
-  } catch {
-    return 0;
-  }
-  const known = new Set(getDb().select({ id: schema.spaceSounds.id }).from(schema.spaceSounds).all().map((row) => row.id));
-  let removed = 0;
-  for (const name of names) {
-    if (known.has(name.replace(/\.audio$/, ''))) continue;
-    try {
-      fs.unlinkSync(path.join(soundDir(), name));
-      removed += 1;
-    } catch (err) {
-      console.warn('[soundboard] Could not remove an unused file:', err);
-    }
-  }
-  return removed;
-}
-
 function toWire(row: SoundRow): SpaceSound {
   return { id: row.id, spaceId: row.spaceId, name: row.name, duration: row.duration, createdBy: row.createdBy, createdAt: row.createdAt };
-}
-
-function cleanName(value: unknown): string | null {
-  const name = typeof value === 'string' ? value.trim() : '';
-  return name && name.length <= SOUNDBOARD_LIMITS.NAME_MAX_LENGTH ? name : null;
 }
 
 const soundOf = (id: string): SoundRow | undefined =>
@@ -99,7 +63,10 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     const { id } = request.params;
     if (!hasPermission(request.userId, id, PermissionBits.MANAGE_SOUNDS)) return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_SOUNDS' });
-    const name = cleanName(request.body?.name);
+    // Everyone in the space can play it: a member action (utils/spaceModeration.ts).
+    const held = memberActionRefusal(id, request.userId);
+    if (held) return sendError(reply, held.status, held.code, held.details);
+    const name = normalizeSoundName(request.body?.name);
     if (!name) return sendError(reply, 400, 'validation_failed', { field: 'name' });
     if (typeof request.body?.audio !== 'string') return sendError(reply, 400, 'validation_failed', { field: 'audio' });
 
@@ -113,16 +80,25 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
     const mimetype = sniffAudio(bytes);
     if (!mimetype) return sendError(reply, 400, 'sound_invalid');
 
+    // A clip is kept on its creator's storage, and the disk keeps its reserve: held from here until
+    // its row is in, so that clips sent side by side cannot all pass the same check.
+    const refusal = uploadRefusal(request.userId, bytes.length);
+    if (refusal) return sendError(reply, refusal === 'disk_full' ? 507 : 413, refusal);
     const soundId = generateSnowflake();
+    reserveUpload(soundId, request.userId, bytes.length);
     const file = soundFilePath(soundId);
-    await mkdir(soundDir(), { recursive: true });
-    await writeFile(file, bytes);
     try {
+      await mkdir(soundDir(), { recursive: true });
+      await writeFile(file, bytes);
       const probed = await probeMediaMeta(file, mimetype).catch(() => null);
       const measured = Number(request.body.duration);
       const duration = probed?.duration ?? (Number.isFinite(measured) && measured > 0 ? measured : null);
       if (duration === null) throw new SoundRefused('sound_invalid');
       if (duration > SOUNDBOARD_LIMITS.MAX_SECONDS + 0.05) throw new SoundRefused('sound_too_long');
+      // Counted again with nothing awaited before the insert: clips added side by side would
+      // otherwise all pass the count made before the file was written.
+      const countNow = db.select({ count: sql<number>`count(*)` }).from(schema.spaceSounds).where(eq(schema.spaceSounds.spaceId, id)).get()?.count ?? 0;
+      if (countNow >= SOUNDBOARD_LIMITS.PER_SPACE_MAX) throw new SoundRefused('sound_limit_reached');
       const now = Date.now();
       db.insert(schema.spaceSounds).values({
         id: soundId, spaceId: id, name, mimetype, size: bytes.length, duration, createdBy: request.userId, createdAt: now,
@@ -130,11 +106,14 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
     } catch (err) {
       await rm(file, { force: true });
       if (err instanceof SoundRefused) {
+        if (err.code === 'sound_limit_reached') return sendError(reply, 400, 'sound_limit_reached', { max: SOUNDBOARD_LIMITS.PER_SPACE_MAX });
         return err.code === 'sound_too_long'
           ? sendError(reply, 400, 'sound_too_long', { max: SOUNDBOARD_LIMITS.MAX_SECONDS })
           : sendError(reply, 400, 'sound_invalid');
       }
       throw err;
+    } finally {
+      releaseUpload(soundId);
     }
     const row = soundOf(soundId);
     if (!row) return sendError(reply, 500, 'internal_error');
@@ -148,7 +127,9 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
     const row = soundOf(request.params.id);
     if (!row) return sendError(reply, 404, 'sound_not_found');
     if (!hasPermission(request.userId, row.spaceId, PermissionBits.MANAGE_SOUNDS)) return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_SOUNDS' });
-    const name = cleanName(request.body?.name);
+    const held = memberActionRefusal(row.spaceId, request.userId);
+    if (held) return sendError(reply, held.status, held.code, held.details);
+    const name = normalizeSoundName(request.body?.name);
     if (!name) return sendError(reply, 400, 'validation_failed', { field: 'name' });
     getDb().update(schema.spaceSounds).set({ name }).where(eq(schema.spaceSounds.id, row.id)).run();
     recordAudit({ spaceId: row.spaceId, actorId: request.userId, action: 'sound_update', targetType: 'space', targetId: row.id, targetLabel: name });
@@ -207,7 +188,7 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
 }
 
 class SoundRefused extends Error {
-  constructor(readonly code: 'sound_invalid' | 'sound_too_long') {
+  constructor(readonly code: 'sound_invalid' | 'sound_too_long' | 'sound_limit_reached') {
     super(code);
   }
 }

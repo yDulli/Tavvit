@@ -136,6 +136,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   cannot_dm_self: 'Cannot create DM with yourself',
   group_dm_too_few_members: 'users must contain at least {{min}} entries',
   group_dm_too_many_members: 'Group DMs are limited to {{max}} members',
+  group_dm_limit_reached: 'An account can be in at most {{max}} group DMs',
+  group_dm_member_limit_reached: 'Someone asked for is already in the most group DMs an account can be in ({{max}})',
   users_not_found: 'One or more users not found',
   duplicate_users: 'Duplicate users after identity resolution',
   group_dm_includes_self: 'Do not include yourself; you are added automatically',

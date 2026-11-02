@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { cssUrl } from '../../utils/cssUrl';
 import { useTranslation } from 'react-i18next';
 import { PROFILE_LIMITS, type UpdateSpaceProfileRequest } from '@backspace/shared';
 import { useUIStore } from '../../stores/uiStore';
@@ -178,7 +179,7 @@ export function SpaceProfileModal() {
                 disabled={uploading !== null || saving}
                 aria-label={t('spaces:spaceProfile.uploadBanner')}
                 className="relative block h-[72px] w-full overflow-hidden rounded-md border border-border-soft bg-surface-input"
-                style={shownBannerSrc ? { backgroundImage: `url(${shownBannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                style={shownBannerSrc ? { backgroundImage: cssUrl(shownBannerSrc), backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
               >
                 {uploading === 'banner' && <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-xs text-white">{t('spaces:spaceProfile.uploading')}</span>}
               </button>

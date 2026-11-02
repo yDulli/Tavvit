@@ -1,13 +1,23 @@
 import type { FastifyInstance } from 'fastify';
-import { AccessToken, TrackSource } from 'livekit-server-sdk';
+import { AccessToken } from 'livekit-server-sdk';
+import { FULL_VOICE_GRANT, spaceVoiceGrant, type VoiceGrant } from '../utils/livekitGrants.js';
 import { authenticate } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
 import { config } from '../config.js';
-import { getChannelSpaceId, hasPermission, computePermissions, isDmMember, PermissionBits } from '../utils/permissions.js';
+import { getChannelSpaceId, hasPermission, isDmMember, PermissionBits } from '../utils/permissions.js';
 import type { LiveKitTokenRequest, LiveKitTokenResponse } from '@backspace/shared';
 import { getDb, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
 import { memberActionRefusal } from '../utils/spaceModeration.js';
+
+/**
+ * The LiveKit room of a DM's call on this instance. A space's voice channel is a room named by its
+ * bare channel id, so a DM's room has a prefix no channel id has: a key a peer chose can never name
+ * someone's voice channel, or another conversation's call.
+ */
+export function dmCallRoomName(dmChannelId: string, federatedId: string | null): string {
+  return federatedId ? `fed:${federatedId}` : `dm-${dmChannelId}`;
+}
 
 /**
  * Generate a LiveKit token for a federated call participant.
@@ -24,19 +34,7 @@ export async function generateFederatedCallToken(
     ttl: '5m',
   });
 
-  token.addGrant({
-    room: roomName,
-    roomJoin: true,
-    canPublish: true,
-    canPublishSources: [
-      TrackSource.MICROPHONE,
-      TrackSource.CAMERA,
-      TrackSource.SCREEN_SHARE,
-      TrackSource.SCREEN_SHARE_AUDIO,
-    ],
-    canSubscribe: true,
-    canPublishData: true,
-  });
+  token.addGrant({ room: roomName, roomJoin: true, ...FULL_VOICE_GRANT });
 
   return token.toJwt();
 }
@@ -54,9 +52,8 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
     // Determine room name based on channel type
     let roomName: string;
 
-    // Default: full publish (DM calls always get full permissions)
-    let canSpeak = true;
-    let canStream = true;
+    // DM calls always get full permissions; a space's voice channel what the member may do there.
+    let grant: VoiceGrant = FULL_VOICE_GRANT;
 
     if (dmChannelId && typeof dmChannelId === 'string') {
       // DM call token
@@ -64,19 +61,22 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
         return sendError(reply, 403, 'not_dm_member');
       }
 
-      // Federated DMs use federatedId as room name (cross-instance stable).
-      // Local-only DMs use dm-{dmChannelId}.
+      // Federated DMs are named by their federatedId (cross-instance stable), local-only DMs by
+      // their id, each with a prefix of its own (dmCallRoomName).
       const db = getDb();
       const channel = db.select({ federatedId: schema.dmChannels.federatedId })
         .from(schema.dmChannels)
         .where(eq(schema.dmChannels.id, dmChannelId))
         .get();
 
-      roomName = channel?.federatedId ? channel.federatedId : `dm-${dmChannelId}`;
+      roomName = dmCallRoomName(dmChannelId, channel?.federatedId ?? null);
     } else if (channelId && typeof channelId === 'string') {
-      // Space voice channel token
+      // Space voice channel token: a voice channel's only (ws/events.ts, handleVoiceJoin).
       const spaceId = getChannelSpaceId(channelId);
-      if (!spaceId) {
+      const channelType = spaceId
+        ? getDb().select({ type: schema.channels.type }).from(schema.channels).where(eq(schema.channels.id, channelId)).get()?.type
+        : undefined;
+      if (!spaceId || channelType !== 'voice') {
         return sendError(reply, 404, 'channel_not_found');
       }
       // VIEW_CHANNEL as well: CONNECT alone would let a member hear a hidden voice channel (permissions.md).
@@ -88,10 +88,8 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
       if (timeout) {
         return sendError(reply, timeout.status, timeout.code, timeout.details);
       }
-      // Check SPEAK and STREAM permissions for granular token grants
-      const perms = computePermissions(request.userId, spaceId, channelId);
-      canSpeak = (perms & PermissionBits.SPEAK) !== 0n || (perms & PermissionBits.ADMINISTRATOR) !== 0n;
-      canStream = (perms & PermissionBits.STREAM) !== 0n || (perms & PermissionBits.ADMINISTRATOR) !== 0n;
+      // SPEAK and STREAM, less a space mute or deafen a moderator set (utils/livekitGrants.ts).
+      grant = spaceVoiceGrant(request.userId, spaceId, channelId);
       roomName = channelId;
     } else {
       return sendError(reply, 400, 'validation_failed');
@@ -106,24 +104,7 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
       ttl: '10m',
     });
 
-    // Build canPublishSources based on permissions
-    const canPublishSources: TrackSource[] = [];
-    if (canSpeak) {
-      canPublishSources.push(TrackSource.MICROPHONE);
-      canPublishSources.push(TrackSource.CAMERA);
-    }
-    if (canStream) {
-      canPublishSources.push(TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO);
-    }
-
-    token.addGrant({
-      room: roomName,
-      roomJoin: true,
-      canPublish: canSpeak || canStream,
-      canPublishSources,
-      canSubscribe: true,
-      canPublishData: true,
-    });
+    token.addGrant({ room: roomName, roomJoin: true, ...grant });
 
     const jwt = await token.toJwt();
 

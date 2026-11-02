@@ -31,7 +31,8 @@ vi.mock('../utils/federationAuth.js', async () => {
 
 // `generateFederatedCallToken` lives in `routes/livekit.js`, not in
 // `federationAuth.js` — mocking it on the latter is a no-op.
-vi.mock('../routes/livekit.js', () => ({
+vi.mock('../routes/livekit.js', async (importActual) => ({
+  dmCallRoomName: (await importActual<typeof import('../routes/livekit.js')>()).dmCallRoomName,
   generateFederatedCallToken: () => Promise.resolve('fake-token'),
 }));
 

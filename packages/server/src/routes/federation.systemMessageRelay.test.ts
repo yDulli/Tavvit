@@ -109,7 +109,8 @@ describe('relayed system messages', () => {
     db.insert(schema.federationPeers).values({
       id: 'peer-home', origin: HOME_ORIGIN, hmacSecret: 'c'.repeat(64), status: 'active', createdAt: Date.now(),
     }).run();
-    db.insert(schema.users).values({ id: 'bob', username: 'bob', passwordHash: 'real-hash', createdAt: 1 }).run();
+    // bob takes a conversation from anyone: the invite starts one here.
+    db.insert(schema.users).values({ id: 'bob', username: 'bob', passwordHash: 'real-hash', dmPolicy: 'anyone', createdAt: 1 }).run();
     db.insert(schema.users).values({
       id: 'alice-on-orbit', username: 'alice@home.test', passwordHash: '!federation-replicated',
       homeInstance: 'home.test', homeUserId: 'alice', createdAt: 1,

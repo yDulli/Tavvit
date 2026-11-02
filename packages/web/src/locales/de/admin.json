@@ -713,7 +713,11 @@
     "required": {
       "title": "Neue Konten",
       "label": "Bestätigte Adresse verlangen",
-      "description": "Ab jetzt muss ein neues Konto eine Adresse angeben. Bis sie bestätigt ist, kann es Spaces nutzen, in die es eingeladen wurde, und mit Freunden schreiben, aber keine Spaces erstellen und keine Fremden ansprechen. Bestehende Konten betrifft das nicht."
+      "description": "Ab jetzt muss ein neues Konto eine Adresse angeben. Bis sie bestätigt ist, kann es die Spaces lesen, denen es beigetreten ist, und mit Freunden schreiben, aber in Spaces weder schreiben noch reagieren, keine Spaces erstellen und keine Fremden ansprechen. Bestehende Konten betrifft das nicht."
+    },
+    "throwaway": {
+      "label": "Wegwerf-Adressen ablehnen",
+      "description": "Adressen bei rund 10.000 bekannten Wegwerf-Maildiensten wie Mailinator können weder zur Anmeldung noch als Adresse verwendet werden. Adressen, die schon an Konten hängen, bleiben."
     },
     "test": {
       "title": "Testversand",

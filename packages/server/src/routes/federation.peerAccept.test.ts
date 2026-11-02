@@ -48,6 +48,28 @@ vi.mock('dns', () => ({
   default: { promises: { lookup: async (_host: string, options?: { all?: boolean }) => (options?.all ? [{ address: '93.184.216.34', family: 4 }] : { address: '93.184.216.34', family: 4 }) } },
 }));
 
+// The origin a /peer/accept names answers the signed check (handlers/peerHandshake.ts) with the
+// epoch the request stated, unless a test says otherwise. Only that inbound check is stood in for:
+// it is the one probe that signs as a name of ours (signAs); the others run for real.
+const inboundCheck = vi.hoisted(() => ({
+  lastInstanceId: null as string | null,
+  answer: 'verified' as 'verified' | 'not_peered' | 'unvouched',
+  /** Runs while the check is being asked, as something else happening meanwhile. */
+  meanwhile: null as (() => void) | null,
+}));
+vi.mock('../utils/federationEpoch.js', async (importActual) => {
+  const actual = await importActual<typeof import('../utils/federationEpoch.js')>();
+  return {
+    ...actual,
+    probeEpoch: vi.fn(async (...args: Parameters<typeof actual.probeEpoch>) => {
+      if (args[1]?.signAs === undefined) return actual.probeEpoch(...args);
+      inboundCheck.meanwhile?.();
+      if (inboundCheck.answer === 'not_peered') return { kind: 'not_peered' as const };
+      return { kind: 'verified' as const, instanceId: inboundCheck.lastInstanceId ?? 'proven-epoch', ...(inboundCheck.answer === 'unvouched' ? { vouched: false } : {}) };
+    }),
+  };
+});
+
 vi.mock('../db/index.js', () => ({
   getDb: () => testDb,
   getRawDb: () => sqlite,
@@ -102,6 +124,9 @@ function seedInstanceSettings(name: string): void {
 
 async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
+  app.addHook('preHandler', async (request) => {
+    inboundCheck.lastInstanceId = ((request.body ?? {}) as { instanceId?: string }).instanceId ?? null;
+  });
   const { federationRoutes } = await import('./federation.js');
   await app.register(federationRoutes);
   await app.ready();
@@ -756,5 +781,174 @@ describe('POST /api/federation/peer/accept: the answer follows the row state (#3
     } finally {
       releaseAdminHandshake('https://zzz-caller.example');
     }
+  });
+});
+
+describe('POST /api/federation/peer/accept: the caller shows it speaks for the origin it names', () => {
+  let app: FastifyInstance;
+
+  beforeEach(async () => {
+    sqlite = new Database(':memory:');
+    testDb = drizzle(sqlite, { schema });
+    applyMigrations(sqlite);
+    seedInstanceSettings('Local Backspace');
+    inboundCheck.answer = 'verified';
+    app = await buildApp();
+  });
+
+  afterEach(() => {
+    inboundCheck.answer = 'verified';
+  });
+
+  // Each case from its own address: the endpoint is rate limited by IP.
+  let address = 0;
+  const accept = (payload: Record<string, unknown>) => {
+    address += 1;
+    return app.inject({
+      method: 'POST', url: '/api/federation/peer/accept', remoteAddress: `10.0.9.${address}`,
+      payload: { hmacSecret: 'a-secret-of-the-caller', ...payload },
+    });
+  };
+  const rowFor = (origin: string) =>
+    testDb.select().from(schema.federationPeers).where(eq(schema.federationPeers.origin, origin)).get();
+
+  it('makes no row for an origin that does not answer a request signed with the offered secret', async () => {
+    inboundCheck.answer = 'not_peered';
+    const res = await accept({ sourceOrigin: 'https://claimed.example', instanceId: 'epoch-x' });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('PEER_ORIGIN_UNPROVEN');
+    expect(rowFor('https://claimed.example')).toBeUndefined();
+  });
+
+  it('makes no row for an epoch other than the one its origin proves', async () => {
+    const { probeEpoch } = await import('../utils/federationEpoch.js');
+    vi.mocked(probeEpoch).mockResolvedValueOnce({ kind: 'verified', instanceId: 'the-real-epoch' });
+    const res = await accept({ sourceOrigin: 'https://claimed.example', instanceId: 'another-epoch' });
+    expect(res.statusCode).toBe(403);
+    expect(rowFor('https://claimed.example')).toBeUndefined();
+  });
+
+  it('never peers as this instance itself', async () => {
+    const { getOurOrigin } = await import('../utils/federationAuth.js');
+    const res = await accept({ sourceOrigin: getOurOrigin(), instanceId: 'epoch-x' });
+    expect(res.statusCode).toBe(400);
+    expect(rowFor(getOurOrigin())).toBeUndefined();
+  });
+
+  it('makes no row from an origin that holds the secret for a row it does not vouch for as its own handshake', async () => {
+    // A row an older release there took from a stranger's request holds that stranger's secret.
+    inboundCheck.answer = 'unvouched';
+    const res = await accept({ sourceOrigin: 'https://claimed.example', instanceId: 'epoch-x' });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('PEER_ORIGIN_UNPROVEN');
+    expect(rowFor('https://claimed.example')).toBeUndefined();
+  });
+
+  it('with auto-accept off, puts no request before the admin that its origin does not prove', async () => {
+    testDb.update(schema.instanceSettings).set({ autoAcceptPeering: 0 }).where(eq(schema.instanceSettings.id, 1)).run();
+    const requests = () => testDb.select().from(schema.peerApprovalRequests).all();
+    inboundCheck.answer = 'not_peered';
+    const refused = await accept({ sourceOrigin: 'https://claimed.example', instanceId: 'epoch-x', instanceName: 'Claimed' });
+    expect(refused.statusCode).toBe(403);
+    expect(refused.json().code).toBe('PEER_ORIGIN_UNPROVEN');
+    expect(requests()).toEqual([]);
+
+    // Positive control: the same request from the instance at that origin is queued.
+    inboundCheck.answer = 'verified';
+    const queued = await accept({ sourceOrigin: 'https://claimed.example', instanceId: 'epoch-x', instanceName: 'Claimed' });
+    expect(queued.statusCode).toBeLessThan(300);
+    expect(requests()).toHaveLength(1);
+  });
+
+  it('answers 409 when our own handshake with the caller began while the caller was being checked', async () => {
+    const { claimAdminHandshake, releaseAdminHandshake } = await import('../utils/federationPeering.js');
+    // Ours wins against a higher origin: once it is in flight, the caller's must not be taken too.
+    testDb.insert(schema.federationPeers).values({
+      id: 'peer-ours', origin: 'https://zzz-caller.example', hmacSecret: 'S0', status: 'pending', initiatedBy: 'auto', createdAt: Date.now(),
+    }).run();
+    inboundCheck.meanwhile = () => { claimAdminHandshake('https://zzz-caller.example'); };
+    try {
+      const res = await accept({ sourceOrigin: 'https://zzz-caller.example', instanceId: 'epoch-x' });
+      expect(res.statusCode).toBe(409);
+      expect(res.json().code).toBe('PEER_HANDSHAKE_IN_PROGRESS');
+      const row = rowFor('https://zzz-caller.example');
+      expect(row?.status).toBe('pending');
+      expect(row?.hmacSecret).toBe('S0');
+    } finally {
+      inboundCheck.meanwhile = null;
+      releaseAdminHandshake('https://zzz-caller.example');
+    }
+  });
+});
+
+describe('the check of a handshake is bound to who asks', () => {
+  let app: FastifyInstance;
+
+  beforeEach(async () => {
+    sqlite = new Database(':memory:');
+    testDb = drizzle(sqlite, { schema });
+    applyMigrations(sqlite);
+    seedInstanceSettings('Local Backspace');
+    inboundCheck.answer = 'verified';
+    app = await buildApp();
+  });
+
+  afterEach(() => {
+    inboundCheck.answer = 'verified';
+  });
+
+  const epochAs = (origin: string, secret: string) => {
+    const body = JSON.stringify({});
+    return app.inject({ method: 'POST', url: '/api/federation/epoch', headers: buildFederationHeaders(body, secret, origin), payload: body });
+  };
+
+  it('/epoch answers for a handshake of ours only to the origin it was with: a secret given to one peer passes nobody else', async () => {
+    // A handshake of ours with evil.example, whose secret evil.example now holds.
+    testDb.insert(schema.federationPeers).values({
+      id: 'peer-evil', origin: 'https://evil.example', hmacSecret: 'secret-given-to-evil', status: 'pending', createdAt: Date.now(),
+    }).run();
+    // evil.example passes the secret on and has instance B ask us, as B: we vouch for nothing.
+    expect((await epochAs('https://b.example', 'secret-given-to-evil')).statusCode).toBe(403);
+    // Asked as the origin the handshake is with, we answer.
+    expect((await epochAs('https://evil.example', 'secret-given-to-evil')).statusCode).toBe(200);
+  });
+
+  it('/epoch vouches only for a handshake this instance is making itself', async () => {
+    testDb.insert(schema.federationPeers).values([
+      { id: 'peer-ours', origin: 'https://ours.example', hmacSecret: 'S-ours', status: 'pending', initiatedBy: 'admin', createdAt: Date.now() },
+      { id: 'peer-waiting', origin: 'https://waiting.example', hmacSecret: 'S-waiting', status: 'awaiting_approval', initiatedBy: 'auto', createdAt: Date.now() },
+      // A row taken from someone's request (an older release took it without a check), and one settled.
+      { id: 'peer-taken', origin: 'https://taken.example', hmacSecret: 'S-taken', status: 'active', initiatedBy: 'remote', createdAt: Date.now() },
+      { id: 'peer-settled', origin: 'https://settled.example', hmacSecret: 'S-settled', status: 'active', initiatedBy: 'admin', createdAt: Date.now() },
+    ]).run();
+    const vouched = async (origin: string, secret: string) => (await epochAs(origin, secret)).json().vouched;
+    expect(await vouched('https://ours.example', 'S-ours')).toBe(true);
+    expect(await vouched('https://waiting.example', 'S-waiting')).toBe(true);
+    expect(await vouched('https://taken.example', 'S-taken')).toBe(false);
+    expect(await vouched('https://settled.example', 'S-settled')).toBe(false);
+  });
+
+  it('/epoch answers no request that names one of this instance\'s own names, a row from before that was refused included', async () => {
+    const { getOurOrigin } = await import('../utils/federationAuth.js');
+    testDb.insert(schema.federationPeers).values({
+      id: 'peer-self', origin: getOurOrigin(), hmacSecret: 'S-self', status: 'active', initiatedBy: 'remote', createdAt: Date.now(),
+    }).run();
+    expect((await epochAs(getOurOrigin(), 'S-self')).statusCode).toBe(403);
+  });
+
+  it('a reset of an established peering is started only by the instance at that origin', async () => {
+    testDb.insert(schema.federationPeers).values({
+      id: 'peer-active', origin: 'https://caller.example', hmacSecret: 'S0', status: 'active', peerInstanceId: 'epoch-A', createdAt: Date.now(),
+    }).run();
+    // A stranger names another epoch, and caller.example does not answer for the offered secret.
+    inboundCheck.answer = 'not_peered';
+    const response = await app.inject({
+      method: 'POST', url: '/api/federation/peer/accept', remoteAddress: '10.0.8.1',
+      payload: { sourceOrigin: 'https://caller.example', hmacSecret: 'a-stranger-s', instanceId: 'epoch-Z' },
+    });
+    expect(response.statusCode).toBe(409);
+    const row = testDb.select().from(schema.federationPeers).where(eq(schema.federationPeers.id, 'peer-active')).get();
+    expect(row?.status).toBe('active');
+    expect(row?.peerInstanceId).toBe('epoch-A');
   });
 });

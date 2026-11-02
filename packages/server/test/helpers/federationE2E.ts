@@ -3,6 +3,7 @@ import type { FederationRelayEvent, FederationRelayResponse } from '@backspace/s
 import {
   bootHomePlusRemotes,
   readInstanceLog,
+  setTestRouting,
   type BootOptions,
   type SpawnedInstance,
 } from './twoInstanceHarness.js';
@@ -125,6 +126,8 @@ async function bootAndPeer(
     for (let i = 0; i < m.remotes.length; i++) {
       const remote = m.remotes[i]!;
       const dial = dialOrigins?.[i] ?? remote.origin;
+      // Dialled through a tap, the remote is reached at the tap's address: one of its names then.
+      if (dial !== remote.origin) await setTestRouting(remote, { ownNames: [remote.origin, dial] });
       const res = await initiatePeering(m.home, harness.homeAdminToken, { ...remote, origin: dial });
       if (res.status !== 200 || res.body.verified !== true) {
         throw new Error(

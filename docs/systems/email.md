@@ -122,10 +122,11 @@ While on, a new local account must give an address, and until it is confirmed it
 | `POST /dm`, unless a friend or an existing conversation | Approaching strangers |
 | `POST /dm/group`, `POST /dm/:id/members`, `POST /dm/space-invite` | The same |
 | `POST /social/requests` | The same |
+| Everything that goes through `memberActionRefusal` (utils/spaceModeration.ts): a message, an edit, a reaction, a poll vote, voice, an event's "going", a poke, a thread, the space profile, one's own nickname, an invite, a new standing link, an event made or changed, a clip added or renamed | Doing anything in a space (1.32.8) |
 
-It can still join what it was invited to, write in spaces and talk to friends. Sign-in is never refused: a stuck mail must not be a locked door.
+It can still join what it was invited to, read there and talk to friends. Sign-in is never refused: a stuck mail must not be a locked door. An account made only to be thrown away therefore cannot post anywhere before its address is real (`email/gate.ts`, `accountNeedsVerifiedEmail`, which reads nothing while the gate is off).
 
-Not concerned: accounts older than the switch, administrators, replicated accounts. It stays closed while mail is down, since lifting it would let a burned quota open the door. The client shows the reason in `EmailPromptBar`, which for an older account is only a suggestion that "not now" puts away for a month.
+Not concerned: accounts older than the switch, administrators, replicated accounts, and accounts that are not people (bots, webhooks, follows: `account_kind`). It stays closed while mail is down, since lifting it would let a burned quota open the door. The client shows the reason in `EmailPromptBar`, which for an older account is only a suggestion that "not now" puts away for a month.
 
 **Keeps existing accounts:** nobody is asked for anything at an upgrade. The bar suggests an address to accounts without one.
 
@@ -200,3 +201,11 @@ Since 1.32.7 one account may have mail sent for itself at most 6 times a day (ad
 ## Blocked domains
 
 An address at a domain the console's sign-up rules block, or under it, is refused with `email_domain_blocked` at sign-up and in `PUT /api/users/@me/email`, before any mail is sent ([admin.md](admin.md), "The console"). An address an account already has stays. On a server that sends no mail an address is not even looked at, so neither is the rule.
+
+### Throwaway addresses
+
+`instance_settings.block_throwaway_email` (default on, migration 0069), switched under Email (`blockThrowawayEmail` in `PATCH /api/settings/instance`). While on, an address at a domain of the built-in list, or under one, is refused the same way (`email_domain_blocked`).
+
+- **The list** is `packages/server/src/email/throwawayDomains.txt`: the CC0 list of the disposable-email-domains project, taken on 2026-11-02, with large providers people really use left out. About 10,000 domains, read once into a set at the first check (`email/throwaway.ts`, `isThrowawayAddress`).
+- **Updating it** is replacing the file in a release; the header names its source and date.
+- **Limits:** a new throwaway service is not on it until the next update, and a person with a real address at a listed domain has to use another one. The admin rules come first, then the list.

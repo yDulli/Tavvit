@@ -45,7 +45,13 @@ import type { PeerActivationReason } from './federationPeerActivation.js';
 export type SyncContext = 'dm' | 'friend' | 'profile';
 export type SyncReason = PeerActivationReason | 'periodic' | 'manual';
 
-export const ALL_SYNC_CONTEXTS: readonly SyncContext[] = ['dm', 'friend', 'profile'];
+/**
+ * In the order a pass pulls them: friendships first, since what a conversation may do here
+ * follows them (routes/federation/localConsent.ts: a group add, a 1-on-1 started), and a
+ * friendship formed in the same window as a message must be in before the message is judged.
+ * Friend events need nothing from the other two.
+ */
+export const ALL_SYNC_CONTEXTS: readonly SyncContext[] = ['friend', 'dm', 'profile'];
 /** What the periodic tick pulls. */
 export const PERIODIC_SYNC_CONTEXTS: readonly SyncContext[] = ALL_SYNC_CONTEXTS;
 

@@ -1,10 +1,11 @@
 import { refuseWithoutSecondFactor } from './twoFactor.js';
+import { checkPassword, refusePasswordCheck } from '../utils/passwordConfirm.js';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
-import { authenticate, verifyPassword } from '../utils/auth.js';
+import { authenticate } from '../utils/auth.js';
 import { dataExportFile, dataExportStatus, requestDataExport } from '../utils/dataExport.js';
 import { sendError } from '../utils/httpErrors.js';
 
@@ -24,7 +25,8 @@ export async function dataExportRoutes(app: FastifyInstance): Promise<void> {
     if (!password || typeof password !== 'string') return sendError(reply, 400, 'password_required');
     const user = getDb().select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
     if (!user) return sendError(reply, 404, 'user_not_found');
-    if (!(await verifyPassword(password, user.passwordHash))) return sendError(reply, 403, 'current_password_incorrect');
+    const check = await checkPassword(user, password, request);
+    if (check !== 'valid') return refusePasswordCheck(reply, check);
     const refused = refuseWithoutSecondFactor(user, request.body?.twoFactorCode, request, reply);
     if (refused) return refused;
 

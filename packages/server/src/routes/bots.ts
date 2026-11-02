@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { and, asc, eq, sql } from 'drizzle-orm';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
+import { isVisibleSingleLine } from '@backspace/shared/src/constants.js';
 import {
   BOT_LIMITS,
   cleanCommand,
@@ -52,10 +54,11 @@ export function _resetCommandLimitForTests(): void {
   commandLimit.reset();
 }
 
+/** The bot's name as shown, also for its role: a name stored before such characters were refused loses them. */
 function nameOf(botId: string): string {
   const row = getDb().select({ displayName: schema.users.displayName, username: schema.users.username })
     .from(schema.users).where(eq(schema.users.id, botId)).get();
-  return row?.displayName || row?.username || '';
+  return withoutUnsafeCharacters(row?.displayName || row?.username || '');
 }
 
 /** What it looks like wherever it is shown: its picture, or its colour without one. */
@@ -85,9 +88,14 @@ function commandFrom(row: typeof schema.botCommands.$inferSelect): BotCommand {
   return { name: row.name, description: row.description, ...(options ? { options } : {}) };
 }
 
+/**
+ * A bot's name as stored, or null when the value is not one: trimmed, at most NAME_MAX_LENGTH,
+ * and following the rule nicknames follow (no control character, line break or bidirectional
+ * control, something visible). It is shown as the bot's name and as its role's in each space.
+ */
 const cleanName = (value: unknown): string | null => {
   const name = typeof value === 'string' ? value.trim() : '';
-  return name && name.length <= BOT_LIMITS.NAME_MAX_LENGTH ? name : null;
+  return name && name.length <= BOT_LIMITS.NAME_MAX_LENGTH && isVisibleSingleLine(name) ? name : null;
 };
 
 /** The text as stored; undefined when it is too long or no text. */
@@ -180,6 +188,10 @@ export async function botRoutes(app: FastifyInstance): Promise<void> {
     const elsewhere = typeof asked === 'string' && /^https?:/i.test(asked.trim());
     const picture = asked === undefined || elsewhere ? null : profilePictureOf(asked, request.userId, oldAvatar);
     if (elsewhere || (asked !== undefined && !picture)) return sendError(reply, 400, 'avatar_url_invalid');
+    // Written anew before the bot shows it, and refused when it cannot be (utils/thumbnail.ts).
+    if (picture?.upload && !(await resizeProfileImage(path.join(config.uploadDir, picture.upload), 'avatar'))) {
+      return sendError(reply, 400, 'profile_image_invalid');
+    }
 
     db.transaction((tx) => {
       tx.update(schema.users).set({ displayName: name, ...(picture ? { avatar: picture.stored } : {}) }).where(eq(schema.users.id, row.id)).run();
@@ -194,10 +206,7 @@ export async function botRoutes(app: FastifyInstance): Promise<void> {
         deleteUploadFile(replaced);
         deleteAttachmentByFilename(replaced);
       }
-      if (picture.upload) {
-        deleteAttachmentByFilename(picture.upload);
-        await resizeProfileImage(path.join(config.uploadDir, picture.upload), 'avatar');
-      }
+      if (picture.upload) deleteAttachmentByFilename(picture.upload);
     }
 
     const updated = botOf(row.id);

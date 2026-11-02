@@ -79,7 +79,8 @@ function hashString(str: string): number {
 
 /** Deterministic gradient for a user avatar. Uses stored avatarColor if available; falls back to hash. */
 export function getAvatarGradient(id?: string | null, name?: string, avatarColor?: string | null): GradientEntry {
-  if (avatarColor && avatarColor in AVATAR_GRADIENT_MAP) {
+  // Only a colour of the map's own: `'constructor' in` an object is true, and its value no gradient.
+  if (avatarColor && Object.hasOwn(AVATAR_GRADIENT_MAP, avatarColor)) {
     return AVATAR_GRADIENT_MAP[avatarColor as AvatarColor];
   }
   const key = id || name || 'unknown';
@@ -88,7 +89,7 @@ export function getAvatarGradient(id?: string | null, name?: string, avatarColor
 
 /** Deterministic gradient for a space icon. Uses stored avatarColor if available; falls back to hash. */
 export function getSpaceGradient(id?: string | null, name?: string, avatarColor?: string | null): GradientEntry {
-  if (avatarColor && avatarColor in SPACE_GRADIENT_MAP) {
+  if (avatarColor && Object.hasOwn(SPACE_GRADIENT_MAP, avatarColor)) {
     return SPACE_GRADIENT_MAP[avatarColor as AvatarColor];
   }
   const key = id || name || 'unknown';

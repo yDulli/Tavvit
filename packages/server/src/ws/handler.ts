@@ -1,4 +1,5 @@
 import { BOT_SOCKET_EVENTS } from '@backspace/shared/src/bots.js';
+import { shownCategories } from '../utils/categoryVisibility.js';
 import { checkBotAccess, verifyBotToken } from '../utils/botAccess.js';
 import type { MessageWithUser } from '@backspace/shared';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
@@ -650,11 +651,15 @@ class ConnectionManager implements ReplicaSessionHost {
       spaceVoiceStates[key] = existing;
     }
     // Permission-mute — ephemeral, derived from in-memory state for every
-    // participant currently in this space's voice rooms (mirrors buildReadyPayload).
-    for (const [, room] of this.voiceRooms) {
+    // participant currently in this space's voice rooms the user can VIEW: that
+    // someone is muted for want of SPEAK says they sit in a voice channel, so it
+    // is filtered as who sits there is.
+    for (const [roomId, room] of this.voiceRooms) {
       if (room.roomType !== 'space') continue;
       const meta = room.metadata as SpaceRoomMeta;
       if (meta.spaceId !== spaceId) continue;
+      const roomPerms = voicePerms.get(roomId) ?? 0n;
+      if ((roomPerms & PermissionBits.VIEW_CHANNEL) === 0n && (roomPerms & PermissionBits.ADMINISTRATOR) === 0n) continue;
       for (const participantId of room.participants) {
         if (this.isPermissionMuted(spaceId, participantId)) {
           const key = `${spaceId}:${participantId}`;
@@ -1977,7 +1982,7 @@ export function buildReadyPayload(userId: string): {
       spaces.push({
         ...spaceToWire(spaceRow),
         channels: visibleChannels,
-        categories: categoriesBySpace.get(spaceRow.id) ?? [],
+        categories: shownCategories(categoriesBySpace.get(spaceRow.id) ?? [], visibleChannels, spacePerms),
         members,
         roles: rolesForViewer(roles, spacePerms),
         myPermissions: permissionsToString(spacePerms),

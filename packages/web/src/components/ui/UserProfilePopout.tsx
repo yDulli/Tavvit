@@ -32,6 +32,7 @@ import { ProfileRoles } from './ProfileRoles';
 import { ProfileSpaceNickname } from './ProfileSpaceNickname';
 import { BlockUserButton } from '../social/BlockUserButton';
 import { ProfileLinks } from './ProfileLinks';
+import { ProfileBanner } from './ProfileBanner';
 
 /** Gap between the card and the element it was opened from. */
 const ANCHOR_OFFSET = 8;
@@ -202,15 +203,7 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
       style={cardStyle}
     >
       {/* Banner; the compact layout has none */}
-      {look.banner && (
-        <div
-          className={`${look.banner}${bannerSrc ? '' : ' banner-depth'}`}
-          style={bannerSrc
-            ? { backgroundImage: `url(${bannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-            : { background: bannerFallback }
-          }
-        />
-      )}
+      {look.banner && <ProfileBanner className={look.banner} src={bannerSrc} fallback={bannerFallback} />}
 
       {/* Body */}
       <div className="px-4 pb-4 relative">

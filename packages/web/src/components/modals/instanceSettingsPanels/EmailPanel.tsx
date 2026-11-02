@@ -60,11 +60,11 @@ export function EmailPanel() {
     }
   };
 
-  const setRequired = async (emailRequired: boolean) => {
+  const save = async (patch: { emailRequired?: boolean; blockThrowawayEmail?: boolean }) => {
     setSaving(true);
     setError('');
     try {
-      await updateInstanceSettings({ emailRequired });
+      await updateInstanceSettings(patch);
       invalidateHomeInstanceInfo();
     } catch (err) {
       setError(describeError(err));
@@ -143,7 +143,14 @@ export function EmailPanel() {
           description={t('admin:email.required.description')}
           enabled={instanceSettings?.emailRequired === true}
           disabled={saving || instanceSettings === null}
-          onChange={(enabled) => { void setRequired(enabled); }}
+          onChange={(enabled) => { void save({ emailRequired: enabled }); }}
+        />
+        <ToggleRow
+          label={t('admin:email.throwaway.label')}
+          description={t('admin:email.throwaway.description')}
+          enabled={instanceSettings?.blockThrowawayEmail === true}
+          disabled={saving || instanceSettings === null}
+          onChange={(enabled) => { void save({ blockThrowawayEmail: enabled }); }}
         />
       </SettingsSection>
 

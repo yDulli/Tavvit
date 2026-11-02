@@ -15,6 +15,7 @@ import { cleanupUnusedStickerAssets } from './stickerAssets.js';
 import type { StorageStats, StorageBreakdown, OrphanedFile, CleanupResult } from '@backspace/shared';
 import { profileImageFilenames } from './profileImageRefs.js';
 import { renameLegacyUploads } from './legacyUploadNames.js';
+import { removeUnusedSoundFiles } from './soundFiles.js';
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico', '.bmp', '.avif']);
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.avi', '.mkv']);
@@ -939,6 +940,15 @@ export async function runFederationJanitor(): Promise<void> {
       }
     } catch (err) {
       console.error('[storage-janitor] Renaming older uploads failed:', err);
+    }
+
+    // Soundboard files whose clip is gone (a deletion that stopped between the row and the file),
+    // left for an hour first: a clip being added has its file before its row.
+    try {
+      const sounds = removeUnusedSoundFiles(60 * 60 * 1000);
+      if (sounds > 0) console.log(`[storage-janitor] Removed ${sounds} soundboard file(s) without a clip`);
+    } catch (err) {
+      console.error('[storage-janitor] Removing unused soundboard files failed:', err);
     }
 
     // Expire approval requests:

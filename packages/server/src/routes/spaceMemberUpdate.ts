@@ -1,4 +1,5 @@
 import path from 'path';
+import { memberActionRefusal } from '../utils/spaceModeration.js';
 import { PROFILE_LIMITS, type MemberWithUser, type UpdateMemberRequest, type UpdateSpaceProfileRequest } from '@backspace/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { and, eq } from 'drizzle-orm';
@@ -107,14 +108,22 @@ function validateRoleUpdate(context: MemberUpdateContext, roleIds: unknown): rol
 }
 
 /**
- * Who may set whose nickname: anyone their own; another member's needs
- * MANAGE_SPACE, never reaches the owner, and follows the role hierarchy like
- * every other action on a member (permissions.md, "Role hierarchy").
+ * Who may set whose nickname: anyone their own, as a member action (the whole
+ * space sees it, so not while timed out or before the address is confirmed);
+ * another member's needs MANAGE_SPACE, never reaches the owner, and follows
+ * the role hierarchy like every other action on a member (permissions.md,
+ * "Role hierarchy").
  * Answers the stored form (null clears), or undefined after sending a refusal.
  */
 function validateNicknameUpdate(context: MemberUpdateContext, nickname: unknown): string | null | undefined {
   const { spaceId, actorId, targetId, ownerId, reply } = context;
-  if (actorId !== targetId) {
+  if (actorId === targetId) {
+    const refusal = memberActionRefusal(spaceId, actorId);
+    if (refusal) {
+      sendError(reply, refusal.status, refusal.code, refusal.details);
+      return undefined;
+    }
+  } else {
     if (!hasPermission(actorId, spaceId, PermissionBits.MANAGE_SPACE)) {
       sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_SPACE' });
       return undefined;
@@ -249,6 +258,10 @@ function registerSpaceProfileRoute(app: FastifyInstance): void {
     const member = db.select().from(schema.spaceMembers)
       .where(and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, request.userId))).get();
     if (!member) return sendError(reply, 404, 'not_space_member');
+    // A space profile is shown to the whole space: changed as anything else done there is, by a
+    // member who is not timed out and, while the gate is on, has confirmed their address.
+    const refusal = memberActionRefusal(id, request.userId);
+    if (refusal) return sendError(reply, refusal.status, refusal.code, refusal.details);
 
     const updates: Partial<Pick<typeof schema.spaceMembers.$inferInsert, 'avatar' | 'banner' | 'bio'>> = {};
     const replaced: string[] = [];
@@ -277,15 +290,19 @@ function registerSpaceProfileRoute(app: FastifyInstance): void {
     }
     if (Object.keys(updates).length === 0) return sendError(reply, 400, 'no_fields_to_update');
 
+    // The new images are fitted to their slot like an account's before the row shows them, and
+    // refused when they cannot be written anew (utils/thumbnail.ts).
+    for (const image of placed) {
+      if (!(await resizeProfileImage(path.join(config.uploadDir, path.basename(image.name)), image.kind))) {
+        return sendError(reply, 400, 'profile_image_invalid');
+      }
+    }
+
     db.update(schema.spaceMembers).set(updates)
       .where(and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, request.userId))).run();
 
-    // The new images are the member row's now, not an upload waiting for a
-    // message; they are fitted to their slot like an account's.
-    for (const image of placed) {
-      deleteAttachmentByFilename(image.name);
-      await resizeProfileImage(path.join(config.uploadDir, path.basename(image.name)), image.kind);
-    }
+    // The new images are the member row's now, not an upload waiting for a message.
+    for (const image of placed) deleteAttachmentByFilename(image.name);
     // A replaced image goes once nothing else shows it and no message holds it.
     for (const old of replaced) {
       if (pictureFileReleasable(old)) deleteUploadFile(old);

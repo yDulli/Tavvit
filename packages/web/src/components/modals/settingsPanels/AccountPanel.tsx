@@ -1,4 +1,5 @@
 import { DataExportSection } from './DataExportSection';
+import { cssUrl } from '../../../utils/cssUrl';
 import { StorageSection } from './StorageSection';
 import { StatusPicker } from '../../ui/StatusPicker';
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -443,7 +444,7 @@ export function AccountPanel() {
               <div
                 className={look.banner}
                 style={displayBannerSrc
-                  ? { backgroundImage: `url(${displayBannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                  ? { backgroundImage: cssUrl(displayBannerSrc), backgroundSize: 'cover', backgroundPosition: 'center' }
                   : { background: bannerFallback }
                 }
               />
@@ -539,7 +540,7 @@ export function AccountPanel() {
             <div
               className="h-full w-full"
               style={displayBannerSrc
-                ? { backgroundImage: `url(${displayBannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                ? { backgroundImage: cssUrl(displayBannerSrc), backgroundSize: 'cover', backgroundPosition: 'center' }
                 : { background: bannerFallback }
               }
             />

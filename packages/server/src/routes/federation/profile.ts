@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
+import { isAvatarColor } from '@backspace/shared';
 import path from 'node:path';
 import { config } from '../../config.js';
 import { getDb, schema } from '../../db/index.js';
@@ -6,6 +8,7 @@ import { deleteUploadFile } from '../../utils/fileCleanup.js';
 import { sanitizeUser } from '../../utils/sanitize.js';
 import { generateSnowflake } from '../../utils/snowflake.js';
 import { isUploadOn, mediaOriginsFor } from '../../utils/remoteMedia.js';
+import { diskWouldFill } from '../../utils/accountLimits.js';
 import { storedUploadName } from '../../utils/uploadNames.js';
 import { collectProfileBroadcastTargetIds } from '../../utils/userDeletion.js';
 import { safeFetch } from '../../utils/ssrf.js';
@@ -69,9 +72,9 @@ export async function hydrateReplicatedUserProfile(
   // picture an account may show (utils/remoteMedia.ts), and nothing otherwise.
   const resolveAsset = async (snapshot: string): Promise<string | null> => {
     const absoluteUrl = buildAbsoluteUrl(snapshot);
+    if (!isUploadOn(absoluteUrl, mediaOriginsFor(user.homeInstance))) return null;
     const localFile = await downloadProfileAsset(absoluteUrl, baseUrl);
-    if (localFile) return localFile;
-    return isUploadOn(absoluteUrl, mediaOriginsFor(user.homeInstance)) ? absoluteUrl : null;
+    return localFile ?? absoluteUrl;
   };
 
   const fills: Partial<Record<FillColumn, string>> = {};
@@ -90,12 +93,12 @@ export async function hydrateReplicatedUserProfile(
   // back and forth, announcing each flip. Locally-downloaded bare filenames
   // produced by that path must not be clobbered back to URLs either.
   if (!homeAnswered) {
-    if (effectiveDisplayName && !user.displayName) fills.displayName = effectiveDisplayName;
+    if (effectiveDisplayName && !user.displayName) fills.displayName = withoutUnsafeCharacters(effectiveDisplayName);
     if (profile.avatar && !user.avatar) {
       const avatar = await resolveAsset(profile.avatar);
       if (avatar) fills.avatar = avatar;
     }
-    if (profile.avatarColor && !user.avatarColor) fills.avatarColor = profile.avatarColor;
+    if (isAvatarColor(profile.avatarColor) && !user.avatarColor) fills.avatarColor = profile.avatarColor;
     if (profile.banner && !user.banner) {
       const banner = await resolveAsset(profile.banner);
       if (banner) fills.banner = banner;
@@ -158,17 +161,22 @@ export async function downloadProfileAsset(
   url: string,
   sourceInstance: string,
 ): Promise<string | null> {
-  // SSRF: hostname must match the authenticated source instance
+  // SSRF: the host (and its port) must be the authenticated source instance's, and the address an
+  // upload there: a picture is a file of the instance that sent it, never another of its pages.
   try {
-    const urlHostname = new URL(url).hostname;
-    const sourceHostname = new URL(sourceInstance).hostname;
-    if (urlHostname !== sourceHostname) {
-      console.warn(`[federation] Profile asset SSRF blocked: URL hostname "${urlHostname}" != source "${sourceHostname}"`);
+    const urlHost = new URL(url).host;
+    const source = new URL(sourceInstance);
+    if (urlHost !== source.host) {
+      console.warn(`[federation] Profile asset SSRF blocked: URL host "${urlHost}" != source "${source.host}"`);
       return null;
     }
+    if (!isUploadOn(url, [source.origin])) return null;
   } catch {
     return null;
   }
+  // A copy is no reason to take the room the database needs: past the disk's reserve, the address
+  // is kept instead (utils/accountLimits.ts).
+  if (diskWouldFill(MAX_PROFILE_ASSET_BYTES)) return null;
 
   const ext = path.extname(new URL(url).pathname) || '.webp';
   const localId = generateSnowflake();
@@ -260,6 +268,15 @@ export interface HomeProfile {
   bio: string | null;
 }
 
+/**
+ * A name another instance sends, without the characters that would disguise it (a right-to-left
+ * override shows one name as another): this instance refuses them in its own names, and stores
+ * none from elsewhere.
+ */
+function shownNameOf(name: string | null): string | null {
+  return name === null ? null : withoutUnsafeCharacters(name) || null;
+}
+
 /** A `/users/by-home-id` answer's profile as a `HomeProfile`. */
 export function homeProfileFromAnswer(answer: { username: string; profile: FederationUserLookupProfile }): HomeProfile {
   const { profile } = answer;
@@ -270,7 +287,7 @@ export function homeProfileFromAnswer(answer: { username: string; profile: Feder
     avatar: profile.avatar,
     banner: profile.banner,
     ...(profile.accentColor !== undefined ? { accentColor: profile.accentColor } : {}),
-    avatarColor: profile.avatarColor,
+    avatarColor: isAvatarColor(profile.avatarColor) ? profile.avatarColor : null,
     bio: profile.bio,
   };
 }
@@ -332,10 +349,10 @@ export async function applyHomeProfile(
   const banner = await resolveHomeAsset(profile.banner, homeOrigin);
 
   const updates: Partial<typeof schema.users.$inferInsert> = {
-    displayName: profile.displayName ?? handleFromHint(profile.username),
+    displayName: shownNameOf(profile.displayName ?? handleFromHint(profile.username)),
     avatar,
     banner,
-    avatarColor: profile.avatarColor,
+    avatarColor: isAvatarColor(profile.avatarColor) ? profile.avatarColor : null,
     bio: profile.bio,
     profileUpdatedAt: profile.profileUpdatedAt,
   };
@@ -427,7 +444,7 @@ export async function processProfileUpdateEvent(
     avatar: payload.avatar,
     banner: payload.banner,
     accentColor: payload.accentColor,
-    avatarColor: payload.avatarColor,
+    avatarColor: isAvatarColor(payload.avatarColor) ? payload.avatarColor : null,
     bio: payload.bio,
   }, sourceInstance, db);
   if (newer) {

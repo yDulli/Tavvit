@@ -78,7 +78,8 @@ const VOICE = 'channel-voice';
 
 const headers = (userId: string) => ({ authorization: `Bearer ${signJwt({ userId, username: userId })}` });
 
-const { soundboardRoutes, sniffAudio, removeUnusedSoundFiles, soundFilePath, _resetSoundboardLimitForTests } = await import('./soundboard.js');
+const { soundboardRoutes, sniffAudio, _resetSoundboardLimitForTests } = await import('./soundboard.js');
+const { removeUnusedSoundFiles, soundFilePath } = await import('../utils/soundFiles.js');
 
 const OGG = Buffer.concat([Buffer.from('OggS'), Buffer.alloc(64, 1)]);
 const clip = (bytes: Buffer = OGG) => bytes.toString('base64');
@@ -214,6 +215,40 @@ describe('reading and managing', () => {
     testDb.delete(schema.spaces).where(eq(schema.spaces.id, SPACE)).run();
     expect(removeUnusedSoundFiles()).toBe(1);
     expect(fs.existsSync(soundFilePath(id))).toBe(false);
+  });
+
+  it('the hourly sweep leaves a file young enough to be a clip on its way in', async () => {
+    const id = await madeSound();
+    testDb.delete(schema.spaces).where(eq(schema.spaces.id, SPACE)).run();
+    const hour = 60 * 60 * 1000;
+    expect(removeUnusedSoundFiles(hour)).toBe(0);
+    expect(fs.existsSync(soundFilePath(id))).toBe(true);
+    expect(removeUnusedSoundFiles(hour, Date.now() + 2 * hour)).toBe(1);
+    expect(fs.existsSync(soundFilePath(id))).toBe(false);
+  });
+
+  it("a space deleted takes its clips' files with it, not only their rows", async () => {
+    const id = await madeSound();
+    const { spaceRoutes } = await import('./spaces.js');
+    const spacesApp = Fastify();
+    await spacesApp.register(spaceRoutes);
+    await spacesApp.ready();
+    try {
+      expect((await spacesApp.inject({ method: 'DELETE', url: `/api/spaces/${SPACE}`, headers: headers(OWNER) })).statusCode).toBe(200);
+    } finally {
+      await spacesApp.close();
+    }
+    expect(testDb.select().from(schema.spaceSounds).all()).toHaveLength(0);
+    expect(fs.existsSync(soundFilePath(id))).toBe(false);
+  });
+
+  it("counts on its creator's storage, and is refused once that is full", async () => {
+    testDb.update(schema.users).set({ storageLimitBytes: OGG.length + 10 }).where(eq(schema.users.id, SOUNDS)).run();
+    expect((await add()).statusCode).toBe(201);
+    const refused = await add(SOUNDS, { name: 'Second' });
+    expect(refused.statusCode).toBe(413);
+    expect(refused.json().code).toBe('storage_limit_reached');
+    expect(fs.readdirSync(path.join(uploadDir, 'sounds'))).toHaveLength(1);
   });
 });
 

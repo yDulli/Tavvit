@@ -59,7 +59,7 @@ vi.mock('../ws/events.js', () => ({ checkVoicePermissions: vi.fn(), disconnectMe
 // The pictures here are placeholders, not images: fitting them is not under test.
 vi.mock('../utils/thumbnail.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../utils/thumbnail.js')>()),
-  resizeProfileImage: vi.fn(async () => undefined),
+  resizeProfileImage: vi.fn(async () => true),
 }));
 
 function file(name: string): string {

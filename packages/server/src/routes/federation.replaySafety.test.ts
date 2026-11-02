@@ -160,7 +160,8 @@ beforeEach(async () => {
   db.insert(schema.federationPeers).values({
     id: 'peer-home', origin: HOME_ORIGIN, hmacSecret: 'b'.repeat(64), status: 'active', createdAt: 1,
   }).run();
-  seedUser({ id: 'bob', username: 'bob', passwordHash: 'real-hash', homeInstance: null });
+  // bob takes a conversation from anyone: a relayed 1-on-1 that starts one reaches him.
+  seedUser({ id: 'bob', username: 'bob', passwordHash: 'real-hash', homeInstance: null, dmPolicy: 'anyone' });
   seedUser({ id: 'alice-on-orbit', username: 'alice@home.test', homeInstance: 'home.test', homeUserId: 'alice' });
   db.insert(schema.dmChannels).values({ id: CHANNEL, federatedId: FED_ID, createdAt: 1 }).run();
   db.insert(schema.dmMembers).values({ dmChannelId: CHANNEL, userId: 'bob', closed: 0, closedChangedAt: 1 }).run();
@@ -254,7 +255,7 @@ describe('a create that arrives through a pull raises nothing live', () => {
   });
 
   it('announces a 1-on-1 copy it created, silently, to each member', async () => {
-    seedUser({ id: 'erin', username: 'erin', passwordHash: 'real-hash', homeInstance: null });
+    seedUser({ id: 'erin', username: 'erin', passwordHash: 'real-hash', homeInstance: null, dmPolicy: 'anyone' });
     const erin: FederationRelayParticipant = { homeUserId: 'erin', homeInstance: ORBIT_ORIGIN, profile: { username: 'erin' } };
     const event: FederationRelayEvent = { ...createEvent('m-new-pair', 4_000), participants: [alice, erin] };
 
@@ -526,6 +527,9 @@ describe('member and friend events are last-writer-wins on their subject clock',
     db.insert(schema.dmMembers).values({ dmChannelId: GROUP, userId: 'alice-on-orbit', closed: 0, closedChangedAt: 1 }).run();
   });
 
+  /** alice adds dave as the local route would let her: they are friends. */
+  const befriendAliceAndDave = () => db.insert(schema.friends).values({ userId: 'alice-on-orbit', friendId: 'dave', createdAt: 1 }).run();
+
   function memberAdd(timestamp: number): FederationRelayEvent {
     return {
       eventType: 'member_add',
@@ -561,6 +565,7 @@ describe('member and friend events are last-writer-wins on their subject clock',
   }
 
   it('an add lost live, then a remove live, then the add pulled: the member stays out', async () => {
+    befriendAliceAndDave();
     // add(1000) is lost; the kick(2000) arrives live for someone not here.
     expect((await apply(memberKick(2_000))).accepted).toEqual(['member_remove:dave:2000']);
     expect(isMember('dave')).toBe(false);
@@ -578,6 +583,7 @@ describe('member and friend events are last-writer-wins on their subject clock',
   });
 
   it('a remove lost live, then a re-add live, then the remove pulled: the member stays in', async () => {
+    befriendAliceAndDave();
     await apply(memberAdd(1_000));
     expect(isMember('dave')).toBe(true);
 
@@ -593,6 +599,7 @@ describe('member and friend events are last-writer-wins on their subject clock',
   });
 
   it('a change made here orders the relayed events that follow it', async () => {
+    befriendAliceAndDave();
     const { recordLocalMemberChange } = await import('../utils/federationSubjectClock.js');
     // dave was added through this instance at 5000, after a kick alice's
     // instance made at 4000 and delivers only now.
@@ -606,6 +613,7 @@ describe('member and friend events are last-writer-wins on their subject clock',
   });
 
   it('a stale add creates no copy of a group not held here', async () => {
+    befriendAliceAndDave();
     const { recordLocalMemberChange } = await import('../utils/federationSubjectClock.js');
     recordLocalMemberChange('grp-2', DAVE, 5_000, db);
     const bootstrap: FederationRelayEvent = {

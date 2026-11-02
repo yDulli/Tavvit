@@ -214,8 +214,11 @@ describe('category moves and voice presence', () => {
     expect(res.statusCode).toBe(200);
     const [layout] = eventsTo('member', 'channel_layout_updated');
     expect(layout?.channels?.map((c) => c.id)).toEqual([VOICE_ID]);
-    expect(layout?.categories?.find((c) => c.id === CATEGORY_ID)?.isPrivate).toBe(true);
+    // A private category the member sees nothing in is not named to them; the owner is told it.
+    expect(layout?.categories?.find((c) => c.id === CATEGORY_ID)).toBeUndefined();
     expect(layout?.categories?.find((c) => c.id === OPEN_CATEGORY_ID)?.isPrivate).toBe(false);
+    const [ownerLayout] = eventsTo('owner', 'channel_layout_updated');
+    expect(ownerLayout?.categories?.find((c) => c.id === CATEGORY_ID)?.isPrivate).toBe(true);
     expect(pushedTo()).toEqual([`member@${SPACE_ID}`, `owner@${SPACE_ID}`]);
     expect(checkVoicePermissions).toHaveBeenCalledWith(SPACE_ID);
   });

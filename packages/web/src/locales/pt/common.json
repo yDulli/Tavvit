@@ -303,7 +303,7 @@
   "emailPrompt": {
     "unconfirmed": "Seu endereço {{address}} ainda não foi confirmado. Procure nosso e-mail ou verifique nas configurações.",
     "missing": "Adicione um endereço de e-mail para poder voltar se esquecer sua senha.",
-    "required": "Confirme seu endereço de e-mail para criar spaces e iniciar conversas com pessoas que não são suas amigas.",
+    "required": "Confirme seu endereço de e-mail para escrever e reagir nos spaces, criar spaces e iniciar conversas com pessoas que não são suas amigas.",
     "open": "Abrir configurações",
     "dismiss": "Agora não"
   }

@@ -74,6 +74,8 @@
   "cannot_dm_self": "无法与自己发起私信会话。",
   "group_dm_too_few_members": "群聊至少需要包含 {{min}} 位其他成员。",
   "group_dm_too_many_members": "群聊最多只能包含 {{max}} 位成员。",
+  "group_dm_limit_reached": "您已加入 {{max}} 个群聊，已达到单个账户的上限。请先退出一个群聊再创建新的。",
+  "group_dm_member_limit_reached": "{{name}} 已加入 {{max}} 个群聊，已达到单个账户的上限。",
   "users_not_found": "未找到部分用户。",
   "duplicate_users": "同一用户被重复添加。",
   "group_dm_includes_self": "您会自动加入群组，无需将自己添加到列表中。",

@@ -1,6 +1,7 @@
 import React, { type ImgHTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 import { externalHostOf, useExternalMediaStore } from '../../stores/externalMediaStore';
+import { useConnectedOrigins } from '../../hooks/useConnectedOrigins';
 
 /**
  * Whether this address may be fetched now, and its host when it still needs a yes. An address on
@@ -12,6 +13,23 @@ export function useBlockedHost(url: string | null | undefined, trustedOrigins: r
   const host = externalHostOf(url);
   if (!host || alwaysAllow || allowedHosts.includes(host)) return null;
   return url && trustedOrigins.includes(originOf(url)) ? null : host;
+}
+
+/**
+ * A picture's address as the page may fetch it now: as given when it is on a server this client
+ * talks to (`useConnectedOrigins`) or the person said yes to its host, null while it waits for that
+ * yes (docs/systems/legal.md). Every picture a server names goes through this: an account's picture
+ * and banner, a space's or a group's icon. What stands in meanwhile is the caller's.
+ */
+export function useGatedPicture(address: string | null | undefined): string | null {
+  const blocked = useBlockedHost(address, useConnectedOrigins()) !== null;
+  return address && !blocked ? address : null;
+}
+
+/** An `<img>` of such a picture, with `whileBlocked` in its place until it may be fetched. */
+export function GatedPicture({ src, whileBlocked, ...rest }: ImgHTMLAttributes<HTMLImageElement> & { src: string; whileBlocked: React.ReactNode }) {
+  const shown = useGatedPicture(src);
+  return shown ? <img src={shown} {...rest} /> : <>{whileBlocked}</>;
 }
 
 function originOf(url: string): string {

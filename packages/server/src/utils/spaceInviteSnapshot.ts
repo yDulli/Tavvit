@@ -1,5 +1,5 @@
 import { usableInvite } from './spaceInvites.js';
-import type { AvatarColor, InvitePreview, SpaceVisibility } from '@backspace/shared';
+import { isAvatarColor, type AvatarColor, type InvitePreview, type SpaceVisibility } from '@backspace/shared';
 import { DEFAULT_INSTANCE_NAME } from '@backspace/shared/src/constants.js';
 import { eq, sql } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
@@ -97,7 +97,7 @@ export async function fetchSpaceInviteSnapshot(
       description: data.description ?? null,
       // Whoever sees the invite fetches its icon: a file of that instance, by name or address, and nothing elsewhere.
       icon: typeof data.icon === 'string' ? shownPicture(data.icon, [instanceOrigin(spaceInstanceOrigin) ?? spaceInstanceOrigin]) : null,
-      avatarColor: data.avatarColor ?? null,
+      avatarColor: isAvatarColor(data.avatarColor) ? data.avatarColor : null,
       memberCount: typeof data.memberCount === 'number' ? data.memberCount : 0,
       instanceName: data.instanceName ?? DEFAULT_INSTANCE_NAME,
     };

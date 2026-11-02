@@ -9,6 +9,7 @@ import { and, eq, or } from 'drizzle-orm';
 import type { FederationRelayEvent } from '@backspace/shared';
 import { extractDomain, isOwnDomain, resolveOrCreateReplicatedUser, resolveRelayActor, attributionRefusal, type RelayActor } from '../identity.js';
 import { hydrateReplicatedUserProfile } from '../profile.js';
+import { alreadyConnected, relayedFriendRequestRefusal, relayedFriendRequestRefusalFromStranger } from '../localConsent.js';
 
 /**
  * Whether a friendship side names a user homed on this instance. Compared by
@@ -66,6 +67,37 @@ export async function processFriendRequestCreateEvent(
     return;
   }
 
+  // The recipient is the local user that IS the `to` identity, never a row
+  // that only shares its homeUserId (such as the sender's).
+  const recipient = resolveRelayActor(to, db);
+  const toUser = recipient.kind === 'found' ? recipient.user : undefined;
+  if (!toUser) {
+    rejected.push({ messageId: event.messageId, reason: 'recipient_not_found' });
+    return;
+  }
+  // A request is this instance's to keep only when one of its own people is in it: between two
+  // people homed elsewhere it is their homes' (a sender sends it to those alone,
+  // getFriendEventTargets), and keeping it would make a row and fetch pictures for neither.
+  if (toUser.homeInstance !== null && !isOwnDomain(extractDomain(from.homeInstance).toLowerCase())) {
+    console.warn(`[federation] Refused friend_request_create from ${extractDomain(sourceInstance)}: neither of its two is homed here`);
+    rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+    return;
+  }
+
+  // The person here gets a request as the local route would let it reach them (localConsent.ts),
+  // judged before a stub is made or a picture fetched for the sender: not from someone either of
+  // them blocked, and not past their rule on who may send one. A pair already friends, or already
+  // asked, is the no-op below.
+  const knownSender = resolveRelayActor(from, db);
+  const consent = knownSender.kind === 'found'
+    ? (alreadyConnected(knownSender.user.id, toUser.id, db) ? null : relayedFriendRequestRefusal(knownSender.user.id, toUser, db))
+    : relayedFriendRequestRefusalFromStranger(toUser);
+  if (consent) {
+    console.warn(`[federation] Refused friend_request_create to ${toUser.id}: they do not take it (${consent})`);
+    rejected.push({ messageId: event.messageId, reason: 'recipient_refuses' });
+    return;
+  }
+
   // Resolve the sender (create stub if needed — they're on a remote instance)
   const fromUserResolved = resolveOrCreateReplicatedUser(from.homeUserId, from.homeInstance, db, { username: event.friendship.fromProfile?.username, status: event.friendship.fromProfile?.status, deleted: event.friendship.fromProfile?.deleted });
   if (!fromUserResolved) {
@@ -74,15 +106,6 @@ export async function processFriendRequestCreateEvent(
     return;
   }
   let fromUser = await hydrateReplicatedUserProfile(fromUserResolved, event.friendship.fromProfile, db);
-
-  // The recipient is the local user that IS the `to` identity, never a row
-  // that only shares its homeUserId (such as the sender resolved just above).
-  const recipient = resolveRelayActor(to, db);
-  const toUser = recipient.kind === 'found' ? recipient.user : undefined;
-  if (!toUser) {
-    rejected.push({ messageId: event.messageId, reason: 'recipient_not_found' });
-    return;
-  }
 
   if (claimFriendPair(event, from, to, db)) {
     accepted.push(event.messageId);

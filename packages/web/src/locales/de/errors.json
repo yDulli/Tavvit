@@ -74,6 +74,8 @@
   "cannot_dm_self": "Du kannst keine Unterhaltung mit dir selbst beginnen.",
   "group_dm_too_few_members": "Eine Gruppe braucht mindestens {{min}} weitere Personen.",
   "group_dm_too_many_members": "Gruppen können höchstens {{max}} Mitglieder haben.",
+  "group_dm_limit_reached": "Du bist in {{max}} Gruppen, mehr sind für ein Konto nicht möglich. Verlass eine, um eine neue zu starten.",
+  "group_dm_member_limit_reached": "{{name}} ist schon in {{max}} Gruppen, mehr sind für ein Konto nicht möglich.",
   "users_not_found": "Einige dieser Personen wurden nicht gefunden.",
   "duplicate_users": "Dieselbe Person ist mehr als einmal aufgeführt.",
   "group_dm_includes_self": "Du wirst der Gruppe automatisch hinzugefügt und musst dich nicht selbst auswählen.",

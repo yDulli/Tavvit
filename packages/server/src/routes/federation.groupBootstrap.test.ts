@@ -86,7 +86,9 @@ function applyMigrations(db: Database.Database): void {
 
 const OWNER_INSTANCE = 'orbit.ddns.net';
 const OWNER_ORIGIN = `https://${OWNER_INSTANCE}`;
-const FEDERATED_ID = 'fed-bootstrap-1';
+const FEDERATED_ID = '6f1c2a4e-1b2c-4d3e-8f90-1a2b3c4d5e6f';
+const OWNER_STUB = 'owner-stub-1';
+const LOCAL_FRIEND = 'local-friend-1';
 
 // Tiny PNG body for fetch stubs — matches the shape downloadProfileAsset
 // expects (image/* content-type, non-empty body).
@@ -137,6 +139,12 @@ function buildBootstrapEvent(opts: {
         homeInstance: OWNER_INSTANCE,
         profile: { username: 'added', displayName: 'added' },
       },
+      // Someone of this instance, a friend of the owner: a group is kept here for its own people.
+      {
+        homeUserId: LOCAL_FRIEND,
+        homeInstance: 'local.test',
+        profile: { username: 'friend', displayName: 'friend' },
+      },
     ],
     // Defaults match what an older peer emits; explicit overrides below.
     name: null,
@@ -183,6 +191,12 @@ beforeEach(() => {
   sqlite = new Database(':memory:');
   testDb = drizzle(sqlite, { schema });
   applyMigrations(sqlite);
+  // The owner as this instance knows them, and a person here who is their friend.
+  testDb.insert(schema.users).values([
+    { id: OWNER_STUB, username: `owner@${OWNER_INSTANCE}`, displayName: 'owner', passwordHash: '!federation-replicated', status: 'offline', isAdmin: 0, homeInstance: OWNER_INSTANCE, homeUserId: 'home-owner-1', createdAt: Date.now() },
+    { id: LOCAL_FRIEND, username: 'friend', displayName: 'friend', passwordHash: 'hash', status: 'online', isAdmin: 0, createdAt: Date.now() },
+  ]).run();
+  testDb.insert(schema.friends).values({ userId: OWNER_STUB, friendId: LOCAL_FRIEND, createdAt: 1 }).run();
   tmpUploadDir = path.join(os.tmpdir(), `bs-fed-bootstrap-${crypto.randomBytes(6).toString('hex')}`);
   fs.mkdirSync(tmpUploadDir, { recursive: true });
   vi.mocked(connectionManager.sendToUser).mockReset();
@@ -321,18 +335,7 @@ describe('processMemberAddEvent — bootstrap with group metadata snapshot', () 
     // Seed: channel already bootstrapped with current metadata. The
     // incremental member_add must not touch any of these fields.
     const channelId = 'ch-existing-1';
-    const ownerLocalId = 'owner-stub-1';
-    testDb.insert(schema.users).values({
-      id: ownerLocalId,
-      username: `owner@${OWNER_INSTANCE}`,
-      displayName: 'owner',
-      passwordHash: '!federation-replicated',
-      status: 'offline',
-      isAdmin: 0,
-      homeInstance: OWNER_INSTANCE,
-      homeUserId: 'home-owner-1',
-      createdAt: Date.now(),
-    }).run();
+    const ownerLocalId = OWNER_STUB;
 
     const localMemberId = 'local-member-1';
     testDb.insert(schema.users).values({
@@ -410,6 +413,8 @@ describe('processMemberAddEvent — the bootstrap dm_channel_created', () => {
     testDb.insert(schema.users).values({
       id: 'local-carol', username: 'carol', passwordHash: 'x', homeUserId: null, homeInstance: null, createdAt: 1,
     }).run();
+    // Carol is the owner's friend too, as she would be had the owner put her in.
+    testDb.insert(schema.friends).values({ userId: OWNER_STUB, friendId: 'local-carol', createdAt: 1 }).run();
     const event = buildBootstrapEvent({ name: 'With Carol', icon: null, metadataUpdatedAt: 77 });
     event.group!.members.push({ homeUserId: 'local-carol', homeInstance: 'local.test', profile: { username: 'carol', displayName: 'carol' } });
 

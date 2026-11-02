@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as schema from '../db/schema.js';
 import { setWorkerId } from '../utils/snowflake.js';
-import { signJwt } from '../utils/auth.js';
+import { hashPassword, signJwt } from '../utils/auth.js';
 
 setWorkerId(24);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -64,6 +64,12 @@ const DETACHED_ID = 'u-detached-1';
 const DETACHED_USERNAME = 'lee@dead.test';
 
 const REMOTE = 'https://orbit.test';
+const PASSWORD = 'not-a-real-password-1';
+let passwordHash = '';
+
+beforeAll(async () => {
+  passwordHash = await hashPassword(PASSWORD);
+});
 
 function credential(
   userId: string,
@@ -78,6 +84,11 @@ function credential(
   });
 }
 
+/** The same with the home password, which is what gives the secret out. */
+function issued(userId: string, username: string, payload: Record<string, unknown>) {
+  return credential(userId, username, { ...payload, password: PASSWORD });
+}
+
 beforeEach(async () => {
   sqlite = new Database(':memory:');
   sqlite.pragma('foreign_keys = ON');
@@ -86,15 +97,15 @@ beforeEach(async () => {
 
   testDb.insert(schema.users).values([
     {
-      id: LOCAL_ID, username: LOCAL_USERNAME, passwordHash: 'not-a-real-hash',
+      id: LOCAL_ID, username: LOCAL_USERNAME, passwordHash,
       avatarColor: 'mint', homeInstance: null, createdAt: 1,
     },
     {
-      id: FEDERATED_ID, username: FEDERATED_USERNAME, passwordHash: 'not-a-real-hash',
+      id: FEDERATED_ID, username: FEDERATED_USERNAME, passwordHash,
       avatarColor: 'sky', homeInstance: 'orbit.test', homeUserId: 'home-kim-1', createdAt: 1,
     },
     {
-      id: DETACHED_ID, username: DETACHED_USERNAME, passwordHash: 'not-a-real-hash',
+      id: DETACHED_ID, username: DETACHED_USERNAME, passwordHash,
       avatarColor: 'peach', homeInstance: null, homeUserId: null,
       detachedHomeInstance: 'dead.test', detachedHomeUserId: 'home-lee-1',
       federationHomeOrphaned: 1, createdAt: 1,
@@ -119,7 +130,7 @@ describe('POST /api/users/@me/federation-credential', () => {
   });
 
   it('issues a high-entropy secret that is not derived from the account password', async () => {
-    const res = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    const res = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
     expect(res.statusCode).toBe(200);
     const body = res.json() as { origin: string; secret: string; provisioned: boolean };
     expect(body.origin).toBe(REMOTE);
@@ -137,8 +148,8 @@ describe('POST /api/users/@me/federation-credential', () => {
   });
 
   it('is first-writer-wins: a second call returns the same secret, never a fresh one', async () => {
-    const first = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
-    const second = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    const first = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    const second = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
     expect(second.statusCode).toBe(200);
     expect(second.json().secret).toBe(first.json().secret);
 
@@ -148,21 +159,21 @@ describe('POST /api/users/@me/federation-credential', () => {
   });
 
   it('issues a DIFFERENT secret per remote origin', async () => {
-    const a = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
-    const b = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: 'https://zeta.test' });
+    const a = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    const b = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: 'https://zeta.test' });
     expect(a.json().secret).not.toBe(b.json().secret);
   });
 
   it('scopes rows to the caller — one user never reads another user\'s secret', async () => {
-    const mine = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
-    const theirs = await credential(DETACHED_ID, DETACHED_USERNAME, { origin: REMOTE });
+    const mine = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    const theirs = await issued(DETACHED_ID, DETACHED_USERNAME, { origin: REMOTE });
     expect(theirs.statusCode).toBe(200);
     expect(theirs.json().secret).not.toBe(mine.json().secret);
   });
 
   it('normalizes the origin so host-only and trailing-slash forms share one row', async () => {
-    const canonical = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
-    const sloppy = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: 'orbit.test/' });
+    const canonical = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    const sloppy = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: 'orbit.test/' });
     expect(sloppy.statusCode).toBe(200);
     expect(sloppy.json().origin).toBe(REMOTE);
     expect(sloppy.json().secret).toBe(canonical.json().secret);
@@ -185,7 +196,7 @@ describe('POST /api/users/@me/federation-credential', () => {
   });
 
   it('refuses to issue credentials for a replicated federated account (its home does that)', async () => {
-    const res = await credential(FEDERATED_ID, FEDERATED_USERNAME, { origin: 'https://zeta.test' });
+    const res = await issued(FEDERATED_ID, FEDERATED_USERNAME, { origin: 'https://zeta.test' });
     expect(res.statusCode).toBe(409);
     expect(
       testDb.select().from(schema.userFederationCredentials)
@@ -194,21 +205,22 @@ describe('POST /api/users/@me/federation-credential', () => {
   });
 
   it('DOES issue credentials for a detached account (sovereign local, no home to ask)', async () => {
-    const res = await credential(DETACHED_ID, DETACHED_USERNAME, { origin: REMOTE });
+    const res = await issued(DETACHED_ID, DETACHED_USERNAME, { origin: REMOTE });
     expect(res.statusCode).toBe(200);
     expect(res.json().secret.length).toBeGreaterThanOrEqual(32);
   });
 
   it('markProvisioned latches the row and never rotates the stored secret', async () => {
-    const first = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    const first = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
     expect(first.json().provisioned).toBe(false);
 
-    const marked = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE, markProvisioned: true });
+    const marked = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE, markProvisioned: true });
     expect(marked.json().provisioned).toBe(true);
     expect(marked.json().secret).toBe(first.json().secret);
 
     const reread = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
     expect(reread.json().provisioned).toBe(true);
+    expect(reread.json().secret).toBeUndefined();
 
     const row = testDb.select().from(schema.userFederationCredentials)
       .where(and(
@@ -219,9 +231,52 @@ describe('POST /api/users/@me/federation-credential', () => {
   });
 
   it('markProvisioned on a first call creates the row already provisioned', async () => {
-    const res = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE, markProvisioned: true });
+    const res = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE, markProvisioned: true });
     expect(res.statusCode).toBe(200);
     expect(res.json().provisioned).toBe(true);
+  });
+
+  it('gives a session without the password the state only: no secret, and nothing is made', async () => {
+    const res = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ origin: REMOTE, provisioned: false });
+    expect(testDb.select().from(schema.userFederationCredentials).all()).toHaveLength(0);
+
+    // Marking needs a secret given out before: on an origin with none, nothing is made.
+    const marked = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE, markProvisioned: true });
+    expect(marked.json()).toEqual({ origin: REMOTE, provisioned: false });
+    expect(testDb.select().from(schema.userFederationCredentials).all()).toHaveLength(0);
+  });
+
+  it('marks a secret given out before as used without the password, and still gives no secret', async () => {
+    const first = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    const marked = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE, markProvisioned: true });
+    expect(marked.statusCode).toBe(200);
+    expect(marked.json()).toEqual({ origin: REMOTE, provisioned: true });
+    const again = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    expect(again.json().secret).toBe(first.json().secret);
+    expect(again.json().provisioned).toBe(true);
+  });
+
+  it('gives no secret for a wrong password', async () => {
+    const res = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE, password: 'not-the-password' });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('current_password_incorrect');
+    expect(res.json().secret).toBeUndefined();
+    expect(testDb.select().from(schema.userFederationCredentials).all()).toHaveLength(0);
+  });
+
+  it('asks for the second factor while 2FA is on', async () => {
+    testDb.update(schema.users).set({ twoFactorEnabledAt: 1 }).where(eq(schema.users.id, LOCAL_ID)).run();
+    const res = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('mfa_code_required');
+    expect(testDb.select().from(schema.userFederationCredentials).all()).toHaveLength(0);
+  });
+
+  it('rejects a password that is not text', async () => {
+    const res = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE, password: 12345 });
+    expect(res.statusCode).toBe(400);
   });
 
   it('rejects a request from a deleted account', async () => {
@@ -233,8 +288,8 @@ describe('POST /api/users/@me/federation-credential', () => {
 
 describe('federation credentials are scrubbed with the account', () => {
   it('tombstoneUser removes every stored remote credential for the deleted user', async () => {
-    await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
-    await credential(LOCAL_ID, LOCAL_USERNAME, { origin: 'https://zeta.test' });
+    await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    await issued(LOCAL_ID, LOCAL_USERNAME, { origin: 'https://zeta.test' });
     // Positive control: the rows really are there before the deletion runs, so a
     // later "length 0" assertion cannot pass vacuously.
     expect(
@@ -268,7 +323,7 @@ describe('with federation switched off (FEDERATION_ENABLED)', () => {
   });
 
   it('refuses to issue a federation credential', async () => {
-    const res = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    const res = await issued(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
     expect(res.statusCode).toBe(403);
     expect(res.json().code).toBe('federation_disabled');
     const stored = testDb.select().from(schema.userFederationCredentials).all();

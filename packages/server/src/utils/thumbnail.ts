@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import sharp from 'sharp';
+import sharp, { type Metadata } from 'sharp';
 import { execFile as execFileCb } from 'child_process';
 import { promisify } from 'util';
 
@@ -53,32 +53,48 @@ async function mediaJob<T>(job: () => Promise<T>): Promise<T> {
 
 const PROFILE_LIMITS = { avatar: 256, icon: 256, banner: 1280 } as const;
 
+/** What a picture field keeps: formats every browser shows, each written back as itself. */
+type PictureFormat = 'jpeg' | 'png' | 'webp' | 'gif' | 'avif';
+const PICTURE_FORMATS: readonly PictureFormat[] = ['jpeg', 'png', 'webp', 'gif', 'avif'];
+
+/** The format sharp writes a picture back in, or null for one a picture field does not take. */
+function pictureFormatOf(metadata: Metadata): PictureFormat | null {
+  // sharp names an AVIF file by its container; any other HEIF is no picture browsers show.
+  const format = metadata.format === 'heif' && metadata.compression === 'av1' ? 'avif' : metadata.format;
+  return PICTURE_FORMATS.find((allowed) => allowed === format) ?? null;
+}
+
 /**
  * Re-encode a profile image (avatar, icon, or banner), down to the target max dimension when it is
  * larger. Preserves animated GIF frames. Always written anew, small or not: what a picture field
  * holds is then pixels of that size and nothing else, however much the upload carried
  * (utils/profileImageRefs.ts). Writes to a temp file then atomically renames to avoid corruption.
+ * False when the file is no picture of those formats or could not be written anew: the field must
+ * not take it then, since it would show the upload as it came.
  */
 export async function resizeProfileImage(
   filepath: string,
   type: 'avatar' | 'icon' | 'banner',
-): Promise<void> {
+): Promise<boolean> {
   const maxDim = PROFILE_LIMITS[type];
-  await mediaJob(async () => {
+  return mediaJob(async () => {
+    const tmpPath = filepath + '.tmp';
     try {
       const metadata = await sharp(filepath, { animated: true, limitInputPixels: PICTURE_INPUT_PIXELS }).metadata();
-      if (!metadata.width) return;
+      const format = pictureFormatOf(metadata);
+      if (!metadata.width || format === null) return false;
 
-      const tmpPath = filepath + '.tmp';
       await sharp(filepath, { animated: true, limitInputPixels: PICTURE_INPUT_PIXELS })
         .resize({ width: maxDim, withoutEnlargement: true })
+        .toFormat(format)
         .toFile(tmpPath);
       fs.renameSync(tmpPath, filepath);
+      return true;
     } catch (err) {
-      // Non-fatal — the original file is still intact
-      console.error('Profile image resize failed (non-fatal) for %s:', path.basename(filepath), err);
+      console.error('Profile image could not be written anew for %s:', path.basename(filepath), err);
       // Clean up temp file if it was partially written
-      try { fs.unlinkSync(filepath + '.tmp'); } catch { /* ignore */ }
+      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+      return false;
     }
   });
 }

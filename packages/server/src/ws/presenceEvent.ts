@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { Activity, ActivityAssets, ActivityTimestamps, ActivityType, PresenceIdentity, ServerEvent } from '@backspace/shared';
 import { ACTIVITY_LIMITS } from '@backspace/shared/src/activities.js';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { getDb, schema } from '../db/index.js';
 
 /**
@@ -63,7 +64,9 @@ export function presenceUpdateFor(userId: string, status: string, activities?: A
  */
 export function snapshotActivities(live: Activity[], customStatus: string | null): Activity[] {
   if (live.length > 0) return live;
-  return customStatus ? [{ type: 'custom', name: customStatus }] : [];
+  // As publicUserOf shows the status: one stored before such characters were refused loses them.
+  const shown = customStatus ? withoutUnsafeCharacters(customStatus).trim() : '';
+  return shown ? [{ type: 'custom', name: shown }] : [];
 }
 
 // ─── Activity Validation ──────────────────────────────────────────────────
@@ -86,13 +89,17 @@ export function validateActivities(raw: unknown): Activity[] | null {
     if (!VALID_ACTIVITY_TYPES.has(obj.type as string)) return null;
     if (typeof obj.name !== 'string') return null;
     // Checked on the trimmed name, which is what is stored and relayed: a
-    // name a sender accepts must pass every receiver's check too.
-    if (obj.name.trim().length === 0 || obj.name.length > ACTIVITY_LIMITS.MAX_NAME_LENGTH) return null;
+    // name a sender accepts must pass every receiver's check too. Its texts
+    // are shown as a status, so they lose the characters that would disguise
+    // one (a right-to-left override, a control character), as a custom status
+    // does (shared/src/profileFields.ts); a window title can hold them too.
+    const name = withoutUnsafeCharacters(obj.name).trim();
+    if (name.length === 0 || obj.name.length > ACTIVITY_LIMITS.MAX_NAME_LENGTH) return null;
 
-    const activity: Activity = { type: obj.type as ActivityType, name: (obj.name as string).trim() };
+    const activity: Activity = { type: obj.type as ActivityType, name };
 
-    if (typeof obj.details === 'string' && obj.details.length <= ACTIVITY_LIMITS.MAX_DETAILS_LENGTH) activity.details = obj.details.trim();
-    if (typeof obj.state === 'string' && obj.state.length <= ACTIVITY_LIMITS.MAX_STATE_LENGTH) activity.state = obj.state.trim();
+    if (typeof obj.details === 'string' && obj.details.length <= ACTIVITY_LIMITS.MAX_DETAILS_LENGTH) activity.details = withoutUnsafeCharacters(obj.details).trim();
+    if (typeof obj.state === 'string' && obj.state.length <= ACTIVITY_LIMITS.MAX_STATE_LENGTH) activity.state = withoutUnsafeCharacters(obj.state).trim();
     if (typeof obj.url === 'string' && obj.url.length <= ACTIVITY_LIMITS.MAX_URL_LENGTH) {
       if (obj.url.startsWith('https://') || obj.url.startsWith('http://')) activity.url = obj.url;
     }
@@ -109,9 +116,9 @@ export function validateActivities(raw: unknown): Activity[] | null {
       const aObj = obj.assets as Record<string, unknown>;
       const assets: ActivityAssets = {};
       if (typeof aObj.largeImage === 'string' && aObj.largeImage.length <= ACTIVITY_LIMITS.MAX_URL_LENGTH) assets.largeImage = aObj.largeImage;
-      if (typeof aObj.largeText === 'string' && aObj.largeText.length <= ACTIVITY_LIMITS.MAX_ASSET_TEXT_LENGTH) assets.largeText = aObj.largeText;
+      if (typeof aObj.largeText === 'string' && aObj.largeText.length <= ACTIVITY_LIMITS.MAX_ASSET_TEXT_LENGTH) assets.largeText = withoutUnsafeCharacters(aObj.largeText);
       if (typeof aObj.smallImage === 'string' && aObj.smallImage.length <= ACTIVITY_LIMITS.MAX_URL_LENGTH) assets.smallImage = aObj.smallImage;
-      if (typeof aObj.smallText === 'string' && aObj.smallText.length <= ACTIVITY_LIMITS.MAX_ASSET_TEXT_LENGTH) assets.smallText = aObj.smallText;
+      if (typeof aObj.smallText === 'string' && aObj.smallText.length <= ACTIVITY_LIMITS.MAX_ASSET_TEXT_LENGTH) assets.smallText = withoutUnsafeCharacters(aObj.smallText);
       if (Object.keys(assets).length > 0) activity.assets = assets;
     }
 

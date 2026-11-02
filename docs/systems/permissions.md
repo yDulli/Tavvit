@@ -137,6 +137,8 @@ if channelOverride:  base = (base & ~deny) | allow
 
 ## Private channels and categories
 
+**Who is told a private category** (1.32.8, `utils/categoryVisibility.ts`): its name says what it holds, so a category hidden from @everyone is sent only to those who see a channel in it and to those with MANAGE_CHANNELS or ADMINISTRATOR, who arrange it. That holds in `ready`, `GET /api/spaces/:id`, `channel_layout_updated` and `category_updated` (sent member by member for a private one); a category hidden from nobody goes to everyone as before.
+
 "Private" is not stored on its own. A channel or category is private when its
 own @everyone override (`targetType = 'role'`, `targetId` = the space id)
 denies View Channels; a member override whose id happens to equal the space id

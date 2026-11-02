@@ -75,6 +75,7 @@ function rowToAdminSettings(row: SettingsRow, sqlite: Database.Database): Instan
   return {
     instanceName: row.instanceName ?? DEFAULT_INSTANCE_NAME,
     emailRequired: row.emailRequiredSince !== null,
+    blockThrowawayEmail: row.blockThrowawayEmail === 1,
     emojiPolicy: row.emojiPolicy === 'everyone' ? 'everyone' : 'admins',
     registrationOpen: row.registrationOpen !== null ? row.registrationOpen === 1 : config.registrationOpen,
     federatedRegistrationOpen: row.federatedRegistrationOpen === 1,
@@ -334,6 +335,14 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
       const since = db.select({ since: schema.instanceSettings.emailRequiredSince }).from(schema.instanceSettings)
         .where(eq(schema.instanceSettings.id, 1)).get()?.since ?? null;
       updateData.emailRequiredSince = body.emailRequired ? since ?? Date.now() : null;
+    }
+
+    // Asked at sign-up and when an address is set; addresses already on accounts stay (utils/signupRules.ts).
+    if (body.blockThrowawayEmail !== undefined) {
+      if (typeof body.blockThrowawayEmail !== 'boolean') {
+        return sendError(reply, 400, 'field_not_boolean', { field: 'blockThrowawayEmail' });
+      }
+      updateData.blockThrowawayEmail = body.blockThrowawayEmail ? 1 : 0;
     }
 
     if (body.emojiPolicy !== undefined) {

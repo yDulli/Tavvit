@@ -12,7 +12,8 @@ import { rateLimitsDisabled } from './rateLimitSwitch.js';
  *   one making the guesses pays for them.
  * - **On the name from anywhere** it doubles up to a few seconds: a guesser with many addresses
  *   gets slower, and the worst a griefer can do to the owner is that short wait.
- * - **At most a few attempts on a name run at once.** Only a flood from many addresses
+ * - **At most a few passwords for a name are checked at once.** The wait comes first and holds
+ *   no place, so only a flood that keeps that many comparisons running from many addresses
  *   reaches this, and past it an attempt is told to come back in a moment.
  *
  * State is in memory, per process. A restart forgives everyone, and the maps are bounded
@@ -28,7 +29,7 @@ export interface LoginThrottleOptions {
   sourceCapMs: number;
   /** The longest wait for a name, whoever asks. */
   accountCapMs: number;
-  /** Attempts on one name at the same time. */
+  /** Passwords for one name checked at the same time; a waiting attempt is not one of them. */
   maxInFlight: number;
   /** Hard cap on keys remembered at once. */
   maxTracked: number;

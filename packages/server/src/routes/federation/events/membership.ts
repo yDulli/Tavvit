@@ -12,10 +12,13 @@ import { connectionManager } from '../../../ws/handler.js';
 import { GROUP_DM_NAME_MAX_LENGTH, GROUP_DM_NAME_MIN_LENGTH } from '@backspace/shared/src/constants.js';
 import { and, eq, or } from 'drizzle-orm';
 import type { DmMessageWithUser, FederationRelayEvent } from '@backspace/shared';
-import { extractDomain, resolveOrCreateReplicatedUser, resolveRelayActor, attributionRefusal } from '../identity.js';
+import { extractDomain, isOwnDomain, resolveOrCreateReplicatedUser, resolveRelayActor, sameRelayActor, attributionRefusal } from '../identity.js';
 import { downloadProfileAsset, processProfileUpdateEvent } from '../profile.js';
 import { dmChannelMembers, mayRelayInto, memberWithIdentity } from '../dmChannels.js';
 import { dmSystemContent, dmSystemName } from '../../../utils/dmSystemMessages.js';
+import { isGroupKey } from '../../../utils/dmConversation.js';
+import { GROUP_DM_MAX_MEMBERS } from '../../../utils/groupDmLimits.js';
+import { relayedGroupAddRefusal } from '../localConsent.js';
 
 export async function processMemberAddEvent(
   event: FederationRelayEvent,
@@ -28,7 +31,6 @@ export async function processMemberAddEvent(
     rejected.push({ messageId: event.messageId, reason: 'missing_membership_payload' });
     return;
   }
-
   // Idempotency: a prior delivery of this exact event has already been processed.
   // The system message we persist below carries `(source_instance, source_message_id)`
   // and is guarded by `idx_dm_messages_source_unique`, so presence of a row here is
@@ -84,6 +86,14 @@ export async function processMemberAddEvent(
   // ("Relayed member adds" in dm-system.md). The roster and owner arrive in
   // this event, so a refusal here is terminal.
   if (!channel && event.group) {
+    // A key names the group's call room here too (routes/livekit.ts): only a key of the shape a
+    // group is given is taken, never a voice channel's id or another call's name. And a group
+    // has at most its member cap, checked before anyone in it is looked up or made.
+    if (!isGroupKey(event.federatedId) || event.group.members.length > GROUP_DM_MAX_MEMBERS) {
+      console.warn(`[federation] Refused member_add bootstrap of ${event.federatedId}: not a group key, or more members than a group has`);
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
     const owner = event.group.owner;
     if (!owner) {
       console.warn(`[federation] Refused member_add bootstrap of ${event.federatedId}: the group names no owner`);
@@ -94,6 +104,58 @@ export async function processMemberAddEvent(
     if (refusal) {
       console.warn(`[federation] Attribution refused (${refusal}) in member_add bootstrap: owner homeInstance=${extractDomain(owner.homeInstance)} source=${extractDomain(sourceInstance)}`);
       rejected.push({ messageId: event.messageId, reason: refusal });
+      return;
+    }
+
+    // This instance holds a group for its own people: one that names nobody homed here is not
+    // kept, and no stub is made for anyone in it.
+    const homedHereByName = (p: { homeInstance: string }) => isOwnDomain(extractDomain(p.homeInstance).toLowerCase());
+    if (!homedHereByName(event.membership.user) && !event.group.members.some(homedHereByName)) {
+      console.warn(`[federation] Refused member_add bootstrap of ${event.federatedId}: it names nobody of this instance`);
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
+
+    // Who of this instance the group holds, as the local routes would have put them in
+    // (localConsent.ts), judged before any stub is made: the member this event adds, by whoever in
+    // the roster added them, and anyone else of this instance in the roster, by its owner. Either
+    // one has to be someone this instance knows already: a friend of someone here is. Only the
+    // owner's adds may take the other person of a 1-on-1 without a friendship (a group made from
+    // it). One the owner could not have added is left out and comes in by their own add, checked
+    // then. A refused add of someone here is refused.
+    const knownHere = (identity: { homeUserId: string; homeInstance: string } | undefined) => {
+      if (!identity) return null;
+      const found = resolveRelayActor(identity, db);
+      return found.kind === 'found' ? found.user : null;
+    };
+    const ownerKnown = knownHere(owner);
+    const adderInRoster = event.membership.addedBy && event.group.members.some((member) => sameRelayActor(member, event.membership!.addedBy!))
+      ? knownHere(event.membership.addedBy)
+      : null;
+    const added = knownHere(event.membership.user);
+    const addedHere = added && added.homeInstance === null ? added : null;
+    const admitted = new Set<string>();
+    if (addedHere) {
+      const bootstrapAdder = adderInRoster ?? ownerKnown;
+      const byOwner = bootstrapAdder !== null && ownerKnown !== null && bootstrapAdder.id === ownerKnown.id;
+      const bootstrapRefusal = bootstrapAdder ? relayedGroupAddRefusal(bootstrapAdder.id, addedHere, byOwner, db) : 'not_a_friend';
+      if (bootstrapRefusal) {
+        console.warn(`[federation] Refused member_add bootstrap of ${event.federatedId}: ${addedHere.id} does not take it (${bootstrapRefusal})`);
+        rejected.push({ messageId: event.messageId, reason: 'recipient_refuses' });
+        return;
+      }
+      admitted.add(addedHere.id);
+    }
+    if (ownerKnown) {
+      for (const member of event.group.members) {
+        const here = homedHereByName(member) ? knownHere(member) : null;
+        if (!here || here.homeInstance !== null || admitted.has(here.id)) continue;
+        if (relayedGroupAddRefusal(ownerKnown.id, here, true, db) === null) admitted.add(here.id);
+      }
+    }
+    if (admitted.size === 0) {
+      console.warn(`[federation] Refused member_add bootstrap of ${event.federatedId}: nobody of this instance in it would have been added here`);
+      rejected.push({ messageId: event.messageId, reason: 'recipient_refuses' });
       return;
     }
 
@@ -153,6 +215,7 @@ export async function processMemberAddEvent(
     // roster records no clock, since that view may itself lag behind a change
     // made elsewhere. Only the added member's clock moves (below).
     for (const rosterUser of roster) {
+      if (rosterUser.homeInstance === null && !admitted.has(rosterUser.id)) continue;
       const subject = rosterSubjects.get(rosterUser.id) ?? null;
       if (subject && isSubjectChangeStale(subject, event.timestamp, db)) continue;
       insertDmMember(db.$client, channelId, rosterUser.id);
@@ -194,6 +257,18 @@ export async function processMemberAddEvent(
       rejected.push({ messageId: event.messageId, reason: 'unauthorized_source' });
       return;
     }
+    // Someone of this instance is added as the local routes would add them (localConsent.ts): by a
+    // friend. Someone this copy already holds is not judged again: the second add of a group made
+    // from a 1-on-1 can arrive after the first one brought them in.
+    const added = resolveRelayActor(event.membership.user, db);
+    if (added.kind === 'found' && !members.some((member) => member.id === added.user.id)) {
+      const addRefusal = relayedGroupAddRefusal(adder.id, added.user, false, db);
+      if (addRefusal) {
+        console.warn(`[federation] Refused member_add in group DM ${channel.id}: ${added.user.id} does not take it (${addRefusal})`);
+        rejected.push({ messageId: event.messageId, reason: 'recipient_refuses' });
+        return;
+      }
+    }
   }
 
   // Cancel soft-delete if channel was pending GC
@@ -222,7 +297,7 @@ export async function processMemberAddEvent(
     .from(schema.dmMembers)
     .where(eq(schema.dmMembers.dmChannelId, channel.id))
     .all().length;
-  if (memberCount >= 10) {
+  if (memberCount >= GROUP_DM_MAX_MEMBERS) {
     rejected.push({ messageId: event.messageId, reason: 'max_members_exceeded' });
     return;
   }

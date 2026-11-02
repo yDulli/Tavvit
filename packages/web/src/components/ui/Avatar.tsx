@@ -1,8 +1,7 @@
 import React from 'react';
 import type { User } from '@backspace/shared';
 import { getAvatarGradient, getSpaceGradient } from '../../utils/gradients';
-import { useConnectedOrigins } from '../../hooks/useConnectedOrigins';
-import { useBlockedHost } from './ExternalMedia';
+import { useGatedPicture } from './ExternalMedia';
 
 interface AvatarProps {
   src?: string | null;
@@ -88,8 +87,7 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
   // A picture on a server this client does not talk to waits for a yes like anything else from
   // there (docs/systems/legal.md): the initials stand in, and that server learns nothing. What the
   // server lets through is checked there too (utils/remoteMedia.ts); this holds wherever it is not.
-  const blocked = useBlockedHost(address, useConnectedOrigins()) !== null;
-  const shown = blocked ? null : address;
+  const shown = useGatedPicture(address);
   const fontPx = Math.round(size * 0.4);
   const gradient = palette === 'space'
     ? getSpaceGradient(userId, name, avatarColor)

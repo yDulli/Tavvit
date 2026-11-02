@@ -302,7 +302,7 @@
   "emailPrompt": {
     "unconfirmed": "Deine Adresse {{address}} ist noch nicht bestätigt. Schau nach unserer Mail oder prüfe sie in den Einstellungen.",
     "missing": "Füge eine E-Mail-Adresse hinzu, damit du wieder hineinkommst, wenn du dein Passwort vergisst.",
-    "required": "Bestätige deine E-Mail-Adresse, um Spaces zu erstellen und Gespräche mit Leuten zu beginnen, die nicht deine Freunde sind.",
+    "required": "Bestätige deine E-Mail-Adresse, um in Spaces zu schreiben und zu reagieren, Spaces zu erstellen und Gespräche mit Leuten zu beginnen, die nicht deine Freunde sind.",
     "open": "Einstellungen öffnen",
     "dismiss": "Nicht jetzt"
   }

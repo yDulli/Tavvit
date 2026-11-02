@@ -1,4 +1,5 @@
 import { channelTakesWebhooks } from '../../utils/channelKinds';
+import { GatedPicture } from '../ui/ExternalMedia';
 import { ChannelIcon } from '../ui/ChannelIcon';
 import { FollowedThreadRows } from './FollowedThreadRows';
 import { SpaceEventsRow } from '../events/SpaceEventsRow';
@@ -752,13 +753,17 @@ export function MobileSpacesScreen() {
                 onContextMenu={(e) => handleSpaceContextMenu(e, space.id)}
                 className={stripTabClass(isSelected, hasUnread)}
               >
-                {iconUrl ? (
-                  <img src={iconUrl} alt="" className="h-5 w-5 rounded object-cover" />
-                ) : (
-                  <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center rounded font-mono text-label font-semibold text-white" style={{ background: grad.gradient }}>
-                    {space.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
+                {(() => {
+                  const letter = (
+                    <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center rounded font-mono text-label font-semibold text-white" style={{ background: grad.gradient }}>
+                      {space.name.charAt(0).toUpperCase()}
+                    </span>
+                  );
+                  // A picture on a server this client does not talk to waits for a yes (useGatedPicture).
+                  return iconUrl
+                    ? <GatedPicture src={iconUrl} alt="" className="h-5 w-5 rounded object-cover" whileBlocked={letter} />
+                    : letter;
+                })()}
                 <span className="max-w-[140px] truncate">{space.name}</span>
                 {origin && (
                   isDisconnected

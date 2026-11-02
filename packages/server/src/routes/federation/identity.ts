@@ -192,7 +192,8 @@ export function attributionRefusal(
   const sourceDomain = extractDomain(sourceInstance).toLowerCase();
   if (!authorDomain || !sourceDomain) return 'attribution_mismatch';
 
-  // Case 1: the actor belongs to the signing peer.
+  // Case 1: the actor belongs to the signing peer. A peer never signs as this instance: the
+  // handshake refuses such a row and handlers/s2sAuth.ts refuses its requests.
   if (authorDomain === sourceDomain) {
     const identity = resolveRelayActor(actor, db);
     if (identity.kind === 'mismatch') return 'attribution_mismatch';

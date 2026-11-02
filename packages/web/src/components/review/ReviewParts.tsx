@@ -20,6 +20,7 @@ import {
 } from '../../i18n/review';
 import { Modal } from '../ui/Modal';
 import { Avatar } from '../ui/Avatar';
+import { GatedPicture } from '../ui/ExternalMedia';
 import { BadgeList } from '../../badges/BadgeList';
 
 // The pieces both sides of the platform's reviews show (docs/systems/
@@ -198,7 +199,8 @@ export function ListingPreview({ spaceId, name, description, icon, banner, avata
   return (
     <div className="surface-card max-w-[320px] overflow-hidden rounded-lg">
       <div className={`relative ${bannerUrl ? 'h-20' : 'h-10'} bg-white/[0.03]`}>
-        {bannerUrl && <img src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+        {/* A banner stored before pictures had to be uploads can name another server: it waits for a yes (useGatedPicture). */}
+        {bannerUrl && <GatedPicture src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" whileBlocked={null} />}
       </div>
       <div className="relative z-10 -mt-6 px-3.5">
         <Avatar

@@ -605,8 +605,8 @@
       "overwrite": "Überschreiben"
     },
     "typingKey": {
-      "title": "Dieses Kürzel braucht Strg, Alt oder die Systemtaste",
-      "description": "Buchstaben, Ziffern, Leertaste, Enter, Tab und Rücktaste gehen nur zusammen mit Strg, Alt oder der Systemtaste. Allein würde die App alles mithören, was du in anderen Programmen tippst, deshalb hört sie nicht darauf. Funktionstasten, Maustasten und Tasten wie die Feststelltaste gehen auch allein."
+      "title": "Dieses Kürzel braucht Strg oder die Systemtaste",
+      "description": "Buchstaben, Ziffern, Satzzeichen, der Ziffernblock, Leertaste, Enter, Tab und Rücktaste gehen nur zusammen mit Strg oder der Systemtaste und nicht zusätzlich mit Alt: Mit Alt tippen viele Tastaturen ein Zeichen. Allein würde die App mithören, was du in anderen Programmen tippst, deshalb hört sie nicht darauf. Funktionstasten, Maustasten und Tasten wie die Feststelltaste gehen auch allein."
     }
   },
   "desktop": {

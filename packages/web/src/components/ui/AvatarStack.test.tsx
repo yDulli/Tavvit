@@ -14,6 +14,7 @@ vi.mock('../../audio/AudioManager', () => ({
 }));
 
 import { AvatarStack } from './AvatarStack';
+import { useConnectedOriginsStore } from '../../stores/connectedOriginsStore';
 
 function makeUser(n: number): User {
   return {
@@ -215,7 +216,9 @@ describe('AvatarStack', () => {
     expect(container.querySelector('[data-avatar-stack-overflow]')).toBeFalsy();
   });
 
-  it('uses absolute icon URL as-is for icon override', () => {
+  it('uses absolute icon URL as-is for icon override, on a server this client talks to', () => {
+    // Elsewhere it would wait for a yes first (GatedPicture.test.tsx).
+    useConnectedOriginsStore.setState({ origins: ['https://example.com'] });
     const { container } = render(
       <AvatarStack
         members={[]}

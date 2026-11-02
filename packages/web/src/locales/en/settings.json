@@ -605,8 +605,8 @@
       "overwrite": "Overwrite"
     },
     "typingKey": {
-      "title": "This shortcut needs Ctrl, Alt or the system key",
-      "description": "Letters, digits, Space, Enter, Tab and Backspace only work together with Ctrl, Alt or the system key. On their own, the app would hear everything you type in other programs, so it does not listen for them. Function keys, mouse buttons and keys like Caps Lock work alone."
+      "title": "This shortcut needs Ctrl or the system key",
+      "description": "Letters, digits, punctuation, the number pad, Space, Enter, Tab and Backspace only work together with Ctrl or the system key, and not with Alt as well: with Alt, many keyboards type a character. On their own, the app would hear what you type in other programs, so it does not listen for them. Function keys, mouse buttons and keys like Caps Lock work alone."
     }
   },
   "desktop": {

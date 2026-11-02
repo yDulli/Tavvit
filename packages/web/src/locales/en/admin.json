@@ -713,7 +713,11 @@
     "required": {
       "title": "New accounts",
       "label": "Require a confirmed address",
-      "description": "From now on, a new account has to give an address. Until it is confirmed, the account can use spaces it was invited to and talk to friends, but cannot create spaces or approach strangers. Existing accounts are not concerned."
+      "description": "From now on, a new account has to give an address. Until it is confirmed, the account can read the spaces it joined and talk to friends, but cannot write or react in spaces, create spaces or approach strangers. Existing accounts are not concerned."
+    },
+    "throwaway": {
+      "label": "Refuse throwaway addresses",
+      "description": "Addresses at about 10,000 known throwaway mail services, such as Mailinator, can neither be used to sign up nor be set as an address. Addresses already on accounts stay."
     },
     "test": {
       "title": "Test",

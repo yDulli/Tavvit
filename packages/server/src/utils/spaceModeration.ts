@@ -4,6 +4,7 @@ import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
 import { DEFAULT_MODERATION_SETTINGS, countMentions, findModerationViolation } from '@backspace/shared/src/moderation.js';
 import { getDb, schema, type DBHandle } from '../db/index.js';
 import { getMember, hasPermission, isSpaceOwner, PermissionBits } from './permissions.js';
+import { accountNeedsVerifiedEmail } from '../email/gate.js';
 
 // Space moderation on the instance that hosts the space (docs/systems/spaces.md,
 // "Moderation"): member timeouts, the minimum account and membership ages,
@@ -93,6 +94,10 @@ export function memberActionRefusal(spaceId: string, userId: string, now: number
   const member = getMember(spaceId, userId);
   const until = activeTimeoutUntil(member?.timedOutUntil, now);
   if (until !== null && !isSpaceOwner(spaceId, userId)) return { status: 403, code: 'member_timed_out', details: { until } };
+  // A new account that still has to confirm its address reads, and does nothing else in a space
+  // until it has: no message, reaction, poll vote, voice or anything else that goes through here
+  // (docs/systems/email.md, "The gate"). An account made to throw away cannot post before then.
+  if (accountNeedsVerifiedEmail(userId)) return { status: 403, code: 'email_verification_required' };
   if (member && mustAcceptRules(spaceId, member)) return { status: 403, code: 'rules_not_accepted' };
   return null;
 }

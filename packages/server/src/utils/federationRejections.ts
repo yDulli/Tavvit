@@ -42,6 +42,7 @@ const REFUSED_REASONS = new Set<string>([
   'invalid_target',       // edit/delete/reaction target malformed or from a non-peer; 1-on-1 create or reaction by a non-member; group op on a 1-on-1; unacceptable bootstrap; friend_add answering no pending request
   'source_peer_mismatch', // the batch's claimed source is not the peer that signed it
   'sticker_elsewhere',    // a message or reaction names a sticker on neither the author's home nor this instance (utils/remoteMedia.ts)
+  'recipient_refuses',    // the person here does not take it: a block, their rule on who may write or befriend, a friendship a group add needs, or a full group count (routes/federation/localConsent.ts)
   // The payload itself is malformed; sending it again sends the same payload.
   'invalid_payload',
   'invalid_status',

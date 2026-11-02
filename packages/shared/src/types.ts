@@ -25,6 +25,11 @@ export const MAX_BULK_DELETE_MESSAGES = 100;
 export const AVATAR_COLORS = ['mint', 'sky', 'lavender', 'coral', 'rose', 'teal', 'amber'] as const;
 export type AvatarColor = (typeof AVATAR_COLORS)[number];
 
+/** Whether a value is one of the avatar colours: a name from anywhere else is none of them. */
+export function isAvatarColor(value: unknown): value is AvatarColor {
+  return typeof value === 'string' && (AVATAR_COLORS as readonly string[]).includes(value);
+}
+
 export interface User {
   id: string;
   username: string;
@@ -60,7 +65,8 @@ export interface User {
   createdAt: number;
   homeInstance: string | null;
   homeUserId: string | null;
-  replicatedInstances: ReplicatedInstance[];
+  /** Own view only: the other instances this account also has an account on, read by its own client. */
+  replicatedInstances?: ReplicatedInstance[];
   /** Own account only: the version of the instance's terms this person agreed to. */
   termsVersion?: number | null;
   showActivity?: boolean;
@@ -1814,6 +1820,8 @@ export interface AdminEmailStatus {
 export interface InstanceAdminSettings {
   /** A new account needs a verified address (docs/systems/email.md, "The gate"). */
   emailRequired?: boolean;
+  /** Addresses at throwaway mail domains are refused (docs/systems/email.md, "Throwaway addresses"). Missing on older servers. */
+  blockThrowawayEmail?: boolean;
   instanceName: string;
   emojiPolicy: InstanceEmojiPolicy;
   registrationOpen: boolean;
@@ -1942,7 +1950,7 @@ export interface InstanceInfoResponse {
   registrationOpen: boolean;
   /** This instance sends mail: addresses, confirming them and "forgot password" exist. Missing on older servers. */
   email?: boolean;
-  /** A new account has to give an address and confirm it before it may approach strangers or create spaces. */
+  /** A new account has to give an address and confirm it before it may do anything in a space but read, approach strangers or create spaces. */
   emailRequired?: boolean;
   /** This server holds what 2FA needs. Missing on older servers. */
   twoFactor?: boolean;
@@ -2037,15 +2045,23 @@ export interface DeleteAccountRequest {
 // The credential the client uses to register/log in as this user on ANOTHER
 // instance. Issued and stored by the user's HOME instance only, so it stays
 // identical across devices and browsing sessions. Never the home password.
+// It signs in to the account there, so it is given out only with the home
+// password (and the second factor while 2FA is on): a session alone learns
+// whether the remote account already uses it, nothing more.
 
 export interface FederationCredentialRequest {
   origin: string;            // Remote instance origin, e.g. 'https://orbit.example'
   markProvisioned?: boolean; // Record that the remote account now uses this secret
+  /** The home password: without it the answer has no `secret`. */
+  password?: string;
+  /** Required with `password` while the account has 2FA on. */
+  twoFactorCode?: string;
 }
 
 export interface FederationCredentialResponse {
   origin: string;
-  secret: string;
+  /** Only when the request carried the password. */
+  secret?: string;
   provisioned: boolean;      // True once the remote account is known to use `secret`
 }
 

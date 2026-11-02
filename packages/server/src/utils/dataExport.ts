@@ -12,7 +12,7 @@
  * pages with the event loop let go between them, so an account with years of messages
  * does not stop a server that holds everybody's connections.
  */
-import { soundFilePath } from '../routes/soundboard.js';
+import { soundFilePath } from './soundFiles.js';
 import { once } from 'node:events';
 import { createReadStream, createWriteStream, existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, rm, stat, writeFile } from 'node:fs/promises';
@@ -265,10 +265,10 @@ async function buildArchive(userId: string, target: string): Promise<void> {
     }
     for (const sticker of raw.prepare('SELECT sticker_id AS id, name FROM personal_stickers WHERE user_id = ?')
       .all(userId) as Array<{ id: string; name: string }>) {
-      addFile('stickers', `${sticker.id}-${sticker.name}.webp`, stickerAssetPath(sticker.id));
+      addFile('stickers', `${sticker.id}-${archiveName(sticker.name)}.webp`, stickerAssetPath(sticker.id));
     }
     for (const sound of raw.prepare('SELECT id, name FROM space_sounds WHERE created_by = ?').all(userId) as Array<{ id: string; name: string }>) {
-      addFile('sounds', `${sound.id}-${sound.name}.audio`, soundFilePath(sound.id));
+      addFile('sounds', `${sound.id}-${archiveName(sound.name)}.audio`, soundFilePath(sound.id));
     }
     for (const emoji of raw.prepare('SELECT id, name FROM custom_emojis WHERE created_by = ?').all(userId) as Array<{ id: string; name: string }>) {
       addFile('emoji', `${emoji.name}.webp`, emojiFilePath(emoji.id));

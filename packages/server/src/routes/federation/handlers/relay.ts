@@ -15,6 +15,7 @@ import { extractDomain } from '../identity.js';
 import { isRelayRateLimited } from '../rateLimits.js';
 import { markOutboxOfferedForPeer } from '../../../utils/federationOutboxQueue.js';
 import { authenticateS2SPeer } from './s2sAuth.js';
+import { isOwnOrigin } from '../../../utils/federationOwnNames.js';
 import { buildSyncResponse, type SyncPosition } from './syncPage.js';
 
 /**
@@ -261,7 +262,14 @@ export function registerRelayRoutes(app: FastifyInstance): void {
         return reply.code(400).send({ error: 'Missing or malformed federation headers', statusCode: 400 });
       }
 
-      // 2. Resolve the peer by origin. Reject unknown or revoked peers.
+      // 2. Resolve the peer by the origin it names, and only that row: the answer, signed with its
+      // secret, tells the asker that this instance holds that secret for that origin. A remote's
+      // /peer/accept checks a handshake of ours this way, naming the address we dialled it at
+      // (peerHandshake.ts); a secret we gave anyone else answers for nobody but them. No name of
+      // this instance is a peer, a row from before that was refused included (s2sAuth.ts).
+      if (isOwnOrigin(fedHeaders.origin)) {
+        return reply.code(403).send({ error: 'Not peered', statusCode: 403 });
+      }
       const peer = db
         .select()
         .from(schema.federationPeers)
@@ -277,8 +285,13 @@ export function registerRelayRoutes(app: FastifyInstance): void {
         return reply.code(401).send({ error: 'Invalid signature', statusCode: 401 });
       }
 
-      // 4. Sign the response body with the peer's shared secret and return it.
-      return sendSignedJson(reply, { instanceId: getInstanceId() }, peer.hmacSecret);
+      // 4. Sign the response body with the peer's shared secret and return it. `vouched` says
+      // whether this row is a handshake this instance is making itself (a pending or awaiting row
+      // it began), which is all a remote's /peer/accept asks this for (proveCaller). A row this
+      // instance took from someone else's request, or one already settled, does not vouch: a row an
+      // older release took without a check could name someone it never heard from.
+      const vouched = peer.initiatedBy !== 'remote' && (peer.status === 'pending' || peer.status === 'awaiting_approval');
+      return sendSignedJson(reply, { instanceId: getInstanceId(), vouched }, peer.hmacSecret);
     },
   );
 

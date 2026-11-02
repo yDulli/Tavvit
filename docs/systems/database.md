@@ -1139,3 +1139,19 @@ See [spaces.md](spaces.md), "Channel icons".
 | Table or column | Notes |
 |-----------------|-------|
 | `channels.icon` | Null, `glyph:<id>` or one emoji. Only adds a nullable column, so every existing channel keeps its type's icon. |
+
+## Throwaway addresses (migration 0069)
+
+See [email.md](email.md), "Throwaway addresses".
+
+| Table or column | Notes |
+|-----------------|-------|
+| `instance_settings.block_throwaway_email` | integer NOT NULL, default 1. While 1, an address at a domain of the built-in list (`email/throwawayDomains.txt`) is refused at sign-up and when an address changes. |
+
+## Bounded lists of other instances (migration 0070)
+
+See [client-federation.md](client-federation.md) and [api.md](api.md), `PATCH /api/users/@me`.
+
+| Table or column | Notes |
+|-----------------|-------|
+| `users.replicated_instances` | A data step only: a list the route could never have written (not JSON, not a list, more than 20 entries, longer than 32 KiB) becomes `[]`. A list the app wrote stays. From 1.32.8 the route keeps a name and an origin per entry, each origin once, and the list goes only to the account itself (`sanitizeUser` with `isSelf`), never into what others see of it. |

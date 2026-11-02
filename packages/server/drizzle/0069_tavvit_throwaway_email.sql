@@ -1,0 +1,1 @@
+ALTER TABLE `instance_settings` ADD `block_throwaway_email` integer DEFAULT 1 NOT NULL;

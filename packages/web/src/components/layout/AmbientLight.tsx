@@ -4,6 +4,7 @@ import type { User } from '@backspace/shared';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useDmViewer } from '../../hooks/useDmViewer';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { useGatedPicture } from '../ui/ExternalMedia';
 import { extractDominantColors } from '../../utils/colorExtractor';
 import { getAvatarGradient, getSpaceGradient } from '../../utils/gradients';
 import { isMine } from '../../utils/identity';
@@ -19,11 +20,15 @@ function placeOf(pathname: string): { dmId: string | null; spaceId: string | nul
   return { dmId: null, spaceId: first };
 }
 
-/** The colour of a space: its picture's when it has one that can be read, else its tile's. */
+/**
+ * The colour of a space: its picture's when it has one that can be read, else its tile's.
+ * Reading it fetches the picture, so one on a server this client does not talk to waits
+ * for a yes as the sidebar's does (useGatedPicture).
+ */
 function useSpaceColor(spaceId: string | null): string | null {
   const space = useSpaceStore((s) => (spaceId ? s.spaces.find((candidate) => candidate.id === spaceId) : undefined));
   const icon = space?.icon ?? null;
-  const url = icon ? (icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`) : null;
+  const url = useGatedPicture(icon ? (icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`) : null);
   const [fromPicture, setFromPicture] = useState<{ url: string; color: string } | null>(null);
 
   useEffect(() => {

@@ -74,6 +74,8 @@
   "cannot_dm_self": "You cannot start a conversation with yourself.",
   "group_dm_too_few_members": "A group needs at least {{min}} other people.",
   "group_dm_too_many_members": "Groups can have at most {{max}} members.",
+  "group_dm_limit_reached": "You are in {{max}} groups, the most one account can be in. Leave one to start another.",
+  "group_dm_member_limit_reached": "{{name}} is already in {{max}} groups, the most one account can be in.",
   "users_not_found": "Some of those people could not be found.",
   "duplicate_users": "The same person is listed more than once.",
   "group_dm_includes_self": "You are added to the group automatically, so leave yourself off the list.",

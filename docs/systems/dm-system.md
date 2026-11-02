@@ -99,6 +99,8 @@ Looking up by key first returns a relay-created row whose member rows differ ins
 
 ## Group DM Creation
 
+**Limits** (1.32.8, `utils/groupDmLimits.ts`): a group has at most 10 people (`GROUP_DM_MAX_MEMBERS`), and an account is in at most 100 groups that are not deleted, hidden ones included (`GROUP_DMS_PER_ACCOUNT`): `409 group_dm_limit_reached` for the creator, `409 group_dm_member_limit_reached` (with the person's name) for someone added, in `POST /api/dm/group` and `POST /api/dm/:id/members`. Creating groups is limited to 10 in 10 minutes per address.
+
 **Endpoint:** `POST /api/dm/group` -- `dm.ts:dmRoutes`
 
 **Request:** `CreateGroupDmRequest`
@@ -203,6 +205,8 @@ Close and reopen are relayed to all peer instances that hold a copy of the DM:
 ---
 
 ## Adding Members to an Existing Group DM
+
+**A relayed add** (1.32.8, `routes/federation/localConsent.ts`): someone of this instance is put into a group only as the local routes would put them there: by a friend of theirs (or someone they share a 1-on-1 with), not across a block either way, and not past their 100 groups. A bootstrap names at most 10 members, has a key of the shape groups are given, names someone homed here, and keeps only the people of this instance its owner could have added; the others come with their own add. A refusal answers `recipient_refuses`, which the sender does not retry.
 
 **Endpoint:** `POST /api/dm/:id/members` -- `dm.ts:dmRoutes`
 
@@ -597,16 +601,17 @@ A mention is a `<@id>` token in the content, and the id is one the instance the 
 
 **Deduplication:** Check `sourceInstance` + `sourceMessageId` -- reject if already exists.
 
-**Participant resolution:**
-- ALL participants resolved via `resolveOrCreateReplicatedUser()` (auto-creates stubs for unknown remote users)
-- Profile data from relay event hydrated onto replicated user stubs via `hydrateReplicatedUserProfile()`
-- The author is the resolved participant that IS `event.message`'s `homeUserId` + `homeInstance` (`resolveRelayActor`), not the first participant sharing its `homeUserId`: a participant bound by username can resolve to a row of another identity. No such participant: reject `author_not_found`
+**Participant resolution** (1.32.8: nothing is made before the event is allowed):
+- The participants are looked up with `findFederatedUser()`, which makes nothing; a group's event looks up only its author, who must be a member of the copy here (an author nobody here knows is no member: `unauthorized_source`, retried). A 1-on-1 names two different people: one that names its author twice is `invalid_target`, one with nobody of this instance known `participant_not_found`, and no participant being the author `author_not_found`.
+- A 1-on-1 author nobody here knows reaches only someone who takes messages from anyone (`relayedConversationRefusalFromStranger`, `routes/federation/localConsent.ts`); a known one is judged as the local route would (block, and `dmPolicy` for a conversation not held yet). Refused: `recipient_refuses`.
+- Only once the event is allowed are the rows settled with `resolveOrCreateReplicatedUser()` (the one known here first, so the only row made is the last step) and the profiles hydrated onto them via `hydrateReplicatedUserProfile()`
+- The author is the row that IS `event.message`'s `homeUserId` + `homeInstance` (`resolveRelayActor`), not the first participant sharing its `homeUserId`: a participant bound by username can resolve to a row of another identity. Otherwise: reject `author_not_found`
 
 **Channel resolution (group vs 1-on-1):**
 
 | Has `federatedId`? | Path |
 |---------------------|------|
-| Yes (group DM) | Lookup by `federatedId`. If not found, reject (`channel_not_found`) -- channel must exist from prior `member_add` bootstrap. Then the "Relayed message creates" check against the channel's members |
+| Yes (group DM) | Lookup by `federatedId`. If not found, reject (`channel_not_found`) -- channel must exist from prior `member_add` bootstrap. A row found that may be a 1-on-1 (`mayBeOneOnOneRow`) is `invalid_target`: no sender puts a key on a 1-on-1's create, and the group path would skip a 1-on-1's block check. Then the "Relayed message creates" check against the channel's members |
 | No (1-on-1 DM) | The "Relayed message creates" check against the first two participants, then `findOrCreateOneOnOne()` for the pair (key `oneOnOneKey`) |
 
 ### Relayed message creates
@@ -744,7 +749,7 @@ This is the one place the rule is written; other specs point here.
 
 What decides the path is whether this instance holds a channel with the event's `federatedId` (soft-deleted or not):
 
-- **Bootstrap** (no such channel): the event must carry `group`, which must name an owner, and `attributionRefusal(group.owner, sourceInstance)` must pass: the sender speaks for the group's owner. The owner and roster are then resolved (`resolveOrCreateReplicatedUser`; tombstoned identities are dropped) and `mayRelayInto(<roster>, <owner>, sourceInstance)` must pass: the owner is in the roster and the signing peer is one of the instances the roster lives on. A missing owner or a failed roster check is `invalid_target` (terminal; the event carries everything it is judged on, so a retry cannot change the answer) and no channel is created. The roster it sends becomes this instance's copy. This is how a brand-new group, or a group this instance has never held, arrives.
+- **Bootstrap** (no such channel): the key must have a group's shape (`isGroupKey`, a UUID as every version mints them; a 1-on-1's would stand where that pair's conversation is looked up), the event must carry `group`, which must name an owner, and `attributionRefusal(group.owner, sourceInstance)` must pass: the sender speaks for the group's owner. Who of this instance it holds is judged before any row is made (`relayedGroupAddRefusal`): the member it adds by their adder, a friend unless the adder is the owner and the two share a 1-on-1 (a group made from it); others of this instance in the roster by the owner, the same way, and one refused is left out. The owner and roster are then resolved (`resolveOrCreateReplicatedUser`; tombstoned identities are dropped) and `mayRelayInto(<roster>, <owner>, sourceInstance)` must pass: the owner is in the roster and the signing peer is one of the instances the roster lives on. A missing owner or a failed roster check is `invalid_target` (terminal; the event carries everything it is judged on, so a retry cannot change the answer) and no channel is created. The roster it sends becomes this instance's copy. This is how a brand-new group, or a group this instance has never held, arrives.
 - **Incremental** (the channel exists): the add is judged against this instance's copy, mirroring `POST /api/dm/:id/members`:
   1. `attributionRefusal(membership.addedBy, sourceInstance)`, as for every relay event.
   2. The channel must be a group (`ownerId` set). A 1-on-1 has a fixed pair: else `invalid_target` (terminal).
@@ -752,7 +757,7 @@ What decides the path is whether this instance holds a channel with the event's 
 
 **Order.** Adds and removes of one member are last-writer-wins on the member's clock, whichever instance sent them and whether they came live or by a pull: an add older than the member's last change here (a kick, a leave, or a change made through this instance's routes) is accepted and changes nothing, before either path, so it also creates no copy of a group not held here. The rule is in [federation.md "Subject clocks"](federation.md#subject-clocks-member-and-friend-events-are-last-writer-wins).
 
-`unauthorized_source` is retried by the sender. An add can legitimately arrive before the event that made its adder a member, when that member was added through a third instance; the retry applies it once that event has landed. The local route's friendship check is the adder's own instance's to make; the receiver cannot see that friendship.
+`unauthorized_source` is retried by the sender. An add can legitimately arrive before the event that made its adder a member, when that member was added through a third instance; the retry applies it once that event has landed. For someone homed elsewhere, the local route's friendship check is the adder's own instance's to make; for someone of this instance it is made here (1.32.8, `relayedGroupAddRefusal`): the adder must be their friend, and someone the copy already holds is not judged again (the second add of a group made from a 1-on-1 can arrive after the first one brought them in). Refused: `recipient_refuses`.
 
 Known limit: a copy kept after all of this instance's members left keeps its roster from that time. An add by someone who joined later is refused until their own add reaches this instance, which it does not, since the group is no longer relayed here. Re-adding through the owner or any member still in that roster works.
 

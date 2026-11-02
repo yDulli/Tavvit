@@ -13,13 +13,22 @@ export const MAX_KEYBIND_KEYS = 4;
 /** The extra mouse buttons the hook reports (it ignores 1 to 2, the buttons that click). */
 const MOUSE_BUTTONS = new Set([3, 4, 5, 6, 7]);
 
-/** Keys that type text: letters, digits, the number pad's digits, space, enter, backspace and tab. */
-const TYPING_CODES: ReadonlySet<string> = new Set([
-  ...Array.from({ length: 26 }, (_, i) => `Key${String.fromCharCode(65 + i)}`),
-  ...Array.from({ length: 10 }, (_, i) => `Digit${i}`),
-  ...Array.from({ length: 10 }, (_, i) => `Numpad${i}`),
-  'Space', 'Enter', 'Backspace', 'Tab',
+/**
+ * Keys that type nothing, whatever is held with them: function keys, locks, and moving about. Every
+ * other key types on some keyboard, a letter, a digit, punctuation (ö, ä, ü and ß on a German one,
+ * m on a French one), the number pad, space, enter, tab and backspace, and is not taken alone.
+ */
+const SILENT_CODES: ReadonlySet<string> = new Set([
+  ...Array.from({ length: 24 }, (_, i) => `F${i + 1}`),
+  'Escape', 'CapsLock', 'NumLock', 'ScrollLock', 'PrintScreen', 'Pause', 'ContextMenu',
+  'Insert', 'Delete', 'Home', 'End', 'PageUp', 'PageDown', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown',
 ]);
+
+/** With Ctrl or the system key (Windows key, Command) held, a key gives a command and types nothing. */
+const COMMAND_CODES: ReadonlySet<string> = new Set(['ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight']);
+
+/** Alt with a key types a character on many keyboards: Option on a Mac, and Ctrl with Alt is AltGr. */
+const ALT_CODES: ReadonlySet<string> = new Set(['AltLeft', 'AltRight']);
 
 /** Shift turns a letter into a capital: it is typing too, so it does not lift the rule. */
 const SHIFT_CODES: ReadonlySet<string> = new Set(['ShiftLeft', 'ShiftRight']);
@@ -31,12 +40,40 @@ export interface KeybindConfig {
 }
 
 /**
- * Whether a shortcut of these keys (by their DOM codes) types text when pressed: only typing keys
- * and Shift, and no mouse button. Such a shortcut is refused, so the hook never reports them.
+ * Whether a shortcut of these keys (by their DOM codes) can type text when pressed. Such a shortcut
+ * is refused, so the hook never reports them. Only what cannot type is taken: a mouse button, keys
+ * that type nothing with any modifiers but Shift alone, or a key that types held with Ctrl or the
+ * system key and without Alt.
  */
 export function typesText(codes: readonly string[], mouseButton?: number): boolean {
   if (mouseButton !== undefined) return false;
-  return codes.length > 0 && codes.every((code) => TYPING_CODES.has(code) || SHIFT_CODES.has(code));
+  if (codes.length === 0) return false;
+  const keys = codes.filter((code) => !COMMAND_CODES.has(code) && !ALT_CODES.has(code) && !SHIFT_CODES.has(code));
+  if (keys.every((code) => SILENT_CODES.has(code))) {
+    // Modifiers and silent keys type nothing, but Shift alone is what makes capitals.
+    return keys.length === 0 && codes.every((code) => SHIFT_CODES.has(code));
+  }
+  const command = codes.some((code) => COMMAND_CODES.has(code));
+  const alt = codes.some((code) => ALT_CODES.has(code));
+  return !command || alt;
+}
+
+/**
+ * How often the page may hand over its shortcuts: the settings do it when they change. A page that
+ * swaps them faster is not someone at the settings, and is not listened to until the minute is over.
+ */
+export function createKeybindSyncLimit(max = 30, windowMs = 60_000, now: () => number = Date.now): () => boolean {
+  let windowStart = 0;
+  let count = 0;
+  return () => {
+    const at = now();
+    if (at - windowStart >= windowMs) {
+      windowStart = at;
+      count = 0;
+    }
+    count += 1;
+    return count <= max;
+  };
 }
 
 /**

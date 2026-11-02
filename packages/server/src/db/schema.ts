@@ -735,10 +735,17 @@ export const instanceSettings = sqliteTable('instance_settings', {
   /** Who may add to the instance's emoji library: 'admins' or 'everyone'. */
   emojiPolicy: text('emoji_policy').notNull().default('admins'),
   /**
-   * Since when a new local account needs a verified address before it may create spaces or
-   * approach strangers (docs/systems/email.md, "The gate"). Null: off. Older accounts are not concerned.
+   * Since when a new local account needs a verified address before it may do anything in a space
+   * but read, create spaces or approach strangers (docs/systems/email.md, "The gate"). Null: off.
+   * Older accounts are not concerned.
    */
   emailRequiredSince: integer('email_required_since'),
+  /**
+   * Whether an address at a throwaway mail domain (email/throwawayDomains.txt) is refused at
+   * sign-up and when an address is set (docs/systems/email.md, "Throwaway addresses"). 1: refused.
+   * Addresses already on accounts stay as they are.
+   */
+  blockThrowawayEmail: integer('block_throwaway_email').notNull().default(1),
   /**
    * What a browser solves before an account is created (SignupChallengeLevel). A row made
    * from here on is `normal` (ensureDefaults); the migration set the one that existed.

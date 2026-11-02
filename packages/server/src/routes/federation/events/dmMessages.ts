@@ -6,25 +6,28 @@ import { normalizeOriginForCompare } from '../../../utils/federationAuth.js';
 import { dmDeleteKey, hasAppliedEvent, recordAppliedEvent } from '../../../utils/federationAppliedEvents.js';
 import { reopenClosedDmMembers } from '../../../utils/dmMemberClosed.js';
 import { getGroupDmTargetOrigins } from '../../../utils/federationOutbox.js';
-import { findOrCreateOneOnOne, oneOnOneKey } from '../../../utils/dmConversation.js';
+import { findOrCreateOneOnOne, mayBeOneOnOneRow, oneOnOneKey } from '../../../utils/dmConversation.js';
+import { oneOnOneBlockRefusal } from '../../../utils/blocks.js';
 import { loadDmChannelWire } from '../../../utils/dmChannelWire.js';
 import { announceDmReconcile } from '../../../utils/dmConversationEvents.js';
 import { deleteAttachmentFiles } from '../../../utils/fileCleanup.js';
 import { rewriteRelayedMentions } from '../../../utils/federationMentions.js';
 import { sanitizeUser } from '../../../utils/sanitize.js';
 import { generateSnowflake } from '../../../utils/snowflake.js';
-import { instanceOrigin, mayPostSticker, mediaOriginsFor, shownPicture } from '../../../utils/remoteMedia.js';
+import { instanceOrigin, isStickerFrom, mayPostSticker, mediaOriginsFor, shownPicture } from '../../../utils/remoteMedia.js';
 import { relayedMimetype } from '../../../utils/uploadTypes.js';
 import { reactionLimitReached } from '../../../utils/reactions.js';
 import { connectionManager } from '../../../ws/handler.js';
 import { getDmMessageWithUser } from '../../dm.js';
 import { and, eq, isNull, or } from 'drizzle-orm';
-import type { FederationMessageTarget, FederationRelayEvent } from '@backspace/shared';
+import type { FederationMessageTarget, FederationRelayEvent, FederationRelayProfileSnapshot } from '@backspace/shared';
 import { parseDmSystemEvent, RELAYABLE_DM_SYSTEM_EVENTS } from '@backspace/shared/src/dmSystemEvents.js';
 import type { RelayDelivery } from './dispatch.js';
 import { buildDmMessagePayload, dmChannelMembers, isRelayTarget, isUrlFromPeer, mayRelayInto, memberWithIdentity, nonMemberRefusal, resolveLocalDmMessage, resolveRelayedReplyTarget } from '../dmChannels.js';
-import { attributionRefusal, extractDomain, relayActorOfUser, resolveOrCreateReplicatedUser, resolveRelayActor, sameRelayActor } from '../identity.js';
+import { attributionRefusal, extractDomain, findFederatedUser, isOwnDomain, relayActorOfUser, resolveOrCreateReplicatedUser, resolveRelayActor, sameRelayActor } from '../identity.js';
 import { hydrateReplicatedUserProfile } from '../profile.js';
+import { relayedConversationRefusal, relayedConversationRefusalFromStranger } from '../localConsent.js';
+import { GROUP_DM_MAX_MEMBERS } from '../../../utils/groupDmLimits.js';
 
 /** The most attachments of one relayed message this instance keeps and fetches. */
 const RELAYED_ATTACHMENTS_MAX = 25;
@@ -45,6 +48,18 @@ export async function processCreateEvent(
 
   if (!event.participants || event.participants.length < 2) {
     rejected.push({ messageId: event.messageId, reason: 'missing_participants' });
+    return;
+  }
+  // At most the people a conversation has, before anyone is looked up or made: a 1-on-1 is its
+  // pair, a group at most its member cap.
+  if (event.participants.length > (event.federatedId ? GROUP_DM_MAX_MEMBERS : 2)) {
+    rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+    return;
+  }
+  // This instance keeps a 1-on-1 only with one of its own people in it: one between people of
+  // other instances is theirs, not this one's to store (and to download the files of).
+  if (!event.federatedId && !event.participants.some((p) => typeof p.homeInstance === 'string' && isOwnDomain(extractDomain(p.homeInstance).toLowerCase()))) {
+    rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
     return;
   }
 
@@ -104,49 +119,29 @@ export async function processCreateEvent(
     systemContent = JSON.stringify(stored);
   }
 
-  // Resolve ALL participants to local users, auto-creating replicated stubs
-  // for remote users that don't have a local record yet. This ensures 1-on-1
-  // federated DMs work even when the remote user hasn't connected or friended.
-  const resolvedParticipants: Array<{
-    localUser: typeof schema.users.$inferSelect;
-    homeUserId: string;
-  }> = [];
-
-  for (const p of event.participants) {
-    let localUser = resolveOrCreateReplicatedUser(p.homeUserId, p.homeInstance, db, { username: p.profile?.username, status: p.profile?.status, deleted: p.profile?.deleted });
-    // Skip deleted identities — don't include tombstoned users in the DM
-    if (!localUser) continue;
-    // Hydrate with profile data from the relay event (displayName, avatar, etc.)
-    if (p.profile) {
-      localUser = await hydrateReplicatedUserProfile(localUser, p.profile, db);
-    }
-    resolvedParticipants.push({ localUser, homeUserId: p.homeUserId });
-  }
-
-  if (resolvedParticipants.length < 2) {
-    rejected.push({ messageId: event.messageId, reason: 'participant_not_found' });
-    return;
-  }
-
-  // The author is the resolved participant that IS the message's identity
-  // (`resolveRelayActor`), not the first whose homeUserId matches: a
-  // participant bound by username can resolve to a row of another identity.
-  const author = resolveRelayActor(event.message, db);
-  const authorEntry = author.kind === 'found'
-    ? resolvedParticipants.find(p => p.localUser.id === author.user.id)
-    : undefined;
+  // Who the event names is looked up without making anyone (findFederatedUser, the lookup
+  // resolveOrCreateReplicatedUser makes first): a refused event leaves no row here, and asks no
+  // home for a profile or picture, which each new row does. A row is made, and the profiles the
+  // event carries filled in, only once the event is allowed (below).
+  const authorEntry = event.participants.find((p) => sameRelayActor(p, event.message!));
+  // No participant is the author's identity: a group's event names nobody to look up, and a
+  // 1-on-1's two people are someone other than its author.
   if (!authorEntry) {
-    rejected.push({ messageId: event.messageId, reason: 'author_not_found' });
+    rejected.push({ messageId: event.messageId, reason: event.federatedId ? 'participant_not_found' : 'author_not_found' });
     return;
   }
-  const authorUser = authorEntry.localUser;
 
   // A sticker is fetched by every reader here as soon as it shows, so it only comes from the
-  // author's home or this instance (utils/remoteMedia.ts). Checked before a copy of the conversation is made.
-  if (!isSystem && !mayPostSticker(event.message.content, authorUser.id)) {
+  // author's home or this instance (utils/remoteMedia.ts). The author is homed on the sender
+  // (attribution, above), so their home is the one the message names.
+  if (!isSystem && !isStickerFrom(event.message.content ?? '', mediaOriginsFor(event.message.homeInstance))) {
     rejected.push({ messageId: event.messageId, reason: 'sticker_elsewhere' });
     return;
   }
+
+  const hintsOf = (entry: typeof authorEntry) => ({ username: entry.profile?.username, status: entry.profile?.status, deleted: entry.profile?.deleted });
+  const knownAs = (entry: typeof authorEntry) => findFederatedUser(entry.homeUserId, entry.homeInstance, db, { username: entry.profile?.username });
+  const authorKnown = knownAs(authorEntry);
 
   // Resolve local DM channel: group DMs carry a federatedId and the channel
   // must already exist (bootstrapped by a prior member_add event); 1-on-1 DMs
@@ -154,6 +149,9 @@ export async function processCreateEvent(
   let localDmChannelId: string;
   // Whether this event created this instance's copy of a 1-on-1.
   let createdCopy = false;
+  let authorUser: typeof schema.users.$inferSelect;
+  // The rows the event's profiles fill in once it is allowed.
+  const profiled: Array<{ user: typeof schema.users.$inferSelect; profile: FederationRelayProfileSnapshot | undefined }> = [];
 
   if (event.federatedId) {
     // Group DM: look up by federated_id (channel must already exist from member_add bootstrap)
@@ -170,31 +168,113 @@ export async function processCreateEvent(
       rejected.push({ messageId: event.messageId, reason: 'channel_not_found' });
       return;
     }
-    if (!mayRelayInto(dmChannelMembers(channel.id, db), authorUser.id, sourceInstance)) {
+    // A key names a group only: a sender puts it on a group's messages alone
+    // (federationOutbox.ts), and a 1-on-1 found by one would take a message past
+    // the checks a 1-on-1's create has (below), a block among them.
+    if (mayBeOneOnOneRow({ owner_id: channel.ownerId, federated_id: channel.federatedId })) {
+      console.warn(`[federation] Refused create in DM ${channel.id}: a conversation key names a 1-on-1`);
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
+    // A member of this copy has a row here: an author nobody here knows is no member yet.
+    if (!authorKnown || !mayRelayInto(dmChannelMembers(channel.id, db), authorKnown.id, sourceInstance)) {
       const reason = nonMemberRefusal(channel);
       console.warn(`[federation] Refused create in DM ${channel.id} (${reason}): the author is not a member, or ${extractDomain(sourceInstance)} is not a peer of the conversation`);
       rejected.push({ messageId: event.messageId, reason });
       return;
     }
+    const settled = resolveOrCreateReplicatedUser(authorEntry.homeUserId, authorEntry.homeInstance, db, hintsOf(authorEntry));
+    if (!settled) {
+      rejected.push({ messageId: event.messageId, reason: 'participant_not_found' });
+      return;
+    }
+    // The author is the row that IS the message's identity (`resolveRelayActor`), as for a 1-on-1 (below).
+    const author = resolveRelayActor(event.message, db);
+    if (author.kind !== 'found' || author.user.id !== settled.id) {
+      rejected.push({ messageId: event.messageId, reason: 'author_not_found' });
+      return;
+    }
+    authorUser = settled;
+    profiled.push({ user: settled, profile: authorEntry.profile });
     localDmChannelId = channel.id;
   } else {
     // 1-on-1 DM: the conversation is the pair its federated_id is computed
     // from, so the pair is its membership, and is checked before any local
-    // copy of the conversation is created.
-    const pair = [resolvedParticipants[0]!.localUser, resolvedParticipants[1]!.localUser];
-    if (!mayRelayInto(pair, authorUser.id, sourceInstance)) {
+    // copy of the conversation is created. Its two people are two.
+    const otherEntry = event.participants.find((p) => !sameRelayActor(p, event.message!));
+    if (!otherEntry) {
+      rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+      return;
+    }
+    const otherKnown = knownAs(otherEntry);
+    // One of this instance's people is in it (above), and they always have a row.
+    if (!authorKnown && !otherKnown) {
+      rejected.push({ messageId: event.messageId, reason: 'participant_not_found' });
+      return;
+    }
+    // Each of the pair as the checks see them: their row, or, for someone not known here yet
+    // (never one of this instance's people), where they are homed.
+    const standIn = (entry: typeof authorEntry, known: typeof authorKnown) =>
+      known ?? { id: `unknown:${entry.homeUserId}`, homeInstance: extractDomain(entry.homeInstance).toLowerCase() };
+    const authorStand = standIn(authorEntry, authorKnown);
+    if (!mayRelayInto([authorStand, standIn(otherEntry, otherKnown)], authorStand.id, sourceInstance)) {
       console.warn(`[federation] Refused 1-on-1 create: the author is not one of the pair, or ${extractDomain(sourceInstance)} is not a peer of the conversation`);
       rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
       return;
     }
+    // The person here is written to as the local routes would let them be (localConsent.ts): a
+    // block either way, and their rule on who may start a conversation, for one not held here yet.
+    // An author nobody here knows has nothing to block and no conversation held, so only someone
+    // who takes messages from anyone gets one. With no row for the other, the person here is the
+    // author, writing to someone homed elsewhere, whose home keeps their rules.
+    let consent: string | null = null;
+    if (authorKnown && otherKnown) {
+      const held = db.select({ id: schema.dmChannels.id }).from(schema.dmChannels)
+        .where(and(eq(schema.dmChannels.federatedId, oneOnOneKey(authorKnown, otherKnown)), isNull(schema.dmChannels.deletedAt)))
+        .get();
+      consent = relayedConversationRefusal(authorKnown.id, otherKnown, held === undefined, db);
+    } else if (otherKnown) {
+      consent = relayedConversationRefusalFromStranger(otherKnown);
+    }
+    if (consent) {
+      console.warn(`[federation] Refused 1-on-1 create: the person here does not take it (${consent})`);
+      rejected.push({ messageId: event.messageId, reason: 'recipient_refuses' });
+      return;
+    }
+    // Allowed: the one known here is settled first, so the only row made is the last step.
+    const [firstEntry, secondEntry] = authorKnown ? [authorEntry, otherEntry] : [otherEntry, authorEntry];
+    const first = resolveOrCreateReplicatedUser(firstEntry.homeUserId, firstEntry.homeInstance, db, hintsOf(firstEntry));
+    const second = first ? resolveOrCreateReplicatedUser(secondEntry.homeUserId, secondEntry.homeInstance, db, hintsOf(secondEntry)) : null;
+    if (!first || !second) {
+      rejected.push({ messageId: event.messageId, reason: 'participant_not_found' });
+      return;
+    }
+    // The author is the row that IS the message's identity (`resolveRelayActor`), not the first
+    // whose homeUserId matches: a participant bound by username can resolve to a row of another
+    // identity.
+    const authorRow = authorKnown ? first : second;
+    const author = resolveRelayActor(event.message, db);
+    if (author.kind !== 'found' || author.user.id !== authorRow.id) {
+      rejected.push({ messageId: event.messageId, reason: 'author_not_found' });
+      return;
+    }
+    authorUser = authorRow;
+    profiled.push({ user: first, profile: firstEntry.profile }, { user: second, profile: secondEntry.profile });
     // Both members open: the message that creates a copy here is delivered
     // with it.
-    const opened = findOrCreateOneOnOne(db, pair[0]!, pair[1]!, { open: 'both' });
+    const opened = findOrCreateOneOnOne(db, first, second, { open: 'both' });
     announceDmReconcile(opened.reconciled);
     localDmChannelId = opened.channelId;
     createdCopy = opened.created;
     // A call that rang here before this copy existed is bound to it now.
-    connectionManager.lateBindFederatedCall(oneOnOneKey(pair[0]!, pair[1]!), localDmChannelId);
+    connectionManager.lateBindFederatedCall(oneOnOneKey(first, second), localDmChannelId);
+  }
+
+  // The event is allowed: the profiles it carries fill in what this instance does not know yet.
+  for (const entry of profiled) {
+    if (!entry.profile) continue;
+    const hydrated = await hydrateReplicatedUserProfile(entry.user, entry.profile, db);
+    if (entry.user.id === authorUser.id) authorUser = hydrated;
   }
 
   // The wire's `replyToId` is the sender's local id and is never adopted; the
@@ -390,7 +470,7 @@ function isMessageTarget(value: unknown): value is FederationMessageTarget {
  * signed source can differ in scheme; the relay targets as `isRelayTarget`
  * compares them.
  */
-function isPeerOfMessage(
+export function isPeerOfMessage(
   localMsg: typeof schema.dmMessages.$inferSelect,
   sourceInstance: string,
 ): boolean {
@@ -787,6 +867,12 @@ export function processReactionAddEvent(
   const reactingUser = reactor.user;
   if (!mayPostSticker(event.reaction.emoji, reactingUser.id)) {
     rejected.push({ messageId: event.messageId, reason: 'sticker_elsewhere' });
+    return;
+  }
+  // A block stops reactions in a 1-on-1 as it stops messages, either way, as the local handler
+  // refuses them (ws/events.ts, utils/blocks.ts).
+  if (oneOnOneBlockRefusal(localMsg.dmChannelId, reactingUser.id, db)) {
+    rejected.push({ messageId: event.messageId, reason: 'recipient_refuses' });
     return;
   }
   // As many different reactions as a message here may carry (utils/reactions.ts).

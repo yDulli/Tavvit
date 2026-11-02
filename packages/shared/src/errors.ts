@@ -223,6 +223,8 @@ export const ERROR_CODES = [
   'cannot_dm_self',
   'group_dm_too_few_members',
   'group_dm_too_many_members',
+  'group_dm_limit_reached',
+  'group_dm_member_limit_reached',
   'users_not_found',
   'duplicate_users',
   'group_dm_includes_self',

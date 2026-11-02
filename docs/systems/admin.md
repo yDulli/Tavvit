@@ -471,7 +471,7 @@ Not an admin matter, on purpose: nothing in the admin area turns it off, and an 
 
 ## Email
 
-The tab shows how mail is doing and holds no address or credential (`EmailPanel`, `GET /api/admin/email/status`): state, sender, counts, what is waiting, the last error by name, warnings near a limit or a bounce rate that gets accounts paused, and a test mail. The switch that makes new accounts confirm an address is here too. email.md has all of it. The admin's password reset tells the account's confirmed address.
+The tab shows how mail is doing and holds no address or credential (`EmailPanel`, `GET /api/admin/email/status`): state, sender, counts, what is waiting, the last error by name, warnings near a limit or a bounce rate that gets accounts paused, and a test mail. The switch that makes new accounts confirm an address before they do anything in a space is here too, and the one that refuses throwaway addresses (`blockThrowawayEmail`, on by default). email.md has all of it. The admin's password reset tells the account's confirmed address.
 
 ---
 

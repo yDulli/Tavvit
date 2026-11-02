@@ -606,8 +606,8 @@
       "overwrite": "Substituir"
     },
     "typingKey": {
-      "title": "Este atalho precisa de Ctrl, Alt ou da tecla do sistema",
-      "description": "Letras, números, Espaço, Enter, Tab e Backspace só funcionam junto com Ctrl, Alt ou a tecla do sistema. Sozinhas, o app ouviria tudo o que você digita em outros programas, por isso não as escuta. Teclas de função, botões do mouse e teclas como Caps Lock funcionam sozinhas."
+      "title": "Este atalho precisa de Ctrl ou da tecla do sistema",
+      "description": "Letras, números, pontuação, o teclado numérico, Espaço, Enter, Tab e Backspace só funcionam junto com Ctrl ou a tecla do sistema, e não também com Alt: com Alt, muitos teclados digitam um caractere. Sozinhas, o app ouviria o que você digita em outros programas, por isso não as escuta. Teclas de função, botões do mouse e teclas como Caps Lock funcionam sozinhas."
     }
   },
   "desktop": {

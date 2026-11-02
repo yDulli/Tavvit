@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { getDb, schema } from '../../../db/index.js';
 import { parseFederationHeaders, verifyPeerSignature } from '../../../utils/federationAuth.js';
+import { isOwnOrigin } from '../../../utils/federationOwnNames.js';
 import { isNonceDuplicate } from '../rateLimits.js';
 
 /** A `federation_peers` row, as returned by a `select().from(...).get()`. */
@@ -109,7 +110,12 @@ export function authenticateS2SPeer(
     return { ok: false };
   }
 
-  // 2. Resolve the peer by origin; require an active relationship.
+  // 2. Resolve the peer by origin; require an active relationship. A row for our own origin, from
+  // before the handshake refused one, speaks for nobody.
+  if (isOwnOrigin(fedHeaders.origin)) {
+    reply.code(403).send({ error: 'Unknown or inactive peer', statusCode: 403 });
+    return { ok: false };
+  }
   const peer = db
     .select()
     .from(schema.federationPeers)

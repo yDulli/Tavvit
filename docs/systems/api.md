@@ -44,6 +44,8 @@ PUT    /admin/starter-spaces       { spaceIds }             → StarterSpacesRes
 
 ## Rate limiting
 
+**1.32.8 adds:** `POST /api/dm/group` 10 in 10 minutes, `DELETE /api/events/:id/rsvp` 30 a minute (as the PUT), `PUT /api/users/@me/space-layout` 60 a minute. `PUT /api/users/@me/space-layout` takes at most 500 items, 50 folders, 200 spaces in a folder, ids of 128 characters, names of 100, and a colour as the sidebar sets one (`#rrggbb` or `rgb(var(--accent-…))`), else `400 validation_failed`. `POST /api/bots/@me/files` holds its room before a byte is written. New codes: `409 group_dm_limit_reached` `{ max }`, `409 group_dm_member_limit_reached` `{ name, max }`, `400 profile_image_invalid` from every picture field whose image cannot be written anew. A display name or status with a control character or bidirectional override is `400 validation_failed`. Every route that asks for the current password answers `429 login_throttled` while the account's password checks are all in use. `PATCH /api/spaces/:id/members/@me/profile`, one's own nickname through `PATCH /api/spaces/:id/members/:userId`, `POST /api/spaces/:id/invites`, `POST /api/spaces/:id/invite` when it makes a new standing link, `POST /api/spaces/:id/events`, `PATCH /api/events/:id`, `POST /api/spaces/:id/sounds` and `PATCH /api/sounds/:id` are member actions (`member_timed_out`, `email_verification_required`, `rules_not_accepted`). A clip's or a bot's name with a control character or bidirectional override is `400 validation_failed`. `replicatedInstances` in `PATCH /api/users/@me` keeps a name and an origin per entry and goes back only to the account itself. The RSVP routes answer members only, and tell the space only of a change.
+
 The page's own files (`/assets/`, `/fonts/`, `/icons/`, `/sounds/`) are not counted: a first visit asks for about 40 of them, and they are served from disk.
 
 Every request passes a limit: the global **200 per minute** registered in
@@ -189,7 +191,7 @@ DELETE /users/@me             { password, username }      → { success }
 PUT    /users/@me/space-layout { items, folders, updatedAt? } → { items, folders, updatedAt }
 GET    /users/@me/federation-registry                    → { registry: FederationRegistryEntry[], updatedAt: number }
 PUT    /users/@me/federation-registry { registry, updatedAt } → { ok: true, updatedAt } (409 if not newer)
-POST   /users/@me/federation-credential { origin, markProvisioned? } → { origin, secret, provisioned }
+POST   /users/@me/federation-credential { origin, markProvisioned?, password?, twoFactorCode? } → { origin, secret?, provisioned }
 GET    /users/:id                                        → { user }
 GET    /users/:id/mutuals     ?homeUserId=               → { mutualFriends[], mutualSpaces[] }
 ```
@@ -211,6 +213,8 @@ GET    /users/:id/mutuals     ?homeUserId=               → { mutualFriends[], 
 **Self-view flag:** `GET /users/@me`, the login response, and the WS `ready` payload all sanitize the row with `isSelf=true` and include `federationHomeOrphaned: boolean` (detach design §4.7) and `detachedHomeInstance: string | null` (the home a detached account was federated from; a detached account is homed on this instance, so `homeInstance` is null — `federation.md`, "Detached accounts are homed here") — self-view only; it is never exposed to other users and never on the deleted/tombstone branch.
 
 **`POST /users/@me/federation-credential`:** get-or-create the per-remote credential this account's client presents when registering or logging in as itself on another instance. Scoped to `request.userId`; the secret is never derived from and never equal to the account password. See `auth.md` §5b and `client-federation.md` §1.
+
+- The `secret` is in the answer only when the request carries the account's current `password` (and `twoFactorCode` while 2FA is on): `403 current_password_incorrect`, `403 mfa_code_required` / `mfa_code_invalid`, `429 login_throttled`. Without a password the answer is `{ origin, provisioned }` and no row is made; `markProvisioned: true` then marks an existing row only. `password` that is not a string → **400**. Rate limit 60/min.
 
 - `origin` is canonicalized to `https://host[:port]` (lowercased, no path), so `orbit.example`, `orbit.example/`, and `https://Tavvit.example` all address one row. Unparseable or non-http(s) values → **400**; our own origin → **400** (a credential is only ever for a remote).
 - **409** when the caller is a replicated federated account (`homeInstance` set and `federationHomeOrphaned !== 1`) — credentials are issued by the account's own home instance so exactly one secret exists per (user, remote). Detached accounts follow the LOCAL rule and DO get credentials.
@@ -590,7 +594,7 @@ See [sounds.md](sounds.md), "Soundboard".
 | Method | Path | Rule |
 |--------|------|------|
 | GET | `/api/spaces/:id/sounds` | Members. |
-| POST | `/api/spaces/:id/sounds` | MANAGE_SOUNDS. `{ name, audio (base64), duration? }`. |
+| POST | `/api/spaces/:id/sounds` | MANAGE_SOUNDS. `{ name, audio (base64), duration? }`. Counts on the creator's storage and the disk's reserve (`413 storage_limit_reached`, `507 disk_full`, uploads.md "Limits per account"). Deleting the space deletes the clips' files. |
 | PATCH, DELETE | `/api/sounds/:id` | MANAGE_SOUNDS. |
 | GET | `/api/sounds/:id/audio` | Members. |
 | POST | `/api/channels/:id/soundboard/:soundId/play` | In the call, USE_SOUNDBOARD, not held back. |
@@ -729,7 +733,7 @@ Backend: Klipy API (requires `gifApiKey` in instance_settings)
 ```
 POST /livekit/token  { channelId | dmChannelId } → { token, url }
 ```
-Permissions checked: CONNECT, SPEAK, STREAM (space channels). DM calls: always full grants. A member timed out in the channel's space gets no token: `403 member_timed_out` (`details.until`), after the CONNECT check.
+Permissions checked: CONNECT, SPEAK, STREAM (space channels), less a moderator's space mute or deafen (voice.md, "What LiveKit enforces"). Only a voice channel: any other channel is `404 channel_not_found`. DM calls: always full grants, in the room `fed:<federatedId>` or `dm-<id>`. A member timed out in the channel's space gets no token: `403 member_timed_out` (`details.until`), after the CONNECT check.
 
 ## Instance (`routes/instance.ts`) — public
 ```

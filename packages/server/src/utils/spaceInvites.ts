@@ -8,6 +8,7 @@
  * revoked link is exactly as unknown as one that never existed.
  */
 import crypto from 'node:crypto';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import type { SpaceInviteLink } from '@backspace/shared';
 import { isVanityCodeShape, normalizeVanityCode, RESERVED_VANITY_CODES } from '@backspace/shared/src/vanityInvites.js';
@@ -131,7 +132,7 @@ export function listInvites(spaceId: string, now: number = Date.now(), db: Db = 
       code: invite.code,
       standing: invite.code === space.inviteCode,
       createdBy: invite.createdBy && username !== null
-        ? { id: invite.createdBy, name: displayName || username.split('@')[0]! }
+        ? { id: invite.createdBy, name: (displayName ? withoutUnsafeCharacters(displayName) : '') || username.split('@')[0]! }
         : null,
       createdAt: invite.createdAt,
       expiresAt: invite.expiresAt,

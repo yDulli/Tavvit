@@ -1,4 +1,5 @@
 import { isWeakPassword } from '../utils/passwordPolicy.js';
+import { checkPassword, refusePasswordCheck } from '../utils/passwordConfirm.js';
 import { recordSecurityEvent } from '../security/events.js';
 import { refuseWithoutSecondFactor } from './twoFactor.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -8,7 +9,7 @@ import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@backspace/shared/src/
 import type { ChangeEmailRequest } from '@backspace/shared';
 import { getDb, schema } from '../db/index.js';
 import { config } from '../config.js';
-import { authenticate, hashPassword, requireAdmin, verifyPassword } from '../utils/auth.js';
+import { authenticate, hashPassword, requireAdmin } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
 import { registerRawJsonBodyParser } from '../utils/jsonBody.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
@@ -171,7 +172,8 @@ export async function emailRoutes(app: FastifyInstance): Promise<void> {
 
     const { address: rawAddress, password, locale: rawLocale } = request.body ?? {};
     if (!password || typeof password !== 'string') return sendError(reply, 400, 'password_required');
-    if (!(await verifyPassword(password, user.passwordHash))) return sendError(reply, 403, 'current_password_incorrect');
+    const check = await checkPassword(user, password, request);
+    if (check !== 'valid') return refusePasswordCheck(reply, check);
     const address = normalizeEmail(rawAddress);
     if (!address) return sendError(reply, 400, 'email_invalid');
 
@@ -234,7 +236,8 @@ export async function emailRoutes(app: FastifyInstance): Promise<void> {
     if (!user) return sendError(reply, 404, 'user_not_found');
     const password = request.body?.password;
     if (!password || typeof password !== 'string') return sendError(reply, 400, 'password_required');
-    if (!(await verifyPassword(password, user.passwordHash))) return sendError(reply, 403, 'current_password_incorrect');
+    const check = await checkPassword(user, password, request);
+    if (check !== 'valid') return refusePasswordCheck(reply, check);
     const refused = refuseWithoutSecondFactor(user, request.body?.twoFactorCode, request, reply);
     if (refused) return refused;
     removeAddress(user);

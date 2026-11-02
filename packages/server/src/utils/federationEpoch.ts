@@ -36,7 +36,9 @@ export interface PeerForEpoch {
  * it was signed with:
  *
  * - `verified`: the peer holds this secret (it verified our request and its
- *   signed answer verifies with the same secret). Carries the peer's epoch.
+ *   signed answer verifies with the same secret). Carries the peer's epoch, and
+ *   `vouched` when the peer says whether the row is a handshake it is making
+ *   itself (1.32.8 on; an older peer says nothing, and `vouched` is absent).
  * - `not_peered`: the peer answered 403, so it holds no row for us, or has
  *   revoked it. A handshake can reach a fresh slot there.
  * - `secret_mismatch`: the peer answered 401, so it holds a row for us under a
@@ -48,7 +50,7 @@ export interface PeerForEpoch {
  * before v1.0.0), and the endpoint answers any peer row that is not revoked.
  */
 export type EpochProbe =
-  | { kind: 'verified'; instanceId: string }
+  | { kind: 'verified'; instanceId: string; vouched?: boolean }
   | { kind: 'not_peered' }
   | { kind: 'secret_mismatch' }
   | { kind: 'unknown' };
@@ -60,9 +62,12 @@ export type EpochProbe =
  * live peer (design §9), so the epoch we newly trust is signed, not TLS-only.
  * No exception escapes this function.
  */
-export async function probeEpoch(peer: PeerForEpoch): Promise<EpochProbe> {
+export async function probeEpoch(
+  peer: PeerForEpoch,
+  opts: { trust?: 'approved' | 'asserted'; timeoutMs?: number; signAs?: string } = {},
+): Promise<EpochProbe> {
   const body = JSON.stringify({});
-  const headers = buildFederationHeaders(body, peer.hmacSecret, getOurOrigin());
+  const headers = buildFederationHeaders(body, peer.hmacSecret, opts.signAs ?? getOurOrigin());
 
   let res: Response;
   try {
@@ -70,8 +75,8 @@ export async function probeEpoch(peer: PeerForEpoch): Promise<EpochProbe> {
       method: 'POST',
       headers,
       body,
-      signal: AbortSignal.timeout(10000),
-    }, 'approved');
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 10000),
+    }, opts.trust ?? 'approved');
   } catch {
     return { kind: 'unknown' };
   }
@@ -97,10 +102,11 @@ export async function probeEpoch(peer: PeerForEpoch): Promise<EpochProbe> {
   }
 
   try {
-    const instanceId = (JSON.parse(text) as { instanceId?: unknown }).instanceId;
-    return typeof instanceId === 'string' && instanceId.length > 0
-      ? { kind: 'verified', instanceId }
-      : { kind: 'unknown' };
+    const answer = JSON.parse(text) as { instanceId?: unknown; vouched?: unknown };
+    if (typeof answer.instanceId !== 'string' || answer.instanceId.length === 0) return { kind: 'unknown' };
+    return typeof answer.vouched === 'boolean'
+      ? { kind: 'verified', instanceId: answer.instanceId, vouched: answer.vouched }
+      : { kind: 'verified', instanceId: answer.instanceId };
   } catch {
     return { kind: 'unknown' };
   }

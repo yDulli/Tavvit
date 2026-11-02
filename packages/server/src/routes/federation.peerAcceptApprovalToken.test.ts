@@ -17,6 +17,20 @@ type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 let sqlite: Database.Database;
 let testDb: TestDb;
 
+// The origin a /peer/accept names answers the signed check (handlers/peerHandshake.ts) with the
+// epoch the request stated, unless a test says otherwise. Only that inbound check is stood in for:
+// it is the one probe that signs as a name of ours (signAs); the others run for real.
+const inboundCheck = vi.hoisted(() => ({ lastInstanceId: null as string | null, answer: 'verified' as 'verified' | 'not_peered' }));
+vi.mock('../utils/federationEpoch.js', async (importActual) => {
+  const actual = await importActual<typeof import('../utils/federationEpoch.js')>();
+  return {
+    ...actual,
+    probeEpoch: vi.fn(async (...args: Parameters<typeof actual.probeEpoch>) => (args[1]?.signAs !== undefined
+      ? (inboundCheck.answer === 'verified' ? { kind: 'verified' as const, instanceId: inboundCheck.lastInstanceId ?? 'proven-epoch' } : { kind: 'not_peered' as const })
+      : actual.probeEpoch(...args))),
+  };
+});
+
 vi.mock('../db/index.js', () => ({
   getDb: () => testDb,
   getRawDb: () => sqlite,
@@ -70,6 +84,9 @@ function seedInstanceSettings(autoAccept: 0 | 1): void {
 
 async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
+  app.addHook('preHandler', async (request) => {
+    inboundCheck.lastInstanceId = ((request.body ?? {}) as { instanceId?: string }).instanceId ?? null;
+  });
   const { federationRoutes } = await import('./federation.js');
   await app.register(federationRoutes);
   await app.ready();

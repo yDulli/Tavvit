@@ -9,6 +9,7 @@ import { loadDmChannelWire } from '../../../utils/dmChannelWire.js';
 import { presenceUpdateEvent, validateActivities } from '../../../ws/presenceEvent.js';
 import { projectReplicaStatus } from '../../../ws/replicaPresence.js';
 import { extractDomain, resolveRelayActor, attributionRefusal, type RelayActor } from '../identity.js';
+import { isPeerOfMessage } from './dmMessages.js';
 
 /**
  * The local users a `file_rejected` names: the users homed on the rejecting
@@ -64,7 +65,9 @@ export function processFileRejectedEvent(
     .where(eq(schema.dmMessages.id, event.messageId))
     .get();
 
-  if (!localMsg) {
+  // Only a message the sender was relayed: of a conversation it is a peer of. Any other answers as
+  // a message that is not here, so the answer tells nothing about which ids exist.
+  if (!localMsg || !isPeerOfMessage(localMsg, sourceInstance)) {
     rejected.push({ messageId: event.messageId, reason: 'message_not_found' });
     return;
   }

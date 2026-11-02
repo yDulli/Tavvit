@@ -175,7 +175,7 @@ describe('relayed profile snapshots (#355)', () => {
     const [groupOnC] = await groupDelivered(C, cora, [
       { id: aliceOnC, homeUserId: alice.id, homeInstance: R.domain },
       { id: bobOnC, homeUserId: bob.id, homeInstance: H.domain },
-    ], relayFrom(C));
+    ], relayFrom(C), R);
     const announcedBefore = userUpdatesFor(bobOnR).length;
 
     // Messages alternate between C (stale colour) and bob's home.

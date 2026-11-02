@@ -178,6 +178,15 @@ describe('user routes send error codes', () => {
     });
   });
 
+  it('PATCH @me with a display name or status that would disguise itself is validation_failed', async () => {
+    // A right-to-left override shows "\u202enimda" as "admin".
+    for (const payload of [{ displayName: '\u202enimda' }, { customStatus: 'away \u2066x' }]) {
+      const res = await app.inject({ method: 'PATCH', url: '/api/users/@me', headers: auth(), payload });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({ code: 'validation_failed', details: { field: Object.keys(payload)[0] } });
+    }
+  });
+
   it('PUT federation-registry with a stale timestamp is registry_conflict', async () => {
     const first = await app.inject({
       method: 'PUT', url: '/api/users/@me/federation-registry', headers: auth(),

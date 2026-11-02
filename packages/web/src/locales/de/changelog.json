@@ -4,6 +4,18 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.32.8": {
+      "title": "Sicherere Konten, Anrufe und Verbindungen zwischen Servern",
+      "items": {
+        "accounts": "Ein neues Konto, das seine Adresse noch bestätigen muss, kann in Spaces nur lesen, bis es das getan hat, und Wegwerf-Adressen lassen sich bei der Anmeldung ablehnen.",
+        "privacy": "Banner und die Bilder von Gruppen und Spaces von anderen Servern warten jetzt auch auf dein Ja, und der Datenschutzhinweis sagt klar, dass Nachrichten nicht Ende-zu-Ende-verschlüsselt sind.",
+        "voice": "Wer in einem Sprachkanal stummgeschaltet oder taub gestellt wird, bleibt es jetzt auch, wenn seine App das ignoriert.",
+        "limits": "Sounds, Gruppenbilder und Dateien von Bots zählen zum Speicher, den ein Konto nutzen darf, und ein Konto kann in höchstens 100 Gruppen sein.",
+        "signin": "Das Erraten von Passwörtern wird überall gebremst, wo ein Passwort abgefragt wird, ohne dich aus deinem eigenen Konto auszusperren.",
+        "desktop": "Die Desktop-App hört nur noch auf Tastenkürzel, die keinen Text tippen können, auf jedem Tastaturlayout.",
+        "federation": "Zwischen Servern muss ein Server seine Adresse beweisen, bevor ihm vertraut wird, und niemand wird hier in eine Gruppe, einen Chat, einen Anruf oder eine Freundschaftsanfrage gebracht, die er nicht annehmen würde."
+      }
+    },
     "1.32.7": {
       "title": "Sicherheitskorrekturen",
       "items": {

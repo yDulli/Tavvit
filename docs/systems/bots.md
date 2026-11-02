@@ -20,7 +20,7 @@ The same holds on the socket. `{ type: 'auth', token: 'Bot <token>' }` opens one
 
 ## The account
 
-`users.account_kind = 'bot'`, with the same exclusions as a webhook's ([webhooks.md](webhooks.md), "Accounts that are not people"): it signs in with its token only, is in no list of people, is never an admin, and takes no messages or friend requests. The username is `bot-<id>`, which no person's name can be.
+`users.account_kind = 'bot'`, with the same exclusions as a webhook's ([webhooks.md](webhooks.md), "Accounts that are not people"): it signs in with its token only, is in no list of people, is never an admin, and takes no messages or friend requests. The username is `bot-<id>`, which no person's name can be. Its name, shown as its name and as its role's in each space, follows the rule nicknames follow (`cleanName` in `routes/bots.ts`, with `isVisibleSingleLine`: at most 32, no control character or bidirectional override, something visible); one stored before loses those characters where it is shown (`nameOf`).
 
 The mark comes only from the column: `User.accountKind`, the "Bot" tag at its messages, and the derived `bot` badge in its profile ([badges.md](badges.md)). Nothing a client sends can set or clear it.
 

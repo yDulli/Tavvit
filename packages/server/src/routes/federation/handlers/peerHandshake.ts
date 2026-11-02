@@ -3,7 +3,7 @@ import path from 'node:path';
 import { getDb, schema } from '../../../db/index.js';
 import { authenticate, requireAdmin } from '../../../utils/auth.js';
 import { parseFederationHeaders, verifyPeerSignature } from '../../../utils/federationAuth.js';
-import { getInstanceId } from '../../../utils/federationEpoch.js';
+import { getInstanceId, probeEpoch, type EpochProbe } from '../../../utils/federationEpoch.js';
 import { markPeerReset } from '../../../utils/federationReset.js';
 import { claimAdminHandshake, isHandshakeInFlight, releaseAdminHandshake } from '../../../utils/federationPeering.js';
 import { decideInboundHandshake, insertPeer, transitionPeer } from '../../../utils/federationPeerState.js';
@@ -14,8 +14,37 @@ import { queueApprovalRequest } from './approvals.js';
 import { resolveLocalOrigin, sanitizePeer, validateOrigin } from '../origin.js';
 import { isAcceptRateLimited, isEnsureRateLimited } from '../rateLimits.js';
 import { federationFetch } from '../../../utils/federationFetch.js';
+import { handshakeCheckOrigin, isOwnOrigin, ownOrigins } from '../../../utils/federationOwnNames.js';
 import { sendError } from '../../../utils/httpErrors.js';
 import { PEER_ENSURE_REASONS, type PeerEnsureReason } from '@backspace/shared';
+
+/**
+ * Whether the instance at `sourceOrigin` holds `hmacSecret` for this instance, in a handshake it is
+ * making itself. Asked as each name it may have dialled us by (utils/federationOwnNames.ts), its
+ * /epoch answers, signed with that secret, only for its row for that very name (handlers/relay.ts),
+ * and says whether that row is its own handshake (`vouched`). A secret it gave anyone else proves
+ * nothing here, nobody but that instance can answer at its address, and a row it once took from a
+ * stranger without a check does not vouch. An older peer says nothing of `vouched`, and is taken
+ * on the signed answer alone.
+ *
+ * `trust` is the probe's address rule (utils/federationFetch.ts): `approved` only for an origin a
+ * local admin dialled, which may be a private address; anything else is the caller's word, so its
+ * address must be public unless FEDERATION_ALLOW_PRIVATE_PEERS is on.
+ */
+async function proveCaller(sourceOrigin: string, hmacSecret: string, trust: 'approved' | 'asserted'): Promise<EpochProbe> {
+  const target = handshakeCheckOrigin(sourceOrigin);
+  const answers = await Promise.all(ownOrigins().map((name) =>
+    probeEpoch({ origin: target, hmacSecret }, { trust, timeoutMs: 5000, signAs: name })));
+  return answers.find((answer) => answer.kind === 'verified' && answer.vouched !== false)
+    ?? answers.find((answer) => answer.kind === 'verified')
+    ?? answers[0]
+    ?? { kind: 'unknown' };
+}
+
+/** Whether a proof says the caller is the instance at its origin, making this handshake. */
+function provesCaller(proof: EpochProbe): proof is Extract<EpochProbe, { kind: 'verified' }> {
+  return proof.kind === 'verified' && proof.vouched !== false;
+}
 
 /**
  * The reason a `/peer/ensure` request states, or `null` when it states one a
@@ -170,6 +199,11 @@ export function registerPeerHandshakeRoutes(app: FastifyInstance): void {
       if (!sourceOrigin) {
         return reply.code(400).send({ error: 'sourceOrigin must be a valid HTTPS URL (HTTP is only allowed for localhost)', statusCode: 400 });
       }
+      // Nobody peers under one of this instance's names, its domain included: a row for one of them
+      // would let its holder speak for every account here (routes/federation/identity.ts).
+      if (isOwnOrigin(sourceOrigin)) {
+        return reply.code(400).send({ error: 'Cannot peer with self', statusCode: 400 });
+      }
 
       const db = getDb();
       const settings = db
@@ -191,20 +225,60 @@ export function registerPeerHandshakeRoutes(app: FastifyInstance): void {
         .where(eq(schema.federationPeers.origin, sourceOrigin))
         .get() ?? null;
 
-      const decision = decideInboundHandshake({
-        row: existing,
+      const decide = (row: typeof existing) => decideInboundHandshake({
+        row,
         autoAccept,
         inboundToken,
         ownHandshakeInFlight: isHandshakeInFlight(sourceOrigin),
         ourOrigin: resolveLocalOrigin(),
         sourceOrigin,
       });
+      const decision = decide(existing);
+
+      // Before a row is made or turned active, or a request put before the admin, the caller shows
+      // that it speaks for the origin it names and that it means this instance (proveCaller). Anyone
+      // can send this request; only the instance at that address, handshaking with us, can answer
+      // the check. A queued request is proved too: otherwise anyone could put one before the admin
+      // in another instance's name, or replace a real one's secret and token.
+      let provenInstanceId: string | null = null;
+      if (decision.kind === 'create' || decision.kind === 'activate' || decision.kind === 'queue') {
+        // An origin our own admin dialled is approved, a private address included; any other is the
+        // caller's word (proveCaller).
+        const trust = decision.kind === 'activate' && existing?.initiatedBy === 'admin' ? 'approved' : 'asserted';
+        const proof = await proveCaller(sourceOrigin, hmacSecret, trust);
+        if (!provesCaller(proof)) {
+          console.warn(`[federation] /peer/accept from ${sourceOrigin} refused: that origin did not answer, for a handshake of its own, a request signed with the offered secret (${proof.kind})`);
+          return reply.code(403).send({
+            error: 'Could not confirm that this request comes from the instance it names',
+            code: 'PEER_ORIGIN_UNPROVEN',
+            statusCode: 403,
+          });
+        }
+        if (reqInstanceId && reqInstanceId !== proof.instanceId) {
+          console.warn(`[federation] /peer/accept from ${sourceOrigin} refused: it named another instance than the one at that origin`);
+          return reply.code(403).send({
+            error: 'Could not confirm that this request comes from the instance it names',
+            code: 'PEER_ORIGIN_UNPROVEN',
+            statusCode: 403,
+          });
+        }
+        provenInstanceId = proof.instanceId;
+
+        // The check took time, in which our own handshake with this origin can have started or the
+        // row changed: what was decided must still be what the row decides now, or both
+        // handshakes could be taken on two different secrets.
+        const now = db.select().from(schema.federationPeers).where(eq(schema.federationPeers.origin, sourceOrigin)).get() ?? null;
+        const again = decide(now);
+        if (again.kind !== decision.kind || now?.id !== existing?.id || now?.hmacSecret !== existing?.hmacSecret || now?.status !== existing?.status) {
+          return reply.code(409).send({ error: 'A peering handshake with this instance is already in progress', code: 'PEER_HANDSHAKE_IN_PROGRESS', statusCode: 409 });
+        }
+      }
 
       const accepted = { accepted: true, instanceName: ourInstanceName, instanceId: ourInstanceId };
       const theirs = {
         hmacSecret,
         instanceName: reqInstanceName ?? null,
-        peerInstanceId: reqInstanceId ?? null,
+        peerInstanceId: provenInstanceId ?? reqInstanceId ?? null,
         lastSeenAt: Date.now(),
         approvalToken: null,
       };
@@ -215,7 +289,7 @@ export function registerPeerHandshakeRoutes(app: FastifyInstance): void {
             origin: sourceOrigin,
             hmacSecret,
             instanceName: reqInstanceName ?? null,
-            peerInstanceId: reqInstanceId ?? null,
+            peerInstanceId: provenInstanceId ?? reqInstanceId ?? null,
             lastSeenAt: Date.now(),
             initiatedBy: 'remote',
             status: 'active',
@@ -259,7 +333,13 @@ export function registerPeerHandshakeRoutes(app: FastifyInstance): void {
           // epoch means a new incarnation on that domain (markPeerReset routes
           // the row to needs_attention and journals it; it never re-keys).
           if (existing && reqInstanceId && existing.peerInstanceId && reqInstanceId !== existing.peerInstanceId) {
-            markPeerReset(existing.id, sourceOrigin, existing.peerInstanceId, reqInstanceId);
+            // Only the instance at that origin starts a reset: anyone can send this request, and a
+            // reset stops federation with the peer until an admin acts. The origin is that of an
+            // established row, which this instance already sends to (approved).
+            const proof = await proveCaller(sourceOrigin, hmacSecret, 'approved');
+            if (provesCaller(proof) && proof.instanceId === reqInstanceId) {
+              markPeerReset(existing.id, sourceOrigin, existing.peerInstanceId, reqInstanceId);
+            }
           }
           return reply.code(409).send({
             accepted: false,

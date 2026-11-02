@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { checkPassword, refusePasswordCheck } from '../utils/passwordConfirm.js';
 import { eq } from 'drizzle-orm';
 import type { AuthResponse, SecurityOverview, TwoFactorSetupResponse } from '@backspace/shared';
 import { getDb, schema } from '../db/index.js';
-import { authenticate, issueSessionToken, verifyPassword } from '../utils/auth.js';
+import { authenticate, issueSessionToken } from '../utils/auth.js';
 import { errorBody, sendError } from '../utils/httpErrors.js';
 import { loginThrottle, loginThrottleKey } from '../utils/loginThrottle.js';
 import { sanitizeUser } from '../utils/sanitize.js';
@@ -145,7 +146,8 @@ export async function twoFactorRoutes(app: FastifyInstance): Promise<void> {
     if (user.twoFactorEnabledAt !== null) return sendError(reply, 409, 'two_factor_already_enabled');
     const password = request.body?.password;
     if (typeof password !== 'string' || !password) return sendError(reply, 400, 'password_required');
-    if (!(await verifyPassword(password, user.passwordHash))) return sendError(reply, 403, 'current_password_incorrect');
+    const check = await checkPassword(user, password, request);
+    if (check !== 'valid') return refusePasswordCheck(reply, check);
     const enrollment = beginEnrollment(user.id, user.username);
     if (!enrollment) return sendError(reply, 503, 'two_factor_unavailable');
     const response: TwoFactorSetupResponse = enrollment;
@@ -180,7 +182,8 @@ export async function twoFactorRoutes(app: FastifyInstance): Promise<void> {
     if (user.twoFactorEnabledAt === null) return reply.code(200).send({ success: true });
     const password = request.body?.password;
     if (typeof password !== 'string' || !password) return sendError(reply, 400, 'password_required');
-    if (!(await verifyPassword(password, user.passwordHash))) return sendError(reply, 403, 'current_password_incorrect');
+    const check = await checkPassword(user, password, request);
+    if (check !== 'valid') return refusePasswordCheck(reply, check);
     const refused = refuseWithoutSecondFactor(user, request.body?.code, request, reply);
     if (refused) return refused;
     removeTwoFactor(user.id);
@@ -198,7 +201,8 @@ export async function twoFactorRoutes(app: FastifyInstance): Promise<void> {
     if (user.twoFactorEnabledAt === null) return sendError(reply, 409, 'two_factor_not_enabled');
     const password = request.body?.password;
     if (typeof password !== 'string' || !password) return sendError(reply, 400, 'password_required');
-    if (!(await verifyPassword(password, user.passwordHash))) return sendError(reply, 403, 'current_password_incorrect');
+    const check = await checkPassword(user, password, request);
+    if (check !== 'valid') return refusePasswordCheck(reply, check);
     const refused = refuseWithoutSecondFactor(user, request.body?.code, request, reply);
     if (refused) return refused;
     const recoveryCodes = regenerateRecoveryCodes(user.id);

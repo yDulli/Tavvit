@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { and, desc, eq, inArray, ne, or, sql, like, type SQL } from 'drizzle-orm';
 import type { MentionItem, MentionsResponse } from '@backspace/shared';
 import { parseMentions } from '@backspace/shared/src/mentions.js';
@@ -64,7 +65,7 @@ function mentionedNamesOf(
     .where(and(inArray(schema.spaceMembers.spaceId, [...spaceIds]), inArray(schema.spaceMembers.userId, [...ids])))
     .all()) {
     const names = bySpace.get(member.spaceId) ?? new Map<string, string>();
-    names.set(member.userId, member.nickname || member.displayName || member.username.split('@')[0]!);
+    names.set(member.userId, member.nickname || (member.displayName ? withoutUnsafeCharacters(member.displayName) : '') || member.username.split('@')[0]!);
     bySpace.set(member.spaceId, names);
   }
   return bySpace;

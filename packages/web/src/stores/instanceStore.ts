@@ -10,7 +10,9 @@ import type {
 } from '@backspace/shared';
 import { detachedHomeOf } from '@backspace/shared';
 import { BackspaceApiClient, HttpError, createApiClient, api } from '../api/client';
+import { describeError } from '../i18n/errors';
 import { useAuthStore } from './authStore';
+import { useMfaPromptStore } from './mfaPromptStore';
 import {
   setApiForOriginResolver,
   setOriginFromHostnameResolver,
@@ -209,7 +211,7 @@ export function isSelfOrigin(origin: string): boolean {
  * `origin` is the session's origin string as the rest of the client keys it:
  * `''` for the primary connection, the connected instance's origin otherwise.
  *
- * Shared by `maybeAutoReattach` (proof minting), `resolveCredentialHomeApi`
+ * Shared by `maybeAutoReattach` (proof minting), `resolveCredentialHome`
  * (per-remote credential issuance) and `getFriendsHomeOrigin` (friend-only
  * requests) so all agree on what "a session on the home instance" means.
  */
@@ -247,8 +249,8 @@ export function getFriendsHomeOrigin(): string {
 }
 
 /**
- * The API client of the instance that ISSUES this account's per-remote
- * federation credentials — always the account's true home.
+ * The instance that ISSUES this account's per-remote federation credentials —
+ * always the account's true home — with the origin its code dialog names.
  *
  * Credentials must be minted in exactly one place. If each browsing instance
  * issued its own, the same remote account would be handed two different secrets
@@ -256,11 +258,36 @@ export function getFriendsHomeOrigin(): string {
  * account (`federationHomeOrphaned`) has no home left to ask, so it is sovereign
  * here and issues its own — the same rule the server applies (users.ts).
  */
-function resolveCredentialHomeApi(): BackspaceApiClient | null {
+function resolveCredentialHome(): { api: BackspaceApiClient; origin: string } | null {
   const currentUser = useAuthStore.getState().user;
   if (!currentUser) return null;
-  if (!currentUser.homeInstance || currentUser.federationHomeOrphaned) return api;
-  return resolveSessionApiForHome(homeHostOf(currentUser.homeInstance))?.api ?? null;
+  if (!currentUser.homeInstance || currentUser.federationHomeOrphaned) return { api, origin: window.location.origin };
+  const home = resolveSessionApiForHome(homeHostOf(currentUser.homeInstance));
+  return home ? { api: home.api, origin: home.origin || window.location.origin } : null;
+}
+
+/**
+ * The per-remote secret for `origin`. The home gives it out only with its password
+ * and, while 2FA is on there, a code, which the one dialog asks for
+ * (`useMfaPromptStore`); cancelling it fails the request. A wrong password is the
+ * home's `current_password_incorrect`, for the caller to tell.
+ */
+async function issuedCredential(
+  home: { api: BackspaceApiClient; origin: string },
+  origin: string,
+  password: string,
+): Promise<{ origin: string; secret: string }> {
+  let twoFactorCode: string | undefined;
+  for (;;) {
+    try {
+      const credential = await home.api.users.federationCredential({ origin, password, twoFactorCode });
+      if (!credential.secret) throw new Error('The home instance gave no credential');
+      return { origin: credential.origin, secret: credential.secret };
+    } catch (err) {
+      if (!(err instanceof HttpError) || (err.code !== 'mfa_code_required' && err.code !== 'mfa_code_invalid')) throw err;
+      twoFactorCode = await useMfaPromptStore.getState().ask(home.origin, err.code === 'mfa_code_invalid' ? describeError(err) : null);
+    }
+  }
 }
 
 /**
@@ -276,6 +303,11 @@ function resolveCredentialHomeApi(): BackspaceApiClient | null {
  * rotation bumps the remote's `passwordChangedAt` and revokes this user's other
  * sessions there).
  *
+ * The home gives the secret out only with its password, so the rotation waits
+ * for a path that has it: an explicit login passes what was typed (the home
+ * password, for an account made before the secrets), and a token reconnect,
+ * which has none, only learns whether one is still due.
+ *
  * `force` skips the flag — used after an explicit login, which is the one
  * signal that the remote hash is something other than the issued secret.
  *
@@ -285,7 +317,7 @@ function resolveCredentialHomeApi(): BackspaceApiClient | null {
  */
 export async function ensureRemoteCredential(
   instance: ConnectedInstance,
-  opts: { force?: boolean } = {},
+  opts: { force?: boolean; password?: string } = {},
 ): Promise<void> {
   const currentUser = useAuthStore.getState().user;
   if (!currentUser) return;
@@ -294,15 +326,19 @@ export async function ensureRemoteCredential(
   if (trueHome && homeHostOf(instance.origin) === homeHostOf(trueHome.host)) return; // home keeps the real password
   if (!isMyFederatedIdentity(currentUser, instance.user)) return;
 
-  const homeApi = resolveCredentialHomeApi();
-  if (!homeApi) return;
+  const home = resolveCredentialHome();
+  if (!home) return;
 
-  const credential = await homeApi.users.federationCredential({ origin: instance.origin });
-  if (credential.provisioned && !opts.force) return;
+  if (!opts.force) {
+    const state = await home.api.users.federationCredential({ origin: instance.origin });
+    if (state.provisioned) return;
+  }
+  if (!opts.password) return;
 
+  const credential = await issuedCredential(home, instance.origin, opts.password);
   const rotated = await instance.api.users.changePassword({ newPassword: credential.secret });
   useInstanceStore.getState().updateInstanceToken(instance.origin, rotated.token);
-  await homeApi.users.federationCredential({ origin: instance.origin, markProvisioned: true });
+  await home.api.users.federationCredential({ origin: instance.origin, markProvisioned: true });
 }
 
 // ─── Home-instance peering for a remote session ──────────────────────────────
@@ -752,19 +788,22 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
         // Target is a remote/third-party instance. The entered password is
         // checked by the account's OWN home instance and never travels to the
         // target; the target is given a per-remote secret the home issues.
-        homeApi = resolveCredentialHomeApi();
-        if (!homeApi) {
+        const home = resolveCredentialHome();
+        if (!home) {
           throw new Error(
             `Connect to your home instance (${trueHomeHost}) first — it issues the credential for ${targetHost}`,
           );
         }
+        homeApi = home.api;
 
-        const { valid } = await homeApi.users.verifyPassword(password);
-        if (!valid) {
-          throw new Error('Incorrect password');
+        // The home checks the password itself before it gives the secret out.
+        let credential: { origin: string; secret: string };
+        try {
+          credential = await issuedCredential(home, origin, password);
+        } catch (err) {
+          if (err instanceof HttpError && err.code === 'current_password_incorrect') throw new Error('Incorrect password');
+          throw err;
         }
-
-        const credential = await homeApi.users.federationCredential({ origin });
         credentialOrigin = credential.origin;
         finalUsername = `${bareUsername}@${trueHomeHost}`;
 
@@ -914,7 +953,10 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
       // The user just authenticated with a password of their own choosing, so
       // the remote hash is whatever they typed. Force it back onto the
       // home-issued secret (no-op unless this is our own federated identity).
-      ensureRemoteCredential(instance, { force: true }).catch((err) =>
+      // The home gives that out for its own password, which is what an account
+      // made before the secrets was given; any other password it refuses, and
+      // the remote keeps the one typed.
+      ensureRemoteCredential(instance, { force: true, password }).catch((err) =>
         console.warn('[federation] Could not reconcile remote credential:', err),
       );
 
@@ -1242,7 +1284,7 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
     // to see their known connections (as auth_expired) instead of an empty list.
     // These synthesized entries are display-only until the next successful GET
     // — we never PUT while _registrySyncReady is false.
-    for (const ri of currentUser.replicatedInstances) {
+    for (const ri of currentUser.replicatedInstances ?? []) {
       const origin = ri.origin || `https://${ri.domain}`;
       if (isSelfOrigin(origin)) continue;
       if (registry.has(origin)) continue;
@@ -1288,7 +1330,7 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
     // connection target. It won't be in replicatedInstances (you don't
     // "federate to" your own home), but the client needs it for friends,
     // DMs, and profile data.
-    const instancesToConnect = [...currentUser.replicatedInstances];
+    const instancesToConnect = [...(currentUser.replicatedInstances ?? [])];
     if (currentUser.homeInstance) {
       const homeOrigin = `https://${currentUser.homeInstance}`;
       if (!isSelfOrigin(homeOrigin)) {

@@ -6,6 +6,20 @@ import { PROFILE_LIMITS, type ProfileLink } from './types.js';
 
 /** Control characters and bidirectional overrides, which would let a field disguise itself. */
 const UNSAFE_CHARACTERS = /[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/;
+const UNSAFE_CHARACTERS_ALL = new RegExp(UNSAFE_CHARACTERS.source, 'g');
+
+/**
+ * Whether a name or status holds such a character: a right-to-left override would show
+ * "\u202enimda" as "admin", or a moderator's name in someone else's.
+ */
+export function hasUnsafeCharacters(text: string): boolean {
+  return UNSAFE_CHARACTERS.test(text);
+}
+
+/** The text without them: for a value stored before they were refused, or sent by another instance. */
+export function withoutUnsafeCharacters(text: string): string {
+  return text.replace(UNSAFE_CHARACTERS_ALL, '');
+}
 
 /**
  * Pronouns as stored: trimmed, null when empty, or undefined when they are not

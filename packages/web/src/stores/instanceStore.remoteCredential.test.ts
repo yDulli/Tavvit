@@ -12,20 +12,26 @@ const ISSUED_SECRET = 'fake-issued-secret-for-orbit';
 const OTHER_SECRET = 'fake-issued-secret-for-zeta';
 
 // ── Home-instance API (`api`) ───────────────────────────────────────────────
+type CredentialAsk = { origin: string; markProvisioned?: boolean; password?: string; twoFactorCode?: string };
+
+function wrongPassword(): HttpError {
+  return new HttpError(403, 'Current password is incorrect', { error: 'current_password_incorrect', code: 'current_password_incorrect', statusCode: 403 }, 'current_password_incorrect');
+}
+
 const verifyPassword = vi.fn(async (_password: string) => ({ valid: true }));
-const federationCredential = vi.fn(
-  async (data: { origin: string; markProvisioned?: boolean }) => ({
-    origin: data.origin,
-    secret: data.origin.includes('zeta') ? OTHER_SECRET : ISSUED_SECRET,
-    provisioned: false,
-  }),
-);
+/** The home answers as the server does: the secret only for its password, the state alone without it. */
+const federationCredential = vi.fn(async (data: CredentialAsk): Promise<{ origin: string; secret?: string; provisioned: boolean }> => {
+  if (data.password === undefined) return { origin: data.origin, provisioned: false };
+  if (data.password !== HOME_PASSWORD) throw wrongPassword();
+  return { origin: data.origin, secret: data.origin.includes('zeta') ? OTHER_SECRET : ISSUED_SECRET, provisioned: false };
+});
 const ensurePeered = vi.fn(async () => ({ peeringStatus: 'active' }));
 
 // ── Target-instance API (built by `createApiClient`) ────────────────────────
 const remoteRegister = vi.fn();
 const remoteLogin = vi.fn();
 const remoteInfo = vi.fn(async () => ({ name: 'Tavvit' }));
+const remoteChangePassword = vi.fn<(data: { newPassword: string }) => Promise<{ token: string }>>(async () => ({ token: 'rotated-token' }));
 
 // Keep the real exports: HttpError is what the store inspects on a failed
 // remote registration.
@@ -34,8 +40,7 @@ vi.mock('../api/client', async (importOriginal) => ({
   api: {
     users: {
       verifyPassword: (password: string) => verifyPassword(password),
-      federationCredential: (data: { origin: string; markProvisioned?: boolean }) =>
-        federationCredential(data),
+      federationCredential: (data: CredentialAsk) => federationCredential(data),
       update: vi.fn(async () => ({})),
       getFederationRegistry: vi.fn(async () => ({ registry: [], updatedAt: 0 })),
       putFederationRegistry: vi.fn(async () => ({ ok: true, updatedAt: 1 })),
@@ -49,7 +54,7 @@ vi.mock('../api/client', async (importOriginal) => ({
       login: (data: unknown) => remoteLogin(origin, data),
     },
     instance: { info: () => remoteInfo() },
-    users: { reattach: vi.fn(), changePassword: vi.fn() },
+    users: { reattach: vi.fn(), changePassword: (data: { newPassword: string }) => remoteChangePassword(data) },
     dm: { list: vi.fn(async () => []) },
   }),
 }));
@@ -84,6 +89,7 @@ vi.mock('./authStore', async () => {
 
 import { useInstanceStore, ensureRemoteCredential, RemoteLoginRequiredError } from './instanceStore';
 import type { ConnectedInstance } from './instanceStore';
+import { useMfaPromptStore } from './mfaPromptStore';
 
 const REMOTE = 'https://orbit.example';
 
@@ -121,6 +127,7 @@ beforeEach(() => {
   remoteRegister.mockReset();
   remoteLogin.mockReset();
   remoteInfo.mockClear();
+  remoteChangePassword.mockClear();
   localStorage.clear();
   session.user = NATIVE_USER;
   useInstanceStore.setState({
@@ -144,13 +151,38 @@ describe('connectToRemote never hands the home password to a remote instance', (
     expect(passwordsSentToRemote()).toContain(ISSUED_SECRET);
     // The regression: the home password is not among them.
     expect(passwordsSentToRemote()).not.toContain(HOME_PASSWORD);
-    expect(federationCredential).toHaveBeenCalledWith({ origin: REMOTE });
+    expect(federationCredential).toHaveBeenCalledWith(expect.objectContaining({ origin: REMOTE, password: HOME_PASSWORD }));
   });
 
-  it('verifies the entered password against the home instance only', async () => {
+  it('gives the entered password to the home instance only, which checks it as it gives the secret out', async () => {
     remoteRegister.mockResolvedValue(authResponse());
     await useInstanceStore.getState().connectToRemote(REMOTE, HOME_PASSWORD, 'Erin');
-    expect(verifyPassword).toHaveBeenCalledWith(HOME_PASSWORD);
+    expect(federationCredential).toHaveBeenCalledWith(expect.objectContaining({ password: HOME_PASSWORD }));
+    // One check, at the home: no separate one before it.
+    expect(verifyPassword).not.toHaveBeenCalled();
+  });
+
+  it('asks for the home\'s second factor while 2FA is on there, and sends the code', async () => {
+    remoteRegister.mockResolvedValue(authResponse());
+    federationCredential.mockImplementationOnce(async () => {
+      throw new HttpError(403, 'A code is required', { error: 'mfa_code_required', code: 'mfa_code_required', statusCode: 403 }, 'mfa_code_required');
+    });
+    const ask = vi.fn(async () => '123456');
+    useMfaPromptStore.setState({ ask });
+
+    await useInstanceStore.getState().connectToRemote(REMOTE, HOME_PASSWORD, 'Erin');
+
+    expect(ask).toHaveBeenCalledWith('https://nova.example', null);
+    expect(federationCredential).toHaveBeenCalledWith(expect.objectContaining({ password: HOME_PASSWORD, twoFactorCode: '123456' }));
+    expect(passwordsSentToRemote()).toContain(ISSUED_SECRET);
+  });
+
+  it('tells a wrong password as such, and sends nothing to the remote', async () => {
+    await expect(
+      useInstanceStore.getState().connectToRemote(REMOTE, 'fake-wrong-password', 'Erin'),
+    ).rejects.toThrow('Incorrect password');
+    expect(remoteRegister).not.toHaveBeenCalled();
+    expect(remoteLogin).not.toHaveBeenCalled();
   });
 
   it('falls back to login with the issued secret when the account already exists', async () => {
@@ -294,11 +326,11 @@ describe('ensureRemoteCredential (legacy connection migration)', () => {
     };
   }
 
-  it('rotates an unprovisioned remote account onto the home-issued secret', async () => {
+  it('rotates an unprovisioned remote account onto the home-issued secret, given the home password', async () => {
     const inst = makeInstance();
     useInstanceStore.setState({ instances: [inst] });
 
-    await ensureRemoteCredential(inst);
+    await ensureRemoteCredential(inst, { password: HOME_PASSWORD });
 
     const changePassword = (inst.api as unknown as {
       users: { changePassword: ReturnType<typeof vi.fn> };
@@ -308,10 +340,7 @@ describe('ensureRemoteCredential (legacy connection migration)', () => {
     expect(useInstanceStore.getState().instances[0]!.token).toBe('rotated-token');
   });
 
-  it('does nothing when the home instance already recorded the account as provisioned', async () => {
-    federationCredential.mockResolvedValueOnce({
-      origin: REMOTE, secret: ISSUED_SECRET, provisioned: true,
-    });
+  it('without the password, only learns that a rotation is due and leaves the account as it is', async () => {
     const inst = makeInstance();
     useInstanceStore.setState({ instances: [inst] });
 
@@ -320,7 +349,24 @@ describe('ensureRemoteCredential (legacy connection migration)', () => {
     const changePassword = (inst.api as unknown as {
       users: { changePassword: ReturnType<typeof vi.fn> };
     }).users.changePassword;
+    expect(federationCredential).toHaveBeenCalledWith({ origin: REMOTE });
+    expect(federationCredential).toHaveBeenCalledTimes(1);
     expect(changePassword).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the home instance already recorded the account as provisioned', async () => {
+    federationCredential.mockResolvedValueOnce({ origin: REMOTE, provisioned: true });
+    const inst = makeInstance();
+    useInstanceStore.setState({ instances: [inst] });
+
+    await ensureRemoteCredential(inst, { password: HOME_PASSWORD });
+
+    const changePassword = (inst.api as unknown as {
+      users: { changePassword: ReturnType<typeof vi.fn> };
+    }).users.changePassword;
+    expect(changePassword).not.toHaveBeenCalled();
+    // The secret is never asked for when nothing is due.
+    expect(federationCredential).not.toHaveBeenCalledWith(expect.objectContaining({ password: HOME_PASSWORD }));
   });
 
   it('force rotates even a provisioned account (post explicit login)', async () => {
@@ -330,12 +376,24 @@ describe('ensureRemoteCredential (legacy connection migration)', () => {
     const inst = makeInstance();
     useInstanceStore.setState({ instances: [inst] });
 
-    await ensureRemoteCredential(inst, { force: true });
+    await ensureRemoteCredential(inst, { force: true, password: HOME_PASSWORD });
 
     const changePassword = (inst.api as unknown as {
       users: { changePassword: ReturnType<typeof vi.fn> };
     }).users.changePassword;
     expect(changePassword).toHaveBeenCalledWith({ newPassword: ISSUED_SECRET });
+  });
+
+  it('leaves the remote account as it is when the home does not take the password', async () => {
+    const inst = makeInstance();
+    useInstanceStore.setState({ instances: [inst] });
+
+    await expect(ensureRemoteCredential(inst, { force: true, password: 'fake-remote-only-password' })).rejects.toBeInstanceOf(HttpError);
+
+    const changePassword = (inst.api as unknown as {
+      users: { changePassword: ReturnType<typeof vi.fn> };
+    }).users.changePassword;
+    expect(changePassword).not.toHaveBeenCalled();
   });
 
   it('refuses to touch an account on the remote that is not our federated identity', async () => {
@@ -402,9 +460,10 @@ describe('credentials are always issued by the account\'s TRUE home instance', (
   });
 
   it('mints the secret on the home connection, never on the instance being browsed', async () => {
-    const homeCredential = vi.fn(async (data: { origin: string; markProvisioned?: boolean }) => ({
-      origin: data.origin, secret: ISSUED_SECRET, provisioned: false,
-    }));
+    const homeCredential = vi.fn(async (data: CredentialAsk) => {
+      if (data.password !== HOME_PASSWORD) throw wrongPassword();
+      return { origin: data.origin, secret: ISSUED_SECRET, provisioned: false };
+    });
     const homeVerify = vi.fn(async () => ({ valid: true }));
     const homeConnection: ConnectedInstance = {
       origin: 'https://nova.example',
@@ -422,8 +481,8 @@ describe('credentials are always issued by the account\'s TRUE home instance', (
 
     await useInstanceStore.getState().connectToRemote('https://zeta.example', HOME_PASSWORD);
 
-    expect(homeVerify).toHaveBeenCalledWith(HOME_PASSWORD);
-    expect(homeCredential).toHaveBeenCalledWith({ origin: 'https://zeta.example' });
+    expect(homeCredential).toHaveBeenCalledWith(expect.objectContaining({ origin: 'https://zeta.example', password: HOME_PASSWORD }));
+    expect(homeVerify).not.toHaveBeenCalled();
     // The instance we are browsing is NOT asked for anything.
     expect(verifyPassword).not.toHaveBeenCalled();
     expect(federationCredential).not.toHaveBeenCalled();
@@ -442,7 +501,7 @@ describe('credentials are always issued by the account\'s TRUE home instance', (
 });
 
 describe('every path that establishes a remote session reconciles the credential', () => {
-  it('reconnectInstance migrates a legacy connection using the still-valid token', async () => {
+  it('reconnectInstance asks whether a legacy connection is due, and leaves the rotation to a path with the password', async () => {
     const changePassword = vi.fn(async () => ({ token: 'rotated-token' }));
     const legacy: ConnectedInstance = {
       origin: REMOTE,
@@ -471,7 +530,20 @@ describe('every path that establishes a remote session reconciles the credential
     // The reconciliation is fire-and-forget — let its promise chain settle.
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(changePassword).toHaveBeenCalledWith({ newPassword: ISSUED_SECRET });
+    // A token alone does not get the secret out of the home: the state is all it learns.
+    expect(federationCredential).toHaveBeenCalledWith({ origin: REMOTE });
+    expect(federationCredential).not.toHaveBeenCalledWith(expect.objectContaining({ password: expect.anything() }));
+    expect(changePassword).not.toHaveBeenCalled();
+  });
+
+  it('the explicit login with the home password moves a legacy account onto the issued secret', async () => {
+    remoteLogin.mockResolvedValue(authResponse());
+
+    await useInstanceStore.getState().loginToRemote(REMOTE, 'erin@nova.example', HOME_PASSWORD);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(federationCredential).toHaveBeenCalledWith(expect.objectContaining({ origin: REMOTE, password: HOME_PASSWORD }));
+    expect(remoteChangePassword).toHaveBeenCalledWith({ newPassword: ISSUED_SECRET });
     expect(federationCredential).toHaveBeenCalledWith({ origin: REMOTE, markProvisioned: true });
   });
 });
@@ -490,7 +562,6 @@ describe('a re-authentication keeps the origin in the instance list', () => {
   }
 
   it('a wrong password leaves the error placeholder where it was, so the origin stays known', async () => {
-    verifyPassword.mockResolvedValueOnce({ valid: false });
     useInstanceStore.setState({ instances: [placeholder('error')] });
 
     await expect(

@@ -140,7 +140,7 @@ beforeAll(async () => {
   [groupOnA, fid] = await groupDelivered(A, alice, [
     { id: rowFor(A, bob.id), homeUserId: bob.id, homeInstance: B.domain },
     { id: rowFor(A, cora.id), homeUserId: cora.id, homeInstance: C.domain },
-  ], relayToB);
+  ], relayToB, B);
 
   const groupOnB = channelByFederatedId(B, fid)!;
   const sent = await sendDmMessage(B, bob.token, groupOnB, { content: 'bob to the group' });

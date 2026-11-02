@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { DEFAULT_EVERYONE_PERMISSIONS, PermissionBits, permissionsToString } from '@backspace/shared/src/permissions.js';
 import { EVENT_KEPT_AFTER_MS, EVENT_LIMITS, EVENT_REMINDER_BEFORE_MS } from '@backspace/shared/src/events.js';
 import * as schema from '../db/schema.js';
@@ -193,6 +193,33 @@ describe('reading and answering', () => {
 
     const back = await app.inject({ method: 'DELETE', url: `/api/events/${event.id}/rsvp`, headers: headers(MEMBER) });
     expect(back.json()).toMatchObject({ going: 0, amGoing: false });
+  });
+
+  it('tells the space only of a change, and answers nobody outside it with the event', async () => {
+    const event = (await create(PLANNER)).json();
+    sent.length = 0;
+    const going = () => app.inject({ method: 'PUT', url: `/api/events/${event.id}/rsvp`, headers: headers(MEMBER) });
+    const notGoing = (userId = MEMBER) => app.inject({ method: 'DELETE', url: `/api/events/${event.id}/rsvp`, headers: headers(userId) });
+    await going();
+    await going();
+    expect(told('event_updated')).toHaveLength(1);
+    await notGoing();
+    await notGoing();
+    expect(told('event_updated')).toHaveLength(2);
+
+    const outside = await notGoing(OUTSIDER);
+    expect(outside.statusCode).toBe(403);
+    expect(outside.json()).not.toHaveProperty('title');
+    expect(told('event_updated')).toHaveLength(2);
+  });
+
+  it('is not given by a member who is timed out', async () => {
+    const event = (await create(PLANNER)).json();
+    testDb.update(schema.spaceMembers).set({ timedOutUntil: Date.now() + 60_000 })
+      .where(and(eq(schema.spaceMembers.spaceId, SPACE), eq(schema.spaceMembers.userId, MEMBER))).run();
+    const res = await app.inject({ method: 'PUT', url: `/api/events/${event.id}/rsvp`, headers: headers(MEMBER) });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('member_timed_out');
   });
 
   it('lets only members answer, and names those going only to the space, without private fields', async () => {

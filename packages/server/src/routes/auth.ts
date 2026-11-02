@@ -1,4 +1,5 @@
 import { homeIdentityProven } from '../utils/federationAttach.js';
+import { hasUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { PASSWORD_MAX_LENGTH } from '@backspace/shared/src/constants.js';
 import type { SessionsResponse } from '@backspace/shared';
 import { LEGAL_LIMITS } from '@backspace/shared/src/legal.js';
@@ -201,6 +202,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (displayName !== undefined && displayName !== null) {
       if (typeof displayName !== 'string') return sendError(reply, 400, 'validation_failed', { field: 'displayName' });
       if (displayName.trim().length > DISPLAY_NAME_MAX) return sendError(reply, 400, 'display_name_too_long', { max: DISPLAY_NAME_MAX });
+      if (hasUnsafeCharacters(displayName)) return sendError(reply, 400, 'validation_failed', { field: 'displayName' });
     }
 
     // A replicated row's password is a secret its home made up, not something anyone chose.
@@ -508,6 +510,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const user = accountNamed(username);
     const throttleKey = loginThrottleKey(user?.username ?? username);
     const throttleActive = !loginThrottleDisabled();
+    // Earlier failures make this one wait, before any hashing work (utils/loginThrottle.ts). The
+    // right password is never refused, only delayed, and the wait holds none of the name's places:
+    // only checking a password does, so guesses that are made to wait cannot keep the owner's
+    // attempt from being checked.
+    if (throttleActive) await loginWait.sleep(loginThrottle.waitFor(throttleKey, request.ip));
     if (throttleActive && !loginThrottle.enter(throttleKey)) {
       reply.header('Retry-After', String(THROTTLE_RETRY_SECONDS));
       return reply.code(429).send({
@@ -522,10 +529,6 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     };
 
     try {
-    // Earlier failures make this one wait, before any database or hashing work
-    // (utils/loginThrottle.ts). The right password is never refused, only delayed.
-    if (throttleActive) await loginWait.sleep(loginThrottle.waitFor(throttleKey, request.ip));
-
     if (password.length > PASSWORD_MAX_LENGTH) return rejectCredentials();
 
     const db = getDb();

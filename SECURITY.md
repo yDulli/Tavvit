@@ -2,54 +2,25 @@
 
 ## Reporting a vulnerability
 
-Please **do not** open a public issue for security vulnerabilities.
+Please **do not** open a public issue, post or comment for a security problem.
 
-Report privately via a **GitHub security advisory** on this repository
-(Security → **Report a vulnerability**).
+Report it privately:
 
-For non-security questions, use **GitHub Issues** (bugs) or **GitHub Discussions**
-(questions).
+- on GitHub, as a **security advisory** on this repository (Security → **Report a vulnerability**), or
+- to the contact a Tavvit instance names in its `/.well-known/security.txt`, for a problem on that instance.
 
-We will acknowledge your report, work with you on a fix, and coordinate
-disclosure. Please include reproduction steps, affected version/commit, and your
-environment (deployment method, browser/desktop, and whether federation or voice
-is involved).
+Please include what you did, what happened, the affected version (the footer of the instance or `GET /api/instance/info`), and whether federation, voice or the desktop app is involved. You will get an answer, a fix as soon as one is ready, and a say in when the details are made public. Please give a fix time to reach the servers that run Tavvit before you publish.
 
-## Security testing and assurance
+For questions that are not about security, use **GitHub Discussions**.
 
-Backspace runs continuous automated security testing. None of it replaces a
-report from a human researcher, which is why the section above exists.
+## What is tested
 
-- **Static analysis.** CodeQL analyses the TypeScript on every pull request,
-  every push to `main`, and weekly.
-- **Dependencies.** OSV-Scanner checks the lockfile against the OSV database on
-  the same schedule. GitHub Dependabot raises update pull requests weekly and
-  advisory alerts continuously.
-- **Secrets.** gitleaks scans the full git history, not just the diff.
-- **Configuration and containers.** Trivy checks infrastructure configuration
-  and dependency licenses on every change, and scans the published container
-  image on every publish.
-- **Running instance.** An OWASP ZAP baseline scan runs against a freshly built
-  ephemeral instance on every push to `main` and weekly. It is unauthenticated
-  and reaches the web shell and its static assets, so it is a regression guard
-  rather than an assessment of the application.
-- **Repository posture.** OpenSSF Scorecard evaluates the repository itself and
-  publishes the result publicly.
-- **Supply chain.** Every GitHub Action is pinned to a full commit SHA, jobs run
-  with per-job permissions on hardened runners, and published images carry a
-  software bill of materials and build provenance.
+Every release passes `scripts/release-check.mjs`: types, catalogs, lint, every test, the web build, and a start of the server as the Docker image starts it with every optional part configured. A browser check runs the main ways in against a demo instance. On GitHub, when Actions are enabled for this repository, the workflows in `.github/workflows` add CodeQL, OSV-Scanner, gitleaks, Trivy, an OWASP ZAP baseline scan and OpenSSF Scorecard; `docs/systems/security-scanning.md` describes them and how their findings are handled.
 
-Findings are triaged, not accumulated. Every dismissal carries a written reason.
-The full policy, the workflow inventory, and the register of dismissed findings
-are in
-[`docs/systems/security-scanning.md`](docs/systems/security-scanning.md).
+None of this replaces a report from a person. Automated scanning does not sign in, so it does not exercise spaces, channels, uploads, federation or voice; reports about those are especially welcome. The code has been reviewed by hand area by area, most recently for 1.32.4 to 1.32.7, and every confirmed finding was fixed, but no review proves the absence of the next one.
 
-Automated scanning has known gaps, and they are worth stating plainly. The
-dynamic scan does not authenticate, and because the web shell contains no links
-for a crawler to follow it reaches the shell and its static assets rather than
-the API. It does not exercise spaces, channels, uploads, federation, or voice.
-There is no fuzzing. Reports covering those areas are especially welcome.
+What Tavvit does not promise: messages are not end-to-end encrypted, so whoever runs an instance could read what is stored on it. The privacy policy of each instance says so.
 
 ## Supported versions
 
-Backspace 1.x receives security fixes. Always run the latest release.
+Only the latest release receives fixes. Run it.

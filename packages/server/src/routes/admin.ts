@@ -1,5 +1,5 @@
 import { recordSecurityEvent } from '../security/events.js';
-import { verifyPassword } from '../utils/auth.js';
+import { checkPassword, refusePasswordCheck } from '../utils/passwordConfirm.js';
 import { refuseWithoutSecondFactor } from './twoFactor.js';
 import { SUSPENSION_LIMITS } from '@backspace/shared/src/platform.js';
 import { notifyPasswordChanged } from '../email/account.js';
@@ -402,9 +402,8 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         const actor = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
         if (!actor) return sendError(reply, 404, 'user_not_found');
         if (typeof body.password !== 'string' || !body.password) return sendError(reply, 400, 'password_required');
-        if (!(await verifyPassword(body.password, actor.passwordHash))) {
-          return sendError(reply, 403, 'current_password_incorrect');
-        }
+        const check = await checkPassword(actor, body.password, request);
+        if (check !== 'valid') return refusePasswordCheck(reply, check);
         // Last, so that nothing above can use up a code and then refuse.
         const refused = refuseWithoutSecondFactor(actor, body.twoFactorCode, request, reply);
         if (refused) return refused;
@@ -489,6 +488,28 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         })
         .run();
       return reply.code(200).send({ ok: true, id });
+    },
+  );
+
+  // Test-only: where this instance dials the harness's other instances, whose names (their
+  // DOMAIN) resolve nowhere, and the addresses it is itself dialled at. Gated exactly like
+  // seed-peer above (utils/federationOwnNames.ts).
+  app.post<{ Body: { entries?: Record<string, string>; ownNames?: string[] } }>(
+    '/api/admin/test/federation/dial-map',
+    async (request, reply) => {
+      if (process.env.NODE_ENV !== 'test' || process.env.ENABLE_TEST_ROUTES !== '1') {
+        return reply.code(404).send({ error: 'Not Found', statusCode: 404 });
+      }
+      const { entries, ownNames } = request.body ?? {};
+      if (entries !== undefined && (!entries || typeof entries !== 'object' || Object.values(entries).some((value) => typeof value !== 'string'))) {
+        return reply.code(400).send({ error: 'entries must map origins to origins', statusCode: 400 });
+      }
+      if (ownNames !== undefined && (!Array.isArray(ownNames) || ownNames.some((name) => typeof name !== 'string'))) {
+        return reply.code(400).send({ error: 'ownNames must be a list of origins', statusCode: 400 });
+      }
+      const { setTestRouting } = await import('../utils/federationOwnNames.js');
+      setTestRouting({ dial: entries, ownNames });
+      return reply.code(200).send({ ok: true });
     },
   );
 

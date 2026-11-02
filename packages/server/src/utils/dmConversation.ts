@@ -48,6 +48,24 @@ export function mintGroupKey(): string {
   return crypto.randomUUID();
 }
 
+/**
+ * Whether a peer's conversation key has a shape these two functions make: 32 hex characters for a
+ * 1-on-1, a UUID for a group. A key names the conversation's call room at LiveKit too
+ * (routes/livekit.ts, `dmCallRoomName`), so a key of any other shape is not taken from a peer.
+ */
+export function isConversationKey(value: unknown): value is string {
+  return typeof value === 'string' && (/^[0-9a-f]{32}$/.test(value) || isGroupKey(value));
+}
+
+/**
+ * Whether a peer's key has the shape a group is given (`mintGroupKey`, as every version has made
+ * them). A group made here from a peer's word takes no other: under a 1-on-1's key it would stand
+ * where that pair's conversation is looked up (`findOrCreateOneOnOne`), and keep it from being made.
+ */
+export function isGroupKey(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 // ─── Read pointers ───────────────────────────────────────────────────────────
 
 /**

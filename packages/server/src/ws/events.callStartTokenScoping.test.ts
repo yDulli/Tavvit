@@ -33,7 +33,8 @@ vi.mock('../utils/federationAuth.js', async () => {
 // traceable back to the identity it was minted for. A LiveKit token is a bearer
 // credential; these tests assert exactly which identities' credentials leave
 // this instance and to whom.
-vi.mock('../routes/livekit.js', () => ({
+vi.mock('../routes/livekit.js', async (importActual) => ({
+  dmCallRoomName: (await importActual<typeof import('../routes/livekit.js')>()).dmCallRoomName,
   generateFederatedCallToken: (roomName: string, homeUserId: string) =>
     Promise.resolve(`token:${roomName}:${homeUserId}`),
 }));
@@ -219,10 +220,10 @@ describe('sendFederatedCallStart — LiveKit token scoping', () => {
 
     // Each peer receives exactly one token: the one for the member it hosts.
     expect(orbit!.call?.tokens).toEqual({
-      'bob-home': 'token:fed-group:bob-home',
+      'bob-home': 'token:fed:fed-group:bob-home',
     });
     expect(nova!.call?.tokens).toEqual({
-      'carol-home': 'token:fed-group:carol-home',
+      'carol-home': 'token:fed:fed-group:carol-home',
     });
 
     // Neither peer receives a credential for a local member or the caller.
@@ -258,8 +259,8 @@ describe('sendFederatedCallStart — LiveKit token scoping', () => {
 
     expect(relayedOrigins()).toEqual(['https://orbit.example']);
     expect(relayTo('https://orbit.example')!.call?.tokens).toEqual({
-      'bob-home': 'token:fed-same-peer:bob-home',
-      'erin-home': 'token:fed-same-peer:erin-home',
+      'bob-home': 'token:fed:fed-same-peer:bob-home',
+      'erin-home': 'token:fed:fed-same-peer:erin-home',
     });
   });
 
@@ -278,7 +279,7 @@ describe('sendFederatedCallStart — LiveKit token scoping', () => {
     await sendFederatedCallStartForTest('dm-ids', 'alice', 'Alice');
 
     expect(relayTo('https://orbit.example')!.call?.memberTokens).toEqual([
-      { homeUserId: 'bob-home', homeInstance: 'https://orbit.example', token: 'token:fed-ids:bob-home' },
+      { homeUserId: 'bob-home', homeInstance: 'https://orbit.example', token: 'token:fed:fed-ids:bob-home' },
     ]);
   });
 });

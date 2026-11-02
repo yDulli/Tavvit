@@ -8,7 +8,11 @@ import type { DmRoomMeta, FederatedCallEntry } from '../../../ws/handler.js';
 import type { DmCallUndeliverableFailure, FederatedIdentity, FederationCallPayload, FederationRelayEvent, ServerEvent } from '@backspace/shared';
 import { extractDomain, resolveOrCreateReplicatedUser, resolveRelayActor, attributionRefusal, type RelayActor } from '../identity.js';
 import { isGroupConversation } from '../../../utils/dmConversation.js';
+import { oneOnOneBlockRefusal } from '../../../utils/blocks.js';
 import { isDmMember } from '../../../utils/permissions.js';
+import { dmChannelMembers, mayRelayInto } from '../dmChannels.js';
+import { relayedCallRefusal, relayedConversationRefusal, relayedConversationRefusalFromStranger } from '../localConsent.js';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 
 /**
  * The call's tokens by the local user each is for. A token names its holder
@@ -140,25 +144,43 @@ export function processDmCallStartEvent(
   const group = isGroupConversation({ owner_id: channel?.ownerId ?? null, federated_id: event.federatedId })
     && event.call.perMember === true;
 
-  // Resolve caller to local stub. The call payload carries only a display
-  // name, which is not a handle, so no username hint: a caller met here first
-  // gets the `<homeUserId>@<domain>` name until a real username arrives.
-  const callerStub = resolveOrCreateReplicatedUser(
-    event.call.caller.homeUserId,
-    event.call.caller.homeInstance,
-    db,
-  );
-  if (!callerStub) {
+  // The caller as this instance knows them, looked up without making a row: a call that rings
+  // nobody here leaves none (a new row asks its home for its profile and pictures).
+  const callerKnown = resolveRelayActor(event.call.caller, db);
+  if (callerKnown.kind === 'mismatch') {
     rejected.push({ messageId: event.messageId, reason: 'participant_not_found' });
     return;
   }
+  // A call in a conversation held here comes from one of its members, through one of the instances
+  // it is relayed to: its key can be worked out from two public ids (utils/dmConversation.ts), so
+  // without this a peer could ring two people of this instance in their own conversation.
+  if (channel && (callerKnown.kind !== 'found' || !mayRelayInto(dmChannelMembers(channel.id, db), callerKnown.user.id, sourceInstance))) {
+    console.warn(`[federation] Refused dm_call_start in DM ${channel.id}: the caller is not a member, or ${extractDomain(sourceInstance)} is not a peer of the conversation`);
+    rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+    return;
+  }
+
+  /**
+   * The person of this instance a call rings, as the local rules let it (localConsent.ts). A caller
+   * nobody here knows yet starts a conversation with someone who takes one from anyone only.
+   */
+  const mayRing = (userId: string, startsConversation: boolean): boolean => {
+    const person = db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    if (!person) return false;
+    if (callerKnown.kind !== 'found') return relayedConversationRefusalFromStranger(person) === null;
+    const refusal = startsConversation
+      ? relayedConversationRefusal(callerKnown.user.id, person, true, db)
+      : relayedCallRefusal(callerKnown.user.id, person, db);
+    return refusal === null;
+  };
 
   const ringedUserIds: string[] = [];
   const tokens = callTokensByLocalUser(event.call, db);
 
-  if (channel) {
+  if (channel && callerKnown.kind === 'found') {
     // ── Path A: DM exists locally ──
     const localDmChannelId = channel.id;
+    const callerStub = callerKnown.user;
 
     const localMembers = db.select({ userId: schema.dmMembers.userId })
       .from(schema.dmMembers)
@@ -166,8 +188,9 @@ export function processDmCallStartEvent(
       .all();
 
     for (const member of localMembers) {
-      // Don't ring the caller on this instance.
+      // Don't ring the caller on this instance, nor anyone who blocked them or whom they blocked.
       if (member.userId === callerStub.id) continue;
+      if (!mayRing(member.userId, false)) continue;
 
       // #18: skip offline members. Entry-vs-no-entry decision uses the same
       // connection-count signal Path B has always used — keeps the two paths
@@ -187,7 +210,7 @@ export function processDmCallStartEvent(
         dmChannelId: localDmChannelId,
         federatedCallId: event.federatedId,
         callerId: callerStub.id,
-        callerName: callerStub.displayName ?? callerStub.username,
+        callerName: withoutUnsafeCharacters(callerStub.displayName ?? callerStub.username),
         livekitUrl: event.call!.livekitUrl,
         livekitToken: token,
         callOrigin: event.call!.caller.homeInstance,
@@ -228,6 +251,8 @@ export function processDmCallStartEvent(
     }
 
     const ourDomain = extractDomain(getOurOrigin());
+    // Who is rung, found before anyone is: the caller's row is made only for a call that rings someone.
+    const toRing: Array<{ userId: string; token: string }> = [];
 
     for (const p of event.call.participants) {
       const participantDomain = extractDomain(p.homeInstance);
@@ -258,6 +283,9 @@ export function processDmCallStartEvent(
         .get();
 
       if (!localUser) continue;
+      // No conversation here yet: the call starts one, so the person's rule on who may start one
+      // holds, and a block either way.
+      if (!mayRing(localUser.id, true)) continue;
 
       // Check if user has an active WS connection
       const connections = connectionManager.getUserConnections(localUser.id);
@@ -265,27 +293,40 @@ export function processDmCallStartEvent(
 
       const token = tokens.get(localUser.id);
       if (!token) continue;
-
-      connectionManager.sendToUser(localUser.id, {
-        type: 'dm_call_incoming',
-        dmChannelId: null,
-        federatedCallId: event.federatedId,
-        callerId: callerStub.id,
-        callerName: callerStub.displayName ?? callerStub.username,
-        livekitUrl: event.call!.livekitUrl,
-        livekitToken: token,
-        callOrigin: event.call!.caller.homeInstance,
-      });
-      ringedUserIds.push(localUser.id);
+      toRing.push({ userId: localUser.id, token });
     }
 
-    if (ringedUserIds.length === 0) {
+    if (toRing.length === 0) {
       // No recipient reachable — signal to caller via third ack bucket (#18).
       // The remote processed the event cleanly; this is not a data error, but
       // the caller must learn that nobody was rung so it can tear down its
       // local ring room instead of hanging 60s waiting for an accept.
       undeliverable.push({ messageId: event.messageId, reason: 'no_recipient' });
       return;
+    }
+
+    // Resolve caller to local stub. The call payload carries only a display
+    // name, which is not a handle, so no username hint: a caller met here first
+    // gets the `<homeUserId>@<domain>` name until a real username arrives.
+    const callerStub = callerKnown.kind === 'found'
+      ? callerKnown.user
+      : resolveOrCreateReplicatedUser(event.call.caller.homeUserId, event.call.caller.homeInstance, db);
+    if (!callerStub) {
+      rejected.push({ messageId: event.messageId, reason: 'participant_not_found' });
+      return;
+    }
+    for (const { userId, token } of toRing) {
+      connectionManager.sendToUser(userId, {
+        type: 'dm_call_incoming',
+        dmChannelId: null,
+        federatedCallId: event.federatedId,
+        callerId: callerStub.id,
+        callerName: withoutUnsafeCharacters(callerStub.displayName ?? callerStub.username),
+        livekitUrl: event.call!.livekitUrl,
+        livekitToken: token,
+        callOrigin: event.call!.caller.homeInstance,
+      });
+      ringedUserIds.push(userId);
     }
 
     const entry: FederatedCallEntry = {
@@ -631,6 +672,12 @@ export function processDmTypingStartEvent(
   // Only a member is shown typing in a conversation.
   if (!isDmMember(channel.id, typingUser.id)) {
     rejected.push({ messageId: event.messageId, reason: 'invalid_target' });
+    return;
+  }
+  // Someone blocked is not shown typing in a 1-on-1 either, as the local handler drops it
+  // (ws/events.ts, utils/blocks.ts): nothing to tell, so nothing is said.
+  if (oneOnOneBlockRefusal(channel.id, typingUser.id, db)) {
+    accepted.push(event.messageId);
     return;
   }
 

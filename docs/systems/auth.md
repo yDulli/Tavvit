@@ -21,7 +21,7 @@ Source files:
 - `packages/web/src/App.tsx` -- `ProtectedRoute` and `AuthRedirect` route wrappers
 - `packages/web/src/utils/identity.ts` -- Federation-aware identity helpers (`parseFederatedUsername`, `homeIdentityOf`, `userKey`, `isMine`; see `client-federation.md` section 5)
 - `packages/web/src/utils/federationOps.ts` -- Account deletion propagation to connected remote instances
-- `packages/web/src/stores/instanceStore.ts` -- `resolveCredentialHomeApi()` / `ensureRemoteCredential()`: per-remote federation credentials (§5b)
+- `packages/web/src/stores/instanceStore.ts` -- `resolveCredentialHome()` / `issuedCredential()` / `ensureRemoteCredential()`: per-remote federation credentials (§5b)
 - `packages/server/src/config.ts` -- `jwtSecret`, `jwtExpiresIn`, `registrationOpen` config
 
 DB tables: `users`, `instanceSettings`, `userFederationCredentials`. See `database.md` for full schemas.
@@ -333,6 +333,10 @@ Detach is sovereign but not permanent: the legitimate owner who re-created their
 
 ## 5. Password Change
 
+**Every route that asks for the current password** (verify, change, username, address, second factor, export, account deletion, admin actions) goes through `checkPassword` in `utils/passwordConfirm.ts` (1.32.8): a wrong answer counts as a failed sign-in of the account and waits as one does, and at most as many are checked at once as for a sign-in (`utils/loginThrottle.ts`; past that `429 login_throttled`), so a stolen session cannot test guesses side by side from many addresses. The wait can be long, and the route goes on with the account as it read it before: so once checked, the account is read again, and a password changed or reset meanwhile, a second factor turned on, the account deleted or the request's session ended answer `wrong` (counted neither way), so a request already waiting cannot undo them. The sign-in itself waits before it takes one of the name's few places, which are held only while a password is checked: guesses that are made to wait no longer keep the owner's attempt from being checked.
+
+**A display name or custom status** with a control character or a bidirectional override (`hasUnsafeCharacters`, shared/src/profileFields.ts) is refused at sign-up and in `PATCH /api/users/@me` (`400 validation_failed`), and such characters are taken out of any stored or relayed one before it is sent (`publicUserOf`): a right-to-left override would show one name as another.
+
 ### User Password Change
 
 **Endpoint:** `POST /api/users/@me/change-password`
@@ -452,22 +456,23 @@ Without mail, a forgotten password is an administrator's to reset: the admin rou
 
 **Endpoint — `POST /api/users/@me/federation-credential`** (`routes/users.ts`), JWT-authenticated, scoped to `request.userId`:
 
-- Body `{ origin, markProvisioned? }` → `{ origin, secret, provisioned }`.
+- Body `{ origin, markProvisioned?, password?, twoFactorCode? }` → `{ origin, secret?, provisioned }`.
+- **The secret only for the home password** (1.32.8). It signs in to the account on the remote, so it is given out only when the request carries the account's current password, checked with `checkPassword` (held to what a sign-in is, §4), and the second factor while 2FA is on (`refuseWithoutSecondFactor`): a wrong password is `403 current_password_incorrect`, a missing code `403 mfa_code_required`. Without a password the answer is `{ origin, provisioned }` only and nothing is made, so a stolen session learns whether a rotation is due and nothing more; `markProvisioned: true` then marks a row given out before and makes none. Rate limit 60/min.
 - `origin` is canonicalized to `https://host[:port]`; unparseable/non-http(s) → 400; our own origin → 400.
 - Get-or-create with `onConflictDoNothing` + re-read = **first-writer-wins**. A racing second call gets the stored secret; it never replaces one, which would lock the loser out of the remote account.
 - **409 for a replicated federated account** (`homeInstance` set and `federationHomeOrphaned !== 1`): credentials must be issued in exactly one place or the same remote account is handed two different secrets. Detached accounts (`federationHomeOrphaned === 1`) have no home left to ask and follow the LOCAL rule, matching §5 change-password and §6 deletion.
 - `markProvisioned: true` latches `provisioned_at` (set-once; the secret is never rotated by this call).
 
-**Client side** (`instanceStore.ts`). `resolveCredentialHomeApi()` returns the API client of the account's **true home** — the primary connection when browsing home natively, else a connected secondary instance for that domain, else `null`. `connectToRemote()`:
+**Client side** (`instanceStore.ts`). `resolveCredentialHome()` returns the API client of the account's **true home**, with the origin its code dialog names — the primary connection when browsing home natively, else a connected secondary instance for that domain, else `null`. `issuedCredential()` asks it for the secret with the password and, on `mfa_code_required` or `mfa_code_invalid`, asks for the code through the one dialog (`useMfaPromptStore`) and tries again. `connectToRemote()`:
 
 1. If the target IS the account's own home, log in with the entered password as before. Nothing else applies — that password is that account's password.
-2. Otherwise the entered password is verified by `homeApi.users.verifyPassword` (the home instance, never the target), a secret is fetched from the home, and the remote `register` / `login` is performed with **that secret**. There is deliberately no retry with the entered password.
+2. Otherwise the entered password goes to the home instance (never the target) with the request for the secret, which checks it; a wrong one is "Incorrect password". The remote `register` / `login` is performed with **that secret**. There is deliberately no retry with the entered password.
 3. On success the credential is marked provisioned.
 4. If the home instance is not reachable in this session, the connect **fails with a message naming the home** rather than minting a divergent secret on the instance being browsed.
 
-`ensureRemoteCredential(instance, { force? })` is the single reconciliation point, called after every path that establishes a remote session — fresh connect, explicit `loginToRemote`, and token reconnect in `autoConnectAll`. It rotates the remote account onto the home-issued secret via that instance's `change-password` (which needs no `currentPassword` for a federated account — §5), then marks it provisioned. It refuses unless the remote account is this user's own federated identity (`homeInstance` **and** `homeUserId` both match), so a native account someone logged into on the remote is never touched.
+`ensureRemoteCredential(instance, { force?, password? })` is the single reconciliation point, called after every path that establishes a remote session — fresh connect, explicit `loginToRemote`, and token reconnect in `autoConnectAll`. Without `force` it first asks the home whether the account is provisioned; when a rotation is due and a password is at hand, it gets the secret with it and rotates the remote account onto it via that instance's `change-password` (which needs no `currentPassword` for a federated account — §5), then marks it provisioned. A path without the password (a token reconnect) leaves the rotation for one that has it. It refuses unless the remote account is this user's own federated identity (`homeInstance` **and** `homeUserId` both match), so a native account someone logged into on the remote is never touched.
 
-**Migrating connections made before this existed.** Those remote accounts carry `bcrypt(home password)`. `provisioned_at = NULL` marks them; `ensureRemoteCredential` rotates each one exactly once, using the still-valid cached token, so no password is needed. Two consequences worth knowing:
+**Migrating connections made before this existed.** Those remote accounts carry `bcrypt(home password)`. `provisioned_at = NULL` marks them; `ensureRemoteCredential` rotates each one exactly once. Since 1.32.8 the secret needs the home password, so a token reconnect only learns that the rotation is due, and it happens at the next path that has the password: the explicit per-instance login, where an account made before the secrets takes the home password, passes what was typed. Any other password the home refuses (counted as a wrong one), and the remote keeps the password typed. Two consequences worth knowing:
 
 - The rotation sets `passwordChangedAt` on the remote, which revokes that account's other sessions there. Those devices re-authenticate through the normal prompt — and their entered password only ever reaches the home instance.
 - If the token has already expired, the connect surfaces `RemoteLoginRequiredError` and the per-instance login form. What the user types there goes to that instance by their explicit choice; `ensureRemoteCredential(..., { force: true })` then switches the account onto the issued secret.

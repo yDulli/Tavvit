@@ -302,7 +302,7 @@
   "emailPrompt": {
     "unconfirmed": "Your address {{address}} is not confirmed yet. Look for our mail, or check it in settings.",
     "missing": "Add an email address, so you can get back in if you forget your password.",
-    "required": "Confirm your email address to create spaces and to start conversations with people who are not your friends.",
+    "required": "Confirm your email address to write and react in spaces, to create spaces and to start conversations with people who are not your friends.",
     "open": "Open settings",
     "dismiss": "Not now"
   }

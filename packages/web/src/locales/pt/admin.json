@@ -730,7 +730,11 @@
     "required": {
       "title": "Novas contas",
       "label": "Exigir um endereço confirmado",
-      "description": "A partir de agora, uma conta nova precisa informar um endereço. Até ele ser confirmado, a conta pode usar os spaces para os quais foi convidada e falar com amigos, mas não pode criar spaces nem abordar desconhecidos. As contas existentes não são afetadas."
+      "description": "A partir de agora, uma nova conta precisa informar um endereço. Até ele ser confirmado, a conta pode ler os spaces em que entrou e conversar com amigos, mas não pode escrever nem reagir nos spaces, criar spaces ou abordar desconhecidos. Contas existentes não são afetadas."
+    },
+    "throwaway": {
+      "label": "Recusar endereços descartáveis",
+      "description": "Endereços de cerca de 10.000 serviços de e-mail descartável conhecidos, como o Mailinator, não podem ser usados para criar uma conta nem definidos como endereço. Endereços que já estão em contas continuam."
     },
     "test": {
       "title": "Teste",

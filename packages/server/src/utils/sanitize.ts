@@ -1,11 +1,12 @@
 import { DEFAULT_DM_POLICY, DEFAULT_FRIEND_REQUEST_POLICY } from '@backspace/shared';
 import { isDmPolicy, isFriendRequestPolicy } from './contactPolicy.js';
-import { isProfileLayout, type User, type ReplicatedInstance } from '@backspace/shared';
-import { parseStoredProfileLinks } from '@backspace/shared/src/profileFields.js';
+import { isAvatarColor, isProfileLayout, type User } from '@backspace/shared';
+import { parseStoredProfileLinks, withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { users } from '../db/schema.js';
 import { userBadgesOf } from './badges.js';
 import { needsVerifiedEmail } from '../email/gate.js';
 import { shownAccountPicture } from './remoteMedia.js';
+import { storedReplicatedInstances } from './replicatedInstances.js';
 
 /**
  * What anyone may see of an account comes from these columns and no others. A query that lists many
@@ -34,7 +35,6 @@ export const PUBLIC_USER_COLUMNS = {
   createdAt: users.createdAt,
   homeInstance: users.homeInstance,
   homeUserId: users.homeUserId,
-  replicatedInstances: users.replicatedInstances,
   accountKind: users.accountKind,
   /** Not shown: it decides which home's pictures are trusted (`shownAccountPicture`). */
   federationHomeOrphaned: users.federationHomeOrphaned,
@@ -68,17 +68,7 @@ export function publicUserOf(row: PublicUserRow): User {
       createdAt: row.createdAt,
       homeInstance: null,
       homeUserId: null,
-      replicatedInstances: [],
     };
-  }
-
-  let replicatedInstances: ReplicatedInstance[] = [];
-  if (row.replicatedInstances) {
-    try {
-      replicatedInstances = JSON.parse(row.replicatedInstances);
-    } catch {
-      replicatedInstances = [];
-    }
   }
 
   // Everyone who sees the account fetches its pictures by themselves: an address stored before
@@ -88,25 +78,26 @@ export function publicUserOf(row: PublicUserRow): User {
   return {
     id: row.id,
     username: row.username,
-    displayName: row.displayName,
+    // Shown as the characters they are: a name or status stored before such characters were
+    // refused, or sent by another instance, loses the ones that would disguise it.
+    displayName: row.displayName === null ? null : withoutUnsafeCharacters(row.displayName),
     avatar: shownAccountPicture(row.avatar, pictureHome),
     banner: shownAccountPicture(row.banner, pictureHome),
     accentColor: row.accentColor ?? null,
     accentColorSecondary: row.accentColorSecondary ?? null,
-    avatarColor: (row.avatarColor as User['avatarColor']) ?? null,
+    avatarColor: isAvatarColor(row.avatarColor) ? row.avatarColor : null,
     bio: row.bio ?? null,
     pronouns: row.pronouns ?? null,
     profileLinks: parseStoredProfileLinks(row.profileLinks),
     profileLayout: isProfileLayout(row.profileLayout) ? row.profileLayout : null,
     badges: userBadgesOf(row),
     status: (row.status ?? 'offline') as User['status'],
-    customStatus: row.customStatus,
+    customStatus: row.customStatus === null ? null : withoutUnsafeCharacters(row.customStatus),
     isAdmin: row.isAdmin === 1,
     profileUpdatedAt: row.profileUpdatedAt ?? 0,
     createdAt: row.createdAt,
     homeInstance: row.homeInstance ?? null,
     homeUserId: row.homeUserId ?? null,
-    replicatedInstances,
     ...(row.accountKind !== 'person' ? { accountKind: row.accountKind } : {}),
   };
 }
@@ -131,5 +122,6 @@ export function sanitizeUser(row: typeof users.$inferSelect, isSelf = false): Us
     locale: row.locale ?? null,
     federationHomeOrphaned: row.federationHomeOrphaned === 1,
     detachedHomeInstance: row.detachedHomeInstance ?? null,
+    replicatedInstances: storedReplicatedInstances(row.replicatedInstances),
   };
 }

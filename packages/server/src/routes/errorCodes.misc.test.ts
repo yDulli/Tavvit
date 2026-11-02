@@ -175,13 +175,20 @@ describe('livekit token route sends error codes', () => {
     expect(res.json()).toMatchObject({ statusCode: 403, code: 'not_dm_member' });
   });
 
-  it('space voice: unknown channel, then no CONNECT permission', async () => {
+  it('space voice: unknown channel, a channel that is not a voice channel, then no CONNECT permission', async () => {
     state.livekit = { apiKey: 'k', apiSecret: 's', url: 'ws://lk' };
     permissionMocks.getChannelSpaceId.mockReturnValue(null);
     let res = await app.inject({ method: 'POST', url: '/api/livekit/token', headers: auth, payload: { channelId: 'c1' } });
     expect(res.json()).toMatchObject({ statusCode: 404, code: 'channel_not_found' });
 
+    // Only a voice channel holds a call.
     permissionMocks.getChannelSpaceId.mockReturnValue('space-1');
+    permissionMocks.hasPermission.mockReturnValue(true);
+    state.dbRow = { type: 'text' };
+    res = await app.inject({ method: 'POST', url: '/api/livekit/token', headers: auth, payload: { channelId: 'c1' } });
+    expect(res.json()).toMatchObject({ statusCode: 404, code: 'channel_not_found' });
+
+    state.dbRow = { type: 'voice' };
     permissionMocks.hasPermission.mockReturnValue(false);
     res = await app.inject({ method: 'POST', url: '/api/livekit/token', headers: auth, payload: { channelId: 'c1' } });
     expect(res.json()).toMatchObject({ statusCode: 403, code: 'voice_connect_forbidden', error: 'Missing CONNECT permission' });

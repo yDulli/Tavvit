@@ -18,6 +18,20 @@ type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 let sqlite: Database.Database;
 let testDb: TestDb;
 
+// The origin a /peer/accept names answers the signed check (handlers/peerHandshake.ts) with the
+// epoch the request stated, unless a test says otherwise. Only that inbound check is stood in for:
+// a probe of our own handshakes ('approved') runs for real.
+const inboundCheck = vi.hoisted(() => ({ lastInstanceId: null as string | null, answer: 'verified' as 'verified' | 'not_peered' }));
+vi.mock('./federationEpoch.js', async (importActual) => {
+  const actual = await importActual<typeof import('./federationEpoch.js')>();
+  return {
+    ...actual,
+    probeEpoch: vi.fn(async (...args: Parameters<typeof actual.probeEpoch>) => (args[1]?.trust === 'asserted'
+      ? (inboundCheck.answer === 'verified' ? { kind: 'verified' as const, instanceId: inboundCheck.lastInstanceId ?? 'proven-epoch' } : { kind: 'not_peered' as const })
+      : actual.probeEpoch(...args))),
+  };
+});
+
 vi.mock('../db/index.js', () => ({
   getDb: () => testDb,
   getRawDb: () => sqlite,
@@ -75,6 +89,9 @@ function seedInstanceSettings(): void {
 
 async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
+  app.addHook('preHandler', async (request) => {
+    inboundCheck.lastInstanceId = ((request.body ?? {}) as { instanceId?: string }).instanceId ?? null;
+  });
   const { federationRoutes } = await import('../routes/federation.js');
   await app.register(federationRoutes);
   await app.ready();
@@ -197,7 +214,7 @@ describe('POST /api/federation/peer/accept — peer_instance_id (epoch) persiste
     expect(row?.peerInstanceId).toBe('epoch-D');
   });
 
-  it('writes null peer_instance_id when body omits instanceId (legacy peer)', async () => {
+  it('writes the proven peer_instance_id when body omits instanceId (legacy peer)', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/federation/peer/accept',
@@ -212,7 +229,8 @@ describe('POST /api/federation/peer/accept — peer_instance_id (epoch) persiste
     const row = testDb.select().from(schema.federationPeers)
       .where(eq(schema.federationPeers.origin, 'https://remote.example')).get();
     expect(row?.status).toBe('active');
-    expect(row?.peerInstanceId).toBeNull();
+    // A caller that states no epoch still has one: the one its origin proved (peerHandshake.ts).
+    expect(row?.peerInstanceId).toBe('proven-epoch');
   });
 
   it('returns our own instanceId in the response body', async () => {

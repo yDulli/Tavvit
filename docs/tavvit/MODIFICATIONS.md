@@ -93,6 +93,16 @@ The extras (1.25.0): voice messages recorded in the browser with a waveform and 
 
 Bots and API (1.26.0): accounts run from a program, deny by default on every route and socket event, a token shown once, a switch for the operator (off by default), a developer page, an invite page, slash commands, and a guide with an example bot in `docs/bots/`. Also: writing in a channel now takes VIEW_CHANNEL as well as SEND_MESSAGES.
 
+Security fixes (1.32.8), after a second sweep over the areas the first did not reach, and the gate and privacy points that were still open:
+- **New accounts:** while confirming an address is required, a new account does nothing in a space but read until it has; throwaway addresses are refused by a built-in list, a switch under Email that is on by default (`docs/systems/email.md`). The privacy draft says that messages are not end-to-end encrypted.
+- **Storage and limits:** soundboard clips count on their creator and go with their space; group DMs are at most 100 per account and their icons are written anew; every picture field refuses an image it cannot re-encode; bot uploads hold their room first; the sidebar layout is bounded (`docs/systems/uploads.md`, `docs/systems/dm-system.md`).
+- **Voice:** a space mute, deafen or lost SPEAK is enforced by LiveKit itself, calls run in voice channels only, and moderation answers no longer tell who sits in voice (`docs/systems/voice.md`).
+- **Accounts:** a password confirmation counts against the account like a sign-in, waiting guesses no longer keep the owner out, and names and statuses that would disguise themselves are refused (`docs/systems/auth.md`); the list of other instances goes only to its account.
+- **Privacy in the client:** banners, group and space icons wait for a yes like avatars, banners go into CSS escaped, role colours only as colours (`docs/systems/legal.md`); private categories are named only to those who see into them.
+- **Federation:** a peer proves the origin it claims before it is taken or put before the admin, and only with a handshake of its own (a row an older release took from a stranger vouches for nothing); nobody peers as this instance, and a peer can no longer put people here into groups, conversations, calls or friend requests they would not take locally, nor make a row or fetch a picture here for an event that is refused (`docs/systems/federation.md`); a call room's name can never be a voice channel's, and a group's key never a 1-on-1's.
+- **A remote account's secret:** the home gives the per-remote secret out only for its password and second factor, never to a session alone (`docs/systems/auth.md`, §5b).
+- **Desktop:** a global shortcut is taken only when it cannot type, on any keyboard (`docs/systems/desktop-security.md`).
+
 Security fixes (1.32.7), after a second public report and a sweep of the whole code in eight areas:
 - **Address leaks:** pictures, invite icons, Outer Space cards, invites to other servers and files from peers wait for a yes in the client, `Avatar` included (`docs/systems/legal.md`).
 - **Requests from strangers:** a body past 64 KiB is read only from someone who has shown who they are (`utils/bodyGuard.ts`). A socket frame is at most 64 KiB, and an account keeps at most 10 sockets (`docs/systems/websocket.md`).

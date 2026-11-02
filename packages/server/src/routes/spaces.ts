@@ -1,4 +1,5 @@
 import { spaceLimitReached } from '../utils/accountLimits.js';
+import { shownCategories } from '../utils/categoryVisibility.js';
 import { accountNeedsVerifiedEmail } from '../email/gate.js';
 import { MAX_OWNER_TITLE_LENGTH, normalizeOwnerTitle } from '@backspace/shared/src/constants.js';
 import { updateSpaceMemberRoutes, roleGrantRefusal } from './spaceMemberUpdate.js';
@@ -14,6 +15,7 @@ import { DEFAULT_EVERYONE_PERMISSIONS, ALL_PERMISSIONS, permissionsToString, str
 import { connectionManager } from '../ws/handler.js';
 import { deleteAttachmentFiles, deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
 import { pictureFileReleasable, profilePictureOf, releaseMemberPictures, uploadNameOf } from '../utils/profileImageRefs.js';
+import { removeSoundFiles } from '../utils/soundFiles.js';
 import { resizeProfileImage } from '../utils/thumbnail.js';
 import {
   discoveryStatusOf,
@@ -48,7 +50,7 @@ import {
 import { sanitizeUser } from '../utils/sanitize.js';
 import { checkVoicePermissions, disconnectMemberFromSpaceVoice } from '../ws/events.js';
 import { channelToWire, memberStaffBadges, memberToWire, spaceToWire } from '../utils/spaceWire.js';
-import { dropHeldTimeout, holdDepartingTimeout, restoreHeldTimeout } from '../utils/spaceModeration.js';
+import { dropHeldTimeout, holdDepartingTimeout, memberActionRefusal, restoreHeldTimeout } from '../utils/spaceModeration.js';
 import {
   addedFields,
   auditChange,
@@ -329,19 +331,20 @@ function auditedRoleFields(row: typeof schema.roles.$inferSelect): Record<string
 }
 
 /**
- * Takes a space's newly shown pictures in: their upload records go (the
- * spaces table holds the files now), and each is fitted to its size. Only
- * files a picture check passed come here (profilePictureOf).
+ * Fits a space's newly shown pictures to their sizes before the row takes them (utils/thumbnail.ts):
+ * false when one cannot be written anew, and then the request is refused. Only files a picture
+ * check passed come here (profilePictureOf).
  */
-async function adoptSpacePictures(icon: string | null, banner: string | null): Promise<void> {
-  if (icon) {
-    deleteAttachmentByFilename(icon);
-    await resizeProfileImage(path.join(config.uploadDir, icon), 'icon');
-  }
-  if (banner) {
-    deleteAttachmentByFilename(banner);
-    await resizeProfileImage(path.join(config.uploadDir, banner), 'banner');
-  }
+async function fitSpacePictures(icon: string | null, banner: string | null): Promise<boolean> {
+  if (icon && !(await resizeProfileImage(path.join(config.uploadDir, icon), 'icon'))) return false;
+  if (banner && !(await resizeProfileImage(path.join(config.uploadDir, banner), 'banner'))) return false;
+  return true;
+}
+
+/** Once the spaces table holds a space's newly shown pictures, their upload records go. */
+function adoptSpacePictures(icon: string | null, banner: string | null): void {
+  if (icon) deleteAttachmentByFilename(icon);
+  if (banner) deleteAttachmentByFilename(banner);
 }
 
 export async function spaceRoutes(app: FastifyInstance): Promise<void> {
@@ -383,6 +386,14 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     const safeAvatarColor = avatarColor && (AVATAR_COLORS as readonly string[]).includes(avatarColor)
       ? avatarColor
       : AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+
+    if (!(await fitSpacePictures(iconPicture.upload, bannerPicture.upload))) {
+      return sendError(reply, 400, 'profile_image_invalid');
+    }
+    // Asked again after the pictures were fitted, with nothing awaited before the insert: spaces
+    // created side by side would otherwise all pass the check made before.
+    const spaceLimitNow = spaceLimitReached(request.userId);
+    if (spaceLimitNow !== null) return sendError(reply, 409, 'space_limit_reached', { max: spaceLimitNow });
 
     const db = getDb();
     const spaceId = generateSnowflake();
@@ -473,7 +484,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     // Register the creator in connectionManager so they receive WS broadcasts for this space
     connectionManager.addUserSpace(request.userId, spaceId);
 
-    await adoptSpacePictures(iconPicture.upload, bannerPicture.upload);
+    adoptSpacePictures(iconPicture.upload, bannerPicture.upload);
 
     return reply.code(201).send(spaceToWire(server));
   });
@@ -614,7 +625,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     const result: SpaceWithChannelsAndMembers = {
       ...spaceToWire(server),
       channels: visibleChannels,
-      categories,
+      categories: shownCategories(categories, visibleChannels, spacePerms),
       members,
       roles: rolesForViewer(roles, spacePerms),
       myPermissions: permissionsToString(spacePerms),
@@ -760,6 +771,10 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     if (reviewEdit.discovery) updates.discoveryStatus = reviewEdit.discovery.status;
     if (reviewEdit.verification) updates.verificationStatus = reviewEdit.verification.status;
 
+    if (!(await fitSpacePictures(iconUpload, bannerUpload))) {
+      return sendError(reply, 400, 'profile_image_invalid');
+    }
+
     db.update(schema.spaces).set(updates).where(eq(schema.spaces.id, id)).run();
 
     const listedAfter = (updates.directoryListed ?? server.directoryListed) === 1;
@@ -782,7 +797,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       deleteUploadFile(replacedBanner);
       deleteAttachmentByFilename(replacedBanner);
     }
-    await adoptSpacePictures(iconUpload, bannerUpload);
+    adoptSpacePictures(iconUpload, bannerUpload);
 
     const updated = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
     if (!updated) {
@@ -851,6 +866,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
 
     const memberPictures = db.select({ userId: schema.spaceMembers.userId, avatar: schema.spaceMembers.avatar, banner: schema.spaceMembers.banner })
       .from(schema.spaceMembers).where(eq(schema.spaceMembers.spaceId, id)).all();
+    // The soundboard's rows go with the space; their files are removed here, not left for a restart.
+    const soundIds = db.select({ id: schema.spaceSounds.id }).from(schema.spaceSounds)
+      .where(eq(schema.spaceSounds.spaceId, id)).all().map((sound) => sound.id);
 
     // Delete all channels (messages cascade), members, folder refs, read states, then space atomically
     db.transaction((tx) => {
@@ -872,6 +890,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
 
     // Clean up all attachment files from disk
     deleteAttachmentFiles(attachmentRows);
+    removeSoundFiles(soundIds);
 
     // Clean up space icon/banner files nothing else shows, and the members' own pictures.
     for (const picture of [uploadNameOf(spaceIcon), uploadNameOf(spaceBanner)]) {
@@ -917,6 +936,10 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     if (server.inviteCode) {
       return reply.code(200).send({ inviteCode: server.inviteCode });
     }
+
+    // Making a new link is a member action, as POST /invites is (utils/spaceModeration.ts).
+    const refusal = memberActionRefusal(id, request.userId);
+    if (refusal) return sendError(reply, refusal.status, refusal.code, refusal.details);
 
     const inviteCode = generateInviteCode();
     db.update(schema.spaces).set({ inviteCode }).where(eq(schema.spaces.id, id)).run();
@@ -1064,6 +1087,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     if (!hasPermission(request.userId, id, PermissionBits.CREATE_INVITE)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'CREATE_INVITE' });
     }
+    // Bringing people in is something done in the space (utils/spaceModeration.ts).
+    const refusal = memberActionRefusal(id, request.userId);
+    if (refusal) return sendError(reply, refusal.status, refusal.code, refusal.details);
     if (expiresInSeconds !== null && !(INVITE_EXPIRY_SECONDS as readonly number[]).includes(expiresInSeconds)) {
       return sendError(reply, 400, 'invite_options_invalid');
     }

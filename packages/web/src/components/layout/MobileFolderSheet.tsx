@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { GatedPicture } from '../ui/ExternalMedia';
 import { useTranslation } from 'react-i18next';
 import type { SpaceFolder } from '@backspace/shared';
 import { useSpaceStore } from '../../stores/spaceStore';
@@ -155,7 +156,17 @@ export function MobileFolderSheet({ folder, onClose, onSelectSpace, onUpdateFold
                   style={!iconUrl ? { background: grad.gradient } : undefined}
                 >
                   {iconUrl ? (
-                    <img src={iconUrl} alt={space.name} className="w-full h-full object-cover" />
+                    // A picture on a server this client does not talk to waits for a yes (useGatedPicture).
+                    <GatedPicture
+                      src={iconUrl}
+                      alt={space.name}
+                      className="w-full h-full object-cover"
+                      whileBlocked={(
+                        <span className="flex h-full w-full items-center justify-center font-mono text-meta font-semibold text-white" style={{ background: grad.gradient }}>
+                          {space.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    />
                   ) : (
                     <span className="font-mono text-meta font-semibold text-white">{space.name.charAt(0).toUpperCase()}</span>
                   )}

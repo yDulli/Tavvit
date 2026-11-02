@@ -142,6 +142,8 @@ Each writes `report_decide` to the platform audit log with the reason, and `repo
 
 ## Content from other servers
 
+Every picture a server names goes through the same gate in the client (`useGatedPicture` and `GatedPicture` in `components/ui/ExternalMedia.tsx`, 1.32.8): an account's picture and banner (`ProfileBanner`), a group's icon, a space's icon in the sidebar, on the phone's space lists, in Explore and among mutual spaces, the colour the place's light is taken from (`AmbientLight`, which reads the picture), and a banner in the admin's listing preview. A banner goes into CSS only through `utils/cssUrl.ts`, quoted and escaped, so an address cannot open a second `url()`. Role colours are drawn only as `#rrggbb` (`utils/roleStyle.ts`), so a colour from another instance adds no layer that loads an address.
+
 A server that delivers a file sees the address of whoever fetches it. Link previews, video thumbnails, GIFs, embedded players and Markdown images therefore load only after a yes, on the same rule the Google Fonts ruling (LG München, 2022) made familiar here.
 
 - `ExternalImage` and `ExternalGate` (`ui/ExternalMedia.tsx`) show a placeholder for anything on another origin until allowed. This server's own files pass straight through.

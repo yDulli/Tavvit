@@ -108,6 +108,8 @@ nothing is stored or broadcast.
 | `voice_status` | isMuted, isDeafened, isCameraOn, isScreenSharing | server enforces space/permission mute |
 
 ### Voice Moderation
+
+1.32.8: `voice_space_mute`, `voice_space_deafen`, `voice_move` and `voice_disconnect` answer `Target user is not in a voice channel you can moderate` both when the target is in no voice channel and when the actor may not moderate theirs, so nobody learns who sits in voice anywhere. `voice_permission_muted` goes to those who can see the channel (`sendToChannel`), and `space_voice_state` / `ready` carry `permissionMuted` only for rooms the viewer sees. `voice_join` takes a voice channel only. `channel_poke` is held to what any message in the channel is (slow mode, the space's age rules, a forum's posts only) and reaches nobody across a block. A private category is named only to those who see a channel in it or may manage channels (permissions.md, "Private channels and categories"), in `ready`, `channel_layout_updated` and `category_updated`.
 | type | fields | permission |
 |------|--------|------------|
 | `voice_space_mute` | userId, muted | MUTE_MEMBERS |

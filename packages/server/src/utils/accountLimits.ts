@@ -43,20 +43,23 @@ function storageAccountOf(userId: string): string {
  * What the account keeps in files, with those of its bots and of the follows it set up. A file it
  * holds through several messages counts once, and a copy it forwarded counts too: otherwise
  * forwarding a file and deleting the original would free the room while the file stays. Copies
- * fetched from another instance (`source_url`) are not this account's upload here.
+ * fetched from another instance (`source_url`) are not this account's upload here. The clips it
+ * added to a soundboard count as well, for as long as their space keeps them.
  */
 function storageUsedByAccount(account: string): number {
   const row = getDb().get<{ used: number }>(sql`
-    SELECT COALESCE(SUM(size), 0) AS used FROM (
-      SELECT MAX(size) AS size FROM attachments
-      WHERE (
-          uploader_id = ${account}
-          OR uploader_id IN (SELECT id FROM bots WHERE owner_id = ${account})
-          OR uploader_id IN (SELECT account_id FROM channel_follows WHERE created_by = ${account})
-        )
-        AND source_url IS NULL
-      GROUP BY filename
-    )
+    SELECT
+      (SELECT COALESCE(SUM(size), 0) FROM (
+        SELECT MAX(size) AS size FROM attachments
+        WHERE (
+            uploader_id = ${account}
+            OR uploader_id IN (SELECT id FROM bots WHERE owner_id = ${account})
+            OR uploader_id IN (SELECT account_id FROM channel_follows WHERE created_by = ${account})
+          )
+          AND source_url IS NULL
+        GROUP BY filename
+      ))
+      + (SELECT COALESCE(SUM(size), 0) FROM space_sounds WHERE created_by = ${account}) AS used
   `);
   return row?.used ?? 0;
 }

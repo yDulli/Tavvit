@@ -67,6 +67,12 @@ describe('downloadProfileAsset', () => {
     expect(rawFetch).not.toHaveBeenCalled();
   });
 
+  it('refuses an address of the source instance that is not one of its uploads', async () => {
+    expect(await downloadProfileAsset('https://peer.test/api/federation/sync', 'https://peer.test')).toBeNull();
+    expect(await downloadProfileAsset('https://peer.test:8443/api/uploads/a.png', 'https://peer.test')).toBeNull();
+    expect(rawFetch).not.toHaveBeenCalled();
+  });
+
   it('re-validates the destination of a redirect instead of following it blindly', async () => {
     rawFetch.mockResolvedValueOnce(
       new Response(null, { status: 302, headers: { location: 'http://127.0.0.1:9200/logo.png' } }),
@@ -75,7 +81,7 @@ describe('downloadProfileAsset', () => {
     validate.mockResolvedValueOnce(undefined)                                   // first hop, the peer
             .mockRejectedValueOnce(new Error('Private IP not allowed'));        // the redirect target
 
-    const result = await downloadProfileAsset('https://peer.test/a.png', 'https://peer.test');
+    const result = await downloadProfileAsset('https://peer.test/api/uploads/a.png', 'https://peer.test');
 
     expect(result).toBeNull();
     expect(validate).toHaveBeenCalledWith('http://127.0.0.1:9200/logo.png');
@@ -86,7 +92,7 @@ describe('downloadProfileAsset', () => {
     rawFetch.mockResolvedValueOnce(
       new Response('hello', { status: 200, headers: { 'content-type': 'text/plain' } }),
     );
-    expect(await downloadProfileAsset('https://peer.test/a.png', 'https://peer.test')).toBeNull();
+    expect(await downloadProfileAsset('https://peer.test/api/uploads/a.png', 'https://peer.test')).toBeNull();
     // Without this the case is vacuous: any transport failure also returns
     // null, so a null result alone does not show the content-type branch ran.
     expect(rawFetch).toHaveBeenCalledTimes(1);
@@ -97,7 +103,7 @@ describe('downloadProfileAsset', () => {
     rawFetch.mockResolvedValueOnce(
       new Response(oversize, { status: 200, headers: { 'content-type': 'image/png' } }),
     );
-    expect(await downloadProfileAsset('https://peer.test/a.png', 'https://peer.test')).toBeNull();
+    expect(await downloadProfileAsset('https://peer.test/api/uploads/a.png', 'https://peer.test')).toBeNull();
     expect(rawFetch).toHaveBeenCalledTimes(1);
     // Same reason, plus the claim in the test name: nothing is left behind,
     // neither the temp file nor a renamed final one.

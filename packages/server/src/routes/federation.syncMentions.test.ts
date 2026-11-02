@@ -164,7 +164,7 @@ describe('POST /api/federation/sync — replayed messages carry their mention li
     }).run();
 
     orbit = makeInstance(ORBIT_ORIGIN, HOME_ORIGIN);
-    seedUser(orbit.db, { id: 'bob', username: 'bob', passwordHash: 'real-hash', homeInstance: null });
+    seedUser(orbit.db, { id: 'bob', username: 'bob', passwordHash: 'real-hash', homeInstance: null, dmPolicy: 'anyone' });
     seedUser(orbit.db, { id: 'alice-on-orbit', username: 'alice@home.test', homeInstance: 'home.test', homeUserId: 'alice' });
     seedDm(orbit.db, 'ch-orbit', ['bob', 'alice-on-orbit']);
 
@@ -208,7 +208,7 @@ describe('POST /api/federation/sync — a replayed message has the live relay\'s
     }).run();
 
     orbit = makeInstance(ORBIT_ORIGIN, HOME_ORIGIN);
-    seedUser(orbit.db, { id: 'bob', username: 'bob', passwordHash: 'real-hash', homeInstance: null });
+    seedUser(orbit.db, { id: 'bob', username: 'bob', passwordHash: 'real-hash', homeInstance: null, dmPolicy: 'anyone' });
     seedUser(orbit.db, { id: 'alice-on-orbit', username: 'alice@home.test', homeInstance: 'home.test', homeUserId: 'alice' });
     seedDm(orbit.db, 'ch-orbit', ['bob', 'alice-on-orbit']);
 

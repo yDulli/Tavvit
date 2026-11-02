@@ -1,6 +1,7 @@
 import React from 'react';
 import type { User } from '@backspace/shared';
 import { Avatar, avatarRadius } from './Avatar';
+import { useGatedPicture } from './ExternalMedia';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { parseFederatedUsername } from '../../utils/identity';
 
@@ -143,16 +144,19 @@ function AvatarTile({
 
 export function AvatarStack({ members, origin, size, border, iconUrl }: AvatarStackProps) {
   const borderClass = BORDER_CLASS[border];
+  // A group's icon is a picture like any other: on a server this client does not talk to, it waits
+  // for a yes, and the members' pictures stand in (useGatedPicture).
+  const iconSrc = useGatedPicture(iconUrl ? resolveIconSrc(iconUrl) : null);
 
   // Icon override — bypass the stack entirely.
-  if (iconUrl) {
+  if (iconSrc) {
     return (
       <div
         className="relative flex-shrink-0 overflow-hidden"
         style={{ width: size, height: size, borderRadius: avatarRadius(size) }}
       >
         <img
-          src={resolveIconSrc(iconUrl)}
+          src={iconSrc}
           alt=""
           loading="lazy"
           className="w-full h-full object-cover"

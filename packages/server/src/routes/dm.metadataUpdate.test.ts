@@ -74,7 +74,14 @@ vi.mock('../utils/fileCleanup.js', async () => {
     deleteAttachmentFiles: vi.fn(),
   };
 });
+// The icon is written anew at its size before the group shows it; no real image here.
+vi.mock('../utils/thumbnail.js', async (importActual) => ({
+  ...(await importActual<typeof import('../utils/thumbnail.js')>()),
+  resizeProfileImage: vi.fn(async () => true),
+}));
 import { deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
+import { resizeProfileImage } from '../utils/thumbnail.js';
+import { GROUP_DMS_PER_ACCOUNT } from '../utils/groupDmLimits.js';
 
 // Connection manager mock retrieval for spy assertions
 import { connectionManager } from '../ws/handler.js';
@@ -594,5 +601,94 @@ describe('PATCH /api/dm/:id — group metadata update', () => {
     // Old icon was a local filename — cleanup should fire
     expect(deleteUploadFile).toHaveBeenCalledWith('old.png');
     expect(deleteAttachmentByFilename).toHaveBeenCalledWith('old.png');
+  });
+});
+
+describe('a group icon is a picture field like any other', () => {
+  let app: FastifyInstance;
+
+  beforeEach(async () => {
+    sqlite = new Database(':memory:');
+    testDb = drizzle(sqlite, { schema });
+    applyMigrations(sqlite);
+    seedInstanceSettings();
+    seedUsers();
+    currentUserId = 'owner-A';
+    vi.clearAllMocks();
+    app = await buildApp();
+  });
+
+  it('never takes a file a message holds', async () => {
+    seedGroupDm({ id: 'dm-1', ownerId: 'owner-A', members: ['owner-A', 'member-B'] });
+    testDb.insert(schema.dmMessages).values({ id: 'msg-1', dmChannelId: 'dm-1', userId: 'owner-A', content: 'look', createdAt: Date.now() }).run();
+    testDb.insert(schema.attachments).values({
+      id: 'att-held', uploaderId: 'owner-A', dmMessageId: 'msg-1', filename: 'held.png', originalName: 'held.png', mimetype: 'image/png', size: 100, createdAt: Date.now(),
+    }).run();
+
+    const res = await app.inject({ method: 'PATCH', url: '/api/dm/dm-1', payload: { icon: 'held.png' } });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().code).toBe('icon_url_invalid');
+    expect(resizeProfileImage).not.toHaveBeenCalled();
+    expect(testDb.select().from(schema.dmChannels).where(eq(schema.dmChannels.id, 'dm-1')).get()?.icon).toBeNull();
+  });
+
+  it('is refused, and the group keeps its icon, when the image cannot be written anew', async () => {
+    seedGroupDm({ id: 'dm-1', ownerId: 'owner-A', members: ['owner-A', 'member-B'], icon: 'old.png' });
+    seedAttachment({ id: 'att-new', filename: 'new.png', uploaderId: 'owner-A', mimetype: 'image/png', size: 100 });
+    vi.mocked(resizeProfileImage).mockResolvedValueOnce(false);
+
+    const res = await app.inject({ method: 'PATCH', url: '/api/dm/dm-1', payload: { icon: 'new.png' } });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().code).toBe('profile_image_invalid');
+    expect(testDb.select().from(schema.dmChannels).where(eq(schema.dmChannels.id, 'dm-1')).get()?.icon).toBe('old.png');
+    expect(deleteUploadFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('how many groups an account is in', () => {
+  let app: FastifyInstance;
+
+  const befriend = (a: string, b: string) => testDb.insert(schema.friends).values({ userId: a, friendId: b, createdAt: 1 }).run();
+  const fillGroups = (userId: string) => {
+    for (let i = 0; i < GROUP_DMS_PER_ACCOUNT; i += 1) seedGroupDm({ id: `full-${userId}-${i}`, ownerId: 'stranger-D', members: [userId, 'stranger-D'] });
+  };
+
+  beforeEach(async () => {
+    sqlite = new Database(':memory:');
+    testDb = drizzle(sqlite, { schema });
+    applyMigrations(sqlite);
+    seedInstanceSettings();
+    seedUsers();
+    testDb.insert(schema.users).values({ id: 'friend-E', username: 'erin', displayName: 'Erin', passwordHash: 'x', createdAt: Date.now() }).run();
+    befriend('owner-A', 'member-B');
+    befriend('owner-A', 'friend-E');
+    currentUserId = 'owner-A';
+    vi.clearAllMocks();
+    app = await buildApp();
+  });
+
+  const createGroup = () => app.inject({ method: 'POST', url: '/api/dm/group', payload: { users: [{ id: 'member-B' }, { id: 'friend-E' }] } });
+
+  it('starts a group while under the limit', async () => {
+    expect((await createGroup()).statusCode).toBe(201);
+  });
+
+  it('starts no further group once the caller is in as many as an account may be', async () => {
+    fillGroups('owner-A');
+    const res = await createGroup();
+    expect(res.statusCode).toBe(409);
+    expect(res.json()).toMatchObject({ code: 'group_dm_limit_reached', details: { max: GROUP_DMS_PER_ACCOUNT } });
+  });
+
+  it('puts nobody into a group who is already in as many', async () => {
+    fillGroups('friend-E');
+    const res = await createGroup();
+    expect(res.statusCode).toBe(409);
+    expect(res.json()).toMatchObject({ code: 'group_dm_member_limit_reached', details: { name: 'Erin' } });
+
+    seedGroupDm({ id: 'dm-1', ownerId: 'owner-A', members: ['owner-A', 'member-B'] });
+    const added = await app.inject({ method: 'POST', url: '/api/dm/dm-1/members', payload: { userId: 'friend-E' } });
+    expect(added.statusCode).toBe(409);
+    expect(added.json().code).toBe('group_dm_member_limit_reached');
   });
 });

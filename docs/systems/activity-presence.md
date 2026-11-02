@@ -72,7 +72,7 @@ The server validates every incoming `activity_update` payload, and the activitie
 
 1. Must be an array with at most `MAX_ACTIVITIES_PER_USER` items
 2. Each item must be an object with a valid `type` (one of: `custom`, `playing`, `listening`, `watching`, `streaming`)
-3. `name` is required, must be a string that is not empty after trimming and within `MAX_NAME_LENGTH`; trimmed on accept
+3. `name` is required, must be a string that is not empty after trimming and within `MAX_NAME_LENGTH`; trimmed on accept. The texts it shows (`name`, `details`, `state`, `largeText`, `smallText`) lose the characters that would disguise a status (control characters, bidirectional overrides; `withoutUnsafeCharacters`, `shared/src/profileFields.ts`), as a custom status does (1.32.8): a window title can hold them too, and a name that is nothing else is refused
 4. Optional fields (`details`, `state`) accepted if string and within length limits; trimmed
 5. `url` accepted only if it starts with `https://` or `http://` and is within `MAX_URL_LENGTH`
 6. `timestamps.start` and `timestamps.end` accepted if numbers in range `[0, 4102444800000]` (epoch ms cap ~2100)
@@ -251,7 +251,7 @@ The client debounce is a trailing-edge timer: each new `pushActivities()` call r
 
 On WebSocket auth, `buildReadyPayload()` constructs a `userActivities` map for all visible users: space members, DM members and **friends** (a friend may share neither a space nor a DM with the user). Keys are this instance's row ids. Next to it, `userActivityIdentities` maps each of those keys to the row's `{ homeUserId, homeInstance }` (both null for a native row), so the client can key the entry by the person's home identity (see "Keying" below). For a replicated friend the entry is the activity their home last relayed.
 
-`snapshotActivities(live, customStatus)` (`ws/presenceEvent.ts`) picks each entry: the user's live or relayed activities, else a synthetic `custom` activity from `customStatus`. The friendship snapshot (below) uses the same function.
+`snapshotActivities(live, customStatus)` (`ws/presenceEvent.ts`) picks each entry: the user's live or relayed activities, else a synthetic `custom` activity from `customStatus`, without the characters a status stored before they were refused may hold. The friendship snapshot (below) uses the same function.
 
 This synthetic injection only occurs in snapshots (ready, friendship), not in live `presence_update` broadcasts.
 

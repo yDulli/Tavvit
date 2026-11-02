@@ -1,4 +1,5 @@
 import type { SavedItem } from '@backspace/shared/src/saved.js';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   isSpaceDefaultNotificationLevel,
@@ -68,7 +69,8 @@ const WORDS: Record<string, { reminder: string; voice: string; sticker: string; 
 const wordsFor = (locale: string | null) => WORDS[locale ?? 'en'] ?? WORDS.en!;
 
 function displayNameOf(user: { displayName?: string | null; username: string }): string {
-  return user.displayName || user.username;
+  // A notification shows a name as the characters it is (shared/src/profileFields.ts).
+  return (user.displayName ? withoutUnsafeCharacters(user.displayName) : '') || user.username;
 }
 
 /** The message as one short line in the device's language: no ids, no marks, nothing a spoiler hides. */

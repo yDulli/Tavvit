@@ -317,6 +317,16 @@ data-channel ping receiver in `handleDataReceived`).
 
 ## Voice Moderation
 
+### What LiveKit enforces (1.32.8)
+
+The client is told of every mute, but a client that does not listen is held to it by LiveKit itself (`utils/livekitGrants.ts`):
+
+- **A token** for a space's voice channel grants what `spaceVoiceGrant` says: the microphone and the camera with SPEAK, a shared screen with STREAM, and nothing of that while a moderator's `voice_restrictions` row says `mute` (a shared screen's sound neither); `canSubscribe` is false while it says `deafen`. A DM call's token grants everything (`FULL_VOICE_GRANT`).
+- **A grant already handed out** is changed at once: `voice_space_mute` / `voice_space_deafen` and `checkVoicePermissions` (a role or override change) call `applyVoiceGrants`, which sends LiveKit `updateParticipant` with the new permission and `mutePublishedTrack` for a track the person may no longer send. LiveKit unconfigured, it does nothing.
+- **Only a voice channel** holds a call: `voice_join` and the token route refuse any other channel type.
+- **Room names:** a space's voice channel is the room of its channel id; a DM's call is `fed:<federatedId>` or `dm-<id>` (`dmCallRoomName` in `routes/livekit.ts`), a prefix no channel id has, so a key a peer chose never names a voice channel. A peer's group key is taken only in the shape this code mints it (`isConversationKey`).
+- **Known limit:** someone who may join can sit in the LiveKit room before the socket lists them (a token is asked for before `voice_join`). Those in the call see them there as a tile; the sidebar shows them only once they joined over the socket.
+
 Three independent muting mechanisms:
 
 ### 1. User Self-Mute/Deafen

@@ -1,4 +1,5 @@
 import { needsVerifiedEmail } from '../email/gate.js';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { friendRequestableBy, maySendFriendRequest } from '../utils/contactPolicy.js';
 import { blockRefusal } from '../utils/blocks.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
@@ -1034,7 +1035,7 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
     const results: UserSearchResult[] = rows.map((row) => ({
       id: row.id,
       username: row.username,
-      displayName: row.displayName,
+      displayName: row.displayName === null ? null : withoutUnsafeCharacters(row.displayName),
       avatar: row.avatar,
       avatarColor: (row.avatarColor as UserSearchResult['avatarColor']) ?? null,
       homeInstance: row.homeInstance,

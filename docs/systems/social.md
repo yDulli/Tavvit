@@ -210,6 +210,8 @@ This ensures friends always see real-time profile updates (avatar, display name,
 
 ## 6. Federation: Friend Relay
 
+**What a peer cannot decide for someone here** (1.32.8): a relayed friend request reaches a person of this instance only as `POST /social/requests` would let it, not across a block either way and not past their `friendRequestPolicy` (`relayedFriendRequestRefusal`, `routes/federation/localConsent.ts`); a relayed 1-on-1 that would start a conversation the same with their `dmPolicy`, and never across a block. Both answer `recipient_refuses`.
+
 ### Overview
 
 Cross-instance friend operations use 5 relay event types with `contextType: 'friend'`. The federation relay mechanism (outbox, delivery, HMAC signing) is documented in `docs/systems/federation.md`. This section covers the **application logic** specific to friend events.

@@ -77,25 +77,25 @@ The password the user types is a credential for **one** instance — their home.
 
 Two consequences shape the client:
 
-- **Credentials are minted by the account's TRUE home, not by the instance being browsed.** `resolveCredentialHomeApi()` returns the home connection's API client (the primary connection when browsing home natively, else a connected secondary instance for the home domain). If two instances each issued their own secret for the same remote, the remote account would end up with one of them and the user would be locked out of it everywhere else. When no home session is available, `connectToRemote` fails with a message naming the home rather than minting a divergent secret. A detached account (`federationHomeOrphaned`) is sovereign and issues its own.
-- **`ensureRemoteCredential(instance, { force? })` is the single reconciliation point.** Every path that establishes a remote session calls it — `connectToRemote`, `loginToRemote` (with `force`), and the token reconnect in `autoConnectAll`. It rotates the remote account onto the issued secret when the home's `provisioned` flag says the account may still carry something else, and refuses unless the remote account is this user's own federated identity (`homeInstance` **and** `homeUserId` both match).
+- **Credentials are minted by the account's TRUE home, not by the instance being browsed.** `resolveCredentialHome()` returns the home connection's API client, with the origin the code dialog names (the primary connection when browsing home natively, else a connected secondary instance for the home domain). If two instances each issued their own secret for the same remote, the remote account would end up with one of them and the user would be locked out of it everywhere else. When no home session is available, `connectToRemote` fails with a message naming the home rather than minting a divergent secret. A detached account (`federationHomeOrphaned`) is sovereign and issues its own.
+- **The home gives the secret out only with its password** (and the second factor while 2FA is on; auth.md §5b). `issuedCredential()` sends the entered password with the request and asks for a code through the one dialog (`useMfaPromptStore`) when the home wants one. A session alone learns only whether the remote account is provisioned.
+- **`ensureRemoteCredential(instance, { force?, password? })` is the single reconciliation point.** Every path that establishes a remote session calls it — `connectToRemote`, `loginToRemote` (with `force` and the password typed), and the token reconnect in `autoConnectAll`. It rotates the remote account onto the issued secret when the home's `provisioned` flag says the account may still carry something else and a password is at hand (a token reconnect has none and leaves it for a path that has), and refuses unless the remote account is this user's own federated identity (`homeInstance` **and** `homeUserId` both match).
 
 ### Connection Flow (`connectToRemote`)
 
 When a user adds a remote instance via the Connections settings:
 
 1. **Target is the account's own home** — log in with the entered password under the bare username. Nothing below applies.
-2. **Resolve the home API client** — `resolveCredentialHomeApi()`; if there is no home session, throw naming the home instance.
-3. **Verify the entered password against the home instance** — `homeApi.users.verifyPassword`. The target never sees it.
-4. **Fetch the per-remote secret** — `homeApi.users.federationCredential({ origin })`.
-5. **Compute federated username** — `{bareUsername}@{homeHost}` (e.g., `erin@nova.ddns.net`)
-6. **Try registration** on the remote instance with:
+2. **Resolve the home API client** — `resolveCredentialHome()`; if there is no home session, throw naming the home instance.
+3. **Get the per-remote secret with the entered password** — `issuedCredential(home, origin, password)`, which is `homeApi.users.federationCredential({ origin, password, twoFactorCode? })`. The home checks the password (a wrong one is "Incorrect password") and, while 2FA is on, the code the dialog asks for. The target never sees the password.
+4. **Compute federated username** — `{bareUsername}@{homeHost}` (e.g., `erin@nova.ddns.net`)
+5. **Try registration** on the remote instance with:
    - Username: `erin@nova.ddns.net`
    - Password: **the issued secret**
    - `homeInstance`: `nova.ddns.net` (bare domain)
    - `homeUserId`: user's Snowflake ID on home instance
    - `attachProof`: what the home just gave this session for the remote (`POST /api/auth/attach-proof`), after being asked to peer with it (`ensurePeered`). The remote asks the home about it, and refuses with 403 `home_instance_unproven` when it cannot (auth.md). A 403 falls through to the login below, as for a closed instance
-7. **If registration is refused** because the username is taken or because the instance is closed to new accounts, log in with the issued secret. A migrated account on a closed instance still gets in this way. There is deliberately **no** retry with the entered password. If that login fails, `connectToRemote` throws `RemoteLoginRequiredError` and the caller offers the explicit per-instance login form, where the user chooses what to send. The error's `reason` records which refusal came first, and it is the only thing that decides what the form's notice may claim:
+6. **If registration is refused** because the username is taken or because the instance is closed to new accounts, log in with the issued secret. A migrated account on a closed instance still gets in this way. There is deliberately **no** retry with the entered password. If that login fails, `connectToRemote` throws `RemoteLoginRequiredError` and the caller offers the explicit per-instance login form, where the user chooses what to send. The error's `reason` records which refusal came first, and it is the only thing that decides what the form's notice may claim:
 
    | Registration answered | `reason` | Code (`describeError`) | What the notice says |
    |---|---|---|---|
@@ -103,7 +103,7 @@ When a user adds a remote instance via the Connections settings:
    | 403 (`federated_registration_closed`; `registration_closed`, `invite_required` or no code from an older remote) | `registration-closed` | `federated_registration_closed` | The instance takes no new accounts from other instances; *if* the user has an account there, sign in with it |
 
    Only the first may say an account exists. On a closed instance the client cannot know: the server's closed gate answers before any username check (`routes/auth.ts`), and a refused login says `invalid_credentials` whether the account is missing or has another password. Any other registration failure is rethrown. `FallbackNotice` in `RemotePasswordStep.tsx` is the one place the notice is worded; all five surfaces that offer the login render it.
-8. **On success** — mark the credential provisioned, store JWT token, create API client, open WebSocket, ask the home instance to peer (below), sync profile
+7. **On success** — mark the credential provisioned, store JWT token, create API client, open WebSocket, ask the home instance to peer (below), sync profile
 
 ### Home-instance peering on every session (`peerHomeWithRemote`)
 
@@ -440,7 +440,7 @@ The **Connections** panel (in user settings) allows managing remote instance con
 | `error` or `disconnected` | `reauthenticateInstance(origin, password)` in place | `{ kind: 'connected', how: 'reconnect' }` |
 | unknown | `connectToRemote(origin, password, displayName)`, the flow above | `{ kind: 'connected', how: 'new' }` |
 | any, called with an empty password | a resumable origin (a live instance in `error`/`disconnected` that kept its token, or a registry entry in `disconnected`) is resumed with `reconnectInstance` | `{ kind: 'connected', how: 'resumed' }`, or `{ kind: 'needs-password' }` when there was nothing to resume or the token was refused, or a thrown `peer_unreachable` |
-| any, and only the account's own credentials can get in (step 7 of the flow above) | `RemoteLoginRequiredError` is caught | `{ kind: 'needs-remote-password', remoteUsername, reason }`, so the caller can offer the explicit per-instance login form under the notice `reason` selects |
+| any, and only the account's own credentials can get in (step 6 of the flow above) | `RemoteLoginRequiredError` is caught | `{ kind: 'needs-remote-password', remoteUsername, reason }`, so the caller can offer the explicit per-instance login form under the notice `reason` selects |
 
 Every other failure is thrown as is. It does not validate a typed URL: a caller that wants the self and duplicate checks for user input still runs `probeInstance` first, as the Connections flow does.
 
@@ -542,7 +542,7 @@ each host places it on the panel or row it already has:
    under the field it is about. Submitting calls `reauthenticateInstance`,
    which drops the stale session and re-runs the standard connect flow.
 2. **The account's own password on that instance.** Reached only when phase 1
-   throws `RemoteLoginRequiredError` (step 7 of the connect flow gives the two
+   throws `RemoteLoginRequiredError` (step 6 of the connect flow gives the two
    reasons), and no home password can fix that. The phase renders
    `FallbackForm`, exported from `RemotePasswordStep.tsx` and shared with the
    Connections add flow and the connect-and-join dialog, prefilled with the

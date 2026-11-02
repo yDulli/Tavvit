@@ -9,7 +9,8 @@ import { getChannelSpaceId, getMember, hasPermission, PermissionBits } from '../
 import { connectionManager } from './handler.js';
 import { errorText } from '../utils/httpErrors.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
-import { memberActionRefusal } from '../utils/spaceModeration.js';
+import { recordSlowmodePost, spaceMessageRefusal } from '../utils/spaceModeration.js';
+import { blockRefusal } from '../utils/blocks.js';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
 
 /**
@@ -62,8 +63,9 @@ export function handleChannelPoke({ event, userId, ws }: {
   if (!hasPermission(userId, spaceId, PermissionBits.SEND_MESSAGES, channelId)) {
     refusePoke(ws, 'missing_permission', { permission: 'SEND_MESSAGES' }); return;
   }
-  // A poke posts a row in the channel, which a timed-out member may not do.
-  const timeout = memberActionRefusal(spaceId, userId);
+  // A poke posts a row in the channel, held to what any message there is: a timeout, the age a
+  // space asks of those who write, slow mode, and a forum's posts only (utils/spaceModeration.ts).
+  const timeout = spaceMessageRefusal({ kind: 'create', spaceId, channelId, userId, content: null });
   if (timeout) {
     refusePoke(ws, timeout.code, timeout.details); return;
   }
@@ -77,6 +79,8 @@ export function handleChannelPoke({ event, userId, ws }: {
   if (!hasPermission(targetUserId, spaceId, PermissionBits.VIEW_CHANNEL, channelId)) {
     refusePoke(ws, 'poke_target_no_access'); return;
   }
+  // Nobody pokes someone across a block, either way: it answers as someone who is not there.
+  if (blockRefusal(userId, targetUserId, db)) { refusePoke(ws, 'member_not_found'); return; }
   // Counted only once a poke would be stored, so a refused one costs nothing.
   if (!pokeLimit.consume(userId)) {
     refusePoke(ws, 'rate_limited'); return;
@@ -84,11 +88,16 @@ export function handleChannelPoke({ event, userId, ws }: {
   // The target's name in this space when the poke happened: the snapshot a
   // client shows once the target has left (channelSystemEvents.ts).
   const targetDisplayName = targetMember.nickname || dmSystemName(target);
-  const row = db.insert(schema.messages).values({
-    id: generateSnowflake(), channelId, userId, type: 'system',
-    content: channelSystemContent({ event: 'channel_poke', targetUserId, targetDisplayName }),
-    createdAt: Date.now(),
-  }).returning().get();
+  const now = Date.now();
+  const row = db.transaction((tx) => {
+    const stored = tx.insert(schema.messages).values({
+      id: generateSnowflake(), channelId, userId, type: 'system',
+      content: channelSystemContent({ event: 'channel_poke', targetUserId, targetDisplayName }),
+      createdAt: now,
+    }).returning().get();
+    recordSlowmodePost(tx, channelId, userId, now);
+    return stored;
+  });
   // One event carries the stored row. It is not a message_created: a client
   // from before pokes ignores an event type it does not know, where it would
   // treat a message_created as a new message (an unread dot, a message sound,

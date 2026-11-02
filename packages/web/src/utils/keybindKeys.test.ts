@@ -5,14 +5,22 @@ import { BINDABLE_ACTIONS } from '../stores/keybindStore';
 const keys = (...codes: string[]) => codes.map(codeToNumeric);
 
 describe('a desktop shortcut that types text on its own', () => {
-  it('is a letter, a digit, space, enter, tab or backspace, alone or with Shift', () => {
-    for (const codes of [['KeyV'], ['Digit1'], ['Numpad5'], ['Space'], ['Enter'], ['Tab'], ['Backspace'], ['ShiftLeft', 'KeyA'], ['KeyA', 'KeyB']]) {
+  it('is a letter, a digit, punctuation, the number pad, space, enter, tab or backspace, alone or with Shift', () => {
+    for (const codes of [['KeyV'], ['Digit1'], ['Numpad5'], ['NumpadAdd'], ['Space'], ['Enter'], ['Tab'], ['Backspace'], ['ShiftLeft', 'KeyA'],
+      ['KeyA', 'KeyB'], ['Backquote'], ['Semicolon'], ['ShiftLeft', 'Quote'], ['ShiftLeft']]) {
       expect(shortcutTypesText(keys(...codes)), codes.join('+')).toBe(true);
     }
   });
 
-  it('is not one with Ctrl, Alt or the system key, a function key, a lock key, punctuation or a mouse button', () => {
-    for (const codes of [['ControlLeft', 'KeyM'], ['AltLeft', 'Digit1'], ['MetaLeft', 'KeyA'], ['F13'], ['CapsLock'], ['Backquote']]) {
+  it('is one with Alt, which types a character with a key on many keyboards', () => {
+    for (const codes of [['AltLeft', 'Digit1'], ['AltRight', 'KeyQ'], ['ControlLeft', 'AltRight', 'KeyQ'], ['ControlLeft', 'AltLeft', 'KeyQ']]) {
+      expect(shortcutTypesText(keys(...codes)), codes.join('+')).toBe(true);
+    }
+  });
+
+  it('is not one with Ctrl or the system key, a key that types nothing, a modifier alone, or a mouse button', () => {
+    for (const codes of [['ControlLeft', 'KeyM'], ['MetaLeft', 'KeyA'], ['ControlLeft', 'ShiftLeft', 'Semicolon'], ['F13'], ['F5'], ['CapsLock'],
+      ['AltLeft'], ['ShiftLeft', 'F5'], ['AltLeft', 'F13']]) {
       expect(shortcutTypesText(keys(...codes)), codes.join('+')).toBe(false);
     }
     expect(shortcutTypesText(keys('KeyV'), 4)).toBe(false);

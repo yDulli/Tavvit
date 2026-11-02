@@ -4,6 +4,18 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.32.8": {
+      "title": "Safer accounts, calls and links between servers",
+      "items": {
+        "accounts": "A new account that still has to confirm its address can only read in spaces until it has, and throwaway addresses can be refused at sign-up.",
+        "privacy": "Banners and the icons of groups and spaces from other servers wait for your yes too, and the privacy notice says plainly that messages are not end-to-end encrypted.",
+        "voice": "Muting or deafening someone in a voice channel now holds even when their app ignores it.",
+        "limits": "Sounds, group pictures and files from bots count towards the storage an account may use, and an account can be in at most 100 groups.",
+        "signin": "Guessing passwords is slowed down everywhere a password is asked for, without keeping you out of your own account.",
+        "desktop": "The desktop app only listens for shortcuts that cannot type text, on any keyboard layout.",
+        "federation": "Between servers, a server has to prove its address before it is trusted, and nobody is put into a group, chat, call or friend request here that they would not accept."
+      }
+    },
     "1.32.7": {
       "title": "Security fixes",
       "items": {

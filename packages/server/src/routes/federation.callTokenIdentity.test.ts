@@ -80,7 +80,8 @@ function seedReplica(id: string, homeUserId: string, homeInstance: string): void
 
 function seedDm(dmChannelId: string, federatedId: string, members: string[]): void {
   testDb.insert(schema.dmChannels).values({ id: dmChannelId, ownerId: 'bob', federatedId, createdAt: Date.now() }).run();
-  testDb.insert(schema.dmMembers).values(members.map(userId => ({ dmChannelId, userId }))).run();
+  // The caller is in the conversation: a call comes from one of its members.
+  testDb.insert(schema.dmMembers).values([...members, 'caller-stub'].map(userId => ({ dmChannelId, userId }))).run();
 }
 
 function callStart(federatedId: string, call: Partial<NonNullable<FederationRelayEvent['call']>>): FederationRelayEvent {
@@ -111,6 +112,7 @@ describe('dm_call_start: tokens go to the identity they were minted for', () => 
     // happens to be 'bob' too; both are in the group and online.
     seedUser('bob');
     seedReplica('kai-here', 'bob', 'third.example');
+    seedReplica('caller-stub', 'caller-home', 'https://remote.example');
     vi.spyOn(cm, 'getUserConnections').mockImplementation(() => new Set(['ws' as unknown as WebSocket]));
   });
 
@@ -183,6 +185,8 @@ describe('dm_call_start: tokens go to the identity they were minted for', () => 
     const { processRelayEvents } = await importSUT();
     const cm = await importManager();
     const send = vi.spyOn(cm, 'sendToUser');
+    // With no conversation here the call starts one, which bob takes from a friend.
+    testDb.insert(schema.friends).values({ userId: 'caller-stub', friendId: 'bob', createdAt: 1 }).run();
 
     await processRelayEvents([callStart('fed-d', {
       tokens: { bob: 'tok-bob' },

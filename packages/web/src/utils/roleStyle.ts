@@ -6,12 +6,23 @@ import type { Role } from '@backspace/shared';
 // a role's colours reads it here, so a gradient looks the same in the member
 // list, on the profile card and in the role editor.
 
+/**
+ * A role's colour as it is drawn: `#rrggbb` and nothing else. A role of a space on another instance
+ * comes from that instance as it sent it, and a value put into a gradient as it is could add a layer
+ * that loads an address from anywhere (`red), url(https://...)`), past the client's gate.
+ */
+function hexOf(value: string | null | undefined): string | undefined {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : undefined;
+}
+
 /** The style of text drawn in `role`'s colours. */
 export function roleTextStyle(role: Pick<Role, 'color' | 'colorSecondary'>): CSSProperties {
-  if (!role.colorSecondary) return { color: role.color };
+  const color = hexOf(role.color);
+  const second = hexOf(role.colorSecondary);
+  if (!color || !second) return { color };
   return {
-    color: role.color,
-    backgroundImage: `linear-gradient(90deg, ${role.color}, ${role.colorSecondary})`,
+    color,
+    backgroundImage: `linear-gradient(90deg, ${color}, ${second})`,
     WebkitBackgroundClip: 'text',
     backgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
@@ -20,6 +31,8 @@ export function roleTextStyle(role: Pick<Role, 'color' | 'colorSecondary'>): CSS
 
 /** The style of a role's colour dot: its colour, or a split of its two. */
 export function roleDotStyle(role: Pick<Role, 'color' | 'colorSecondary'>): CSSProperties {
-  if (!role.colorSecondary) return { backgroundColor: role.color };
-  return { backgroundImage: `linear-gradient(135deg, ${role.color} 50%, ${role.colorSecondary} 50%)` };
+  const color = hexOf(role.color);
+  const second = hexOf(role.colorSecondary);
+  if (!color || !second) return { backgroundColor: color };
+  return { backgroundImage: `linear-gradient(135deg, ${color} 50%, ${second} 50%)` };
 }

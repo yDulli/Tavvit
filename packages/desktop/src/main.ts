@@ -18,6 +18,7 @@ import os from 'os';
 import { startActivityDetection, stopActivityDetection, getCurrentActivity, setUserGames } from './activityDetector';
 import { loadSettings as loadGameDetection, saveSettings as saveGameDetection, withoutUserGame, type GameDetectionSettings } from './gameDetectionSettings';
 import { KeybindManager } from './keybindManager';
+import { createKeybindSyncLimit } from './keybindPolicy';
 import { deriveStartMinimizedFromArgs, parseExecPathFromDesktopFile, shouldReapplyAppImage } from './autoLaunch';
 import { DEV_URL_ENV, resolveAppUrl, removeLegacyInstanceFile } from './appUrl';
 import { getUpdateCapability, isSandboxed } from './updateCapability';
@@ -912,9 +913,15 @@ function registerIpcHandlers(): void {
     return { openAtLogin: newOpenAtLogin, startMinimized: newStartMinimized };
   });
 
-  // Keybinds
-  ipcMain.handle('keybinds-sync', (_event, keybinds) => {
-    keybindManager.updateKeybinds(keybinds);
+  // Keybinds: only the app's own window, on the app or an instance it knows, hands them over, and
+  // not faster than settings change (keybindPolicy.ts decides which shortcuts the hook may hear).
+  const keybindSyncAllowed = createKeybindSyncLimit();
+  ipcMain.handle('keybinds-sync', (event, keybinds) => {
+    if (event.sender !== mainWindow?.webContents) return keybindManager.isHookRunning();
+    let origin: string | null = null;
+    try { origin = new URL(event.sender.getURL()).origin; } catch { /* no page loaded */ }
+    if (origin === null || (origin !== APP_ORIGIN && !knownInstanceOrigins.has(origin))) return keybindManager.isHookRunning();
+    if (keybindSyncAllowed()) keybindManager.updateKeybinds(keybinds);
     return keybindManager.isHookRunning();
   });
   ipcMain.handle('keybind-portal-status', () => {

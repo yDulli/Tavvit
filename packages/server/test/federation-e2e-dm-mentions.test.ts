@@ -121,7 +121,7 @@ beforeAll(async () => {
   [groupOnA, fid] = await groupDelivered(A, alice, [
     { id: bobOnA, homeUserId: bob.id, homeInstance: B.domain },
     { id: carol.id },
-  ], relayToB);
+  ], relayToB, B);
   groupOnB = channelByFederatedId(B, fid)!;
   carolOnB = rowFor(B, carol.id);
 

@@ -146,6 +146,27 @@ describe('POST /api/auth/login: per-account throttle', () => {
     expect((await login(username, PASSWORD)).statusCode).toBe(200);
   });
 
+  it('lets the owner in while guesses on the name are made to wait: a wait holds no place', async () => {
+    const username = await newAccount();
+    await failTimes(username, 8);
+    const { loginWait } = await import('../utils/loginThrottle.js');
+    // The guesses that follow sleep and do not wake up within this test.
+    const asleep: Array<() => void> = [];
+    vi.mocked(loginWait.sleep).mockImplementation((ms: number) => {
+      waits.push(ms);
+      return ms > 0 ? new Promise<void>((resolve) => { asleep.push(resolve); }) : Promise.resolve();
+    });
+    const guesses = Array.from({ length: 8 }, () => login(username, 'wrong password'));
+    await vi.waitFor(() => expect(asleep).toHaveLength(8));
+    // The owner's own attempt waits as long, and is then checked, not turned away.
+    const owner = login(username, PASSWORD);
+    await vi.waitFor(() => expect(asleep).toHaveLength(9));
+    asleep.pop()!();
+    expect((await owner).statusCode).toBe(200);
+    for (const wake of asleep) wake();
+    await Promise.all(guesses);
+  });
+
   it('refuses a password longer than any can be without hashing it', async () => {
     const username = await newAccount();
     const res = await login(username, 'x'.repeat(257));

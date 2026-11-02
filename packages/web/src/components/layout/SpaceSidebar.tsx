@@ -21,6 +21,7 @@ import type { SpaceLayoutItem, SpaceFolder } from '@backspace/shared';
 
 import { getSpaceGradient } from '../../utils/gradients';
 import { useFloatingPosition } from '../../hooks/useFloatingPosition';
+import { GatedPicture } from '../ui/ExternalMedia';
 
 // ─── Resolved layout types ─────────────────────────────────────────────────
 
@@ -101,18 +102,8 @@ function HomeTabUnread({ hasUnread }: { hasUnread: boolean }) {
 
 /** A space's picture in a tab: its icon, or its first letter on its colour. */
 function SpaceGlyph({ id, name, icon, avatarColor, size = 20 }: { id: string; name: string; icon?: string | null; avatarColor?: string | null; size?: number }) {
-  if (icon) {
-    return (
-      <img
-        src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
-        alt=""
-        className="flex-shrink-0 rounded object-cover"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
   const tone = getSpaceGradient(id, name, avatarColor);
-  return (
+  const letter = (
     <span
       aria-hidden="true"
       className="flex flex-shrink-0 items-center justify-center rounded font-mono text-label font-semibold leading-none text-white"
@@ -120,6 +111,16 @@ function SpaceGlyph({ id, name, icon, avatarColor, size = 20 }: { id: string; na
     >
       {name.charAt(0).toUpperCase()}
     </span>
+  );
+  if (!icon) return letter;
+  return (
+    <GatedPicture
+      src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
+      alt=""
+      className="flex-shrink-0 rounded object-cover"
+      style={{ width: size, height: size }}
+      whileBlocked={letter}
+    />
   );
 }
 
@@ -215,20 +216,20 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
 
 function MiniSpaceIcon({ space }: { space: TaggedSpace }) {
   const icon = space.icon;
-  if (icon) {
-    return (
-      <img
-        src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
-        alt=""
-        className="w-full h-full object-cover rounded-[1px]"
-      />
-    );
-  }
   const grad = getSpaceGradient(space.id, space.name, space.avatarColor);
-  return (
+  const colour = (
     <div
       className="w-full h-full rounded-[1px]"
       style={{ background: grad.gradient }}
+    />
+  );
+  if (!icon) return colour;
+  return (
+    <GatedPicture
+      src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
+      alt=""
+      className="w-full h-full object-cover rounded-[1px]"
+      whileBlocked={colour}
     />
   );
 }

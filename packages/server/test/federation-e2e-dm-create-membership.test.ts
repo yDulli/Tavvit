@@ -138,11 +138,11 @@ beforeAll(async () => {
   [aliceGroupOnA, aliceGroupFid] = await groupDelivered(A, alice, [
     { id: carol.id },
     { id: rowFor(A, bob.id), homeUserId: bob.id, homeInstance: B.domain },
-  ], relayToB);
+  ], relayToB, B);
   [, carolGroupFid] = await groupDelivered(A, carol, [
     { id: rowFor(A, bob.id), homeUserId: bob.id, homeInstance: B.domain },
     { id: rowFor(A, erin.id), homeUserId: erin.id, homeInstance: B.domain },
-  ], relayToB);
+  ], relayToB, B);
 }, 120_000);
 
 afterAll(async () => {

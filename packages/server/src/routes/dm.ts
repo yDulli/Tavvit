@@ -1,4 +1,5 @@
 import { parseWaveform } from '@backspace/shared/src/voiceMessages.js';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { areFriends, mayStartConversation } from '../utils/contactPolicy.js';
 import { accountNeedsVerifiedEmail } from '../email/gate.js';
 import { blockRefusal } from '../utils/blocks.js';
@@ -37,8 +38,11 @@ import { sendError } from '../utils/httpErrors.js';
 import { parseHistoryPage, selectHistoryPage, markHistoryPageHonoured } from '../utils/messagePaging.js';
 
 /** Members a group DM can hold, the owner included. */
-const GROUP_DM_MAX_MEMBERS = 10;
 import { deleteAttachmentFiles, deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
+import { ownProfileUploadOf, pictureFileReleasable } from '../utils/profileImageRefs.js';
+import { resizeProfileImage } from '../utils/thumbnail.js';
+import { GROUP_DM_MAX_MEMBERS, GROUP_DMS_PER_ACCOUNT, groupDmLimitReached } from '../utils/groupDmLimits.js';
+import path from 'node:path';
 import { isValidAssetUrl } from './users.js';
 import {
   GROUP_DM_NAME_MIN_LENGTH,
@@ -908,10 +912,13 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // POST /api/dm/group - Create a new group DM with multiple members
-  app.post<{ Body: CreateGroupDmRequest }>('/api/dm/group', async (request, reply) => {
+  app.post<{ Body: CreateGroupDmRequest }>('/api/dm/group', {
+    config: { rateLimit: { max: 10, timeWindow: '10 minutes' } },
+  }, async (request, reply) => {
     const { users: userIdentities, fromDmChannelId } = request.body;
 
     if (accountNeedsVerifiedEmail(request.userId)) return sendError(reply, 403, 'email_verification_required');
+    if (groupDmLimitReached(request.userId)) return sendError(reply, 409, 'group_dm_limit_reached', { max: GROUP_DMS_PER_ACCOUNT });
 
     // Validate input is a non-empty array of at least 2 identity objects
     if (!Array.isArray(userIdentities) || userIdentities.length < 2) {
@@ -1019,6 +1026,12 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
       if (!friendship) {
         return sendError(reply, 403, 'not_a_friend', { name: targetUser.displayName ?? targetUser.username });
       }
+    }
+
+    // Nobody is put into more groups than an account may be in.
+    const full = targetUsers.find((target) => groupDmLimitReached(target.id));
+    if (full) {
+      return sendError(reply, 409, 'group_dm_member_limit_reached', { name: full.displayName ?? full.username, max: GROUP_DMS_PER_ACCOUNT });
     }
 
     // Create group DM channel + members in a single transaction
@@ -1337,6 +1350,11 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
           if (attachment.size > GROUP_DM_ICON_MAX_BYTES) {
             return sendError(reply, 400, 'icon_too_large', { max: Math.floor(GROUP_DM_ICON_MAX_BYTES / (1024 * 1024)) });
           }
+          // As any picture field takes a file (utils/profileImageRefs.ts): not one a message holds,
+          // which the icon would resize and, once replaced, delete, and not one another field shows.
+          if (!ownProfileUploadOf(candidate, request.userId, oldIcon)) {
+            return sendError(reply, 400, 'icon_url_invalid');
+          }
         }
         nextIcon = candidate;
         iconChanged = true;
@@ -1351,6 +1369,13 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
         icon: dmChannel.icon,
         metadataUpdatedAt: dmChannel.metadataUpdatedAt,
       });
+    }
+
+    // Written anew at an icon's size before the group shows it, as a space's icon is, and refused
+    // when it cannot be (utils/thumbnail.ts).
+    if (iconChanged && nextIcon && !nextIcon.startsWith('http')
+        && !(await resizeProfileImage(path.join(config.uploadDir, path.basename(nextIcon)), 'icon'))) {
+      return sendError(reply, 400, 'profile_image_invalid');
     }
 
     // Caller user row — needed for federation actor identity
@@ -1447,8 +1472,8 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    // ---- Old icon cleanup (mirror users.ts:463-466 precedent) ----
-    if (iconChanged && oldIcon && !oldIcon.startsWith('http')) {
+    // ---- Old icon cleanup: once nothing shows it and no message holds it (as users.ts does) ----
+    if (iconChanged && oldIcon && !oldIcon.startsWith('http') && pictureFileReleasable(oldIcon)) {
       deleteUploadFile(oldIcon);
       deleteAttachmentByFilename(oldIcon);
     }
@@ -1575,6 +1600,9 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
 
     if (currentMembers.length >= 10) {
       return sendError(reply, 400, 'group_dm_too_many_members', { max: GROUP_DM_MAX_MEMBERS });
+    }
+    if (groupDmLimitReached(targetUserId)) {
+      return sendError(reply, 409, 'group_dm_member_limit_reached', { name: targetUser.displayName ?? targetUser.username, max: GROUP_DMS_PER_ACCOUNT });
     }
 
     // Insert dm_members row for new user
@@ -1747,7 +1775,7 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
       if (meta.state === 'active' || meta.state === 'ringing') {
         // Look up caller name
         const callerRow = db.select().from(schema.users).where(eq(schema.users.id, meta.callerId)).get();
-        const callerName = callerRow?.displayName ?? callerRow?.username ?? meta.callerId;
+        const callerName = (callerRow?.displayName ? withoutUnsafeCharacters(callerRow.displayName) : '') || callerRow?.username || meta.callerId;
         connectionManager.sendToUser(targetUserId, {
           type: 'dm_call_incoming',
           dmChannelId: id,

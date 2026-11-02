@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { categoryShownTo, shownCategories } from '../utils/categoryVisibility.js';
 import { eq, and, inArray, ne } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
@@ -271,11 +272,28 @@ function broadcastCategoryOverrideChange(spaceId: string, categoryId: string): v
     .where(eq(schema.channelCategories.id, categoryId)).get();
   if (category) {
     const isPrivate = isCategoryPrivate(categoryId, spaceId);
-    connectionManager.sendToSpace(spaceId, {
-      type: 'category_updated',
-      category: { ...rowToCategory(category), isPrivate },
-      spaceId,
-    });
+    announceCategoryUpdate(spaceId, { ...rowToCategory(category), isPrivate });
+  }
+}
+
+/**
+ * A category's change, to those who see it (utils/categoryVisibility.ts): one hidden from @everyone
+ * only to those who see a channel in it or may manage channels, since its name says what it holds.
+ */
+function announceCategoryUpdate(spaceId: string, category: ChannelCategory & { isPrivate: boolean }): void {
+  const event = { type: 'category_updated' as const, category, spaceId };
+  if (!category.isPrivate) {
+    connectionManager.sendToSpace(spaceId, event);
+    return;
+  }
+  const channelIds = getDb().select({ id: schema.channels.id }).from(schema.channels)
+    .where(and(eq(schema.channels.spaceId, spaceId), eq(schema.channels.categoryId, category.id)))
+    .all()
+    .map((channel) => channel.id);
+  for (const [userId, spaceIds] of connectionManager.getUserSpaceEntries()) {
+    if (!spaceIds.has(spaceId)) continue;
+    const seesOne = channelIds.some((channelId) => (computePermissions(userId, spaceId, channelId) & PermissionBits.VIEW_CHANNEL) !== 0n);
+    if (categoryShownTo(true, seesOne, computePermissions(userId, spaceId))) connectionManager.sendToUser(userId, event);
   }
 }
 
@@ -1264,11 +1282,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const updatedData = { ...rowToCategory(updated), isPrivate: isCategoryPrivate(id, category.spaceId) };
-    connectionManager.sendToSpace(category.spaceId, {
-      type: 'category_updated',
-      category: updatedData,
-      spaceId: category.spaceId,
-    });
+    announceCategoryUpdate(category.spaceId, updatedData);
 
     return reply.code(200).send(updatedData);
   });
@@ -1507,7 +1521,7 @@ function broadcastChannelLayout(spaceId: string, movedChannelIds: readonly strin
       type: 'channel_layout_updated',
       spaceId,
       channels: visibleChannels,
-      categories: categoryData,
+      categories: shownCategories(categoryData, visibleChannels, computePermissions(userId, spaceId)),
     });
     if (seesMovedVoiceChannel) connectionManager.pushSpaceVoiceState(userId, spaceId);
   }

@@ -64,6 +64,19 @@ function seedUser(id: string): void {
   }).run();
 }
 
+/** The remote caller as this instance knows them: a call comes from a member of its conversation. */
+const CALLER_STUB = 'caller-stub';
+function seedCaller(): void {
+  testDb.insert(schema.users).values({
+    id: CALLER_STUB,
+    username: 'caller@remote.example',
+    passwordHash: '!federation-replicated',
+    homeUserId: 'caller-home',
+    homeInstance: 'https://remote.example',
+    createdAt: Date.now(),
+  }).run();
+}
+
 describe('processRelayEvents → processDmCallStartEvent', () => {
   beforeEach(async () => {
     sqlite = new Database(':memory:');
@@ -127,15 +140,18 @@ describe('processRelayEvents → processDmCallStartEvent', () => {
     const dmChannelId = 'dm-1';
     seedUser('bob-local');
     seedUser('alice-local');
+    seedCaller();
+    // A group of the caller's with two people here.
     testDb.insert(schema.dmChannels).values({
       id: dmChannelId,
-      ownerId: null,
+      ownerId: CALLER_STUB,
       federatedId,
       createdAt: Date.now(),
     }).run();
     testDb.insert(schema.dmMembers).values([
       { dmChannelId, userId: 'bob-local' },
       { dmChannelId, userId: 'alice-local' },
+      { dmChannelId, userId: CALLER_STUB },
     ]).run();
 
     // Stub: both users offline (zero WS connections)
@@ -186,15 +202,17 @@ describe('processRelayEvents → processDmCallStartEvent', () => {
     const dmChannelId = 'dm-2';
     seedUser('bob-local');
     seedUser('carol-local');
+    seedCaller();
     testDb.insert(schema.dmChannels).values({
       id: dmChannelId,
-      ownerId: null,
+      ownerId: CALLER_STUB,
       federatedId,
       createdAt: Date.now(),
     }).run();
     testDb.insert(schema.dmMembers).values([
       { dmChannelId, userId: 'bob-local' },
       { dmChannelId, userId: 'carol-local' },
+      { dmChannelId, userId: CALLER_STUB },
     ]).run();
 
     // Bob online, Carol offline
@@ -247,17 +265,18 @@ describe('processRelayEvents → processDmCallStartEvent', () => {
     expect(entry!.ringedUserIds).toEqual(['bob-local']);
   });
 
-  it('a caller first met through a call is not named after their display name', async () => {
-    const { processRelayEvents } = await importSUT();
-    const event = {
+  /** A first call from a caller nobody here knows, to dana here, who is online. */
+  function firstCallToDana(messageId: string, federatedId: string) {
+    seedUser('dana-local');
+    return {
       eventType: 'dm_call_start' as const,
-      messageId: 'msg-name',
+      messageId,
       encryptionVersion: 0 as const,
       timestamp: Date.now(),
-      federatedId: 'fed-call-caller-name',
+      federatedId,
       call: {
         livekitUrl: 'wss://lk.example',
-        tokens: { 'caller-home': 'tok-c' },
+        tokens: { 'caller-home': 'tok-c', 'dana-local': 'tok-d' },
         caller: {
           homeUserId: 'caller-home',
           homeInstance: 'https://remote.example',
@@ -265,15 +284,45 @@ describe('processRelayEvents → processDmCallStartEvent', () => {
         },
         participants: [
           { homeUserId: 'caller-home', homeInstance: 'https://remote.example', displayName: 'Friendly Caller' },
+          { homeUserId: 'dana-local', homeInstance: 'https://local.example', displayName: 'Dana' },
         ],
       },
     };
+  }
 
-    await processRelayEvents([event], 'https://remote.example', 'https://remote.example', testDb);
+  it('a caller first met through a call is not named after their display name', async () => {
+    const { processRelayEvents } = await importSUT();
+    const cm = await importManager();
+    const event = firstCallToDana('msg-name', 'fed-call-caller-name');
+    // Dana takes a conversation from anyone, so a caller nobody here knows rings her.
+    testDb.update(schema.users).set({ dmPolicy: 'anyone' }).where(eq(schema.users.id, 'dana-local')).run();
+    vi.spyOn(cm, 'getUserConnections').mockImplementation((uid: string) =>
+      uid === 'dana-local' ? new Set(['fakews' as unknown as WebSocket]) : new Set(),
+    );
+
+    const result = await processRelayEvents([event], 'https://remote.example', 'https://remote.example', testDb);
+    expect(result.accepted).toEqual(['msg-name']);
 
     // The display name is not a handle: the row keeps the id-based name until
     // a real username for it arrives.
     const caller = testDb.select().from(schema.users).where(eq(schema.users.homeUserId, 'caller-home')).get();
     expect(caller?.username).toBe('caller-home@remote.example');
+  });
+
+  it('a call that rings nobody here makes no row for a caller nobody knows', async () => {
+    const { processRelayEvents } = await importSUT();
+    const cm = await importManager();
+    // Dana is online, but takes a new conversation only from friends and people she shares a space with.
+    const event = firstCallToDana('msg-stranger', 'fed-call-stranger');
+    vi.spyOn(cm, 'getUserConnections').mockImplementation((uid: string) =>
+      uid === 'dana-local' ? new Set(['fakews' as unknown as WebSocket]) : new Set(),
+    );
+    const sendToUserSpy = vi.spyOn(cm, 'sendToUser');
+
+    const result = await processRelayEvents([event], 'https://remote.example', 'https://remote.example', testDb);
+
+    expect(result.undeliverable).toEqual([{ messageId: 'msg-stranger', reason: 'no_recipient' }]);
+    expect(sendToUserSpy).not.toHaveBeenCalledWith('dana-local', expect.anything());
+    expect(testDb.select().from(schema.users).where(eq(schema.users.homeUserId, 'caller-home')).get()).toBeUndefined();
   });
 });

@@ -1,4 +1,5 @@
 import { addSpaceReaction, REACTION_EMOJI_MAX_LENGTH, REACTIONS_PER_MESSAGE_MAX, reactionLimitReached, removeSpaceReaction } from '../utils/reactions.js';
+import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { mayPostSticker } from '../utils/remoteMedia.js';
 import { handleChannelPoke } from './channelPoke.js';
 import type { WebSocket } from 'ws';
@@ -23,7 +24,7 @@ import { deleteAttachmentFiles } from '../utils/fileCleanup.js';
 import { resolveEmbeds, reResolveEmbeds, embedRowToEmbed } from '../utils/embedResolver.js';
 import { appendMutationLog, dmMessageFederationRef, dmMessageMutationTarget, queueOutboxEvent, queueDmRelay, queueDmMessageDeleteRelay, getGroupDmTargetOrigins, sendCallRelay, sendTypingRelay, queueReadStateRelay } from '../utils/federationOutbox.js';
 import { canonicalizeHomeInstance, getOurOrigin, normalizeOriginForCompare } from '../utils/federationAuth.js';
-import { generateFederatedCallToken } from '../routes/livekit.js';
+import { dmCallRoomName, generateFederatedCallToken } from '../routes/livekit.js';
 import type { RelayActor } from '../routes/federation/identity.js';
 import { config } from '../config.js';
 import { canActOnMemberInSpace } from '../utils/roleHierarchy.js';
@@ -38,11 +39,14 @@ import { recordMessageDeleteAudit } from '../utils/auditLog.js';
 import { isPollMessage } from '../utils/polls.js';
 import { pushDmCall } from '../utils/pushDelivery.js';
 import { evictFromLiveKitRoom } from '../utils/livekitEviction.js';
+import { applySpaceVoiceGrant, applyVoiceGrants, spaceVoiceGrant, type VoiceGrant } from '../utils/livekitGrants.js';
 
 /**
  * Re-evaluate SPEAK permission for all participants in voice channels
  * belonging to the given space. On transition, updates the in-memory
  * permissionMutedUsers Set and broadcasts voice_permission_muted events.
+ * LiveKit is told what each of them may now do (utils/livekitGrants.ts):
+ * a role that lost SPEAK or STREAM loses it there too, not only in the client.
  */
 export function checkVoicePermissions(spaceId: string): void {
   for (const [roomId, room] of connectionManager.getAllRooms()) {
@@ -50,7 +54,9 @@ export function checkVoicePermissions(spaceId: string): void {
     const meta = room.metadata as SpaceRoomMeta;
     if (meta.spaceId !== spaceId) continue;
 
+    const grants = new Map<string, VoiceGrant>();
     for (const userId of room.participants) {
+      grants.set(userId, spaceVoiceGrant(userId, spaceId, roomId));
       const perms = computePermissions(userId, spaceId, roomId);
       const canSpeak = (perms & PermissionBits.SPEAK) !== 0n || (perms & PermissionBits.ADMINISTRATOR) !== 0n;
       const wasMuted = connectionManager.isPermissionMuted(spaceId, userId);
@@ -58,7 +64,8 @@ export function checkVoicePermissions(spaceId: string): void {
 
       if (shouldMute !== wasMuted) {
         connectionManager.setPermissionMuted(spaceId, userId, shouldMute);
-        connectionManager.sendToSpace(spaceId, {
+        // Told to those who can see the channel, as everything about who sits in it is.
+        connectionManager.sendToChannel(spaceId, roomId, {
           type: 'voice_permission_muted',
           userId,
           spaceId,
@@ -66,6 +73,7 @@ export function checkVoicePermissions(spaceId: string): void {
         });
       }
     }
+    applyVoiceGrants(roomId, grants);
   }
 }
 
@@ -620,8 +628,13 @@ function handleVoiceJoin(event: Record<string, unknown>, userId: string, ws: Web
     return;
   }
 
+  // Only a voice channel holds a call: one held in a text channel would be listed nowhere, and no
+  // moderator would see who is in it.
   const spaceId = getChannelSpaceId(channelId);
-  if (!spaceId) {
+  const channelType = spaceId
+    ? getDb().select({ type: schema.channels.type }).from(schema.channels).where(eq(schema.channels.id, channelId)).get()?.type
+    : undefined;
+  if (!spaceId || channelType !== 'voice') {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Channel not found' });
     rejectVoiceJoin(userId, channelId);
     return;
@@ -819,7 +832,7 @@ function handleVoiceJoin(event: Record<string, unknown>, userId: string, ws: Web
     const canSpeak = (perms & PermissionBits.SPEAK) !== 0n || (perms & PermissionBits.ADMINISTRATOR) !== 0n;
     if (!canSpeak) {
       connectionManager.setPermissionMuted(spaceId, userId, true);
-      connectionManager.sendToSpace(spaceId, {
+      connectionManager.sendToChannel(spaceId, channelId, {
         type: 'voice_permission_muted',
         userId,
         spaceId,
@@ -2034,7 +2047,7 @@ async function sendFederatedCallStart(
   const participants = members.map(m => ({
     homeUserId: m.homeUserId || m.userId,
     homeInstance: m.homeInstance || ourOrigin,
-    displayName: m.displayName || m.username,
+    displayName: (m.displayName ? withoutUnsafeCharacters(m.displayName) : '') || m.username,
   }));
 
   // A group call follows the group rules here, and the peers holding its
@@ -2074,7 +2087,7 @@ async function sendFederatedCallStart(
     for (const m of recipients) {
       const homeUserId = m.homeUserId || m.userId;
       const name = m.displayName || m.username;
-      const token = await generateFederatedCallToken(federatedId, homeUserId, name);
+      const token = await generateFederatedCallToken(dmCallRoomName(dmChannelId, federatedId), homeUserId, name);
       tokens[homeUserId] = token;
       const homeInstance = canonicalizeHomeInstance(m.homeInstance);
       if (homeInstance) memberTokens.push({ homeUserId, homeInstance, token });
@@ -2312,6 +2325,12 @@ function refusedByRoleHierarchy(spaceId: string, actorId: string, targetId: stri
   return true;
 }
 
+/**
+ * What a voice moderation request is told when its target is in no voice channel, or in one the
+ * actor may not moderate: the same, so that nobody learns from it who sits in voice anywhere.
+ */
+const NOT_MODERATED_HERE = 'Target user is not in a voice channel you can moderate';
+
 function handleVoiceSpaceMute(event: Record<string, unknown>, userId: string): void {
   const targetUserId = event.userId as string;
   const muted = event.muted === true;
@@ -2321,16 +2340,12 @@ function handleVoiceSpaceMute(event: Record<string, unknown>, userId: string): v
     return;
   }
 
-  // Find the target user's current room
+  // Find the target user's current room. One answer whether they are in no voice channel or in
+  // one the actor may not moderate: otherwise anyone could learn who sits in voice anywhere.
   const targetRoom = connectionManager.getUserRoom(targetUserId);
-  if (!targetRoom || targetRoom.room.roomType !== 'space') {
-    connectionManager.sendToUser(userId, { type: 'error', message: 'Target user is not in a voice channel' });
-    return;
-  }
-
-  const meta = targetRoom.room.metadata as SpaceRoomMeta;
-  if (!hasPermission(userId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.MUTE_MEMBERS, targetRoom.roomId)) {
-    connectionManager.sendToUser(userId, { type: 'error', message: 'Missing MUTE_MEMBERS permission' });
+  const meta = targetRoom?.room.roomType === 'space' ? targetRoom.room.metadata as SpaceRoomMeta : null;
+  if (!targetRoom || !meta || !hasPermission(userId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.MUTE_MEMBERS, targetRoom.roomId)) {
+    connectionManager.sendToUser(userId, { type: 'error', message: NOT_MODERATED_HERE });
     return;
   }
 
@@ -2363,6 +2378,8 @@ function handleVoiceSpaceMute(event: Record<string, unknown>, userId: string): v
       )
     ).run();
   }
+  // LiveKit holds the member to it, whatever their client does with the event below.
+  applySpaceVoiceGrant(targetUserId, meta.spaceId, targetRoom.roomId);
 
   // Broadcast to the space members who can see the channel
   connectionManager.sendToChannel(meta.spaceId, targetRoom.roomId, {
@@ -2384,14 +2401,9 @@ function handleVoiceSpaceDeafen(event: Record<string, unknown>, userId: string):
   }
 
   const targetRoom = connectionManager.getUserRoom(targetUserId);
-  if (!targetRoom || targetRoom.room.roomType !== 'space') {
-    connectionManager.sendToUser(userId, { type: 'error', message: 'Target user is not in a voice channel' });
-    return;
-  }
-
-  const meta = targetRoom.room.metadata as SpaceRoomMeta;
-  if (!hasPermission(userId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.DEAFEN_MEMBERS, targetRoom.roomId)) {
-    connectionManager.sendToUser(userId, { type: 'error', message: 'Missing DEAFEN_MEMBERS permission' });
+  const meta = targetRoom?.room.roomType === 'space' ? targetRoom.room.metadata as SpaceRoomMeta : null;
+  if (!targetRoom || !meta || !hasPermission(userId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.DEAFEN_MEMBERS, targetRoom.roomId)) {
+    connectionManager.sendToUser(userId, { type: 'error', message: NOT_MODERATED_HERE });
     return;
   }
 
@@ -2423,6 +2435,7 @@ function handleVoiceSpaceDeafen(event: Record<string, unknown>, userId: string):
       )
     ).run();
   }
+  applySpaceVoiceGrant(targetUserId, meta.spaceId, targetRoom.roomId);
 
   connectionManager.sendToChannel(meta.spaceId, targetRoom.roomId, {
     type: 'voice_space_deafened',
@@ -2446,19 +2459,17 @@ function handleVoiceMove(event: Record<string, unknown>, userId: string): void {
     return;
   }
 
-  // Find the target user's current room
+  // Find the target user's current room (one answer for none and for one not the actor's to moderate)
   const currentRoom = connectionManager.getUserRoom(targetUserId);
-  if (!currentRoom || currentRoom.room.roomType !== 'space') {
-    connectionManager.sendToUser(userId, { type: 'error', message: 'Target user is not in a voice channel' });
-    return;
-  }
-
-  const meta = currentRoom.room.metadata as SpaceRoomMeta;
+  const meta = currentRoom?.room.roomType === 'space' ? currentRoom.room.metadata as SpaceRoomMeta : null;
   // On both channels, and with sight of them: a moderator who cannot see a hidden voice
   // channel neither takes anyone out of it nor puts anyone into it (permissions.md).
   const moveBits = PermissionBits.VIEW_CHANNEL | PermissionBits.MOVE_MEMBERS;
-  if (!hasPermission(userId, meta.spaceId, moveBits, currentRoom.roomId)
-    || !hasPermission(userId, meta.spaceId, moveBits, targetChannelId)) {
+  if (!currentRoom || !meta || !hasPermission(userId, meta.spaceId, moveBits, currentRoom.roomId)) {
+    connectionManager.sendToUser(userId, { type: 'error', message: NOT_MODERATED_HERE });
+    return;
+  }
+  if (!hasPermission(userId, meta.spaceId, moveBits, targetChannelId)) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Missing MOVE_MEMBERS permission' });
     return;
   }
@@ -2555,16 +2566,11 @@ function handleVoiceDisconnect(event: Record<string, unknown>, userId: string): 
     return;
   }
 
-  // Find the target user's current room
+  // Find the target user's current room (one answer for none and for one not the actor's to moderate)
   const currentRoom = connectionManager.getUserRoom(targetUserId);
-  if (!currentRoom || currentRoom.room.roomType !== 'space') {
-    connectionManager.sendToUser(userId, { type: 'error', message: 'Target user is not in a voice channel' });
-    return;
-  }
-
-  const meta = currentRoom.room.metadata as SpaceRoomMeta;
-  if (!hasPermission(userId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.DISCONNECT_MEMBERS, currentRoom.roomId)) {
-    connectionManager.sendToUser(userId, { type: 'error', message: 'Missing DISCONNECT_MEMBERS permission' });
+  const meta = currentRoom?.room.roomType === 'space' ? currentRoom.room.metadata as SpaceRoomMeta : null;
+  if (!currentRoom || !meta || !hasPermission(userId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.DISCONNECT_MEMBERS, currentRoom.roomId)) {
+    connectionManager.sendToUser(userId, { type: 'error', message: NOT_MODERATED_HERE });
     return;
   }
 
