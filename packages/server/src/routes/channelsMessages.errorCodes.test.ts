@@ -96,7 +96,6 @@ function seedUser(id: string): void {
     status: 'offline',
     isAdmin: 0,
     isDeleted: 0,
-    discoverable: 1,
     homeInstance: null,
     homeUserId: null,
     createdAt: NOW,
@@ -191,6 +190,25 @@ describe('channel and message routes send error codes', () => {
 
     currentUserId = 'member';
     app = await buildApp();
+  });
+
+  describe('a moderator kept out of a private channel', () => {
+    it('does not delete in it by message id, and deletes where they can see', async () => {
+      // MANAGE_MESSAGES across the space, but SECRET is hidden from @everyone and so from them.
+      testDb.insert(schema.roles).values({
+        id: 'role-mod', spaceId: SPACE, name: 'Mods', position: 1, createdAt: NOW,
+        permissions: permissionsToString(DEFAULT_EVERYONE_PERMISSIONS | PermissionBits.MANAGE_MESSAGES),
+      }).run();
+      testDb.insert(schema.memberRoles).values({ spaceId: SPACE, userId: 'member', roleId: 'role-mod' }).run();
+      const hidden = seedMessage(SECRET, 'owner', 'staff only');
+
+      const res = await app.inject({ method: 'DELETE', url: `/api/messages/${hidden}` });
+      expect(res.statusCode).toBe(403);
+      expect((JSON.parse(res.body) as ErrorBody).code).toBe('message_delete_forbidden');
+      expect(testDb.select().from(schema.messages).all().some((m) => m.id === hidden)).toBe(true);
+
+      expect((await app.inject({ method: 'DELETE', url: `/api/messages/${ownersMessageId}` })).statusCode).toBe(200);
+    });
   });
 
   describe('messages', () => {

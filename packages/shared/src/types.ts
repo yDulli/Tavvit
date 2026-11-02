@@ -1,8 +1,24 @@
+import type { MessageCard } from './cards.js';
+import type { CommandOptionValue, CommandReply } from './bots.js';
 import type { ErrorCode, ErrorDetails } from './errors.js';
+import type { CustomEmoji } from './customEmoji.js';
+import type { GrantedUserBadgeId, MemberBadgeId, SpaceBadgeId, UserBadgeId } from './badges.js';
+import type { UserNotice } from './legal.js';
+import type { ReviewQueueCountPayload, SpaceCategory, SpaceReviewUpdatedPayload, UserSuspension } from './platform.js';
+import type { PollInfo } from './polls.js';
+import type { SpaceEvent } from './events.js';
+import type { SavedItem } from './saved.js';
+import type { ThreadInfo, ThreadSummary } from './threads.js';
+import type { ForumTag } from './forums.js';
+import type { SignupChallengeSolution } from './signupChallenge.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 export const MAX_MESSAGE_LENGTH = 4000;
+/** How many messages one channel or conversation can have pinned. */
+export const MAX_PINS_PER_CHANNEL = 50;
+/** How many messages a moderator can delete in one go. */
+export const MAX_BULK_DELETE_MESSAGES = 100;
 
 // ─── User Types ─────────────────────────────────────────────────────────────
 
@@ -16,19 +32,58 @@ export interface User {
   avatar: string | null;
   banner: string | null;
   accentColor: string | null;
+  /**
+   * The second colour of the profile theme (`#rrggbb`), paired with `accentColor`:
+   * the two make the gradient of the banner and the tint of the profile card.
+   * Absent on instances that predate it; meaningless without `accentColor`.
+   */
+  accentColorSecondary?: string | null;
   avatarColor: AvatarColor | null;
   bio: string | null;
+  /** Pronouns shown beside the name on the profile card; absent or null without. */
+  pronouns?: string | null;
+  /** Links on the profile card (a site, a social profile), in the person's order. */
+  profileLinks?: ProfileLink[];
+  /** How the profile card is laid out; absent or null for `standard`. */
+  profileLayout?: ProfileLayout | null;
+  /**
+   * The person's badges on the instance that sent the row (badges.ts): staff
+   * for an instance admin, and those its admins gave. Absent from hosts that
+   * predate badges.
+   */
+  badges?: UserBadgeId[];
   status: UserStatus;
   customStatus: string | null;
   isAdmin: boolean;
   isDeleted?: boolean;
-  discoverable?: boolean;
   profileUpdatedAt?: number;
   createdAt: number;
   homeInstance: string | null;
   homeUserId: string | null;
   replicatedInstances: ReplicatedInstance[];
+  /** Own account only: the version of the instance's terms this person agreed to. */
+  termsVersion?: number | null;
   showActivity?: boolean;
+  /** Only when it is not a person: the mark at a webhook's message comes from here, set by the server. */
+  accountKind?: Exclude<AccountKind, 'person'>;
+  /** Only on the person's own row. */
+  dmPolicy?: DmPolicy;
+  /** Only on the person's own row. */
+  friendRequestPolicy?: FriendRequestPolicy;
+  /** Self-view only: when the custom status clears by itself (epoch ms), or null when it stays until changed. */
+  customStatusExpiresAt?: number | null;
+  /** The account's address, the one waiting to replace it, and whether the first is confirmed. Own view only. */
+  email?: string | null;
+  emailVerified?: boolean;
+  pendingEmail?: string | null;
+  /** This account may not approach strangers or create spaces until its address is confirmed. Own view only. */
+  emailVerificationRequired?: boolean;
+  /** The language mail is written in; the client updates it when it differs. Own view only. */
+  locale?: string | null;
+  /** Signing in takes a second factor, and so do sensitive changes. Own view only. */
+  twoFactorEnabled?: boolean;
+  /** When this account last changed its username. Only ever sent to the account itself. */
+  usernameChangedAt?: number | null;
   /** Self-view only: this federated account's home instance was reset/lost — it now operates as a sovereign local account (detach spec). */
   federationHomeOrphaned?: boolean;
   /**
@@ -136,10 +191,28 @@ export interface Space {
    * client reads it through `ownerGroupTitle` and `hostKeepsOwnerTitle`.
    */
   ownerTitle: string | null;
+  /**
+   * Whether the member list shows the owner in a group of their own above the
+   * roles (headed by `ownerTitle`). Off, the owner is listed under their own
+   * top shown role like anyone else and marked as the owner by a crown, which
+   * comes from `ownerId`, never from a role. Absent from hosts that predate
+   * it, where the owner always had their own group (`ownerHasOwnGroup`).
+   */
+  ownerGroup?: boolean;
+  /** The space's badges: verified (from the platform's verification) and those its admins gave. */
+  badges?: SpaceBadgeId[];
   inviteCode: string | null;
+  /** Its own invite address, `/join/<this>` (shared/src/vanityInvites.ts). */
+  vanityCode?: string | null;
   visibility: SpaceVisibility;
   directoryListed: boolean;
   description: string | null;
+  /**
+   * The notification level a member of this space starts with until they
+   * choose their own (Server settings, Overview); null keeps the built-in
+   * `DEFAULT_NOTIFICATION_LEVEL`. Absent from hosts that predate it.
+   */
+  defaultNotificationLevel?: SpaceDefaultNotificationLevel | null;
   createdAt: number;
 }
 
@@ -171,6 +244,10 @@ export interface ExploreSpace {
   memberCount: number;
   createdAt: number;
   joined?: boolean;
+  /** Verified and the badges an admin gave the space (badges.ts); absent from hosts that predate badges. */
+  badges?: SpaceBadgeId[];
+  /** The category its approved Discovery listing names (platform.ts); absent from older hosts. */
+  category?: SpaceCategory | null;
 }
 
 /** Why the last directory ping did not go through. `reason` is set when `status` is 'fetch'. */
@@ -239,12 +316,33 @@ export interface Member {
   spaceId: string;
   userId: string;
   nickname: string | null;
+  /**
+   * The member's own picture, banner and about text for this space (a space
+   * profile), each null to show the account's. Set by the member only
+   * (`PATCH /api/spaces/:id/members/@me/profile`); absent from hosts that
+   * predate space profiles.
+   */
+  avatar?: string | null;
+  banner?: string | null;
+  bio?: string | null;
   joinedAt: number;
+  /**
+   * While in the future (epoch ms, the hosting server's clock) the member is
+   * timed out: they cannot post, react or join voice in the space. Null or a
+   * past time when they are not; absent from hosts that predate timeouts.
+   */
+  timedOutUntil?: number | null;
 }
 
 export interface MemberWithUser extends Member {
   user: User;
   roles: Role[];
+  /**
+   * Staff badges the member's roles give them in this space, worked out by
+   * the hosting server from the roles' bits, which members cannot see.
+   * Owning the space is not among them: that comes from `Space.ownerId`.
+   */
+  badges?: MemberBadgeId[];
 }
 
 // ─── Role Types ─────────────────────────────────────────────────────────────
@@ -257,7 +355,84 @@ export interface Role {
   position: number;
   permissions?: string; // BigInt decimal string (bitwise)
   isEveryone?: boolean; // UI hint: true when role.id === space.id
+  /** What the role is for, shown in the role list and on the profile card; null without one. */
+  description?: string | null;
+  /** A second colour (`#rrggbb`): names and role chips are drawn in a gradient from `color` to it. */
+  colorSecondary?: string | null;
+  /** An emoji drawn beside the role's name on the profile card and in the member list; null without one. */
+  icon?: string | null;
+  /**
+   * Members whose top shown role this is are listed under it in the member
+   * list. A role that is not shown still colours and ranks its members.
+   * Absent from hosts that predate it, which group by every role.
+   */
+  hoist?: boolean;
+  /** Anyone in the space may @mention the role, without MENTION_EVERYONE. */
+  mentionable?: boolean;
   createdAt: number;
+}
+
+// ─── Profile cards ──────────────────────────────────────────────────────────
+
+/** One link on a profile card. `label` defaults to the link's host. */
+export interface ProfileLink {
+  url: string;
+  label?: string | null;
+}
+
+/**
+ * The profile card's layouts: `standard` (the banner across the top, the
+ * picture over its edge), `centered` (the picture and name centred under the
+ * banner) and `compact` (no banner area; picture and name side by side).
+ */
+export const PROFILE_LAYOUTS = ['standard', 'centered', 'compact'] as const;
+export type ProfileLayout = (typeof PROFILE_LAYOUTS)[number];
+
+export function isProfileLayout(value: unknown): value is ProfileLayout {
+  return typeof value === 'string' && (PROFILE_LAYOUTS as readonly string[]).includes(value);
+}
+
+export const PROFILE_LIMITS = {
+  MAX_PRONOUNS_LENGTH: 40,
+  MAX_LINKS: 5,
+  MAX_LINK_URL_LENGTH: 200,
+  MAX_LINK_LABEL_LENGTH: 32,
+  /** A space profile's about text, as long as the account's. */
+  MAX_BIO_LENGTH: 190,
+} as const;
+
+/**
+ * Body of `PATCH /api/spaces/:id/members/@me/profile`: the member's space
+ * profile. An absent field is left as it is; null shows the account's again.
+ */
+export interface UpdateSpaceProfileRequest {
+  avatar?: string | null;
+  banner?: string | null;
+  bio?: string | null;
+}
+
+/** The limits of a role's display fields (`Role.description`, `Role.icon`). */
+export const ROLE_LIMITS = {
+  MAX_NAME_LENGTH: 100,
+  MAX_DESCRIPTION_LENGTH: 200,
+  /** An emoji, a flag or a short sequence of them. */
+  MAX_ICON_LENGTH: 16,
+} as const;
+
+/**
+ * Body of `POST /api/spaces/:id/roles` and `PATCH /api/spaces/:id/roles/:roleId`.
+ * An absent field is left as it is (on create: its default); null clears the
+ * optional display fields.
+ */
+export interface RoleWriteRequest {
+  name?: string;
+  color?: string;
+  colorSecondary?: string | null;
+  description?: string | null;
+  icon?: string | null;
+  hoist?: boolean;
+  mentionable?: boolean;
+  permissions?: string;
 }
 
 // ─── Folder Types ───────────────────────────────────────────────────────────
@@ -279,7 +454,11 @@ export type SpaceLayoutItem =
 
 // ─── Channel Types ──────────────────────────────────────────────────────────
 
-export type ChannelType = 'text' | 'voice';
+/**
+ * `announcement` is a text channel only those with the right may write in, and other spaces can
+ * follow. `forum` holds no messages of its own: each post is a thread (docs/systems/forums.md).
+ */
+export type ChannelType = 'text' | 'voice' | 'thread' | 'announcement' | 'forum';
 
 export interface ChannelCategory {
   id: string;
@@ -307,9 +486,20 @@ export interface Channel {
   position: number;
   categoryId: string | null;
   isPrivate?: boolean;
+  /**
+   * Slow mode: how many seconds a member must wait between two messages in
+   * this channel (one of `SLOWMODE_SECONDS`); 0 when off. Members who may
+   * manage messages or the channel are exempt. Absent from hosts that
+   * predate it.
+   */
+  slowmodeSeconds?: number;
   createdAt: number;
   lastMessageId?: string | null;
   myPermissions?: string; // Computed per-user BigInt decimal string
+  /** A thread's channel (threads.ts). Threads are never in a listing of a space's channels. */
+  parentChannelId?: string | null;
+  /** Its own icon in place of its type's (`glyph:<id>` or an emoji, channelIcons.ts). Absent from hosts that predate it. */
+  icon?: string | null;
 }
 
 export interface ReadState {
@@ -337,6 +527,18 @@ export const DEFAULT_NOTIFICATION_LEVEL: NotificationLevel = 'mentions';
 
 export function isNotificationLevel(value: unknown): value is NotificationLevel {
   return typeof value === 'string' && (NOTIFICATION_LEVELS as readonly string[]).includes(value);
+}
+
+/**
+ * The levels a space can set as its members' starting point
+ * (`Space.defaultNotificationLevel`). "nothing" is left out on purpose: going
+ * silent is each member's own choice, never the space's.
+ */
+export const SPACE_DEFAULT_NOTIFICATION_LEVELS = ['all', 'mentions'] as const;
+export type SpaceDefaultNotificationLevel = (typeof SPACE_DEFAULT_NOTIFICATION_LEVELS)[number];
+
+export function isSpaceDefaultNotificationLevel(value: unknown): value is SpaceDefaultNotificationLevel {
+  return typeof value === 'string' && (SPACE_DEFAULT_NOTIFICATION_LEVELS as readonly string[]).includes(value);
 }
 
 /**
@@ -408,8 +610,12 @@ export function isMuteActive(setting: Pick<NotificationSetting, 'muted' | 'muted
   return setting.mutedUntil === null || setting.mutedUntil > now;
 }
 
-/** Where a channel's effective level came from. */
-export type NotificationLevelSource = 'channel' | 'space' | 'default';
+/**
+ * Where a channel's effective level came from: the member's choice for the
+ * channel, their choice for the space, the space's default (set by its
+ * moderators), or the built-in default.
+ */
+export type NotificationLevelSource = 'channel' | 'space' | 'spaceDefault' | 'default';
 
 /**
  * What applies to one space channel: its level after inheritance, and
@@ -431,14 +637,16 @@ export interface ChannelNotificationPolicy {
 }
 
 /**
- * The inheritance rule, in one place: a channel's own level wins, else its
- * space's, else `DEFAULT_NOTIFICATION_LEVEL`. A channel is muted while its
- * own mute or its space's is in force.
+ * The inheritance rule, in one place: a channel's own level wins, else the
+ * member's level for its space, else the space's default
+ * (`Space.defaultNotificationLevel`), else `DEFAULT_NOTIFICATION_LEVEL`. A
+ * channel is muted while its own mute or its space's is in force.
  */
 export function resolveChannelNotificationPolicy(
   spaceSetting: NotificationSetting | null | undefined,
   channelSetting: NotificationSetting | null | undefined,
   now: number,
+  spaceDefault?: SpaceDefaultNotificationLevel | null,
 ): ChannelNotificationPolicy {
   let level: NotificationLevel = DEFAULT_NOTIFICATION_LEVEL;
   let levelSource: NotificationLevelSource = 'default';
@@ -448,6 +656,9 @@ export function resolveChannelNotificationPolicy(
   } else if (spaceSetting?.level) {
     level = spaceSetting.level;
     levelSource = 'space';
+  } else if (spaceDefault && isSpaceDefaultNotificationLevel(spaceDefault)) {
+    level = spaceDefault;
+    levelSource = 'spaceDefault';
   }
   const channelMuted = isMuteActive(channelSetting, now);
   const spaceMuted = isMuteActive(spaceSetting, now);
@@ -463,6 +674,188 @@ export function resolveChannelNotificationPolicy(
     suppressEveryone: spaceSetting?.suppressEveryone === true,
     suppressRoles: spaceSetting?.suppressRoles === true,
   };
+}
+
+// ─── Space Moderation ───────────────────────────────────────────────────────
+// Server settings → Moderation and Audit log, slow mode per channel and member
+// timeouts. Stored and enforced by the instance that hosts the space; a
+// federated member's client talks to that instance directly, so none of it is
+// relayed (docs/systems/spaces.md, "Moderation").
+
+/**
+ * A space's automatic message rules. They apply to messages posted or edited
+ * in its text channels; the owner, administrators and members who may manage
+ * messages or the space are exempt.
+ */
+export interface SpaceModerationSettings {
+  /**
+   * Words and phrases a message may not contain, compared without regard to
+   * case and only as whole words; a leading or trailing `*` also matches the
+   * entry inside a longer word (`*bad*`).
+   */
+  blockedWords: string[];
+  /** Refuse messages that contain a web link. */
+  blockLinks: boolean;
+  /** Refuse messages that contain an invite link to a space. */
+  blockInvites: boolean;
+  /** The most user and role mentions one message may carry; 0 sets no limit. */
+  maxMentions: number;
+  /** How old an account must be, in minutes, before it may post; 0 sets no minimum. */
+  minAccountAgeMinutes: number;
+  /** How long someone must have been a member, in minutes, before they may post; 0 sets no minimum. */
+  minMemberAgeMinutes: number;
+  /** When the rules were last changed (epoch ms); null while they are the defaults. */
+  updatedAt: number | null;
+}
+
+/** Body of `PATCH /api/spaces/:spaceId/moderation`; an absent field is left as it is. */
+export type UpdateSpaceModerationRequest = Partial<Omit<SpaceModerationSettings, 'updatedAt'>>;
+
+export const MODERATION_LIMITS = {
+  MAX_BLOCKED_WORDS: 100,
+  MAX_BLOCKED_WORD_LENGTH: 48,
+  /** `maxMentions` is 0 (off) up to this. */
+  MAX_MENTIONS_CAP: 50,
+  /** `minAccountAgeMinutes` and `minMemberAgeMinutes` are 0 (off) up to this (30 days). */
+  MAX_AGE_MINUTES: 43_200,
+  /** A timeout or audit reason. */
+  MAX_REASON_LENGTH: 512,
+  /** The shortest and longest timeout, in seconds (one minute to 28 days). */
+  MIN_TIMEOUT_SECONDS: 60,
+  MAX_TIMEOUT_SECONDS: 2_419_200,
+} as const;
+
+/** The slow mode intervals a channel can have, in seconds; 0 is off. */
+export const SLOWMODE_SECONDS = [0, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600] as const;
+export type SlowmodeSeconds = (typeof SLOWMODE_SECONDS)[number];
+
+export function isSlowmodeSeconds(value: unknown): value is SlowmodeSeconds {
+  return typeof value === 'number' && (SLOWMODE_SECONDS as readonly number[]).includes(value);
+}
+
+/** The timeout lengths the interface offers, in seconds (1 min, 5 min, 10 min, 1 h, 1 day, 1 week). */
+export const TIMEOUT_DURATIONS_SECONDS = [60, 300, 600, 3600, 86_400, 604_800] as const;
+
+/**
+ * Body of `PUT /api/spaces/:spaceId/members/:userId/timeout`. Any whole
+ * number of seconds from `MIN_TIMEOUT_SECONDS` to `MAX_TIMEOUT_SECONDS` is
+ * accepted; the server turns it into `timedOutUntil` with its own clock.
+ */
+export interface TimeoutMemberRequest {
+  durationSeconds: number;
+  reason?: string | null;
+}
+
+/** Answer of the timeout endpoints: the member as it now is. */
+export interface MemberResponse {
+  member: MemberWithUser;
+}
+
+/** Everything the audit log records, one entry per change. */
+export const AUDIT_LOG_ACTIONS = [
+  'space_update',
+  'moderation_update',
+  'invite_regenerate',
+  'invite_create',
+  'invite_revoke',
+  'messages_bulk_delete',
+  'channel_create',
+  'channel_update',
+  'channel_delete',
+  'category_create',
+  'category_update',
+  'category_delete',
+  'override_update',
+  'override_delete',
+  'role_create',
+  'role_update',
+  'role_delete',
+  'role_reorder',
+  'member_roles_update',
+  'member_kick',
+  'member_ban',
+  'member_unban',
+  'member_timeout',
+  'member_timeout_remove',
+  'message_delete',
+  'channel_messages_delete',
+  'thread_create',
+  'thread_update',
+  'thread_delete',
+  'event_create',
+  'event_update',
+  'event_delete',
+  'welcome_update',
+  'webhook_create',
+  'webhook_update',
+  'webhook_delete',
+  'forum_tags_update',
+  'channel_follow_create',
+  'channel_follow_delete',
+  'vanity_update',
+  'sound_create',
+  'sound_update',
+  'sound_delete',
+  'bot_add',
+  'message_pin',
+  'message_unpin',
+  'join_request_approve',
+  'join_request_decline',
+  'ownership_transfer',
+  'template_import',
+] as const;
+export type AuditLogAction = (typeof AUDIT_LOG_ACTIONS)[number];
+
+export function isAuditLogAction(value: unknown): value is AuditLogAction {
+  return typeof value === 'string' && (AUDIT_LOG_ACTIONS as readonly string[]).includes(value);
+}
+
+export type AuditLogTargetType = 'space' | 'channel' | 'category' | 'role' | 'member' | 'message' | 'invite' | 'join_request';
+
+export type AuditLogValue = string | number | boolean | null;
+
+/**
+ * One field an entry changed. `key` is the field's machine name (`name`,
+ * `topic`, `slowmodeSeconds`, `permissions`, `allow`, `deny`, `color`,
+ * `visibility`, `role_added`, `role_removed`, `durationSeconds`, ...);
+ * permission values are decimal strings. A field that was added has no
+ * `from`, one that was removed no `to`.
+ */
+export interface AuditLogChange {
+  key: string;
+  from?: AuditLogValue;
+  to?: AuditLogValue;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  spaceId: string;
+  /** Who made the change: a user id of the hosting instance. */
+  actorId: string;
+  action: AuditLogAction;
+  targetType: AuditLogTargetType | null;
+  targetId: string | null;
+  /** The target's name when the entry was written (a channel, a role, a member), so a deleted target still reads. */
+  targetLabel: string | null;
+  changes: AuditLogChange[] | null;
+  reason: string | null;
+  createdAt: number;
+}
+
+/** How many entries one page of the audit log holds by default, and at most. */
+export const AUDIT_LOG_PAGE_SIZE = 50;
+export const AUDIT_LOG_MAX_PAGE_SIZE = 100;
+
+/**
+ * Answer of `GET /api/spaces/:spaceId/audit-log?before&limit&action&actorId`:
+ * newest first, with the users the entries name (actors and members who were
+ * targets) so the page can show them. `nextBefore` is the cursor for the next
+ * older page, null at the end.
+ */
+export interface AuditLogResponse {
+  entries: AuditLogEntry[];
+  users: User[];
+  nextBefore: string | null;
 }
 
 // ─── Message Types ──────────────────────────────────────────────────────────
@@ -486,6 +879,25 @@ export interface Message {
    */
   mentionEveryone?: boolean;
   mentionRoleIds?: string[];
+  /** When the message was pinned to its channel, and by whom; null when it is not. */
+  pinnedAt?: number | null;
+  pinnedBy?: string | null;
+  /** What a bot or a webhook showed besides text (cards.ts). When it wrote no text, the content is their summary. */
+  cards?: MessageCard[];
+  /** A copy of a message forwarded here (routes/forward.ts). It names neither the original nor its author. */
+  forwarded?: boolean;
+}
+
+/** Where to forward a message: exactly one of them. */
+export interface ForwardMessageRequest {
+  channelId?: string;
+  dmChannelId?: string;
+}
+
+/** What pinning or unpinning a message answers with (`message_pin_changed` carries the same). */
+export interface MessagePinState {
+  pinnedAt: number | null;
+  pinnedBy: string | null;
 }
 
 export interface MessageWithUser extends Message {
@@ -494,6 +906,10 @@ export interface MessageWithUser extends Message {
   embeds: Embed[];
   reactions: Reaction[];
   replyTo?: MessageWithUser | null;
+  /** The poll this message asks; the content is its question (polls.ts). */
+  poll?: PollInfo;
+  /** The thread that grew from this message (threads.ts). */
+  thread?: ThreadSummary;
 }
 
 // ─── Reaction Types ────────────────────────────────────────────────────────
@@ -527,6 +943,10 @@ export interface Attachment {
    * optimistic unknown case, also covered by the client's onError fallback).
    */
   playable?: boolean | null;
+  /** The sender marked it: a picture or video stays covered until a reader asks. */
+  spoiler?: boolean;
+  /** A voice message: bar heights to draw its waveform (shared/src/voiceMessages.ts). */
+  voiceWaveform?: number[] | null;
   federationStatus?: string | null;
   federationMeta?: string | null;
   createdAt: number;
@@ -621,6 +1041,9 @@ export interface DmMessage {
   // Federation relay identity
   sourceMessageId?: string | null;
   sourceInstance?: string | null;
+  pinnedAt?: number | null;
+  pinnedBy?: string | null;
+  forwarded?: boolean;
 }
 
 export interface DmMessageWithUser extends DmMessage {
@@ -692,6 +1115,8 @@ export interface DmCallUndeliverableFailure {
 
 // Client → Server Events
 export type ClientEvent =
+  | { type: 'client_focus'; focused: boolean }
+  | { type: 'thread_watch'; threadId: string | null }
   | { type: 'auth'; token: string; client?: ClientKind }
   | { type: 'message_create'; channelId: string; content: string; replyToId?: string }
   | { type: 'message_edit'; messageId: string; content: string }
@@ -735,12 +1160,44 @@ export interface PresenceIdentity {
 
 // Server → Client Events
 export type ServerEvent =
+  /** Several events in one frame, for a client that said at `auth` that it reads them (`batch: true`). */
+  | { type: 'batch'; events: ServerEvent[] }
   | { type: 'channel_poke'; message: MessageWithUser }
-  | { type: 'ready'; user: User; spaces: SpaceWithChannelsAndMembers[]; dmChannels: DmChannel[]; folders?: SpaceFolder[]; spaceLayout?: SpaceLayoutItem[] | null; layoutUpdatedAt?: number; voiceStates?: Record<string, string[]>; voiceChannelElapsedSeconds?: Record<string, number>; voiceUserStates?: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }>; supportsPoke?: boolean; unreadCounts?: Record<string, number>; readStates?: ReadState[]; activeCalls?: ActiveCallInfo[]; spaceVoiceStates?: Record<string, { spaceMuted: boolean; spaceDeafened: boolean }>; userActivities?: Record<string, Activity[]>; userActivityIdentities?: Record<string, PresenceIdentity>; rejectedPeerOrigins?: string[]; awaitingApprovalPeerOrigins?: string[]; activePeerOrigins?: string[]; pendingApprovalCount?: number }
+  | { type: 'ready'; user: User; spaces: SpaceWithChannelsAndMembers[]; dmChannels: DmChannel[]; followedThreads?: ThreadInfo[]; folders?: SpaceFolder[]; spaceLayout?: SpaceLayoutItem[] | null; layoutUpdatedAt?: number; voiceStates?: Record<string, string[]>; voiceChannelElapsedSeconds?: Record<string, number>; voiceUserStates?: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }>; supportsPoke?: boolean; unreadCounts?: Record<string, number>; readStates?: ReadState[]; activeCalls?: ActiveCallInfo[]; spaceVoiceStates?: Record<string, { spaceMuted: boolean; spaceDeafened: boolean }>; userActivities?: Record<string, Activity[]>; userActivityIdentities?: Record<string, PresenceIdentity>; rejectedPeerOrigins?: string[]; awaitingApprovalPeerOrigins?: string[]; activePeerOrigins?: string[]; pendingApprovalCount?: number; reportQueueCount?: number | null; reviewQueueCount?: ReviewQueueCountPayload | null }
   | { type: 'channel_unread_count'; counts: Record<string, number> }
   | { type: 'message_created'; message: MessageWithUser }
   | { type: 'message_updated'; message: MessageWithUser }
   | { type: 'message_deleted'; messageId: string; channelId: string }
+  | ({ type: 'message_pin_changed'; channelId: string; messageId: string } & MessagePinState)
+  | { type: 'poll_updated'; channelId: string; messageId: string; poll: PollInfo }
+  | {
+    type: 'command_invoked';
+    name: string;
+    args: string;
+    /** What the person filled in, for a command that asks for options. */
+    options: Record<string, CommandOptionValue>;
+    /** Answer it with `POST /api/interactions/:id/reply` within 15 minutes. */
+    interactionId: string;
+    channelId: string;
+    spaceId: string;
+    user: User;
+  }
+  | ({ type: 'command_reply' } & CommandReply)
+  | { type: 'soundboard_play'; channelId: string; spaceId: string; soundId: string; userId: string }
+  | { type: 'space_sounds_changed'; spaceId: string }
+  | { type: 'saved_changed'; messageId: string; saved: boolean }
+  | { type: 'saved_reminder'; item: SavedItem; preview: string }
+  | { type: 'space_welcome_changed'; spaceId: string }
+  | { type: 'event_updated'; event: SpaceEvent }
+  | { type: 'event_deleted'; eventId: string; spaceId: string }
+  | { type: 'event_reminder'; eventId: string; spaceId: string; title: string; startsAt: number }
+  | { type: 'thread_updated'; parentChannelId: string; starterMessageId: string | null; thread: ThreadSummary }
+  | { type: 'thread_deleted'; threadId: string; parentChannelId: string; starterMessageId: string | null }
+  | { type: 'forum_tags_updated'; channelId: string; tags: ForumTag[] }
+  | { type: 'thread_followed'; thread: ThreadInfo }
+  | { type: 'thread_unfollowed'; threadId: string }
+  /** Many messages of one channel at once: a ban that took someone's recent messages with it. */
+  | { type: 'messages_deleted'; messageIds: string[]; channelId: string }
   | { type: 'typing'; channelId: string; userId: string; username: string }
   | ({ type: 'presence_update'; userId: string; status: string; activities?: Activity[] } & Partial<PresenceIdentity>)
   | { type: 'voice_state_update'; channelId: string; userId: string; action: 'join' | 'leave'; channelElapsedSeconds?: number }
@@ -752,6 +1209,8 @@ export type ServerEvent =
   | { type: 'dm_message_deleted'; messageId: string; dmChannelId: string }
   | { type: 'dm_typing'; dmChannelId: string; userId: string; username: string }
   | { type: 'dm_typing_stop'; dmChannelId: string; userId: string }
+  | { type: 'emoji_upserted'; emoji: CustomEmoji }
+  | { type: 'emoji_removed'; emojiId: string }
   | { type: 'reaction_added'; messageId: string; reaction: Reaction }
   | { type: 'reaction_removed'; messageId: string; userId: string; emoji: string }
   | { type: 'channel_ack'; channelId: string; messageId: string }
@@ -775,6 +1234,7 @@ export type ServerEvent =
   | { type: 'dm_member_added'; dmChannelId: string; user: User }
   | { type: 'dm_member_removed'; dmChannelId: string; userId: string }
   | { type: 'friend_removed'; userId: string }
+  | { type: 'blocks_updated'; blockedUserIds: string[] }
   | { type: 'friend_request_cancelled'; requestId: string; userId: string }
   | { type: 'friend_request_declined'; requestId: string; userId: string }
   | { type: 'friend_request_sent'; request: FriendRequest }
@@ -838,23 +1298,104 @@ export type ServerEvent =
   // The space's roles or a member's roles changed: what the receiver may see
   // or do there, and how its roles and members look, may be different now.
   // The client refetches that space's detail (docs/systems/websocket.md).
-  | { type: 'space_access_changed'; spaceId: string };
+  | { type: 'space_access_changed'; spaceId: string }
+  // Platform administration (platform.ts): to a space's owner when one of its
+  // reviews moved, to the instance's admins when the open requests changed.
+  | ({ type: 'space_review_updated' } & SpaceReviewUpdatedPayload)
+  | ({ type: 'review_queue_count' } & ReviewQueueCountPayload)
+  /** To the instance's admins: how many reports wait for a decision. */
+  | { type: 'report_queue_count'; open: number }
+  /** To everyone: the operator's details or a legal document changed, read them again. */
+  | { type: 'legal_updated' }
+  /** To one person: what the operator decided about them. */
+  | { type: 'user_notice'; notice: UserNotice }
+  | { type: 'announcements_changed' };
 
 // ─── API Request/Response Types ─────────────────────────────────────────────
 
 export interface RegisterRequest {
+  /** The answer to `GET /api/auth/challenge` (signupChallenge.ts). */
+  challenge?: SignupChallengeSolution;
   username: string;
   password: string;
   displayName?: string;
   avatarColor?: string;
   homeInstance?: string;
   homeUserId?: string;
+  /** With `homeInstance`: what their home gave them for this instance (`POST /api/auth/attach-proof`), which it will vouch for. */
+  attachProof?: string;
   inviteToken?: string;
+  /** The version of the terms the person agreed to; required once the instance has published terms. */
+  acceptedTermsVersion?: number;
+  /** The person confirmed the instance's minimum age; required together with the terms. */
+  ageConfirmed?: boolean;
+  /** Where to confirm the account and reset its password. Ignored while the instance sends no mail. */
+  email?: string;
+  /** The language mail to this account is written in. */
+  locale?: string;
 }
 
 export interface LoginRequest {
   username: string;
   password: string;
+  /** A random id this browser keeps, to tell a new device from a known one. */
+  deviceId?: string;
+}
+
+/** The sign-in's second step, with the ticket `POST /auth/login` answered `mfa_required` with. */
+export interface LoginSecondFactorRequest {
+  ticket: string;
+  /** From an authenticator app, or a recovery code. */
+  code: string;
+}
+
+export interface TwoFactorSetupResponse {
+  /** Base32, for typing into an app. Shown once. */
+  secret: string;
+  otpauthUrl: string;
+}
+
+export type SecurityEventKind =
+  | 'login'
+  | 'login_new_device'
+  | 'login_failed'
+  | 'mfa_failed'
+  | 'password_changed'
+  | 'username_changed'
+  | 'password_reset'
+  | 'email_added'
+  | 'email_changed'
+  | 'email_removed'
+  | 'two_factor_on'
+  | 'two_factor_off'
+  | 'two_factor_reset'
+  | 'recovery_regenerated'
+  | 'recovery_used'
+  | 'session_revoked'
+  | 'sessions_ended'
+  | 'sessions_ended_by_admin';
+
+export interface SecurityEventInfo {
+  id: string;
+  kind: SecurityEventKind;
+  clientLabel: string | null;
+  addressHint: string | null;
+  /** Failures from one place within a few minutes are one entry. */
+  count: number;
+  createdAt: number;
+}
+
+export interface SecurityOverview {
+  twoFactor: {
+    /** This server holds the key that 2FA needs. */
+    available: boolean;
+    enabled: boolean;
+    enabledAt: number | null;
+    recoveryCodesLeft: number;
+  };
+  passwordChangedAt: number | null;
+  sessionCount: number;
+  events: SecurityEventInfo[];
 }
 
 export interface AuthResponse {
@@ -879,15 +1420,23 @@ export interface CreateChannelRequest {
 }
 
 export interface UpdateChannelRequest {
+  /** Between `text` and `announcement` only; anything else is `400 channel_type_change_invalid`. */
+  type?: ChannelType;
   name?: string;
   /** `null` or a value that trims to nothing clears the topic. */
   topic?: string | null;
   position?: number;
   categoryId?: string | null;
+  /** `glyph:<id>` or an emoji; `null` or an empty string goes back to the type's icon. */
+  icon?: string | null;
+  /** Slow mode interval, one of `SLOWMODE_SECONDS` (0 switches it off); anything else is `400 slowmode_invalid`. */
+  slowmodeSeconds?: number;
 }
 
 export interface UpdateSpaceRequest {
   ownerTitle?: string | null;
+  /** List the owner in a group of their own above the roles (`Space.ownerGroup`). Owner only. */
+  ownerGroup?: boolean;
   name?: string;
   icon?: string;
   banner?: string;
@@ -895,21 +1444,117 @@ export interface UpdateSpaceRequest {
   visibility?: SpaceVisibility;
   directoryListed?: boolean;
   description?: string;
+  /** The members' starting notification level; null restores the built-in default. Anything else is `400 notification_level_invalid`. */
+  defaultNotificationLevel?: SpaceDefaultNotificationLevel | null;
+}
+
+/** One entry of the list of people the signed-in user has blocked. */
+export interface BlockedUser {
+  user: User;
+  /** When the block was made (epoch ms). */
+  blockedAt: number;
+}
+
+/** Who may start a conversation with someone. Conversations they already have stay open. */
+/** What an account is. Only a person signs in; the others exist because a message needs an author. */
+/** `follow` writes the copies of a followed announcement channel's posts (docs/systems/forums.md). */
+export type AccountKind = 'person' | 'webhook' | 'bot' | 'follow';
+
+export const DM_POLICIES = ['nobody', 'friends', 'friends_and_spaces', 'anyone'] as const;
+export type DmPolicy = (typeof DM_POLICIES)[number];
+export const DEFAULT_DM_POLICY: DmPolicy = 'friends_and_spaces';
+
+/** Who may send someone a friend request, and find them by name to do it. */
+export const FRIEND_REQUEST_POLICIES = ['nobody', 'shared_spaces', 'anyone'] as const;
+export type FriendRequestPolicy = (typeof FRIEND_REQUEST_POLICIES)[number];
+export const DEFAULT_FRIEND_REQUEST_POLICY: FriendRequestPolicy = 'anyone';
+
+/** Who may add to the instance's emoji library. */
+export type InstanceEmojiPolicy = 'admins' | 'everyone';
+
+/** The longest reason a moderator can give for removing someone. */
+export const MODERATION_REASON_MAX_LENGTH = 512;
+
+/** How far back a ban can take the person's messages with it, in seconds. */
+export const BAN_DELETE_MESSAGE_SECONDS = [0, 3600, 86_400, 604_800] as const;
+
+/** The ends an invite link can have, in seconds from now. */
+export const INVITE_EXPIRY_SECONDS = [1800, 3600, 21_600, 86_400, 604_800, 2_592_000] as const;
+/** The limits an invite link can have, in people let in. */
+export const INVITE_MAX_USES = [1, 5, 10, 25, 50, 100] as const;
+
+/** One link into a space, as those who manage the space see it. */
+export interface SpaceInviteLink {
+  code: string;
+  /** The link the Invite dialog hands out. */
+  standing: boolean;
+  /** Who made it; null when that account is gone. */
+  createdBy: { id: string; name: string } | null;
+  createdAt: number;
+  expiresAt: number | null;
+  maxUses: number | null;
+  uses: number;
+}
+
+export interface CreateSpaceInviteRequest {
+  /** One of `INVITE_EXPIRY_SECONDS`, or null for never. */
+  expiresInSeconds: number | null;
+  /** One of `INVITE_MAX_USES`, or null for no limit. */
+  maxUses: number | null;
+}
+
+/** One device signed in to this account. */
+export interface SessionInfo {
+  id: string;
+  /** The device asking. */
+  current: boolean;
+  /** A browser and a system ("Chrome · Windows"); null when the request did not say. */
+  clientLabel: string | null;
+  /** The address cut short ("203.0.113.0"), to tell places apart. */
+  addressHint: string | null;
+  createdAt: number;
+  lastActiveAt: number;
+}
+
+export interface SessionsResponse {
+  sessions: SessionInfo[];
+}
+
+/** Where a person's copy of their data stands. */
+export interface DataExportStatus {
+  status: 'none' | 'pending' | 'ready' | 'failed';
+  createdAt: number | null;
+  /** When the file is removed; null while there is none. */
+  expiresAt: number | null;
+  sizeBytes: number | null;
 }
 
 export interface UpdateUserRequest {
+  dmPolicy?: DmPolicy;
+  friendRequestPolicy?: FriendRequestPolicy;
+  /** Null or an empty string clears them. */
+  pronouns?: string | null;
+  /** The whole list, replacing the stored one; an empty list or null clears it. */
+  profileLinks?: ProfileLink[] | null;
+  profileLayout?: ProfileLayout | null;
   displayName?: string;
   avatar?: string;
   banner?: string;
   accentColor?: string;
+  /** The profile theme's second colour; an empty string clears it. */
+  accentColorSecondary?: string;
   avatarColor?: string;
   bio?: string;
   customStatus?: string;
+  /**
+   * How long the custom status lasts, in minutes (1 to 10080), counted from the
+   * save; null keeps it until it is changed. Meaningless without a status.
+   */
+  customStatusExpiresInMinutes?: number | null;
   status?: ChosenUserStatus;
   replicatedInstances?: ReplicatedInstance[];
   homeUserId?: string;
   profileUpdatedAt?: number;
-  discoverable?: boolean;
   showActivity?: boolean;
 }
 
@@ -922,11 +1567,17 @@ export interface UpdateMemberRequest {
 export interface CreateMessageRequest {
   content: string;
   attachments?: string[];
+  /** Those of `attachments` to show as spoilers. */
+  spoilerAttachments?: string[];
   replyToId?: string;
+  /** Bots only (cards.ts). */
+  cards?: unknown;
 }
 
 export interface UpdateMessageRequest {
   content: string;
+  /** Bots only: the cards it shows from now on, or null for none. */
+  cards?: unknown;
 }
 
 export interface JoinSpaceRequest {
@@ -985,6 +1636,8 @@ export interface CreateGroupDmRequest {
 export interface CreateDmMessageRequest {
   content?: string;
   attachments?: string[];
+  /** Those of `attachments` to show as spoilers. */
+  spoilerAttachments?: string[];
   replyToId?: string;
 }
 
@@ -1062,23 +1715,20 @@ export interface Friend {
   homeInstance: string | null;
 }
 
-export interface DiscoverUser {
+/**
+ * `GET /api/social/search`: a person found by their username (docs/systems/
+ * social.md, "Finding people"). Only what an add-friend row shows and a
+ * request or a DM needs to address them; nothing about their status, their
+ * profile text or their other accounts.
+ */
+export interface UserSearchResult {
   id: string;
   username: string;
   displayName: string | null;
   avatar: string | null;
-  banner: string | null;
   avatarColor: AvatarColor | null;
-  bio: string | null;
-  status: UserStatus;
-  customStatus: string | null;
-  createdAt: number;
   homeInstance: string | null;
   homeUserId: string | null;
-  mutualFriendCount: number;
-  mutualSpaceCount: number;
-  relationship: 'none' | 'friends' | 'outbound_pending' | 'inbound_pending';
-  requestId?: string;
 }
 
 export type FriendRequestStatus = 'pending' | 'accepted' | 'declined';
@@ -1126,14 +1776,57 @@ export interface GifResult {
 
 // ─── Instance Settings Types ────────────────────────────────────────────────
 
+/** Where this account's address stands. Mail itself is never reported as delivered, only as handed over. */
+export interface AccountEmailStatus {
+  address: string | null;
+  verified: boolean;
+  pendingAddress: string | null;
+  /** Mail to the address that is waiting for a link bounced or was complained about, so nothing more goes there. */
+  undeliverable: boolean;
+  /** How the last mail with a link fared: 'failed' and 'expired' never reached the provider. */
+  lastSend: 'queued' | 'sent' | 'failed' | 'expired' | null;
+}
+
+export interface ChangeEmailRequest {
+  address: string;
+  password: string;
+  locale?: string;
+  /** Required while the account has 2FA on. */
+  twoFactorCode?: string;
+}
+
+/** What the admin area shows about mail. Holds no address and no credential. */
+export interface AdminEmailStatus {
+  transport: 'none' | 'smtp' | 'resend';
+  from: string;
+  /** 'held': a daily or monthly limit is reached. 'blocked': the provider refuses the key or the domain. */
+  state: 'off' | 'ok' | 'held' | 'blocked';
+  heldUntil: number | null;
+  lastError: string | null;
+  queued: number;
+  today: { accepted: number; failed: number; bounced: number; complained: number; limit: number };
+  month: { accepted: number; limit: number };
+  /** Share of the last 30 days' mail, 0 to 1; a provider may pause an account above about 4 % and 0.08 %. */
+  bounceRate: number;
+  complaintRate: number;
+  webhookConfigured: boolean;
+}
+
 export interface InstanceAdminSettings {
+  /** A new account needs a verified address (docs/systems/email.md, "The gate"). */
+  emailRequired?: boolean;
   instanceName: string;
+  emojiPolicy: InstanceEmojiPolicy;
   registrationOpen: boolean;
   federatedRegistrationOpen: boolean;
   discoveryEnabled: boolean;
   gifApiKey?: string;
   gifEnabled?: boolean;
   maxUploadSizeMb: number;
+  /** What an account may keep in files, in GB; 0 means no limit (utils/accountLimits.ts on the server). */
+  storagePerAccountGb: number;
+  /** How many spaces an account may own; 0 means no limit. */
+  spacesPerAccount: number;
   federationRelayEnabled: boolean;
   federationRelayTtlDays: number;
   defaultAutoRotateIntervalDays: number;
@@ -1157,11 +1850,11 @@ export interface InstanceAdminSettings {
    */
   directoryListedSpaceCount: number;
   /**
-   * The web client's Backspace page shows the Support card, which links to
-   * the project's Ko-fi page. Hides only that card; the server does nothing
-   * else with it. Default true. Also on `InstanceInfoResponse`.
+   * The instance accent colour as `#rrggbb`, or null for the built-in violet.
+   * Validated on write (`accentColorProblem`): it must stay readable under white
+   * button text and visible on the dark panels. Also on `InstanceInfoResponse`.
    */
-  supportCardEnabled: boolean;
+  accentColor: string | null;
 }
 
 export interface InstanceStreamingLimits {
@@ -1193,10 +1886,70 @@ export interface InstanceStreamingLimits {
 
 // ─── Federation Types ──────────────────────────────────────────────────────
 
+/** One message that mentions the signed-in user, for the inbox (GET /api/users/@me/mentions). */
+export interface MentionItem {
+  spaceId: string;
+  channelId: string;
+  message: MessageWithUser;
+  /** How the message reaches the reader: by name, through a role they hold, @everyone / @here, or a word they watch. */
+  via: 'user' | 'role' | 'everyone' | 'keyword';
+  /**
+   * The names of the people the text mentions, by the id in its `<@id>` tokens, as
+   * that space shows them. The inbox reads messages of spaces whose member lists
+   * the client has not loaded. Absent from a peer on an older version.
+   */
+  mentionedNames?: Record<string, string>;
+}
+
+/**
+ * GET /api/users/@me/mentions: newest first. `nextBefore` is the `before` for
+ * the next page, or null when the archive is exhausted. It is not always the
+ * last item's id: a page can end on messages that were scanned and matched
+ * nothing, and the next page starts after those.
+ */
+export interface MentionsResponse {
+  mentions: MentionItem[];
+  nextBefore: string | null;
+}
+
+/** One installer of the current desktop release, as the server can actually serve it. */
+export interface DesktopReleaseFile {
+  /** Only Windows installers are built today (docs/systems/desktop.md, "Releases"). */
+  platform: 'windows';
+  arch: 'x64' | 'arm64';
+  /** The installer's file name, e.g. `Tavvit-1.11.0-win-x64.exe`. */
+  fileName: string;
+  /** Same-origin path the browser downloads from: `/downloads/desktop/<fileName>`. */
+  url: string;
+  /** Bytes on disk. */
+  size: number;
+  /** Base64 SHA-512 from latest.yml, the value electron-updater verifies against. */
+  sha512: string;
+}
+
+/** GET /api/desktop/release — the published desktop build, or none. */
+export interface DesktopReleaseResponse {
+  release: {
+    version: string;
+    /** ISO 8601, from latest.yml's `releaseDate`; null when the file carries none. */
+    releasedAt: string | null;
+    files: DesktopReleaseFile[];
+  } | null;
+}
+
 export interface InstanceInfoResponse {
   name: string;
   version: string;
   registrationOpen: boolean;
+  /** This instance sends mail: addresses, confirming them and "forgot password" exist. Missing on older servers. */
+  email?: boolean;
+  /** A new account has to give an address and confirm it before it may approach strangers or create spaces. */
+  emailRequired?: boolean;
+  /** This server holds what 2FA needs. Missing on older servers. */
+  twoFactor?: boolean;
+  /** Someone set up a translator for messages on this server (docs/systems/translation.md). Missing on older servers. */
+  translation?: boolean;
+  emojiPolicy: InstanceEmojiPolicy;
   federatedRegistrationOpen: boolean;
   // Persistent per-instance epoch (incarnation UUID). Minted by ensureDefaults on
   // first boot and stable across restarts; changes only on a wipe/re-provision.
@@ -1225,44 +1978,27 @@ export interface InstanceInfoResponse {
   directoryConfigured: boolean;
   directoryAvailable: boolean;
   directoryEnabled: boolean;
-  // The admin's switch for the Support card on the web client's Backspace
-  // page. It only hides that card in the web client and changes nothing the
-  // server does.
-  supportCardEnabled: boolean;
-}
 
-/**
- * What the admin Updates panel renders. Admin-only.
- *
- * `state` is deliberately three-valued. An instance with no outbound internet,
- * or one whose operator turned the lookup off, must be able to say "I do not
- * know" instead of implying it is current.
- */
-export interface InstanceUpdateStatus {
-  current: {
-    version: string;
-    /** Short git SHA baked at build time; null in dev builds. */
-    commit: string | null;
-  };
-  latest: {
-    version: string;
-    url: string;
-    /** ISO 8601, or an empty string when the release carried no date. */
-    publishedAt: string;
-  } | null;
-  state: 'up-to-date' | 'update-available' | 'unknown';
-  /** Epoch ms of the lookup this answer came from; null when none was made. */
-  checkedAt: number | null;
-  /** False when BACKSPACE_UPDATE_CHECK=false. */
-  checkEnabled: boolean;
-  /** Why `state` is unknown, when it is. Null otherwise. */
-  reason: 'disabled' | 'unreachable' | 'rate-limited' | 'unparseable' | null;
-  /**
-   * How this instance gets its image. `unknown` on installs that predate
-   * install.sh recording it, which the panel handles by showing both sets of
-   * manual commands rather than guessing.
-   */
-  channel: 'prebuilt' | 'source' | 'unknown';
+  // ── Tavvit additions ──────────────────────────────────────────────────────
+  // Optional on the wire: a client also reads this document from other
+  // instances it connects to (older Backspace servers), and those never send
+  // these fields. Each field below says what ABSENT means.
+
+  // The operator enabled server-to-server federation (FEDERATION_ENABLED).
+  // Absent means the server predates the switch, i.e. federation is available.
+  federationEnabled?: boolean;
+  // No local account exists yet and registration is closed, so nobody can
+  // sign in or register: the first administrator has to be created from the
+  // server with the `tavvit-admin` CLI. The login page shows how. Absent: false.
+  setupRequired?: boolean;
+  // The operator named where the source of THIS (modified) build is published
+  // (TAVVIT_SOURCE_URL). While false, `sourceCodeUrl` is only the upstream
+  // fallback and the AGPL § 13 offer is incomplete. Absent: true (an unmodified
+  // upstream server's own URL is its source).
+  sourceCodeConfigured?: boolean;
+  // The instance accent colour as `#rrggbb`, or null for the built-in violet.
+  // Absent: null.
+  accentColor?: string | null;
 }
 
 export interface VerifyPasswordRequest {
@@ -1276,6 +2012,15 @@ export interface VerifyPasswordResponse {
 export interface ChangePasswordRequest {
   currentPassword?: string;  // Required on home, optional for federated users
   newPassword: string;
+  /** Required while the account has 2FA on. */
+  twoFactorCode?: string;
+}
+
+export interface ChangeUsernameRequest {
+  username: string;
+  password: string;
+  /** Required while the account has 2FA on. */
+  twoFactorCode?: string;
 }
 
 export interface ChangePasswordResponse {
@@ -1285,6 +2030,8 @@ export interface ChangePasswordResponse {
 export interface DeleteAccountRequest {
   password: string;
   username: string;  // Must match — confirmation safeguard
+  /** Required while the account has 2FA on. */
+  twoFactorCode?: string;
 }
 
 // ─── Per-Remote Federation Credentials ───────────────────────────────────
@@ -1379,6 +2126,10 @@ export interface AdminUser {
   isDeleted: boolean;
   homeInstance: string | null;
   createdAt: number;
+  /** The suspension standing now (platform.ts); null when there is none. */
+  suspension: UserSuspension | null;
+  /** The badges an admin gave the account. */
+  grantedBadges: GrantedUserBadgeId[];
 }
 
 export interface AdminUserListResponse {
@@ -1409,7 +2160,8 @@ export interface FederationRelayEvent {
     | 'dm_typing_start' | 'dm_typing_stop'
     | 'profile_update' | 'presence_update'
     | 'read_state_update'
-    | 'dm_close' | 'dm_reopen';
+    | 'dm_close' | 'dm_reopen'
+    | 'pin_set';
   contextType?: 'dm' | 'friend' | 'profile';
   dmChannelId?: string;
   messageId: string;
@@ -1442,10 +2194,14 @@ export interface FederationRelayEvent {
     mentions?: FederationMentionRef[];
     editedAt: number | null;
     createdAt: number;
+    /** A copy of a message forwarded here. Optional: absent from older senders. */
+    forwarded?: boolean;
     attachments?: FederationRelayAttachment[];
   };
   reactions?: FederationRelayReaction[];
   reaction?: FederationRelayReaction;
+  /** `pin_set`: whether a conversation's message is pinned now, and who changed it. */
+  pin?: FederationRelayPin;
   /**
    * `update` / `delete`: the message being changed and who is changing it.
    * Optional: older senders omit it and are matched by `messageId` alone. See
@@ -1677,6 +2433,17 @@ export interface FederationRelayReaction {
   createdAt: number;
 }
 
+export interface FederationRelayPin {
+  messageId: string;
+  messageHomeInstance?: string;
+  userId: string;
+  homeUserId: string;
+  homeInstance: string;
+  pinned: boolean;
+  /** When it changed, on the sender's clock. An older state does not replace a newer one. */
+  at: number;
+}
+
 export interface FederationRelayAttachment {
   id: string;
   filename: string;
@@ -1689,6 +2456,8 @@ export interface FederationRelayAttachment {
   // Web-playability computed by the origin instance (see Attachment.playable).
   // Propagated so the receiving instance need not re-probe the codec.
   playable?: boolean | null;
+  spoiler?: boolean;
+  voiceWaveform?: number[];
   thumbnailFilename?: string;
   sourceUrl: string;
 }
@@ -2060,34 +2829,6 @@ export interface CheckInviteInvalidResponse {
 export type CheckInviteResponse = CheckInviteValidResponse | CheckInviteInvalidResponse;
 
 export type ClientKind = 'web' | 'desktop' | 'mobile';
-
-/** Schema 1 of the opt-in daily instance report. See docs/systems/telemetry.md. */
-export interface TelemetryPayload {
-  schema: 1;
-  instance: string;
-  day: string;
-  build: { version: string; commit: string | null; modified: boolean };
-  users: { registered: number; active1d: number; active7d: number; active30d: number };
-  clients: { web: number; desktop: number; mobile: number };
-  content: { spaces: number; channels: number; messages: number; messages7d: number; storageMiB: number };
-  features: { voice: boolean; federation: boolean; peers: number; registrationOpen: boolean };
-  runtime: { install: 'prebuilt' | 'source' | null; os: string; arch: string; node: number };
-  installedAt: string;
-}
-
-export interface TelemetryStatus {
-  /** null = never asked. */
-  enabled: boolean | null;
-  lastDay: string | null;
-  lastError: { day: string; status: number } | null;
-  /** The random telemetry id, minted on the first enable and kept through off; null until then. */
-  id: string | null;
-  /**
-   * Whether an admin should be asked now: always while never answered, never
-   * after a yes, and after a no again from the next minor release on.
-   */
-  askDue: boolean;
-}
 
 export type { DmSystemEvent } from './dmSystemEvents.js';
 export type { ChannelSystemEvent } from './channelSystemEvents.js';

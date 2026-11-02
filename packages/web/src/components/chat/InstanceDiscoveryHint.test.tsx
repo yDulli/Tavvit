@@ -19,8 +19,7 @@ const ADMIN_TEXT = 'Space discovery is off on this instance. Spaces here are joi
 const ENABLE_LABEL = 'Turn on space discovery';
 const NOT_LISTED_TEXT = 'No space here is listed in the public directory.';
 const LIST_LABEL = 'List them';
-// The two voices of the browse row. A member is told whose choice it is,
-// because they cannot act on it and an unexplained absence reads as a fault.
+// The sentences a member used to be shown; kept only to assert they never appear.
 const BROWSE_OFF_MEMBER = 'Spaces from other instances are not shown here because your instance administrator turned that off.';
 const BROWSE_OFF_TEXT = 'Spaces from other instances are not shown here.';
 const BROWSE_LABEL = 'Show global spaces in Explore';
@@ -174,12 +173,13 @@ describe('InstanceDiscoveryHint', () => {
     expect(screen.getByRole('button', { name: 'Turn on space discovery' })).toBeInTheDocument();
   });
 
-  it('tells a member why Explore is empty, without an action', () => {
+  it('says nothing to a member about discovery being off: it is the administrator\'s setting', () => {
     seed({ isAdmin: false, streamingLimits: DISCOVERY_OFF });
-    render(<InstanceDiscoveryHint directoryConfigured directoryAvailable onDiscoveryEnabled={onDiscoveryEnabled} onBrowseEnabled={onBrowseEnabled} />);
+    const { container } = render(<InstanceDiscoveryHint directoryConfigured directoryAvailable onDiscoveryEnabled={onDiscoveryEnabled} onBrowseEnabled={onBrowseEnabled} />);
 
-    expect(screen.getByText(MEMBER_TEXT)).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText(MEMBER_TEXT)).not.toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_TEXT)).not.toBeInTheDocument();
   });
 
   it('names the reason to an admin and offers the switch', () => {
@@ -380,15 +380,14 @@ describe('InstanceDiscoveryHint', () => {
    * broken rather than configured.
    *
    * That setting lives on `InstanceAdminSettings`, which only an admin may
-   * read, so a member surface cannot ask for it. What both roles may read is
-   * its effect: `directoryAvailable` on the public `GET /api/instance/info`,
-   * which is the endpoint and the switch together. With `directoryConfigured`
-   * true, an unavailable directory can only be the switch, and that pair is
-   * what these two rows are derived from.
+   * read. What both roles can read is its effect: `directoryAvailable` on the
+   * public `GET /api/instance/info`. With `directoryConfigured` true, an
+   * unavailable directory can only be the switch, so the admin's row is
+   * derived from that pair. A member is shown no row for it.
    */
-  it('tells a member that spaces from other instances are not shown, without an action', () => {
+  it('says nothing to a member about spaces from other instances being hidden', () => {
     seed({ isAdmin: false, streamingLimits: NOT_LISTED });
-    render(
+    const { container } = render(
       <InstanceDiscoveryHint
         directoryConfigured
         directoryAvailable={false}
@@ -397,32 +396,32 @@ describe('InstanceDiscoveryHint', () => {
       />,
     );
 
-    expect(screen.getByText(BROWSE_OFF_MEMBER)).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText(BROWSE_OFF_MEMBER)).not.toBeInTheDocument();
+    expect(screen.queryByText(BROWSE_OFF_TEXT)).not.toBeInTheDocument();
   });
 
   /*
-   * A member cannot act on any of this, so every member row has to say that
-   * the state is a choice their administrator made. Without that, an absent
-   * Outer Space reads as a fault or an outage, and the person who could
-   * explain it is not on screen. The rule is asserted on the sentence rather
-   * than on the key, so a reworded string that drops the administrator fails
-   * here.
+   * No instance notice reaches a member, whatever the combination: neither
+   * the admin's sentence, nor an old member-voice one that names the
+   * administrator.
    */
-  it('tells the member whose choice it is, not just that it is so', () => {
-    seed({ isAdmin: false, streamingLimits: NOT_LISTED });
-    render(
-      <InstanceDiscoveryHint
-        directoryConfigured
-        directoryAvailable={false}
-        onDiscoveryEnabled={onDiscoveryEnabled}
-        onBrowseEnabled={onBrowseEnabled}
-      />,
-    );
-
-    expect(screen.getByText(/your instance administrator/i)).toBeInTheDocument();
-    // And the bare fact, the admin's voice, is not what a member is shown.
-    expect(screen.queryByText(BROWSE_OFF_TEXT)).not.toBeInTheDocument();
+  it('shows a member no row at all, in any combination of the settings', () => {
+    for (const streamingLimits of [DISCOVERY_OFF, NOT_LISTED, LISTED]) {
+      for (const directoryAvailable of [true, false, null]) {
+        seed({ isAdmin: false, streamingLimits });
+        const { container, unmount } = render(
+          <InstanceDiscoveryHint
+            directoryConfigured
+            directoryAvailable={directoryAvailable}
+            onDiscoveryEnabled={onDiscoveryEnabled}
+            onBrowseEnabled={onBrowseEnabled}
+          />,
+        );
+        expect(container).toBeEmptyDOMElement();
+        unmount();
+      }
+    }
   });
 
   it('names the same fact to an admin and offers the setting back on', () => {
@@ -466,17 +465,25 @@ describe('InstanceDiscoveryHint', () => {
     }
   });
 
+  /*
+   * Asked of an admin as well, because a member is shown no row whatever this
+   * answer is: only the admin's row can be raised by reading null as false.
+   * The instance is listed, so the browse row is the only one that could appear.
+   */
   it('says nothing about browsing before the instance info arrives: unknown is not a fact', () => {
-    seed({ isAdmin: false, streamingLimits: NOT_LISTED });
-    const { container } = render(
-      <InstanceDiscoveryHint
-        directoryConfigured
-        directoryAvailable={null}
-        onDiscoveryEnabled={onDiscoveryEnabled}
-        onBrowseEnabled={onBrowseEnabled}
-      />,
-    );
-    expect(container).toBeEmptyDOMElement();
+    for (const isAdmin of [true, false]) {
+      seed({ isAdmin, streamingLimits: LISTED });
+      const { container, unmount } = render(
+        <InstanceDiscoveryHint
+          directoryConfigured
+          directoryAvailable={null}
+          onDiscoveryEnabled={onDiscoveryEnabled}
+          onBrowseEnabled={onBrowseEnabled}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
+      unmount();
+    }
   });
 
   it('turning browsing on saves the flag and the row goes once the page has re-read the info', async () => {
@@ -625,9 +632,7 @@ describe('InstanceDiscoveryHint', () => {
       expect(screen.getByRole('button', { name: BROWSE_LABEL })).toBeInTheDocument();
     });
 
-    it('both member rows at once, with nothing to click', () => {
-      // A member is never told about the listing: they cannot change it, and
-      // it is not a fact about the page they came to browse.
+    it('a member gets no rows even when all three facts apply', () => {
       seed({ isAdmin: false, streamingLimits: DISCOVERY_OFF });
       const { container } = render(
         <InstanceDiscoveryHint
@@ -638,10 +643,7 @@ describe('InstanceDiscoveryHint', () => {
         />,
       );
 
-      // Both in the member's voice: each names the administrator, because
-      // neither is something this reader can change.
-      expect(rowTexts(container)).toEqual([MEMBER_TEXT, BROWSE_OFF_MEMBER]);
-      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+      expect(container).toBeEmptyDOMElement();
     });
 
     it('one strip, not a card each: the rows share a frame', () => {
@@ -655,9 +657,11 @@ describe('InstanceDiscoveryHint', () => {
         />,
       );
 
-      // Three facts above the spaces the page is for: one border, and the
-      // warning row carries its tone in the text rather than in a fill.
-      expect(container.querySelectorAll('.border').length).toBe(1);
+      // Three facts above the spaces the page is for: one framed card, no row
+      // drawing a box of its own with a plain border either, and the warning
+      // row carries its tone in the text rather than in a fill.
+      expect(container.querySelectorAll('.surface-card').length).toBe(1);
+      expect(container.querySelectorAll('.border').length).toBe(0);
       expect(container.querySelector('.bg-accent-amber\\/10')).toBeNull();
       expect(container.querySelector('p.text-accent-amber')?.textContent).toBe(ADMIN_TEXT);
     });
@@ -700,14 +704,14 @@ describe('InstanceDiscoveryHint', () => {
    */
   describe('the confirmations in front of the two directory actions', () => {
     const DISCLOSURE = "For each listed space this makes public: its name, description, icon, banner, member count and this instance's address. People browsing the directory load the icon and banner from this instance.";
-    const LIST_OPT_IN = 'Only spaces whose owners turn listing on are sent, so this switch lists no space on its own.';
+    const LIST_OPT_IN = 'Only spaces whose listing the administrators approved and whose owners opt in to the directory are sent, so this switch lists no space on its own.';
     // The extra first line the dialog takes when the write also turns on
     // local discovery.
     const RUNG_INTRO = 'This allows global listing for the whole instance: spaces here become discoverable in Explore, and the instance starts reporting itself to the public directory.';
-    const LIST_OFF = 'To stop listing later: Settings, Instance, General, the space discovery choice.';
+    const LIST_OFF = 'To stop listing later: Admin console, General, the space discovery choice.';
     const BROWSE_LOADS = "People here see spaces from other instances in Outer Space. Their browsers load those spaces' icons and banners from the instances that own them.";
     const BROWSE_EXPOSURE = "Those instances see the IP address of every browser that loads one, and this instance's administrator does not control them.";
-    const BROWSE_OFF_WHERE = 'To stop showing them later: Settings, Instance, General, the switch for global spaces in Explore.';
+    const BROWSE_OFF_WHERE = 'To stop showing them later: Admin console, General, the switch for global spaces in Explore.';
 
     it('the list action explains itself instead of writing anything', async () => {
       seed({ isAdmin: true, streamingLimits: NOT_LISTED });

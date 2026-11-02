@@ -16,7 +16,7 @@ function overlayOf(heading: HTMLElement): HTMLElement {
 }
 
 function backdropOf(overlay: HTMLElement): HTMLElement {
-  const backdrop = overlay.querySelector(':scope > .bg-black\\/50');
+  const backdrop = overlay.querySelector(':scope > .modal-scrim');
   if (!(backdrop instanceof HTMLElement)) throw new Error('dialog has no backdrop');
   return backdrop;
 }
@@ -75,6 +75,31 @@ describe('Modal', () => {
     );
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes only the dialog in front on Escape, then the one behind it', () => {
+    const outerClose = vi.fn();
+    function Outer() {
+      const [innerOpen, setInnerOpen] = useState(false);
+      return (
+        <Modal isOpen onClose={outerClose} title="Outer">
+          <button type="button" onClick={() => setInnerOpen(true)}>Open inner</button>
+          <Modal isOpen={innerOpen} onClose={() => setInnerOpen(false)} title="Inner">
+            <p>Inner body</p>
+          </Modal>
+        </Modal>
+      );
+    }
+    render(<Outer />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open inner' }));
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('heading', { name: 'Inner' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Outer' })).toBeInTheDocument();
+    expect(outerClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(outerClose).toHaveBeenCalledTimes(1);
   });
 
   it('keeps focus on a field inside the portaled dialog', () => {

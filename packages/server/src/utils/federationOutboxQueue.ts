@@ -82,6 +82,17 @@ const reactionRule: OutboxEventRule = {
   refusalEndsQueue: false,
 };
 
+/** Whether one message is pinned: each change sets the whole state, so a newer one replaces what is queued. */
+const pinRule: OutboxEventRule = {
+  family: 'state',
+  queueKey: (entityId, _contextId, payload) => {
+    const messageId = payloadString(payload, 'pin', 'messageId');
+    const home = payloadString(payload, 'pin', 'messageHomeInstance');
+    return messageId && home ? `pin:${home}:${messageId}` : `pin:${entityId}`;
+  },
+  refusalEndsQueue: false,
+};
+
 /** Whether one user has one conversation closed: close and reopen share the queue. */
 const dmOpenStateRule: OutboxEventRule = {
   family: 'state',
@@ -116,6 +127,7 @@ const OUTBOX_EVENT_RULES: Record<OutboxEventType, OutboxEventRule> = {
   delete: messageRule,
   reaction_add: reactionRule,
   reaction_remove: reactionRule,
+  pin_set: pinRule,
   presence_update: {
     family: 'state',
     queueKey: (entityId) => `presence:${entityId}`,

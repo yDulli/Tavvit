@@ -1,4 +1,5 @@
-import { sqliteTable, text, integer, primaryKey, foreignKey, real, unique, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import type { AccountKind } from '@backspace/shared';
+import { sqliteTable, text, integer, primaryKey, foreignKey, real, unique, index, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 export const users = sqliteTable('users', {
@@ -18,19 +19,73 @@ export const users = sqliteTable('users', {
    */
   chosenStatus: text('chosen_status').notNull().default('online'),
   customStatus: text('custom_status'),
+  /**
+   * When the custom status clears by itself (epoch ms), or null to keep it until
+   * the user changes it. Set from a duration chosen when the status is saved;
+   * the sweeper in utils/customStatusExpiry.ts clears it and tells observers.
+   */
+  customStatusExpiresAt: integer('custom_status_expires_at'),
   isAdmin: integer('is_admin').default(0),
   homeInstance: text('home_instance'),
   homeUserId: text('home_user_id'),
   replicatedInstances: text('replicated_instances').default('[]'),
   banner: text('banner'),
   accentColor: text('accent_color'),
+  /** The profile theme's second colour (`#rrggbb`); see User.accentColorSecondary. */
+  accentColorSecondary: text('accent_color_secondary'),
   avatarColor: text('avatar_color'),
   bio: text('bio'),
+  /** Pronouns shown on the profile card; null without (User.pronouns). */
+  pronouns: text('pronouns'),
+  /** JSON array of ProfileLink ({ url, label }), at most PROFILE_LIMITS.MAX_LINKS; null without. */
+  profileLinks: text('profile_links'),
+  /** The profile card's layout (ProfileLayout); null for the standard one. */
+  profileLayout: text('profile_layout'),
+  /**
+   * JSON array of the badges an instance admin gave the person
+   * (GrantedUserBadgeId, docs/systems/badges.md); null without. Staff is not
+   * stored: it comes from is_admin.
+   */
+  badges: text('badges'),
+  /**
+   * An instance admin's suspension of the account (docs/systems/admin.md,
+   * "Suspensions"). Suspended while `suspended_at` is set and `suspended_until`
+   * is null (until lifted) or in the future: no sign-in, no API, no socket.
+   * Lifting clears all three; the platform audit log keeps the history.
+   */
+  suspendedAt: integer('suspended_at'),
+  /** Its own limit on files, set by an admin; 0 means none. Null: the instance's applies. */
+  storageLimitBytes: integer('storage_limit_bytes'),
+  suspendedUntil: integer('suspended_until'),
+  suspensionReason: text('suspension_reason'),
+  /** The version of the instance's terms this person agreed to, and when (docs/systems/legal.md). */
+  termsVersion: integer('terms_version'),
+  termsAcceptedAt: integer('terms_accepted_at'),
   isDeleted: integer('is_deleted').default(0),
-  discoverable: integer('discoverable').default(1),
   profileUpdatedAt: integer('profile_updated_at'),
   passwordChangedAt: integer('password_changed_at'),
+  /** When this account last changed its username (docs/systems/auth.md, "Changing a username"). */
+  usernameChangedAt: integer('username_changed_at'),
+  /**
+   * The account's address (docs/systems/email.md). Lower case. Verified when
+   * `email_verified_at` is set; only then does it open anything. Local accounts only:
+   * a replicated row has none, and it is never relayed.
+   */
+  email: text('email'),
+  emailVerifiedAt: integer('email_verified_at'),
+  /** A new address waiting for its link; the old one stays in force until then. */
+  pendingEmail: text('pending_email'),
+  /** The language mail to this account is written in (SupportedLanguage); null until the client said. */
+  locale: text('locale'),
+  /** Since when signing in takes a second factor. The secret itself is in `two_factor_secrets`. */
+  twoFactorEnabledAt: integer('two_factor_enabled_at'),
   showActivity: integer('show_activity').notNull().default(1),
+  /** Who may start a conversation with this person (DmPolicy, utils/contactPolicy.ts). */
+  /** `person` signs in. A `webhook` (or later `bot`) account is left out of everything that lists people. */
+  accountKind: text('account_kind').$type<AccountKind>().notNull().default('person'),
+  dmPolicy: text('dm_policy').notNull().default('friends_and_spaces'),
+  /** Who may send this person a friend request (FriendRequestPolicy). */
+  friendRequestPolicy: text('friend_request_policy').notNull().default('anyone'),
   federationRegistryUpdatedAt: integer('federation_registry_updated_at').default(0),
   federationHealPending: integer('federation_heal_pending').default(0),
   federationHomeOrphaned: integer('federation_home_orphaned').default(0),
@@ -46,10 +101,6 @@ export const users = sqliteTable('users', {
    */
   detachedHomeInstance: text('detached_home_instance'),
   detachedHomeUserId: text('detached_home_user_id'),
-  /** UTC day (YYYY-MM-DD) of the last authenticated WebSocket activity; written at most once per day. */
-  lastActiveDay: text('last_active_day'),
-  /** 'web' | 'desktop' | 'mobile', from the client's auth message. */
-  lastClient: text('last_client'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   /**
@@ -62,6 +113,8 @@ export const users = sqliteTable('users', {
   homeUserIdx: index('idx_users_home_user_id').on(table.homeUserId),
   /** `resolveRelayActor` matches a former (detached) identity in the same query as `home_user_id`. */
   detachedHomeUserIdx: index('idx_users_detached_home_user_id').on(table.detachedHomeUserId),
+  /** Unique among verified addresses only, so typing someone's address neither claims it nor reveals it. */
+  verifiedEmailIdx: uniqueIndex('idx_users_verified_email').on(table.email).where(sql`email_verified_at IS NOT NULL`),
 }));
 
 export const spaces = sqliteTable('spaces', {
@@ -72,10 +125,54 @@ export const spaces = sqliteTable('spaces', {
   avatarColor: text('avatar_color'),
   ownerId: text('owner_id').notNull().references(() => users.id),
   ownerTitle: text('owner_title'),
+  /**
+   * 1: the member list shows the owner in a group of their own (Space.ownerGroup).
+   * Migration 0040 set it for every space that had named that group, so those
+   * keep the list they chose; 0 lists the owner under their own roles.
+   */
+  ownerGroup: integer('owner_group').notNull().default(0),
   inviteCode: text('invite_code').unique(),
+  /** Its own invite address, which also has a row in `space_invites` (shared/src/vanityInvites.ts). */
+  vanityCode: text('vanity_code').unique(),
   visibility: text('visibility').default('private'),
   directoryListed: integer('directory_listed').notNull().default(0),
   description: text('description'),
+  /**
+   * JSON array of the badges an instance admin gave the space
+   * (GrantedSpaceBadgeId); null without. Verified is not stored here: it comes
+   * from `verification_status`.
+   */
+  badges: text('badges'),
+  /**
+   * The platform's verification of the space (docs/systems/admin.md,
+   * "Verification"): null when never requested, else 'pending',
+   * 'needs_info', 'verified', 'rejected' or 'revoked'. The one status field;
+   * the request is in space_verification_requests, every decision in
+   * space_review_events.
+   */
+  verificationStatus: text('verification_status'),
+  /**
+   * The platform's approval of the space's Discovery listing (docs/systems/
+   * admin.md, "Discovery approval"): null when never submitted, else
+   * 'pending', 'changes_requested', 'approved', 'rejected' or 'withdrawn'.
+   * Only 'approved' lists the space; nothing an owner sets does.
+   */
+  discoveryStatus: text('discovery_status'),
+  /**
+   * The notification level a member starts with until they choose their own
+   * ('all' | 'mentions'); NULL keeps the built-in default. Read by the
+   * clients only (`resolveChannelNotificationPolicy`).
+   */
+  defaultNotificationLevel: text('default_notification_level'),
+  /**
+   * What the space says to someone new (shared/src/welcome.ts). With `rules_required_since` set,
+   * a member who joined after that has to agree to `rules_text` before they can take part.
+   * The channels are a JSON array of ids.
+   */
+  welcomeText: text('welcome_text'),
+  rulesText: text('rules_text'),
+  rulesRequiredSince: integer('rules_required_since'),
+  welcomeChannelIds: text('welcome_channel_ids'),
   createdAt: integer('created_at').notNull(),
 });
 
@@ -83,7 +180,19 @@ export const spaceMembers = sqliteTable('space_members', {
   spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   nickname: text('nickname'),
+  /** The member's own picture, banner and about text for this space; null falls back to the account's (Member.avatar). */
+  avatar: text('avatar'),
+  banner: text('banner'),
+  bio: text('bio'),
   joinedAt: integer('joined_at').notNull(),
+  /**
+   * While in the future (epoch ms, this server's clock) the member is timed
+   * out: no posting, reacting or joining voice in the space. NULL or a past
+   * time when not. See utils/spaceModeration.ts.
+   */
+  timedOutUntil: integer('timed_out_until'),
+  /** When they agreed to the space's rules; null when they have not. */
+  rulesAcceptedAt: integer('rules_accepted_at'),
 }, (table) => ({
   pk: primaryKey({ columns: [table.spaceId, table.userId] }),
   userIdx: index('idx_space_members_user_id').on(table.userId),
@@ -107,9 +216,102 @@ export const channels = sqliteTable('channels', {
   topic: text('topic'),
   position: integer('position').default(0),
   categoryId: text('category_id'),
+  /** Slow mode: seconds a member waits between two messages here (one of SLOWMODE_SECONDS); 0 is off. */
+  slowmodeSeconds: integer('slowmode_seconds').notNull().default(0),
+  /** Its own icon in place of its type's: `glyph:<id>` or an emoji (shared/src/channelIcons.ts). */
+  icon: text('icon'),
+  /**
+   * A thread (`type = 'thread'`, docs/systems/threads.md): the channel it is in, whose rights
+   * it has, the message it grew from (null once that is gone) and who started it. A listing
+   * of a space's channels leaves threads out.
+   */
+  parentChannelId: text('parent_channel_id').references((): AnySQLiteColumn => channels.id, { onDelete: 'cascade' }),
+  threadStarterMessageId: text('thread_starter_message_id').references((): AnySQLiteColumn => messages.id, { onDelete: 'set null' }),
+  threadCreatedBy: text('thread_created_by'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   spaceIdx: index('idx_channels_space_id').on(table.spaceId),
+  parentIdx: index('idx_channels_parent').on(table.parentChannelId),
+  starterIdx: uniqueIndex('idx_channels_thread_starter').on(table.threadStarterMessageId).where(sql`thread_starter_message_id IS NOT NULL`),
+}));
+
+/** Who follows a thread: their alerts and unread count come from it. Going from the space takes this too. */
+export const threadMembers = sqliteTable('thread_members', {
+  threadId: text('thread_id').notNull().references(() => channels.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  joinedAt: integer('joined_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.threadId, table.userId] }),
+  userIdx: index('idx_thread_members_user').on(table.userId),
+}));
+
+/**
+ * The tags of a forum (docs/systems/forums.md): what a post can be sorted under. `color` is a
+ * name of the accent family (`FORUM_TAG_COLORS`).
+ */
+export const forumTags = sqliteTable('forum_tags', {
+  id: text('id').primaryKey(),
+  channelId: text('channel_id').notNull().references(() => channels.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  color: text('color'),
+  position: integer('position').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  channelIdx: index('idx_forum_tags_channel').on(table.channelId),
+}));
+
+/** Which tags a post carries. A post goes with its tags, and a tag from all its posts. */
+export const forumPostTags = sqliteTable('forum_post_tags', {
+  threadId: text('thread_id').notNull().references(() => channels.id, { onDelete: 'cascade' }),
+  tagId: text('tag_id').notNull().references(() => forumTags.id, { onDelete: 'cascade' }),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.threadId, table.tagId] }),
+  tagIdx: index('idx_forum_post_tags_tag').on(table.tagId),
+}));
+
+/**
+ * An announcement channel another space follows: what is posted there arrives as a copy in the
+ * target, written by `account_id` (`users.account_kind = 'follow'`). Either channel going takes
+ * this with it. When the person who set it up goes, it keeps working: it belongs to the channel.
+ */
+export const channelFollows = sqliteTable('channel_follows', {
+  id: text('id').primaryKey(),
+  sourceChannelId: text('source_channel_id').notNull().references(() => channels.id, { onDelete: 'cascade' }),
+  targetChannelId: text('target_channel_id').notNull().references(() => channels.id, { onDelete: 'cascade' }),
+  accountId: text('account_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdBy: text('created_by'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  pairIdx: uniqueIndex('idx_channel_follows_pair').on(table.sourceChannelId, table.targetChannelId),
+  targetIdx: index('idx_channel_follows_target').on(table.targetChannelId),
+}));
+
+/** Own invite addresses an administrator took away: nobody can take them again. */
+/** Names given up a short while ago: out of reach until `until`, so nobody can pose as who had them. */
+export const retiredUsernames = sqliteTable('retired_usernames', {
+  username: text('username').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  until: integer('until').notNull(),
+});
+
+export const blockedVanityCodes = sqliteTable('blocked_vanity_codes', {
+  code: text('code').primaryKey(),
+  createdAt: integer('created_at').notNull(),
+});
+
+/**
+ * When a member last posted in a slow mode channel: one row per channel and
+ * member, written with each message accepted while the channel has slow mode
+ * on, so the wait survives restarts and deleting the message. The channel's
+ * rows are dropped when its slow mode is switched off. See
+ * utils/spaceModeration.ts.
+ */
+export const channelSlowmodePosts = sqliteTable('channel_slowmode_posts', {
+  channelId: text('channel_id').notNull().references(() => channels.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  postedAt: integer('posted_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.channelId, table.userId] }),
 }));
 
 export const messages = sqliteTable('messages', {
@@ -120,6 +322,13 @@ export const messages = sqliteTable('messages', {
   content: text('content'),
   type: text('type', { enum: ['user', 'system'] }).notNull().default('user'),
   editedAt: integer('edited_at'),
+  /** When the message was pinned to its channel, and by whom; null when it is not (routes/pins.ts). */
+  pinnedAt: integer('pinned_at'),
+  pinnedBy: text('pinned_by'),
+  /** A copy of a message forwarded here (routes/forward.ts). */
+  forwarded: integer('forwarded', { mode: 'boolean' }).notNull().default(false),
+  /** JSON: what a bot or a webhook showed besides text (shared/src/cards.ts). */
+  cards: text('cards'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   replyToFk: foreignKey({
@@ -127,6 +336,7 @@ export const messages = sqliteTable('messages', {
     foreignColumns: [table.id],
   }).onDelete('set null'),
   channelIdx: index('idx_messages_channel_id').on(table.channelId),
+  pinnedIdx: index('idx_messages_channel_pinned').on(table.channelId, table.pinnedAt).where(sql`pinned_at IS NOT NULL`),
   userIdx: index('idx_messages_user_id').on(table.userId),
   // Unread counts (ws/channelUnreadCounts.ts): the messages of a channel after
   // a read cursor, compared as numbers, with the author to leave out the
@@ -135,6 +345,39 @@ export const messages = sqliteTable('messages', {
   // qualified column in an index expression, and the query must spell it
   // `CAST(... AS INTEGER)` in this case for the planner to match it.
   unreadIdx: index('idx_messages_channel_unread').on(table.channelId, sql`CAST(id AS INTEGER)`, table.userId, table.type),
+}));
+
+/**
+ * A poll in a space channel (routes/polls.ts): a message whose content is the question.
+ * Its answers and votes go with the message. The votes of a deleted account go with it.
+ */
+export const polls = sqliteTable('polls', {
+  messageId: text('message_id').primaryKey().references(() => messages.id, { onDelete: 'cascade' }),
+  multiple: integer('multiple', { mode: 'boolean' }).notNull().default(false),
+  /** When it ends by itself; null when it runs until someone ends it. */
+  endsAt: integer('ends_at'),
+  endedAt: integer('ended_at'),
+  createdAt: integer('created_at').notNull(),
+});
+
+export const pollOptions = sqliteTable('poll_options', {
+  id: text('id').primaryKey(),
+  messageId: text('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull(),
+  label: text('label').notNull(),
+}, (table) => ({
+  messageIdx: index('idx_poll_options_message').on(table.messageId),
+}));
+
+export const pollVotes = sqliteTable('poll_votes', {
+  optionId: text('option_id').notNull().references(() => pollOptions.id, { onDelete: 'cascade' }),
+  messageId: text('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.optionId, table.userId] }),
+  messageIdx: index('idx_poll_votes_message').on(table.messageId, table.userId),
+  userIdx: index('idx_poll_votes_user').on(table.userId),
 }));
 
 export const attachments = sqliteTable('attachments', {
@@ -154,12 +397,17 @@ export const attachments = sqliteTable('attachments', {
   // browser <video>, 0 = known-undecodable (e.g. HEVC .mov), NULL = unknown
   // (codec unprobed / non-video). Drives the client's download fallback.
   playable: integer('playable', { mode: 'boolean' }),
+  /** The sender marked it as a spoiler; set when the message is sent. */
+  spoiler: integer('spoiler', { mode: 'boolean' }).notNull().default(false),
+  /** A voice message's bar heights, `12,40,7` (shared/src/voiceMessages.ts). Null for any other file. */
+  voiceWaveform: text('voice_waveform'),
   sourceUrl: text('source_url'),
   federationStatus: text('federation_status'),
   federationMeta: text('federation_meta'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   messageIdx: index('idx_attachments_message_id').on(table.messageId),
+  uploaderIdx: index('idx_attachments_uploader').on(table.uploaderId),
   dmMessageIdx: index('idx_attachments_dm_message_id').on(table.dmMessageId),
 }));
 
@@ -225,6 +473,12 @@ export const dmMessages = sqliteTable('dm_messages', {
   sourceInstance: text('source_instance'),
   sourceMessageId: text('source_message_id'),
   encryptionVersion: integer('encryption_version').default(0),
+  /** As on `messages`. `pin_changed_at` is the last change either way: a relayed older state does not replace a newer one. */
+  pinnedAt: integer('pinned_at'),
+  pinnedBy: text('pinned_by'),
+  pinChangedAt: integer('pin_changed_at'),
+  /** A copy of a message forwarded here (routes/forward.ts). */
+  forwarded: integer('forwarded', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   replyToFk: foreignKey({
@@ -232,6 +486,7 @@ export const dmMessages = sqliteTable('dm_messages', {
     foreignColumns: [table.id],
   }).onDelete('set null'),
   channelIdx: index('idx_dm_messages_dm_channel_id').on(table.dmChannelId),
+  pinnedIdx: index('idx_dm_messages_channel_pinned').on(table.dmChannelId, table.pinnedAt).where(sql`pinned_at IS NOT NULL`),
   userIdx: index('idx_dm_messages_user_id').on(table.userId),
   // Unread counts, as idx_messages_channel_unread above.
   unreadIdx: index('idx_dm_messages_channel_unread').on(table.dmChannelId, sql`CAST(id AS INTEGER)`, table.userId),
@@ -248,6 +503,37 @@ export const friends = sqliteTable('friends', {
   pk: primaryKey({ columns: [table.userId, table.friendId] }),
   userIdx: index('idx_friends_user_id').on(table.userId),
   friendIdx: index('idx_friends_friend_id').on(table.friendId),
+}));
+
+/**
+ * Who has blocked whom. A block is one-directional (the blocker chose it) but its
+ * effects on direct contact are mutual while it exists: neither person can start
+ * a conversation, send a friend request or message the other. The blocked person
+ * is never told. See utils/blocks.ts.
+ */
+export const userBlocks = sqliteTable('user_blocks', {
+  blockerId: text('blocker_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  blockedId: text('blocked_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.blockerId, table.blockedId] }),
+  blockedIdx: index('idx_user_blocks_blocked_id').on(table.blockedId),
+}));
+
+/**
+ * The instance's custom emoji (shared/src/customEmoji.ts). The picture is the
+ * file `emoji/<id>.webp` under the upload directory, which the attachment
+ * janitor never reads; deleting the row deletes the file.
+ */
+export const customEmojis = sqliteTable('custom_emojis', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  animated: integer('animated').notNull().default(0),
+  size: integer('size').notNull(),
+  createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  createdByIdx: index('idx_custom_emojis_created_by').on(table.createdBy),
 }));
 
 export const friendRequests = sqliteTable('friend_requests', {
@@ -291,9 +577,21 @@ export const roles = sqliteTable('roles', {
   id: text('id').primaryKey(),
   spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
+  /** The role made for a bot when it came into the space; it gets the same one back after a kick. */
+  botId: text('bot_id'),
   color: text('color').default('#b9bbbe'),
   position: integer('position').default(0),
   permissions: text('permissions'), // JSON string of permission keys
+  /** What the role is for; null without one (Role.description). */
+  description: text('description'),
+  /** The gradient's second colour, `#rrggbb`; null for a plain colour. */
+  colorSecondary: text('color_secondary'),
+  /** An emoji drawn beside the name; null without one. */
+  icon: text('icon'),
+  /** Members are listed under the role in the member list (Role.hoist). 1 for every role that predates the flag, which is how they were listed. */
+  hoist: integer('hoist').notNull().default(1),
+  /** Anyone may @mention the role without MENTION_EVERYONE. */
+  mentionable: integer('mentionable').notNull().default(0),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   spaceIdx: index('idx_roles_space_id').on(table.spaceId),
@@ -395,6 +693,10 @@ export const userSpaceLayout = sqliteTable('user_space_layout', {
 
 export const instanceSettings = sqliteTable('instance_settings', {
   id: integer('id').primaryKey().default(1),
+  // The column default stays 'Backspace' deliberately: changing a SQLite column
+  // default makes drizzle-kit emit a full table rebuild, and the only INSERT
+  // into this table is `ensureDefaults`, which writes DEFAULT_INSTANCE_NAME
+  // explicitly. Read paths fall back to DEFAULT_INSTANCE_NAME for NULL.
   instanceName: text('instance_name').default('Backspace'),
   workerId: integer('worker_id'),
   instanceId: text('instance_id'),
@@ -416,16 +718,6 @@ export const instanceSettings = sqliteTable('instance_settings', {
   federationRelayTtlDays: integer('federation_relay_ttl_days').notNull().default(30),
   defaultAutoRotateIntervalDays: integer('default_auto_rotate_interval_days').notNull().default(90),
   autoAcceptPeering: integer('auto_accept_peering').notNull().default(1),
-  /** null = never asked, 0 = off, 1 = on. */
-  telemetryEnabled: integer('telemetry_enabled'),
-  /** Random UUID, minted on the first off-to-on transition and kept through off. Never the federation instance_id. */
-  telemetryId: text('telemetry_id'),
-  /** Last UTC day successfully reported. */
-  telemetryLastDay: text('telemetry_last_day'),
-  /** JSON { day, status } of the last failed attempt, null after a success. */
-  telemetryLastError: text('telemetry_last_error'),
-  /** The server version running when telemetry was last switched off; the ask returns on the next minor. */
-  telemetryDeclinedVersion: text('telemetry_declined_version'),
   /** The admin allows spaces on this instance to be listed in the directory. */
   directoryEnabled: integer('directory_enabled').notNull().default(0),
   /** A directory ping is owed. Survives restarts and the toggle being off. */
@@ -436,8 +728,30 @@ export const instanceSettings = sqliteTable('instance_settings', {
   directoryLastError: text('directory_last_error'),
   /** People on this instance see spaces from other instances in Explore. */
   directoryBrowseEnabled: integer('directory_browse_enabled').notNull().default(1),
-  /** The web client's Backspace page shows the Support card. Hides only that card; the server does nothing else with it. */
-  supportCardEnabled: integer('support_card_enabled', { mode: 'boolean' }).notNull().default(true),
+  /** What an account may keep in files; 0 means no limit (utils/accountLimits.ts). */
+  storagePerAccountBytes: integer('storage_per_account_bytes').notNull().default(5368709120),
+  /** How many spaces an account may own; 0 means no limit. */
+  spacesPerAccount: integer('spaces_per_account').notNull().default(25),
+  /** Who may add to the instance's emoji library: 'admins' or 'everyone'. */
+  emojiPolicy: text('emoji_policy').notNull().default('admins'),
+  /**
+   * Since when a new local account needs a verified address before it may create spaces or
+   * approach strangers (docs/systems/email.md, "The gate"). Null: off. Older accounts are not concerned.
+   */
+  emailRequiredSince: integer('email_required_since'),
+  /**
+   * What a browser solves before an account is created (SignupChallengeLevel). A row made
+   * from here on is `normal` (ensureDefaults); the migration set the one that existed.
+   */
+  signupChallenge: text('signup_challenge').notNull().default('off'),
+  /** When this server started lately, as JSON, to tell a restart loop from an update (utils/operatorAlerts.ts). */
+  recentStarts: text('recent_starts'),
+  /** Whether people here may run bots. Off until the operator turns it on. */
+  botsEnabled: integer('bots_enabled').notNull().default(0),
+  /** Instance accent colour as `#rrggbb`; null = the built-in default (DEFAULT_ACCENT_COLOR). Validated on write. */
+  accentColor: text('accent_color'),
+  /** JSON LegalOperator: who runs the instance (docs/systems/legal.md). Null until an admin fills it in. */
+  legalOperator: text('legal_operator'),
   /** First-boot timestamp (ms); backfilled by ensureDefaults, so non-null after boot. */
   installedAt: integer('installed_at'),
   /**
@@ -450,6 +764,62 @@ export const instanceSettings = sqliteTable('instance_settings', {
   ledgerStartedAt: integer('ledger_started_at'),
   updatedAt: integer('updated_at').notNull(),
 });
+
+/**
+ * One signed-in device: a token names its row (`sid`), and a token whose row is gone
+ * is refused at once. docs/systems/auth.md, "Sessions". The address is cut short and the
+ * label is a browser and a system, enough to recognise a device and nothing more.
+ */
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull(),
+  /** Written at most every few minutes (`touchSession`). */
+  lastActiveAt: integer('last_active_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+  clientLabel: text('client_label'),
+  addressHint: text('address_hint'),
+}, (table) => ({
+  userIdx: index('idx_sessions_user').on(table.userId),
+  expiresIdx: index('idx_sessions_expires').on(table.expiresAt),
+}));
+
+/**
+ * A copy of what this instance holds about an account, asked for by that person
+ * (utils/dataExport.ts). The file is `<id>.zip` in `config.exportDir`.
+ */
+export const dataExports = sqliteTable('data_exports', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** 'pending', 'ready' or 'failed'. */
+  status: text('status').notNull(),
+  createdAt: integer('created_at').notNull(),
+  /** When the file and this row go. */
+  expiresAt: integer('expires_at').notNull(),
+  sizeBytes: integer('size_bytes'),
+}, (table) => ({
+  userIdx: index('idx_data_exports_user').on(table.userId),
+}));
+
+/**
+ * The links into a space. `spaces.invite_code` names the standing one, the link the
+ * Invite dialog hands out; a space can have others with an end date or a limit. A
+ * link that was revoked, ran out or expired has no row (or none that counts), so it
+ * leads nowhere: docs/systems/spaces.md, "Invite links".
+ */
+export const spaceInvites = sqliteTable('space_invites', {
+  code: text('code').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: integer('created_at').notNull(),
+  /** When it stops working; null for never. */
+  expiresAt: integer('expires_at'),
+  /** How many people it may let in; null for no limit. */
+  maxUses: integer('max_uses'),
+  uses: integer('uses').notNull().default(0),
+}, (table) => ({
+  spaceIdx: index('space_invites_space_idx').on(table.spaceId),
+}));
 
 export const bans = sqliteTable('bans', {
   spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
@@ -484,6 +854,65 @@ export const voiceRestrictions = sqliteTable('voice_restrictions', {
 }, (table) => ({
   pk: primaryKey({ columns: [table.spaceId, table.userId, table.restrictionType] }),
   spaceIdx: index('idx_voice_restrictions_space_id').on(table.spaceId),
+}));
+
+/**
+ * The timeout of a member who left or was kicked while timed out, kept until
+ * it ends so that leaving and joining again does not lift it: a join restores
+ * it onto the new `space_members` row and drops this one. A ban needs none
+ * (the banned cannot join). Written and read only by utils/spaceModeration.ts.
+ */
+export const spaceDepartedTimeouts = sqliteTable('space_departed_timeouts', {
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  timedOutUntil: integer('timed_out_until').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.spaceId, table.userId] }),
+}));
+
+/**
+ * A space's automatic message rules (SpaceModerationSettings). A space
+ * without a row has the defaults: nothing blocked, no limits. Written only by
+ * `PATCH /api/spaces/:id/moderation`, read by utils/spaceModeration.ts.
+ */
+export const spaceModerationSettings = sqliteTable('space_moderation_settings', {
+  spaceId: text('space_id').primaryKey().references(() => spaces.id, { onDelete: 'cascade' }),
+  /** JSON array of strings, stored as `normalizeModerationSettings` returns them. */
+  blockedWords: text('blocked_words').notNull().default('[]'),
+  blockLinks: integer('block_links').notNull().default(0),
+  blockInvites: integer('block_invites').notNull().default(0),
+  maxMentions: integer('max_mentions').notNull().default(0),
+  minAccountAgeMinutes: integer('min_account_age_minutes').notNull().default(0),
+  minMemberAgeMinutes: integer('min_member_age_minutes').notNull().default(0),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/**
+ * The space's audit log: one row per moderation or settings change, newest
+ * read first. `id` is a snowflake, so ids sort by time and page the log.
+ * `actor_id` has no foreign key on purpose: an entry outlives its actor.
+ * Written only through utils/auditLog.ts, which also drops entries older than
+ * 180 days.
+ */
+export const spaceAuditLog = sqliteTable('space_audit_log', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  actorId: text('actor_id').notNull(),
+  action: text('action').notNull(),
+  targetType: text('target_type'),
+  targetId: text('target_id'),
+  targetLabel: text('target_label'),
+  /** JSON AuditLogChange[], or NULL when the entry records no field. */
+  changes: text('changes'),
+  reason: text('reason'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  // Paging newest first within one space compares ids as numbers, written
+  // `CAST(... AS INTEGER)` exactly as here so the planner uses the index (see
+  // idx_messages_channel_unread for why the column is unqualified).
+  spacePageIdx: index('idx_space_audit_log_space_page').on(table.spaceId, sql`CAST(id AS INTEGER)`),
+  // The retention sweep deletes a space's entries older than a cut-off.
+  spaceCreatedIdx: index('idx_space_audit_log_space_created').on(table.spaceId, table.createdAt),
 }));
 
 export const federationPeers = sqliteTable('federation_peers', {
@@ -807,3 +1236,479 @@ export const personalStickers = sqliteTable('personal_stickers', {
   name: text('name').notNull(),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({ pk: primaryKey({ columns: [table.userId, table.stickerId] }) }));
+
+/**
+ * A space's verification request (docs/systems/admin.md, "Verification"): one
+ * per space, replaced when the owner sends it again. The status is
+ * spaces.verification_status; the decisions are in space_review_events.
+ */
+export const spaceVerificationRequests = sqliteTable('space_verification_requests', {
+  spaceId: text('space_id').primaryKey().references(() => spaces.id, { onDelete: 'cascade' }),
+  /** The space's name and description when the request was sent. */
+  name: text('name').notNull(),
+  description: text('description'),
+  category: text('category').notNull(),
+  website: text('website'),
+  /** JSON array of public profile addresses (http/https). */
+  profiles: text('profiles').notNull().default('[]'),
+  reason: text('reason').notNull(),
+  /** How the requester shows they run the community: a public post, a page, a contact the reviewer can check. */
+  proof: text('proof').notNull(),
+  requestedBy: text('requested_by').notNull(),
+  requestedAt: integer('requested_at').notNull(),
+  decidedBy: text('decided_by'),
+  decidedAt: integer('decided_at'),
+  decisionNote: text('decision_note'),
+});
+
+/**
+ * A space's Discovery request (docs/systems/admin.md, "Discovery approval"):
+ * one per space. `approved_snapshot` holds the listing as the admin approved
+ * it; a change to it sends the space back to review.
+ */
+export const spaceDiscoveryRequests = sqliteTable('space_discovery_requests', {
+  spaceId: text('space_id').primaryKey().references(() => spaces.id, { onDelete: 'cascade' }),
+  category: text('category').notNull(),
+  requestedBy: text('requested_by').notNull(),
+  requestedAt: integer('requested_at').notNull(),
+  decidedBy: text('decided_by'),
+  decidedAt: integer('decided_at'),
+  decisionNote: text('decision_note'),
+  /** JSON { name, description, icon, banner, category } as approved; null until approved. */
+  approvedSnapshot: text('approved_snapshot'),
+});
+
+/**
+ * The history of both reviews: every request, decision and automatic change
+ * of a space's verification or Discovery status, with who did it and why.
+ */
+export const spaceReviewEvents = sqliteTable('space_review_events', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  /** 'verification' | 'discovery' */
+  process: text('process').notNull(),
+  /** What happened: 'submit', 'approve', 'reject', 'request_changes', 'revoke', 'withdraw', 'changed', 'migrated'. */
+  action: text('action').notNull(),
+  /** The status the event left; null when it left none (a withdrawn verification request). */
+  status: text('status'),
+  actorId: text('actor_id').notNull(),
+  note: text('note'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  spaceProcessIdx: index('idx_space_review_events_space').on(table.spaceId, table.process, table.createdAt),
+}));
+
+/**
+ * What the instance's administrators did (docs/systems/admin.md, "Platform
+ * audit log"): suspensions, review decisions, badges, Discovery withdrawals.
+ * `id` is a snowflake, so ids sort by time and page the log. No foreign keys:
+ * an entry outlives its actor and its target.
+ */
+/** One published version of the terms or the privacy policy (docs/systems/legal.md). Never edited, so an acceptance always names what was agreed to. */
+export const legalDocuments = sqliteTable('legal_documents', {
+  id: text('id').primaryKey(),
+  /** 'terms' | 'privacy' */
+  kind: text('kind').notNull(),
+  version: integer('version').notNull(),
+  /** JSON object: language code to Markdown text. */
+  texts: text('texts').notNull(),
+  publishedAt: integer('published_at').notNull(),
+  effectiveAt: integer('effective_at').notNull(),
+  changes: text('changes'),
+  publishedBy: text('published_by').notNull(),
+}, (table) => ({
+  versionIdx: uniqueIndex('idx_legal_documents_version').on(table.kind, table.version),
+}));
+
+/** A report of illegal content or of a breach of the terms (DSA Art. 16). Decided ones go after a year. */
+export const contentReports = sqliteTable('content_reports', {
+  id: text('id').primaryKey(),
+  /** 'open' | 'closed' */
+  status: text('status').notNull(),
+  category: text('category').notNull(),
+  explanation: text('explanation').notNull(),
+  /** 'message' | 'dm_message' | 'user' | 'space' | 'link' */
+  targetType: text('target_type').notNull(),
+  targetId: text('target_id'),
+  targetUrl: text('target_url'),
+  /** JSON ReportSnapshot: what was reported, as it was then. */
+  snapshot: text('snapshot'),
+  reporterUserId: text('reporter_user_id'),
+  reporterName: text('reporter_name'),
+  reporterEmail: text('reporter_email'),
+  createdAt: integer('created_at').notNull(),
+  decision: text('decision'),
+  ground: text('ground'),
+  decisionNote: text('decision_note'),
+  decidedBy: text('decided_by'),
+  decidedAt: integer('decided_at'),
+}, (table) => ({
+  statusIdx: index('idx_content_reports_status').on(table.status, table.createdAt),
+}));
+
+/** What the operator decided, told to the person it concerns (DSA Art. 16(5), 17). Read ones go after a year. */
+export const userNotices = sqliteTable('user_notices', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  kind: text('kind').notNull(),
+  ground: text('ground'),
+  note: text('note'),
+  subject: text('subject'),
+  until: integer('until'),
+  decision: text('decision'),
+  createdAt: integer('created_at').notNull(),
+  readAt: integer('read_at'),
+}, (table) => ({
+  userIdx: index('idx_user_notices_user').on(table.userId),
+}));
+
+/** A link in a mail: only its hash is here. One per account and purpose. docs/systems/email.md. */
+export const emailTokens = sqliteTable('email_tokens', {
+  tokenHash: text('token_hash').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** 'verify' | 'reset' */
+  purpose: text('purpose').notNull(),
+  /** The address the link went to. A verify link confirms exactly this one. */
+  address: text('address').notNull(),
+  createdAt: integer('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_email_tokens_user').on(table.userId, table.purpose),
+  expiresIdx: index('idx_email_tokens_expires').on(table.expiresAt),
+}));
+
+/**
+ * Mail waiting to go, and a short memory of what went. The body is never stored: it is
+ * rendered when it is sent. The address, the nonce and the parameters go once a row is done.
+ */
+export const emailOutbox = sqliteTable('email_outbox', {
+  id: text('id').primaryKey(),
+  kind: text('kind').notNull(),
+  /** 'critical' | 'verify' | 'notice': who still goes when the day's budget runs low. */
+  priority: text('priority').notNull(),
+  userId: text('user_id'),
+  toAddress: text('to_address'),
+  /** The address's hash, for the limits per address. Stays after the address went. */
+  toHash: text('to_hash').notNull(),
+  locale: text('locale').notNull(),
+  /** JSON: what the text names. Never a secret. */
+  params: text('params').notNull().default('{}'),
+  /** What the mail's link is derived from, with a key that is not in the database. */
+  linkNonce: text('link_nonce'),
+  /** 'queued' | 'sent' | 'failed' | 'expired' */
+  status: text('status').notNull().default('queued'),
+  attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: integer('next_attempt_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+  providerId: text('provider_id'),
+  lastError: text('last_error'),
+  createdAt: integer('created_at').notNull(),
+  sentAt: integer('sent_at'),
+}, (table) => ({
+  dueIdx: index('idx_email_outbox_due').on(table.status, table.nextAttemptAt),
+  addressIdx: index('idx_email_outbox_address').on(table.toHash, table.createdAt),
+  userIdx: index('idx_email_outbox_user').on(table.userId),
+}));
+
+/** How much went, per UTC day. No personal data. */
+export const emailUsageDaily = sqliteTable('email_usage_daily', {
+  day: text('day').primaryKey(),
+  accepted: integer('accepted').notNull().default(0),
+  failed: integer('failed').notNull().default(0),
+  bounced: integer('bounced').notNull().default(0),
+  complained: integer('complained').notNull().default(0),
+  /** What the provider itself counted, when it says: it also counts tests from its dashboard. */
+  providerDay: integer('provider_day'),
+  providerMonth: integer('provider_month'),
+});
+
+/** Addresses mail must not go to any more, by hash: they bounced hard or complained. */
+export const emailSuppressions = sqliteTable('email_suppressions', {
+  addressHash: text('address_hash').primaryKey(),
+  /** 'bounce' | 'complaint' */
+  reason: text('reason').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
+/**
+ * An account's TOTP secret, encrypted with a key that is not in the database and bound to
+ * the account (security/twoFactor.ts). `confirmed_at` null: being set up, not in force.
+ */
+export const twoFactorSecrets = sqliteTable('two_factor_secrets', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  secretEnc: text('secret_enc').notNull(),
+  confirmedAt: integer('confirmed_at'),
+  /** The newest accepted time step: a code cannot be used twice. */
+  lastUsedStep: integer('last_used_step'),
+  /** Wrong codes in a row, and until when the next has to wait. Per account, so a new ticket does not help. */
+  failedAttempts: integer('failed_attempts').notNull().default(0),
+  lockedUntil: integer('locked_until'),
+  createdAt: integer('created_at').notNull(),
+});
+
+/** Recovery codes, as keyed hashes only. Used ones stay until new ones are made, so they count as used. */
+export const twoFactorRecoveryCodes = sqliteTable('two_factor_recovery_codes', {
+  codeHash: text('code_hash').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  usedAt: integer('used_at'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_two_factor_recovery_user').on(table.userId),
+}));
+
+/** The sign-in's first step passed, the second due. Not a token: nothing but the second step reads this. */
+export const mfaTickets = sqliteTable('mfa_tickets', {
+  ticketHash: text('ticket_hash').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  deviceId: text('device_id'),
+  attempts: integer('attempts').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_mfa_tickets_user').on(table.userId),
+  expiresIdx: index('idx_mfa_tickets_expires').on(table.expiresAt),
+}));
+
+/** What happened to an account's security, for its owner to read. 90 days, 200 per account. */
+export const securityEvents = sqliteTable('security_events', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** SecurityEventKind */
+  kind: text('kind').notNull(),
+  clientLabel: text('client_label'),
+  /** The address cut short, as on a session. */
+  addressHint: text('address_hint'),
+  /** Repeated failures from one place are one row. */
+  count: integer('count').notNull().default(1),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_security_events_user').on(table.userId, table.createdAt),
+  createdIdx: index('idx_security_events_created').on(table.createdAt),
+}));
+
+/** Devices an account signed in from, by a hash of a random id the browser keeps. To tell a new one. */
+export const knownDevices = sqliteTable('known_devices', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  deviceHash: text('device_hash').notNull(),
+  firstSeenAt: integer('first_seen_at').notNull(),
+  lastSeenAt: integer('last_seen_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.deviceHash] }),
+  seenIdx: index('idx_known_devices_seen').on(table.lastSeenAt),
+}));
+
+/** What the operator says to everyone signed in, on a banner, while it runs. */
+export const announcements = sqliteTable('announcements', {
+  id: text('id').primaryKey(),
+  /** 'info' | 'warning' */
+  tone: text('tone').notNull(),
+  body: text('body').notNull(),
+  createdBy: text('created_by').notNull(),
+  createdAt: integer('created_at').notNull(),
+  endsAt: integer('ends_at'),
+  endedAt: integer('ended_at'),
+  /** Also on the public status page, for anyone, signed in or not. */
+  onStatusPage: integer('on_status_page').notNull().default(0),
+}, (table) => ({
+  liveIdx: index('idx_announcements_live').on(table.endedAt, table.endsAt),
+}));
+
+/** What the operator has to hear about (utils/operatorAlerts.ts). A row stays after it clears, to keep the day's mail counted. */
+export const operatorAlerts = sqliteTable('operator_alerts', {
+  /** 'disk_high' | 'backup_failed' | 'backup_old' | 'offsite_failed' | 'restart_loop' */
+  cause: text('cause').primaryKey(),
+  active: integer('active').notNull().default(1),
+  detail: text('detail'),
+  since: integer('since').notNull(),
+  lastMailedAt: integer('last_mailed_at'),
+});
+
+/** What the admins keep for each other about an account. Goes with the account, and is in its data export. */
+export const adminNotes = sqliteTable('admin_notes', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  authorId: text('author_id').notNull(),
+  body: text('body').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_admin_notes_user').on(table.userId),
+}));
+
+/** Who may not sign up: an address at this domain, or this name. It touches no account that exists. */
+export const signupRules = sqliteTable('signup_rules', {
+  /** 'email_domain' | 'username' */
+  kind: text('kind').notNull(),
+  /** In lower case. */
+  value: text('value').notNull(),
+  note: text('note'),
+  createdBy: text('created_by').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.kind, table.value] }),
+}));
+
+/** The public spaces a new account of this instance starts in. */
+export const starterSpaces = sqliteTable('starter_spaces', {
+  spaceId: text('space_id').primaryKey().references(() => spaces.id, { onDelete: 'cascade' }),
+  addedBy: text('added_by').notNull(),
+  addedAt: integer('added_at').notNull(),
+});
+
+export const platformAuditLog = sqliteTable('platform_audit_log', {
+  id: text('id').primaryKey(),
+  actorId: text('actor_id').notNull(),
+  action: text('action').notNull(),
+  /** 'user' | 'space' | 'instance' (settings, invites, storage) */
+  targetType: text('target_type').notNull(),
+  targetId: text('target_id').notNull(),
+  targetLabel: text('target_label'),
+  reason: text('reason'),
+  /** JSON object with what the action set (a status, an end time, a badge). */
+  details: text('details'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  pageIdx: index('idx_platform_audit_log_page').on(sql`CAST(id AS INTEGER)`),
+  targetIdx: index('idx_platform_audit_log_target').on(table.targetType, table.targetId),
+}));
+
+/** This instance's own signing key for push (one row), made when first needed. Apart from the settings, so no settings route can hand it out. */
+export const pushKeys = sqliteTable('push_keys', {
+  id: integer('id').primaryKey(),
+  publicKey: text('public_key').notNull(),
+  privateKey: text('private_key').notNull(),
+  createdAt: integer('created_at').notNull(),
+});
+
+/**
+ * A browser that wants pushes for an account (docs/systems/push.md). Bound to the session it
+ * was made in, so ending the session ends them. `show_text`, `direct_messages` and `locale`
+ * are that device's own choices, which the server has to follow while the app is closed.
+ */
+export const pushSubscriptions = sqliteTable('push_subscriptions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  sessionId: text('session_id').references(() => sessions.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  showText: integer('show_text', { mode: 'boolean' }).notNull().default(true),
+  directMessages: integer('direct_messages', { mode: 'boolean' }).notNull().default(true),
+  locale: text('locale'),
+  failures: integer('failures').notNull().default(0),
+  lastSuccessAt: integer('last_success_at'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  userIdx: index('idx_push_subscriptions_user').on(table.userId),
+}));
+
+/** An event in a space (routes/events.ts). `reminder_sent_at` keeps a reminder to once; moving the event clears it. */
+export const spaceEvents = sqliteTable('space_events', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  location: text('location'),
+  channelId: text('channel_id').references(() => channels.id, { onDelete: 'set null' }),
+  startsAt: integer('starts_at').notNull(),
+  endsAt: integer('ends_at'),
+  createdBy: text('created_by'),
+  reminderSentAt: integer('reminder_sent_at'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  spaceIdx: index('idx_space_events_space').on(table.spaceId, table.startsAt),
+  dueIdx: index('idx_space_events_due').on(table.startsAt).where(sql`reminder_sent_at IS NULL`),
+}));
+
+export const spaceEventRsvps = sqliteTable('space_event_rsvps', {
+  eventId: text('event_id').notNull().references(() => spaceEvents.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.eventId, table.userId] }),
+  userIdx: index('idx_space_event_rsvps_user').on(table.userId),
+}));
+
+/**
+ * An address that posts into one channel (routes/webhooks.ts). Only the hash of its token is
+ * kept. `user_id` is the account its messages are written under; `created_by` is cleared
+ * when that person's account goes, and the webhook keeps working: it belongs to the channel.
+ */
+export const webhooks = sqliteTable('webhooks', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  channelId: text('channel_id').notNull().references(() => channels.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  tokenHash: text('token_hash').notNull(),
+  createdBy: text('created_by'),
+  createdAt: integer('created_at').notNull(),
+  lastUsedAt: integer('last_used_at'),
+}, (table) => ({
+  channelIdx: index('idx_webhooks_channel').on(table.channelId),
+  spaceIdx: index('idx_webhooks_space').on(table.spaceId),
+}));
+
+/** A person's own list of messages, with a reminder if they want one (routes/saved.ts). */
+export const savedMessages = sqliteTable('saved_messages', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  messageId: text('message_id').references(() => messages.id, { onDelete: 'cascade' }),
+  dmMessageId: text('dm_message_id').references(() => dmMessages.id, { onDelete: 'cascade' }),
+  remindAt: integer('remind_at'),
+  reminderSentAt: integer('reminder_sent_at'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  messageIdx: uniqueIndex('idx_saved_user_message').on(table.userId, table.messageId),
+  dmMessageIdx: uniqueIndex('idx_saved_user_dm_message').on(table.userId, table.dmMessageId),
+  dueIdx: index('idx_saved_due').on(table.remindAt).where(sql`remind_at IS NOT NULL AND reminder_sent_at IS NULL`),
+}));
+
+/** The words that alert a person (shared/src/notificationRules.ts). */
+export const notificationKeywords = sqliteTable('notification_keywords', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  word: text('word').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.word] }),
+}));
+
+/** A short clip of a space's soundboard (routes/soundboard.ts). The file is in `uploads/sounds`. */
+export const spaceSounds = sqliteTable('space_sounds', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  mimetype: text('mimetype').notNull(),
+  size: integer('size').notNull(),
+  duration: real('duration').notNull(),
+  createdBy: text('created_by'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  spaceIdx: index('idx_space_sounds_space').on(table.spaceId),
+}));
+
+/**
+ * A bot: an account (`users.account_kind = 'bot'`, same id) a person runs from a program
+ * (routes/bots.ts). Only the hash of its token is kept. When the owner's account goes, their
+ * bots go with it (`tombstoneUser`).
+ */
+export const bots = sqliteTable('bots', {
+  id: text('id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  description: text('description'),
+  tokenHash: text('token_hash').notNull(),
+  createdAt: integer('created_at').notNull(),
+  lastUsedAt: integer('last_used_at'),
+}, (table) => ({
+  ownerIdx: index('idx_bots_owner').on(table.ownerId),
+}));
+
+/** What a bot answers to in a channel's composer. */
+export const botCommands = sqliteTable('bot_commands', {
+  botId: text('bot_id').notNull().references(() => bots.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  /** JSON: what it asks for (shared/src/bots.ts, BotCommandOption). Null when it asks for nothing. */
+  options: text('options'),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.botId, table.name] }),
+}));

@@ -18,6 +18,8 @@ import {
 } from '../../utils/screenShare';
 import { StreamQualityControls, StreamSummary, StreamHostSubtitle } from './StreamQualityControls';
 import { pickAutoStageSource, type ScreenSourceTab } from '../../utils/screenShareSources';
+import { Icon } from '../ui/Icon';
+import { VoiceIcon } from './voiceIcons';
 
 /**
  * ScreenShareSetup — the one screen every screen share starts from.
@@ -43,10 +45,10 @@ import { pickAutoStageSource, type ScreenSourceTab } from '../../utils/screenSha
  *     own prompt does the picking. Must happen inside the click (transient
  *     activation), which is why the choice is a button and not automatic.
  *
- * The card is a fixed, near-viewport glass surface so the layout never jumps
+ * The card is a fixed, near-viewport floating surface so the layout never jumps
  * with its content. The quality panel is a drawer that slides in over the
  * stage from the right, opened from the "Stream settings" button in the
- * footer's action pill (next to Cancel / Start) or the footer summary.
+ * footer's actions (next to Cancel / Start) or the footer summary.
  */
 
 type Tab = ScreenSourceTab;
@@ -448,36 +450,35 @@ export function ScreenShareSetup() {
     : t('voice:screenPicker.stageReady');
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
+      <div className="modal-scrim absolute inset-0" onClick={handleClose} />
 
       {/* Card — fixed to the viewport so the layout never jumps with its content */}
       <div
         data-testid="screen-share-setup"
-        className="relative w-[calc(calc(100*var(--app-vw))-6rem)] max-w-6xl h-[calc(88*var(--app-vh))] glass-modal rounded-xl animate-slide-up flex flex-col"
+        className="relative w-[calc(calc(100*var(--app-vw))-2rem)] desktop:w-[calc(calc(100*var(--app-vw))-6rem)] max-w-6xl h-[calc(88*var(--app-vh))] glass-modal rounded-lg overflow-hidden animate-slide-up flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-3 flex-shrink-0">
+        <div className="flex items-center justify-between gap-4 pl-4 pr-3 desktop:pl-5 py-2.5 border-b border-border-hard flex-shrink-0">
           <div className="min-w-0">
-            <h2 className="text-xl font-bold text-txt-primary leading-tight">{t('voice:screenPicker.title')}</h2>
-            <p className="text-[13px] text-txt-tertiary mt-0.5">{t('voice:screenPicker.subtitle')}</p>
+            <h2 className="text-lead font-semibold text-txt-primary leading-tight">{t('voice:screenPicker.title')}</h2>
+            <p className="text-meta text-txt-tertiary mt-0.5">{t('voice:screenPicker.subtitle')}</p>
           </div>
           <button
             onClick={handleClose}
-            className="text-txt-tertiary hover:text-txt-primary transition-colors p-1 -mr-1 flex-shrink-0"
+            className="icon-btn icon-btn-lg"
             aria-label={t('common:actions.close')}
+            title={t('common:actions.close')}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-            </svg>
+            <Icon name="x" size={18} />
           </button>
         </div>
 
         {/* Toolbar — Screens / Windows plus window search; only where the app lists sources */}
         {showGrid && (
-          <div className="flex items-center justify-between gap-3 px-6 pb-3 flex-shrink-0">
-            <div className="flex items-center gap-1 p-1 rounded-full bg-white/[0.04] ring-1 ring-white/[0.06]">
+          <div className="flex items-center justify-between gap-3 px-4 desktop:px-5 pt-3 flex-shrink-0">
+            <div className="flex rounded-md border border-border-soft bg-surface-input p-0.5">
               <TabButton
                 active={activeTab === 'screens'}
                 onClick={() => setActiveTab('screens')}
@@ -497,7 +498,7 @@ export function ScreenShareSetup() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t('voice:screenPicker.searchWindows')}
-                className="input-search w-64 max-w-[45%]"
+                className="input-search w-64 max-w-[45%] py-1.5"
                 autoFocus
               />
             )}
@@ -507,18 +508,18 @@ export function ScreenShareSetup() {
         {/* Body: full-width source area; the quality drawer slides in over it */}
         <div className="relative flex-1 min-h-0 overflow-hidden flex">
           {/* Source area */}
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col px-6 pb-4">
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col px-4 desktop:px-5 py-3">
             {showGrid ? (
               <>
                 {/* Source grid */}
-                <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin rounded-xl bg-black/20 ring-1 ring-white/[0.06] p-3">
+                <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin rounded-lg border border-border-hard bg-surface-input p-3">
                   {loadingSources && sources.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-txt-tertiary text-sm">
+                    <div className="h-full flex items-center justify-center text-txt-tertiary text-ui">
                       {t('voice:screenPicker.loadingSources')}
                     </div>
                   ) : activeSources.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center gap-3 px-6 text-center">
-                      <div className="text-txt-tertiary text-sm">
+                      <div className="text-txt-secondary text-ui">
                         {activeTab === 'windows' && search.trim()
                           ? t('voice:screenPicker.noWindowsMatch')
                           : activeTab === 'screens'
@@ -533,14 +534,15 @@ export function ScreenShareSetup() {
                       {sources.length === 0 && (
                         <>
                           {isElectronMac() && (
-                            <p className="text-[13px] text-txt-tertiary max-w-sm">
+                            <p className="text-ui text-txt-tertiary max-w-sm">
                               {t('voice:screenPicker.permissionHintMac')}
                             </p>
                           )}
                           <button
                             onClick={() => setSourcesNonce((n) => n + 1)}
                             disabled={loadingSources}
-                            className="px-4 py-2 rounded-full glass text-txt-primary hover:bg-white/[0.08] text-[13px] font-medium transition-colors disabled:opacity-40"
+                            aria-busy={loadingSources}
+                            className="btn-outline"
                           >
                             {t('voice:screenPicker.retrySources')}
                           </button>
@@ -564,19 +566,19 @@ export function ScreenShareSetup() {
 
                 {/* Staged strip — live preview of the chosen tile */}
                 <div className={`flex-shrink-0 overflow-hidden transition-all duration-300 ${staged ? 'max-h-40 mt-3 opacity-100' : 'max-h-0 mt-0 opacity-0'}`}>
-                  <div className="flex items-center gap-4 rounded-xl glass px-3 py-3">
-                    <div className="w-44 flex-shrink-0">
-                      <div className="relative rounded-lg overflow-hidden bg-black/60 aspect-video ring-1 ring-white/[0.08]">
+                  <div className="surface-card rounded-lg flex items-center gap-3 p-2">
+                    <div className="w-36 flex-shrink-0">
+                      <div className="relative rounded-md overflow-hidden bg-black aspect-video">
                         <video ref={previewRef} autoPlay muted playsInline className="w-full h-full object-contain" />
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-accent-mint truncate">{readyLabel}</div>
-                      <div className="text-[14px] font-semibold text-txt-primary truncate mt-0.5">
+                      <div className="label-mono text-txt-positive truncate">{readyLabel}</div>
+                      <div className="text-ui font-medium text-txt-primary truncate mt-1">
                         {stagedName ?? t('voice:screenPicker.preview')}
                       </div>
                       {audioNeedsRepick && (
-                        <div className="text-[11px] text-accent-amber/80 mt-1">{t('voice:screenPicker.audioNeedsRepick')}</div>
+                        <div className="text-label text-accent-amber mt-1">{t('voice:screenPicker.audioNeedsRepick')}</div>
                       )}
                     </div>
                   </div>
@@ -584,68 +586,54 @@ export function ScreenShareSetup() {
               </>
             ) : (
               /* Browser, system picker, or older desktop before its prompt: the stage */
-              <div className="relative flex-1 min-h-0 rounded-xl overflow-hidden bg-surface-base ring-1 ring-white/[0.06]">
-                {/* Ambient glow so the empty stage reads as a screen, not a form field */}
-                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_50%_40%,rgba(255,255,255,0.05),transparent_60%)]" />
-                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_50%_110%,rgba(140,130,255,0.12),transparent_55%)]" />
+              <div className="relative flex-1 min-h-0 rounded-lg overflow-hidden border border-border-hard bg-surface-input">
 
                 {staged ? (
                   <>
-                    <video ref={previewRef} autoPlay muted playsInline className="absolute inset-0 w-full h-full object-contain bg-black/70" />
-                    <div className="absolute top-3 left-3 px-2 py-0.5 rounded-md bg-black/60 text-[10px] font-bold uppercase tracking-wide text-white/80">
+                    <video ref={previewRef} autoPlay muted playsInline className="absolute inset-0 w-full h-full object-contain bg-black" />
+                    <div className="label-mono absolute top-2 left-2 rounded bg-black/65 px-1.5 py-0.5 text-white/80">
                       {t('voice:screenPicker.preview')}
                     </div>
-                    <div className="absolute inset-x-0 bottom-0 px-4 py-3 flex flex-col items-start gap-2 desktop:flex-row desktop:items-center desktop:justify-between desktop:gap-3 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+                    <div className="absolute inset-x-0 bottom-0 px-4 py-3 flex flex-col items-start gap-2 desktop:flex-row desktop:items-center desktop:justify-between desktop:gap-3 bg-gradient-to-t from-black/70 to-transparent">
                       <div className="min-w-0">
-                        <div className="text-[11px] font-semibold uppercase tracking-wider text-accent-mint truncate">{readyLabel}</div>
+                        <div className="label-mono text-txt-positive truncate">{readyLabel}</div>
                         {stagedName && (
-                          <div className="text-[13px] font-semibold text-white truncate mt-0.5">{stagedName}</div>
+                          <div className="text-ui font-medium text-white truncate mt-1">{stagedName}</div>
                         )}
                         {audioNeedsRepick && (
-                          <div className="text-[11px] text-accent-amber/90 mt-0.5">{t('voice:screenPicker.audioNeedsRepick')}</div>
+                          <div className="text-label text-accent-amber mt-1">{t('voice:screenPicker.audioNeedsRepick')}</div>
                         )}
                       </div>
                       <button
                         onClick={stageNow}
                         disabled={staging}
-                        className="flex-shrink-0 px-3 py-1.5 rounded-full glass text-txt-primary hover:bg-white/[0.08] text-[13px] font-medium transition-colors disabled:opacity-40"
+                        aria-busy={staging}
+                        className="btn-outline flex-shrink-0 bg-surface-elevated hover:bg-surface-elevated"
                       >
                         {t('voice:screenPicker.chooseAgain')}
                       </button>
                     </div>
                   </>
                 ) : (
-                  <div className="relative h-full flex flex-col items-center justify-center text-center gap-4 px-6">
-                    {/* Monitor illustration */}
-                    <svg width="112" height="88" viewBox="0 0 112 88" fill="none" aria-hidden="true" className="drop-shadow-[0_8px_24px_rgba(140,130,255,0.25)]">
-                      <rect x="4" y="4" width="104" height="66" rx="8" stroke="rgba(255,255,255,0.22)" strokeWidth="2" fill="rgba(255,255,255,0.03)" />
-                      <rect x="10" y="10" width="92" height="54" rx="4" fill="url(#ss-stage-screen)" />
-                      <path d="M46 78h20M56 70v8" stroke="rgba(255,255,255,0.22)" strokeWidth="2" strokeLinecap="round" />
-                      <path d="M40 84h32" stroke="rgba(255,255,255,0.16)" strokeWidth="2" strokeLinecap="round" />
-                      <path d="M62 37l-10-6.5v13L62 37z" fill="rgba(255,255,255,0.55)" />
-                      <defs>
-                        <linearGradient id="ss-stage-screen" x1="10" y1="10" x2="102" y2="64" gradientUnits="userSpaceOnUse">
-                          <stop stopColor="rgba(140,130,255,0.35)" />
-                          <stop offset="1" stopColor="rgba(140,130,255,0.08)" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-txt-tertiary">{t('voice:screenPicker.stageIdle')}</div>
-                      <div className="text-[17px] font-bold text-txt-primary mt-1">{t('voice:screenPicker.chooseTitle')}</div>
-                      {chooseHint && (
-                        <div className="text-[13px] text-txt-tertiary max-w-md mt-1">{chooseHint}</div>
-                      )}
+                  <div className="empty-state h-full">
+                    <div className="empty-state-icon">
+                      <Icon name="monitor" size={18} />
                     </div>
+                    <div className="label-mono">{t('voice:screenPicker.stageIdle')}</div>
+                    <div className="empty-state-title">{t('voice:screenPicker.chooseTitle')}</div>
+                    {chooseHint && (
+                      <div className="empty-state-body">{chooseHint}</div>
+                    )}
                     <button
                       onClick={stageNow}
                       disabled={staging || !supported || (electron && pickerMode === null)}
-                      className="px-5 py-2.5 rounded-full bg-accent-primary hover:bg-accent-primary-hover text-white text-sm font-semibold transition-colors shadow-lg shadow-accent-primary/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                      aria-busy={staging}
+                      className="btn-primary mt-3"
                     >
                       {t('voice:screenPicker.choose')}
                     </button>
                     {!supported && (
-                      <div className="text-[12px] text-txt-danger">{t('voice:screenPicker.unsupported')}</div>
+                      <div className="text-meta text-txt-danger mt-1">{t('voice:screenPicker.unsupported')}</div>
                     )}
                   </div>
                 )}
@@ -665,76 +653,70 @@ export function ScreenShareSetup() {
             id="stream-settings-drawer-panel"
             data-testid="stream-settings-drawer"
             aria-hidden={!settingsOpen}
-            className={`absolute inset-y-0 right-0 z-20 w-[calc(calc(100*var(--app-vw))-5rem)] desktop:w-[340px] glass border-l border-border-hard flex flex-col min-h-0 shadow-2xl transition-transform duration-300 ease-out ${
+            className={`absolute inset-y-0 right-0 z-20 w-[calc(calc(100*var(--app-vw))-5rem)] desktop:w-[340px] glass flex flex-col min-h-0 transition-transform duration-200 ease-out ${
               settingsOpen ? 'translate-x-0' : 'translate-x-full'
             }`}
           >
-            <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3 border-b border-border-hard flex-shrink-0">
+            <div className="flex items-center justify-between gap-3 pl-4 pr-3 py-2 border-b border-border-hard flex-shrink-0">
               <div className="min-w-0">
-                <div className="text-[15px] font-bold text-txt-primary">{t('voice:streamSettings.title')}</div>
+                <div className="text-body font-semibold text-txt-primary">{t('voice:streamSettings.title')}</div>
                 <StreamHostSubtitle className="mt-0.5" />
               </div>
               <button
                 onClick={() => setSettingsOpen(false)}
-                className="text-txt-tertiary hover:text-txt-primary transition-colors p-1 -mr-1"
+                className="icon-btn"
                 aria-label={t('common:actions.close')}
+                title={t('common:actions.close')}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-                </svg>
+                <Icon name="x" size={16} />
               </button>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-5 py-4">
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 py-3">
               <StreamQualityControls />
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 flex items-center justify-between gap-3 px-6 pt-3 pb-4 border-t border-border-hard">
+        <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 desktop:px-5 py-2.5 border-t border-border-hard">
           <div className="min-w-0 flex flex-col">
             <button
               onClick={() => setSettingsOpen(true)}
-              className="text-left hover:text-txt-secondary transition-colors truncate"
+              className="group min-w-0 rounded text-left truncate"
               title={t('voice:streamSettings.title')}
             >
-              <StreamSummary />
+              <StreamSummary className="transition-colors duration-100 group-hover:text-txt-secondary" />
             </button>
             {error && (
-              <span className="text-[12px] text-txt-danger truncate" role="alert">
+              <span className="text-meta text-txt-danger truncate" role="alert">
                 {t(`voice:screenPicker.${error}`)}
               </span>
             )}
           </div>
-          <div className="glass-bubble rounded-full px-2 py-2 flex items-center gap-1 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-1.5">
             <button
               onClick={() => setSettingsOpen((open) => !open)}
               aria-expanded={settingsOpen}
               aria-controls="stream-settings-drawer-panel"
               aria-label={t('voice:streamSettings.title')}
               title={t('voice:streamSettings.title')}
-              className={`flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                settingsOpen
-                  ? 'bg-white/[0.1] text-txt-primary'
-                  : 'text-txt-secondary hover:text-txt-primary hover:bg-white/[0.06]'
-              }`}
+              className={`btn-quiet ${settingsOpen ? 'bg-interactive-selected text-txt-primary' : ''}`}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
-                <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
-              </svg>
+              <VoiceIcon name="sliders" size={16} className="flex-shrink-0" />
               <span className="hidden desktop:inline">{t('voice:streamSettings.title')}</span>
             </button>
-            <div className="w-px h-5 bg-white/10 mx-1" />
+            <div aria-hidden="true" className="w-px h-5 bg-border-hard mx-0.5" />
             <button
               onClick={handleClose}
-              className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+              className="btn-quiet"
             >
               {t('common:actions.cancel')}
             </button>
             <button
               onClick={() => void handleStart()}
               disabled={!canStart}
-              className="px-4 py-1.5 bg-accent-primary hover:bg-accent-primary-hover text-white text-sm font-semibold rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-busy={starting}
+              className="btn-primary"
             >
               {t('voice:screenPicker.start')}
             </button>
@@ -760,18 +742,20 @@ function TabButton({ active, onClick, label, count }: {
   return (
     <button
       onClick={onClick}
-      className={`px-3.5 py-1.5 text-sm font-medium rounded-full transition-colors ${
+      aria-pressed={active}
+      className={`relative rounded px-3 py-1 text-ui font-medium transition-colors duration-100 ${
         active
-          ? 'bg-accent-primary text-white shadow-sm'
-          : 'text-txt-secondary hover:text-txt-primary hover:bg-white/[0.06]'
+          ? 'bg-surface-elevated text-txt-primary'
+          : 'text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover active:bg-interactive-active'
       }`}
     >
       {label}
       {count !== null && count > 0 && (
-        <span className={`ml-1.5 text-xs ${active ? 'text-white/70' : 'text-txt-tertiary'}`}>
+        <span className="tabular ml-1.5 font-mono text-label text-txt-tertiary">
           {count}
         </span>
       )}
+      {active && <span aria-hidden="true" className="absolute inset-x-2 bottom-0 h-[2px] rounded-t-[1px] bg-accent-primary" />}
     </button>
   );
 }
@@ -786,14 +770,15 @@ function SourceCard({ source, selected, onClick, onDoubleClick }: {
     <button
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      className={`group flex flex-col rounded-lg overflow-hidden transition-all text-left ring-2 ${
+      aria-pressed={selected}
+      className={`group flex flex-col rounded-lg overflow-hidden border bg-surface-channel text-left transition-colors duration-100 ${
         selected
-          ? 'ring-accent-primary bg-accent-primary/10'
-          : 'ring-transparent hover:ring-white/20 bg-surface-elevated/60 hover:bg-surface-elevated'
+          ? 'border-accent-primary ring-1 ring-accent-primary'
+          : 'border-border-hard hover:border-interactive-muted hover:bg-surface-elevated'
       }`}
     >
       {/* Thumbnail */}
-      <div className="relative aspect-video bg-black/40 overflow-hidden">
+      <div className="relative aspect-video bg-black overflow-hidden">
         <img
           src={source.thumbnailDataUrl}
           alt={source.name}
@@ -801,10 +786,8 @@ function SourceCard({ source, selected, onClick, onDoubleClick }: {
           draggable={false}
         />
         {selected && (
-          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-accent-primary flex items-center justify-center">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-            </svg>
+          <div className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded bg-accent-primary text-white">
+            <Icon name="check" size={14} strokeWidth={2.25} />
           </div>
         )}
       </div>
@@ -819,7 +802,7 @@ function SourceCard({ source, selected, onClick, onDoubleClick }: {
             draggable={false}
           />
         )}
-        <span className={`text-xs truncate ${selected ? 'text-txt-primary' : 'text-txt-secondary'}`}>
+        <span className={`text-meta truncate ${selected ? 'text-txt-primary' : 'text-txt-secondary'}`}>
           {source.name}
         </span>
       </div>

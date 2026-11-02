@@ -86,7 +86,6 @@
     },
     "title": "语音与视频",
     "volume": {
-      "sectionTitle": "音量",
       "soundEffects": {
         "label": "音效音量"
       },
@@ -129,14 +128,176 @@
       "privacy": "隐私",
       "connections": "连接",
       "keybinds": "按键绑定",
+      "developers": "开发者",
       "desktop": "桌面端",
-      "instance": "实例"
+      "instance": "管理控制台",
+      "emoji": "表情",
+      "games": "游戏",
+      "notifications": "通知",
+      "accessibility": "无障碍",
+      "language": "语言",
+      "security": "安全"
     },
     "logOut": "退出登录",
     "backToMenu": "返回设置菜单"
   },
   "appearance": {
-    "title": "外观"
+    "title": "外观",
+    "theme": {
+      "title": "主题",
+      "description": "应用界面的颜色。保存在此设备上。",
+      "name": {
+        "carbon": "碳黑",
+        "slate": "石板",
+        "ink": "墨",
+        "moss": "地衣",
+        "clay": "陶土",
+        "harbor": "港湾",
+        "plum": "梅子",
+        "custom": "自定义"
+      },
+      "custom": {
+        "hue": "色相",
+        "strength": "色彩浓度",
+        "depth": "深度",
+        "reset": "恢复为碳黑"
+      }
+    },
+    "accent": {
+      "title": "强调色",
+      "description": "按钮和高亮的颜色。没有自己的颜色时，使用此服务器选择的颜色。",
+      "useInstance": "使用服务器的颜色",
+      "hex": "自定义颜色（十六进制）",
+      "problem": {
+        "too_light": "太浅：按钮上的白色文字会难以阅读。",
+        "too_dark": "太深：在深色面板上会看不见。"
+      },
+      "name": {
+        "vermilion": "朱红",
+        "violet": "Tavvit 紫",
+        "blue": "蓝色",
+        "sky": "天蓝",
+        "teal": "青绿",
+        "lime": "苔绿",
+        "amber": "琥珀",
+        "orange": "橙色",
+        "crimson": "绯红",
+        "rose": "玫红",
+        "orchid": "兰紫"
+      }
+    },
+    "reading": {
+      "title": "阅读",
+      "textSize": {
+        "label": "聊天文字大小",
+        "description": "聊天中消息文字显示的大小。"
+      },
+      "reduceMotion": {
+        "label": "减少动效",
+        "description": "关闭滑动面板等动画。动画图片仍会继续播放。"
+      },
+      "light": {
+        "label": "环境光",
+        "description": "一道柔和的光，颜色来自你所在的地方。"
+      }
+    },
+    "shape": {
+      "title": "形状",
+      "corners": {
+        "label": "圆角",
+        "description": "按钮、卡片和输入框的圆角程度。",
+        "options": {
+          "sharp": "直角",
+          "standard": "标准",
+          "round": "圆润"
+        }
+      },
+      "avatars": {
+        "label": "头像",
+        "description": "每个头像被裁剪成的形状。",
+        "options": {
+          "rounded": "圆角方形",
+          "circle": "圆形",
+          "square": "方形"
+        }
+      },
+      "sidebar": {
+        "label": "侧边栏宽度",
+        "description": "频道和会话列表的宽度。",
+        "options": {
+          "narrow": "窄",
+          "standard": "标准",
+          "wide": "宽"
+        }
+      }
+    },
+    "messages": {
+      "title": "消息",
+      "style": {
+        "label": "样式",
+        "description": "所有聊天中消息的排列方式。",
+        "options": {
+          "bubbles": {
+            "label": "气泡",
+            "description": "每条消息一张卡片，你的在右侧。"
+          },
+          "rows": {
+            "label": "行",
+            "description": "头像、名字和文字成行排列。"
+          },
+          "lines": {
+            "label": "日志",
+            "description": "时间、名字和文字在同一行。"
+          }
+        }
+      },
+      "density": {
+        "label": "间距",
+        "description": "消息之间的空间大小。",
+        "options": {
+          "compact": "紧凑",
+          "cozy": "适中",
+          "spacious": "宽松"
+        }
+      },
+      "clock": {
+        "label": "时钟",
+        "description": "时间的显示方式。",
+        "options": {
+          "auto": "跟随语言",
+          "12h": "12 小时制",
+          "24h": "24 小时制"
+        }
+      },
+      "underlineLinks": {
+        "label": "为链接加下划线",
+        "description": "链接带下划线，而不仅是颜色不同。"
+      }
+    },
+    "typeface": {
+      "title": "字体排印",
+      "label": "字体",
+      "description": "整个应用使用的字体。中文始终使用系统字体。",
+      "options": {
+        "geist": "Geist",
+        "plexSans": "Plex",
+        "inter": "Inter",
+        "grotesk": "Grotesk",
+        "mono": "Mono",
+        "system": "系统"
+      }
+    },
+    "access": {
+      "title": "无障碍",
+      "contrast": {
+        "label": "更高对比度",
+        "description": "次要文字更亮，边缘更清晰。"
+      },
+      "status": {
+        "label": "色盲友好的状态",
+        "description": "在线、闲置和忙碌使用易于区分的颜色。"
+      }
+    }
   },
   "account": {
     "title": "我的账号",
@@ -176,6 +337,51 @@
         "label": "关于我",
         "placeholder": "向大家介绍一下您自己吧…",
         "counter": "{{used}}/{{max}}"
+      },
+      "image": {
+        "animationTooLarge": "动画图片最大 {{max}} MB，请选择更小的文件。"
+      },
+      "theme": {
+        "label": "个人资料主题",
+        "hint": "两种颜色，用来为横幅着色并为资料卡添加色调。",
+        "presets": "现成主题",
+        "preset": {
+          "nebula": "星云",
+          "ember": "余烬",
+          "tide": "潮汐",
+          "moss": "苔藓",
+          "dusk": "黄昏",
+          "sol": "日光",
+          "slate": "板岩"
+        },
+        "first": "第一种颜色",
+        "second": "第二种颜色",
+        "picker": "{{name}}：取色器",
+        "hex": "{{name}}：十六进制代码",
+        "preview": "你的资料卡将呈现的样子"
+      },
+      "pronouns": {
+        "label": "代词",
+        "placeholder": "例如：她/她的、他/他的",
+        "counter": "{{used}}/{{max}}"
+      },
+      "links": {
+        "label": "链接",
+        "hint": "资料卡上最多可放 {{max}} 个网址，每个都可以加上标签。",
+        "url": "链接地址",
+        "urlPlaceholder": "https://…",
+        "labelField": "链接标签",
+        "labelPlaceholder": "标签（可选）",
+        "add": "添加链接",
+        "remove": "移除链接",
+        "invalid": "请输入以 https:// 或 http:// 开头、不超过 {{max}} 个字符的网址。"
+      },
+      "layout": {
+        "label": "资料卡布局",
+        "hint": "资料卡顶部的排列方式。",
+        "standard": "标准",
+        "centered": "居中",
+        "compact": "紧凑"
       }
     },
     "details": {
@@ -186,7 +392,19 @@
       },
       "customStatus": {
         "label": "自定义状态",
-        "placeholder": "您现在在忙些什么？"
+        "placeholder": "您现在在忙些什么？",
+        "expiry": {
+          "label": "清除时间",
+          "keep": "保留当前结束时间（{{time}}）",
+          "choice": {
+            "30": "30 分钟",
+            "60": "1 小时",
+            "240": "4 小时",
+            "10080": "7 天",
+            "never": "不清除",
+            "today": "今天"
+          }
+        }
       }
     },
     "password": {
@@ -255,42 +473,84 @@
         "spacesFailed": "处理空间失败",
         "deleteFailed": "注销账号失败"
       }
+    },
+    "dataExport": {
+      "title": "你的数据副本",
+      "description": "此服务器保存的有关你账户的全部内容：你的资料、你写的内容、你的文件。准备需要一点时间，副本保留一周。",
+      "pending": "正在准备你的副本。你可以关闭此页面，回来时就能看到。",
+      "ready": "你的副本可下载至 {{date}}。",
+      "download": "下载",
+      "failed": "无法创建副本。请重试。",
+      "password": "你的密码",
+      "request": "请求副本"
+    },
+    "storage": {
+      "title": "你的文件",
+      "description": "你发送的内容都计入这里，每个文件计一次，转发的也算。删除包含文件的消息可腾出空间。",
+      "used": "已用 {{used}}，共 {{limit}}",
+      "usedNoLimit": "已用 {{used}}"
+    },
+    "username": {
+      "change": "更改",
+      "newLabel": "新用户名",
+      "hint": "{{min}} 到 {{max}} 个小写字母、数字或下划线。",
+      "warning": "之后你需要使用新名称登录。{{days}} 天后才能再次更改，在此期间旧名称会被保留，以防他人冒充你。",
+      "submit": "更改用户名",
+      "changed": "你现在是 @{{username}}",
+      "nextChange": "你可以在 {{date}} 再次更改。",
+      "homeOnly": "此名称在你的账户所属的服务器上设置。",
+      "connected": "此账户已连接到其他服务器，它们通过此名称识别该账户，因此暂时无法更改。"
     }
   },
   "privacy": {
     "title": "隐私",
-    "discovery": {
-      "sectionTitle": "发现功能",
-      "label": "允许他人找到我的个人资料",
-      "description": "启用后，您的个人资料将出现在“发现用户”中。他人始终可以通过精准用户名添加您。"
-    },
     "activity": {
       "sectionTitle": "活动状态",
       "label": "分享活动状态",
       "description": "允许他人查看您正在进行的活动，例如您正在玩的游戏或正在听的音乐。"
+    },
+    "blocked": {
+      "sectionTitle": "已屏蔽的用户",
+      "description": "被屏蔽的人无法给你发消息或好友请求，他们在共同空间和群组中的消息会被隐藏。对方不会收到通知。",
+      "empty": "你还没有屏蔽任何人。",
+      "loading": "加载中…",
+      "loadFailed": "无法加载已屏蔽的用户。",
+      "retry": "重试",
+      "unblock": "取消屏蔽",
+      "since": "屏蔽于 {{date}}"
+    },
+    "contact": {
+      "title": "谁可以联系你",
+      "dm": {
+        "label": "谁可以与你开始对话",
+        "description": "已有的对话保持开放。要结束对话，请屏蔽对方。",
+        "options": {
+          "anyone": "任何人",
+          "friendsAndSpaces": "好友和同一空间的人",
+          "friends": "仅好友",
+          "nobody": "没有人"
+        }
+      },
+      "requests": {
+        "label": "谁可以向你发送好友请求",
+        "description": "其他人按名称搜索时找不到你。",
+        "options": {
+          "anyone": "任何人",
+          "sharedSpaces": "同一空间的人",
+          "nobody": "没有人"
+        }
+      }
     }
   },
   "connections": {
     "title": "连接"
   },
-  "instance": {
-    "tabs": {
-      "general": "常规",
-      "registration": "注册",
-      "federation": "联邦",
-      "streaming": "推流",
-      "storage": "存储",
-      "users": "用户",
-      "updates": "更新",
-      "telemetry": "打个招呼"
-    }
-  },
   "keybinds": {
     "portal": {
-      "description": "在 Wayland 下，桌面环境负责管理 Backspace 的所有快捷键。请在系统的键盘快捷键设置中（Backspace 项下）分配、更改或删除快捷键。此处不使用本地浏览器/X11 绑定。",
+      "description": "在 Wayland 下，桌面环境负责管理 Tavvit 的所有快捷键。请在系统的键盘快捷键设置中（Tavvit 项下）分配、更改或删除快捷键。此处不使用本地浏览器/X11 绑定。",
       "idle": "正在准备首次注册所有可用操作。",
       "pending": "正在连接到桌面门户。如果弹出系统对话框，请为您要使用的操作选择快捷键。",
-      "ready": "Backspace 已注册。打开系统的键盘快捷键设置可更改或移除绑定。下方的列表为只读，当您切回 Backspace 时会自动刷新。",
+      "ready": "Tavvit 已注册。打开系统的键盘快捷键设置可更改或移除绑定。下方的列表为只读，当您切回 Tavvit 时会自动刷新。",
       "unavailable": "门户不可用、权限被拒绝或会话已结束。需要全局快捷键门户后端支持。Wayland 下已禁用本地绑定。",
       "retry": "注册或重新连接快捷键",
       "assigned": "系统快捷键：{{shortcut}}",
@@ -332,7 +592,7 @@
     },
     "accessibility": {
       "title": "需要辅助功能权限",
-      "description": "Backspace 需要辅助功能权限才能在应用外部使用全局快捷键。",
+      "description": "Tavvit 需要辅助功能权限才能在应用外部使用全局快捷键。",
       "grant": "授予权限"
     },
     "hookError": {
@@ -342,6 +602,10 @@
     "conflict": {
       "message": "<strong>{{combo}}</strong> 已绑定至 <strong>{{action}}</strong>。是否覆盖？",
       "overwrite": "覆盖"
+    },
+    "typingKey": {
+      "title": "此快捷键需要搭配 Ctrl、Alt 或系统键",
+      "description": "字母、数字、空格、回车、Tab 和退格键只能与 Ctrl、Alt 或系统键组合使用。单独使用时，应用会听到你在其他程序中输入的所有内容，因此不会监听它们。功能键、鼠标按键以及 Caps Lock 等按键可以单独使用。"
     }
   },
   "desktop": {
@@ -349,7 +613,7 @@
     "autoLaunch": {
       "openAtLogin": {
         "label": "开机启动",
-        "description": "在您登录系统时自动启动 Backspace"
+        "description": "在您登录系统时自动启动 Tavvit"
       },
       "startMinimized": {
         "label": "启动时最小化",
@@ -357,7 +621,7 @@
       }
     },
     "updates": {
-      "appName": "Backspace 桌面端",
+      "appName": "Tavvit 桌面端",
       "versionLabel": "版本 {{version}}",
       "checking": "正在检查更新…",
       "checkingShort": "正在检查…",
@@ -375,58 +639,289 @@
       "external": "更新通过您的 Flatpak 软件管理器进行安装",
       "download": "下载",
       "restart": "重启",
-      "manualNote": "当前构建版本无法自动安装更新，因此需要从 GitHub 下载新版本并手动替换应用。请查阅发布说明以获取适用于您平台的步骤。",
-      "externalNote": "Flatpak 在应用外部以原子方式应用更新。请使用您的软件管理器或运行 <code>flatpak update</code> 命令来更新 Backspace。"
-    },
-    "instance": {
-      "current": "当前连接的实例",
-      "change": "切换实例"
+      "manualNote": "当前构建版本无法自动安装更新，需要从本服务器的下载页面下载新版本并手动安装。",
+      "externalNote": "Flatpak 在应用外部以原子方式应用更新。请使用您的软件管理器或运行 <code>flatpak update</code> 命令来更新 Tavvit。",
+      "autoNote": "更新会自动下载并安装：当 Tavvit 位于系统托盘中，或电脑几分钟无人使用时，它会重新启动，但绝不会在通话中重启。"
     }
   },
-  "desktopDownload": {
-    "title": "桌面端",
-    "intro": "支持全局快捷键、开机启动和系统托盘图标。",
-    "unsupported": "桌面端应用支持 Windows、Linux 和 macOS。",
-    "name": {
-      "windows": "Windows",
-      "mac": "macOS",
-      "linux": "Linux"
+  "emoji": {
+    "title": "表情",
+    "intro": "此服务器上所有人共享的图片库。可在任何聊天中使用：输入 :名称: 或在表情菜单中选择。",
+    "add": {
+      "title": "添加表情",
+      "choose": "选择图片",
+      "change": "选择其他图片",
+      "hint": "PNG、JPEG、WebP 或 GIF，最大 {{max}} MB。会缩小到 128 像素以内，动态 GIF 仍会继续播放。",
+      "name": "名称",
+      "namePlaceholder": "party_parrot",
+      "submit": "添加表情",
+      "submitting": "正在添加…",
+      "tooLarge": "该文件超过 {{max}} MB。",
+      "unreadable": "无法读取该文件。",
+      "counter": "你已添加 {{used}}/{{max}} 个。",
+      "added": "已添加 :{{name}}:"
     },
-    "tag": {
-      "windows": "当前电脑",
-      "mac": "当前 Mac",
-      "linux": "当前设备"
+    "library": {
+      "title": "表情库",
+      "count_other": "{{count}} 个表情",
+      "search": "搜索表情",
+      "empty": "还没有表情。添加第一个吧。",
+      "noMatches": "没有匹配的表情。",
+      "loadFailed": "无法加载表情。",
+      "retry": "重试"
     },
-    "covers": {
-      "windows": "x64 或 arm64",
-      "mac": "支持 Apple Silicon 和 Intel 处理器的 Mac",
-      "linux": "AppImage 或 deb 软件包，x64 或 arm64"
+    "row": {
+      "rename": "重命名",
+      "save": "保存",
+      "delete": "删除",
+      "yours": "我的",
+      "renamed": "已重命名为 :{{name}}:",
+      "removed": "已删除 :{{name}}:",
+      "nameLabel": ":{{name}}: 的名称",
+      "deleteConfirm": {
+        "title": "删除 :{{name}}:？",
+        "body": "它会从反应中消失，使用它的旧消息会改为显示 :{{name}}:。",
+        "action": "删除"
+      }
     },
-    "download": {
-      "windows": "下载 Windows 版",
-      "mac": "下载 macOS 版",
-      "linux": "下载 Linux 版"
+    "adminsOnly": "在此服务器上，由管理员添加表情。库中的所有表情所有人都可以使用。"
+  },
+  "games": {
+    "title": "游戏动态",
+    "intro": "像桌面应用在这台电脑上看到的那样，向好友展示你正在玩什么。",
+    "browserOnly": "浏览器无法看到正在运行哪些程序，因此游戏检测只在 Tavvit 桌面应用中可用。其他功能在这里照常使用。",
+    "getDesktop": "获取桌面应用",
+    "detect": {
+      "label": "检测我在玩什么",
+      "description": "在你关闭前保持开启。Tavvit 每 15 秒查看一次这台电脑上正在运行的内容：从 Steam、Epic Games 或 GOG 启动的游戏，以及一份常见游戏列表。只会分享游戏名称，且仅在“隐私”中开启分享时才会分享。"
     },
-    "picker": {
-      "architecture": "架构",
-      "format": "软件包格式"
+    "now": {
+      "title": "当前检测到",
+      "playing": "正在玩 {{name}}",
+      "none": "没有正在运行的、Tavvit 认识的游戏。"
     },
-    "arch": {
-      "appleSilicon": "Apple Silicon",
-      "intel": "Intel",
-      "x64": "x64",
-      "arm64": "arm64"
+    "sharingOff": "隐私设置中已关闭动态分享，因此好友看不到这些。",
+    "mine": {
+      "title": "我的游戏",
+      "description": "这些是你之前自己添加的。在你移除之前，它们仍会被识别。",
+      "remove": "移除 {{name}}"
     },
-    "kind": {
-      "appimage": "AppImage",
-      "deb": "deb"
+    "updateApp": "此版本的 Tavvit 桌面应用还无法检测游戏。请下载并安装一次最新版本，此后它会自行保持更新。"
+  },
+  "notifications": {
+    "device": {
+      "title": "在此设备上",
+      "app": "桌面应用在窗口处于后台时显示通知。",
+      "granted": "通知已开启。当有与你相关的内容且此标签页在后台时，你会收到通知。",
+      "default": "通知已关闭。浏览器会询问你一次。",
+      "denied": "你的浏览器已阻止此网站的通知。请在网站设置中允许，然后重新加载页面。",
+      "unsupported": "此浏览器不支持通知。",
+      "turnOn": "开启通知",
+      "test": "发送测试通知",
+      "testBody": "通知看起来就是这样。"
     },
-    "archGuessed": {
-      "windows": "您的浏览器未提供当前电脑的处理器类型，已预选 x64。",
-      "mac": "您的浏览器未提供当前 Mac 的芯片类型，已预选 Apple Silicon。",
-      "linux": "您的浏览器未提供当前设备的处理器类型，已预选 x64。"
+    "content": {
+      "title": "通知内容",
+      "showText": {
+        "label": "显示消息文字",
+        "description": "关闭后，通知只显示发送者，别人无法从你的屏幕上看到内容。"
+      },
+      "directMessages": {
+        "label": "私信",
+        "description": "关闭后，私信和群聊不再发出声音或通知，但仍显示为未读。"
+      },
+      "appBadge": {
+        "label": "在应用图标上显示未读数"
+      }
     },
-    "version": "版本 {{version}}",
-    "allReleases": "GitHub 上的所有版本"
+    "sounds": {
+      "title": "声音",
+      "messageSound": {
+        "label": "新消息提示音",
+        "description": "用于会通知你的消息。"
+      },
+      "callSound": {
+        "label": "来电铃声",
+        "description": "关闭后，来电只在屏幕上显示。"
+      }
+    },
+    "spaces": {
+      "title": "空间",
+      "description": "每个空间可以通知你多少内容。这跟随你的账户，在其他设备上同样有效。",
+      "muted": "已静音",
+      "empty": "你还没有加入任何空间。"
+    },
+    "push": {
+      "title": "此设备的推送",
+      "toggle": "应用关闭时也通知我",
+      "toggleHint": "通过浏览器的推送服务发送。该服务只能看到消息到达的时间，看不到内容。",
+      "installFirst": "在 iPhone 或 iPad 上，需先将 Tavvit 添加到主屏幕：点按“分享”，再点按“添加到主屏幕”，然后从那里打开。",
+      "denied": "你的浏览器已被设置为不显示 Tavvit 的通知。可在浏览器的此网站设置中更改。"
+    },
+    "keywords": {
+      "title": "关键词",
+      "description": "在设置为“提及”的频道中，包含这些词语的消息会像提及一样提醒你。只有你能看到它们。",
+      "placeholder": "添加词语",
+      "add": "添加",
+      "remove": "移除 {{word}}",
+      "limit": "{{used}} / {{max}}"
+    }
+  },
+  "security": {
+    "sessions": {
+      "title": "你在哪里登录",
+      "description": "已登录此服务器的所有设备。如果有不认识的设备，请将其退出并更改密码。",
+      "loading": "正在加载…",
+      "unknownDevice": "未知设备",
+      "thisDevice": "此设备",
+      "lastActive": "活跃于 {{date}}",
+      "signOut": "退出",
+      "signOutOthers": "退出其他所有设备",
+      "signOutOthersConfirm": {
+        "title": "退出其他所有设备？",
+        "description": "其他所有设备会立即退出，需要密码才能重新登录。"
+      },
+      "signedIn": "登录于 {{date}}",
+      "signOutAll": "在所有设备上退出",
+      "signOutAllConfirm": {
+        "title": "在所有设备上退出?",
+        "description": "所有设备都会退出登录,包括此设备。之后请使用密码重新登录。"
+      }
+    },
+    "email": {
+      "title": "邮箱地址",
+      "description": "用于确认是你本人,以及重置忘记的密码。其他人永远看不到它。",
+      "none": "还没有地址。没有已确认的地址时,忘记的密码只能由管理员重置。",
+      "confirmed": "已确认",
+      "unconfirmed": "未确认",
+      "pending": "等待确认:{{address}}。在此之前,当前地址仍然有效。",
+      "waiting": "我们已向 {{address}} 发送链接。它 24 小时内有效。也请查看垃圾邮件文件夹。",
+      "undeliverable": "发往此地址的邮件无法送达,因此不再向其发送。请使用其他地址。",
+      "sendFailed": "上一封确认邮件未能发送。请稍后再试。",
+      "sent": "链接已发送",
+      "resend": "重新发送链接",
+      "cancel": "取消更改",
+      "change": "更改",
+      "remove": "移除",
+      "newAddress": "新邮箱地址",
+      "submit": "发送确认链接",
+      "removeConfirm": {
+        "title": "移除你的邮箱地址?",
+        "description": "没有已确认的地址时,忘记的密码只能由管理员重置。"
+      }
+    },
+    "passwordRecovery": {
+      "confirmed": "如果你忘记密码,我们会向 {{address}} 发送链接。",
+      "none": "如果你忘记密码,在你拥有已确认的地址之前,只能由管理员重置。",
+      "noMail": "此服务器不发送邮件。如果你忘记密码,只能由管理员重置。"
+    },
+    "overview": {
+      "title": "概览",
+      "none": "尚无",
+      "on": "已开启",
+      "off": "已关闭",
+      "changed": "更改于 {{date}}",
+      "neverChanged": "注册后未更改",
+      "devices_other": "{{count}} 台设备"
+    },
+    "twoFactor": {
+      "title": "两步验证",
+      "description": "登录时还需要验证器应用(如 Aegis、Google Authenticator、Microsoft Authenticator 或 1Password)中的验证码。即使别人得到你的密码,也无法登录。",
+      "off": "已关闭。登录只需要密码。",
+      "unavailable": "此服务器不可用:运营者尚未设置。",
+      "enable": "开启",
+      "disable": "关闭",
+      "regenerate": "创建新的恢复码",
+      "activate": "开启",
+      "confirmPassword": "请输入密码以开始。",
+      "scan": "用验证器应用扫描此码,然后输入显示的验证码。",
+      "qrLabel": "验证器应用的二维码",
+      "manual": "无法扫描?在应用中输入此密钥:",
+      "firstCode": "应用中的验证码",
+      "codeLabel": "应用中的验证码或恢复码",
+      "codeHint": "此账户已开启两步验证。",
+      "enabledSince": "自 {{date}} 起开启。",
+      "codesLeft_other": "还剩 {{count}} 个恢复码。",
+      "codesLow": "恢复码快用完了。请在还能登录时创建新的恢复码。",
+      "disableIntro": "登录将再次只需要密码。请输入密码和验证码以确认。",
+      "regenerateIntro": "旧的恢复码将失效。请输入密码和验证码以确认。",
+      "recovery": {
+        "intro": "请将它们保存在安全的地方,不要和手机放在一起。如果手机丢失,每个恢复码可让你登录一次。它们只显示这一次。",
+        "copy": "复制",
+        "copied": "已复制",
+        "copyFailed": "无法复制",
+        "download": "下载",
+        "saved": "我已将它们保存在安全的地方",
+        "done": "完成"
+      }
+    },
+    "activity": {
+      "title": "安全活动",
+      "description": "过去 90 天内此账户发生的事情。",
+      "empty": "暂无记录。",
+      "kinds": {
+        "login": "已登录",
+        "login_new_device": "从新设备登录",
+        "login_failed": "登录失败",
+        "mfa_failed": "密码正确但验证码错误",
+        "password_changed": "密码已更改",
+        "username_changed": "用户名已更改",
+        "password_reset": "密码已重置",
+        "email_added": "邮箱地址已确认",
+        "email_changed": "邮箱地址已更改",
+        "email_removed": "邮箱地址已移除",
+        "two_factor_on": "两步验证已开启",
+        "two_factor_off": "两步验证已关闭",
+        "two_factor_reset": "运营者已重置两步验证",
+        "recovery_regenerated": "已创建新的恢复码",
+        "recovery_used": "已使用恢复码",
+        "session_revoked": "一台设备已退出登录",
+        "sessions_ended": "多台设备已退出登录",
+        "sessions_ended_by_admin": "管理员已将你退出登录"
+      }
+    }
+  },
+  "developers": {
+    "title": "机器人",
+    "description": "机器人是你自己运行的程序，拥有独立账号。你需要对其行为负责。最多 {{max}} 个。",
+    "open": "打开开发者门户",
+    "docs": "查看文档",
+    "disabled": "此实例的运营者尚未启用机器人。",
+    "nameLabel": "机器人名称",
+    "create": "创建",
+    "tokenTitle": "{{name}} 的令牌",
+    "tokenDescription": "请立即复制：它不会再次显示。持有它的人可以此机器人身份操作，请像对待密码一样保管。",
+    "tokenLabel": "机器人令牌",
+    "copy": "复制",
+    "copied": "已复制",
+    "listTitle": "你的机器人",
+    "neverUsed": "从未使用",
+    "lastUsed": "上次使用：{{time}}",
+    "inviteLabel": "将其加入空间的地址",
+    "rotate": "新令牌",
+    "rotateTitle": "更换新令牌？",
+    "rotateBody": "{{name}} 的旧令牌将立即失效，运行中的机器人会被断开。",
+    "remove": "删除机器人",
+    "removeTitle": "删除此机器人？",
+    "removeBody": "{{name}} 将离开所有空间，令牌失效。已发布内容会保留。",
+    "portal": {
+      "title": "开发者门户",
+      "backToApp": "返回 Tavvit",
+      "allBots": "所有机器人",
+      "profile": "资料",
+      "descriptionLabel": "它的用途",
+      "pictureChange": "更换图片",
+      "pictureRemove": "移除图片",
+      "cropTitle": "裁剪图片",
+      "saved": "已保存",
+      "tokenHint": "令牌只在创建时显示一次。新令牌会立即让旧令牌失效。",
+      "inviteDescription": "打开此地址且能管理空间的人会选择空间，并看到机器人请求的权限。它只能获得此人拥有的权限，且永远不会成为管理员。",
+      "inviteRights": "它请求的权限",
+      "commands": "命令",
+      "commandsHint": "你的程序上次注册的内容。",
+      "noCommands": "暂无。",
+      "spaces": "空间",
+      "noSpaces": "它还不在任何空间中。"
+    }
   }
 }

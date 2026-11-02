@@ -1,22 +1,55 @@
 {
   "update": {
-    "laterHint": "您可以稍后在“设置 - 桌面”中安装此更新",
+    "laterHint": "下次 Tavvit 位于系统托盘中或您离开时，它会自动安装。",
+    "laterHintSettings": "您可以稍后在“设置 - 桌面端”中安装此更新",
     "dismiss": "忽略此更新",
     "failed": {
       "title": "无法安装更新",
-      "body": "Backspace {{version}} 已下载，但安装失败。您可以手动进行安装。"
+      "body": "Tavvit {{version}} 已下载，但安装失败。您可以手动进行安装。"
     },
     "ready": {
       "title": "更新已就绪",
-      "body": "Backspace {{version}} 已下载，随时可以安装。"
+      "body": "Tavvit {{version}} 已下载。它会在您离开时自动安装（绝不会在通话中），您也可以现在重启来安装。"
     },
     "available": {
-      "title": "Backspace {{version}} 现已可用",
+      "title": "Tavvit {{version}} 现已可用",
       "body": "当前构建版本无法自动更新，请下载新版本以进行升级。",
       "bodyWithCurrent": "您当前使用的是 {{currentVersion}}。当前构建版本无法自动更新，请下载新版本以进行升级。"
     },
     "restartNow": "立即重启",
     "download": "下载",
     "later": "稍后"
+  },
+  "download": {
+    "kicker": "桌面版",
+    "title": "Tavvit Windows 版",
+    "description": "同一个 Tavvit，在独立窗口中运行。可以随电脑启动，保持登录，并且在其他应用位于前台时也能使用按键通话。",
+    "button": "下载 Windows 版",
+    "short": "下载",
+    "meta": "v{{version}} · {{size}}",
+    "detected": "检测到：{{system}}",
+    "unsupported": "{{system}} 暂无桌面应用。此下载为 Windows 安装程序；在此设备上可以在浏览器中使用 Tavvit。",
+    "otherVersions": "所有安装程序",
+    "arch": {
+      "x64": "Windows 64 位 (x64)",
+      "arm64": "Windows ARM 版 (arm64)"
+    },
+    "system": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS",
+      "other": "此系统"
+    },
+    "none": "此服务器尚未发布桌面版。在此之前，Tavvit 可以在浏览器中完整使用。",
+    "failed": "无法加载下载列表。",
+    "retry": "重试",
+    "releasedOn": "发布于 {{date}}",
+    "checksum": "SHA-512",
+    "browserNote": "无需安装即可使用 Tavvit：",
+    "openInBrowser": "在浏览器中打开",
+    "backToApp": "返回 Tavvit",
+    "signIn": "登录"
   }
 }

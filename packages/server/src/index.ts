@@ -1,3 +1,5 @@
+import { apiErrorHandler } from './utils/apiErrorHandler.js';
+import { startSessionSweeper, stopSessionSweeper } from './utils/sessions.js';
 import Fastify, { type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -5,13 +7,33 @@ import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import { config } from './config.js';
-import { getDb, getRawDb, closeDatabase } from './db/index.js';
+import { getDb, getRawDb, closeDatabase, schema } from './db/index.js';
 import { checkFfmpeg } from './utils/thumbnail.js';
 import { authRoutes } from './routes/auth.js';
 import { userRoutes } from './routes/users.js';
 import { spaceRoutes } from './routes/spaces.js';
+import { spaceModerationRoutes } from './routes/spaceModeration.js';
+import { discordImportRoutes } from './routes/discordImport.js';
 import { channelRoutes } from './routes/channels.js';
 import { messageRoutes } from './routes/messages.js';
+import { pinRoutes } from './routes/pins.js';
+import { forwardRoutes } from './routes/forward.js';
+import { pollRoutes } from './routes/polls.js';
+import { pushRoutes } from './routes/push.js';
+import { threadRoutes } from './routes/threads.js';
+import { forumRoutes } from './routes/forums.js';
+import { translationRoutes } from './routes/translation.js';
+import { channelFollowRoutes } from './routes/channelFollows.js';
+import { eventRoutes } from './routes/events.js';
+import { webhookRoutes } from './routes/webhooks.js';
+import { savedRoutes } from './routes/saved.js';
+import { botRoutes } from './routes/bots.js';
+import { removeUnusedSoundFiles, soundboardRoutes } from './routes/soundboard.js';
+import { keywordRoutes } from './routes/keywords.js';
+import { startSavedReminderSweeper } from './utils/savedReminders.js';
+import { pathForLog, removeUnusedWebhookAccounts } from './utils/webhookAccounts.js';
+import { welcomeRoutes } from './routes/welcome.js';
+import { startEventReminderSweeper } from './utils/eventReminders.js';
 import { stickerRoutes } from './routes/stickers.js';
 import { uploadRoutes } from './routes/uploads.js';
 import { filesRoutes } from './routes/files.js';
@@ -22,21 +44,50 @@ import { settingsRoutes } from './routes/settings.js';
 import { notificationSettingsRoutes } from './routes/notificationSettings.js';
 import { utilRoutes } from './routes/utils.js';
 import { instanceRoutes } from './routes/instance.js';
+import { emailRoutes, emailWebhookRoutes } from './routes/email.js';
+import { startEmailWorker, stopEmailWorker } from './email/service.js';
+import { startSecuritySweeper, stopSecuritySweeper } from './security/events.js';
+import { twoFactorRoutes } from './routes/twoFactor.js';
 import { invitesRoutes } from './routes/invites.js';
 import { exploreRoutes } from './routes/explore.js';
 import { directoryRoutes } from './routes/directory.js';
 import { searchRoutes } from './routes/search.js';
 import { adminRoutes } from './routes/admin.js';
-import { adminUpdateRoutes } from './routes/adminUpdates.js';
-import { adminTelemetryRoutes } from './routes/adminTelemetry.js';
+import { platformAdminRoutes } from './routes/platformAdmin.js';
+import { adminConsoleRoutes } from './routes/adminConsole.js';
+import { spaceReviewRoutes } from './routes/spaceReview.js';
 import { gifRoutes } from './routes/gif.js';
+import { desktopDownloadRoutes } from './routes/desktopDownloads.js';
+import { legalRoutes } from './routes/legal.js';
+import { startLegalRecordSweeper } from './utils/reports.js';
+import { inboxRoutes } from './routes/inbox.js';
+import { dataExportRoutes } from './routes/dataExport.js';
+import { accountStorageRoutes } from './routes/accountStorage.js';
+import { botFileRoutes } from './routes/botFiles.js';
+import { startDataExportSweeper, stopDataExportSweeper } from './utils/dataExport.js';
+import { blockRoutes } from './routes/blocks.js';
+import { profileImageRoutes } from './routes/profileImages.js';
+import { emojiRoutes } from './routes/emojis.js';
+import { startCustomStatusSweeper, stopCustomStatusSweeper } from './utils/customStatusExpiry.js';
 import { federationRoutes } from './routes/federation.js';
 import { cspReportRoutes } from './routes/cspReport.js';
 import { buildCspHeaderValue, CSP_REPORT_GROUP, CSP_REPORT_PATH } from './utils/csp.js';
 import { startFederationWorkers, stopFederationWorkers } from './utils/federationWorker.js';
 import { startBackupWorker, stopBackupWorker } from './utils/backupWorker.js';
-import { startTelemetryReporter, stopTelemetryReporter } from './telemetry/reporter.js';
+import { startRuntimeStats, stopRuntimeStats } from './utils/runtimeStats.js';
+import { startOperatorAlerts, stopOperatorAlerts } from './utils/operatorAlerts.js';
+import { publicStatusRoutes } from './routes/publicStatus.js';
+import { loadtestRoutes } from './routes/loadtest.js';
 import { startDirectoryPinger, stopDirectoryPinger } from './directory/pinger.js';
+import { buildStartupSummary } from './utils/startupSummary.js';
+import { sourceOffer } from './utils/sourceOffer.js';
+import { registerDeveloperDocs } from './utils/developerDocs.js';
+import { createWebDocuments, isStaticAssetPath, registerWebDocumentRoutes, sendIndex, type InviteCard } from './utils/webDocument.js';
+import { rateLimitsDisabled, warnIgnoredRateLimitSwitch } from './utils/rateLimitSwitch.js';
+import { trustProxyFor } from './utils/trustProxy.js';
+import { registerJsonBodyParser } from './utils/jsonBody.js';
+import { getLocalInvitePreview } from './utils/spaceInviteSnapshot.js';
+import { uploadNameOf } from './utils/profileImageRefs.js';
 import { errorBody } from './utils/httpErrors.js';
 import './utils/federationRollback.js'; // Side-effect: registers rollback callbacks for outbox terminal failures.
 import { registerCallRelayHooks } from './ws/events.js';
@@ -46,6 +97,8 @@ import { registerWebSocket } from './ws/handler.js';
 import path from 'path';
 import fs from 'fs';
 import { MESSAGE_PAGING_HEADER } from '@backspace/shared';
+import { DEFAULT_INSTANCE_NAME } from '@backspace/shared/src/constants.js';
+import { eq } from 'drizzle-orm';
 
 async function main(): Promise<void> {
   const app = Fastify({
@@ -53,12 +106,23 @@ async function main(): Promise<void> {
     // nearest proxy appended rather than the left-most thing in
     // `X-Forwarded-For`, so a client cannot pick the address its rate limits
     // are counted under. `TRUSTED_PROXY_HOPS` in config.ts carries what the
-    // number means and when an operator changes it.
-    trustProxy: config.trustedProxyHops,
+    // number means and when an operator changes it; utils/trustProxy.ts why it
+    // is a function now (Fastify 5 trusts nobody for a bare number).
+    trustProxy: trustProxyFor(config.trustedProxyHops),
     logger: {
       level: 'info',
+      // Which request, not who sent it or what they searched for: no address,
+      // no query string and no webhook token reach the logs (docs/systems/legal.md).
+      serializers: {
+        req(request) {
+          return { method: request.method, url: pathForLog(request.url) };
+        },
+      },
     },
   });
+
+  // An empty JSON body is no body, as before Fastify 5 (utils/jsonBody.ts).
+  registerJsonBodyParser(app);
 
   // The origin is deliberately reflected rather than restricted to a peer
   // allowlist. Client federation has a browser on one instance call
@@ -135,7 +199,10 @@ async function main(): Promise<void> {
 
   // The policy is built once at boot because its only input is config, which
   // does not change while the process runs.
-  const cspHeaderValue = buildCspHeaderValue({ livekitUrl: config.livekit.url });
+  const cspHeaderValue = buildCspHeaderValue({
+    livekitUrl: config.livekit.url,
+    federationEnabled: config.federation.enabled,
+  });
   // Enforcing since 2026-09-03. It shipped report-only first and was flipped
   // only after the observation phase in docs/systems/web-security.md section 7
   // ran on two real deployments with a violation detector validated on each.
@@ -144,6 +211,11 @@ async function main(): Promise<void> {
   // nobody exercised.
   const cspHeaderName = 'Content-Security-Policy';
   const reportingEndpoints = `${CSP_REPORT_GROUP}="${CSP_REPORT_PATH}"`;
+  // What the page may ask the browser for (web-security.md, "Permissions-Policy"): camera,
+  // microphone and screen capture for itself alone, for calls, and nothing it never uses. What an
+  // embedded player is handed (fullscreen, autoplay, picture-in-picture, encrypted media) is left
+  // out on purpose: naming it here would stop an iframe's `allow` from passing it on.
+  const PERMISSIONS_POLICY = 'camera=(self), microphone=(self), display-capture=(self), geolocation=(), payment=(), usb=(), serial=(), hid=(), midi=(), browsing-topics=()';
 
   app.addHook('onSend', async (_request, reply, payload) => {
     // A route that has already set its own policy is asserting something
@@ -156,8 +228,14 @@ async function main(): Promise<void> {
       reply.header(cspHeaderName, cspHeaderValue);
       reply.header('Reporting-Endpoints', reportingEndpoints);
     }
+    if (!reply.getHeader('Permissions-Policy')) reply.header('Permissions-Policy', PERMISSIONS_POLICY);
     return payload;
   });
+
+  // Before anything can throw. Fastify's default answers with the error's own message
+  // and logs it, and those carry things that must go nowhere: the parser quotes the
+  // body it could not read, passwords included.
+  app.setErrorHandler(apiErrorHandler);
 
   await app.register(rateLimit, {
     max: 200,
@@ -173,8 +251,11 @@ async function main(): Promise<void> {
     // its own. See docs/systems/api.md, "Rate limiting".
     keyGenerator: (request: FastifyRequest) => request.ip,
     // Test harnesses set DISABLE_RATE_LIMITS=1 to bypass per-IP exhaustion when
-    // many tests share the loopback IP. Default unset; production unchanged.
-    allowList: () => process.env.DISABLE_RATE_LIMITS === '1' || process.env.DISABLE_RATE_LIMITS === 'true',
+    // many tests share the loopback IP; production ignores it (utils/rateLimitSwitch.ts).
+    // The page's own files are served from disk and a first visit asks for about
+    // 40 of them, so counting them would leave a handful of new visitors behind
+    // one address with a black page.
+    allowList: (request: FastifyRequest) => rateLimitsDisabled() || isStaticAssetPath(request.url),
     // The shared error shape (see localization.md) plus `retryAfter` in
     // seconds; the plugin sets the Retry-After header itself. One builder
     // covers every per-route override too, so a route that tightens its own
@@ -185,15 +266,55 @@ async function main(): Promise<void> {
     }),
   });
 
-  await app.register(websocket);
+  // A large `ready` goes compressed: it is mostly the same few words over and over, and someone on
+  // a phone waits for all of it. Nothing small is, so a message costs what it did. See
+  // docs/systems/operations.md.
+  await app.register(websocket, {
+    options: {
+      perMessageDeflate: {
+        threshold: 32 * 1024,
+        serverNoContextTakeover: true,
+        clientNoContextTakeover: true,
+        zlibDeflateOptions: { level: 3 },
+      },
+    },
+  });
 
   // Serve built frontend in production
   const webDistPath = path.resolve(import.meta.dirname ?? '.', '../../web/dist');
-  if (fs.existsSync(webDistPath)) {
+  const webDocuments = fs.existsSync(webDistPath) ? createWebDocuments(webDistPath, config.publicOrigin ?? `https://${config.domain}`) : null;
+  const inviteCardFor = (code: string): InviteCard | null => {
+    const preview = getLocalInvitePreview(code);
+    if (!preview) return null;
+    const icon = uploadNameOf(preview.icon);
+    return {
+      spaceName: preview.spaceName,
+      description: preview.description,
+      memberCount: preview.memberCount,
+      iconPath: icon ? `/api/uploads/${icon}` : null,
+    };
+  };
+  const currentInstanceName = (): string => {
+    const row = getDb().select().from(schema.instanceSettings).where(eq(schema.instanceSettings.id, 1)).get();
+    return row?.instanceName?.trim() || DEFAULT_INSTANCE_NAME;
+  };
+  if (webDocuments) {
+    // The page and the manifest carry the instance's own name (see
+    // utils/webDocument.ts), so they are answered ahead of the static handler
+    // that would send the files exactly as Vite wrote them.
+    registerWebDocumentRoutes(app, webDocuments, currentInstanceName, inviteCardFor);
+    registerDeveloperDocs(app, webDistPath);
     await app.register(fastifyStatic, {
       root: webDistPath,
       prefix: '/',
       wildcard: false,
+      setHeaders: (reply, filePath) => {
+        const served = path.relative(webDistPath, filePath);
+        // Vite names these by their content, so a copy can never go stale. A
+        // typeface's file changes name when it changes. The rest is revalidated.
+        if (served.startsWith(`assets${path.sep}`)) reply.header('Cache-Control', 'public, max-age=31536000, immutable');
+        else if (served.startsWith(`fonts${path.sep}`)) reply.header('Cache-Control', 'public, max-age=604800');
+      },
     });
   }
 
@@ -210,10 +331,32 @@ async function main(): Promise<void> {
   resetStalePresenceOnBoot();
 
   await app.register(authRoutes);
+  await app.register(loadtestRoutes);
+  await app.register(publicStatusRoutes);
   await app.register(userRoutes);
+  await app.register(blockRoutes);
+  await app.register(profileImageRoutes);
+  await app.register(emojiRoutes);
   await app.register(spaceRoutes);
+  await app.register(spaceModerationRoutes);
+  await app.register(discordImportRoutes);
   await app.register(channelRoutes);
   await app.register(messageRoutes);
+  await app.register(pinRoutes);
+  await app.register(forwardRoutes);
+  await app.register(pollRoutes);
+  await app.register(pushRoutes);
+  await app.register(threadRoutes);
+  await app.register(forumRoutes);
+  await app.register(translationRoutes);
+  await app.register(channelFollowRoutes);
+  await app.register(eventRoutes);
+  await app.register(webhookRoutes);
+  await app.register(savedRoutes);
+  await app.register(soundboardRoutes);
+  await app.register(botRoutes);
+  await app.register(keywordRoutes);
+  await app.register(welcomeRoutes);
   await app.register(uploadRoutes);
   await app.register(stickerRoutes);
   await app.register(filesRoutes);
@@ -224,15 +367,30 @@ async function main(): Promise<void> {
   await app.register(notificationSettingsRoutes);
   await app.register(utilRoutes);
   await app.register(instanceRoutes);
+  await app.register(twoFactorRoutes);
+  await app.register(emailRoutes);
+  await app.register(emailWebhookRoutes);
   await app.register(invitesRoutes);
   await app.register(exploreRoutes);
   await app.register(directoryRoutes);
   await app.register(searchRoutes);
   await app.register(adminRoutes);
-  await app.register(adminUpdateRoutes);
-  await app.register(adminTelemetryRoutes);
+  await app.register(platformAdminRoutes);
+  await app.register(adminConsoleRoutes);
+  await app.register(spaceReviewRoutes);
   await app.register(gifRoutes);
-  await app.register(federationRoutes);
+  await app.register(desktopDownloadRoutes);
+  await app.register(legalRoutes);
+  await app.register(inboxRoutes);
+  await app.register(dataExportRoutes);
+  await app.register(accountStorageRoutes);
+  await app.register(botFileRoutes);
+  // Federation is opt-in. Left unregistered, /api/federation/* answers with the
+  // ordinary 404 of any unknown API path, so a stranger probing for it learns
+  // nothing about this instance. See config.federation.enabled.
+  if (config.federation.enabled) {
+    await app.register(federationRoutes);
+  }
   // Registered here rather than beside the hook above so it sits behind the
   // rate limiter. The sink is unauthenticated by design and writes a log line
   // per report, and @fastify/rate-limit only covers routes registered after it.
@@ -244,18 +402,24 @@ async function main(): Promise<void> {
   });
 
   // SPA fallback - serve index.html for non-API routes
-  if (fs.existsSync(webDistPath)) {
+  if (webDocuments) {
     app.setNotFoundHandler((request, reply) => {
-      if (request.url.startsWith('/api/') || request.url.startsWith('/ws')) {
+      // A missing download must be a 404, never the app's page: the desktop
+      // updater would otherwise read HTML as latest.yml.
+      if (request.url.startsWith('/api/') || request.url.startsWith('/ws') || request.url.startsWith('/downloads/')) {
         return reply.code(404).send({ error: 'Not found', statusCode: 404 });
       }
-      return reply.sendFile('index.html');
+      const html = webDocuments.index(currentInstanceName());
+      if (html === null) return reply.code(404).send({ error: 'Not found', statusCode: 404 });
+      return sendIndex(reply, html);
     });
   }
 
   try {
     await app.listen({ port: config.port, host: config.host });
-    console.log(`Backspace server running at http://${config.host}:${config.port}`);
+    console.log(`Tavvit server running at http://${config.host}:${config.port}`);
+    for (const line of buildStartupSummary(getRawDb(), config, sourceOffer())) console.log(line);
+    warnIgnoredRateLimitSwitch();
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -277,13 +441,22 @@ async function main(): Promise<void> {
     console.log('[startup] federation workers disabled via DISABLE_FEDERATION_WORKERS');
   } else {
     startFederationWorkers();
-    // The opt-in usage reporter, behind the same guard as the federation
-    // workers so an integration harness starts no background timers. It sends
-    // nothing at all unless an admin has switched reporting on.
-    startTelemetryReporter();
   }
 
   startBackupWorker();
+  startRuntimeStats();
+  startOperatorAlerts();
+  // Statuses set to "clear after..." end here (utils/customStatusExpiry.ts).
+  startCustomStatusSweeper();
+  startEventReminderSweeper();
+  startSavedReminderSweeper();
+  removeUnusedWebhookAccounts();
+  removeUnusedSoundFiles();
+  startSessionSweeper();
+  startDataExportSweeper();
+  startLegalRecordSweeper();
+  startEmailWorker();
+  startSecuritySweeper();
 
   // The space directory pinger stays outside the workers guard on purpose:
   // the two-instance harness disables the workers and still needs the pinger,
@@ -293,9 +466,15 @@ async function main(): Promise<void> {
   const shutdown = async () => {
     console.log('Shutting down...');
     stopFederationWorkers();
-    stopTelemetryReporter();
     stopDirectoryPinger();
     stopBackupWorker();
+    stopRuntimeStats();
+    stopOperatorAlerts();
+    stopCustomStatusSweeper();
+    stopSessionSweeper();
+    stopDataExportSweeper();
+    stopEmailWorker();
+    stopSecuritySweeper();
     await app.close();
     closeDatabase(); // checkpoints WAL — leaves a complete on-disk file
     process.exit(0);

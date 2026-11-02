@@ -1,3 +1,4 @@
+import { SoundboardButton } from '../voice/SoundboardButton';
 import { layoutRect, layoutPixels } from '../../platform/interfaceScale';
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -16,6 +17,17 @@ import {
 import { VoiceGrid } from '../voice/VoiceGrid';
 import { deriveGridTiles } from '../../hooks/useLiveKit';
 import { requestMicPermission } from '../../utils/voice';
+import { BAR_BUTTON } from './mobileClasses';
+
+/** A control of the call's bar, 48px: a hairline at rest, tinted while it is on. */
+function callControlClass(isOn: boolean, tone: 'rose' | 'mint'): string {
+  const on = tone === 'rose'
+    ? 'border-accent-rose/40 bg-accent-rose/20 text-accent-rose'
+    : 'border-accent-mint/40 bg-accent-mint/20 text-accent-mint';
+  return `flex h-12 w-12 items-center justify-center rounded-md border transition-colors ${
+    isOn ? on : 'border-border-soft text-txt-primary hover:bg-interactive-hover active:bg-interactive-active'
+  }`;
+}
 
 /**
  * Full-screen mobile voice/video call view.
@@ -274,10 +286,11 @@ export function MobileVoiceFullScreen() {
   return (
     <div className="flex flex-col h-full bg-surface-base">
       {/* Header */}
-      <header className="h-12 flex items-center gap-2 px-3 border-b border-border-soft shrink-0">
+      <header className="panel-bar flex h-12 items-center gap-1 px-1">
         <button
+          type="button"
           onClick={popMobileScreen}
-          className="w-8 h-8 flex items-center justify-center text-txt-secondary hover:text-txt-primary"
+          className={BAR_BUTTON}
           aria-label={t('voice:mobileCall.collapse')}
         >
           <svg
@@ -295,20 +308,21 @@ export function MobileVoiceFullScreen() {
           </svg>
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-semibold text-txt-primary truncate">
+          <h1 className="text-lead font-semibold leading-tight tracking-[-0.01em] text-txt-primary truncate">
             {channelName}
           </h1>
           {spaceName && (
-            <p className="text-[11px] text-txt-tertiary truncate">{spaceName}</p>
+            <p className="text-label text-txt-tertiary truncate">{spaceName}</p>
           )}
         </div>
-        <span className="text-xs text-txt-tertiary">
+        <span className={`shrink-0 text-meta text-txt-tertiary ${isDmCall ? 'pr-2' : ''}`}>
           {t('voice:mobileCall.connectedCount', { count: participants.length })}
         </span>
         {!isDmCall && (
           <button
+            type="button"
             onClick={() => pushMobileScreen('members')}
-            className="w-8 h-8 flex items-center justify-center text-txt-secondary hover:text-txt-primary"
+            className={BAR_BUTTON}
             aria-label={t('voice:mobileCall.viewMembers')}
           >
             <svg
@@ -352,10 +366,10 @@ export function MobileVoiceFullScreen() {
             />
           </svg>
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-medium text-accent-amber">
+            <p className="text-meta font-medium text-accent-amber">
               {t('voice:mobileCall.micDenied.title')}
             </p>
-            <p className="text-[11px] text-txt-tertiary leading-tight mt-0.5">
+            <p className="text-label text-txt-tertiary leading-tight mt-0.5">
               {t('voice:mobileCall.micDenied.description')}
             </p>
           </div>
@@ -364,7 +378,7 @@ export function MobileVoiceFullScreen() {
             onClick={() => {
               void requestMicPermission();
             }}
-            className="text-[11px] font-medium px-3 py-1.5 rounded-md bg-accent-amber/20 text-accent-amber hover:bg-accent-amber/30 transition-colors shrink-0"
+            className="btn-quiet h-9 px-2.5 text-meta bg-accent-amber/20 text-accent-amber hover:bg-accent-amber/30 hover:text-accent-amber"
           >
             {t('voice:mobileCall.micDenied.allow')}
           </button>
@@ -380,17 +394,14 @@ export function MobileVoiceFullScreen() {
 
       {/* Control bar */}
       <div
-        className="glass-bubble mx-2 mb-2 rounded-2xl flex items-center justify-center gap-4 px-4 py-3 shrink-0"
+        className="glass-bubble mx-2 mb-2 rounded-lg flex items-center justify-between gap-1 px-3 py-2 shrink-0"
         style={{ marginBottom: 'calc(0.5rem + var(--safe-bottom))' }}
       >
         {/* Mute */}
         <button
+          type="button"
           onClick={toggleMuteFromControl}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-            isMuted
-              ? 'bg-accent-rose/20 text-accent-rose'
-              : 'bg-surface-elevated text-txt-primary hover:bg-interactive-hover'
-          }`}
+          className={callControlClass(isMuted, 'rose')}
           aria-label={isMuted ? t('voice:controls.unmute') : t('voice:controls.mute')}
         >
           <svg
@@ -417,12 +428,9 @@ export function MobileVoiceFullScreen() {
 
         {/* Deafen */}
         <button
+          type="button"
           onClick={toggleDeafenFromControl}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-            isDeafened
-              ? 'bg-accent-rose/20 text-accent-rose'
-              : 'bg-surface-elevated text-txt-primary hover:bg-interactive-hover'
-          }`}
+          className={callControlClass(isDeafened, 'rose')}
           aria-label={isDeafened ? t('voice:controls.undeafen') : t('voice:controls.deafen')}
         >
           <svg
@@ -453,12 +461,9 @@ export function MobileVoiceFullScreen() {
             visible only when relevant so single-camera devices are unaffected. */}
         <div className="relative" ref={cameraPickerAnchorRef}>
           <button
+            type="button"
             onClick={handleCameraAction}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-              isCameraOn
-                ? 'bg-accent-mint/20 text-accent-mint'
-                : 'bg-surface-elevated text-txt-primary hover:bg-interactive-hover'
-            }`}
+            className={callControlClass(isCameraOn, 'mint')}
             aria-label={isCameraOn ? t('voice:camera.turnOff') : t('voice:camera.turnOn')}
           >
             <svg
@@ -484,7 +489,7 @@ export function MobileVoiceFullScreen() {
               aria-label={t('voice:camera.switch')}
               aria-haspopup="menu"
               aria-expanded={cameraPickerOpen}
-              className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-surface-elevated text-txt-primary flex items-center justify-center shadow-md border border-border-soft active:scale-95 transition-transform"
+              className="icon-btn absolute -top-1.5 -right-1.5 h-6 w-6 border border-border-soft bg-surface-elevated text-txt-primary hover:bg-surface-elevated"
             >
               <svg
                 width="14"
@@ -515,12 +520,9 @@ export function MobileVoiceFullScreen() {
             voiceActions). The previous voiceStore.toggleScreenShare flipped
             only the boolean and never started capture. */}
         <button
+          type="button"
           onClick={handleScreenShareAction}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-            isScreenSharing
-              ? 'bg-accent-mint/20 text-accent-mint'
-              : 'bg-surface-elevated text-txt-primary hover:bg-interactive-hover'
-          }`}
+          className={callControlClass(isScreenSharing, 'mint')}
           aria-label={
             isScreenSharing ? t('voice:mobileCall.stopSharingScreen') : t('voice:mobileCall.shareScreen')
           }
@@ -540,10 +542,14 @@ export function MobileVoiceFullScreen() {
           </svg>
         </button>
 
+        {/* The soundboard belongs to a space: a call between two people has none. */}
+        {!activeDmCall && currentVoiceChannelId && <SoundboardButton channelId={currentVoiceChannelId} className={callControlClass(false, 'mint')} />}
+
         {/* Disconnect */}
         <button
+          type="button"
           onClick={handleDisconnect}
-          className="w-12 h-12 rounded-full bg-accent-rose flex items-center justify-center text-white hover:bg-accent-rose/80 transition-colors"
+          className="btn-danger h-12 w-12 p-0"
           aria-label={t('voice:mobileCall.disconnect')}
         >
           <svg
@@ -575,7 +581,7 @@ export function MobileVoiceFullScreen() {
             ref={cameraPickerPopupRef}
             role="menu"
             aria-label={t('voice:camera.select')}
-            className="fixed z-[60] rounded-md bg-surface-elevated border border-border-hard py-1 shadow-lg overflow-y-auto"
+            className="fixed z-[60] rounded-lg glass py-1 overflow-y-auto"
             style={{
               left: cameraPickerRect.left,
               bottom: cameraPickerRect.bottom,
@@ -590,7 +596,7 @@ export function MobileVoiceFullScreen() {
               role="menuitemradio"
               aria-checked={cameraDeviceId === null}
               onClick={() => handlePickCamera(null)}
-              className={`w-full text-left px-3 py-2 text-[12px] truncate ${
+              className={`w-full text-left px-3 py-2 text-meta truncate ${
                 cameraDeviceId === null ? 'text-txt-primary' : 'text-txt-secondary'
               } active:bg-interactive-hover`}
             >
@@ -603,7 +609,7 @@ export function MobileVoiceFullScreen() {
                 role="menuitemradio"
                 aria-checked={cameraDeviceId === d.deviceId}
                 onClick={() => handlePickCamera(d.deviceId)}
-                className={`w-full text-left px-3 py-2 text-[12px] truncate ${
+                className={`w-full text-left px-3 py-2 text-meta truncate ${
                   cameraDeviceId === d.deviceId ? 'text-txt-primary' : 'text-txt-secondary'
                 } active:bg-interactive-hover`}
               >

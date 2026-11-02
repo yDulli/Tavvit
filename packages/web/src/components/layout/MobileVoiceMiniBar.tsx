@@ -56,13 +56,14 @@ export function MobileVoiceMiniBar() {
 
 
   return (
-    <div className="glass-bubble mx-2 mb-1 rounded-2xl flex items-center gap-2 px-3 py-2 shrink-0">
+    <div className="glass-bubble mx-2 mb-1 rounded-lg flex items-center gap-1 py-1 pl-1 pr-1 shrink-0">
       {/* Tap to expand */}
       <button
+        type="button"
         onClick={() => pushMobileScreen('voice-full')}
-        className="flex-1 flex items-center gap-2 min-w-0"
+        className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 text-left transition-colors hover:bg-interactive-hover active:bg-interactive-active"
       >
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+        <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${
           isDropped ? 'bg-accent-rose/20' : isReconnecting ? 'bg-accent-amber/20' : 'bg-accent-mint/20'
         }`}>
           <svg className={`w-4 h-4 ${accentClass}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -70,32 +71,34 @@ export function MobileVoiceMiniBar() {
           </svg>
         </div>
         <div className="min-w-0">
-          <p className={`text-xs font-medium truncate ${accentClass}`}>{channelName}</p>
+          <p className={`text-meta font-medium truncate ${accentClass}`}>{channelName}</p>
           {isReconnecting ? (
-            <p className="text-[10px] text-txt-tertiary">{t('voice:status.reconnecting')}</p>
+            <p className="text-2xs text-txt-tertiary">{t('voice:status.reconnecting')}</p>
           ) : isDropped ? (
-            <p className="text-[10px] text-txt-tertiary">{t('voice:status.disconnected')}</p>
+            <p className="text-2xs text-txt-tertiary">{t('voice:status.disconnected')}</p>
           ) : participantCount > 0 ? (
-            <p className="text-[10px] text-txt-tertiary">{t('spaces:main.voice.participants', { count: participantCount })}</p>
+            <p className="text-2xs text-txt-tertiary">{t('spaces:main.voice.participants', { count: participantCount })}</p>
           ) : null}
         </div>
       </button>
 
       {isDropped && (
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); reconnectVoice(); }}
-          className="px-2 h-8 rounded-full text-[11px] font-medium text-accent-primary hover:bg-interactive-hover transition-colors shrink-0"
+          className="btn-outline btn-sm"
         >
           {t('voice:status.retry')}
         </button>
       )}
 
       {/* Quick controls */}
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-0.5 shrink-0">
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); toggleMuteFromControl(); }}
-          className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-            isMuted ? 'bg-accent-rose/20 text-accent-rose' : 'text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover'
+          className={`icon-btn h-10 w-10 ${
+            isMuted ? 'bg-accent-rose/20 text-accent-rose hover:bg-accent-rose/30 hover:text-accent-rose' : 'text-txt-secondary'
           }`}
           aria-label={isMuted ? t('voice:controls.unmute') : t('voice:controls.mute')}
         >
@@ -112,9 +115,10 @@ export function MobileVoiceMiniBar() {
         </button>
 
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); toggleDeafenFromControl(); }}
-          className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-            isDeafened ? 'bg-accent-rose/20 text-accent-rose' : 'text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover'
+          className={`icon-btn h-10 w-10 ${
+            isDeafened ? 'bg-accent-rose/20 text-accent-rose hover:bg-accent-rose/30 hover:text-accent-rose' : 'text-txt-secondary'
           }`}
           aria-label={isDeafened ? t('voice:controls.undeafen') : t('voice:controls.deafen')}
         >
@@ -125,11 +129,12 @@ export function MobileVoiceMiniBar() {
         </button>
 
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             handleDisconnectAction();
           }}
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-accent-rose/20 text-accent-rose hover:bg-accent-rose/30 transition-colors"
+          className="icon-btn h-10 w-10 bg-accent-rose/20 text-accent-rose hover:bg-accent-rose/30 hover:text-accent-rose"
           aria-label={t('voice:mobileCall.disconnect')}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

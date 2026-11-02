@@ -51,4 +51,25 @@ describe('tombstoneUser — federation_home_orphaned cleanup', () => {
     expect(row?.federationHomeOrphaned ?? 0).toBe(0);
     expect(row?.isDeleted).toBe(1);
   });
+
+  it('clears the profile card fields and hands back the space profile pictures', async () => {
+    const { getDb } = await import('../db/index.js');
+    const { tombstoneUser } = await import('./userDeletion.js');
+    const db = getDb();
+    const uid = 'user_test_profile';
+    db.insert(schema.users).values({
+      id: uid, username: 'dana', passwordHash: 'x', createdAt: 1,
+      pronouns: 'she/her', profileLinks: JSON.stringify([{ url: 'https://example.com/', label: null }]),
+      profileLayout: 'compact', accentColorSecondary: '#112233', avatar: 'dana.webp',
+    }).run();
+    db.insert(schema.users).values({ id: 'space_owner', username: 'owner', passwordHash: 'x', createdAt: 1 }).run();
+    db.insert(schema.spaces).values({ id: 'space_profile', name: 'Space', ownerId: 'space_owner', createdAt: 1 }).run();
+    db.insert(schema.spaceMembers).values({ spaceId: 'space_profile', userId: uid, joinedAt: 1, avatar: 'dana-space.webp' }).run();
+
+    const files = tombstoneUser(uid, { purgeContent: false });
+
+    const row = db.select().from(schema.users).where(eq(schema.users.id, uid)).get();
+    expect(row).toMatchObject({ pronouns: null, profileLinks: null, profileLayout: null, accentColorSecondary: null, avatar: null });
+    expect(files).toEqual(expect.arrayContaining(['dana.webp', 'dana-space.webp']));
+  });
 });

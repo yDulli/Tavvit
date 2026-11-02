@@ -1,3 +1,7 @@
+import { parseWaveform } from '@backspace/shared/src/voiceMessages.js';
+import { areFriends, mayStartConversation } from '../utils/contactPolicy.js';
+import { accountNeedsVerifiedEmail } from '../email/gate.js';
+import { blockRefusal } from '../utils/blocks.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { eq, and, or, inArray, isNull } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
@@ -5,6 +9,7 @@ import { insertDmMember, reopenClosedDmMembers, setDmMemberClosed } from '../uti
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { isDmMember } from '../utils/permissions.js';
+import { isUploadOn, mediaOriginsOfUser } from '../utils/remoteMedia.js';
 import { checkDmMessageCreate, checkDmMessageDelete, checkDmMessageEdit } from '../utils/dmMessageRules.js';
 import { DM_MESSAGE_CREATE_RATE_LIMIT } from '../utils/dmMessageRateLimit.js';
 import { connectionManager } from '../ws/handler.js';
@@ -56,6 +61,7 @@ import {
   normalizeIconForWire,
 } from '../utils/federationOutbox.js';
 import { getOurOrigin, canonicalizeHomeInstance } from '../utils/federationAuth.js';
+import { pushDmMessage } from '../utils/pushDelivery.js';
 import { recordLocalMemberChange } from '../utils/federationSubjectClock.js';
 import { resolveOriginFromHostname } from '../utils/federationOriginResolve.js';
 import type { FederationRelayEvent } from '@backspace/shared';
@@ -177,6 +183,9 @@ export function buildDmMessageWithUser(
     dmChannelId: message.dmChannelId,
     userId: message.userId,
     replyToId: message.replyToId,
+    pinnedAt: message.pinnedAt,
+    pinnedBy: message.pinnedBy,
+    ...(message.forwarded ? { forwarded: true } : {}),
     content: message.content,
     type: (message.type ?? 'user') as 'user' | 'system',
     editedAt: message.editedAt,
@@ -196,6 +205,8 @@ export function buildDmMessageWithUser(
       height: a.height ?? null,
       duration: a.duration ?? null,
       playable: a.playable ?? null,
+      spoiler: a.spoiler,
+      voiceWaveform: parseWaveform(a.voiceWaveform),
       federationStatus: a.federationStatus ?? null,
       federationMeta: a.federationMeta ?? null,
       createdAt: a.createdAt,
@@ -336,6 +347,7 @@ export function broadcastDmMessage(dmChannelId: string, message: DmMessageWithUs
   sendTypingRelay(dmChannelId, 'dm_typing_stop', message.userId);
 
   reopenForClosedMembers(dmChannelId, message);
+  pushDmMessage(message, (id) => connectionManager.isUserFocused(id));
 
   for (const member of dmMembers) {
     connectionManager.sendToUser(member.userId, {
@@ -377,6 +389,16 @@ function openOneOnOne(
     queueDmCloseRelay(opened.channelId, callerId, 'dm_reopen');
   }
   return opened;
+}
+
+/** Whether the two already have a 1-on-1 conversation, closed or not. */
+function hasOneOnOne(a: string, b: string, db: ReturnType<typeof getDb>): boolean {
+  return db.$client.prepare(
+    `SELECT 1 FROM dm_channels c
+     JOIN dm_members mine ON mine.dm_channel_id = c.id AND mine.user_id = ?
+     JOIN dm_members theirs ON theirs.dm_channel_id = c.id AND theirs.user_id = ?
+     WHERE c.owner_id IS NULL LIMIT 1`,
+  ).get(a, b) !== undefined;
 }
 
 /**
@@ -860,6 +882,22 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 400, 'cannot_dm_self');
     }
 
+    const blocked = blockRefusal(request.userId, targetUserId, db);
+    if (blocked) {
+      return sendError(reply, 403, blocked);
+    }
+
+    // The target's rule decides who may start something; a conversation the two
+    // already have stays theirs (utils/contactPolicy.ts).
+    if (!mayStartConversation(request.userId, targetUser, db) && !hasOneOnOne(request.userId, targetUserId, db)) {
+      return sendError(reply, 403, 'dm_not_accepted');
+    }
+
+    // Until its address is confirmed a new account talks to friends only (docs/systems/email.md).
+    if (accountNeedsVerifiedEmail(request.userId) && !areFriends(request.userId, targetUserId, db) && !hasOneOnOne(request.userId, targetUserId, db)) {
+      return sendError(reply, 403, 'email_verification_required');
+    }
+
     const opened = openOneOnOne(request.userId, targetUser, db);
     const result = loadDmChannelWire(db, opened.channelId);
     if (!result) {
@@ -871,6 +909,8 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
   // POST /api/dm/group - Create a new group DM with multiple members
   app.post<{ Body: CreateGroupDmRequest }>('/api/dm/group', async (request, reply) => {
     const { users: userIdentities, fromDmChannelId } = request.body;
+
+    if (accountNeedsVerifiedEmail(request.userId)) return sendError(reply, 403, 'email_verification_required');
 
     // Validate input is a non-empty array of at least 2 identity objects
     if (!Array.isArray(userIdentities) || userIdentities.length < 2) {
@@ -936,6 +976,13 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
     // Caller cannot include themselves
     if (targetUsers.some(u => u.id === request.userId)) {
       return sendError(reply, 400, 'group_dm_includes_self');
+    }
+
+    // Nobody who has blocked the caller, or whom the caller has blocked, is put
+    // into a conversation with them.
+    for (const target of targetUsers) {
+      const blocked = blockRefusal(request.userId, target.id, db);
+      if (blocked) return sendError(reply, 403, blocked);
     }
 
     // When converting a 1-on-1 DM to a group, existing DM members are exempt
@@ -1256,6 +1303,9 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
         } else if (!isValidAssetUrl(trimmed)) {
           return sendError(reply, 400, 'icon_url_invalid');
         } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+          // Every member fetches the icon by themselves: an address only of an upload here, or at the
+          // home of the member who sets it (utils/remoteMedia.ts).
+          if (!isUploadOn(trimmed, mediaOriginsOfUser(request.userId))) return sendError(reply, 400, 'icon_url_invalid');
           candidate = trimmed;
         } else {
           // Bare filename or `/api/uploads/<filename>` — normalize to bare filename.
@@ -1452,6 +1502,8 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
   // POST /api/dm/:id/members - Add a user to an existing DM channel (group DM upgrade)
   app.post<{ Params: { id: string }; Body: AddDmMemberRequest }>('/api/dm/:id/members', async (request, reply) => {
     const { id } = request.params;
+
+    if (accountNeedsVerifiedEmail(request.userId)) return sendError(reply, 403, 'email_verification_required');
     const { userId: targetUserIdRaw, homeUserId, homeInstance } = request.body;
 
     const db = getDb();
@@ -1958,6 +2010,7 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
     },
   }, async (request, reply) => {
     const body = request.body;
+    if (accountNeedsVerifiedEmail(request.userId)) return sendError(reply, 403, 'email_verification_required');
     if (!body || !body.spaceId || !body.inviteCode || !body.target) {
       return sendError(reply, 400, 'invalid_body');
     }
@@ -2089,7 +2142,7 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
     if (!check.ok) {
       return sendError(reply, check.refusal.status, check.refusal.code, check.refusal.details);
     }
-    const { content, attachmentIds, replyToId } = check.value;
+    const { content, attachmentIds, spoilerIds, replyToId } = check.value;
 
     const db = getDb();
     const messageId = generateSnowflake();
@@ -2108,7 +2161,7 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
 
       for (const attId of attachmentIds) {
         tx.update(schema.attachments)
-          .set({ dmMessageId: messageId })
+          .set({ dmMessageId: messageId, spoiler: spoilerIds.has(attId) })
           .where(eq(schema.attachments.id, attId))
           .run();
       }

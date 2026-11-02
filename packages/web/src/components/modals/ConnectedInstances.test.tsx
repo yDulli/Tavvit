@@ -384,7 +384,7 @@ describe('peering waits and outcomes started by a connection', () => {
     id: 'sub-1',
     requestId: 'req-1',
     peerOrigin: 'https://orbit.example',
-    peerInstanceName: 'Orbit',
+    peerInstanceName: 'Tavvit',
     triggerReason: 'instance_connect' as const,
     triggerTarget: 'https://orbit.example',
     createdAt: 1,

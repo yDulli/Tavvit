@@ -1,0 +1,392 @@
+{
+  "meta": {
+    "title": "Tavvit: Gruppenchat mit Kanälen, Sprachchat und Bildschirmfreigabe",
+    "description": "Tavvit ist ein Zuhause für deine Freunde und Communitys: Kanäle, Direktnachrichten, Sprachchat und Bildschirmfreigabe in einer schnellen, ruhigen App. Ohne Werbung, ohne Tracker."
+  },
+  "nav": {
+    "label": "Hauptnavigation",
+    "features": "Funktionen",
+    "download": "Herunterladen",
+    "login": "Anmelden",
+    "register": "Loslegen",
+    "developers": "Entwickler",
+    "help": "Hilfe"
+  },
+  "hero": {
+    "title": "Setz dich dazu.",
+    "lead": "Gruppenchat für deine Freunde und Communitys: Kanäle, Direktnachrichten, Sprachchat und Bildschirmfreigabe. Ohne Werbung, ohne Tracker.",
+    "explore": "Funktionen ansehen",
+    "alt": "Die Tavvit-App: links die Kanäle eines Space, in der Mitte ein Gespräch, rechts die Mitglieder."
+  },
+  "news": {
+    "label": "Neu"
+  },
+  "eyebrow": {
+    "demo": "zum Probesitzen",
+    "messages": "am Tisch",
+    "spaces": "dein eigener Raum",
+    "crowds": "die Gästeliste",
+    "voice": "das Hinterzimmer",
+    "conversations": "dein Stammplatz",
+    "around": "das schwarze Brett",
+    "people": "die Stammgäste",
+    "themes": "streich die Wände",
+    "community": "die ganze Straße",
+    "moving": "die Schlüssel",
+    "developers": "hinter dem Tresen",
+    "privacy": "Hausregeln",
+    "anywhere": "zum Mitnehmen",
+    "features": "alles drauf",
+    "questions": "frag am Tresen",
+    "cta": "die Tür ist offen"
+  },
+  "statement": "Alles, was deine Gruppe braucht, an einem Ort, und nichts, das dir hinterherläuft. Schnell geöffnet, ruhig im Alltag und ganz nach deinem Geschmack.",
+  "demo": {
+    "label": "Ein Demo-Kanal",
+    "title": "Na los,\nsag was.",
+    "body": "So fühlt sich ein Kanal an. Schreib eine Nachricht und schau, wer antwortet.",
+    "note": "Eine Demo: Die Leute sind erfunden, und nichts von dem, was du tippst, verlässt diese Seite.",
+    "topic": "Sag Hallo. Hier beißt niemand.",
+    "placeholder": "Nachricht an #general",
+    "send": "Senden",
+    "you": "Du",
+    "typing": "{{name}} schreibt…",
+    "online": "Gerade da",
+    "channels": "Kanäle",
+    "cta": "Platz behalten",
+    "seed": {
+      "sam": "Wer ist noch wach?",
+      "lena": "Immer. Ich glaube, da ist gerade jemand Neues reingekommen.",
+      "noor": "Hey, neu hier? Setz dich dazu und sag Hallo!"
+    },
+    "replies": {
+      "lena": "Willkommen! Nimm dir einen Stuhl, hier beißt niemand.",
+      "sam": "Gutes Timing. Für heute Abend fehlt uns noch jemand.",
+      "noor": "Die Person mag ich. Können wir sie behalten?",
+      "theo": "Liege ich deswegen immer hinten?",
+      "yuki": "Notiert. Ich trage dich in die Tabelle ein.",
+      "end": "Du hast den Dreh raus. In echt gibt es dazu Sprachkanäle, Threads und noch viel mehr."
+    }
+  },
+  "messages": {
+    "title": "Gespräche,\ndie lesbar bleiben.",
+    "body": "Antworten zeigen, worauf sie sich beziehen. Reaktionen bleiben klein. Code, Links und Dateien sitzen an der richtigen Stelle, und eine Nachricht, die dich erwähnt, fällt sofort auf.",
+    "alt": "Ein Gespräch mit Antworten, einem Codeblock, Erwähnungen und Reaktionen."
+  },
+  "spaces": {
+    "title": "Ein Space für jede Gruppe.",
+    "body": "Das Raid-Team, der Buchclub, die Leute, mit denen du Dinge baust. Jede Gruppe bekommt ihren eigenen Space, mit Kanälen in Kategorien und einer Mitgliederliste, die zeigt, wer was macht.",
+    "alt": "Die Kanalliste eines Space neben der Mitgliederliste, gruppiert nach farbigen Rollen.",
+    "layers": {
+      "channels": "Kanäle",
+      "conversation": "Gespräch",
+      "members": "Mitglieder und Rollen"
+    }
+  },
+  "crowds": {
+    "title": "Wer sitzt an deinem Tisch?",
+    "raid": "Das Raid-Team",
+    "photo": "Der Fotoclub",
+    "dev": "Die Entwickler",
+    "books": "Der Buchclub",
+    "alts": {
+      "raid": "Der Space einer Gaming-Gruppe: ein Gespräch über noch eine Runde, mit Codeblock und Reaktionen.",
+      "photo": "Der Space eines Fotoclubs: ein Kanal, in dem Leute Rückmeldung zu einem Film geben.",
+      "dev": "Der Space einer Entwicklergruppe: ein Code-Review-Kanal mit einer Nachricht eines Build-Bots.",
+      "books": "Der Space eines Buchclubs: ein Gespräch über das Buch des Monats."
+    }
+  },
+  "conversations": {
+    "title": "Zurück, wo du\naufgehört hast.",
+    "body": "Ungelesene Kanäle fallen auf, der Posteingang sammelt, was auf dich wartet, und Strg+K bringt dich mit wenigen Tasten zu jedem Kanal und jedem Gespräch.",
+    "alt": "Der Schnellwechsler über der App: die Suche nach einem Kanal und der Treffer."
+  },
+  "around": {
+    "title": "Alles rund ums Gespräch.",
+    "body": "Eine Gruppe redet nicht nur. Nebengespräche, Pläne, Abstimmungen und Hausregeln liegen direkt neben dem Chat.",
+    "thread": {
+      "title": "Threads",
+      "body": "Zieh ein Nebengespräch aus dem Kanal heraus. Folge denen, die dich interessieren, der Rest bleibt dir aus dem Weg.",
+      "alt": "Ein Kanal mit einem geöffneten Thread daneben."
+    },
+    "poll": {
+      "title": "Umfragen",
+      "body": "Frag in die Runde. Das Ergebnis bleibt verborgen, bis du abgestimmt hast, damit die ersten Stimmen den Rest nicht lenken.",
+      "alt": "Eine Umfrage mit drei Antworten und dem Anteil der Stimmen für jede."
+    },
+    "welcome": {
+      "title": "Begrüßung und Regeln",
+      "body": "Heiße neue Leute willkommen, zeig ihnen die richtigen Kanäle und bitte sie auf Wunsch, zuerst den Regeln zuzustimmen.",
+      "alt": "Die Begrüßung eines Space mit den Regeln und den Kanälen für den Anfang."
+    },
+    "event": {
+      "title": "Termine",
+      "body": "Plane den Raid oder den Buchclub, sieh, wer kommt, lass dich erinnern und trag es in deinen Kalender ein.",
+      "alt": "Ein Termin mit Datum, Zusagen und einer Schaltfläche, um dem Sprachkanal beizutreten."
+    },
+    "points": {
+      "voice": {
+        "title": "Sprachnachrichten und Soundboard",
+        "body": "Sag es, statt es zu tippen, und spiel im Sprachkanal für alle einen Sound ab, wenn der Moment danach ruft."
+      },
+      "saved": {
+        "title": "Gespeicherte Nachrichten und Erinnerungen",
+        "body": "Behalte Wichtiges in einer Liste und lass dich später an eine Nachricht erinnern."
+      },
+      "alerts": {
+        "title": "Stichwörter und Push",
+        "body": "Wähle die Wörter, die dich erreichen sollen, und bekomm eine Benachrichtigung, auch wenn die App geschlossen ist."
+      }
+    }
+  },
+  "profiles": {
+    "body": "Ein Banner, eine Bio, Pronomen, Links und Farben nach deiner Wahl, und wenn du magst ein eigenes Bild und eine eigene Bio für jeden Space.",
+    "alt": "Eine Profilkarte mit Banner, Bio und Rolle."
+  },
+  "friends": {
+    "title": "Deine Leute,\neinen Klick entfernt.",
+    "body": "Füge Freunde über ihren Benutzernamen hinzu, sieh, wer online ist und was gerade läuft, und starte eine Direktnachricht oder eine Gruppe mit bis zu zehn Leuten.",
+    "alt": "Die Freunde-Seite: wer online ist und was gerade läuft."
+  },
+  "voice": {
+    "title": "Reden, wenn Tippen\nzu langsam ist.",
+    "body": "Spring in einen Sprachkanal, schalte die Kamera ein, teile deinen Bildschirm oder ruf direkt einen Freund an. Die Rauschunterdrückung filtert deine Tastatur heraus, und Push-to-Talk ist nur eine Einstellung entfernt.",
+    "alt": "Ein Sprachkanal mit mehreren Personen und den Anrufsteuerungen darunter."
+  },
+  "features": {
+    "title": "Die Karte.",
+    "groups": {
+      "messages": "Nachrichten",
+      "voice": "Sprache und Video",
+      "spaces": "Spaces",
+      "moderation": "Moderation",
+      "yours": "Nach deinem Geschmack",
+      "everywhere": "Wo es läuft",
+      "community": "Gemeinschaft",
+      "account": "Konto und Sicherheit",
+      "developers": "Bots und Webhooks"
+    },
+    "items": {
+      "replies": "Antworten, Erwähnungen, Reaktionen",
+      "emoji": "Eigene Emojis und Sticker",
+      "files": "Datei-Uploads mit Vorschau",
+      "links": "Linkvorschauen",
+      "search": "Volltextsuche mit Filtern",
+      "unread": "Lesestatus und Posteingang",
+      "voiceChannels": "Sprachkanäle",
+      "video": "Kamera und Video",
+      "screen": "Bildschirmfreigabe",
+      "calls": "Anrufe in Direktnachrichten",
+      "noise": "Rauschunterdrückung",
+      "ptt": "Push-to-Talk",
+      "categories": "Kanäle und Kategorien",
+      "roles": "Rollen und Berechtigungen",
+      "overrides": "Ausnahmen je Kategorie und Kanal",
+      "invites": "Einladungen und Beitrittsanfragen",
+      "listing": "Öffentlicher Eintrag",
+      "spaceProfiles": "Ein eigenes Profil je Space",
+      "bans": "Sperren und Timeouts",
+      "automod": "Automatische Moderation",
+      "slow": "Langsamer Modus",
+      "audit": "Audit-Log",
+      "voiceMod": "Moderation im Sprachkanal",
+      "reports": "Meldeformular für alle",
+      "themes": "Sieben Themes oder eigene Farben",
+      "styles": "Drei Nachrichtenstile",
+      "density": "Dichte, Textgröße und Ecken",
+      "contrast": "Hoher Kontrast und klare Statusformen",
+      "languages": "Englisch, Deutsch, Portugiesisch, Russisch, Chinesisch",
+      "browser": "Im Browser",
+      "windows": "Windows-App mit automatischen Updates",
+      "games": "Spielerkennung unter Windows",
+      "phone": "Auf dem Handy, über den Startbildschirm",
+      "voiceMessages": "Sprachnachrichten",
+      "pins": "Angepinnte Nachrichten",
+      "forward": "Weiterleiten und Spoiler",
+      "saved": "Gespeicherte Nachrichten und Erinnerungen",
+      "keywords": "Stichwort-Alarme",
+      "soundboard": "Soundboard",
+      "threads": "Threads",
+      "events": "Termine mit Erinnerung",
+      "polls": "Umfragen",
+      "welcome": "Begrüßung und Regeln",
+      "template": "Start aus einer Discord-Servervorlage",
+      "twoFactor": "Zwei-Faktor-Anmeldung mit Wiederherstellungscodes",
+      "devices": "Geräteliste, überall abmelden",
+      "export": "Deine Daten herunterladen",
+      "deleteAccount": "Eigenes Konto löschen",
+      "contactRules": "Festlegen, wer dich kontaktieren darf",
+      "blocking": "Blockieren",
+      "botApi": "REST- und Socket-API für Bots",
+      "commands": "Slash-Befehle mit Optionen",
+      "cards": "Karten in Nachrichten",
+      "webhooks": "Eingehende Webhooks",
+      "portal": "Entwicklerportal",
+      "docs": "Öffentliche Entwickler-Doku",
+      "push": "Benachrichtigungen bei geschlossener App"
+    }
+  },
+  "community": {
+    "title": "Finde einen Space\noder eröffne deinen eigenen.",
+    "body": "Stöbere unter Entdecken durch öffentliche Spaces und tritt mit einem Klick oder einer Anfrage bei. Ein Verifiziert-Zeichen bedeutet, dass das Plattform-Team den Space geprüft hat, und kein Space kann sich ohne diese Prüfung selbst eintragen.",
+    "alt": "Die Seite Entdecken mit Karten für öffentliche Spaces.",
+    "points": {
+      "explore": {
+        "title": "Erst nach Prüfung gelistet",
+        "body": "Ein Space erscheint erst dann unter Entdecken, wenn das Plattform-Team ihn freigegeben hat."
+      },
+      "moderation": {
+        "title": "Werkzeuge für Moderatoren",
+        "body": "Timeouts, langsamer Modus, automatische Moderation und ein Audit-Log, das zeigt, wer was getan hat."
+      },
+      "reports": {
+        "title": "Meldungen mit Antwort",
+        "body": "Jeder kann eine Nachricht oder einen Space melden, und Betroffene erfahren die Entscheidung und den Grund."
+      },
+      "rights": {
+        "title": "Rechte bis auf den Kanal",
+        "body": "Rollen mit eigenen Farben und Berechtigungen, dazu Ausnahmen für jede Kategorie und jeden Kanal."
+      },
+      "invites": {
+        "title": "Einladungen nach deinen Regeln",
+        "body": "Links mit Enddatum und Limit oder Beitrittsanfragen, die du einzeln freigibst."
+      },
+      "template": {
+        "title": "Aus einer Vorlage starten",
+        "body": "Füge eine Discord-Servervorlage ein und bekomm ihre Rollen, Kategorien, Kanäle und Rechte. Nachrichten und Mitglieder bleiben, wo sie sind."
+      }
+    }
+  },
+  "moving": {
+    "title": "Einzug in drei Schritten.",
+    "one": {
+      "title": "Richte dich ein",
+      "body": "Starte einen neuen Space oder füge eine Discord-Servervorlage ein und bekomm ihre Rollen, Kategorien und Kanäle."
+    },
+    "two": {
+      "title": "Schick einen Link",
+      "body": "Alle kommen mit demselben Einladungslink rein. Gib ihm ein Enddatum oder ein Limit, wenn du magst."
+    },
+    "three": {
+      "title": "Setz dich dazu",
+      "body": "Deine Gruppe ist da. Kanäle und Sprachkanäle laufen sofort, den Rest gestaltest du selbst."
+    }
+  },
+  "developers": {
+    "title": "Bau darauf auf.",
+    "body": "Bots schreiben, reagieren, moderieren und antworten auf Slash-Befehle über eine dokumentierte API. Webhooks nehmen mit einer einzigen Adresse Nachrichten von jedem Programm an.",
+    "link": "Zur Entwickler-Doku",
+    "alt": "Eine Nachricht eines Bots, als Bot gekennzeichnet, mit einer Karte zum Ergebnis eines Builds.",
+    "points": {
+      "api": {
+        "title": "Eine dokumentierte API",
+        "body": "REST und ein Live-Socket, mit einem Schnellstart, der deinen ersten Bot in Minuten zum Reden bringt."
+      },
+      "commands": {
+        "title": "Slash-Befehle",
+        "body": "Mit Text, Zahlen, Personen, Kanälen und fester Auswahl, und mit Antworten, die nur sieht, wer gefragt hat."
+      },
+      "rights": {
+        "title": "Bots fragen, du entscheidest",
+        "body": "Ein Bot bekommt nur die Rechte, die ihm der Space gibt, und sein Kennzeichen lässt sich nicht abschalten."
+      }
+    }
+  },
+  "privacy": {
+    "title": "Keine Werbung.\nKeine Tracker.",
+    "body": "Bilder und Videos von anderen Websites laden erst nach deinem Klick, diese Seiten erfahren also nichts über dich, bis du dich entscheidest.",
+    "points": {
+      "twoFactor": {
+        "title": "Zwei-Faktor-Anmeldung",
+        "body": "Eine Authenticator-App und Wiederherstellungscodes schützen dein Konto."
+      },
+      "devices": {
+        "title": "Deine Geräte im Blick",
+        "body": "Sieh, wo du angemeldet bist, und melde ein Gerät oder alle ab."
+      },
+      "data": {
+        "title": "Mitnehmen oder löschen",
+        "body": "Lade deine Daten als eine Datei herunter oder lösche dein Konto selbst."
+      },
+      "contact": {
+        "title": "Du bestimmst, wer dich erreicht",
+        "body": "Leg fest, wer dir Freundschaftsanfragen schicken oder ein Gespräch beginnen darf, und blockiere, wen du willst."
+      }
+    }
+  },
+  "themes": {
+    "title": "Deine Farben,\ndeine Dichte.",
+    "body": "Sieben Themes oder eigene Farben, drei Nachrichtenstile, scharfe oder runde Ecken und die Textgröße, die du am besten liest. Tavvit bleibt im Hintergrund, in jedem Look.",
+    "alt": "Dasselbe Gespräch in sieben verschiedenen Farbthemes."
+  },
+  "anywhere": {
+    "title": "Auf dem Desktop.\nAuf dem Handy.",
+    "desktop": {
+      "body": "Eine Windows-App mit globalen Tastenkürzeln, automatischen Updates und Spielerkennung, damit Freunde sehen, was du gerade spielst.",
+      "link": "Für Windows herunterladen"
+    },
+    "phone": {
+      "body": "Öffne Tavvit im Browser deines Handys und füge es zum Startbildschirm hinzu. Spaces, Nachrichten und Sprachkanäle kommen mit, und Benachrichtigungen erreichen dich auch bei geschlossener App.",
+      "alt": "Tavvit auf einem Handy mit einem Gespräch."
+    },
+    "qr": "Scannen und Tavvit auf dem Handy öffnen"
+  },
+  "questions": {
+    "title": "Gute Fragen.",
+    "more": "Mehr auf der Hilfeseite",
+    "items": {
+      "join": {
+        "q": "Wie trete ich einem Space bei?",
+        "a": "Öffne einen Einladungslink von jemandem, der dabei ist, oder stöbere unter Entdecken durch öffentliche Spaces. Manche Spaces lassen dich sofort rein, andere möchten zuerst eine Anfrage."
+      },
+      "phone": {
+        "q": "Gibt es eine Handy-App?",
+        "a": "Tavvit läuft im Browser deines Handys. Füge es zum Startbildschirm hinzu, dann öffnet es sich wie eine App, mit Benachrichtigungen. In den App-Stores ist es nicht."
+      },
+      "computers": {
+        "q": "Auf welchen Computern läuft es?",
+        "a": "Auf jedem mit einem aktuellen Browser. Für Windows gibt es außerdem eine Desktop-App mit globalen Tastenkürzeln, automatischen Updates und Spielerkennung."
+      },
+      "moving": {
+        "q": "Kann ich meinen Discord-Server mitnehmen?",
+        "a": "Seine Struktur, ja. Füge den Link einer Servervorlage ein, und Tavvit legt Rollen, Kategorien, Kanäle und Rechte an. Nachrichten und Mitglieder kommen nicht mit, lade deine Leute also per Link ein."
+      },
+      "bots": {
+        "q": "Kann ich Bots nutzen?",
+        "a": "Ja. Jeder kann mit der öffentlichen API einen schreiben, und wer einen Space leitet, entscheidet, welche Bots hineinkommen und was sie dürfen. Am besten fängst du mit der Entwickler-Doku an."
+      },
+      "trouble": {
+        "q": "Was, wenn sich jemand danebenbenimmt?",
+        "a": "Moderatoren haben Timeouts, Sperren, automatische Filter und ein Audit-Log. Jeder kann eine Nachricht oder einen Space melden, und Betroffene erfahren die Entscheidung und den Grund."
+      }
+    }
+  },
+  "cta": {
+    "title": "Ein Platz ist noch frei.",
+    "body": "Erstell in einer Minute ein Konto und starte deinen ersten Space, oder tritt einem bei, zu dem du eingeladen wurdest.",
+    "closed": "Dieser Server nimmt gerade keine neuen Konten an. Wenn du schon eins hast: willkommen zurück.",
+    "register": "Konto erstellen",
+    "login": "Anmelden"
+  },
+  "closer": "Das war die ganze Seite. Dein Stuhl ist noch frei.",
+  "footer": {
+    "product": "Produkt",
+    "legal": "Rechtliches",
+    "imprint": "Impressum",
+    "privacy": "Datenschutz",
+    "terms": "Nutzungsbedingungen",
+    "report": "Inhalt melden",
+    "developers": "Entwickler",
+    "help": "Hilfe",
+    "changelog": "Neuigkeiten",
+    "status": "Status",
+    "source": "Quellcode",
+    "language": "Sprache",
+    "roadmap": "Roadmap"
+  },
+  "life": {
+    "ok": "Alles läuft",
+    "down": "Gerade hakt etwas",
+    "version": "Stand {{version}}"
+  }
+}

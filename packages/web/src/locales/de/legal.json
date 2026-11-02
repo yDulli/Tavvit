@@ -1,0 +1,238 @@
+{
+  "links": {
+    "label": "Rechtliches",
+    "terms": "Nutzungsbedingungen",
+    "privacy": "Datenschutz",
+    "imprint": "Impressum",
+    "report": "Inhalte melden",
+    "source": "Quellcode"
+  },
+  "shell": {
+    "back": "Zurück zur App",
+    "backHome": "Zur Startseite"
+  },
+  "documents": {
+    "terms": {
+      "title": "Nutzungsbedingungen"
+    },
+    "privacy": {
+      "title": "Datenschutzerklärung"
+    },
+    "missing": "Dieses Dokument wurde noch nicht veröffentlicht. Frag den Betreiber dieses Servers.",
+    "meta": "Version {{version}}, gültig seit {{date}}"
+  },
+  "imprint": {
+    "title": "Impressum",
+    "missing": "Der Betreiber dieses Servers hat das noch nicht ausgefüllt.",
+    "provider": "Anbieter",
+    "representative": "Vertreten durch",
+    "contact": "Kontakt",
+    "register": "Registereintrag",
+    "vatId": "Umsatzsteuer-ID",
+    "editorial": "Verantwortlich für redaktionelle Inhalte",
+    "dsaContact": "Kontaktstelle (Art. 11 und 12 DSA)",
+    "dsaContactBody": "{{email}}, auf Deutsch oder Englisch"
+  },
+  "report": {
+    "pageTitle": "Inhalte melden",
+    "pageIntro": "Weise den Betreiber dieses Servers auf rechtswidrige Inhalte oder Verstöße gegen die Nutzungsbedingungen hin. Du brauchst dafür kein Konto.",
+    "dialogTitle": "Melden",
+    "about": "Du meldest",
+    "category": "Was stimmt damit nicht?",
+    "categoryChoose": "Bitte wählen",
+    "categories": {
+      "hate": "Hassrede oder Volksverhetzung",
+      "violence": "Drohungen oder Aufrufe zu Gewalt",
+      "child_safety": "Sexueller Missbrauch von Kindern",
+      "terrorism": "Terroristische Inhalte",
+      "defamation": "Beleidigung oder Verleumdung",
+      "privacy": "Private Daten ohne Einwilligung",
+      "copyright": "Urheberrechtsverletzung",
+      "fraud": "Betrug oder Schadsoftware",
+      "other_illegal": "Etwas anderes Rechtswidriges",
+      "terms_violation": "Verstoß gegen die Bedingungen, nicht rechtswidrig"
+    },
+    "where": "Wo ist es?",
+    "wherePlaceholder": "Ein Link, oder Space, Kanal und Uhrzeit",
+    "explanation": "Warum ist das rechtswidrig oder verstößt gegen die Bedingungen?",
+    "explanationPlaceholder": "Sag, worum es geht und wogegen es verstößt.",
+    "explanationHint": "Mindestens {{min}} Zeichen.",
+    "name": "Dein Name",
+    "email": "Deine E-Mail-Adresse",
+    "contactOptional": "Bei dieser Kategorie kannst du Name und Adresse leer lassen.",
+    "goodFaith": "Was ich hier melde, ist nach bestem Wissen richtig und vollständig.",
+    "send": "Meldung senden",
+    "sentTitle": "Deine Meldung ist eingegangen.",
+    "sentBody": "Der Betreiber sieht sie sich an und entscheidet. Wenn du eine E-Mail-Adresse angegeben hast, kann er dir dort antworten.",
+    "sentBodyAccount": "Der Betreiber sieht sie sich an und entscheidet. Das Ergebnis erfährst du hier in der App.",
+    "close": "Schließen",
+    "menuMessage": "Nachricht melden",
+    "menuUser": "Person melden",
+    "menuSpace": "Space melden"
+  },
+  "terms": {
+    "dialogTitle": "Nutzungsbedingungen",
+    "required": "Um diesen Server weiter zu nutzen, stimme bitte seinen Nutzungsbedingungen zu.",
+    "upcoming": "Die Nutzungsbedingungen ändern sich am {{date}}. Du kannst sie schon jetzt lesen und ihnen zustimmen.",
+    "changes": "Was sich geändert hat",
+    "logOut": "Abmelden",
+    "later": "Später",
+    "accept": "Ich stimme zu",
+    "retry": "Erneut versuchen"
+  },
+  "notices": {
+    "reason": "Begründung",
+    "ground": {
+      "illegal": "Diese Entscheidung stützt sich auf das Gesetz.",
+      "terms": "Diese Entscheidung stützt sich auf die Nutzungsbedingungen."
+    },
+    "untilLifted": "Sie gilt, bis der Betreiber sie aufhebt.",
+    "until": "Sie gilt bis {{date}}.",
+    "redress": "Du kannst der Entscheidung widersprechen, indem du den Betreiber kontaktierst. Der Weg zu den Gerichten bleibt offen.",
+    "contact": "Kontakt: {{email}}",
+    "ok": "Verstanden",
+    "listTitle": "Hinweise vom Betreiber",
+    "content_removed": {
+      "title": "Dein Inhalt wurde entfernt"
+    },
+    "account_suspended": {
+      "title": "Dein Konto wurde gesperrt"
+    },
+    "listing_withdrawn": {
+      "title": "Dein Space wurde aus der Übersicht genommen"
+    },
+    "report_decided": {
+      "title": "Über deine Meldung wurde entschieden",
+      "outcome": {
+        "no_action": "Der Betreiber hat deine Meldung geprüft und keinen Anlass zum Handeln gefunden.",
+        "content_removed": "Der Betreiber hat den gemeldeten Inhalt entfernt.",
+        "account_suspended": "Der Betreiber hat das gemeldete Konto gesperrt.",
+        "listing_withdrawn": "Der Betreiber hat den gemeldeten Space aus der Übersicht genommen.",
+        "handled": "Der Betreiber ist wegen deiner Meldung tätig geworden."
+      }
+    },
+    "warning": {
+      "title": "Du hast eine Verwarnung erhalten"
+    },
+    "address_withdrawn": {
+      "title": "Die eigene Adresse deines Space wurde entzogen"
+    }
+  },
+  "external": {
+    "notice": "Das kommt von {{host}}. Beim Laden erfährt dieser Server deine IP-Adresse.",
+    "load": "Laden",
+    "always": "Immer erlauben",
+    "compactTitle": "Von {{host}} laden",
+    "compactLoad": "Laden",
+    "settingsTitle": "Inhalte von anderen Servern",
+    "settingsLabel": "Inhalte von anderen Servern immer laden",
+    "settingsDescription": "Link-Vorschauen, GIFs und Videos kommen von anderen Servern, die dabei deine IP-Adresse sehen. Ist das aus, entscheidest du jedes Mal selbst.",
+    "playLoads": "Beim Abspielen lädt {{name}} und sieht dabei deine IP-Adresse."
+  },
+  "register": {
+    "agree": "Ich bin mindestens {{age}} Jahre alt und stimme den <terms>Nutzungsbedingungen</terms> zu. Die <privacy>Datenschutzerklärung</privacy> erklärt, wie mit meinen Daten umgegangen wird.",
+    "agreeFirst": "Stimme den Nutzungsbedingungen zu, um fortzufahren."
+  },
+  "admin": {
+    "title": "Rechtliches",
+    "description": "Wer einen Server betreibt, ist sein Anbieter und verantwortet, was hier geschieht. Trage deine Angaben ein und veröffentliche dann Nutzungsbedingungen und Datenschutzerklärung.",
+    "operator": {
+      "title": "Wer diesen Server betreibt",
+      "description": "Steht öffentlich im Impressum und wird in den Entwürfen verwendet.",
+      "kind": "Betrieben von",
+      "kinds": {
+        "person": "Einer Privatperson",
+        "organization": "Einem Unternehmen oder Verein"
+      },
+      "minimumAge": "Mindestalter",
+      "name": "Vollständiger Name, oder Name und Rechtsform",
+      "address": "Postanschrift",
+      "addressHint": "Eine Anschrift, unter der du per Post erreichbar bist. Ein Postfach reicht nicht.",
+      "email": "E-Mail-Adresse",
+      "emailHint": "Für Fragen, Widersprüche und Behörden. Von hier aus beantwortest du Meldungen.",
+      "representative": "Vertreten durch (optional)",
+      "phone": "Telefon (optional)",
+      "register": "Registereintrag (optional)",
+      "vatId": "Umsatzsteuer-ID (optional)",
+      "editorial": "Verantwortlich für redaktionelle Inhalte (optional)",
+      "hosting": "Hosting-Anbieter, Name und Anschrift (optional)",
+      "dpo": "Datenschutzbeauftragte Person (optional)",
+      "save": "Angaben speichern",
+      "saved": "Gespeichert."
+    },
+    "documents": {
+      "title": "Nutzungsbedingungen und Datenschutzerklärung",
+      "description": "Jede Veröffentlichung ist eine neue Version. Frühere bleiben erhalten, weil eine Zustimmung die Version nennt, der sie gilt.",
+      "kindLabel": "Dokument",
+      "languageLabel": "Sprache",
+      "languages": {
+        "de": "Deutsch",
+        "en": "Englisch"
+      },
+      "insertDraft": "Entwurf einfügen",
+      "loadLatest": "Veröffentlichte Version laden",
+      "operatorFirst": "Trage zuerst ein, wer diesen Server betreibt.",
+      "draftWarning": "Der Entwurf richtet sich danach, was auf diesem Server eingeschaltet ist, ist aber keine Rechtsberatung. Lies ihn, passe ihn an und lass ihn vor einem öffentlichen Start von einem Anwalt prüfen.",
+      "textLabel": "Inhalt (Markdown)",
+      "effective": "Gültig ab (optional)",
+      "effectiveHint": "Leer gilt sofort. Gib den Leuten bei einer Änderung Zeit, etwa 30 Tage.",
+      "changes": "Was sich geändert hat",
+      "changesRequired": "Pflicht: Das lesen die Leute, bevor sie erneut zustimmen.",
+      "changesHint": "Optional bei der ersten Version und bei der Datenschutzerklärung.",
+      "publish": "Veröffentlichen: {{title}}",
+      "published": "Veröffentlicht."
+    },
+    "history": {
+      "title": "Veröffentlichte Versionen",
+      "version": "Version {{version}}",
+      "effective": "Gültig ab {{date}}"
+    },
+    "reports": {
+      "title": "Meldungen",
+      "description": "Meldungen zu rechtswidrigen Inhalten oder Verstößen gegen die Bedingungen, von jedem. Du entscheidest jede einzeln; Betroffene und Meldende erfahren es.",
+      "tabs": {
+        "open": "Offen",
+        "closed": "Entschieden"
+      },
+      "emptyOpen": "Es warten keine Meldungen.",
+      "emptyClosed": "Über noch keine Meldung wurde entschieden.",
+      "detailTitle": "Meldung",
+      "category": "Gemeldet als",
+      "explanation": "Begründung der Meldung",
+      "where": "Wo",
+      "reported": "Gemeldet: {{type}}, wie es damals war",
+      "targets": {
+        "message": "Nachricht",
+        "dm_message": "Direktnachricht",
+        "user": "Person",
+        "space": "Space",
+        "link": "Adresse"
+      },
+      "unknownAuthor": "Unbekannter Verfasser",
+      "attachments": "Anhänge: {{names}}",
+      "reporter": "Gemeldet von",
+      "anonymous": "Nicht genannt",
+      "replyByEmail": "Dieser Server schreibt meldenden Personen nicht: Bestätige und beantworte diese Meldung von deiner eigenen Adresse aus.",
+      "decision": "Entscheidung",
+      "decisions": {
+        "no_action": "Kein Anlass zum Handeln",
+        "content_removed": "Inhalt entfernen",
+        "account_suspended": "Konto sperren",
+        "listing_withdrawn": "Space aus der Übersicht nehmen",
+        "handled": "An anderer Stelle im Admin-Bereich erledigt"
+      },
+      "ground": "Worauf sich das stützt",
+      "groundChoose": "Bitte wählen",
+      "grounds": {
+        "illegal": "Das Gesetz",
+        "terms": "Die Nutzungsbedingungen"
+      },
+      "duration": "Wie lange",
+      "note": "Begründung",
+      "noteHint": "Das liest die betroffene Person. Nenne die Regel oder das Gesetz und was geschehen ist.",
+      "noteHintNoAction": "Für deine eigenen Unterlagen. Die meldende Person erfährt nur das Ergebnis.",
+      "decide": "Entscheiden",
+      "noteTooLong": "Die Begründung einer Sperre darf höchstens {{max}} Zeichen lang sein."
+    }
+  }
+}

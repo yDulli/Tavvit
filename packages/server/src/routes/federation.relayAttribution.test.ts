@@ -103,7 +103,7 @@ function seedRegistryEntry(userId: string, origin: string): void {
   testDb.insert(schema.userFederationRegistry).values({
     userId,
     origin,
-    label: 'Orbit',
+    label: 'Tavvit',
     username: `${userId}@${HOME_DOMAIN}`,
     remoteUserId: 'remote-id',
     status: 'connected',

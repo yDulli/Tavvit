@@ -32,6 +32,15 @@ export function sendNotification(title: string, body: string, options?: Notifica
   }
 }
 
+export type NotificationPermissionState = 'app' | 'granted' | 'denied' | 'default' | 'unsupported';
+
+/** Whether notifications can be shown here: the desktop app always can, a browser asks once. */
+export function notificationPermission(): NotificationPermissionState {
+  if (isElectron()) return 'app';
+  if (!('Notification' in window)) return 'unsupported';
+  return Notification.permission;
+}
+
 export function requestNotificationPermission(): Promise<boolean> {
   if (isElectron()) return Promise.resolve(true);
   if (!('Notification' in window)) return Promise.resolve(false);

@@ -192,8 +192,8 @@ describe('direct-intl', () => {
   it('reports toLocale* and Intl.* outside the formatters module and outside tests', () => {
     const root = makeRoot({
       'packages/web/src/components/M.tsx': "const s = new Date(t).toLocaleDateString();\nconst n = new Intl.NumberFormat('en');",
-      'packages/web/src/i18n/formatters.ts': "new Intl.DateTimeFormat('en');",
-      'packages/web/src/i18n/formatters.test.ts': "d.toLocaleString();",
+      'packages/web/src/i18n/createFormatters.ts': "new Intl.DateTimeFormat('en');",
+      'packages/web/src/i18n/createFormatters.test.ts': "d.toLocaleString();",
     });
     const findings = checkDirectIntl(root) as Finding[];
     expect(findings).toHaveLength(2);

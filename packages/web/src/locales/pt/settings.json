@@ -86,7 +86,6 @@
     },
     "title": "Voz e vídeo",
     "volume": {
-      "sectionTitle": "Volume",
       "soundEffects": {
         "label": "Volume dos efeitos sonoros"
       },
@@ -129,14 +128,176 @@
       "privacy": "Privacidade",
       "connections": "Conexões",
       "keybinds": "Atalhos",
+      "developers": "Desenvolvedores",
       "desktop": "Desktop",
-      "instance": "Instância"
+      "instance": "Console de administração",
+      "emoji": "Emojis",
+      "games": "Jogos",
+      "notifications": "Notificações",
+      "accessibility": "Acessibilidade",
+      "language": "Idioma",
+      "security": "Segurança"
     },
     "logOut": "Sair",
     "backToMenu": "Voltar ao menu de configurações"
   },
   "appearance": {
-    "title": "Aparência"
+    "title": "Aparência",
+    "theme": {
+      "title": "Tema",
+      "description": "As cores das superfícies do app. Guardado neste dispositivo.",
+      "name": {
+        "carbon": "Carbono",
+        "slate": "Ardósia",
+        "ink": "Tinta",
+        "moss": "Líquen",
+        "clay": "Argila",
+        "harbor": "Porto",
+        "plum": "Ameixa",
+        "custom": "Personalizado"
+      },
+      "custom": {
+        "hue": "Matiz",
+        "strength": "Cor",
+        "depth": "Profundidade",
+        "reset": "Voltar ao Carbono"
+      }
+    },
+    "accent": {
+      "title": "Cor de destaque",
+      "description": "A cor dos botões e destaques. Sem uma cor sua, vale a cor que este servidor escolheu.",
+      "useInstance": "Usar a cor do servidor",
+      "hex": "Sua própria cor (hex)",
+      "problem": {
+        "too_light": "Clara demais: o texto branco nos botões seria difícil de ler.",
+        "too_dark": "Escura demais: sumiria nos painéis escuros."
+      },
+      "name": {
+        "vermilion": "Vermelhão",
+        "violet": "Violeta Tavvit",
+        "blue": "Azul",
+        "sky": "Céu",
+        "teal": "Verde-azulado",
+        "lime": "Musgo",
+        "amber": "Âmbar",
+        "orange": "Laranja",
+        "crimson": "Carmim",
+        "rose": "Rosa",
+        "orchid": "Orquídea"
+      }
+    },
+    "reading": {
+      "title": "Leitura",
+      "textSize": {
+        "label": "Tamanho do texto no chat",
+        "description": "O tamanho com que o texto das mensagens aparece nos chats."
+      },
+      "reduceMotion": {
+        "label": "Reduzir movimento",
+        "description": "Desliga animações como painéis deslizantes. Imagens animadas continuam se movendo."
+      },
+      "light": {
+        "label": "Luz ambiente",
+        "description": "Uma luz suave na cor do lugar em que você está."
+      }
+    },
+    "shape": {
+      "title": "Forma",
+      "corners": {
+        "label": "Cantos",
+        "description": "Quão retos ou arredondados são botões, cartões e campos.",
+        "options": {
+          "sharp": "Retos",
+          "standard": "Padrão",
+          "round": "Redondos"
+        }
+      },
+      "avatars": {
+        "label": "Fotos de perfil",
+        "description": "O formato em que cada foto de perfil é recortada.",
+        "options": {
+          "rounded": "Arredondada",
+          "circle": "Círculo",
+          "square": "Quadrado"
+        }
+      },
+      "sidebar": {
+        "label": "Largura da barra lateral",
+        "description": "Quão larga é a lista de canais e conversas.",
+        "options": {
+          "narrow": "Estreita",
+          "standard": "Padrão",
+          "wide": "Larga"
+        }
+      }
+    },
+    "messages": {
+      "title": "Mensagens",
+      "style": {
+        "label": "Estilo",
+        "description": "Como as mensagens são dispostas em todos os chats.",
+        "options": {
+          "bubbles": {
+            "label": "Balões",
+            "description": "Cada mensagem num cartão; as suas à direita."
+          },
+          "rows": {
+            "label": "Linhas",
+            "description": "Foto, nome e texto em linhas abertas."
+          },
+          "lines": {
+            "label": "Registro",
+            "description": "Hora, nome e texto numa só linha."
+          }
+        }
+      },
+      "density": {
+        "label": "Espaçamento",
+        "description": "Quanto espaço há entre as mensagens.",
+        "options": {
+          "compact": "Compacto",
+          "cozy": "Confortável",
+          "spacious": "Espaçoso"
+        }
+      },
+      "clock": {
+        "label": "Relógio",
+        "description": "Como as horas são escritas.",
+        "options": {
+          "auto": "Como o idioma",
+          "12h": "12 horas",
+          "24h": "24 horas"
+        }
+      },
+      "underlineLinks": {
+        "label": "Sublinhar links",
+        "description": "Os links são sublinhados, não só coloridos."
+      }
+    },
+    "typeface": {
+      "title": "Tipografia",
+      "label": "Fonte",
+      "description": "A fonte de todo o app. Texto em chinês usa sempre a do sistema.",
+      "options": {
+        "geist": "Geist",
+        "plexSans": "Plex",
+        "inter": "Inter",
+        "grotesk": "Grotesk",
+        "mono": "Mono",
+        "system": "Sistema"
+      }
+    },
+    "access": {
+      "title": "Acessibilidade",
+      "contrast": {
+        "label": "Mais contraste",
+        "description": "Texto secundário mais claro e bordas mais nítidas."
+      },
+      "status": {
+        "label": "Status para daltônicos",
+        "description": "Online, ausente e ocupado em cores fáceis de distinguir."
+      }
+    }
   },
   "account": {
     "title": "Minha conta",
@@ -176,6 +337,51 @@
         "label": "Sobre mim",
         "placeholder": "Conte ao mundo sobre você…",
         "counter": "{{used}}/{{max}}"
+      },
+      "image": {
+        "animationTooLarge": "Imagens animadas podem ter no máximo {{max}} MB. Escolha uma menor."
+      },
+      "theme": {
+        "label": "Tema do perfil",
+        "hint": "Duas cores que pintam seu banner e dão um tom ao cartão do perfil.",
+        "presets": "Temas prontos",
+        "preset": {
+          "nebula": "Nebulosa",
+          "ember": "Brasa",
+          "tide": "Maré",
+          "moss": "Musgo",
+          "dusk": "Crepúsculo",
+          "sol": "Sol",
+          "slate": "Ardósia"
+        },
+        "first": "Primeira cor",
+        "second": "Segunda cor",
+        "picker": "{{name}}: seletor de cor",
+        "hex": "{{name}}: código hex",
+        "preview": "Como ficará o cartão do seu perfil"
+      },
+      "pronouns": {
+        "label": "Pronomes",
+        "placeholder": "ex.: ela/dela, ele/dele",
+        "counter": "{{used}}/{{max}}"
+      },
+      "links": {
+        "label": "Links",
+        "hint": "Até {{max}} endereços da web no seu cartão de perfil, cada um com um rótulo opcional.",
+        "url": "Endereço do link",
+        "urlPlaceholder": "https://…",
+        "labelField": "Rótulo do link",
+        "labelPlaceholder": "Rótulo (opcional)",
+        "add": "Adicionar link",
+        "remove": "Remover link",
+        "invalid": "Digite um endereço da web que comece com https:// ou http://, com no máximo {{max}} caracteres."
+      },
+      "layout": {
+        "label": "Layout do cartão",
+        "hint": "Como a parte de cima do seu cartão de perfil é organizada.",
+        "standard": "Padrão",
+        "centered": "Centralizado",
+        "compact": "Compacto"
       }
     },
     "details": {
@@ -186,7 +392,19 @@
       },
       "customStatus": {
         "label": "Status personalizado",
-        "placeholder": "O que você está fazendo?"
+        "placeholder": "O que você está fazendo?",
+        "expiry": {
+          "label": "Limpar após",
+          "keep": "Manter o fim atual ({{time}})",
+          "choice": {
+            "30": "30 minutos",
+            "60": "1 hora",
+            "240": "4 horas",
+            "10080": "7 dias",
+            "never": "Não limpar",
+            "today": "Hoje"
+          }
+        }
       }
     },
     "password": {
@@ -257,42 +475,84 @@
         "spacesFailed": "Falha ao processar os espaços",
         "deleteFailed": "Falha ao excluir a conta"
       }
+    },
+    "dataExport": {
+      "title": "Uma cópia dos seus dados",
+      "description": "Tudo o que este servidor tem sobre sua conta: seu perfil, o que você escreveu, seus arquivos. Leva um momento para preparar e fica disponível por uma semana.",
+      "pending": "Sua cópia está sendo preparada. Pode fechar aqui; ela estará pronta quando você voltar.",
+      "ready": "Sua cópia está disponível até {{date}}.",
+      "download": "Baixar",
+      "failed": "Não foi possível criar a cópia. Tente de novo.",
+      "password": "Sua senha",
+      "request": "Pedir uma cópia"
+    },
+    "storage": {
+      "title": "Seus arquivos",
+      "description": "O que você enviou conta aqui, cada arquivo uma vez, mesmo quando encaminhado. Excluir as mensagens em que ele está libera espaço.",
+      "used": "{{used}} de {{limit}} usados",
+      "usedNoLimit": "{{used}} usados"
+    },
+    "username": {
+      "change": "Alterar",
+      "newLabel": "Novo nome de usuário",
+      "hint": "De {{min}} a {{max}} letras minúsculas, dígitos ou sublinhados.",
+      "warning": "A partir daí, você entra com o novo nome. Só poderá alterá-lo de novo depois de {{days}} dias, e seu nome antigo fica reservado durante esse tempo, para que ninguém se passe por você.",
+      "submit": "Alterar nome de usuário",
+      "changed": "Agora você é @{{username}}",
+      "nextChange": "Você poderá alterá-lo de novo em {{date}}.",
+      "homeOnly": "Este nome é definido no servidor de onde vem sua conta.",
+      "connected": "Esta conta está conectada a outros servidores, que a conhecem por este nome, por isso ele não pode ser alterado por enquanto."
     }
   },
   "privacy": {
     "title": "Privacidade",
-    "discovery": {
-      "sectionTitle": "Descoberta",
-      "label": "Permitir que outras pessoas encontrem meu perfil",
-      "description": "Quando ativado, seu perfil aparece em Descobrir pessoas. Outras pessoas sempre podem adicionar você pelo nome de usuário exato."
-    },
     "activity": {
       "sectionTitle": "Status de atividade",
       "label": "Compartilhar status de atividade",
       "description": "Permite que outras pessoas vejam o que você está fazendo, como jogos que você está jogando ou músicas que está ouvindo."
+    },
+    "blocked": {
+      "sectionTitle": "Pessoas bloqueadas",
+      "description": "Pessoas que você bloqueia não podem enviar mensagens nem pedidos de amizade, e as mensagens delas em espaços e grupos compartilhados ficam ocultas. Elas não são avisadas.",
+      "empty": "Você não bloqueou ninguém.",
+      "loading": "Carregando…",
+      "loadFailed": "Não foi possível carregar as pessoas bloqueadas.",
+      "retry": "Tentar de novo",
+      "unblock": "Desbloquear",
+      "since": "Bloqueado em {{date}}"
+    },
+    "contact": {
+      "title": "Quem pode falar com você",
+      "dm": {
+        "label": "Quem pode começar uma conversa com você",
+        "description": "As conversas que você já tem continuam abertas. Para encerrar uma, bloqueie a pessoa.",
+        "options": {
+          "anyone": "Qualquer pessoa",
+          "friendsAndSpaces": "Amigos e pessoas de um espaço em comum",
+          "friends": "Só amigos",
+          "nobody": "Ninguém"
+        }
+      },
+      "requests": {
+        "label": "Quem pode enviar pedidos de amizade",
+        "description": "Os demais não encontram você ao buscar pelo nome.",
+        "options": {
+          "anyone": "Qualquer pessoa",
+          "sharedSpaces": "Pessoas de um espaço em comum",
+          "nobody": "Ninguém"
+        }
+      }
     }
   },
   "connections": {
     "title": "Conexões"
   },
-  "instance": {
-    "tabs": {
-      "general": "Geral",
-      "registration": "Cadastro",
-      "federation": "Federação",
-      "streaming": "Transmissão",
-      "storage": "Armazenamento",
-      "users": "Usuários",
-      "updates": "Atualizações",
-      "telemetry": "Oi"
-    }
-  },
   "keybinds": {
     "portal": {
-      "description": "No Wayland, a área de trabalho gerencia todos os atalhos do Backspace. Atribua, altere ou remova teclas nas configurações de atalhos de teclado do sistema, em Backspace. Atalhos locais do navegador/X11 não são usados aqui.",
+      "description": "No Wayland, a área de trabalho gerencia todos os atalhos do Tavvit. Atribua, altere ou remova teclas nas configurações de atalhos de teclado do sistema, em Tavvit. Atalhos locais do navegador/X11 não são usados aqui.",
       "idle": "Preparando o primeiro registro de todas as ações disponíveis.",
       "pending": "Conectando ao portal da área de trabalho. Se aparecer uma caixa de diálogo do sistema, escolha os atalhos das ações que você quer usar.",
-      "ready": "O Backspace está registrado. Abra as configurações de atalhos de teclado do sistema para alterar ou remover atribuições. A lista abaixo é somente leitura e é atualizada quando você volta ao Backspace.",
+      "ready": "O Tavvit está registrado. Abra as configurações de atalhos de teclado do sistema para alterar ou remover atribuições. A lista abaixo é somente leitura e é atualizada quando você volta ao Tavvit.",
       "unavailable": "O portal está indisponível, a permissão foi negada ou a sessão terminou. É necessário um backend do portal de Atalhos Globais. Os atalhos locais ficam desativados no Wayland.",
       "retry": "Registrar ou reconectar atalhos",
       "assigned": "Atalho do sistema: {{shortcut}}",
@@ -334,7 +594,7 @@
     },
     "accessibility": {
       "title": "Permissão de acessibilidade necessária",
-      "description": "O Backspace precisa da permissão de Acessibilidade para que os atalhos globais funcionem fora do app.",
+      "description": "O Tavvit precisa da permissão de Acessibilidade para que os atalhos globais funcionem fora do app.",
       "grant": "Conceder permissão"
     },
     "hookError": {
@@ -344,6 +604,10 @@
     "conflict": {
       "message": "<strong>{{combo}}</strong> já está atribuído a <strong>{{action}}</strong>. Substituir?",
       "overwrite": "Substituir"
+    },
+    "typingKey": {
+      "title": "Este atalho precisa de Ctrl, Alt ou da tecla do sistema",
+      "description": "Letras, números, Espaço, Enter, Tab e Backspace só funcionam junto com Ctrl, Alt ou a tecla do sistema. Sozinhas, o app ouviria tudo o que você digita em outros programas, por isso não as escuta. Teclas de função, botões do mouse e teclas como Caps Lock funcionam sozinhas."
     }
   },
   "desktop": {
@@ -351,7 +615,7 @@
     "autoLaunch": {
       "openAtLogin": {
         "label": "Iniciar com o sistema",
-        "description": "Abrir o Backspace automaticamente quando você fizer login"
+        "description": "Abrir o Tavvit automaticamente quando você fizer login"
       },
       "startMinimized": {
         "label": "Iniciar minimizado",
@@ -359,7 +623,7 @@
       }
     },
     "updates": {
-      "appName": "Backspace Desktop",
+      "appName": "Tavvit Desktop",
       "versionLabel": "Versão {{version}}",
       "checking": "Verificando atualizações…",
       "checkingShort": "Verificando…",
@@ -377,58 +641,295 @@
       "external": "As atualizações são instaladas pelo seu gerenciador de software do Flatpak",
       "download": "Baixar",
       "restart": "Reiniciar",
-      "manualNote": "Esta versão não consegue instalar atualizações sozinha, então as novas versões são baixadas do GitHub e substituem o app manualmente. Consulte as notas de versão para ver os passos da sua plataforma.",
-      "externalNote": "O Flatpak aplica as atualizações de forma atômica, fora do app. Use seu gerenciador de software ou o comando <code>flatpak update</code> para atualizar o Backspace."
-    },
-    "instance": {
-      "current": "Instância conectada no momento",
-      "change": "Trocar instância"
+      "manualNote": "Esta versão não consegue instalar atualizações sozinha, então as novas versões são baixadas da página de download deste servidor e instaladas manualmente.",
+      "externalNote": "O Flatpak aplica as atualizações de forma atômica, fora do app. Use seu gerenciador de software ou o comando <code>flatpak update</code> para atualizar o Tavvit.",
+      "autoNote": "As atualizações são baixadas e instaladas sozinhas: o Tavvit reinicia quando está na bandeja do sistema ou quando ninguém usou o computador por alguns minutos, nunca durante uma chamada."
     }
   },
-  "desktopDownload": {
-    "title": "Desktop",
-    "intro": "Atalhos globais, início com o sistema e ícone na bandeja do sistema.",
-    "unsupported": "O app para desktop roda no Windows, Linux e macOS.",
-    "name": {
-      "windows": "Windows",
-      "mac": "macOS",
-      "linux": "Linux"
+  "emoji": {
+    "title": "Emojis",
+    "intro": "Uma biblioteca compartilhada de imagens para todos neste servidor. Use em qualquer chat: digite :nome: ou escolha no menu de emojis.",
+    "add": {
+      "title": "Adicionar um emoji",
+      "choose": "Escolher uma imagem",
+      "change": "Escolher outra imagem",
+      "hint": "PNG, JPEG, WebP ou GIF, até {{max}} MB. É reduzida para caber em 128 pixels, e um GIF animado continua se movendo.",
+      "name": "Nome",
+      "namePlaceholder": "papagaio_festa",
+      "submit": "Adicionar emoji",
+      "submitting": "Adicionando…",
+      "tooLarge": "Esse arquivo é maior que {{max}} MB.",
+      "unreadable": "Não foi possível ler esse arquivo.",
+      "counter": "Você adicionou {{used}} de {{max}}.",
+      "added": ":{{name}}: adicionado"
     },
-    "tag": {
-      "windows": "Este PC",
-      "mac": "Este Mac",
-      "linux": "Esta máquina"
+    "library": {
+      "title": "Biblioteca",
+      "count_one": "{{count}} emoji",
+      "count_many": "{{count}} emojis",
+      "count_other": "{{count}} emojis",
+      "search": "Buscar emojis",
+      "empty": "Ainda não há emojis. Adicione o primeiro.",
+      "noMatches": "Nenhum emoji corresponde à busca.",
+      "loadFailed": "Não foi possível carregar os emojis.",
+      "retry": "Tentar de novo"
     },
-    "covers": {
-      "windows": "x64 ou arm64",
-      "mac": "Funciona em Macs com Apple Silicon e Intel",
-      "linux": "AppImage ou pacote deb, x64 ou arm64"
+    "row": {
+      "rename": "Renomear",
+      "save": "Salvar",
+      "delete": "Excluir",
+      "yours": "Seu",
+      "renamed": "Renomeado para :{{name}}:",
+      "removed": ":{{name}}: removido",
+      "nameLabel": "Nome de :{{name}}:",
+      "deleteConfirm": {
+        "title": "Excluir :{{name}}:?",
+        "body": "Ele some das reações, e mensagens antigas que o usam mostram :{{name}}: no lugar.",
+        "action": "Excluir"
+      }
     },
-    "download": {
-      "windows": "Baixar para Windows",
-      "mac": "Baixar para macOS",
-      "linux": "Baixar para Linux"
+    "adminsOnly": "Neste servidor, os administradores adicionam emojis. Tudo na biblioteca é para todos usarem."
+  },
+  "games": {
+    "title": "Atividade de jogo",
+    "intro": "Mostre aos seus amigos o que você está jogando, do jeito que o app de desktop vê neste computador.",
+    "browserOnly": "Um navegador não consegue ver quais programas estão rodando, então a detecção de jogos funciona no app de desktop do Tavvit. Todo o resto funciona aqui normalmente.",
+    "getDesktop": "Baixar o app de desktop",
+    "detect": {
+      "label": "Detectar o que eu jogo",
+      "description": "Ligado até você desligar. A cada 15 segundos o Tavvit olha o que está rodando neste computador: jogos iniciados pela Steam, Epic Games ou GOG e uma lista de jogos conhecidos. Só o nome do jogo é compartilhado, e apenas enquanto o compartilhamento estiver ligado em Privacidade."
     },
-    "picker": {
-      "architecture": "Arquitetura",
-      "format": "Formato do pacote"
+    "now": {
+      "title": "Detectado agora",
+      "playing": "Jogando {{name}}",
+      "none": "Nenhum jogo que o Tavvit conhece está rodando."
     },
-    "arch": {
-      "appleSilicon": "Apple Silicon",
-      "intel": "Intel",
-      "x64": "x64",
-      "arm64": "arm64"
+    "sharingOff": "Compartilhar sua atividade está desligado em Privacidade, então seus amigos não veem isso.",
+    "mine": {
+      "title": "Meus jogos",
+      "description": "Você adicionou estes antes. Eles continuam sendo detectados até você removê-los.",
+      "remove": "Remover {{name}}"
     },
-    "kind": {
-      "appimage": "AppImage",
-      "deb": "deb"
+    "updateApp": "Esta versão do app de desktop do Tavvit ainda não detecta jogos. Baixe e instale a versão mais recente uma vez; a partir daí ela se mantém atualizada sozinha."
+  },
+  "notifications": {
+    "device": {
+      "title": "Neste dispositivo",
+      "app": "O aplicativo para desktop mostra notificações enquanto a janela está em segundo plano.",
+      "granted": "As notificações estão ativadas. Você recebe uma quando algo é para você e esta aba está em segundo plano.",
+      "default": "As notificações estão desativadas. Seu navegador vai perguntar uma vez.",
+      "denied": "Seu navegador bloqueia notificações deste site. Permita nas configurações do site e recarregue a página.",
+      "unsupported": "Este navegador não oferece notificações.",
+      "turnOn": "Ativar notificações",
+      "test": "Enviar uma notificação de teste",
+      "testBody": "É assim que uma notificação aparece."
     },
-    "archGuessed": {
-      "windows": "Seu navegador não informou qual processador este PC tem, então x64 foi pré-selecionado.",
-      "mac": "Seu navegador não informou qual chip este Mac tem, então Apple Silicon foi pré-selecionado.",
-      "linux": "Seu navegador não informou qual processador esta máquina tem, então x64 foi pré-selecionado."
+    "content": {
+      "title": "O que elas mostram",
+      "showText": {
+        "label": "Mostrar o texto da mensagem",
+        "description": "Desativado: a notificação só diz quem escreveu, para ninguém ler na sua tela."
+      },
+      "directMessages": {
+        "label": "Mensagens diretas",
+        "description": "Desativado: sem som e sem notificação para mensagens diretas e grupos. Elas continuam aparecendo como não lidas."
+      },
+      "appBadge": {
+        "label": "Contagem de não lidas no ícone do aplicativo"
+      }
     },
-    "version": "Versão {{version}}",
-    "allReleases": "Todas as versões no GitHub"
+    "sounds": {
+      "title": "Sons",
+      "messageSound": {
+        "label": "Som para novas mensagens",
+        "description": "Para uma mensagem que notificaria você."
+      },
+      "callSound": {
+        "label": "Toque para chamadas",
+        "description": "Desativado: uma chamada recebida só aparece na tela."
+      }
+    },
+    "spaces": {
+      "title": "Espaços",
+      "description": "Quanto cada espaço pode avisar você. Isso acompanha sua conta nos outros dispositivos.",
+      "muted": "Silenciado",
+      "empty": "Você ainda não está em nenhum espaço."
+    },
+    "push": {
+      "title": "Push neste dispositivo",
+      "toggle": "Avisar com o app fechado",
+      "toggleHint": "Passa pelo serviço de push do seu navegador. Ele só vê quando algo chega, não o que diz.",
+      "installFirst": "No iPhone ou iPad isso funciona quando o Tavvit está na Tela de Início: toque em Compartilhar, depois em Adicionar à Tela de Início, e abra por lá.",
+      "denied": "Seu navegador foi instruído a não mostrar notificações do Tavvit. Você pode mudar isso nas configurações dele para este site."
+    },
+    "keywords": {
+      "title": "Palavras-chave",
+      "description": "Uma mensagem com uma destas palavras alerta como uma menção, em canais definidos para menções. Só você as vê.",
+      "placeholder": "Adicionar palavra",
+      "add": "Adicionar",
+      "remove": "Remover {{word}}",
+      "limit": "{{used}} de {{max}}"
+    }
+  },
+  "security": {
+    "sessions": {
+      "title": "Onde você está conectado",
+      "description": "Todos os dispositivos conectados a este servidor. Se não reconhecer algum, desconecte-o e troque sua senha.",
+      "loading": "Carregando…",
+      "unknownDevice": "Dispositivo desconhecido",
+      "thisDevice": "Este dispositivo",
+      "lastActive": "Ativo em {{date}}",
+      "signOut": "Sair",
+      "signOutOthers": "Sair de todos os outros",
+      "signOutOthersConfirm": {
+        "title": "Sair de todos os outros?",
+        "description": "Todos os outros dispositivos são desconectados na hora e precisam da sua senha para voltar."
+      },
+      "signedIn": "Entrou em {{date}}",
+      "signOutAll": "Sair em todos os lugares",
+      "signOutAllConfirm": {
+        "title": "Sair em todos os lugares?",
+        "description": "Todos os dispositivos são desconectados, inclusive este. Depois você entra de novo com sua senha."
+      }
+    },
+    "email": {
+      "title": "Endereço de e-mail",
+      "description": "Para confirmar que é você e redefinir uma senha esquecida. As outras pessoas nunca o veem.",
+      "none": "Ainda sem endereço. Sem um endereço confirmado, só um administrador pode redefinir uma senha esquecida.",
+      "confirmed": "Confirmado",
+      "unconfirmed": "Não confirmado",
+      "pending": "Aguardando confirmação: {{address}}. Seu endereço atual continua valendo até lá.",
+      "waiting": "Enviamos um link para {{address}}. Ele vale por 24 horas. Olhe também a pasta de spam.",
+      "undeliverable": "Os e-mails para este endereço não puderam ser entregues, então nada mais é enviado para lá. Use outro endereço.",
+      "sendFailed": "O último e-mail de confirmação não pôde ser enviado. Tente de novo daqui a pouco.",
+      "sent": "Link enviado",
+      "resend": "Enviar o link de novo",
+      "cancel": "Cancelar a alteração",
+      "change": "Alterar",
+      "remove": "Remover",
+      "newAddress": "Novo endereço de e-mail",
+      "submit": "Enviar link de confirmação",
+      "removeConfirm": {
+        "title": "Remover seu endereço de e-mail?",
+        "description": "Sem um endereço confirmado, só um administrador pode redefinir uma senha esquecida."
+      }
+    },
+    "passwordRecovery": {
+      "confirmed": "Se você esquecer sua senha, enviaremos um link para {{address}}.",
+      "none": "Se você esquecer sua senha, só um administrador poderá redefini-la até você ter um endereço confirmado.",
+      "noMail": "Este servidor não envia e-mails. Se você esquecer sua senha, só um administrador poderá redefini-la."
+    },
+    "overview": {
+      "title": "Visão geral",
+      "none": "Nenhum ainda",
+      "on": "Ativada",
+      "off": "Desativada",
+      "changed": "Alterada em {{date}}",
+      "neverChanged": "Não alterada desde o cadastro",
+      "devices_one": "{{count}} dispositivo",
+      "devices_many": "{{count}} de dispositivos",
+      "devices_other": "{{count}} dispositivos"
+    },
+    "twoFactor": {
+      "title": "Autenticação em duas etapas",
+      "description": "Entrar também exige um código de um app autenticador como Aegis, Google Authenticator, Microsoft Authenticator ou 1Password. Quem obtiver sua senha ainda assim não consegue entrar.",
+      "off": "Desativada. Entrar exige só a sua senha.",
+      "unavailable": "Indisponível neste servidor: o operador não a configurou.",
+      "enable": "Ativar",
+      "disable": "Desativar",
+      "regenerate": "Criar novos códigos de recuperação",
+      "activate": "Ativar",
+      "confirmPassword": "Digite sua senha para começar.",
+      "scan": "Escaneie isto com seu app autenticador e depois digite o código exibido.",
+      "qrLabel": "Código QR para o seu app autenticador",
+      "manual": "Não consegue escanear? Digite esta chave no app:",
+      "firstCode": "Código do app",
+      "codeLabel": "Código do app ou código de recuperação",
+      "codeHint": "Esta conta tem a autenticação em duas etapas ativada.",
+      "enabledSince": "Ativada desde {{date}}.",
+      "codesLeft_one": "Resta {{count}} código de recuperação.",
+      "codesLeft_many": "Restam {{count}} de códigos de recuperação.",
+      "codesLeft_other": "Restam {{count}} códigos de recuperação.",
+      "codesLow": "Seus códigos de recuperação estão acabando. Crie novos enquanto ainda consegue entrar.",
+      "disableIntro": "Entrar voltará a exigir só a sua senha. Digite sua senha e um código para confirmar.",
+      "regenerateIntro": "Seus códigos de recuperação antigos deixam de funcionar. Digite sua senha e um código para confirmar.",
+      "recovery": {
+        "intro": "Guarde-os em um lugar seguro, longe do seu celular. Cada um permite entrar uma vez se você o perder. Eles só aparecem agora.",
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "copyFailed": "Não foi possível copiar",
+        "download": "Baixar",
+        "saved": "Guardei em um lugar seguro",
+        "done": "Concluir"
+      }
+    },
+    "activity": {
+      "title": "Atividade de segurança",
+      "description": "O que aconteceu com esta conta nos últimos 90 dias.",
+      "empty": "Nada ainda.",
+      "kinds": {
+        "login": "Entrada",
+        "login_new_device": "Entrada de um novo dispositivo",
+        "login_failed": "Tentativa de entrada falhou",
+        "mfa_failed": "Código errado depois da senha certa",
+        "password_changed": "Senha alterada",
+        "username_changed": "Nome de usuário alterado",
+        "password_reset": "Senha redefinida",
+        "email_added": "Endereço de e-mail confirmado",
+        "email_changed": "Endereço de e-mail alterado",
+        "email_removed": "Endereço de e-mail removido",
+        "two_factor_on": "Autenticação em duas etapas ativada",
+        "two_factor_off": "Autenticação em duas etapas desativada",
+        "two_factor_reset": "Autenticação em duas etapas redefinida pelo operador",
+        "recovery_regenerated": "Novos códigos de recuperação criados",
+        "recovery_used": "Código de recuperação usado",
+        "session_revoked": "Um dispositivo foi desconectado",
+        "sessions_ended": "Dispositivos foram desconectados",
+        "sessions_ended_by_admin": "Um administrador desconectou você"
+      }
+    }
+  },
+  "developers": {
+    "title": "Bots",
+    "description": "Um bot é um programa que você mesmo opera, com uma conta própria. Você responde pelo que ele faz. Até {{max}}.",
+    "open": "Abrir o portal de desenvolvedores",
+    "docs": "Ler a documentação",
+    "disabled": "O operador desta instância não ativou os bots.",
+    "nameLabel": "Nome do bot",
+    "create": "Criar",
+    "tokenTitle": "O token de {{name}}",
+    "tokenDescription": "Copie agora: ele não será mostrado novamente. Quem o tem age como este bot, então trate-o como uma senha.",
+    "tokenLabel": "Token do bot",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "listTitle": "Seus bots",
+    "neverUsed": "Nunca usado",
+    "lastUsed": "Último uso: {{time}}",
+    "inviteLabel": "Endereço para trazê-lo a um espaço",
+    "rotate": "Novo token",
+    "rotateTitle": "Dar um novo token?",
+    "rotateBody": "O token antigo de {{name}} para de funcionar imediatamente, e um bot em execução é desconectado.",
+    "remove": "Excluir bot",
+    "removeTitle": "Excluir este bot?",
+    "removeBody": "{{name}} sai de todos os espaços e o token para de funcionar. O que escreveu permanece.",
+    "portal": {
+      "title": "Portal de desenvolvedores",
+      "backToApp": "Voltar ao Tavvit",
+      "allBots": "Todos os bots",
+      "profile": "Perfil",
+      "descriptionLabel": "O que ele faz",
+      "pictureChange": "Trocar imagem",
+      "pictureRemove": "Remover imagem",
+      "cropTitle": "Recortar a imagem",
+      "saved": "Salvo",
+      "tokenHint": "O token é mostrado uma vez, ao ser criado. Um novo interrompe o antigo na hora.",
+      "inviteDescription": "Quem abrir este endereço e puder gerenciar um espaço escolhe o espaço e vê o que o bot pede. Ele só recebe permissões que essa pessoa tem, e nunca administrador.",
+      "inviteRights": "O que ele pede",
+      "commands": "Comandos",
+      "commandsHint": "O que seu programa registrou da última vez.",
+      "noCommands": "Nenhum ainda.",
+      "spaces": "Espaços",
+      "noSpaces": "Ainda não está em nenhum espaço."
+    }
   }
 }

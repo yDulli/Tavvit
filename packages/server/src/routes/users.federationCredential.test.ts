@@ -251,3 +251,38 @@ describe('federation credentials are scrubbed with the account', () => {
     ).toHaveLength(0);
   });
 });
+
+describe('with federation switched off (FEDERATION_ENABLED)', () => {
+  // `config` is readonly in its type and mutable at runtime; the suite turns the
+  // switch on globally (test/setup-env.ts), so this case turns it off and back.
+  let federation: { enabled: boolean };
+
+  beforeEach(async () => {
+    const { config } = await import('../config.js');
+    federation = config.federation as { enabled: boolean };
+    federation.enabled = false;
+  });
+
+  afterEach(() => {
+    federation.enabled = true;
+  });
+
+  it('refuses to issue a federation credential', async () => {
+    const res = await credential(LOCAL_ID, LOCAL_USERNAME, { origin: REMOTE });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('federation_disabled');
+    const stored = testDb.select().from(schema.userFederationCredentials).all();
+    expect(stored).toHaveLength(0);
+  });
+
+  it('refuses to fan an identity deletion out to other instances', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/users/@me/federation-identity/delete',
+      headers: { authorization: `Bearer ${signJwt({ userId: LOCAL_ID, username: LOCAL_USERNAME })}` },
+      payload: { origins: [REMOTE], mode: 'soft' },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe('federation_disabled');
+  });
+});

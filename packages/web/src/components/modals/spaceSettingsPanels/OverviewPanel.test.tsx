@@ -117,19 +117,19 @@ describe('OverviewPanel ownership transfer candidates', () => {
   }
 
   it("leave out the user's row on a remote space's instance, not the row that has the session row's id", () => {
-    const ORBIT = 'https://orbit.example';
+    const TAVVIT = 'https://orbit.example';
     // orbit knows the user as o-7; orbit's Cleo has the id the session row has.
-    const meOnOrbit: User = { ...owner, id: 'o-7', username: 'owner@nova', displayName: 'Owner On Orbit', homeInstance: 'nova.example', homeUserId: 'user-1' };
+    const meOnOrbit: User = { ...owner, id: 'o-7', username: 'owner@nova', displayName: 'Owner On Tavvit', homeInstance: 'nova.example', homeUserId: 'user-1' };
     const cleo: User = { ...owner, id: 'user-1', username: 'cleo', displayName: 'Cleo' };
     useSpaceStore.setState({
-      spaces: [{ ...space, ownerId: 'o-7', _instanceOrigin: ORBIT }],
+      spaces: [{ ...space, ownerId: 'o-7', _instanceOrigin: TAVVIT }],
       members: [member(meOnOrbit), member(cleo)],
     });
-    useAuthStore.setState({ myRowIds: new Map([[ORBIT, 'o-7']]) });
+    useAuthStore.setState({ myRowIds: new Map([[TAVVIT, 'o-7']]) });
     openTransfer();
 
     expect(screen.getByText('Cleo')).toBeInTheDocument();
-    expect(screen.queryByText('Owner On Orbit')).not.toBeInTheDocument();
+    expect(screen.queryByText('Owner On Tavvit')).not.toBeInTheDocument();
   });
 
   it("leave out the session row on the page instance", () => {

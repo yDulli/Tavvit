@@ -1,3 +1,5 @@
+import { rateLimitsDisabled } from './rateLimitSwitch.js';
+
 /**
  * The rate limit on creating DM messages: 5 per 5 seconds per client address.
  *
@@ -25,11 +27,6 @@ interface Window {
 
 const windows: Map<string, Window> = new Map();
 let lastSweepAt = 0;
-
-function rateLimitsDisabled(): boolean {
-  const value = process.env.DISABLE_RATE_LIMITS;
-  return value === '1' || value === 'true';
-}
 
 /** Drop the windows that have ended, at most once per window length. */
 function sweep(now: number): void {

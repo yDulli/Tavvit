@@ -5,6 +5,7 @@ import { useFormatters, type Formatters } from '../../../i18n/formatters';
 import { describeError } from '../../../i18n/errors';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { Icon } from '../../ui/Icon';
 import { Toggle } from '../../ui/Toggle';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { api, HttpError } from '../../../api/client';
@@ -73,30 +74,30 @@ function FederationGlobalSettings() {
 
   return (
     <div>
-      <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('federation:admin.relay.title')}</div>
-      <p className="text-xs text-txt-tertiary mb-2">
+      <div className="label-mono mb-1.5">{t('federation:admin.relay.title')}</div>
+      <p className="text-meta text-txt-tertiary mb-2">
         {t('federation:admin.relay.description')}
       </p>
-      <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-4">
-        <label className="flex items-center justify-between cursor-pointer">
-          <div>
-            <div className="text-sm font-medium text-txt-primary">{t('federation:admin.relay.enable.label')}</div>
-            <div className="text-xs text-txt-tertiary mt-0.5">{t('federation:admin.relay.enable.description')}</div>
+      <div className="surface-card rounded-lg p-4 space-y-4">
+        <label className="flex items-center justify-between gap-4 cursor-pointer">
+          <div className="min-w-0">
+            <div className="text-ui font-medium text-txt-primary">{t('federation:admin.relay.enable.label')}</div>
+            <div className="text-meta text-txt-tertiary mt-0.5">{t('federation:admin.relay.enable.description')}</div>
           </div>
           <Toggle enabled={draft.federationRelayEnabled} onChange={(v) => setDraft({ ...draft, federationRelayEnabled: v })} />
         </label>
 
-        <label className="flex items-center justify-between cursor-pointer">
-          <div>
-            <div className="text-sm font-medium text-txt-primary">{t('federation:admin.relay.autoAccept.label')}</div>
-            <div className="text-xs text-txt-tertiary mt-0.5">{t('federation:admin.relay.autoAccept.description')}</div>
+        <label className="flex items-center justify-between gap-4 cursor-pointer">
+          <div className="min-w-0">
+            <div className="text-ui font-medium text-txt-primary">{t('federation:admin.relay.autoAccept.label')}</div>
+            <div className="text-meta text-txt-tertiary mt-0.5">{t('federation:admin.relay.autoAccept.description')}</div>
           </div>
           <Toggle enabled={draft.autoAcceptPeering} onChange={(v) => setDraft({ ...draft, autoAcceptPeering: v })} />
         </label>
 
         <div>
-          <div className="text-sm font-medium text-txt-primary mb-1">{t('federation:admin.relay.ttl.label')}</div>
-          <div className="text-xs text-txt-tertiary mb-2">{t('federation:admin.relay.ttl.description')}</div>
+          <div className="text-ui font-medium text-txt-primary mb-1">{t('federation:admin.relay.ttl.label')}</div>
+          <div className="text-meta text-txt-tertiary mb-2">{t('federation:admin.relay.ttl.description')}</div>
           <input
             type="number"
             min={1}
@@ -108,13 +109,13 @@ function FederationGlobalSettings() {
                 setDraft({ ...draft, federationRelayTtlDays: val });
               }
             }}
-            className="input-standard w-24"
+            className="input-standard tabular h-8 w-24 py-0 font-mono text-ui"
           />
         </div>
 
         <div>
-          <div className="text-sm font-medium text-txt-primary mb-1">{t('federation:admin.relay.rotation.label')}</div>
-          <div className="text-xs text-txt-tertiary mb-2">{t('federation:admin.relay.rotation.description')}</div>
+          <div className="text-ui font-medium text-txt-primary mb-1">{t('federation:admin.relay.rotation.label')}</div>
+          <div className="text-meta text-txt-tertiary mb-2">{t('federation:admin.relay.rotation.description')}</div>
           <input
             type="number"
             min={1}
@@ -126,26 +127,28 @@ function FederationGlobalSettings() {
                 setDraft({ ...draft, defaultAutoRotateIntervalDays: val });
               }
             }}
-            className="input-standard w-24"
+            className="input-standard tabular h-8 w-24 py-0 font-mono text-ui"
           />
         </div>
       </div>
 
       {saveError && (
-        <div className="mt-2 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{saveError}</div>
+        <div className="mt-2 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{saveError}</div>
       )}
 
       {hasChanges && (
         <div className="sticky bottom-0 z-10 pointer-events-none">
           <div className="flex justify-center pt-3 pb-1">
-            <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-2 animate-slide-up pointer-events-auto">
-              <button onClick={handleReset} className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors">
+            <div className="action-bar animate-slide-up pointer-events-auto">
+              <button onClick={handleReset} className="btn-quiet">
                 {t('common:actions.reset')}
               </button>
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                aria-busy={saving}
+                className="btn-primary"
               >
                 {saving ? t('common:states.saving') : t('common:actions.save')}
               </button>
@@ -197,14 +200,14 @@ function formatRelativeTime(t: FederationT, formatters: Formatters, timestamp: n
 
 function peerStatusColor(status: string): string {
   switch (status) {
-    case 'active': return 'bg-status-online/15 text-status-online';
+    case 'active': return 'bg-status-online/15 text-txt-positive';
     case 'pending': return 'bg-accent-lavender/15 text-accent-lavender';
     case 'unreachable': return 'bg-accent-amber/15 text-accent-amber';
-    case 'rejected': return 'bg-accent-rose/15 text-accent-rose';
+    case 'rejected': return 'bg-accent-rose/15 text-txt-danger';
     case 'awaiting_approval': return 'bg-accent-amber/15 text-accent-amber';
-    case 'needs_attention': return 'bg-accent-rose/15 text-accent-rose';
-    case 'revoked': return 'bg-white/5 text-txt-tertiary';
-    default: return 'bg-white/5 text-txt-tertiary';
+    case 'needs_attention': return 'bg-accent-rose/15 text-txt-danger';
+    case 'revoked': return 'bg-white/[0.06] text-txt-secondary';
+    default: return 'bg-white/[0.06] text-txt-secondary';
   }
 }
 
@@ -314,13 +317,14 @@ function FilterDropdown({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-txt-tertiary hover:text-txt-secondary bg-white/[0.04] hover:bg-white/[0.06] rounded transition-colors"
+        aria-expanded={open}
+        className="btn-outline btn-sm"
       >
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="opacity-60">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
         {t('common:actions.filter')}
-        <span className="text-[10px]">▾</span>
+        <Icon name="chevron-down" size={12} className="text-txt-tertiary" />
       </button>
 
       {open && (
@@ -329,32 +333,32 @@ function FilterDropdown({
           <div className="absolute right-0 top-full mt-1 z-50 glass rounded-lg p-1.5 w-48">
             {view === 'active' && (
               <>
-                <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-2 py-1">{t('federation:admin.filter.statusHeading')}</div>
+                <div className="label-mono px-2 py-1">{t('federation:admin.filter.statusHeading')}</div>
                 {(['active', 'unreachable', 'pending', 'rejected', 'awaiting_approval', 'needs_attention'] as StatusFilter[]).map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => toggleStatus(s)}
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded ${
-                      statusFilter.has(s) ? 'text-txt-primary bg-white/[0.04]' : 'text-txt-tertiary'
-                    } hover:bg-white/[0.06] transition-colors`}
+                    className={`flex h-7 w-full items-center gap-2 rounded-md px-2 text-meta transition-colors duration-100 ${
+                      statusFilter.has(s) ? 'bg-interactive-selected text-txt-primary' : 'text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary'
+                    }`}
                   >
                     <div className={`w-2 h-2 rounded-full ${peerStatusDotColor(s)}`} />
                     <span>{filterStatusLabel(t, s)}</span>
                   </button>
                 ))}
-                <div className="h-px bg-white/[0.06] my-1" />
+                <div className="h-px bg-border-hard my-1" />
               </>
             )}
-            <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-2 py-1">{t('common:actions.sortBy')}</div>
+            <div className="label-mono px-2 py-1">{t('common:actions.sortBy')}</div>
             {sortOptions.map((opt) => (
               <button
                 key={opt.key}
                 type="button"
                 onClick={() => { setSortBy(opt.key); setOpen(false); }}
-                className={`w-full text-left px-2 py-1.5 text-xs rounded ${
-                  sortBy === opt.key ? 'text-accent-lavender bg-accent-lavender/[0.08]' : 'text-txt-primary'
-                } hover:bg-white/[0.06] transition-colors`}
+                className={`h-7 w-full rounded-md px-2 text-left text-meta transition-colors duration-100 ${
+                  sortBy === opt.key ? 'bg-interactive-selected text-txt-primary' : 'text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary'
+                }`}
               >
                 {opt.label}
               </button>
@@ -390,24 +394,26 @@ function PeerListControls({
   const { t } = useTranslation(['federation', 'common']);
   return (
     <div className="flex items-center justify-between mb-3">
-      <div className="flex bg-white/[0.04] rounded-md p-0.5">
+      <div className="flex rounded-md border border-border-soft bg-surface-input p-0.5">
         <button
           type="button"
           onClick={() => setView('active')}
-          className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-            view === 'active' ? 'bg-white/[0.08] text-txt-primary' : 'text-txt-tertiary hover:text-txt-secondary'
+          aria-pressed={view === 'active'}
+          className={`h-6 rounded px-2.5 text-meta font-medium transition-colors duration-100 ${
+            view === 'active' ? 'bg-surface-elevated text-txt-primary' : 'text-txt-tertiary hover:bg-interactive-hover hover:text-txt-primary'
           }`}
         >
-          {t('federation:admin.views.active')} <span className="text-[10px] text-txt-tertiary ml-0.5">{activeCount}</span>
+          {t('federation:admin.views.active')} <span className="tabular ml-0.5 font-mono text-label text-txt-tertiary">{activeCount}</span>
         </button>
         <button
           type="button"
           onClick={() => setView('revoked')}
-          className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-            view === 'revoked' ? 'bg-white/[0.08] text-txt-primary' : 'text-txt-tertiary hover:text-txt-secondary'
+          aria-pressed={view === 'revoked'}
+          className={`h-6 rounded px-2.5 text-meta font-medium transition-colors duration-100 ${
+            view === 'revoked' ? 'bg-surface-elevated text-txt-primary' : 'text-txt-tertiary hover:bg-interactive-hover hover:text-txt-primary'
           }`}
         >
-          {t('federation:admin.views.revoked')} <span className="text-[10px] text-txt-tertiary ml-0.5">{revokedCount}</span>
+          {t('federation:admin.views.revoked')} <span className="tabular ml-0.5 font-mono text-label text-txt-tertiary">{revokedCount}</span>
         </button>
       </div>
       <FilterDropdown
@@ -514,43 +520,43 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
         });
 
   return (
-    <div className={`bg-white/[0.02] rounded-md transition-colors ${isGone ? 'opacity-70' : ''} ${expanded ? 'border border-white/[0.06]' : ''}`}>
+    <div className={`${isGone ? 'opacity-70' : ''} ${expanded ? 'bg-interactive-hover' : ''}`}>
       {/* Compact row */}
       <div
-        className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-white/[0.02] rounded-md"
+        className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3 px-3 py-2 transition-colors duration-100 hover:bg-interactive-hover"
         onClick={onToggleExpand}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           <div className={`w-2 h-2 rounded-full shrink-0 ${isGone ? 'bg-txt-tertiary' : peerStatusDotColor(peer.status)}`} />
           <div className="min-w-0">
-            <div className={`text-sm font-medium truncate ${isGone ? 'text-txt-tertiary line-through' : 'text-txt-primary'}`}>
+            <div className={`text-ui font-medium truncate ${isGone ? 'text-txt-tertiary line-through' : 'text-txt-primary'}`}>
               {host}
             </div>
-            <div className={`text-[11px] truncate ${reason ? 'text-accent-rose' : 'text-txt-tertiary'}`}>
+            <div className={`mt-0.5 text-meta truncate ${reason ? 'text-txt-danger' : 'text-txt-tertiary'}`}>
               {metaText}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0 ml-2">
-          <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded ${peerStatusColor(peer.status)}`}>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`inline-flex items-center rounded px-1.5 py-px text-2xs font-medium ${peerStatusColor(peer.status)}`}>
             {peerStatusLabel(t, peer.status)}
           </span>
-          <span className="text-txt-tertiary text-xs">{expanded ? '▾' : '▸'}</span>
+          <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={15} className="text-txt-tertiary" />
         </div>
       </div>
 
       {/* Expanded details */}
       {expanded && (
         <div className="px-3 pb-3">
-          <div className="border-t border-white/[0.05] pt-3">
+          <div className="border-t border-border-hard pt-3">
             {peer.instanceName && (
               <div className="mb-3 min-w-0">
-                <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('federation:admin.peer.instanceName')}</div>
-                <div className="text-xs text-txt-secondary truncate">{peer.instanceName}</div>
+                <div className="label-mono mb-0.5">{t('federation:admin.peer.instanceName')}</div>
+                <div className="text-meta text-txt-secondary truncate">{peer.instanceName}</div>
               </div>
             )}
             {reason && (
-              <p className="mb-3 text-xs leading-relaxed text-txt-secondary">
+              <p className="mb-3 text-meta leading-relaxed text-txt-secondary">
                 {peerReasonDetail(t, reason, host)}
               </p>
             )}
@@ -560,14 +566,14 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onAction('reinitiate'); }}
-                  className="px-3 py-1.5 text-xs font-medium bg-status-online/10 text-status-online hover:bg-status-online/20 rounded transition-colors"
+                  className="btn-outline btn-sm"
                 >
                   {t('federation:admin.peer.reinitiate')}
                 </button>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onAction('delete'); }}
-                  className="px-3 py-1.5 text-xs font-medium bg-accent-rose/10 text-txt-danger hover:bg-accent-rose/20 rounded transition-colors"
+                  className="btn-quiet btn-sm text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger"
                 >
                   {t('federation:admin.peer.deletePermanently')}
                 </button>
@@ -577,36 +583,36 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
                 {/* Stats grid */}
                 <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
-                    <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('federation:admin.peer.consecutiveFailures')}</div>
-                    <div className={`text-xs ${(peer.consecutiveFailures ?? 0) > 0 ? 'text-accent-amber font-medium' : 'text-txt-secondary'}`}>
+                    <div className="label-mono mb-0.5">{t('federation:admin.peer.consecutiveFailures')}</div>
+                    <div className={`text-meta ${(peer.consecutiveFailures ?? 0) > 0 ? 'text-accent-amber font-medium' : 'text-txt-secondary'}`}>
                       {formatters.formatNumber(peer.consecutiveFailures ?? 0)}
                     </div>
                   </div>
                   {peer.status === 'needs_attention' && (
                     <div>
-                      <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('federation:admin.peer.authFailures')}</div>
-                      <div className="text-xs text-accent-rose font-medium">
+                      <div className="label-mono mb-0.5">{t('federation:admin.peer.authFailures')}</div>
+                      <div className="text-meta text-accent-rose font-medium">
                         {formatters.formatNumber(peer.consecutiveAuthFailures)}
                       </div>
                     </div>
                   )}
                   <div>
-                    <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('federation:admin.peer.lastFailure')}</div>
-                    <div className="text-xs text-txt-secondary">{formatRelativeTime(t, formatters, peer.lastFailureAt)}</div>
+                    <div className="label-mono mb-0.5">{t('federation:admin.peer.lastFailure')}</div>
+                    <div className="text-meta text-txt-secondary">{formatRelativeTime(t, formatters, peer.lastFailureAt)}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('federation:admin.peer.peeredSince')}</div>
-                    <div className="text-xs text-txt-secondary">{formatters.formatMediumDate(peer.createdAt)}</div>
+                    <div className="label-mono mb-0.5">{t('federation:admin.peer.peeredSince')}</div>
+                    <div className="text-meta text-txt-secondary">{formatters.formatMediumDate(peer.createdAt)}</div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
-                    <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('federation:admin.peer.secretRotated')}</div>
-                    <div className="text-xs text-txt-secondary">{formatRelativeTime(t, formatters, peer.secretRotatedAt)}</div>
+                    <div className="label-mono mb-0.5">{t('federation:admin.peer.secretRotated')}</div>
+                    <div className="text-meta text-txt-secondary">{formatRelativeTime(t, formatters, peer.secretRotatedAt)}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('federation:admin.peer.autoRotate')}</div>
+                    <div className="label-mono mb-0.5">{t('federation:admin.peer.autoRotate')}</div>
                     {editingInterval ? (
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <input
@@ -615,7 +621,7 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
                           max={365}
                           value={intervalDraft}
                           onChange={(e) => setIntervalDraft(parseInt(e.target.value, 10) || 0)}
-                          className="input-standard w-16 py-0.5 text-xs"
+                          className="input-standard tabular h-6 w-16 px-1.5 py-0 font-mono text-meta"
                           disabled={intervalSaving}
                           autoFocus
                         />
@@ -623,29 +629,29 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
                           type="button"
                           onClick={handleSaveInterval}
                           disabled={intervalSaving}
-                          className="text-[10px] text-accent-primary hover:text-accent-primary/80 disabled:opacity-50"
+                          className="rounded px-1 text-label font-medium text-accent-soft transition-colors duration-100 hover:text-txt-primary disabled:opacity-50"
                         >
                           {intervalSaving ? '…' : t('common:actions.save')}
                         </button>
                         <button
                           type="button"
                           onClick={() => { setEditingInterval(false); setIntervalDraft(peer.autoRotateIntervalDays); setIntervalError(''); }}
-                          className="text-[10px] text-txt-tertiary hover:text-txt-secondary"
+                          className="rounded px-1 text-label text-txt-tertiary transition-colors duration-100 hover:text-txt-primary"
                         >
                           {t('common:actions.cancel')}
                         </button>
                       </div>
                     ) : (
-                      <div className="text-xs text-txt-secondary">
+                      <div className="text-meta text-txt-secondary">
                         {t('federation:admin.peer.rotateEvery', { count: peer.autoRotateIntervalDays })}
-                        {isDefault && <span className="text-[10px] text-txt-tertiary ml-1">{t('federation:admin.peer.defaultTag')}</span>}
+                        {isDefault && <span className="ml-1 text-label text-txt-tertiary">{t('federation:admin.peer.defaultTag')}</span>}
                       </div>
                     )}
-                    {intervalError && <div className="text-[10px] text-txt-danger mt-0.5">{intervalError}</div>}
+                    {intervalError && <div className="mt-0.5 text-label text-txt-danger">{intervalError}</div>}
                   </div>
                   <div>
-                    <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('federation:admin.peer.rotationStatus')}</div>
-                    <div className="text-xs text-txt-secondary">
+                    <div className="label-mono mb-0.5">{t('federation:admin.peer.rotationStatus')}</div>
+                    <div className="text-meta text-txt-secondary">
                       {peer.rotationInProgress ? t('federation:admin.peer.inProgress') : t('federation:admin.peer.idle')}
                     </div>
                   </div>
@@ -658,7 +664,8 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onRecheck(); }}
                       disabled={recheckLoading}
-                      className="px-3 py-1.5 text-xs font-medium bg-accent-mint/10 text-accent-mint hover:bg-accent-mint/20 rounded transition-colors disabled:opacity-50"
+                      aria-busy={recheckLoading}
+                      className="btn-outline btn-sm"
                     >
                       {recheckLoading ? t('federation:admin.peer.checking') : t('federation:admin.peer.checkNow')}
                     </button>
@@ -667,7 +674,7 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); onAction('reset'); }}
-                      className="px-3 py-1.5 text-xs font-medium bg-accent-rose/10 text-txt-danger hover:bg-accent-rose/20 rounded transition-colors"
+                      className="btn-quiet btn-sm text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger"
                     >
                       {t('federation:admin.peer.resetPeering')}
                     </button>
@@ -677,7 +684,7 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onAction('rotate'); }}
                         disabled={peer.rotationInProgress}
-                        className="px-3 py-1.5 text-xs font-medium bg-accent-lavender/10 text-accent-lavender hover:bg-accent-lavender/20 rounded transition-colors disabled:opacity-50"
+                        className="btn-outline btn-sm"
                         title={peer.rotationInProgress ? t('federation:admin.peer.rotationInProgress') : undefined}
                       >
                         {t('federation:admin.peer.rotateSecret')}
@@ -685,7 +692,7 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onAction('revoke'); }}
-                        className="px-3 py-1.5 text-xs font-medium bg-accent-rose/10 text-txt-danger hover:bg-accent-rose/20 rounded transition-colors"
+                        className="btn-quiet btn-sm text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger"
                       >
                         {t('federation:admin.peer.revoke')}
                       </button>
@@ -693,7 +700,7 @@ function PeerRow({ peer, view, expanded, onToggleExpand, onAction, onRecheck, on
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setEditingInterval(true); setIntervalDraft(peer.autoRotateIntervalDays); }}
-                          className="text-[11px] text-txt-tertiary hover:text-txt-secondary underline decoration-dotted transition-colors ml-1"
+                          className="btn-quiet btn-sm"
                         >
                           {t('federation:admin.peer.editInterval')}
                         </button>
@@ -786,14 +793,14 @@ function PendingApprovals({ onCountChange }: { onCountChange?: (count: number) =
   return (
     <div>
       <div className="flex items-center gap-2 mb-1.5">
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">{t('federation:admin.approvals.title')}</div>
-        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-accent-amber/15 text-accent-amber">
+        <div className="label-mono">{t('federation:admin.approvals.title')}</div>
+        <span className="tabular rounded bg-accent-amber/15 px-1.5 py-px font-mono text-2xs font-medium text-accent-amber">
           {requests.length}
         </span>
       </div>
-      <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-2 mb-5">
+      <div className="surface-card rounded-lg p-4 space-y-2 mb-5">
         {loading && requests.length === 0 && (
-          <div className="text-xs text-txt-tertiary py-2">{t('common:states.loading')}</div>
+          <div className="text-meta text-txt-tertiary py-2">{t('common:states.loading')}</div>
         )}
         {requests.map((req) => {
           const isOutbound = req.direction === 'outbound';
@@ -803,14 +810,14 @@ function PendingApprovals({ onCountChange }: { onCountChange?: (count: number) =
             ? t('federation:admin.approvals.outboundTitle', { name, count: subCount })
             : name;
           return (
-            <div key={req.id} className="bg-white/[0.02] rounded-md px-3 py-2.5">
-              <div className="flex items-center justify-between">
+            <div key={req.id} className="rounded-md border border-border-hard px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-txt-primary truncate">{titleText}</div>
+                  <div className="text-ui font-medium text-txt-primary truncate">{titleText}</div>
                   {req.instanceName && (
-                    <div className="text-[11px] text-txt-tertiary truncate">{req.instanceName}</div>
+                    <div className="text-label text-txt-tertiary truncate">{req.instanceName}</div>
                   )}
-                  <div className="text-[11px] text-txt-tertiary mt-0.5">
+                  <div className="text-label text-txt-tertiary mt-0.5">
                     {t('federation:admin.approvals.requested', { time: formatRelativeTime(t, formatters, req.requestedAt) })}
                   </div>
                   {isOutbound && req.subscribers && req.subscribers.length > 0 && (
@@ -818,7 +825,7 @@ function PendingApprovals({ onCountChange }: { onCountChange?: (count: number) =
                       {req.subscribers.map((sub) => (
                         <div
                           key={`${sub.userId}:${sub.triggerReason}:${sub.triggerTarget}`}
-                          className="text-[11px] text-txt-tertiary"
+                          className="text-label text-txt-tertiary"
                         >
                           <span className="font-medium text-txt-secondary">{sub.username}</span>
                           {' — '}
@@ -833,7 +840,7 @@ function PendingApprovals({ onCountChange }: { onCountChange?: (count: number) =
                     type="button"
                     onClick={() => setConfirmAction({ type: 'approve', request: req })}
                     disabled={actionLoading === req.id}
-                    className="px-3 py-1.5 text-xs font-medium bg-status-online/10 text-status-online hover:bg-status-online/20 rounded transition-colors disabled:opacity-50"
+                    className="btn-outline btn-sm"
                   >
                     {t('federation:admin.approvals.approve')}
                   </button>
@@ -841,14 +848,14 @@ function PendingApprovals({ onCountChange }: { onCountChange?: (count: number) =
                     type="button"
                     onClick={() => setConfirmAction({ type: 'deny', request: req })}
                     disabled={actionLoading === req.id}
-                    className="px-3 py-1.5 text-xs font-medium bg-accent-rose/10 text-txt-danger hover:bg-accent-rose/20 rounded transition-colors disabled:opacity-50"
+                    className="btn-quiet btn-sm text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger"
                   >
                     {t('federation:admin.approvals.deny')}
                   </button>
                 </div>
               </div>
               {errors[req.id] && (
-                <div className="mt-2 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-[11px]">
+                <div className="mt-2 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-meta text-txt-danger">
                   {errors[req.id]}
                   <button
                     type="button"
@@ -1057,8 +1064,8 @@ function ResetCleanup() {
   return (
     <div>
       <div className="flex items-center gap-2 mb-1.5">
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">{t('federation:admin.resetCleanup.title')}</div>
-        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-accent-rose/15 text-accent-rose">
+        <div className="label-mono">{t('federation:admin.resetCleanup.title')}</div>
+        <span className="tabular rounded bg-accent-rose/15 px-1.5 py-px font-mono text-2xs font-medium text-txt-danger">
           {resetPeers.length + eventsWithOrphans.length}
         </span>
       </div>
@@ -1069,17 +1076,17 @@ function ResetCleanup() {
           {resetPeers.map((peer) => (
             <div
               key={peer.id}
-              className="bg-accent-rose/10 border border-accent-rose/30 rounded-lg p-3.5"
+              className="rounded-lg border border-accent-rose/30 bg-accent-rose/10 p-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-txt-primary">
+                  <div className="text-ui font-semibold text-txt-primary">
                     {t('federation:admin.resetCleanup.peerReset', { name: originHost(peer.origin) })}
                   </div>
                   {peer.instanceName && (
-                    <div className="text-[11px] text-txt-tertiary truncate">{peer.instanceName}</div>
+                    <div className="text-label text-txt-tertiary truncate">{peer.instanceName}</div>
                   )}
-                  <p className="text-xs text-txt-secondary mt-1.5 leading-relaxed">
+                  <p className="text-meta text-txt-secondary mt-1.5 leading-relaxed">
                     {t('federation:admin.resetCleanup.peerResetDescription')}
                   </p>
                 </div>
@@ -1087,7 +1094,7 @@ function ResetCleanup() {
                   type="button"
                   onClick={() => setConfirmAction({ kind: 'repeer', peer })}
                   disabled={actionLoading}
-                  className="shrink-0 px-3 py-1.5 text-xs font-medium bg-accent-mint/10 text-accent-mint hover:bg-accent-mint/20 rounded transition-colors disabled:opacity-50"
+                  className="btn-outline btn-sm shrink-0"
                 >
                   {t('federation:admin.resetCleanup.repeer')}
                 </button>
@@ -1099,10 +1106,10 @@ function ResetCleanup() {
 
       {/* Orphaned real accounts per reset origin */}
       {eventsWithOrphans.length > 0 && (
-        <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-4 mb-5">
+        <div className="surface-card rounded-lg p-4 space-y-4 mb-5">
           {eventsWithOrphans.map((event) => (
             <div key={`${event.origin}:${event.deadEpoch}`}>
-              <div className="text-xs text-txt-tertiary mb-2 leading-relaxed">
+              <div className="text-meta text-txt-tertiary mb-2 leading-relaxed">
                 <Trans
                   t={t}
                   i18nKey="federation:admin.resetCleanup.eventSummary"
@@ -1116,20 +1123,20 @@ function ResetCleanup() {
               </div>
               <div className="space-y-2">
                 {event.orphanedAccounts.map((account) => (
-                  <div key={account.id} className="bg-white/[0.02] rounded-md px-3 py-2.5">
+                  <div key={account.id} className="rounded-md border border-border-hard px-3 py-2.5">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-txt-primary truncate">
+                        <div className="text-ui font-medium text-txt-primary truncate">
                           {account.displayName || account.username}
                         </div>
-                        <div className="text-[11px] text-txt-tertiary truncate">{account.username}</div>
-                        <div className="text-[11px] text-txt-tertiary mt-0.5">
+                        <div className="text-label text-txt-tertiary truncate">{account.username}</div>
+                        <div className="text-label text-txt-tertiary mt-0.5">
                           {t('federation:admin.resetCleanup.memberships', { count: account.spaceMemberCount })}
                           {' · '}
                           {t('federation:admin.resetCleanup.messages', { count: account.messageCount })}
                         </div>
                         {account.ownedSpaces.length > 0 && (
-                          <div className="text-[11px] text-accent-amber mt-0.5 truncate">
+                          <div className="text-label text-accent-amber mt-0.5 truncate">
                             {t('federation:admin.resetCleanup.owns', { spaces: account.ownedSpaces.map((s) => s.name).join(', ') })}
                           </div>
                         )}
@@ -1141,7 +1148,7 @@ function ResetCleanup() {
                             setConfirmAction({ kind: 'remove', account, origin: event.origin })
                           }
                           disabled={actionLoading}
-                          className="px-3 py-1.5 text-xs font-medium bg-accent-rose/10 text-txt-danger hover:bg-accent-rose/20 rounded transition-colors disabled:opacity-50"
+                          className="btn-quiet btn-sm text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger"
                         >
                           {t('common:actions.remove')}
                         </button>
@@ -1154,7 +1161,7 @@ function ResetCleanup() {
                 type="button"
                 onClick={() => handleDismiss(event.origin)}
                 disabled={actionLoading}
-                className="mt-2 px-3 py-1.5 text-xs font-medium text-txt-tertiary hover:text-txt-secondary bg-white/[0.04] hover:bg-white/[0.06] rounded transition-colors disabled:opacity-50"
+                className="btn-outline btn-sm mt-2"
               >
                 {t('federation:admin.resetCleanup.dismissKeep')}
               </button>
@@ -1382,8 +1389,8 @@ export function FederationPanel({ onApprovalCountChange }: { onApprovalCountChan
 
   return (
     <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-      <h2 className="text-lg font-semibold text-txt-primary">{t('federation:admin.title')}</h2>
-      <div className="text-xs text-txt-tertiary">
+      <h2 className="page-title">{t('federation:admin.title')}</h2>
+      <div className="-mt-4 text-meta leading-snug text-txt-tertiary">
         {t('federation:admin.description')}
       </div>
 
@@ -1396,18 +1403,19 @@ export function FederationPanel({ onApprovalCountChange }: { onApprovalCountChan
       {/* Peered Instances */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">{t('federation:admin.peers.title')}</div>
+          <div className="label-mono">{t('federation:admin.peers.title')}</div>
           <button
             type="button"
             onClick={fetchPeers}
             disabled={peersLoading}
-            className="text-[11px] text-txt-tertiary hover:text-txt-secondary transition-colors disabled:opacity-50"
+            aria-busy={peersLoading}
+            className="btn-quiet btn-sm"
           >
             {peersLoading ? t('common:states.loading') : t('common:actions.refresh')}
           </button>
         </div>
 
-        <div className="rounded-lg bg-white/[0.02] p-3.5">
+        <div>
           {peers.length > 0 && (
             <PeerListControls
               view={view}
@@ -1422,14 +1430,14 @@ export function FederationPanel({ onApprovalCountChange }: { onApprovalCountChan
           )}
 
           {peersError && (
-            <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-xs mb-2">
+            <div className="mb-2 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-meta text-txt-danger">
               {peersError}
               <button type="button" onClick={fetchPeers} className="ml-2 underline">{t('common:actions.retry')}</button>
             </div>
           )}
 
           {sortedPeers.length > 0 && (
-            <div className="space-y-2">
+            <div className="surface-card divide-y divide-border-hard overflow-hidden rounded-lg">
               {sortedPeers.map((peer) => (
                 <PeerRow
                   key={peer.id}
@@ -1450,7 +1458,11 @@ export function FederationPanel({ onApprovalCountChange }: { onApprovalCountChan
           )}
 
           {emptyMessage && !peersError && !peersLoading && (
-            <div className="text-xs text-txt-tertiary py-2">{emptyMessage}</div>
+            <div className="surface-card rounded-lg">
+              <div className="empty-state">
+                <p className="empty-state-body">{emptyMessage}</p>
+              </div>
+            </div>
           )}
         </div>
       </div>

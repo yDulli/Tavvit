@@ -46,38 +46,37 @@ Do NOT update docs for standard UI/UX fixes or minor logic bugs. Only structural
 
 ---
 
-## Design System — "Aether Drift"
+## Design System — Tavvit "Graphite"
 
-Prototype (source of truth): `Backspace-design-prototype.html` (open in browser)
-Full spec: `docs/systems/design-system.md`
+Full spec: `docs/systems/design-system.md`; tokens and component classes live in `packages/web/src/styles/globals.css`.
 
-**Core:** Warm matte surfaces with subtle frosted glass accents. Calm over flashy. Warm over cool.
-**Two-material system:** Solid matte panels for content (75%), frosted glass for persistent controls (25%).
-**Colors:** Warm dark surfaces (#13131a chat, #1a1a23 sidebars), pastel accents (mint, peach, lavender, sky, amber, rose, coral), brand primary lavender (`#7c6cf6`).
+**Core:** A tool that feels expensive. Deep graphite surfaces (never flat black) told apart by a step in tone and a 1px hairline, with soft ambient light falling on them from above, in the colour of the place you are in, always behind the content (`.lit`, `.hero-light`, `.stage-light`; never neon, never glow around text, never glass). Large type carries a little light of its own (`.ink`, `.display-title`, `.page-title`). Small radii (4–6px, scaled by `--radius-scale`); `rounded-full` only for avatars, status dots, toggle thumbs and the empty-state icon, never for buttons, tabs or chips. Geist for the interface, Geist Mono for labels, times and counts. One type scale: `text-2xs` 10, `text-label` 11, `text-meta` 12, `text-ui` 13, `text-body` 14, `text-lead` 15, `text-title` 18; no `text-[13px]`, no half pixels, no `font-bold`. Motion through the tokens (`--ease-out`, `--ease-spring`, `--dur-*`), and everything respects Reduce motion, Higher contrast, the themes, a custom accent and the interface scale. Never a Discord look-alike.
+**Colors:** Surfaces `#0d0e11` frame, `#111216` sidebars, `#15161b` content, `#1e1f25` floating. ONE subtle violet signal, `#7466e8` (`accent-primary`; `accent-soft` for accent text), as a fill only for the selected/active state, the main action and unread/mention counts; white (`.btn-hero`) for the one call to action of an opening page. The accent family (mint, peach, lavender, sky, amber, rose, coral) is for avatars, roles and folders. The Tavvit logo is black and white everywhere, never tinted.
 
 ### Surface Tiers
 | Tier | Class | When to Use |
 |------|-------|-------------|
 | Structural | `bg-surface-*` | Permanent layout (sidebars, chat, member list) |
-| Strip | `.glass-strip` | Persistent edge chrome (space sidebar) |
-| Bubble | `.glass-bubble` | Persistent floating controls (voice bar, input pill) |
+| Strip | `.glass-strip` | The phone's space strip |
+| Bubble | `.glass-bubble` | Persistent floating controls (voice bar, composer) |
 | Popover | `.glass` | Small floating surfaces (context menus, tooltips) |
-| Modal | `.glass-modal` | Large center-screen dialogs with backdrop scrim |
+| Modal | `.glass-modal` | Center-screen dialogs with backdrop scrim |
 | Pill | `.glass-pill` | Inline decorations (reactions, tags) |
 
-**Rule:** If it floats above the content plane, it's glass. Never use `bg-surface-elevated` for floating/overlay elements.
+The tier names are upstream's; none of them is glass any more: each is an opaque surface with a hairline and a lit top edge, and only floating layers cast a shadow. **Rule:** anything that floats above the content plane uses one of them, never `bg-surface-elevated` directly.
+
+### Component classes
+`.nav-item` (navigation rows, `data-active` / `data-unread`), `.list-row` (content rows), `.icon-btn` / `.icon-btn-lg`, `.count-badge` (+ `.count-badge-muted`, or the `CountBadge` component), `.kbd`, `.empty-state` (+ `-icon`, `-title`, `-body`), `.page-title`, `.label-mono`, `.panel-bar`, `.action-bar`, buttons `.btn-primary` / `.btn-quiet` / `.btn-outline` / `.btn-danger` / `.btn-hero` (+ `.btn-sm`, `.btn-lg`; `aria-busy="true"` while working), `.field-label` (the name above a form field), cards `.surface-card` (+ `.lift`, `.spotlight`, `.tinted-card`), `.sliding-list` with `ui/SlidingMark` for the one mark of a list, `.modal-scrim` behind a dialog and `.modal-panel` on it (`useExitGhost` lets it leave). Use them instead of one-off class strings.
 
 ### Input Tiers (defined in `globals.css`)
 | Class | When to Use | Focus |
 |-------|-------------|-------|
-| `.input-standard` | Form fields in modals, settings, auth | `ring-2` primary |
-| `.input-search` | Search bars, filter inputs | `ring-1` primary |
-| `.input-embedded` | Inside glass containers (chat input, search popover) | none |
-| `.input-danger` | Destructive confirmations | `ring-2` rose |
+| `.input-standard` | Form fields in modals, settings, auth | border accent + `ring-1` accent/40 |
+| `.input-search` | Search bars, filter inputs | border accent + `ring-1` accent/40 |
+| `.input-embedded` | Inside a floating container (chat input, search popover) | none |
+| `.input-danger` | Destructive confirmations | border rose + `ring-1` rose |
 
-No resting border — sunken `surface-input` background provides differentiation.
-
-**Glass material:** `backdrop-filter: blur(20px) saturate(120%)`, `rgba(20,20,26,0.52)`, border `rgba(255,255,255,0.07)`. Modal backdrops: `bg-black/50`.
+Inputs have a `border-soft` resting hairline on the sunken `surface-input` background. Modal backdrops: `.modal-scrim`.
 
 ---
 
@@ -85,8 +84,8 @@ No resting border — sunken `surface-input` background provides differentiation
 
 | Layer | Tech |
 |-------|------|
-| Runtime | Node.js 22+, TypeScript strict, pnpm workspaces |
-| Server | Fastify 4, Drizzle ORM, SQLite (better-sqlite3), JWT + bcrypt |
+| Runtime | Node.js 24.7+ (built-in Argon2id), TypeScript strict, pnpm workspaces |
+| Server | Fastify 5, Drizzle ORM, SQLite (better-sqlite3), JWT, Argon2id (bcrypt read for old hashes), nodemailer for SMTP |
 | Frontend | React 18, Vite 8, Tailwind CSS 3, Zustand 5 |
 | Voice | LiveKit (livekit-client + livekit-server-sdk), RNNoise |
 | Media | sharp (thumbnails), Cheerio (URL metadata), react-easy-crop |
@@ -126,7 +125,10 @@ Data: `data/` at the repository root (backspace.db + uploads/ + backups/), mount
 **Env vars:** See `.env.example`. Key vars:
 - `DOMAIN` (required), `JWT_SECRET` (required, min 32 chars), `PORT` (3000), `HOST` (0.0.0.0)
 - `LIVEKIT_URL/API_KEY/API_SECRET` (optional, enables voice)
-- `MAX_UPLOAD_SIZE` (100MB default), `REGISTRATION_OPEN` (true)
+- `MAX_UPLOAD_SIZE` (100MB default), `REGISTRATION_OPEN` (false)
+- `TOTP_ENCRYPTION_KEY` (optional, enables two-factor authentication; see docs/systems/auth.md)
+- `EMAIL_TRANSPORT` (none), `EMAIL_FROM`, `APP_BASE_URL`, `RESEND_API_KEY`, `SMTP_*` (optional, enables mail; see docs/systems/email.md)
+- `TRANSLATION_PROVIDER` (none), `DEEPL_API_KEY`, `LIBRETRANSLATE_URL` (optional, a server-side translator for messages; see docs/systems/translation.md)
 - `COMPOSE_PROFILES=voice` (enables LiveKit service)
 
 **Config:** `packages/server/src/config.ts` reads env with defaults.
@@ -135,12 +137,14 @@ Data: `data/` at the repository root (backspace.db + uploads/ + backups/), mount
 
 **Lint:** `pnpm lint` (ESLint flat config in `eslint.config.js`; violations that predate the lint step are counted in `eslint-suppressions.json`, so new ones fail the run)
 
+**Checking a release:** `node scripts/release-check.mjs` (types, catalogs, lint on changed files, tests once, build) prints only what failed. `node scripts/release-check-browser.mjs <seed.json>` does the same in a browser against a demo instance: who lands where, the headers, and only the pictures that changed. Use these and not a walkthrough or a swarm of agents.
+
 **Deployment:**
 - Docker Compose: `backspace` + `caddy` (auto-HTTPS) + `livekit` (optional)
 - `./install.sh` — Interactive first-time setup
 - `./deploy.sh [pi|vm|all]` — Rsync + rebuild on target(s)
 - Instances: `nova.ddns.net` (Pi), `orbit.ddns.net` (VM)
-- First registered user becomes admin (no default credentials). DB auto-backups to data/backups/; restore via ./restore.sh. See docs/systems/deployment.md.
+- No default credentials, and nobody becomes an administrator by registering: `./tavvit-admin.sh create <name> --admin`. DB auto-backups to data/backups/; restore via ./restore.sh. See docs/systems/deployment.md.
 
 ---
 
@@ -157,13 +161,26 @@ Before modifying any subsystem, read its spec from `docs/systems/`. After making
 | [client-federation.md](docs/systems/client-federation.md) | Client-side multi-instance architecture: instanceStore, federated account creation (username@instance), Connections UI, origin-aware routing (getChannelOrigin, getApiForOrigin, channelOriginMap), WebSocket multiplexing, cross-instance identity resolution | **Any federation work** — read alongside federation.md. Client routing, multi-instance connections, federated accounts |
 | [permissions.md](docs/systems/permissions.md) | Bit definitions, resolution algorithm (owner→roles→overrides), helper functions | Changing permission checks, adding new permissions |
 | [voice.md](docs/systems/voice.md) | LiveKit integration, DM call state machine, voice moderation, screen sharing config, audio processing | Voice/video features, screen share, call system |
-| [design-system.md](docs/systems/design-system.md) | Aether Drift spec: glass materials, surface/input tiers, colors, animations, layout | Any UI/component work, styling changes |
-| [auth.md](docs/systems/auth.md) | Registration, login, JWT management, password self-healing, token revocation, account deletion, federation identity utilities | Auth flows, registration, login, password management, account deletion |
+| [design-system.md](docs/systems/design-system.md) | Tavvit "Graphite" spec: palette and where the violet may appear, surface/input tiers, component classes, shape, type, states, animations, layout | Any UI/component work, styling changes |
+| [auth.md](docs/systems/auth.md) | Registration, login, JWT management, sessions, two-factor authentication, security activity and notifications, password self-healing, token revocation, account deletion, federation identity utilities | Auth flows, registration, login, password management, account deletion |
 | [dm-system.md](docs/systems/dm-system.md) | DM lifecycle (1-on-1 + group), soft-close/reopen, ownership transfer, federation relay, deterministic federatedId, system messages | DM features, group DM management, DM federation |
 | [spaces.md](docs/systems/spaces.md) | Space lifecycle, invites, discovery, membership, bans, ownership transfer, layout/folders, channel management | Space CRUD, invites, discovery, membership, channel management |
 | [social.md](docs/systems/social.md) | Friend requests, friendships, mutuals, user discovery, friend relay, socialStore cross-instance loading | Friends, social graph, user discovery, mutual calculations |
 | [sounds.md](docs/systems/sounds.md) | System-sound inventory: every file in `packages/web/public/sounds/` mapped to its event + audience, viewer-detection data-channel protocol, message-sound filter, settings hooks | Any sound-effect change, viewer-tracking work, message-sound semantics |
-| [admin.md](docs/systems/admin.md) | User management, storage management, instance configuration, streaming config, instance info endpoint | Admin panel, instance settings, user management, storage cleanup |
+| [admin.md](docs/systems/admin.md) | Platform administration (the admin console at `/admin`: dashboard, announcements, sign-up rules, starter spaces, system page, search, exports; only instance admins decide, server-side enforcement), user management, account suspensions, space verification, Discovery approval, the platform audit log, badge grants, storage management, instance configuration, streaming config, instance info endpoint | Admin panel, instance settings, user management, suspensions, verification or Discovery review, the platform audit log, storage cleanup |
+| [email.md](docs/systems/email.md) | Mail about accounts: `EMAIL_TRANSPORT`, the outbox and its budget by priority, links (hash only, in the fragment, click to use), confirming and changing an address, what must not reveal who holds an address, the gate on new accounts, Resend's webhook, the admin tab, Resend and DNS setup, known limits | Anything that sends mail, addresses on accounts, password reset, adding a mail kind |
+| [legal.md](docs/systems/legal.md) | Legal basics of an instance: operator details and imprint, versioned terms and privacy policy with their drafts, agreeing at sign-up and when terms change, DSA reports and decisions, notices to people, retention and logs, click-to-load for content from other servers, the AGPL source offer (`publish-source.sh`), which law each part answers | Terms, privacy, imprint, reports, moderation notices, anything that loads from another server, **any change to what is stored, logged or sent elsewhere** (the privacy draft states those facts) |
+| [badges.md](docs/systems/badges.md) | Badge registry (`packages/shared/src/badges.ts`): derived vs granted, user/member/space scopes, every badge and where it comes from, security rules (platform badges only server-side, roles never become platform badges, owner from `owner_id`), wire fields, `BadgeGlyph`/`BadgeList`/`badgeText` and every surface that shows badges, design rules, how to add a badge | Adding or changing a badge, showing badges on a new surface, staff/verified/owner marks, `users.badges`/`spaces.badges` |
+| [push.md](docs/systems/push.md) | Push to a closed app: who gets what (the shared alert rule), focus, what a notification says, the fixed list of push services, RFC 8291 encryption, VAPID keys, devices bound to sessions, delivery, what only a real device can test | Anything that notifies a person while the app is closed, `push_subscriptions`, `sw-push.js`, the alert rule |
+| [threads.md](docs/systems/threads.md) | Threads: a channel of type `thread` with its parent's rights, what keeps it out of listings, following, who gets its messages and unread counts, archiving, the panel and the phone screen | Threads, anything that lists channels or checks a channel's type |
+| [forums.md](docs/systems/forums.md) | Forums (a post is a thread with no message outside it, tags, the list by latest activity) and announcement channels (an override, following from another space of the instance, what a copy is and what does not arrive), every check of a channel's type | Forums, announcement channels, follows, `forum_tags`, `channel_follows`, **anything that checks a channel's type** |
+| [translation.md](docs/systems/translation.md) | Right-click, Translate: the browser's own translator, the operator's provider (`TRANSLATION_PROVIDER`), a link to Google, in that order; what is sent and what stays as written; limits; what the privacy draft says; why the desktop app skips the browser's translator | Translating messages, `TRANSLATION_PROVIDER`, the message menu's Translate, `splitForTranslation` |
+| [events.md](docs/systems/events.md) | Space events: tables, who may do what, who hears over the socket, the reminder job, the page and its address, the calendar file | Events, reminders, anything at `/channels/:spaceId/events` |
+| [saved.md](docs/systems/saved.md) | Saved messages and reminders, the words that alert a person, what the shared rule does with them, what crosses instances | Saved messages, reminders, keyword alerts, the inbox's tabs for them |
+| [bots.md](docs/systems/bots.md) | Bots: deny by default on routes and socket events (`config: { botAllowed: true }`), the token, what stops one, who may add one and with what rights, commands, limits. The guide for people writing one is the public docs, see developers.md | Bots, **any new route** that a program might want, anything about `Authorization: Bot` |
+| [operations.md](docs/systems/operations.md) | Running an instance for many people: the load test and what it found, how a channel's events reach everyone (`computeChannelPermissionsFor`, `channelUnreadCountsFor`, `batch` frames, `broadcastPresence`, the `ready` queue), warnings to the operator, backups with uploads, the public `/status`, `/help`, `/changelog` and `/roadmap` | **Anything that runs for everyone online on each message or connect**, performance, warnings, `backup.sh`, adding a version to the changelog |
+| [developers.md](docs/systems/developers.md) | The public docs at `/developers`: static HTML made in the web build, which parts come from the code and which are written by hand, the tests that hold them to it, their own CSP and routes, the service worker's exceptions, the stability promise, `security.txt`, the example bot | **Changing what a bot or webhook can do** (the hand-written pages and `changelog.md` must follow), adding a page, anything at `/developers` except the portal |
+| [webhooks.md](docs/systems/webhooks.md) | Webhooks and accounts that are not people: `users.account_kind`, what such an account is left out of, the token and the log, what a post may do, who may manage one | Webhooks, **any new query that lists people**, anything bots will build on |
 | [uploads.md](docs/systems/uploads.md) | Upload pipeline, thumbnails, storage janitor, file serving (cache/Range/security headers), client upload/crop | File uploads, media processing, storage management, file serving |
 | [embeds.md](docs/systems/embeds.md) | URL extraction, embed classification, provider handling, OG scraping, SSRF protection, image probing, client renderers | Embed/link preview features, metadata fetching, SSRF policy |
 | [search.md](docs/systems/search.md) | Full-text search endpoints, filter syntax (q/from/has/before/after), messages-around, hydration pipeline, SearchPopover UI, jump-to-message flow | Search features, filter behavior, jump-to-message |
@@ -176,10 +193,8 @@ Before modifying any subsystem, read its spec from `docs/systems/`. After making
 | [security-scanning.md](docs/systems/security-scanning.md) | CI security pipeline: Dependabot, CodeQL SAST, gitleaks, OSV-Scanner, Trivy (config, license, and the published image), OpenSSF Scorecard, ZAP baseline DAST, SHA-pinning, harden-runner, tiered enforcement policy, triage policy and dismissal register, the fork PR triage bot (`pr-triage.yml`, what the approval click releases, the signal table), maintainer settings checklist | Any CI security work, adding/changing scanners, enabling enforcement, supply-chain hardening |
 | [web-security.md](docs/systems/web-security.md) | Content Security Policy construction and rollout state, the CORS posture and why the origin is reflected, security-header ownership between Caddy and the app, the route-level policy override for served files | Any CSP, CORS or security-header work; before "tightening" CORS |
 | [localization.md](docs/systems/localization.md) | i18next setup, semantic surface-scoped keys, typed catalogs, plural policy, `Intl` formatters bound to the selected language, lazy locale loading, the `ErrorCode` wire contract and `sendError`/`describeError`, desktop main-process catalog and `set-language` IPC, the consistency check and its pending list, sweep order | **Any user-facing string, date, count or error message**; adding a language; converting a surface; adding a server error code |
-| [telemetry.md](docs/systems/telemetry.md) | Opt-in daily instance ping: the schema-1 payload and its field semantics, the two-significant-digit rounding, the never-sent list, the four `instance_settings` opt-in columns and their transition rules, `last_active_day`/`last_client` activity tracking, the reporter's slot minute and one-attempt-per-day rule, the admin routes, the ask's snooze rules, the Cloudflare Worker receiver and its 90-day retention, how the aggregates reach the insights page, `TELEMETRY_ENDPOINT` and `TELEMETRY` | Any telemetry work: payload fields, opt-in state, the reporter, the receiver, the ask, or what an instance does and does not send |
-| [telemetry-opt-in-rate.md](docs/systems/telemetry-opt-in-rate.md) | Estimated opt-in fraction for the hello (point estimate and range), how the ask is built and re-asked, participation figures from Home Assistant, Go, Debian, Ubuntu, Firefox and others with sources, the consent-design experiments, the population that never sees the ask, what would raise or lower the rate | Reading fleet numbers against the real fleet, changing the ask's copy, buttons or cadence, or citing opt-in comparables |
+| [landing.md](docs/systems/landing.md) | The public product page at `/`: who sees it and how `main.tsx` chooses, the bundle budget and its guard test, what it may claim, the repeatable screenshots in `scripts/landing-shots/` | The product page, anything that leads a visitor to `/`, changing the app's look (the pictures need retaking), removing a feature it names |
 | [directory.md](docs/systems/directory.md) | Opt-in space directory ("Outer Space"): the three-facts model, the five `instance_settings`/`spaces` columns and the dirty flag, the public `GET /api/directory/spaces` document and its one asset rule, the pinger's answer table and per-day guard, the feed proxy, the Cloudflare hub's routes, tables, validator and diff writes, the blocklist procedure, the WAF rule and rollout checklist, `DIRECTORY_ENDPOINT` and what empty means, the Explore page's Inner/Outer sections and connect-then-join, known limits | Any directory work: listing state, the document, the pinger, the hub, the Explore page's Outer Space, the admin toggle or the per-space switch |
-| [project-hub.md](docs/systems/project-hub.md) | The Backspace page at `/backspace`: the cards and when each shows, `PROJECT_LINKS` in `projectLinks.ts` (null hides a card), the `HUB_ACTION`/`HubLinkAction` card conventions, the per-user seen-version table and the update dot on the sidebar item, You row and You tab, the community card's states and its click-only privacy rule, the three listing conditions, the maintainer's two setup steps, the design workbench | Any work on the Backspace page, its cards, the update dot, project links, or the Support card setting's effect |
 | [metrics.md](docs/systems/metrics.md) | Traffic archive: daily collection into the `metrics-data` branch, CSV/NDJSON schemas, upsert and write-if-absent semantics, backfill, the 202 stats problem, the traffic token (release bot app), the 60-day schedule hazard; the `site/insights` dashboard: `data.json` contract, 2 MB bundle budget and weekly downsampling, uPlot vendoring, Pages deploy wiring, empty-state behaviour | Any repo-analytics or dashboard work, changing collected series, changing the bundle contract, debugging a stalled collector or a red deploy |
 
 ---
@@ -190,7 +205,13 @@ All core features are implemented and deployed:
 
 **Communication:** Text channels, voice/video (LiveKit), screen sharing (VP9, configurable), DMs (1-on-1 + group up to 10), DM calls (ring/accept/reject), reactions, replies, typing indicators, read states, embeds (YouTube/Vimeo/Spotify/generic), GIF search (Klipy)
 
-**Organization:** Spaces, channel categories, role-based permissions (bitwise RBAC with category+channel overrides), space folders, user sidebar layout, space discovery (public/request/private)
+**Community:** Threads, forums with tags, announcement channels other spaces can follow, an own invite address, events with reminders, a welcome page and rules that can be required, incoming webhooks
+
+**Extras:** Voice messages, saved messages with reminders, keyword alerts, a soundboard, translating a message
+
+**Bots:** A developer page, tokens, an invite page, an HTTP and WebSocket API closed by default, slash commands
+
+**Organization:** Spaces, channel categories, channel icons (an icon of the set or an emoji in place of the type's), role-based permissions (bitwise RBAC with category+channel overrides), space folders, user sidebar layout, space discovery (public/request/private)
 
 **Social:** Friend requests, user search, user discovery, mutual friends/spaces, user profiles (banner, bio, accent color)
 
@@ -198,4 +219,4 @@ All core features are implemented and deployed:
 
 **Federation:** Multi-instance peering (HMAC-signed), DM relay (messages, reactions, membership), file replication with size validation, friend relay, identity resolution, background workers (outbox delivery, file download, health check, janitor)
 
-**Platform:** File uploads (with thumbnails via sharp), full-text search (from/has/before/after filters), admin panel (user management, storage, streaming config), Electron desktop app, mobile-responsive UI, account management (password change, deletion with safeguards)
+**Platform:** File uploads (with thumbnails via sharp), full-text search (from/has/before/after filters), admin panel (user management, storage, streaming config), Electron desktop app, mobile-responsive UI, account management (password and username change, deletion with safeguards)

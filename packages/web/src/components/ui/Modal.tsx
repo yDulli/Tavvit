@@ -1,8 +1,10 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../stores/uiStore';
+import { useExitGhost } from '../../hooks/useExitGhost';
 import { usePortalContainer } from '../../hooks/usePortalContainer';
+import { Icon } from './Icon';
 
 interface ModalProps {
   isOpen: boolean;
@@ -13,6 +15,8 @@ interface ModalProps {
   size?: 'settings';
   /** Mobile display style: 'fullscreen' fills the screen, 'sheet' anchors to bottom, 'default' stays centered */
   mobileStyle?: 'fullscreen' | 'sheet' | 'default';
+  /** False for a dialog that must be answered: no close button, no Escape, no click outside. */
+  dismissible?: boolean;
 }
 
 /**
@@ -32,16 +36,36 @@ export function Modal(props: ModalProps) {
   return createPortal(<ModalSurface {...props} />, portalContainer);
 }
 
-function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, mobileStyle = 'default' }: ModalProps) {
+/**
+ * The dialogs open now, by the order they opened in. Escape closes only the
+ * last one: a dialog opened from another (a decision from a space's detail,
+ * the detail from the settings) must not take the ones behind it along.
+ */
+const openSurfaces = new Set<number>();
+let lastSurfaceOrder = 0;
+
+function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, mobileStyle = 'default', dismissible = true }: ModalProps) {
   const { t } = useTranslation('common');
   const isMobile = useUIStore((s) => s.isMobile);
   const closeLabel = size === 'settings' ? t('chrome.closeSettings') : t('actions.close');
+  // Taken while rendering, where a dialog comes before one nested in it; the
+  // effects of two that open together run the other way round.
+  const [order] = useState(() => ++lastSurfaceOrder);
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  useExitGhost(surfaceRef);
+
+  useEffect(() => {
+    openSurfaces.add(order);
+    return () => {
+      openSurfaces.delete(order);
+    };
+  }, [order]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && dismissible && order === Math.max(...openSurfaces)) {
       onClose();
     }
-  }, [onClose]);
+  }, [dismissible, onClose, order]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -51,19 +75,21 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
   // Mobile fullscreen style
   if (isMobile && mobileStyle === 'fullscreen') {
     return (
-      <div className="fixed inset-0 z-[200] flex flex-col bg-surface-base animate-fade-in">
+      <div ref={surfaceRef} className="modal-whole fixed inset-0 z-[200] flex flex-col bg-surface-chat animate-fade-in">
         {(title || size === 'settings') && (
-          <div className="flex items-center justify-between px-4 pt-4 flex-shrink-0" style={{ paddingTop: 'calc(16px + var(--safe-top))' }}>
-            {title ? <h2 className="text-xl font-bold text-txt-primary">{title}</h2> : <div />}
+          <div className="panel-bar flex items-center justify-between gap-3 bg-surface-base pl-4 pr-1" style={{ paddingTop: 'var(--safe-top)' }}>
+            {title ? <h2 className="truncate text-lead font-semibold tracking-[-0.01em] text-txt-primary">{title}</h2> : <div />}
+            {dismissible && (
             <button
+              type="button"
               onClick={onClose}
-              className="text-txt-tertiary hover:text-txt-primary transition-colors p-1"
+              className="icon-btn h-10 w-10"
               aria-label={closeLabel}
+              title={closeLabel}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-              </svg>
+              <Icon name="x" size={17} />
             </button>
+            )}
           </div>
         )}
         <div className={`${size === 'settings' ? '' : 'p-4 overflow-y-auto scrollbar-thin'} flex-1 min-h-0`} style={size === 'settings' ? undefined : { paddingBottom: 'calc(16px + var(--safe-bottom))' }}>
@@ -76,24 +102,26 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
   // Mobile bottom sheet style
   if (isMobile && mobileStyle === 'sheet') {
     return (
-      <div className="fixed inset-0 z-[200] flex items-end justify-center animate-fade-in">
+      <div ref={surfaceRef} className="fixed inset-0 z-[200] flex items-end justify-center">
         <div
-          className="absolute inset-0 bg-black/50"
-          onClick={onClose}
+          className="modal-scrim absolute inset-0"
+          onClick={dismissible ? onClose : undefined}
         />
-        <div className="relative w-full max-h-[calc(85*var(--app-vh))] flex flex-col glass-modal rounded-t-2xl animate-slide-up" style={{ paddingBottom: 'var(--safe-bottom)' }}>
+        <div className="sheet-panel relative w-full max-h-[calc(85*var(--app-vh))] flex flex-col glass-modal rounded-t-lg" style={{ paddingBottom: 'var(--safe-bottom)' }}>
           {title && (
-            <div className="flex items-center justify-between px-4 pt-4 flex-shrink-0">
-              <h2 className="text-xl font-bold text-txt-primary">{title}</h2>
+            <div className="flex h-12 items-center justify-between gap-3 border-b border-border-hard pl-4 pr-1 flex-shrink-0">
+              <h2 className="truncate text-lead font-semibold tracking-[-0.01em] text-txt-primary">{title}</h2>
+              {dismissible && (
               <button
+                type="button"
                 onClick={onClose}
-                className="text-txt-tertiary hover:text-txt-primary transition-colors p-1"
+                className="icon-btn h-10 w-10"
                 aria-label={closeLabel}
+                title={closeLabel}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-                </svg>
+                <Icon name="x" size={17} />
               </button>
+              )}
             </div>
           )}
           <div className="p-4 overflow-y-auto scrollbar-thin flex-1 min-h-0">
@@ -107,22 +135,24 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
   // Settings size variant — large glass overlay for settings screens
   if (size === 'settings') {
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in">
+      <div ref={surfaceRef} className="fixed inset-0 z-[200] flex items-center justify-center">
         <div
-          className="absolute inset-0 bg-black/50"
-          onClick={onClose}
+          className="modal-scrim absolute inset-0"
+          onClick={dismissible ? onClose : undefined}
         />
-        <div className="relative w-[calc(90*var(--app-vw))] max-w-6xl h-[calc(85*var(--app-vh))] flex flex-col glass-modal rounded-xl animate-slide-up overflow-hidden">
+        <div className="modal-panel relative w-[calc(90*var(--app-vw))] max-w-6xl h-[calc(85*var(--app-vh))] flex flex-col glass-modal rounded-lg overflow-hidden">
           {/* Floating close button */}
+          {dismissible && (
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-1.5 rounded-full bg-surface-elevated/50 backdrop-blur-sm text-txt-tertiary hover:text-txt-primary transition-colors"
+            className="icon-btn icon-btn-lg absolute right-3 top-3 z-10 border border-border-soft bg-surface-elevated"
             aria-label={closeLabel}
+            title={closeLabel}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-            </svg>
+            <Icon name="x" size={16} strokeWidth={2} />
           </button>
+          )}
           {children}
         </div>
       </div>
@@ -131,24 +161,26 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
 
   // Default centered dialog (desktop and mobile default)
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center animate-fade-in">
+    <div ref={surfaceRef} className="fixed inset-0 z-[200] flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
+        className="modal-scrim absolute inset-0"
+        onClick={dismissible ? onClose : undefined}
       />
-      <div className={`relative ${maxWidth} w-full mx-4 max-h-[calc(calc(100*var(--app-vh))-2rem)] flex flex-col glass-modal rounded-lg animate-slide-up`}>
+      <div className={`modal-panel relative ${maxWidth} w-full mx-4 max-h-[calc(calc(100*var(--app-vh))-2rem)] flex flex-col glass-modal rounded-lg`}>
         {title && (
-          <div className="flex items-center justify-between px-4 pt-4 flex-shrink-0">
-            <h2 className="text-xl font-bold text-txt-primary">{title}</h2>
+          <div className="flex h-12 items-center justify-between gap-3 border-b border-border-hard pl-4 pr-2 flex-shrink-0">
+            <h2 className="truncate text-lead font-semibold tracking-[-0.01em] text-txt-primary">{title}</h2>
+            {dismissible && (
             <button
+              type="button"
               onClick={onClose}
-              className="text-txt-tertiary hover:text-txt-primary transition-colors p-1"
+              className="icon-btn icon-btn-lg"
               aria-label={closeLabel}
+              title={closeLabel}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-              </svg>
+              <Icon name="x" size={17} />
             </button>
+            )}
           </div>
         )}
         <div className="p-4 overflow-y-auto scrollbar-thin flex-1 min-h-0">

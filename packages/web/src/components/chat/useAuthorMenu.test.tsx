@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MouseEvent } from 'react';
 import type { DmChannel, MemberWithUser, User } from '@backspace/shared';
 import type { ContextMenuItem } from '../../stores/contextMenuStore';
-const mocks = vi.hoisted(() => ({ open: vi.fn(), send: vi.fn(), toast: vi.fn() }));
+const mocks = vi.hoisted(() => ({ open: vi.fn(), send: vi.fn(), toast: vi.fn(), openModal: vi.fn() }));
 vi.mock('../../stores/contextMenuStore', async importOriginal => ({
   ...await importOriginal<typeof import('../../stores/contextMenuStore')>(),
   useContextMenuStore: { getState: () => ({ open: mocks.open }) },
 }));
-vi.mock('../../stores/uiStore', () => ({ useUIStore: { getState: () => ({ addToast: mocks.toast }) } }));
+vi.mock('../../stores/uiStore', () => ({ useUIStore: { getState: () => ({ addToast: mocks.toast, openModal: mocks.openModal }) } }));
 vi.mock('../../hooks/useWebSocket', () => ({ wsSend: mocks.send }));
 vi.mock('../../audio/AudioManager', () => ({ AudioManager: { getInstance: vi.fn() } }));
 import { useChannelPokeStore } from '../../stores/channelPokeStore';
@@ -70,20 +70,22 @@ afterEach(() => {
 });
 
 describe('the author menu', () => {
-  it('offers Mention by the space nickname, and Poke after it where the host offers pokes', () => {
+  it('offers Mention by the space nickname, Poke after it where the host offers pokes, and Report last', () => {
     useChannelPokeStore.getState().setHost(HOST, true);
     const event = rightClick(space);
     expect(event.preventDefault).toHaveBeenCalled();
     expect(event.stopPropagation).toHaveBeenCalled();
-    expect(openedItems().map((i) => i.key)).toEqual(['mention-author', 'poke-author']);
+    expect(openedItems().map((i) => i.key)).toEqual(['mention-author', 'poke-author', 'report-author']);
     expect(action('mention-author').label).toBe('@Tee');
+    expect(action('report-author').label).toBe('Report person');
   });
 
-  it('offers Mention alone in a DM, by account name', () => {
+  it('offers Mention by account name and Report in a DM, but no Poke', () => {
     useChannelPokeStore.getState().setHost(HOST, true);
     rightClick(inDm);
-    expect(openedItems().map((i) => i.key)).toEqual(['mention-author']);
+    expect(openedItems().map((i) => i.key)).toEqual(['mention-author', 'report-author']);
     expect(action('mention-author').label).toBe('@Target');
+    expect(action('report-author').label).toBe('Report person');
   });
 
   it("adds the author's id on the channel's origin to that channel's draft", () => {
@@ -97,6 +99,7 @@ describe('the author menu', () => {
   it('leaves the right click to the message menu where the viewer cannot write', () => {
     useChannelPokeStore.getState().setHost(HOST, true);
     // No SEND_MESSAGES, a message still sending, or a DM whose partner is gone.
+    // Report goes with the rest here: the message menu has its own.
     for (const options of [{ ...space, canSend: false }, { ...inDm, canSend: false }]) {
       const event = rightClick(options);
       expect(event.preventDefault).not.toHaveBeenCalled();
@@ -105,7 +108,15 @@ describe('the author menu', () => {
     expect(mocks.open).not.toHaveBeenCalled();
   });
 
-  it("offers neither Mention nor Poke on the viewer's own message and leaves it to the message menu", () => {
+  it('leaves the right click to the message menu for a message without a channel', () => {
+    useChannelPokeStore.getState().setHost(HOST, true);
+    const event = rightClick({ ...space, channelId: '' });
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(event.stopPropagation).not.toHaveBeenCalled();
+    expect(mocks.open).not.toHaveBeenCalled();
+  });
+
+  it("offers no Mention, Poke or Report on the viewer's own message and leaves it to the message menu", () => {
     useChannelPokeStore.getState().setHost(HOST, true);
     for (const options of [{ ...inDm, isAuthor: true }, { ...space, isAuthor: true }]) {
       const event = rightClick(options);
@@ -115,11 +126,33 @@ describe('the author menu', () => {
     expect(mocks.open).not.toHaveBeenCalled();
   });
 
-  it('offers no Mention for an author who is not one of the channel people', () => {
-    // A member who left: the composer and the sent message could not name them.
+  it('offers no Mention for an author who is not one of the channel people, and Report remains', () => {
+    // A member who left: the composer and the sent message could not name them,
+    // but the instance still has the account, so they can be reported, unnamed.
     const event = rightClick({ ...space, authorId: stranger.id });
-    expect(event.preventDefault).not.toHaveBeenCalled();
-    expect(mocks.open).not.toHaveBeenCalled();
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(openedItems().map((i) => i.key)).toEqual(['report-author']);
+    action('report-author').onClick();
+    expect(mocks.openModal).toHaveBeenCalledWith('report', {
+      target: { type: 'user', id: 'stranger-host', origin: HOST, label: null },
+    });
+  });
+
+  it("opens the report form for the author's id on the channel's origin, by the space nickname", () => {
+    rightClick(space);
+    action('report-author').onClick();
+    expect(mocks.openModal).toHaveBeenCalledWith('report', {
+      target: { type: 'user', id: 'target-host', origin: HOST, label: 'Tee' },
+    });
+  });
+
+  it("opens the report form for a DM author's id on the DM's origin, by account name", () => {
+    rightClick(inDm);
+    action('report-author').onClick();
+    expect(mocks.openModal).toHaveBeenCalledWith('report', {
+      target: { type: 'user', id: 'target-host', origin: HOST, label: 'Target' },
+    });
   });
 
   it('sends a poke to the instance hosting the space and says so when the socket is closed', () => {

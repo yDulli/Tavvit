@@ -1,3 +1,4 @@
+import { recordPeerTrust } from '../../../utils/platformAudit.js';
 import path from 'node:path';
 import { getDb, schema } from '../../../db/index.js';
 import { authenticate, requireAdmin } from '../../../utils/auth.js';
@@ -60,6 +61,7 @@ export function registerPeerHandshakeRoutes(app: FastifyInstance): void {
       if (!remoteOrigin) {
         return reply.code(400).send({ error: 'remoteOrigin must be a valid HTTPS URL (HTTP is only allowed for localhost)', statusCode: 400 });
       }
+      recordPeerTrust(request.userId, { id: remoteOrigin, origin: remoteOrigin }, 'initiated');
 
       let localOrigin: string;
       try {

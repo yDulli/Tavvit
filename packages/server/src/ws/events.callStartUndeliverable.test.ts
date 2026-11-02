@@ -151,7 +151,7 @@ describe('sendFederatedCallStart — undeliverable reclassification (#18)', () =
     seedDmChannel('dm-1', federatedId, null);
     seedDmMember('dm-1', 'alice');
     seedDmMember('dm-1', 'bob-stub');
-    seedActivePeer('https://orbit.example', 'Orbit');
+    seedActivePeer('https://orbit.example', 'Tavvit');
 
     const cm = await importManager();
     cm.createDmRoom('dm-1', 'alice');  // caller's local ring room (mirrors real flow)
@@ -184,7 +184,7 @@ describe('sendFederatedCallStart — undeliverable reclassification (#18)', () =
     expect(ev.failures).toHaveLength(1);
     expect(ev.failures[0]!.reason).toBe('no_recipient');
     expect(ev.failures[0]!.peerOrigin).toBe('https://orbit.example');
-    expect(ev.failures[0]!.peerLabel).toBe('Orbit');
+    expect(ev.failures[0]!.peerLabel).toBe('Tavvit');
 
     // Room was destroyed.
     expect(destroyRoomSpy).toHaveBeenCalledWith('dm-1');
@@ -200,13 +200,13 @@ describe('sendFederatedCallStart — undeliverable reclassification (#18)', () =
     seedDmMember('dm-group', 'alice');
     seedDmMember('dm-group', 'bob-stub');
     seedDmMember('dm-group', 'carol-stub');
-    seedActivePeer('https://orbit.example', 'Orbit');
+    seedActivePeer('https://orbit.example', 'Tavvit');
     seedActivePeer('https://nova.example', 'Nova');
 
     const cm = await importManager();
     cm.createDmRoom('dm-group', 'alice');
 
-    // Orbit delivers (empty undeliverable), Nova returns messageId in undeliverable.
+    // Tavvit delivers (empty undeliverable), Nova returns messageId in undeliverable.
     sendCallRelayMock.mockImplementation(async (origin: string, events: Array<{ messageId: string }>) => {
       if (origin === 'https://nova.example') {
         return { ok: true, undeliverable: [events[0]!.messageId] };
@@ -245,7 +245,7 @@ describe('sendFederatedCallStart — undeliverable reclassification (#18)', () =
     seedDmChannel('dm-happy', federatedId, null);
     seedDmMember('dm-happy', 'alice');
     seedDmMember('dm-happy', 'bob-stub');
-    seedActivePeer('https://orbit.example', 'Orbit');
+    seedActivePeer('https://orbit.example', 'Tavvit');
 
     const cm = await importManager();
     cm.createDmRoom('dm-happy', 'alice');

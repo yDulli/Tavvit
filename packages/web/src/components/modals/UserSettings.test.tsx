@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { InstanceInfoResponse, User } from '@backspace/shared';
+import { __resetHomeInstanceInfoForTests } from '../../hooks/useHomeInstanceInfo';
 
 // ── Fixtures and store mocks ────────────────────────────────────────────────
 // The modal reads four stores through selectors. Each is mocked with the
@@ -70,6 +71,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+vi.mock('../legal/LegalLinks', () => ({ LegalLinks: () => null }));
 vi.mock('../../stores/uiStore', () => ({
   useUIStore: Object.assign(
     (selector: (s: typeof mocks.ui) => unknown) => selector(mocks.ui),
@@ -107,7 +109,11 @@ vi.mock('./settingsPanels/VoicePanel', () => ({ VoicePanel: () => <p>VoicePanel 
 vi.mock('./settingsPanels/PrivacyPanel', () => ({ PrivacyPanel: () => <p>PrivacyPanel stub</p> }));
 vi.mock('./settingsPanels/ConnectionsPanel', () => ({ ConnectionsPanel: () => <p>ConnectionsPanel stub</p> }));
 vi.mock('./settingsPanels/KeybindsPanel', () => ({ KeybindsPanel: () => <p>KeybindsPanel stub</p> }));
-vi.mock('./settingsPanels/InstancePanel', () => ({ InstancePanel: () => <p>InstancePanel stub</p> }));
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...await importOriginal<typeof import('react-router-dom')>(),
+  useNavigate: () => navigate,
+}));
 
 import { UserSettingsModal } from './UserSettings';
 
@@ -135,17 +141,19 @@ function inDocumentOrder(...nodes: HTMLElement[]): boolean {
 }
 
 /**
- * Renders the modal and waits for the instance info fetch to land. The panels
- * are lazily loaded (`lazySettingsPanels`), so this does not mean the open
- * panel has mounted: a test that reads a panel waits for it with `findBy*`.
+ * Renders the modal. The panels are lazily loaded (`lazySettingsPanels`), so
+ * this does not mean the open panel has mounted: a test that reads a panel
+ * waits for it with `findBy*`.
  */
 async function openSettings(): Promise<void> {
   render(<UserSettingsModal />);
-  await screen.findByRole('link', { name: /Source code/i });
+  await screen.findAllByRole('button', { name: 'Log Out' });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  __resetHomeInstanceInfoForTests();
+  Reflect.deleteProperty(mocks.instanceInfo, 'federationEnabled');
 });
 
 afterEach(() => {
@@ -154,30 +162,20 @@ afterEach(() => {
 });
 
 describe('UserSettingsModal Desktop tab', () => {
-  it('shows the download offer in the browser', async () => {
+  it('has no Desktop tab in the browser: there are no Tavvit installers to offer', async () => {
     await openSettings();
 
-    const tab = screen.getByRole('button', { name: 'Desktop' });
-    // The tab sits inside App Settings: after that group's heading and its last
-    // entry, and before the next thing in the nav list. This account is not an
-    // admin, so what follows the group is the log out button in the footer.
+    expect(screen.queryByRole('button', { name: 'Desktop' })).not.toBeInTheDocument();
+    // App Settings still holds the other tabs, in order, before the footer.
     expect(
       inDocumentOrder(
         screen.getByText('App Settings'),
+        screen.getByRole('button', { name: 'Connections' }),
         screen.getByRole('button', { name: 'Keybinds' }),
-        tab,
         screen.getByRole('button', { name: 'Log Out' }),
       ),
     ).toBe(true);
-    // Nothing starts a new group between the heading and the tab: the only
-    // group headings rendered are User Settings and App Settings.
     expect(screen.getAllByText(/^(User Settings|App Settings|Administration)$/)).toHaveLength(2);
-
-    fireEvent.click(tab);
-
-    expect(await screen.findByRole('link', { name: 'All releases on GitHub' })).toBeInTheDocument();
-    // The Electron-only panel stays out of the browser.
-    expect(screen.queryByRole('button', { name: 'Change Instance' })).not.toBeInTheDocument();
   });
 
   it('shows the desktop app settings inside Electron', async () => {
@@ -186,11 +184,28 @@ describe('UserSettingsModal Desktop tab', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Desktop' }));
 
-    // Both panels carry the same "Desktop" title, so the instance control is
-    // what tells them apart.
     expect(await screen.findByRole('heading', { name: 'Desktop' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Change Instance' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'All releases on GitHub' })).not.toBeInTheDocument();
+    // The app opens one server; there is nothing to switch.
+    expect(screen.queryByRole('button', { name: 'Change Instance' })).toBeNull();
+  });
+});
+
+describe('UserSettingsModal Connections tab', () => {
+  it('is offered where the instance federates', async () => {
+    mocks.instanceInfo.federationEnabled = true;
+    await openSettings();
+    expect(screen.getByRole('button', { name: 'Connections' })).toBeInTheDocument();
+  });
+
+  it('is offered by a server that does not say (an older one federates)', async () => {
+    await openSettings();
+    expect(screen.getByRole('button', { name: 'Connections' })).toBeInTheDocument();
+  });
+
+  it('is not offered on a private server: nothing behind it would answer', async () => {
+    mocks.instanceInfo.federationEnabled = false;
+    await openSettings();
+    expect(screen.queryByRole('button', { name: 'Connections' })).not.toBeInTheDocument();
   });
 });
 
@@ -213,10 +228,24 @@ describe('UserSettingsModal deep links (#330)', () => {
     expect(screen.queryByText('AccountPanel stub')).not.toBeInTheDocument();
   });
 
-  it('opens on the desktop tab a caller names', async () => {
+  it('falls back to Account for the desktop tab in a browser', async () => {
     mocks.ui.modalData = { tab: 'desktop' };
     await openSettings();
-    expect(await screen.findByRole('link', { name: 'All releases on GitHub' })).toBeInTheDocument();
+    expect(await screen.findByText('AccountPanel stub')).toBeInTheDocument();
+  });
+
+  it('opens on the desktop tab a caller names inside Electron', async () => {
+    installDesktopHost();
+    mocks.ui.modalData = { tab: 'desktop' };
+    await openSettings();
+    expect(await screen.findByRole('heading', { name: 'Desktop' })).toBeInTheDocument();
+  });
+
+  it('falls back to Account for the connections tab on a private server', async () => {
+    mocks.instanceInfo.federationEnabled = false;
+    mocks.ui.modalData = { tab: 'connections' };
+    await openSettings();
+    expect(await screen.findByText('AccountPanel stub')).toBeInTheDocument();
   });
 
   it('falls back to Account for the instance tab when the user is not an admin', async () => {
@@ -225,11 +254,27 @@ describe('UserSettingsModal deep links (#330)', () => {
     expect(await screen.findByText('AccountPanel stub')).toBeInTheDocument();
   });
 
-  it('opens the instance tab for an admin', async () => {
+  it('leads an admin to the console, which is a page of its own, and closes itself', async () => {
+    mocks.auth.user = { ...mocks.auth.user, isAdmin: true };
+    mocks.ui.modalData = {};
+    await openSettings();
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Admin console' }))[0]!);
+    expect(mocks.ui.closeModal).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/admin');
+  });
+
+  it('offers nobody else the way there', async () => {
+    mocks.auth.user = { ...mocks.auth.user, isAdmin: false };
+    mocks.ui.modalData = {};
+    await openSettings();
+    expect(screen.queryByRole('button', { name: 'Admin console' })).toBeNull();
+  });
+
+  it('opens Account for what used to be the instance tab', async () => {
     mocks.auth.user = { ...mocks.auth.user, isAdmin: true };
     mocks.ui.modalData = { tab: 'instance' };
     await openSettings();
-    expect(await screen.findByText('InstancePanel stub')).toBeInTheDocument();
+    expect(await screen.findByText('AccountPanel stub')).toBeInTheDocument();
   });
 
   it('falls back to Account for a tab that does not exist', async () => {

@@ -25,6 +25,10 @@ import { PermissionBits, permissionsToString } from '../../../utils/permissions'
 const INVITE = 'Invite only';
 const LOCAL = 'Local space discovery';
 const GLOBAL = 'Allow global listing';
+// Asserted both present and absent, so it is one constant: the positive checks
+// fail when the copy changes, which keeps the absent check from passing forever
+// on a string nothing renders any more.
+const GLOBAL_DESCRIPTION = 'Approved spaces can then also be listed in the global Tavvit directory, when their owners opt in from their Discovery settings.';
 const OPEN_ACCOUNTS = 'Open federated accounts';
 const DISCLOSURE = /its name, description, icon, banner, member count and this instance's address/;
 const BROWSE = 'Show global spaces in Explore';
@@ -45,7 +49,6 @@ function info(directoryConfigured: boolean): InstanceInfoResponse {
     directoryConfigured,
     directoryAvailable: directoryConfigured,
     directoryEnabled: false,
-    supportCardEnabled: true,
   };
 }
 
@@ -60,6 +63,8 @@ const base: InstanceAdminSettings = {
   federatedRegistrationOpen: true,
   discoveryEnabled: true,
   maxUploadSizeMb: 100,
+  storagePerAccountGb: 5,
+  spacesPerAccount: 25,
   federationRelayEnabled: true,
   federationRelayTtlDays: 30,
   defaultAutoRotateIntervalDays: 90,
@@ -71,7 +76,7 @@ const base: InstanceAdminSettings = {
   // One space already listed, so the note that nothing is listed stays out
   // of the tests that are not about it.
   directoryListedSpaceCount: 1,
-  supportCardEnabled: true,
+  accentColor: null,
 };
 
 /** The panel as the app mounts it: inside the router its listing note navigates with. */
@@ -115,7 +120,7 @@ describe('GeneralPanel discovery ladder', () => {
     expect(rung(GLOBAL)).toBeInTheDocument();
     expect(screen.getByText('Spaces here are listed nowhere. Invite links still work.')).toBeInTheDocument();
     expect(screen.getByText('Spaces appear in Explore for people on this instance and on instances connected to it.')).toBeInTheDocument();
-    expect(screen.getByText('Each space can then be manually listed in the global Backspace directory from its own Discovery settings.')).toBeInTheDocument();
+    expect(screen.getByText(GLOBAL_DESCRIPTION)).toBeInTheDocument();
     expect(screen.getAllByRole('radio')).toHaveLength(3);
   });
 
@@ -653,7 +658,7 @@ describe('GeneralPanel global browsing toggle', () => {
 
 describe('GeneralPanel discovery ladder without a directory endpoint', () => {
   /*
-   * The rung promised that listed spaces "appear in the public Backspace
+   * The rung promised that listed spaces "appear in the public Tavvit
    * directory, on every instance". With no DIRECTORY_ENDPOINT the pinger
    * never starts and no hub is ever told, so the promise was false and the
    * rung offered a level that did nothing.
@@ -666,7 +671,7 @@ describe('GeneralPanel discovery ladder without a directory endpoint', () => {
 
     expect(rung(GLOBAL)).toBeDisabled();
     expect(screen.getByText(/nothing here can be listed globally/)).toBeInTheDocument();
-    expect(screen.queryByText('Each space can then be manually listed in the global Backspace directory from its own Discovery settings.')).not.toBeInTheDocument();
+    expect(screen.queryByText(GLOBAL_DESCRIPTION)).not.toBeInTheDocument();
     // The rungs that still do something stay available.
     expect(rung(INVITE)).toBeEnabled();
     expect(rung(LOCAL)).toBeEnabled();
@@ -704,7 +709,7 @@ describe('GeneralPanel discovery ladder without a directory endpoint', () => {
     await act(async () => {});
 
     expect(rung(GLOBAL)).toBeEnabled();
-    expect(screen.getByText('Each space can then be manually listed in the global Backspace directory from its own Discovery settings.')).toBeInTheDocument();
+    expect(screen.getByText(GLOBAL_DESCRIPTION)).toBeInTheDocument();
     expect(screen.queryByText(/nothing here can be listed globally/)).not.toBeInTheDocument();
   });
 
@@ -731,7 +736,7 @@ describe('GeneralPanel discovery ladder without a directory endpoint', () => {
 });
 
 describe('GeneralPanel listing note', () => {
-  const NOTE = 'Turning this on does not list any spaces by itself. Each space still has to switch on "List in the global Backspace directory" in its Discovery settings.';
+  const NOTE = 'Turning this on lists no space by itself. A space must have an approved listing and switch on "List in the global Tavvit directory" in its Discovery settings.';
   const SHOW = 'Show me where';
   const SAVE_AND_SHOW = 'Save and show me where';
   const MANAGE = permissionsToString(PermissionBits.MANAGE_SPACE);
@@ -744,6 +749,7 @@ describe('GeneralPanel listing note', () => {
       banner: null,
       avatarColor: null,
       ownerId: 'admin-1',
+      ownerTitle: null,
       inviteCode: null,
       visibility: 'public',
       directoryListed: false,

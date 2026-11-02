@@ -40,6 +40,12 @@ afterEach(async () => {
 });
 
 describe('MentionBadge', () => {
+  it('shows the name it was given when the channel does not know the person', () => {
+    render(<MentionBadge userId="stranger-id" channelId={null} fallbackName="Robin" />);
+    expect(screen.getByText('@Robin')).toBeInTheDocument();
+    expect(screen.queryByText(/Unknown User/)).toBeNull();
+  });
+
   it("names a user it cannot resolve in the reader's language (issue #313)", async () => {
     await setLanguage('de');
     render(<MentionBadge userId="u-gone" channelId="chan-1" />);
@@ -77,7 +83,10 @@ describe('MentionBadge in a DM (#338)', () => {
   it('uses the accent colour in a DM, never a role colour from a loaded space roster', () => {
     useSpaceStore.setState({ dmChannels: [DM], members: [member('space-1', KAI, [RED_ROLE])] });
     render(<MentionBadge userId={KAI.id} channelId={DM.id} />);
-    expect(screen.getByText('@Kai')).toHaveStyle({ color: '#7c6cf6' });
+    const badge = screen.getByText('@Kai');
+    // The interface accent (a theme token), not the role's red.
+    expect(badge).toHaveClass('text-accent-soft');
+    expect(badge.style.color).toBe('');
   });
 
   it('opens the profile without a space member context in a DM', () => {

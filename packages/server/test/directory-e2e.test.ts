@@ -2,8 +2,9 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { DirectoryDocument, DirectoryPingError, InstanceAdminSettings, Space } from '@backspace/shared';
+import type { SpaceReviewState } from '@backspace/shared/src/platform.js';
 import { bootTwoInstances, readInstanceLog, type TwoInstanceHarness } from './helpers/twoInstanceHarness.js';
-import { registerLocal, type TestUser } from './helpers/testUsers.js';
+import { makeAdmin, registerLocal, type TestUser } from './helpers/testUsers.js';
 
 // Boots two real instances whose pingers point at a stub hub in this process.
 // Every step waits on a 3 second debounce plus a real fetch, so the 5 s unit
@@ -144,7 +145,7 @@ async function waitFor<T>(check: () => Promise<T> | T, ok: (value: T) => boolean
   return last;
 }
 
-async function api<T>(user: TestUser, method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown): Promise<{ status: number; json: T }> {
+async function api<T>(user: TestUser, method: 'GET' | 'POST' | 'PUT' | 'PATCH', path: string, body?: unknown): Promise<{ status: number; json: T }> {
   const res = await fetch(`${user.origin}${path}`, {
     method,
     headers: {
@@ -164,8 +165,8 @@ let admin: TestUser;
 beforeAll(async () => {
   hub = await startStubHub();
   harness = await bootTwoInstances({ directoryEndpoint: hub.url, publicOriginAsTransport: true });
-  // First registered user on an instance is its admin.
   admin = await registerLocal(harness.home, 'directory_admin');
+  makeAdmin(harness.home, admin.id);
 }, 90_000);
 
 afterAll(async () => {
@@ -209,13 +210,28 @@ describe('space directory end to end', () => {
     expect(settings.directoryLastError).toBeNull();
   });
 
-  it('listing a public space puts it in the next document the hub reads', async () => {
-    const created = await api<Space>(admin, 'POST', '/api/spaces', { name: 'Listed Space', visibility: 'public' });
+  it('listing an approved public space puts it in the next document the hub reads', async () => {
+    const created = await api<Space>(admin, 'POST', '/api/spaces', {
+      name: 'Listed Space',
+      visibility: 'public',
+      description: 'Where the directory test lists itself',
+    });
     expect(created.status).toBe(201);
     spaceId = created.json.id;
     expect(created.json.directoryListed).toBe(false);
 
-    // Creating an unlisted space is not a change to the served document.
+    // The document carries only spaces listed in Discovery, which takes an
+    // admin's approval (docs/systems/admin.md, "Discovery approval"): the
+    // owner asks and an admin approves, here both the instance's first
+    // account. While the space is not opted in to the directory, neither
+    // step is a change to the served document, and creating it was not one.
+    const asked = await api<SpaceReviewState>(admin, 'PUT', `/api/spaces/${spaceId}/discovery`, { category: 'community' });
+    expect(asked.status).toBe(200);
+    expect(asked.json.discovery.status).toBe('pending');
+    const approved = await api<SpaceReviewState>(admin, 'POST', `/api/admin/spaces/${spaceId}/discovery/approve`, {});
+    expect(approved.status).toBe(200);
+    expect(approved.json.discovery.status).toBe('approved');
+
     const before = hub.count(home());
 
     const listed = await api<Space>(admin, 'PATCH', `/api/spaces/${spaceId}`, { directoryListed: true });

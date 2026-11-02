@@ -1,3 +1,4 @@
+import { parseWaveform } from '@backspace/shared/src/voiceMessages.js';
 import { and, eq } from 'drizzle-orm';
 import type { FederationMessageTarget, FederationRelayAttachment, FederationRelayEvent, FederationSyncResponse } from '@backspace/shared';
 import { getDb, getRawDb, schema } from '../../../db/index.js';
@@ -182,7 +183,7 @@ function dmReader(peerOrigin: string, scope: SyncRequestScope): SyncLogReader {
         )
       )
     )
-    AND (ml.mutation_type NOT IN ('create', 'update', 'reaction_add', 'reaction_remove') OR dm.id IS NOT NULL)
+    AND (ml.mutation_type NOT IN ('create', 'update', 'reaction_add', 'reaction_remove', 'pin_set') OR dm.id IS NOT NULL)
     AND (
       ml.mutation_type NOT IN ('reaction_add', 'reaction_remove')
       OR CASE WHEN json_valid(ml.payload) THEN
@@ -398,6 +399,32 @@ function serializeSyncRow(
       };
     }
 
+    case 'pin_set': {
+      const pin = parsePayload<{ userId: string; homeUserId: string; homeInstance?: string; pinned: boolean; at?: number }>(row.payload);
+      if (!pin) return null;
+      const message = db
+        .select({ id: schema.dmMessages.id, sourceInstance: schema.dmMessages.sourceInstance, sourceMessageId: schema.dmMessages.sourceMessageId })
+        .from(schema.dmMessages)
+        .where(eq(schema.dmMessages.id, row.entity_id))
+        .get();
+      if (!message) return null;
+      const target = dmMessageFederationRef(message);
+      return {
+        eventType: type,
+        dmChannelId: row.context_id,
+        ...base,
+        pin: {
+          messageId: target.messageId,
+          messageHomeInstance: target.messageHomeInstance,
+          userId: pin.userId,
+          homeUserId: pin.homeUserId,
+          homeInstance: pin.homeInstance || getOurOrigin(),
+          pinned: pin.pinned,
+          at: pin.at ?? row.mutated_at,
+        },
+      };
+    }
+
     case 'dm_close':
     case 'dm_reopen': {
       const dmCloseReopen = parsePayload<{ homeUserId: string; homeInstance: string }>(row.payload);
@@ -490,6 +517,7 @@ function serializeMessageRow(row: MutationLogRow, type: 'create' | 'update'): Fe
       height: a.height ?? undefined,
       duration: a.duration ?? undefined,
       playable: a.playable ?? null,
+      ...(a.voiceWaveform ? { voiceWaveform: parseWaveform(a.voiceWaveform) ?? undefined } : {}),
       thumbnailFilename: a.thumbnailFilename ?? undefined,
       sourceUrl: `${localOrigin}/api/uploads/${a.filename}`,
     }));

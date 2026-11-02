@@ -18,7 +18,7 @@ const ensurePeered = vi.fn<(data: { remoteOrigin: string; reason?: string }) => 
 // ── Remote-instance API (what `createApiClient` hands back) ─────────────────
 const remoteRegister = vi.fn();
 const remoteLogin = vi.fn();
-const remoteInfo = vi.fn(async () => ({ name: 'Orbit' }));
+const remoteInfo = vi.fn(async () => ({ name: 'Tavvit' }));
 const remoteMe = vi.fn();
 
 // Spread the real module: the store extends HttpError at load time, so a bare
@@ -141,7 +141,7 @@ function remoteUser(overrides: Partial<User> = {}): User {
 function liveInstance(status: ConnectedInstance['status'], overrides: Partial<ConnectedInstance> = {}): ConnectedInstance {
   return {
     origin: REMOTE,
-    label: 'Orbit',
+    label: 'Tavvit',
     token: 'cached-token',
     username: 'erin@nova.example',
     user: remoteUser(),
@@ -157,7 +157,7 @@ function liveInstance(status: ConnectedInstance['status'], overrides: Partial<Co
 function registryEntry(status: FederationRegistryStatus, overrides: Partial<FederationRegistryEntry> = {}): FederationRegistryEntry {
   return {
     origin: REMOTE,
-    label: 'Orbit',
+    label: 'Tavvit',
     username: 'erin@nova.example',
     remoteUserId: 'remote-1',
     status,
@@ -185,7 +185,7 @@ function seed(
 function cacheToken(token: string): void {
   localStorage.setItem(
     TOKEN_KEY,
-    JSON.stringify({ [REMOTE]: { token, label: 'Orbit', username: 'erin@nova.example' } }),
+    JSON.stringify({ [REMOTE]: { token, label: 'Tavvit', username: 'erin@nova.example' } }),
   );
 }
 
@@ -373,7 +373,7 @@ describe('every path that opens a session on a remote asks the home instance to 
     const toasts = useUIStore.getState().toasts;
     expect(toasts).toHaveLength(1);
     expect(toasts[0]!.type).toBe('warning');
-    expect(toasts[0]!.message).toContain('Orbit');
+    expect(toasts[0]!.message).toContain('Tavvit');
   });
 
   it('a background resume never toasts about peering', async () => {

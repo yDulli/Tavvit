@@ -1,0 +1,1 @@
+ALTER TABLE `attachments` ADD `spoiler` integer DEFAULT false NOT NULL;

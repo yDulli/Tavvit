@@ -103,6 +103,18 @@ describe('createFormatters', () => {
     expect(createFormatters(() => 'ar-EG-u-nu-arab').formatDuration(65)).toBe('٠١:٠٥');
   });
 
+  it('formats an interval in the largest unit that divides it evenly', () => {
+    const en = createFormatters(() => 'en');
+    expect(en.formatInterval(5)).toBe('5 seconds');
+    expect(en.formatInterval(60)).toBe('1 minute');
+    expect(en.formatInterval(90)).toBe('90 seconds');
+    expect(en.formatInterval(21_600)).toBe('6 hours');
+    expect(en.formatInterval(86_400)).toBe('1 day');
+    expect(en.formatInterval(604_800)).toBe('1 week');
+    expect(en.formatInterval(30 * 86_400)).toBe('30 days');
+    expect(createFormatters(() => 'de').formatInterval(600)).toBe('10 Minuten');
+  });
+
   it('joins a list with the language\'s conjunction and separators', () => {
     expect(createFormatters(() => 'en').formatList(['You', 'Mira', '3 others'])).toBe('You, Mira, and 3 others');
     expect(createFormatters(() => 'de').formatList(['Du', 'Mira'])).toBe('Du und Mira');

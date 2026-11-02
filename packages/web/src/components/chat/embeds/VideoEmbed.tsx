@@ -1,39 +1,43 @@
+import { ExternalGate, ExternalImage } from '../../ui/ExternalMedia';
+import { externalHostOf } from '../../../stores/externalMediaStore';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Embed } from '@backspace/shared';
+import { Icon } from '../../ui/Icon';
+import { providerLabel as labelOf } from './providerLabel';
 
 interface VideoEmbedProps {
   embed: Embed;
 }
 
 export function VideoEmbed({ embed }: VideoEmbedProps) {
-  const { t } = useTranslation('chat');
+  const { t } = useTranslation(['chat', 'legal']);
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Direct video URL — no provider, no embedUrl
   if (!embed.provider && !embed.embedUrl) {
     return (
-      <div
-        className="mt-2 max-w-[400px] rounded-lg overflow-hidden bg-surface-input"
-        style={{ aspectRatio: '16/9' }}
-      >
-        <video
-          src={embed.url}
-          controls
-          preload="none"
-          className="w-full h-full rounded-lg"
-        />
-      </div>
+      <ExternalGate url={embed.url}>
+        <div
+          className="max-w-[400px] overflow-hidden rounded-lg border border-border-hard bg-surface-input"
+          style={{ aspectRatio: '16/9' }}
+        >
+          <video
+            src={embed.url}
+            controls
+            preload="none"
+            className="h-full w-full"
+          />
+        </div>
+      </ExternalGate>
     );
   }
 
   // Provider iframe (YouTube / Vimeo)
-  const providerLabel = embed.provider
-    ? embed.provider.charAt(0).toUpperCase() + embed.provider.slice(1)
-    : null;
+  const providerLabel = labelOf(embed.provider);
 
   return (
-    <div className="mt-2 max-w-[400px] rounded-lg overflow-hidden bg-surface-channel border border-white/[0.06]">
+    <div className="surface-card max-w-[400px] overflow-hidden rounded-lg">
       {/* 16:9 video area */}
       <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
         {isPlaying && embed.embedUrl ? (
@@ -49,11 +53,19 @@ export function VideoEmbed({ embed }: VideoEmbedProps) {
             type="button"
             data-embed-thumbnail
             onClick={() => setIsPlaying(true)}
-            className="absolute inset-0 w-full h-full flex items-center justify-center group focus:outline-none"
+            className="group absolute inset-0 flex h-full w-full items-center justify-center -outline-offset-2"
             aria-label={embed.title ? t('embed.playNamed', { title: embed.title }) : t('embed.playUnnamed')}
           >
             {embed.image ? (
-              <img
+              <ExternalImage
+                whileBlocked={(
+                  <>
+                    <span className="absolute inset-0 bg-black/60" />
+                    <span className="absolute inset-x-2 bottom-2 text-center text-label text-white/80">
+                      {t('legal:external.playLoads', { name: providerLabel ?? externalHostOf(embed.embedUrl) ?? '' })}
+                    </span>
+                  </>
+                )}
                 src={embed.image}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover"
@@ -62,15 +74,9 @@ export function VideoEmbed({ embed }: VideoEmbedProps) {
             ) : (
               <div className="absolute inset-0 bg-black/60" />
             )}
-            {/* Play button — glass-bubble style */}
-            <span className="glass-bubble relative z-10 flex items-center justify-center w-14 h-14 rounded-full group-hover:scale-110 transition-transform duration-150">
-              <svg
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-6 h-6 text-white ml-1"
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
+            {/* Play button */}
+            <span className="glass-bubble relative z-10 flex h-11 w-11 items-center justify-center rounded-lg text-txt-primary transition-colors group-hover:border-interactive-muted group-hover:bg-surface-chat">
+              <Icon name="play" size={18} strokeWidth={1.75} />
             </span>
           </button>
         )}
@@ -78,9 +84,9 @@ export function VideoEmbed({ embed }: VideoEmbedProps) {
 
       {/* Title / provider footer */}
       {(embed.title || providerLabel) && (
-        <div className="px-3 py-2">
+        <div className="border-t border-border-hard px-3 py-2">
           {providerLabel && (
-            <div className="text-[12px] text-txt-tertiary font-medium mb-0.5">
+            <div className="mb-0.5 truncate font-mono text-label text-txt-tertiary">
               {providerLabel}
             </div>
           )}
@@ -89,7 +95,7 @@ export function VideoEmbed({ embed }: VideoEmbedProps) {
               href={embed.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[14px] text-sky-400 font-semibold hover:underline line-clamp-2"
+              className="line-clamp-2 text-body font-medium leading-snug text-txt-primary hover:underline"
             >
               {embed.title}
             </a>

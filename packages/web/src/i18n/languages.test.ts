@@ -1,41 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { availableLanguages, isSupportedLanguage, pickLanguage, readPreviewLanguage, resolveSupportedLanguage, supportedLanguages } from './languages';
-
-describe('resolveSupportedLanguage', () => {
-  it('maps a regional tag to its base language when that base is shipped', () => {
-    expect(resolveSupportedLanguage('ru-RU')).toBe('ru');
-    expect(resolveSupportedLanguage('de-CH')).toBe('de');
-    expect(resolveSupportedLanguage('pt-BR')).toBe('pt');
-  });
-
-  it('is case-insensitive', () => {
-    expect(resolveSupportedLanguage('EN-us')).toBe('en');
-  });
-
-  it('returns null for a language that is not shipped', () => {
-    expect(resolveSupportedLanguage('fr')).toBeNull();
-    expect(resolveSupportedLanguage('')).toBeNull();
-  });
-});
+import { availableLanguages, isSupportedLanguage, pickLanguage, readPreviewLanguage, supportedLanguages } from './languages';
 
 describe('pickLanguage', () => {
   const allReleased = new Set(['en', 'ru', 'de', 'pt', 'zh']);
 
-  it('prefers the stored choice over the browser languages', () => {
-    expect(pickLanguage('de', ['ru-RU'], allReleased)).toBe('de');
+  it('takes the stored choice', () => {
+    expect(pickLanguage('de', allReleased)).toBe('de');
+    expect(pickLanguage('ru')).toBe('ru');
   });
 
-  it('ignores a stored value that is not a shipped language', () => {
-    expect(pickLanguage('fr', ['ru-RU'], allReleased)).toBe('ru');
-  });
-
-  it('takes the first browser language that is shipped, in order', () => {
-    expect(pickLanguage(null, ['fr-FR', 'de-DE', 'ru'], allReleased)).toBe('de');
-  });
-
-  it('falls back to English when nothing matches', () => {
-    expect(pickLanguage(null, ['fr-FR', 'ja'])).toBe('en');
-    expect(pickLanguage(null, [])).toBe('en');
+  it('is English without a choice, or with one that is not a shipped language', () => {
+    expect(pickLanguage(null, allReleased)).toBe('en');
+    expect(pickLanguage('', allReleased)).toBe('en');
+    expect(pickLanguage('fr', allReleased)).toBe('en');
   });
 });
 
@@ -44,22 +21,14 @@ describe('availableLanguages', () => {
     expect(availableLanguages.map((l) => l.code)).toEqual(['en', 'ru', 'de', 'pt', 'zh']);
   });
 
-  it('never lets detection pick a language that is not released', () => {
+  it('never lets a stored choice name a language that is not released', () => {
     // The gate stays in place for the next language; exercise it with an
     // explicit released set so the test does not depend on the shipped flags.
-    const englishOnly = new Set(['en']);
-    expect(pickLanguage('ru', ['ru-RU'], englishOnly)).toBe('en');
-    expect(pickLanguage(null, ['de-DE'], englishOnly)).toBe('en');
-  });
-
-  it('lets detection pick a released language', () => {
-    expect(pickLanguage('ru', ['en'])).toBe('ru');
-    expect(pickLanguage(null, ['de-DE'])).toBe('de');
+    expect(pickLanguage('ru', new Set(['en']))).toBe('en');
   });
 
   it('still lets code select any supported language explicitly', () => {
     expect(isSupportedLanguage('ru')).toBe(true);
-    expect(resolveSupportedLanguage('de-CH')).toBe('de');
   });
 });
 

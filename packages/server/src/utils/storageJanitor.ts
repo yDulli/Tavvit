@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { and, eq, inArray, isNotNull, isNull, lt, lte, notExists } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, lt, lte, notExists } from 'drizzle-orm';
 import { FileStore } from '@tus/file-store';
 import { config } from '../config.js';
 import { getDb, getRawDb, schema } from '../db/index.js';
@@ -13,6 +13,8 @@ import { sweepAppliedEvents } from './federationAppliedEvents.js';
 import { sweepSubjectClocks } from './federationSubjectClock.js';
 import { cleanupUnusedStickerAssets } from './stickerAssets.js';
 import type { StorageStats, StorageBreakdown, OrphanedFile, CleanupResult } from '@backspace/shared';
+import { profileImageFilenames } from './profileImageRefs.js';
+import { renameLegacyUploads } from './legacyUploadNames.js';
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico', '.bmp', '.avif']);
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.avi', '.mkv']);
@@ -61,65 +63,13 @@ function getDiskFiles(): DiskFile[] {
   }
 }
 
-/** Filenames referenced by user/space profiles (avatars, banners, icons). */
+/**
+ * Filenames a picture field shows: account pictures and banners, space
+ * profiles, space icons and banners, group DM icons (utils/profileImageRefs.ts,
+ * the same list the routes check before they delete a replaced picture).
+ */
 function getProfileReferencedFilenames(): Set<string> {
-  const db = getDb();
-  const referenced = new Set<string>();
-
-  // User avatars
-  const avatarRows = db.select({ avatar: schema.users.avatar })
-    .from(schema.users)
-    .where(isNotNull(schema.users.avatar))
-    .all();
-  for (const row of avatarRows) {
-    if (row.avatar) referenced.add(path.basename(row.avatar));
-  }
-
-  // User banners
-  const bannerRows = db.select({ banner: schema.users.banner })
-    .from(schema.users)
-    .where(isNotNull(schema.users.banner))
-    .all();
-  for (const row of bannerRows) {
-    if (row.banner) referenced.add(path.basename(row.banner));
-  }
-
-  // Space icons
-  const iconRows = db.select({ icon: schema.spaces.icon })
-    .from(schema.spaces)
-    .where(isNotNull(schema.spaces.icon))
-    .all();
-  for (const row of iconRows) {
-    if (row.icon) referenced.add(path.basename(row.icon));
-  }
-
-  // Space banners
-  const spaceBannerRows = db.select({ banner: schema.spaces.banner })
-    .from(schema.spaces)
-    .where(isNotNull(schema.spaces.banner))
-    .all();
-  for (const row of spaceBannerRows) {
-    if (row.banner) referenced.add(path.basename(row.banner));
-  }
-
-  // Group DM icons. Skip soft-deleted DMs (the soft-deleted-DM purge in
-  // cleanupSoftDeletedDmChannels handles their attachments separately) and
-  // skip absolute URLs (those reference assets on a remote instance, not
-  // local upload-dir files).
-  const dmIconRows = db.select({ icon: schema.dmChannels.icon })
-    .from(schema.dmChannels)
-    .where(and(
-      isNotNull(schema.dmChannels.icon),
-      isNull(schema.dmChannels.deletedAt),
-    ))
-    .all();
-  for (const row of dmIconRows) {
-    if (row.icon && !row.icon.startsWith('http')) {
-      referenced.add(path.basename(row.icon));
-    }
-  }
-
-  return referenced;
+  return profileImageFilenames();
 }
 
 /** All filenames referenced anywhere: attachments + profiles. */
@@ -979,6 +929,16 @@ export async function runFederationJanitor(): Promise<void> {
       console.log(
         `[storage-janitor] Federation GC sweep: outbox=${outbox} mutationLog=${mutLog} appliedEvents=${appliedEvents} subjectClocks=${subjectClocks} fileQueue=${fileQ} dmChannels=${dmGc} pendingPeers=${pendingPeers}`,
       );
+    }
+
+    // Files of messages from before 1.32.4 get names nobody can guess, a batch an hour (utils/legacyUploadNames.ts).
+    try {
+      const renames = renameLegacyUploads();
+      if (renames.renamed + renames.missing > 0) {
+        console.log(`[storage-janitor] Gave ${renames.renamed} older upload(s) names that cannot be guessed${renames.missing > 0 ? `; ${renames.missing} not on disk` : ''}${renames.left ? '; more next hour' : ''}`);
+      }
+    } catch (err) {
+      console.error('[storage-janitor] Renaming older uploads failed:', err);
     }
 
     // Expire approval requests:

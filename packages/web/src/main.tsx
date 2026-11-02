@@ -1,147 +1,46 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { App } from './App';
-import { startPendingMessageOrchestrator } from './stores/pendingMessageRehydrate';
-import i18n, { initI18n } from './i18n';
 import './styles/globals.css';
-import { initializeInterfaceScale } from './platform/interfaceScale';
-import { waitForEmojiShortcodeNames } from './utils/emojiShortcodes';
+import { showsLanding } from './landing/entry';
+import { showsPublicPage } from './publicPages/entry';
 
-const stopInterfaceScale = initializeInterfaceScale();
-if (import.meta.hot) import.meta.hot.dispose(stopInterfaceScale);
+/**
+ * The page's only script. It decides what this page load is and fetches just
+ * that: the public product page for a visitor, a public page such as the status for
+ * anyone, the app for everyone else. Nothing here may import the app, or a visitor
+ * downloads all of it for a page of text.
+ */
 
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null; showStack: boolean }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null, showStack: false };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ErrorBoundary]', error, errorInfo.componentStack);
-    // Renderer is alive enough to show the fallback UI — disarm the boot timer.
-    // Without this, the timer fires 20s after a caught render error and
-    // overrides the in-app error UI with native recovery, which is wrong.
-    // Gated on VITE_FORCE_BOOT_STALL so the smoke harness can suppress both
-    // ping paths simultaneously when testing the renderer-stalled recovery path.
-    if (import.meta.env.VITE_FORCE_BOOT_STALL) return;
-    if (typeof window.backspace?.rendererReady === 'function') {
-      window.backspace.rendererReady();
-    }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{
-          height: 'calc(100*var(--app-vh))',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#0b0b10',
-          color: '#efefef',
-          flexDirection: 'column',
-          gap: '16px',
-          padding: '24px',
-        }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>{i18n.t('common:crash.title')}</h1>
-          <p style={{ color: '#a0a0aa', maxWidth: '480px', textAlign: 'center' }}>{this.state.error?.message}</p>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => this.setState({ hasError: false, error: null })}
-              style={{
-                padding: '8px 24px',
-                backgroundColor: '#7c6cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-              }}
-            >
-              {i18n.t('common:actions.tryAgain')}
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '8px 24px',
-                backgroundColor: 'transparent',
-                color: '#a0a0aa',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-              }}
-            >
-              {i18n.t('common:crash.reload')}
-            </button>
-          </div>
-          {this.state.error?.stack && (
-            <details
-              open={this.state.showStack}
-              onToggle={(e) => this.setState({ showStack: (e.target as HTMLDetailsElement).open })}
-              style={{ maxWidth: '600px', width: '100%', marginTop: '8px' }}
-            >
-              <summary style={{ color: '#a0a0aa', cursor: 'pointer', fontSize: '13px' }}>
-                {i18n.t('common:crash.details')}
-              </summary>
-              <pre style={{
-                marginTop: '8px',
-                padding: '12px',
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                borderRadius: '8px',
-                fontSize: '11px',
-                color: '#a0a0aa',
-                overflow: 'auto',
-                maxHeight: '200px',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-              }}>
-                {this.state.error.stack}
-              </pre>
-            </details>
-          )}
-        </div>
-      );
-    }
-    return this.props.children;
-  }
+/** A chunk could not be fetched (no network, or a build replaced mid-load). */
+function showLoadFailure(error: unknown): void {
+  console.error('[boot] Could not load the page:', error);
+  const root = document.getElementById('root');
+  if (!root) return;
+  const message = document.createElement('p');
+  message.className = 'empty-state-body';
+  message.textContent = 'Tavvit could not load. Check your connection and try again.'; // i18n-check: allow-literal (shown when no catalog could load)
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.className = 'btn-primary mt-3';
+  retry.textContent = 'Reload'; // i18n-check: allow-literal (shown when no catalog could load)
+  retry.addEventListener('click', () => window.location.reload());
+  const frame = document.createElement('div');
+  frame.className = 'empty-state h-full';
+  frame.append(message, retry);
+  root.replaceChildren(frame);
 }
 
-const root = document.getElementById('root');
-if (!root) throw new Error('Root element not found');
-
-startPendingMessageOrchestrator();
-
-function render(): void {
-  ReactDOM.createRoot(root!).render(
-    <React.StrictMode>
-      <ErrorBoundary>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </ErrorBoundary>
-    </React.StrictMode>
-  );
+function startApp(): Promise<unknown> {
+  // The app waits for the emoji names before its first render, and they are chunks
+  // of their own. Asked for together with the app they arrive with it, not a
+  // round trip later; a failure here is the app's to handle when it asks itself.
+  void import('@emoji-mart/data').catch(() => {});
+  void import('./utils/discordEmojiAliases').catch(() => {});
+  return import('./appBoot');
 }
 
-// The selected language's catalogs are loaded before the first paint, so
-// nothing flashes English first. English itself is bundled, so if loading a
-// language fails the app still renders, in English, rather than not at all.
-// The emoji shortcode names (emoji-mart's data set and Discord's table, each a
-// chunk of its own, requested with the main chunk through the modulepreload
-// links src/build/startupChunks.ts adds) load alongside, so text renders
-// converted from the first paint. The wait is capped: a chunk that stalls
-// must not leave a blank page. Past the cap the app renders with shortcodes as
-// written and converts them when the names land; the wait never rejects.
-const i18nReady = initI18n()
-  .catch((err) => { console.error('[i18n] Failed to initialise, rendering in English:', err); });
-const EMOJI_NAMES_MAX_WAIT_MS = 1000;
-Promise.all([i18nReady, waitForEmojiShortcodeNames(EMOJI_NAMES_MAX_WAIT_MS)]).finally(render);
+function startPage(): Promise<unknown> {
+  if (showsLanding()) return import('./landing/boot');
+  if (showsPublicPage()) return import('./publicPages/boot');
+  return startApp();
+}
+
+startPage().catch(showLoadFailure);

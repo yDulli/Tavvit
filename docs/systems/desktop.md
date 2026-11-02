@@ -4,11 +4,16 @@ Source files:
 - `packages/desktop/src/main.ts` — Main process: window management, tray, IPC handlers, auto-update, deep links, app lifecycle
 - `packages/desktop/src/preload.ts` — Context bridge: exposes `window.backspace` API to renderer
 - `packages/desktop/src/updateCapability.ts` — Signature probe: can this build install its own updates
+- `packages/desktop/src/updateInstall.ts` — When a downloaded update installs (`shouldInstallNow`), the restart-hidden marker, the updater's log file
 - `packages/desktop/src/updateStatus.ts` — Update status union, store, and the shared prompt predicate
 - `packages/desktop/src/updateDismissal.ts` — Per-version dismissal persisted to userData
 - `packages/desktop/src/updaterCache.ts` — Reclaims the updater download cache on manual-mode builds
 - `packages/desktop/src/notificationRetention.ts` — Holds each shown native notification until it is clicked, closed or fails (see Notifications)
-- `packages/desktop/src/activityDetector.ts` — Process polling, game dictionary loading/sync, activity change detection
+- `packages/desktop/src/activityDetector.ts` — Polling, game list loading/sync, activity change detection
+- `packages/desktop/src/gameMatching.ts` — What is pure in game detection: reading the answers and the list, choosing a game
+- `packages/desktop/src/gameLibraries.ts` — What Steam, Epic Games and GOG leave on this computer
+- `packages/desktop/src/gameDetectionSettings.ts` — Game detection on/off and programs added by hand in earlier versions, persisted to userData
+- `packages/web/src/platform/callStateBridge.ts` — Tells main whether a voice session is open (`setCallActive`), so an update never installs during a call
 - `packages/desktop/src/keybindManager.ts` — Global keybinds via uIOhook, native keycode mapping, press/release tracking
 - `packages/web/src/stores/keybindStore.ts` — Client-side keybind persistence (Zustand + localStorage)
 - `packages/web/src/hooks/useKeybinds.ts` — Keybind dispatch: Electron IPC bridge + web capture-phase fallback
@@ -19,7 +24,7 @@ Source files:
 - `packages/desktop/scripts/macSign.js` — Ad-hoc macOS code signing fallback (critical: without it the app will not launch)
 - `io.github.TheZwiss.backspace.yml` — Flatpak manifest (offline x86_64/aarch64 source build)
 - `flatpak/` — Flatpak launcher, desktop entry, AppStream metadata, and build instructions
-- `packages/desktop/resources/games.json` — Bundled game dictionary seed (versioned)
+- `packages/desktop/resources/games.json` — Bundled game list (versioned), published beside the installers with every release
 
 ---
 
@@ -36,14 +41,19 @@ The desktop package compiles to CommonJS (`module: "commonjs"`) targeting ES2022
 
 ## Window Management
 
+The window's own buttons sit on the page's frame, whose colour a surface theme changes.
+`applyAppearance` sends the colour through `setFrameColor` (`set-frame-color` over IPC) and main
+passes it to `setTitleBarOverlay` after checking it is a plain `#rrggbb`. An older app has no
+such method, and its buttons keep the colour it was built with until it updates.
+
 ### Creation (`main.ts:createWindow()`)
 
 ```
 Default size: 1280 x 800
 Minimum size: 940 x 500
 Title bar: hiddenInset (macOS), hidden with titleBarOverlay (Windows/Linux)
-Title bar overlay: bg #0b0b10, symbol #d8d8de, height 32px
-Background color: #313338
+Title bar overlay: bg #0d0e11, symbol #edeef2, height 32px
+Background color: #0d0e11
 ```
 
 ### State Persistence
@@ -76,13 +86,30 @@ Close does **not** quit the app. The `close` event is intercepted; the window is
 - `app.quit()` (Cmd+Q on macOS)
 - `before-quit` lifecycle event
 
-### URL Loading Priority
+### The address the window opens (`appUrl.ts`)
 
-1. `BACKSPACE_URL` environment variable (managed deployments)
-2. Saved instance URL from `{userData}/instance-url.json`
-3. No URL: loads `resources/instance-picker.html` (local HTML file)
+Tavvit Desktop opens one server, the production one, and nothing else:
+`PRODUCTION_URL = 'https://tavvit.com'`. There is no instance picker, no saved
+server address and no setup step; `createWindow()` calls
+`mainWindow.loadURL(APP_URL)` and the server's own login page is the first
+thing a new user sees. Sign-in and the session live in the default Electron
+session's cookies and local storage, so they persist across restarts.
 
-Instance URL management functions: `loadInstanceUrl()`, `saveInstanceUrl()`, `clearInstanceUrl()` — all operate on `{userData}/instance-url.json`.
+| Input | Result |
+|-------|--------|
+| Packaged build (`app.isPackaged`) | always `PRODUCTION_URL`; no environment variable can change it |
+| Unpacked build with `TAVVIT_DEV_URL=http://localhost:5173` | that address (http/https only), for development |
+| Unpacked build without it, or with an unusable value | `PRODUCTION_URL` |
+
+`resolveAppUrl()` is the one implementation, used by `createWindow()` and by
+the recovery page's Reload. `DOWNLOAD_PAGE_URL` (`/download` on the same
+origin) is where every "download the update" action leads (`RELEASES_URL` in
+`updateStatus.ts`), and the update feed is on the same origin too (Auto-Update
+Publishing below), so the three can never point at different servers.
+
+Builds before this one saved a picked address in `{userData}/instance-url.json`.
+`removeLegacyInstanceFile()` deletes it at module load, so an old address can
+never stand between the app and the server.
 
 ### Interface Scale
 
@@ -113,26 +140,6 @@ State plumbing:
 Predicate scope: only intercept URLs whose host matches a **currently connected** instance. Invites for unknown instances or disconnected federated peers still open externally — that's the entry point for `JoinPage`'s federation-redirect flow and must not be hijacked.
 
 Dev-mode caveat: if a developer runs Electron pointed at the Vite dev server (`http://localhost:5173`) while the API runs on `http://localhost:3005`, `window.location.origin` won't match the API origin and interception will not trigger. Production and standard-Electron-pointed-at-server dev are unaffected.
-
----
-
-## Instance Picker
-
-When no instance URL is configured, the app loads `resources/instance-picker.html` — a self-contained HTML page where the user enters their Backspace instance URL. The renderer communicates the chosen URL back via the `set-instance-url` IPC handler.
-
-After navigation (both to an instance URL and back to the picker), the main process forces Electron to re-evaluate drag regions by momentarily resizing the window (+1px then back).
-
-### Non-destructive "Change Instance" navigation
-
-The tray menu, macOS app menu, and recovery surface all include a "Change Instance" option. This navigation is **non-destructive**: the saved instance URL is preserved when navigating to the picker. The picker's `init()` function reads the current saved URL via `getInstanceUrl()` IPC and, if one exists:
-
-- Pre-fills the URL input with the current value.
-- Shows a Cancel button (hidden by default; only shown when a saved URL exists).
-- Switches the header copy from "Welcome to Backspace / Connect to your instance" to "Switch instance / Connect to a different Backspace instance, or cancel to stay."
-
-**Cancel button behavior:** Clicking Cancel re-saves the existing URL via `setInstanceUrl` (idempotent) and navigates back to it. The saved URL is only overwritten when the user explicitly clicks Connect on a *different* URL. This means the user can always back out of an accidental "Change Instance" click.
-
-**Loading state:** `setLoading(true)` — invoked when Connect is clicked — disables both the Connect button and the Cancel button to prevent a race between the `setInstanceUrl` calls.
 
 ---
 
@@ -217,9 +224,10 @@ All four assets are produced by `scripts/gen-icons.mjs` from `assets/brand/{mark
 
 | Item | Action |
 |------|--------|
-| Show Backspace | `window.show()` + `focus()` |
+| Show Tavvit | `window.show()` + `focus()` |
 | Hide | `window.hide()` |
-| Change Instance | Load picker (non-destructive — saved URL preserved), show + focus |
+| Check for Updates… / update action | See Auto-Update |
+| Reload | `handleRecoveryAction('reload')`: loads the app address again and shows the window (also leaves recovery) |
 | Quit | Set `isQuitting = true`, `app.quit()` |
 
 Tray click toggles window visibility (show/hide).
@@ -228,9 +236,10 @@ Tray click toggles window visibility (show/hide).
 
 ## Deep Linking
 
-Protocol: `backspace://`
+Protocol: `tavvit://`
 
-Registered via `app.setAsDefaultProtocolClient('backspace')` and in `electron-builder.yml` under `protocols`.
+Registered via `app.setAsDefaultProtocolClient('tavvit')` and in `electron-builder.yml` under `protocols`. `orbit://` stays registered too, for links from before the rename.
+`packages/web/src/platform/deepLink.ts` parses the same scheme.
 
 ### Platform Handling
 
@@ -242,7 +251,7 @@ Registered via `app.setAsDefaultProtocolClient('backspace')` and in `electron-bu
 
 ### Flow
 
-1. `handleDeepLink(url)` receives a `backspace://` URL
+1. `handleDeepLink(url)` receives an `tavvit://` URL
 2. If window exists: sends `deep-link` IPC to renderer, shows + focuses window
 3. If app not ready: stores in `pendingDeepLink` for delivery after `ready-to-show`
 
@@ -260,12 +269,21 @@ Registered via `app.setAsDefaultProtocolClient('backspace')` and in `electron-bu
 Powered by `electron-updater`. Loaded via `require()` (not import) for graceful
 degradation when not available.
 
+On a build that can install its own updates (`auto`, which every packaged
+Windows build is) nobody has to do anything: an update downloads by itself,
+then installs silently and starts the app again at a moment that interrupts
+nobody (see Install policy). Restart now in the toast, a click on the update
+notification and the tray's update item only make that moment now.
+
 Source files:
 - `updateCapability.ts` — measures whether this build can install its own updates
+- `updateInstall.ts` — `shouldInstallNow`, the restart-hidden marker, and the
+  logger that writes the updater's log file
 - `updateStatus.ts` — the `UpdateStatus` union, the `UpdateStatusStore`, and the
   shared "should we interrupt the user" predicate
 - `updateDismissal.ts` — per-version dismissal persisted to userData
 - `updaterCache.ts` — reclaims the download cache on builds that cannot install
+- `packages/web/src/platform/callStateBridge.ts` — reports an open voice session to main
 - `packages/web/src/stores/updateStore.ts` — the renderer mirror
 - `packages/web/src/components/ui/UpdateToast.tsx` — the prompt
 
@@ -297,10 +315,25 @@ for why the ad-hoc signature makes it impossible today.
 ### Configuration (`initAutoUpdater()`)
 
 ```
-autoDownload         = capability === 'auto'
-autoInstallOnAppQuit = capability === 'auto'
-Publish: GitHub (TheZwiss/backspace)
+autoDownload                = capability === 'auto'
+autoInstallOnAppQuit        = capability === 'auto'
+disableDifferentialDownload = true
+disableWebInstaller         = true
+logger                      = createUpdaterLogger(userData)   // {userData}/logs/updater.log
+Publish: generic, https://tavvit.com/downloads/desktop (electron-builder.yml)
 ```
+
+**Every update downloads whole.** The update server answers one byte range per
+request, so electron-updater's differential download (the one that reads the
+`.blockmap`) could only fail and start over with the whole file.
+`disableDifferentialDownload` goes to the whole installer straight away.
+
+**The updater's log.** `createUpdaterLogger` (`updateInstall.ts`) writes every
+line electron-updater logs (info, warn, error, debug) with an ISO time and its
+level to `{userData}/logs/updater.log`, because nothing reads the console on a
+packaged Windows build, so a failed update can be explained afterwards. The
+file starts over when a line would take it past 1 MB, and a write that fails
+is ignored: logging must never be what breaks an update.
 
 In `manual` mode nothing is downloaded, so no proxy server is created, Squirrel
 is never invoked, and the spurious install error never fires. `purgeUpdaterCache`
@@ -379,13 +412,23 @@ Exactly one version is remembered, compared by equality. Dismissing 1.0.4
 silences 1.0.4 and nothing else, so 1.0.5 surfaces normally. A corrupt or
 truncated file yields "nothing dismissed" rather than throwing at startup.
 
+Dismissing silences the toast and the notification, nothing else: in `auto`
+mode a dismissed update still installs at its moment (the toast's Later says
+so on the `ready` card: "It installs by itself the next time Tavvit is in the
+tray or you are away."). A `manual` build installs nothing by itself. After a
+`failed` install another attempt can still come (the half-hourly check runs
+again, and a moment timer already started keeps looking), but it may fail the
+same way, so the toast promises nothing. On both cards Later names the place
+the update stays instead: "You can install this later from Settings, Desktop".
+
 ### Check schedule
 
 | Trigger | Delay |
 |---------|-------|
-| Initial check | 10 seconds after app ready |
-| Periodic check | Every 4 hours |
-| Manual check | `check-for-updates` IPC from renderer |
+| Initial check | 10 seconds after `initAutoUpdater()` |
+| Periodic check | Every 30 minutes, so a new version is picked up within the half hour |
+| While an update waits | The two checks above are skipped while a downloaded update waits for its moment (`phase: 'ready'`) |
+| Manual check | `check-for-updates` IPC from renderer, and the tray's and recovery page's Check for Updates (recovery `check-update`) |
 
 ### Event flow (main -> renderer)
 
@@ -411,14 +454,60 @@ Check-phase errors are recorded as `{ phase: 'failed', version: null }`, which
 keeps them out of the toast while leaving them visible in Settings. Interrupting
 someone because a background poll hit a flaky network is noise.
 
+### Install policy (`updateInstall.ts`)
+
+On `update-downloaded` in `auto` mode, `scheduleAutoInstall` looks for its
+moment at once and then every 30 seconds (`INSTALL_CHECK_INTERVAL_MS`), and
+installs as soon as `shouldInstallNow` agrees:
+
+| Moment | Installs |
+|---|---|
+| A voice session is open (`callActive`) | never, however long it lasts |
+| The window is hidden in the tray, minimised, or gone | at once |
+| The window is shown | once nobody has used the keyboard or mouse anywhere on the computer for 5 minutes (`powerMonitor.getSystemIdleTime()` against `IDLE_BEFORE_INSTALL_SECONDS`) |
+
+**Only the renderer knows about calls.** `initCallStateBridge`
+(`packages/web/src/platform/callStateBridge.ts`, started once from `AppLayout`)
+sends `set-call-active` with `hasVoiceSession(voiceStore)` when it starts and
+again whenever the answer changes: true while a voice channel is connected,
+connecting or reconnecting, while a DM call is being placed or is ringing in,
+and while a DM call is active without a connection error. Main keeps the last
+value it was sent (`callActive`, false until told). A shell whose preload has
+no `setCallActive`, or a browser, is left alone by the bridge, and a web client
+that predates the bridge never reports a call, so it holds no install back.
+
+**Installing is one call, made the same silent way everywhere.**
+`installUpdateNow` stops the moment timer, writes the restart-hidden marker
+when the window is hidden or gone (below), and calls
+`autoUpdater.quitAndInstall(true, true)`: `isSilent` runs the NSIS installer
+with `/S`, so no installer window appears, and `isForceRunAfter` adds
+`--force-run`, so the app starts again when it is done. The moment timer, the
+toast's Restart now (`install-update`) and the native notification's click go
+through `installUpdateNow`. The recovery page's Restart to Install and the
+tray's and macOS app menu's update item (`handleRecoveryAction('install-update')`
+in `recovery.ts`) call `quitAndInstall(true, true)` directly, without the
+marker. `autoInstallOnAppQuit` still installs a downloaded update when the app
+quits normally.
+
+**Starting hidden after an update.** `markRestartHidden` writes
+`{userData}/restart-hidden.json` (`{ at }`) when the install starts while the
+window is not visible, so the restarted app goes back to the tray instead of
+opening in front of someone who had put it away. On the next start
+`consumeRestartHidden` reads and deletes the marker before the window is
+created; when it is at most 10 minutes old the window stays hidden on
+`ready-to-show`, as for a `--hidden` login launch. A marker that cannot be
+read, is older, or lies in the future is ignored, so an install that never
+restarted cannot hide a later launch.
+
 ### Install
 
 `install-update` IPC:
 
-- `manual` → opens the releases page because there is no in-place install.
+- `manual` → opens the download page because there is no in-place install.
 - `external` → does nothing because the package manager owns the entire update
   lifecycle and no in-app action is presented for this capability.
-- otherwise → `autoUpdater.quitAndInstall()`, then a **4-second watchdog**. If the
+- otherwise → `installUpdateNow(autoUpdater)` (the silent
+  `quitAndInstall(true, true)` above), then a **4-second watchdog**. If the
   app is still alive and still `ready` after it, the status flips to `failed`.
   A successful install takes the app down before the timer fires. This is defence
   in depth against the silent no-op recurring on a platform we did not anticipate.
@@ -431,12 +520,12 @@ suppressed when the window is focused (the in-app toast covers that) and when
 
 | Capability | Title | Body | Click |
 |---|---|---|---|
-| `auto` | Backspace update ready | Click to restart and install version X. | `quitAndInstall()` |
-| `manual` | Backspace X is available | Click to open the download page. | `shell.openExternal(RELEASES_URL)` |
+| `auto` | Tavvit update ready | Click to restart and install version X. | `installUpdateNow()` |
+| `manual` | Tavvit X is available | Click to open the download page. | `shell.openExternal(RELEASES_URL)` |
 | `external` | — | No in-app notification; the package manager notifies the user. | — |
 
-Win32 only: `app.setAppUserModelId('com.backspace.desktop')` is set early in
-startup so notifications attribute to "Backspace" in Windows Action Center.
+Win32 only: `app.setAppUserModelId('de.hashhive.orbit')` is set early in
+startup so notifications attribute to "Tavvit" in Windows Action Center.
 
 ### Recovery integration
 
@@ -638,7 +727,7 @@ When the renderer fails to load or boot, the main process surfaces a native reco
 
 Source files:
 - `packages/desktop/src/recovery.ts` — state store, event handlers, action funnel, menu builders
-- `packages/desktop/src/instanceUrl.ts` — shared instance-URL helpers (used by main.ts and recovery.ts)
+- `packages/desktop/src/appUrl.ts` — the address the window opens (`resolveAppUrl`, used by main.ts and recovery.ts)
 - `packages/desktop/resources/recovery.html` — UI page, vanilla HTML/CSS/JS
 
 ### State Model
@@ -672,7 +761,7 @@ Two flags not in the public state: `inRecoveryMode` (private to the store, guard
 The boot ping is **not a heartbeat** — it is a one-shot per-navigation signal. Web-side call sites:
 
 - `packages/web/src/App.tsx` — `useEffect` with `[]` deps, fires on first commit (semantic: "renderer survived render," not "data loaded")
-- `packages/web/src/main.tsx` — `ErrorBoundary.componentDidCatch`, fires when in-app error UI mounts (so the boot timer doesn't override the ErrorBoundary fallback 20s later)
+- `packages/web/src/appBoot.tsx` — `ErrorBoundary.componentDidCatch`, fires when in-app error UI mounts (so the boot timer doesn't override the ErrorBoundary fallback 20s later)
 
 Main-side gating uses a per-navigation `pingReceivedThisNav` flag (reset on `did-navigate`, set in `handleRendererReady`). If the ping arrives BEFORE the timer is armed — the typical SPA case, because `useEffect` runs in a microtask after bundle execution + React render, which is before `window.onload` that `did-finish-load` waits on — `armBootTimer` checks the flag and short-circuits. If the ping arrives AFTER the timer is armed (less-common ordering), it clears the existing timer via `clearBootTimer`. Either path means a healthy renderer never trips false recovery. The `bootArmed` flag retains its role: it ensures a `clearBootTimer` call inside the timeout callback is a no-op if the timer was already disarmed by the ping.
 
@@ -680,7 +769,7 @@ Navigation-aware arming: `did-navigate` (top-level non-same-document) clears any
 
 ### Recovery UI
 
-`recovery.html` is loaded into the existing `mainWindow` via `loadFile()`. Mirrors `instance-picker.html` drag-region pattern (32px titlebar with `-webkit-app-region: drag`, content container with `no-drag`).
+`recovery.html` is loaded into the existing `mainWindow` via `loadFile()`. It has a 32px titlebar with `-webkit-app-region: drag` and a content container with `no-drag`.
 
 Page reads initial state via `getRecoveryState()` IPC and subscribes to `recovery-state-changed` events for live updates. All button clicks dispatch through a single `recovery-action` IPC channel with strict allowlist validation in main.
 
@@ -689,16 +778,12 @@ Page reads initial state via `getRecoveryState()` IPC and subscribes to `recover
 | Reload | always | always |
 | Restart to Install Update | `updateState === 'downloaded'` | always when visible |
 | Check for Updates | always | not in `'checking'` / `'downloading'` / `'downloaded'` / `'available-manual'` |
-| Change Instance | always | always |
-| Open Releases Page | `updateState === 'error'` or `'available-manual'` | always when visible |
+| Open Download Page | `updateState === 'error'` or `'available-manual'` | always when visible |
+| Quit Tavvit | always | always |
 
-In `'available-manual'` the Open Releases button relabels to "Download Backspace
+In `'available-manual'` the Open Download Page button relabels to "Download Tavvit
 X". Restart to Install is never shown in that state, because the build cannot
-install in place.
-
-| Quit Backspace | always | always |
-
-**Change Instance from recovery is non-destructive.** The saved URL is not cleared when navigating to the picker; see the Instance Picker section above for the full behavior (pre-filled input, Cancel button, header copy update).
+install in place. There is no server switcher: Reload is the way back to the app.
 
 Hint text is computed as a function of `(reason.code, updateState)` — see code in `recovery.html`. The `renderer-stalled` text intentionally avoids claiming an update is the cause (slow Pi/cold cache could also trigger it).
 
@@ -714,7 +799,6 @@ Cmd/Ctrl+R is wired as a keyboard shortcut for Reload.
 |-------|----------|
 | Recovery entered | `[recovery] entered: <code> — <detail>` |
 | Exited via Reload | `[recovery] exited (reload)` |
-| Exited via Change Instance | `[recovery] exited (change-instance)` |
 
 The enter log fires after the state update but before the re-entry guard, so repeated entry (reason update with no re-navigation) also logs — useful for diagnostics.
 
@@ -728,7 +812,7 @@ When the app is launched with `--hidden` (autostart), `enterRecoveryMode()` alwa
 
 ### Force-Kill Fix
 
-The recovery surface's "Restart to Install Update" button — and the native notification's click handler — both call `autoUpdater.quitAndInstall()` **directly**. They do not rely on `autoInstallOnAppQuit`'s on-quit hook.
+The recovery surface's "Restart to Install Update" button calls `autoUpdater.quitAndInstall(true, true)` and the native notification's click handler `installUpdateNow()`, which makes the same call: both install **directly**, silently, and start the app again (see Install policy). They do not rely on `autoInstallOnAppQuit`'s on-quit hook.
 
 Why this matters: a user who Task-Manager-kills a broken app never triggers the on-quit hook; the downloaded update sits on disk. On next launch, the app loads the same broken old version. With recovery active, the user lands in recovery → clicks Restart → install applies cleanly via the direct call. The on-quit hook bypass is no longer fatal.
 
@@ -738,7 +822,7 @@ Why this matters: a user who Task-Manager-kills a broken app never triggers the 
 
 | Concern | Mechanism |
 |---------|-----------|
-| Shared instance URL helpers | Both files import from `instanceUrl.ts` |
+| The app's address | Both files import `resolveAppUrl` and `DEV_URL_ENV` from `appUrl.ts` |
 | `mainWindow` reference | `recovery.ts` holds its own ref via `setMainWindow(win)` setter; `main.ts` calls on `createWindow()` and `closed` |
 | `autoUpdater` reference | `setAutoUpdater(au)` setter on `recovery.ts`; main calls inside `initAutoUpdater()` success path |
 | Quit invariant | `main.ts` exports `requestQuit()` (sets `isQuitting + app.quit()`); recovery uses callback registered via `setOnQuitRequested(cb)` |
@@ -757,7 +841,7 @@ Executed before each release. See `docs/superpowers/specs/2026-05-03-electron-re
 
 - Checks `Notification.isSupported()` before showing
 - `silent: false` (plays system sound)
-- Click handler: defaults to show + focus the main window; an optional `onClick` parameter overrides this (used by the update-ready notification to call `autoUpdater.quitAndInstall()` directly)
+- Click handler: defaults to show + focus the main window; an optional `onClick` parameter overrides this (used by the update-ready notification to call `installUpdateNow()`, the silent install, directly)
 - **Kept referenced until done** (`notificationRetention.ts`, `NotificationRetainer`): each `Notification` is held in a module-level set from just before `show()` until its first `click`, `close` or `failed`. Without the reference the object can be garbage-collected while the toast is still on screen, and on Windows its click handler then never runs, so clicking a chat toast did nothing (#394). Windows does not promise a `close` (a toast that times out into the Action Center may never send one), so the set is capped at 100: past it the oldest is released. A `failed` event is logged (`[notifications]`).
 
 Chat notifications carry optional `{ channelId, spaceId, userId }` context through
@@ -776,7 +860,7 @@ Do Not Disturb and the badge: see sounds.md ("Do Not Disturb").
 
 Badge count: `set-badge-count` IPC calls `app.setBadgeCount()` (macOS dock badge, Windows taskbar overlay).
 
-**Win32 attribution:** `app.setAppUserModelId('com.backspace.desktop')` set early in startup so notifications attribute to "Backspace" in Windows Action Center.
+**Win32 attribution:** `app.setAppUserModelId('de.hashhive.orbit')` set early in startup so notifications attribute to "Tavvit" in Windows Action Center.
 
 ---
 
@@ -785,7 +869,7 @@ Badge count: `set-badge-count` IPC calls `app.setBadgeCount()` (macOS dock badge
 ### macOS
 
 Full menu bar with:
-- App menu: About, Change Instance, Hide/Unhide, Quit
+- App menu: About, update items, Reload, Hide/Unhide, Quit
 - Edit: Undo, Redo, Cut, Copy, Paste, Select All
 - Window: Minimize, Zoom, Front
 
@@ -891,7 +975,12 @@ All handlers registered in `main.ts:registerIpcHandlers()`.
 | `minimize-window` | R->M | — | Minimize window |
 | `maximize-window` | R->M | — | Toggle maximize/unmaximize |
 | `close-window` | R->M | — | Close (hides to tray) |
-| `install-update` | R->M | — | `quitAndInstall()` on auto-capable builds, otherwise opens the releases page. 4s watchdog flips the status to `failed` if the app is still running |
+| `edit-context-menu` | M->R | `{ misspelledWord, suggestions (≤ 5), canCut, canCopy, canPaste, canSelectAll }` | Sent from the window's `context-menu` event for a right click in a text field only (`editMenu.ts`); the page draws the menu, main draws none. The page cancels every other right click, so main never hears of it |
+| `edit-command` | R->M | `'cut' \| 'copy' \| 'paste' \| 'selectAll'` | Runs that `webContents` method in the field the page refocused; anything else is ignored |
+| `replace-misspelling` | R->M | `string` | `webContents.replaceMisspelling(word)` for a chosen suggestion (one line, ≤ 100 characters) |
+| `add-to-dictionary` | R->M | `string` | `session.addWordToSpellCheckerDictionary(word)`, same checks |
+| `install-update` | R->M | — | `installUpdateNow()` (silent `quitAndInstall(true, true)`, the app starts again) on auto-capable builds, otherwise opens the download page. 4s watchdog flips the status to `failed` if the app is still running |
+| `set-call-active` | R->M | `boolean` | Whether a voice session is open (`callActive`); a downloaded update never installs while it is true. Anything but `true` reads as false |
 | `check-for-updates` | R->M | — | `autoUpdater.checkForUpdates()` |
 | `dismiss-update` | R->M | `{ version }` | Persists the dismissal and re-pushes the snapshot |
 | `open-release-page` | R->M | — | `shell.openExternal(RELEASES_URL)` |
@@ -905,9 +994,6 @@ All handlers registered in `main.ts:registerIpcHandlers()`.
 
 | Channel | Direction | Returns | Action |
 |---------|-----------|---------|--------|
-| `get-instance-url` | R->M | `string \| null` | Load saved instance URL |
-| `set-instance-url` | R->M | `void` | Save URL, navigate window to it |
-| `clear-instance-url` | R->M | `void` | Delete saved URL, load picker |
 | `get-app-version` | R->M | `string` | `app.getVersion()` |
 | `get-auto-launch-settings` | R->M | `{ openAtLogin, startMinimized }` | Merge OS state with saved prefs |
 | `set-auto-launch-settings` | R->M | `{ openAtLogin, startMinimized }` | Save + apply to OS |
@@ -967,13 +1053,12 @@ Detection: `typeof window.backspace !== 'undefined'` (see `platform.ts:isElectro
 | `getSystemAudioCapability(usesAppSource?)` | invoke | R->M | Optional (older builds lack it, and builds before the Linux source ignore the argument). `usesAppSource` is `true` from a web client that opens the Linux system-audio source itself. Returns `Promise<'excluded' \| 'included' \| 'unavailable' \| 'unknown'>`; see "System audio and Backspace's own playback" |
 | `startSystemAudio()` | invoke | R->M | Optional. Linux: routes every other app's playback into a virtual source. Returns `Promise<{ ok: true, label } \| { ok: false, reason }>`; the renderer opens the device named `label` as a microphone |
 | `stopSystemAudio()` | invoke | R->M | Optional. Unlinks the virtual source; idempotent |
-| `getInstanceUrl()` | invoke | R->M | Returns `Promise<string \| null>` |
-| `setInstanceUrl(url)` | invoke | R->M | Returns `Promise<void>` |
-| `clearInstanceUrl()` | invoke | R->M | Returns `Promise<void>` |
 | `getAutoLaunchSettings()` | invoke | R->M | |
 | `setAutoLaunchSettings(s)` | invoke | R->M | |
 | `onActivityDetected(cb)` | listen | M->R | Returns cleanup function `() => void` |
 | `getCurrentActivity()` | invoke | R->M | Returns `Promise<Activity \| null>` |
+| `setCallActive(active)` | fire | R->M | Optional (shells before automatic installs lack it). Sends `set-call-active`; called by `callStateBridge.ts` |
+| `getGameDetection()`, `setGameDetectionEnabled(enabled)`, `removeDetectedGame(process)` | invoke | R->M | Optional (shells before game-detection settings lack them). The `game-detection-*` channels in Activity Detection; Settings → Games tells a shell without `getGameDetection` to update |
 | `syncKeybinds(keybinds)` | fire | R->M | |
 | `onKeybindAction(cb)` | listen | M->R | Returns cleanup function |
 | `onAccessibilityStatus(cb)` | listen | M->R | Returns cleanup function |
@@ -1003,81 +1088,132 @@ Direction legend: **fire** = `ipcRenderer.send` (no response), **invoke** = `ipc
 
 ### Overview
 
-Detects running games/applications by polling the OS process list every 15 seconds and matching process names against a game dictionary.
+Finds out which game the person is playing, every 15 seconds, in four ways, without asking them to name or pick anything:
 
-### Game Dictionary
+1. **Steam** says itself which of its games runs, under the name it has in the person's library. This covers every Steam game; no list is involved.
+2. **Epic Games and GOG** say which games are installed and which program starts each. A running program of that name is that game.
+3. **The game list** (`resources/games.json`) knows well-known games from everywhere else by their process names: Battle.net, Riot, Rockstar, Ubisoft, EA, HoYoverse, Roblox, and games without a launcher.
+4. **Window titles** tell the few games that run inside a program plenty of other things use: Minecraft Java Edition is `javaw.exe`.
 
-Two formats supported:
+`gameMatching.ts` holds what is pure (reading the answers, the list, choosing a game), `gameLibraries.ts` what the launchers leave on this computer, `activityDetector.ts` the polling and the sync. All of it is read on the person's computer and nothing leaves it except the name of the game being shown.
+
+There is no picker. The app does not list the programs on someone's computer, not to them and not to anyone. **What it cannot find:** a game outside all four ways, for instance one from the Xbox app or one without a launcher that is not on the list. The way to fix that is a new entry in the list, which reaches every installed app (below). Steam, Epic, GOG and window titles are Windows only; on Mac and Linux, where no build is shipped yet, only process names count, and Minecraft Java Edition is not found.
+
+**On by default.** Detection runs unless the person turned it off in Settings → Games (`GamesPanel` in the web client). The setting lives in `{userData}/game-detection.json` (`gameDetectionSettings.ts`: `{ enabled, userGames: [{ name, process }] }`). A missing or unreadable file, or one that does not say, is on (`DEFAULT_SETTINGS`); an `enabled` the person saved stands, whichever way it went. While it is off nothing is read: `startActivityDetection` is not called at launch and `get-current-activity` answers null. Turning it off stops the loop, clears the current game and sends `activity-detected` null so the activity disappears at once. What it detects reaches anyone else only while the Privacy sharing switch is on (below).
+
+**Programs added by hand.** Up to 1.26.0 a person could pick a running program from a list of all of them and name it. That is gone, since a list of everything on someone's computer is not what this page is for. What people added then still counts, wins over everything else (`setUserGames`, ids `user:<process>`) and stays listed in Settings → Games until they remove it; the section does not appear for anyone else.
+
+**Older shells.** Settings → Games feature-detects the bridge: in a desktop shell whose preload has no `getGameDetection` it says that this version cannot detect games yet and links the download page (`/download`), since after one manual install the app keeps itself up to date; in a browser it says that detection needs the desktop app. A shell older than 1.27.0 still offers `listRunningPrograms` and `addDetectedGame` in its preload; nothing calls them any more.
+
+| IPC (invoke) | Answer | Does |
+|---|---|---|
+| `game-detection-get` | `{ enabled, userGames, current }` | Read the state |
+| `game-detection-set-enabled` (boolean) | state | Start or stop detection and save |
+| `game-detection-remove` (process) | state | Forget a program added by hand |
+
+### Steam
+
+Asked only while `steam.exe` runs, because after a crash the registry can go on naming a game that ended long ago:
+
+`reg query HKCU\Software\Valve\Steam /s` (about 60 ms) gives `RunningAppID`, the game started last; `Apps\<id>\Running`, every game running, since a tool like Wallpaper Engine can hold `RunningAppID` beside a game; `SteamPath`; and `Apps\<id>\Name`, which not every game has.
+
+The name comes from `steamapps/appmanifest_<id>.acf` in `SteamPath` or in one of the other libraries `steamapps/libraryfolders.vdf` names (games are often on another drive), and only then from the registry, whose output is in the console's code page. A name once found is kept for the session. An app without a name counts as nothing. Apps in `ignoredSteamApps` of the game list are tools rather than games and count as nothing either. Ids are `steam:<appId>`.
+
+### Epic Games and GOG
+
+Read at the start and then every 10 minutes (`INSTALLED_REFRESH_MS`), so a game installed meanwhile is found without a restart.
+
+| Launcher | Where | Fields |
+|---|---|---|
+| Epic Games | `%ProgramData%\Epic\EpicGamesLauncher\Data\Manifests\*.item` (JSON) | `DisplayName`, `LaunchExecutable`, `AppCategories` must hold `games` when present (the launcher keeps the same file for the Unreal Engine), `bIsIncompleteInstall` |
+| GOG | `reg query HKLM\SOFTWARE\WOW6432Node\GOG.com\Games /s` | `gameName`, `exeFile` or else `exe` |
+
+A launch file with a name too common to say anything (`launcher.exe`, `game.exe`; `GENERIC_EXECUTABLES`) is left out rather than read as this game. `cleanGameName` removes trademark signs and what the console could not spell, and cuts to the server's 128 characters.
+
+### Game List
 
 ```typescript
-// Legacy bare array (version 0)
-GameEntry[]
+interface GameDictionary {
+  version: number;
+  games: GameEntry[];
+  ignoredSteamApps?: number[]; // Steam apps that are tools, not games
+}
 
-// Versioned object
-{ version: number; games: GameEntry[] }
-```
-
-```typescript
 interface GameEntry {
   id: string;        // unique identifier, e.g. "cs2"
   name: string;      // display name, e.g. "Counter-Strike 2"
   processes: string[]; // executable names, e.g. ["cs2.exe", "cs2"]
+  windows?: { process: string; titleStartsWith: string }[]; // a game inside a shared program
   type?: string;     // "playing" | "listening" | "watching" | "streaming" (default: "playing")
 }
 ```
 
-### Dictionary Loading Strategy
+A bare array of entries, the old format, still reads as version 0.
 
-1. **Startup** (`startActivityDetection`): Load best local source — cache file first (`{userData}/games-cache.json`), fall back to bundled seed (`resources/games.json`)
-2. **Background sync** (`syncDictionary`): Fire-and-forget async fetch from GitHub after startup
+**What belongs on it** (`gameMatching.test.ts` checks the bundled list against this):
+
+- Games only. Spotify, VLC, OBS and mpv were on it and showed "Listening to Spotify" for whoever left it in the tray.
+- Names that say which game this is. `start_protected_game.exe` is Easy Anti-Cheat's starter in hundreds of games and read as Elden Ring in all of them. Launchers (`MinecraftLauncher.exe`), Unreal's generic names (`ShooterGame.exe`, `Client-Win64-Shipping.exe`) and dedicated servers stay off too. A game sold on PC only through Steam, Epic or GOG does not need an entry at all, and shouldn't have one when its process name is a common word.
+- Each name once. Of two entries with the same name only the first could ever show.
+- At least one `.exe` spelling per entry: shells before 1.27.0 compare exactly, and they read this list too.
+
+**Raising `version`** is what publishes a change. An entry older shells should use may not rely on `windows` alone, since they skip that field.
+
+### Which List Is Used
+
+1. **Startup** (`loadLocalDictionary`): the newer of the saved copy (`{userData}/games-cache.json`) and the bundled list (`resources/games.json`), by `version`, so a copy saved by an older version of the app cannot outlive a better list an update brought. When neither loads, detection still runs without a list: Steam, the launchers and programs added by hand work anyway.
+2. **Background sync** (`syncDictionary`): Fire-and-forget async fetch from the app's own server after startup (below).
 
 ### Remote Sync (`syncDictionary()`)
 
-**Remote URL:** `https://raw.githubusercontent.com/TheZwiss/backspace/main/packages/desktop/resources/games.json`
+**Remote URL:** `https://tavvit.com/downloads/desktop/games.json` (`PRODUCTION_URL` + the downloads path): the app's own server, never a third party. `scripts/package-desktop.mjs` puts the list into every desktop archive, so each release publishes it (see Releases). To publish a list without a release, copy `packages/desktop/resources/games.json` to `data/downloads/desktop/games.json` on the server; no restart is needed, and every app takes it at its next start. Without a file the request is a 404 and the local list stands.
 
 ```
-Step 1: Determine best local version (cache vs seed, whichever has higher version)
-Step 2: Fetch remote with conditional request (ETag)
-Step 3: If remote version > local version → atomic write to cache, save ETag, hot-swap
+Step 1: Fetch with a conditional request (ETag)
+Step 2: If remote version > the version in use → atomic write to the saved copy, save the ETag, replace the list in memory
 ```
 
 **ETag-based conditional fetching:**
 - ETag stored at `{userData}/games-cache-etag.txt`
-- Sent as `If-None-Match` header; 304 response = no update needed
-- Follows single redirects (301/302, common for GitHub raw)
+- Sent as `If-None-Match` only while a saved copy exists; 304 response = no update needed
+- Follows redirects (301/302)
 - 10-second timeout
 
 **Atomic file writes** (`atomicWrite()`): Writes to `{path}.tmp` then `fs.renameSync()` into place. Prevents corrupt cache on crash.
 
-**Hot-swap** (`hotSwapDictionary()`): Replaces `gameEntries` and `processMap` in memory without resetting `currentGameId` or `currentActivity`. Active detection state survives dictionary updates.
+**Taking over a list** (`applyDictionary()`): Replaces the list in memory without touching `currentGameId` or `currentActivity`. A game being shown stays shown.
 
 ### Process Polling
 
 **Interval:** 15 seconds (`POLL_INTERVAL_MS`). First poll runs immediately on start.
 
-**Guard:** `isPolling` flag prevents overlapping polls if a previous `execFile` hasn't returned.
+**Guard:** `isPolling` flag prevents overlapping polls if a previous poll hasn't finished. `generation` moves on every start and stop, so a poll still running then writes nothing.
 
-**Error handling:** First `execFile` failure logs warning and stops detection entirely (`stopActivityDetection()`). The `hasErrored` flag prevents repeated log spam.
+**Error handling:** A listing that fails (an error, or no answer within `SCAN_TIMEOUT_MS`, 10 seconds, on a busy machine) is tried again at the next poll; detection never stops by itself. Of failures in a row, only the first is logged. After `FAILURES_BEFORE_CLEAR` (3) failures in a row the game shown last is no longer known to be running, so it is cleared and `activity-detected` null is sent. A listing that succeeds resets the count. A launcher that cannot be asked counts as having nothing running.
 
 ### Platform Commands
 
 | Platform | Command | Output Format |
 |----------|---------|---------------|
 | macOS | `ps -c -A -o comm` | One process name per line (header: `COMM`) |
-| Linux | `ps -A -o comm` | One process name per line (header: `COMM` or `COMMAND`) |
-| Windows | `tasklist /fo csv /nh` | CSV: `"ImageName","PID","SessionName","Session#","MemUsage"` |
+| Linux | `ps -A -o comm` | One process name per line (header: `COMM` or `COMMAND`), cut at 15 characters by the system |
+| Windows | `%SystemRoot%\System32\tasklist.exe /fo csv /nh` | CSV: `"ImageName","PID","SessionName","Session#","MemUsage"` |
+| Windows, window titles | `tasklist.exe /v /fi "imagename eq <program>" /fo csv /nh` | Nine columns, the last is the title. Only while that program runs: about 50 ms with the filter, seconds without |
 
-Max buffer: 1MB. Process names extracted and lowercased into a `Set<string>`.
+Every command runs with `SCAN_OPTIONS`: `windowsHide: true`, so a packaged app does not flash a console window on every poll on Windows; `timeout: SCAN_TIMEOUT_MS` (10 seconds); and a 4 MB `maxBuffer` for a long answer. The Windows tools are called by their full path (`windowsTool`), never by a name that a file in the folder the app was started from could answer to.
+
+**Names** are compared as `processKey` gives them: lower case, without `.exe`, and on Linux cut to 15 characters on both sides. So `RuneLite` in the list finds `RuneLite.exe`, and a Proton game on Linux finds its cut-off name.
+
+**Whose programs:** on Windows only the session this app runs in counts, told by the app's own row in the listing. Services and what another account on the computer has running are not what this person is playing.
 
 ### Matching Algorithm (`poll()`)
 
-1. Parse running processes into a lowercase `Set<string>`
-2. Iterate `gameEntries` in dictionary order (first match wins = priority)
-3. For each entry, check if any of its `processes` (lowercased) are in the running set
-4. **Game detected (new or changed):** Set `currentGameId`, build `Activity` object with `timestamps.start = Date.now()`, fire `onChangeCallback`
-5. **Same game still running:** No-op (no IPC sent)
-6. **Game exited (was detected, now gone):** Clear `currentGameId` and `currentActivity`, fire callback with `null`
-7. **No game (and none before):** No-op
+1. Read the process list into a set of `processKey` names.
+2. Collect everything being played, in order of priority (`findRunningGames`): programs added by hand, then Steam's running games, then Epic and GOG games whose program runs, then entries of the list whose program runs or whose window rule holds.
+3. **Choose one** (`chooseGame`): a game not seen at the last poll wins, since that is what the person just turned to; while nothing new starts, the one showing stays, so the status does not jump; when it ends, the highest priority of what still runs takes over.
+4. **Another name than the one showing:** build the `Activity` with `timestamps.start` set to when that game was first seen, which survives another game coming and going in between (`runningSince`), and fire `onChangeCallback`.
+5. **Same name, even from another source** (the list and Steam both know Counter-Strike 2): no-op, no IPC sent.
+6. **Nothing running:** Clear `currentGameId` and `currentActivity`, fire the callback with `null` if a game was showing.
 
 ### Activity Object
 
@@ -1093,9 +1229,10 @@ interface Activity {
 
 ### Lifecycle
 
-- **Start:** `startActivityDetection(callback)` — called from `app.whenReady()`
-- **Stop:** `stopActivityDetection()` — called from `before-quit`
-- **Query:** `getCurrentActivity()` — exposed via `get-current-activity` IPC handle
+- **Start:** `startActivityDetection(callback)` — called from `app.whenReady()` unless the person turned detection off, and from `game-detection-set-enabled`
+- **Stop:** `stopActivityDetection()` — called from `before-quit` and when detection is turned off; it also forgets the current game
+- **Programs added by hand:** `setUserGames(games)` — called at startup and after a remove; a removed program that was being shown is cleared at once, and while detection runs the next poll runs at once
+- **Query:** `getCurrentActivity()` — exposed via `get-current-activity` IPC handle (null while detection is off)
 
 ---
 
@@ -1349,9 +1486,9 @@ Toggle actions only fire on `pressed: true`. Push-to-talk fires on both press (u
 ### electron-builder Configuration (`electron-builder.yml`)
 
 ```yaml
-appId: com.backspace.desktop
-productName: Backspace
-artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+appId: de.hashhive.orbit          # also the Windows AppUserModelId in main.ts
+productName: Tavvit
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"   # Tavvit-1.12.0-win-x64.exe
 output: dist-electron
 ```
 
@@ -1359,16 +1496,15 @@ output: dist-electron
 
 | Platform | Formats |
 |----------|---------|
-| macOS | dmg (no zip: Squirrel.Mac auto-update needs a Developer ID first) |
-| Windows | nsis, one installer per architecture (allows custom install dir) |
-| Linux | AppImage, deb |
+| Windows | nsis, one installer per architecture (allows custom install dir). The only platform Tavvit builds and offers today |
+| macOS | dmg (configured, not built: needs a Mac to build on) |
+| Linux | AppImage, deb (configured, not built) |
 
 ### Build Commands
 
 | Command | Description |
 |---------|-------------|
-| `pnpm build` | TypeScript compile + electron-builder (current platform) |
-| `pnpm build:all` | Cross-platform: `--mac --win --linux --arm64 --x64` |
+| `pnpm build` | TypeScript compile + `electron-builder --win --x64` |
 | `pnpm dev` | Compile TypeScript + launch Electron (with icon setup) |
 
 ### Native Module Handling
@@ -1435,16 +1571,12 @@ All desktop and web brand assets are generated by `scripts/gen-icons.mjs` from s
 The split is by surface, not file type: UI surfaces (favicons, tray icons, the in-app sidebar tile) stay a flat two-colour mark; the app-icon family (every output where the OS shows this app as one launchable icon: dock, taskbar, Start menu, Alt-Tab, PWA install, iOS home screen, the maskable Android icon) is a dimensional squircle badge on a `#2a2740`-to-`#12101d` plum gradient, with drop shadow, inner shadow and a soft-light stroke overlay, and a white-to-`#7c6cf6` gradient glyph.
 
 **Sources:**
-- `app-icon.svg`: the dimensional squircle badge (plum gradient, filters, stroke overlay) plus the gradient glyph, at a 256 viewBox. Every app-icon output above 32 px renders straight from this vector, at target size, with no raster intermediate or post-render masking.
-- `app-icon-small.svg`: the same dimensional badge geometry with a bolder, simplified mark. Drives app-icon outputs at 16 and 32 px, where the standard mark's inset strokes and shadow read as noise.
-- `mark-icon.svg`: the bare gradient glyph alone, transparent, no badge. Drives the PWA maskable icon's inner mark (composited over a full-bleed plum-gradient canvas, mark at 60% of canvas height) and the social preview.
-- `mark-small.svg`: a bolder small-size variant of the flat glyph. Drives the web favicons (16/32, transparent, glyph fills the box) and the colour tray icons (Windows `.ico`, Linux PNG).
-- `mark-mono-light.svg`: the flat white glyph, for rendering on a lavender ground. Drives `packages/web/public/icons/logo-mark.svg` (byte copy), which paints the sidebar's lavender home tile.
-- `mark-tray.svg`: template artwork tuned for 22px. Drives the macOS menu-bar template tray icon (alpha + black; OS recolours). `mark-mono-dark.svg` has no pipeline output today.
-
-`mark.svg` (the flat-lavender standalone glyph, for dark UI-surface grounds) is not read by this script.
-
-`apple-touch-icon.png` composites the app icon full-bleed over an opaque copy of its own plum gradient (`#2a2740` to `#12101d`, matching `app-icon.svg`'s squircle) so no pixel is transparent. iOS otherwise paints transparent corners black.
+- `app-icon.svg`: the white mark (T and ring) on a graphite rounded square with a hairline, at a 256 viewBox. Every app-icon output above 32 px renders straight from this vector.
+- `app-icon-small.svg`: the same tile with the T alone. Drives the app-icon outputs at 16 and 32 px, the web favicons and the colour tray icons (Windows `.ico`, Linux PNG), so they read on a light and on a dark background.
+- `mark-icon.svg`: the bare white mark on transparent. Drives the PWA maskable icon and the apple-touch icon, each composited on the flat graphite ground (`#121316`) at 60% of the canvas height, with no transparent pixel left.
+- `mark-mono-light.svg`: the white T in a square box. Drives `packages/web/public/icons/logo-mark.svg` (byte copy), the logo in the top bar and on the sign-in pages.
+- `mark.svg`: the mark with its ring, for large uses. Byte copy at `packages/web/public/icons/mark.svg`.
+- `mark-tray.svg`: template artwork for the macOS menu bar (alpha + black; the OS recolours). `mark-mono-dark.svg` has no pipeline output today.
 
 The `dev` script copies the committed `build/icon.icns` into Electron's bundled `Resources/electron.icns` so the macOS dev dock shows the Backspace mark instead of the default Electron logo. This dev-only patch is independent of how `.icns` is generated.
 
@@ -1454,12 +1586,62 @@ See `scripts/gen-icons.README.md` for the regeneration workflow and version-bump
 
 ```yaml
 publish:
-  - provider: github
-    owner: TheZwiss
-    repo: backspace
+  - provider: generic
+    url: https://tavvit.com/downloads/desktop
 ```
 
-GitHub releases are the update source. The `electron-updater` library handles checking, downloading, and applying updates.
+The production server is the update source. `electron-builder` writes this
+address into the packaged `app-update.yml`; `electron-updater` fetches
+`latest.yml` from it, compares versions, and downloads the installer named
+there, whole (`disableDifferentialDownload`, see Auto-Update, Configuration).
+
+## Releases
+
+A release is three files from `packages/desktop/dist-electron/` and the game
+list on the server, in `data/downloads/desktop/` (`DOWNLOADS_DIR`, default
+`downloads/` beside the database):
+
+| File | Read by |
+|------|---------|
+| `Tavvit-<version>-win-x64.exe` | the browser (download page) and the updater |
+| `Tavvit-<version>-win-x64.exe.blockmap` | an updater older than 1.12.0, for its differential download attempt; 1.12.0 and later never read it |
+| `latest.yml` | the updater (version check) and `GET /api/desktop/release` (download page) |
+| `games.json` | every starting app, even one too old to have updated (see Activity Detection, Remote Sync) |
+
+**The current release is 1.12.0** (`version` in `packages/desktop/package.json`),
+the first with the install policy under Auto-Update. An installed 1.11.0 takes
+this first update with the updater it already has. That updater checks every
+four hours, tries a differential download with the `.blockmap` first (which
+fails against this server, so it falls back to the whole installer), and
+installs the old way: when the person clicks Restart now, or when Tavvit quits.
+Nothing installs 1.12.0 by itself at a quiet moment. From 1.12.0 on, every
+update follows the install policy.
+
+Steps, on the Windows build machine and then the server:
+
+1. Raise `version` in `packages/desktop/package.json`.
+2. `pnpm --filter @backspace/desktop build`.
+3. `node scripts/package-desktop.mjs` writes `dist/release/tavvit-desktop-<version>.tar.gz`.
+   It hashes the installer and refuses to pack when the SHA-512 or size differs
+   from `latest.yml`, so an archive can never pair a description with another build.
+   `latest.yml` is the archive's last member.
+4. Upload the archive; on the server run `tar -xzf tavvit-desktop-<version>.tar.gz -C <tavvit folder>/data`.
+   No restart: the release endpoint reads the directory per request.
+
+The server side is `packages/server/src/routes/desktopDownloads.ts` and
+`utils/desktopRelease.ts`: `/downloads/desktop/*` is served by `@fastify/static`
+(Range, ETag; `latest.yml` and `games.json` with `Cache-Control: no-cache`,
+installers as attachments) and a missing file there is a JSON 404, never the app's page, so
+the updater cannot mistake HTML for `latest.yml`. The service worker's
+navigation fallback excludes `/downloads/` for the same reason. The web
+client's `/download` page, the sign-in page's aside and the About page render
+`DesktopDownload`, which offers only files `GET /api/desktop/release` lists
+(files `latest.yml` names and the disk has) and says so plainly when there is no
+release.
+
+The installers are not code-signed: Windows SmartScreen shows "unknown
+publisher" on first run until a signing certificate is configured
+(`win.certificateFile` / `CSC_LINK` in electron-builder).
 
 ---
 
@@ -1467,28 +1649,26 @@ GitHub releases are the update source. The `electron-updater` library handles ch
 
 ### userData Folder Location
 
-The runtime userData folder is named `Backspace` on every platform:
+The runtime userData folder is named `Tavvit` on every platform:
 
 | Platform | Path |
 |---|---|
-| macOS | `~/Library/Application Support/Backspace/` |
-| Linux | `~/.config/Backspace/` |
-| Windows | `%APPDATA%\Backspace\` |
+| macOS | `~/Library/Application Support/Tavvit/` |
+| Linux | `~/.config/Tavvit/` |
+| Windows | `%APPDATA%\Tavvit\` |
 
-Electron's default `app.getName()` reads `package.json`'s `name`, which in this monorepo is `@backspace/desktop` — that would land userData under a nested `@backspace/desktop/` folder. To prevent the monorepo's internal package name from leaking into a user-facing filesystem path, `main.ts` calls `app.setName('Backspace')` at module load, before any `app.getPath('userData')` consumer runs. electron-builder's `productName: Backspace` only renames the bundle metadata (`Backspace.app`, executable, installer, app menu) — it does not affect runtime userData.
-
-### One-Time Migration
-
-Earlier builds wrote to `<appData>/@backspace/desktop/`. On first launch after the rename, `migrateUserData()` (in `userDataMigration.ts`) atomically moves that folder to `<appData>/Backspace/` and removes the now-empty `@backspace/` parent. The migration is conservative: if the new folder already exists and is non-empty, it skips the move rather than clobbering existing state. Failures are logged, not thrown — a failed migration leaves the user with a fresh-install state, which is degraded but not broken.
+Electron's default `app.getName()` reads `package.json`'s `name`, which in this monorepo is `@backspace/desktop` — that would land userData under a nested `@backspace/desktop/` folder. To prevent the monorepo's internal package name from leaking into a user-facing filesystem path, `main.ts` calls `app.setName('Tavvit')` at module load, before any `app.getPath('userData')` consumer runs. electron-builder's `productName: Tavvit` only renames the bundle metadata (executable, installer, app menu) — it does not affect runtime userData.
 
 ### Files
 
 | File | Content | Purpose |
 |------|---------|---------|
-| `instance-url.json` | `{ url: string }` | Saved instance URL |
 | `window-state.json` | `WindowState` | Window position, size, maximize state |
 | `auto-launch.json` | `AutoLaunchSettings` | Open at login + start minimized prefs |
 | `update-state.json` | `{ dismissedVersion }` | The update version the user waved away. Belongs to the app, not to an instance |
+| `restart-hidden.json` | `{ at }` | Written when an update starts installing while the window is hidden; read and deleted on the next start, which then stays in the tray (Auto-Update, Install policy) |
+| `logs/updater.log` | text | What electron-updater did, one timestamped line each; starts over past 1 MB |
+| `game-detection.json` | `{ enabled, userGames }` | Game detection on or off, and the programs the person added |
 | `games-cache.json` | `VersionedDictionary` | Cached remote game dictionary |
 | `games-cache-etag.txt` | ETag string | For conditional HTTP requests |
 
@@ -1503,16 +1683,18 @@ Earlier builds wrote to `<appData>/@backspace/desktop/`. On first launch after t
 3. Register `setDisplayMediaRequestHandler` for screen share
 4. Register all IPC handlers
 5. Create main window (with state restoration)
+   - Just before, `consumeRestartHidden` decides whether this start follows an update installed while the window was hidden; the window then stays hidden on `ready-to-show`.
    - After the BrowserWindow is constructed, `setMainWindow(mainWindow)` and `attachRecoveryHandlers(mainWindow)` are called. The `closed` event handler calls `setMainWindow(null)`.
 6. Create tray icon
-7. Resolve the update capability, then initialize the auto-updater (10s delayed
-   first check). An `external` capability, including Flatpak, records that state
-   without loading `electron-updater`.
+7. Resolve the update capability, then initialize the auto-updater (first
+   check 10 s later, then every 30 minutes). An `external` capability,
+   including Flatpak, records that state without loading `electron-updater`.
 8. Wire recovery store subscriber (rebuilds tray + macOS menu on every state change; pushes `recovery-state-changed` to renderer when in recovery mode)
 9. `setOnQuitRequested(requestQuit)` so recovery's Quit button uses the same `isQuitting + app.quit()` pattern as the tray
-10. Start activity detection (immediate first poll, 15s interval, background
-    remote sync). Flatpak uses the same platform-dependent behavior as global
-    keybinds instead of applying a contradictory package-wide disable.
+10. Start activity detection unless the person turned it off (immediate first
+    poll, 15s interval, background remote sync). Flatpak uses the same
+    platform-dependent behavior as global keybinds instead of applying a
+    contradictory package-wide disable.
 11. Linux/AppImage path-refresh: re-apply autostart entry if `$APPIMAGE` path changed (conditional; no-op on Windows/macOS)
 12. Check for deep link in launch args
 
@@ -1521,3 +1703,12 @@ Earlier builds wrote to `<appData>/@backspace/desktop/`. On first launch after t
 1. Set `isQuitting = true` (allows window close to proceed)
 2. Stop activity detection (clear interval, null callback)
 3. Stop keybind manager (release active actions, stop uIOhook)
+
+## The rename from Orbit (1.13.0)
+
+The product was called Orbit until 1.12. An installed app updates in place, because everything that identifies an install stayed:
+
+- **`appId: de.hashhive.orbit`** is unchanged, and so is the AppUserModelId: the NSIS installer derives its registry key from it, so a new `productName` replaces the old install instead of adding a second app. The install folder keeps its old name; electron-builder renames the shortcut.
+- **userData:** `app.setName('Tavvit')` would move it to `<appData>/Tavvit`, so `main.ts` keeps using `<appData>/Orbit` where that folder exists. The sign-in, settings and window state are in there. A fresh install gets `<appData>/Tavvit`.
+- **Autostart:** the old Run entry is named "Orbit" and starts `Orbit.exe`, which the update replaced. `migrateLegacyLoginItem()` swaps it for the current one once, keeping the choice of starting hidden.
+- **Deep links:** `tavvit://` is the scheme; `orbit://` stays registered and handled, because invite links from before are in people's chats.

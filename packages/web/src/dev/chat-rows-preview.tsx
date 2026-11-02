@@ -205,7 +205,7 @@ function seedStores(state: RowState): void {
   useAuthStore.setState({ user: ME });
   useSpaceStore.setState({
     channelOriginMap: new Map([[CHANNEL, '']]),
-    spaceChannelIndex: new Map([[CHANNEL, { spaceId: SPACE, origin: '', type: 'text' as const }]]),
+    spaceChannelIndex: new Map([[CHANNEL, { spaceId: SPACE, origin: '', type: 'text' as const, name: 'general' }]]),
     channelToSpaceMap: new Map([[CHANNEL, SPACE]]),
     channelPermissions: new Map([[CHANNEL, permissionsToString(ALL_PERMISSIONS)]]),
     dmChannels: [],

@@ -12,3 +12,14 @@
 
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET ??= 'test-only-jwt-secret-not-for-production-use!!';
+
+// Tavvit ships with federation OFF. Most of this suite exercises the federation
+// code, which still works exactly as upstream when the switch is on, so the
+// suite turns it on. The behaviour of the default (off) is pinned separately in
+// src/config.test.ts and src/routes/federationDisabled.test.ts, which override
+// this per test. `??=` keeps a value the shell exported deliberately.
+process.env.FEDERATION_ENABLED ??= 'true';
+
+// Most tests sign a token without opening a session for it. See `sessionlessInTests` in
+// src/utils/auth.ts; src/utils/auth.sessions.test.ts turns this off to test what a real instance does.
+(globalThis as { __tavvitTestsTakeSessionlessTokens?: boolean }).__tavvitTestsTakeSessionlessTokens = true;

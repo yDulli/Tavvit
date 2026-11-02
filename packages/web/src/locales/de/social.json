@@ -8,15 +8,12 @@
   "sections": {
     "online": "Online – {{n}}",
     "all": "Alle Freunde – {{n}}",
-    "pending": "Ausstehend – {{n}}",
-    "active": "Aktiv – {{n}}",
-    "offline": "Offline – {{n}}"
+    "pending": "Ausstehend – {{n}}"
   },
   "empty": {
     "online": "Gerade ist niemand online.",
     "all": "Noch keine Freunde – füg jemanden hinzu!",
-    "pending": "Keine ausstehenden Anfragen – Nori macht ein Nickerchen.",
-    "activity": "Gerade ist es ruhig… Sobald deine Freunde etwas unternehmen, siehst du es hier!"
+    "pending": "Keine ausstehenden Anfragen – Nori macht ein Nickerchen."
   },
   "friend": {
     "viaInstance": "über {{host}}",
@@ -44,13 +41,21 @@
   },
   "add": {
     "title": "Leute finden",
-    "hint": "Suche nach dem Benutzernamen oder gib <handle>name@instanz</handle> ein, um jemanden direkt hinzuzufügen.",
-    "placeholder": "Suchen oder per Benutzername hinzufügen…",
+    "hint": "Finde jemanden über den Benutzernamen oder gib <handle>name@instanz</handle> für jemanden auf einer anderen Instanz ein.",
+    "placeholder": "Benutzername oder name@instanz",
     "direct": "Freundschaftsanfrage senden an <handle>{{handle}}</handle>",
     "sendRequest": "Anfrage senden",
-    "discover": "Leute entdecken",
     "noSearchResults": "Keine passenden Personen gefunden.",
-    "noDiscoverable": "Noch niemand zu entdecken – lade Leute ein!"
+    "intro": "Gib einen Benutzernamen ein, um jemanden zu finden. Hier wird niemand aufgelistet, bevor du suchst, und Personen findest du nur über den Namen, den sie selbst gewählt haben.",
+    "tooShort": "Gib mindestens {{min}} Zeichen eines Benutzernamens ein.",
+    "invalidCharacters": "Benutzernamen bestehen aus Buchstaben, Ziffern und Unterstrichen.",
+    "federationOff": "Personen auf anderen Instanzen kannst du nicht hinzufügen, solange diese Instanz nicht föderiert.",
+    "resultsLabel": "Personen",
+    "state": {
+      "friends": "Bereits befreundet",
+      "outgoing": "Anfrage gesendet",
+      "incoming": "Möchte mit dir befreundet sein"
+    }
   },
   "mutuals": {
     "friends_one": "{{count}} gemeinsamer Freund",
@@ -72,14 +77,31 @@
     "sendMessage": "Nachricht senden",
     "editRoles": "Rollen bearbeiten",
     "viewFull": "Ganzes Profil ansehen",
-    "addFriend": "Freund hinzufügen"
+    "addFriend": "Freund hinzufügen",
+    "links": "Links",
+    "editProfile": "Profil bearbeiten",
+    "editSpaceProfile": "Space-Profil bearbeiten",
+    "activity": "Aktivität"
   },
   "activity": {
     "title": "Jetzt aktiv",
-    "quietTitle": "Gerade ist es ruhig…",
-    "quietDescription": "Sobald deine Freunde etwas unternehmen, etwa ein Spiel spielen oder im Sprachkanal abhängen, siehst du es hier!",
-    "online": "Online – {{n}}",
-    "offline": "Offline – {{n}}"
+    "onlineCount_one": "{{count}} Freund online",
+    "onlineCount_other": "{{count}} Freunde online",
+    "nobodyTitle": "Gerade ist niemand da",
+    "nobodyBody": "Sobald Freunde online kommen, siehst du sie hier – und was sie gerade machen.",
+    "noFriendsBody": "Füge Freunde hinzu, um zu sehen, wer online ist und was alle gerade machen.",
+    "addFriends": "Freunde hinzufügen"
   },
-  "instanceNotConnected": "Keine Verbindung zu {{host}}. Verbinde dich erneut und versuche es noch einmal."
+  "instanceNotConnected": "Keine Verbindung zu {{host}}. Verbinde dich erneut und versuche es noch einmal.",
+  "block": {
+    "action": "Blockieren",
+    "unblock": "Blockierung aufheben",
+    "confirmTitle": "{{name}} blockieren?",
+    "confirmBody": "{{name}} kann dir keine Nachrichten und keine Freundschaftsanfragen mehr schicken, und du ihr oder ihm auch nicht. Die Freundschaft endet. Nachrichten in gemeinsamen Spaces und Gruppen werden für dich ausgeblendet. Die Person erfährt es nicht.",
+    "confirmAction": "Blockieren",
+    "failed": "{{name}} konnte nicht blockiert werden: {{reason}}",
+    "unblockFailed": "Die Blockierung von {{name}} konnte nicht aufgehoben werden: {{reason}}",
+    "blocked": "{{name}} ist blockiert.",
+    "unblocked": "{{name}} ist nicht mehr blockiert."
+  }
 }

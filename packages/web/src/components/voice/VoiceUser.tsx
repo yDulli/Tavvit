@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
+import { Icon, type IconName } from '../ui/Icon';
+import { VoiceIcon } from './voiceIcons';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextMenuStore';
 import { buildVoiceModMenuItems, VolumeSliderItem } from './voiceMenuItems';
@@ -12,13 +14,31 @@ import type { UserTile } from '../../hooks/useLiveKit';
 interface VoiceUserProps {
   tile: UserTile;
   large?: boolean;
+  /** A tile too short for the full picture and caption: the focus strip, a crowded grid, a phone. */
+  compact?: boolean;
 }
 
-export function VoiceUser({ tile, large }: VoiceUserProps) {
+/** One mark in the tile's corner: a dark chip, so it reads over the avatar tile and over a video alike. */
+function TileBadge({ icon, tone, title, compact }: {
+  icon: IconName;
+  tone: 'danger' | 'warning' | 'neutral';
+  title?: string;
+  compact?: boolean;
+}) {
+  const color = tone === 'danger' ? 'text-txt-danger' : tone === 'warning' ? 'text-accent-amber' : 'text-white/80';
+  return (
+    <span title={title} className={`flex items-center justify-center rounded bg-black/60 ${compact ? 'h-4 w-4' : 'h-5 w-5'} ${color}`}>
+      <Icon name={icon} size={compact ? 11 : 13} strokeWidth={2} />
+    </span>
+  );
+}
+
+export function VoiceUser({ tile, large, compact }: VoiceUserProps) {
   const { t } = useTranslation(['voice', 'common']);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const { participant } = tile;
+  const avatarSize = large ? 96 : compact ? 36 : 64;
   const isDeafened = useVoiceStore((s) => s.isDeafened);
   const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
   const isSpeaking = useVoiceStore((s) => s.speakingParticipantIds.has(participant.identity));
@@ -94,14 +114,7 @@ export function VoiceUser({ tile, large }: VoiceUserProps) {
           key: 'camera-toggle',
           type: 'action',
           label: isCameraUnwatched ? t('voice:participantMenu.watchCamera') : t('voice:participantMenu.stopWatchingCamera'),
-          icon: React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor', className: 'flex-shrink-0' },
-            ...(isCameraUnwatched
-              ? [React.createElement('path', { key: 'cam', d: 'M17 10.5V7c0-.55-.45-1-1-1H2c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h14c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z' })]
-              : [
-                  React.createElement('path', { key: 'cam', d: 'M17 10.5V7c0-.55-.45-1-1-1H2c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h14c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z' }),
-                  React.createElement('line', { key: 'slash', x1: 1, y1: 1, x2: 23, y2: 23, stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' }),
-                ]),
-          ),
+          icon: isCameraUnwatched ? <Icon name="video" size={16} /> : <VoiceIcon name="video-off" size={16} />,
           onClick: () => {
             const room = getActiveRoom();
             const identity = targetParticipant?.identity;
@@ -144,10 +157,10 @@ export function VoiceUser({ tile, large }: VoiceUserProps) {
   return (
     <div
       data-context-menu
-      className={`relative bg-surface-base rounded-xl overflow-hidden flex items-center justify-center group transition-all duration-200 ${
+      className={`relative bg-surface-channel rounded-lg overflow-hidden flex items-center justify-center group transition-shadow duration-100 ${
         isSpeaking
-          ? 'ring-[3px] ring-status-online shadow-[0_0_12px_rgba(134,239,172,0.25)]'
-          : 'ring-1 ring-white/[0.06] hover:ring-white/10'
+          ? 'ring-2 ring-status-online'
+          : 'ring-1 ring-border-hard hover:ring-interactive-muted'
       } h-full w-full`}
       onContextMenu={handleContextMenu}
     >
@@ -160,33 +173,29 @@ export function VoiceUser({ tile, large }: VoiceUserProps) {
           className={`w-full h-full ${large ? 'object-contain bg-black' : 'object-cover'}`}
         />
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-surface-channel">
-          <div className="relative flex">
-            <ProfileAvatar
-              src={avatar}
-              name={displayName}
-              size={large ? 100 : 64}
-              userId={avatarUserId}
-              user={user ?? undefined}
-              origin={userOrigin}
-            />
-            {isSpeaking && (
-              <div className="absolute -inset-1.5 rounded-full ring-[3px] ring-status-online animate-pulse" />
-            )}
-          </div>
+        <div className="relative flex">
+          <ProfileAvatar
+            src={avatar}
+            name={displayName}
+            size={avatarSize}
+            userId={avatarUserId}
+            user={user ?? undefined}
+            origin={userOrigin}
+          />
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
-        <div className="flex items-center justify-between">
+      {/* The scrim is there for the picture: on the plain tile the caption needs none. */}
+      <div className={`absolute bottom-0 left-0 right-0 ${compact ? 'px-2 py-1' : 'px-3 py-2'} ${hasVideo ? 'bg-gradient-to-t from-black/70 to-transparent' : ''}`}>
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
             <span
-              className={`font-semibold text-white truncate ${large ? 'text-base' : 'text-[13px]'}`}
+              className={`font-medium truncate ${hasVideo ? 'text-white' : 'text-txt-primary'} ${large ? 'text-lead' : compact ? 'text-meta' : 'text-ui'}`}
             >
               {displayName}
             </span>
             {isLocal && (
-              <span className="text-[10px] text-white/40 font-medium">
+              <span className={`flex-shrink-0 text-label ${hasVideo ? 'text-white/70' : 'text-txt-tertiary'}`}>
                 {t('voice:badges.you')}
               </span>
             )}
@@ -201,53 +210,24 @@ export function VoiceUser({ tile, large }: VoiceUserProps) {
               return (
                 <>
                   {effectivelyMuted && (
-                    <div className={`w-5 h-5 ${(isSpaceMutedUser || isSpaceDeafenedUser || isPermissionMutedUser) ? 'bg-accent-amber/90' : 'bg-accent-rose/90'} rounded-full flex items-center justify-center`}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-                        <path d="M12 2C10.9 2 10 2.9 10 4V12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12V4C14 2.9 13.1 2 12 2Z" />
-                        <line
-                          x1="3"
-                          y1="3"
-                          x2="21"
-                          y2="21"
-                          stroke="white"
-                          strokeWidth="2"
-                        />
-                      </svg>
-                    </div>
+                    <TileBadge
+                      icon="mic-off"
+                      tone={(isSpaceMutedUser || isSpaceDeafenedUser || isPermissionMutedUser) ? 'warning' : 'danger'}
+                      compact={compact}
+                    />
                   )}
                   {effectivelyDeafened && (
-                    <div className={`w-5 h-5 ${isSpaceDeafenedUser ? 'bg-accent-amber/90' : 'bg-accent-rose/90'} rounded-full flex items-center justify-center`}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-                        <path d="M12 3c-4.97 0-9 4.03-9 9v7c0 1.1.9 2 2 2h2v-7H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-2v7h2c1.1 0 2-.9 2-2v-7c0-4.97-4.03-9-9-9z" />
-                        <line
-                          x1="3"
-                          y1="3"
-                          x2="21"
-                          y2="21"
-                          stroke="white"
-                          strokeWidth="2"
-                        />
-                      </svg>
-                    </div>
+                    <TileBadge icon="headphones-off" tone={isSpaceDeafenedUser ? 'warning' : 'danger'} compact={compact} />
                   )}
                   {!isLocal && participant.isCameraOn && (
-                    <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-                        <path d="M17 10.5V7c0-.55-.45-1-1-1H2c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h14c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
-                        {unwatchedCameras.has(participant.userId) && (
-                          <line x1="1" y1="1" x2="23" y2="23" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                        )}
-                      </svg>
-                    </div>
+                    <span className={`flex items-center justify-center rounded bg-black/60 text-white/80 ${compact ? 'h-4 w-4' : 'h-5 w-5'}`}>
+                      {unwatchedCameras.has(participant.userId)
+                        ? <VoiceIcon name="video-off" size={compact ? 11 : 13} strokeWidth={2} />
+                        : <Icon name="video" size={compact ? 11 : 13} strokeWidth={2} />}
+                    </span>
                   )}
                   {!isLocal && participantMutes.get(participant.userId) && (
-                    <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center" title={t('voice:badges.locallyMuted')}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
-                        <path d="M3 9v6h4l5 5V4L7 9H3z" />
-                        <line x1="17" y1="7" x2="23" y2="13" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                        <line x1="23" y1="7" x2="17" y2="13" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                    </div>
+                    <TileBadge icon="volume-off" tone="neutral" title={t('voice:badges.locallyMuted')} compact={compact} />
                   )}
                 </>
               );

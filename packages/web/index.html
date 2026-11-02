@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="aether-drift">
+<html lang="en" data-theme="orbit">
   <head>
     <meta charset="UTF-8" />
     <meta name="color-scheme" content="dark" />
@@ -18,18 +18,31 @@
          entry. child-src is deliberately not listed: frame-src falls back to it,
          and the embed origins are server-owned config that must not appear here. -->
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'" />
-    <meta name="description" content="The self-hosted Discord and TeamSpeak alternative. HD voice, video, and screen share — open source and free (AGPL-3.0)." />
-    <meta name="theme-color" content="#0b0b10" />
+    <meta name="description" content="Tavvit is a home for your friends and communities: channels, direct messages, voice and screen sharing in one quick, quiet app. No ads, no trackers." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Tavvit" />
+    <meta property="og:title" content="Tavvit: group chat with channels, voice and screen sharing" />
+    <meta property="og:description" content="A home for your friends and communities: channels, direct messages, voice and screen sharing. No ads, no trackers." />
+    <meta property="og:image" content="/og-image.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0d0e11" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Backspace" />
+    <meta name="apple-mobile-web-app-title" content="Tavvit" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <title>Backspace</title>
+    <link rel="preload" href="/fonts/Geist-Latin.woff2" as="font" type="font/woff2" crossorigin />
+    <title>Tavvit</title>
   </head>
   <body class="bg-surface-base text-txt-primary">
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-mark" aria-hidden="true"><img src="/icons/logo-mark.svg" alt="" /></div>
+      <noscript>
+        <p>Tavvit is a home for your friends and communities: channels, direct messages, voice and screen sharing in one app. It needs JavaScript to run.</p>
+        <p><a href="/imprint">Legal notice</a> · <a href="/privacy">Privacy policy</a> · <a href="/terms">Terms of use</a></p>
+      </noscript>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

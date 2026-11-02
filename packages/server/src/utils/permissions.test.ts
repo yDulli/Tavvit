@@ -125,3 +125,96 @@ describe('computePermissions', () => {
     expect(computePermissions(ADMIN_ID, SPACE_ID)).toBe(ALL_PERMISSIONS);
   });
 });
+
+describe('computeChannelPermissionsFor', () => {
+  // A small generator with a seed, so that a failure can be run again.
+  const generator = (seed: number) => {
+    let state = seed;
+    return (below: number): number => {
+      state = (state * 1103515245 + 12345) % 2147483648;
+      return state % below;
+    };
+  };
+  const SOME_BITS = [PermissionBits.VIEW_CHANNEL, PermissionBits.SEND_MESSAGES, PermissionBits.READ_MESSAGE_HISTORY, PermissionBits.ATTACH_FILES, PermissionBits.ADD_REACTIONS];
+
+  it('answers exactly as computePermissions does, whoever asks and whatever the overrides', async () => {
+    const { computeChannelPermissionsFor, computePermissions } = await import('./permissions.js');
+
+    testDb.insert(schema.roles).values([
+      { id: 'role-a', spaceId: SPACE_ID, name: 'A', permissions: permissionsToString(PermissionBits.ATTACH_FILES), createdAt: now },
+      { id: 'role-b', spaceId: SPACE_ID, name: 'B', permissions: permissionsToString(PermissionBits.MANAGE_MESSAGES), createdAt: now },
+      { id: 'role-admin', spaceId: SPACE_ID, name: 'Boss', permissions: permissionsToString(PermissionBits.ADMINISTRATOR), createdAt: now },
+    ]).run();
+    const people = [OWNER_ID, MEMBER_ID, OUTSIDER_ID, ADMIN_ID];
+    for (const [id, roles] of [['plain', []], ['with-a', ['role-a']], ['with-both', ['role-a', 'role-b']], ['boss', ['role-admin']]] as const) {
+      testDb.insert(schema.users).values({ id, username: id, passwordHash: 'x', createdAt: now }).run();
+      testDb.insert(schema.spaceMembers).values({ spaceId: SPACE_ID, userId: id, joinedAt: now }).run();
+      for (const roleId of roles) testDb.insert(schema.memberRoles).values({ spaceId: SPACE_ID, userId: id, roleId }).run();
+      people.push(id);
+    }
+
+    const targets = [
+      { targetType: 'role', targetId: SPACE_ID },
+      { targetType: 'role', targetId: 'role-a' },
+      { targetType: 'role', targetId: 'role-b' },
+      { targetType: 'member', targetId: 'plain' },
+      { targetType: 'member', targetId: 'with-a' },
+      { targetType: 'member', targetId: OUTSIDER_ID },
+    ];
+
+    for (let seed = 1; seed <= 40; seed += 1) {
+      const next = generator(seed);
+      const bits = (): string => permissionsToString(SOME_BITS.reduce((all, bit) => (next(3) === 0 ? all | bit : all), 0n));
+      const categoryId = `cat-${seed}`;
+      const channelId = `chan-${seed}`;
+      const threadId = `thread-${seed}`;
+      const inCategory = next(4) !== 0;
+      testDb.insert(schema.channelCategories).values({ id: categoryId, spaceId: SPACE_ID, name: categoryId, position: seed, createdAt: now }).run();
+      testDb.insert(schema.channels).values({ id: channelId, spaceId: SPACE_ID, name: channelId, type: 'text', position: seed, categoryId: inCategory ? categoryId : null, createdAt: now }).run();
+      testDb.insert(schema.channels).values({ id: threadId, spaceId: SPACE_ID, name: threadId, type: 'thread', position: seed, parentChannelId: channelId, createdAt: now }).run();
+      for (const target of targets) {
+        if (next(2) === 0) testDb.insert(schema.categoryOverrides).values({ categoryId, ...target, allow: bits(), deny: bits() }).run();
+        if (next(2) === 0) testDb.insert(schema.channelOverrides).values({ channelId, ...target, allow: bits(), deny: bits() }).run();
+      }
+      for (const place of [channelId, threadId, 'no-such-channel']) {
+        const together = computeChannelPermissionsFor(SPACE_ID, place, people);
+        for (const person of people) {
+          expect(together.get(person), `seed ${seed}, ${place}, ${person}`).toBe(computePermissions(person, SPACE_ID, place));
+        }
+      }
+    }
+  });
+
+  it('gives nobody anything in a space that does not exist', async () => {
+    const { computeChannelPermissionsFor } = await import('./permissions.js');
+    expect(computeChannelPermissionsFor('no-such-space', 'x', [MEMBER_ID]).get(MEMBER_ID)).toBe(0n);
+  });
+
+  it('asks nothing for nobody', async () => {
+    const { computeChannelPermissionsFor } = await import('./permissions.js');
+    expect(computeChannelPermissionsFor(SPACE_ID, 'x', []).size).toBe(0);
+  });
+
+  it('sees a change at once: nothing is kept between two calls', async () => {
+    const { computeChannelPermissionsFor } = await import('./permissions.js');
+    testDb.insert(schema.channels).values({ id: 'c1', spaceId: SPACE_ID, name: 'c1', type: 'text', position: 0, createdAt: now }).run();
+    expect((computeChannelPermissionsFor(SPACE_ID, 'c1', [MEMBER_ID]).get(MEMBER_ID) ?? 0n) & PermissionBits.VIEW_CHANNEL).not.toBe(0n);
+    testDb.insert(schema.channelOverrides).values({ channelId: 'c1', targetType: 'member', targetId: MEMBER_ID, allow: '0', deny: permissionsToString(PermissionBits.VIEW_CHANNEL) }).run();
+    expect((computeChannelPermissionsFor(SPACE_ID, 'c1', [MEMBER_ID]).get(MEMBER_ID) ?? 0n) & PermissionBits.VIEW_CHANNEL).toBe(0n);
+  });
+
+  it('holds across the size of a batch', async () => {
+    const { computeChannelPermissionsFor, computePermissions } = await import('./permissions.js');
+    testDb.insert(schema.channels).values({ id: 'c2', spaceId: SPACE_ID, name: 'c2', type: 'text', position: 0, createdAt: now }).run();
+    const many = Array.from({ length: 1203 }, (_unused, at) => `many-${at}`);
+    sqlite.exec('BEGIN');
+    for (const id of many) {
+      testDb.insert(schema.users).values({ id, username: id, passwordHash: 'x', createdAt: now }).run();
+      testDb.insert(schema.spaceMembers).values({ spaceId: SPACE_ID, userId: id, joinedAt: now }).run();
+    }
+    sqlite.exec('COMMIT');
+    const together = computeChannelPermissionsFor(SPACE_ID, 'c2', many);
+    expect(together.size).toBe(1203);
+    expect(together.get('many-1202')).toBe(computePermissions('many-1202', SPACE_ID, 'c2'));
+  });
+});

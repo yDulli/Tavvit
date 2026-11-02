@@ -9,6 +9,7 @@ import { getChannelSpaceId, getMember, hasPermission, PermissionBits } from '../
 import { connectionManager } from './handler.js';
 import { errorText } from '../utils/httpErrors.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
+import { memberActionRefusal } from '../utils/spaceModeration.js';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
 
 /**
@@ -60,6 +61,11 @@ export function handleChannelPoke({ event, userId, ws }: {
   }
   if (!hasPermission(userId, spaceId, PermissionBits.SEND_MESSAGES, channelId)) {
     refusePoke(ws, 'missing_permission', { permission: 'SEND_MESSAGES' }); return;
+  }
+  // A poke posts a row in the channel, which a timed-out member may not do.
+  const timeout = memberActionRefusal(spaceId, userId);
+  if (timeout) {
+    refusePoke(ws, timeout.code, timeout.details); return;
   }
   const db = getDb();
   const actor = db.select().from(schema.users).where(eq(schema.users.id, userId)).get();

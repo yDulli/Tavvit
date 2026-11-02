@@ -1,7 +1,7 @@
 {
   "general": {
     "title": "常规",
-    "description": "配置您的 Backspace 实例。这些设置将影响所有用户。",
+    "description": "配置您的 Tavvit 实例。这些设置将影响所有用户。",
     "instanceName": {
       "label": "实例名称",
       "description": "显示在登录页面和对等联邦实例上的名称。",
@@ -21,13 +21,13 @@
         },
         "global": {
           "label": "允许列入全局目录",
-          "description": "之后可以在每个空间自己的“发现”设置中，手动将其列入全局 Backspace 目录。"
+          "description": "之后，已获批准的空间还可以列入全局 Tavvit 目录，前提是其拥有者在空间的“发现”设置中选择列入。"
         }
       },
       "unconfigured": "本实例未配置可访问的目录，因此这里的空间无法列入全局目录。"
     },
     "directory": {
-      "listingHint": "仅开启此项不会让任何空间列入目录。每个空间仍需在其“发现”设置中开启“{{setting}}”。",
+      "listingHint": "仅开启此项不会让任何空间列入目录。空间必须已获批准收录，并在其“发现”设置中开启“{{setting}}”。",
       "showMeWhere": "带我去看",
       "saveAndShowMeWhere": "保存并带我去看",
       "listedCount_other": "已列入 {{count}} 个空间",
@@ -54,11 +54,6 @@
       "toggleDescription": "本实例的用户会在外部空间看到来自其他实例的空间。他们的浏览器会从拥有这些空间的实例加载其图标和横幅。",
       "unavailable": "本实例未配置可访问的目录，因此没有内容可显示。"
     },
-    "supportCard": {
-      "label": "Backspace 页面",
-      "toggleLabel": "显示项目支持卡片",
-      "toggleDescription": "在 Backspace 页面上显示一张链接到本项目 Ko-fi 页面的卡片。关闭后只隐藏这张卡片。"
-    },
     "gif": {
       "label": "GIF 搜索",
       "description": "启用由 Klipy 提供支持的 GIF 搜索。可从 Klipy 开发者后台免费获取 API 密钥。",
@@ -67,6 +62,21 @@
       "enabled": "已启用",
       "notConfigured": "未配置",
       "clearKey": "清除密钥"
+    },
+    "accent": {
+      "label": "强调色",
+      "description": "此服务器上所有人看到的按钮和高亮颜色。",
+      "custom": "自定义",
+      "useDefault": "使用默认",
+      "preview": "示例",
+      "invalid": "请输入类似 #7466e8 的颜色。",
+      "tooLight": "此颜色太浅：按钮上的白色文字将难以辨认。",
+      "tooDark": "此颜色太深：会与深色面板融为一体。"
+    },
+    "emoji": {
+      "title": "表情",
+      "label": "所有人都可以添加表情",
+      "description": "关闭后，只有管理员可以向库中添加。所有人都可以使用库中的表情。"
     }
   },
   "registration": {
@@ -251,6 +261,13 @@
       "saved": "上传上限已设置为 {{limit}}",
       "saveFailed": "更新上传上限失败"
     },
+    "accountLimits": {
+      "label": "每个账号的限制",
+      "description": "防止单个账号占满磁盘。管理员不受限制，0 表示不限制；降低限制时，账号已有的内容会保留。可在账号页面为其单独设置限制。",
+      "storage": "每个账号的文件（GB）",
+      "spaces": "每个账号的空间数",
+      "saved": "限制已保存"
+    },
     "cleanup": {
       "label": "清理",
       "nothingFound": "未发现孤立文件、过期上传或游离记录。",
@@ -327,57 +344,6 @@
       "description": "部分码率设置超出了您配置的最大上限 {{max}}。在这些组合下推流的画质将被降级限制在您的上限之内。"
     }
   },
-  "updates": {
-    "title": "更新",
-    "badge": {
-      "settingsAriaLabel": "设置，实例有可用更新",
-      "toast": "此实例有可用的 Backspace {{version}} 新版本",
-      "toastAction": "查看"
-    },
-    "description": "此实例当前运行的版本，以及如何升级版本。",
-    "loading": "正在加载更新状态…",
-    "loadFailed": "无法加载更新状态。",
-    "copyFailed": "复制失败，请手动选中文本并复制。",
-    "running": {
-      "label": "当前运行",
-      "commit": "提交号 {{commit}} · ",
-      "channel": {
-        "prebuilt": "预构建镜像",
-        "source": "从源码构建",
-        "unknown": "安装方式未记录"
-      }
-    },
-    "available": {
-      "label": "可用版本",
-      "version": "Backspace {{version}} 现已可用",
-      "released": "发布于 {{date}} · ",
-      "releaseNotes": "发布说明",
-      "fromInstallDir": "在您的安装目录下运行：",
-      "scriptDescription": "自动创建数据库快照，拉取新镜像，并仅重启 Backspace 容器。如果新版本启动不健康，或启动后仍在运行旧代码，将自动回滚至当前版本。",
-      "noScript": "我没有 update.sh 脚本",
-      "manualIntro": "update.sh 包含在 1.0.5 及更高版本中。若是 git 检出仓库，运行 <code>git pull</code> 即可获取该脚本。否则在使用 <code>./backup.sh</code> 创建快照后，按步骤手动操作。",
-      "prebuiltInstall": "预构建镜像安装：",
-      "sourceInstall": "源码编译安装：",
-      "manualWarning": "请明确指定 <code>backspace</code> 服务名称，并且不要加上 <code>--remove-orphans</code> 参数。若该项目中还运行了其他容器，Compose 会提示该参数，但那样做会误删这些容器。"
-    },
-    "upToDate": "您当前运行的是最新版本。",
-    "disabled": {
-      "title": "更新检查功能已关闭",
-      "description": "此实例不会主动联网请求 GitHub。在您的 <code>.env</code> 中配置 <code>BACKSPACE_UPDATE_CHECK=true</code> 可开启自动检测，或者您可以自行查看 GitHub Releases 页面。"
-    },
-    "rateLimited": {
-      "title": "GitHub 限制了查询频率",
-      "description": "这并不代表是否有新更新。请稍后重试。"
-    },
-    "unreachable": {
-      "title": "无法检查更新",
-      "description": "暂时无法连接到 GitHub，无法确定是否有新版本。您的实例运行不受任何影响。"
-    },
-    "lastChecked": "最后检查时间：{{when}}",
-    "noLookups": "未执行过检查",
-    "checkAgain": "重新检查",
-    "checking": "正在检查…"
-  },
   "users": {
     "title": "用户",
     "description": "查看并管理此实例上的用户账号。",
@@ -434,20 +400,557 @@
     "deleteDialog": {
       "title": "删除用户",
       "description": "确定永久删除 <strong>{{username}}</strong> 吗？这将把他们从所有空间、私信和好友列表中移除。此操作无法撤销。",
-      "confirm": "删除用户"
+      "confirm": "删除用户",
+      "reason": "原因（记入审计日志）",
+      "password": "你的密码，用于确认是你本人"
     }
   },
-  "mobile": {
-    "title": "实例",
+  "platform": {
+    "decision": {
+      "noteRequired": "理由（必填，拥有者会看到）",
+      "noteOptional": "理由（可选，拥有者会看到）",
+      "notePlaceholder": "关于此决定，拥有者需要了解的内容",
+      "counter": "{{length}}/{{max}}"
+    },
+    "reviews": {
+      "title": "审核",
+      "description": "待处理的申请，最早的在前。打开一项申请即可阅读完整内容、查看收录预览和历史记录，并附上理由做出决定。",
+      "verification": "认证申请 · {{n}}",
+      "discovery": "收录申请 · {{n}}",
+      "noVerification": "没有待处理的认证申请。",
+      "noDiscovery": "没有待处理的收录申请。"
+    },
+    "spaces": {
+      "title": "空间",
+      "description": "本实例托管的所有空间。打开一个空间即可查看其审核、徽章和历史记录。",
+      "detailTitle": "空间",
+      "searchPlaceholder": "按名称或 ID 搜索…",
+      "filterLabel": "显示",
+      "filters": {
+        "all": "所有空间",
+        "listed": "已收录到“探索”",
+        "verified": "已认证",
+        "open_review": "待审核"
+      },
+      "empty": "没有匹配的空间。",
+      "page": "第 {{page}} 页，共 {{total}} 页",
+      "members_other": "{{count}} 名成员",
+      "visibility": {
+        "public": "公开",
+        "request": "需申请加入",
+        "private": "私密"
+      },
+      "created": "创建于 {{date}}",
+      "directoryOptIn": "已选择列入目录",
+      "ownedBy": "拥有者：{{name}}（@{{username}}）",
+      "ownerGone": "拥有者账号已不存在"
+    },
+    "requestedBy": "由 {{name}} 于 {{date}} 发送",
+    "verification": {
+      "title": "认证",
+      "name": "名称",
+      "description": "描述",
+      "category": "类别",
+      "website": "网站",
+      "profiles": "公开主页",
+      "reason": "理由",
+      "proof": "证明",
+      "requested": "已发送",
+      "none": "未申请认证。",
+      "history": "认证历史"
+    },
+    "discovery": {
+      "title": "“探索”收录",
+      "category": "类别",
+      "requested": "已发送",
+      "lastNote": "最近一次备注",
+      "none": "未申请收录。",
+      "history": "收录历史"
+    },
+    "decisions": {
+      "verification": {
+        "approve": {
+          "button": "认证",
+          "title": "认证此空间？",
+          "description": "在认证被撤销之前，凡是显示此空间的地方都会带有认证标记。",
+          "confirm": "认证"
+        },
+        "request_info": {
+          "button": "要求补充信息",
+          "title": "要求补充信息？",
+          "description": "申请将连同您的备注退回给拥有者。拥有者重新发送后，申请会回到队列中。",
+          "confirm": "要求补充"
+        },
+        "reject": {
+          "button": "拒绝",
+          "title": "拒绝此申请？",
+          "description": "此空间不会获得认证。拥有者会看到您的理由，并可以发送新的申请。",
+          "confirm": "拒绝"
+        },
+        "revoke": {
+          "button": "撤销",
+          "title": "撤销认证？",
+          "description": "认证标记会立即消失。拥有者会看到您的理由。",
+          "confirm": "撤销"
+        }
+      },
+      "discovery": {
+        "approve": {
+          "button": "批准收录",
+          "title": "将此空间收录到“探索”？",
+          "description": "此空间将按预览所示出现在“探索”中。若其名称、描述或图片被修改，将重新进入审核。",
+          "confirm": "批准"
+        },
+        "request_changes": {
+          "button": "要求修改",
+          "title": "要求修改？",
+          "description": "申请将连同您的备注退回给拥有者。拥有者重新发送后，申请会回到队列中。",
+          "confirm": "要求修改"
+        },
+        "reject": {
+          "button": "拒绝",
+          "title": "拒绝此收录申请？",
+          "description": "此空间不会出现在“探索”中。拥有者会看到您的理由，并可以发送新的申请。",
+          "confirm": "拒绝"
+        },
+        "withdraw": {
+          "button": "撤下",
+          "title": "撤下此收录？",
+          "description": "此空间会立即从“探索”中移除，或其申请会移出队列。拥有者会看到您的理由。",
+          "confirm": "撤下"
+        }
+      }
+    },
+    "badges": {
+      "spaceTitle": "徽章",
+      "spaceHint": "您授予此空间的徽章。“已认证”不在其中：它取决于认证状态。",
+      "userTitle": "徽章",
+      "userHint": "您授予此人的徽章。“管理团队”不在其中：它取决于管理员角色。"
+    },
+    "audit": {
+      "title": "审计日志",
+      "description": "管理员在此执行的所有操作：封禁、审核决定、徽章、角色、邀请和设置。",
+      "filterLabel": "显示",
+      "filters": {
+        "all": "全部",
+        "user": "账号",
+        "space": "空间",
+        "instance": "实例"
+      },
+      "more": "显示更早的记录",
+      "empty": "暂无记录。",
+      "aboutSpace": "此空间的审计日志",
+      "aboutUser": "此账号的审计日志",
+      "by": "操作人：{{name}}",
+      "actions": {
+        "user_suspend": "账号已封禁",
+        "user_unsuspend": "封禁已解除",
+        "user_role": "管理员角色已更改",
+        "user_password_reset": "密码已重置",
+        "user_delete": "账号已删除",
+        "user_badges": "账号徽章已更改",
+        "space_badges": "空间徽章已更改",
+        "verification_approve": "空间已认证",
+        "verification_reject": "认证申请已拒绝",
+        "verification_request_info": "已要求补充认证信息",
+        "verification_revoke": "认证已撤销",
+        "discovery_approve": "收录已批准",
+        "discovery_reject": "收录申请已拒绝",
+        "discovery_request_changes": "已要求修改收录申请",
+        "discovery_withdraw": "收录已撤下",
+        "settings_update": "实例设置已更改",
+        "invite_create": "邀请已创建",
+        "invite_update": "邀请已更改",
+        "invite_revoke": "邀请已撤销",
+        "invite_reinstate": "邀请已恢复",
+        "invite_delete": "邀请已删除",
+        "storage_cleanup": "存储已清理",
+        "unknown": "此版本尚不认识的操作",
+        "legal_operator_update": "更改了运营者信息",
+        "legal_publish": "发布了法律文档",
+        "report_decide": "处理了举报",
+        "announcement_create": "发送了公告",
+        "announcement_end": "结束了公告",
+        "user_note_add": "添加了备注",
+        "user_note_delete": "删除了备注",
+        "user_warn": "警告了账号",
+        "user_sessions_end": "将账号退出登录",
+        "user_storage_limit": "更改了账号的文件限制",
+        "signup_rule_add": "添加了注册规则",
+        "signup_rule_remove": "移除了注册规则",
+        "signup_challenge_update": "更改了自动注册防护",
+        "bots_update": "更改了是否允许机器人",
+        "bot_delete": "删除了机器人",
+        "starter_spaces_update": "更改了初始空间",
+        "backup_create": "创建了备份",
+        "accounts_export": "导出了账号",
+        "audit_export": "导出了审计日志",
+        "peer_trust": "更改了对其他实例的信任",
+        "space_vanity_revoke": "收回了一个邀请地址"
+      },
+      "details": {
+        "until": "直至 {{date}}",
+        "untilLifted": "直至解除",
+        "storageOwn": "单独限制：{{limit}}",
+        "storageNone": "不限制",
+        "storageInstance": "实例的限制",
+        "madeAdmin": "已设为管理员",
+        "removedAdmin": "已取消管理员角色",
+        "badgesAdded": "已添加：{{badges}}",
+        "badgesRemoved": "已移除：{{badges}}",
+        "fields": "已更改：{{fields}}",
+        "cleanup_other": "已移除 {{count}} 个文件 ({{size}})",
+        "sessions": "会话数：{{n}}",
+        "rows": "行数：{{n}}",
+        "peer": {
+          "initiated": "已请求连接",
+          "approved": "已批准",
+          "denied": "已拒绝",
+          "revoked": "已撤销信任",
+          "reset": "已重置",
+          "removed": "已删除记录",
+          "rotated": "新的共享密钥"
+        }
+      }
+    },
+    "users": {
+      "detailTitle": "账号",
+      "joined": "加入时间",
+      "memberships": "空间",
+      "friends": "好友",
+      "messages": "消息",
+      "ownedSpaces": "拥有的空间",
+      "statusFilter": "状态",
+      "allStatuses": "所有账号",
+      "suspendedOnly": "已封禁",
+      "manage": "管理"
+    },
+    "suspension": {
+      "chip": "已封禁",
+      "title": "封禁",
+      "activeUntilLifted": "自 {{date}} 起被封禁，直至管理员解除。",
+      "activeUntil": "自 {{since}} 起被封禁，直至 {{until}}。",
+      "lift": "解除封禁",
+      "hint": "封禁会将此人拒之门外：无法登录、无法发消息、无法通话。账号中的任何内容都不会被删除，封禁会在您选择的时间自动结束。",
+      "duration": "时长",
+      "durations": {
+        "h1": "1 小时",
+        "h24": "24 小时",
+        "h72": "3 天",
+        "h168": "7 天",
+        "h720": "30 天",
+        "lifted": "直至解除"
+      },
+      "reason": "原因（必填）",
+      "reasonPlaceholder": "用一句对方能看懂的话，说明此人做了什么",
+      "reasonShown": "此人尝试登录时会看到这条原因。",
+      "suspend": "封禁",
+      "deleted": "已注销的账号无法被封禁。",
+      "self": "您不能封禁自己的账号。",
+      "adminFirst": "封禁此账号前，请先取消其管理员角色。",
+      "confirmTitle": "封禁此账号？",
+      "confirmDescription": "@{{username}} 将在所有设备上退出登录，封禁期间无法登录。封禁时长：{{duration}}。",
+      "liftTitle": "解除封禁？",
+      "liftDescription": "@{{username}} 可以立即重新登录。",
+      "liftNoteLabel": "原因（可选，会记录在审计日志中）",
+      "liftNotePlaceholder": "为何现在解除封禁"
+    },
+    "vanity": {
+      "title": "专属邀请地址",
+      "hint": "收回后，所有者会收到原因，且任何人都不能再使用此地址。其他链接继续有效。",
+      "revoke": "收回",
+      "confirmTitle": "要收回此地址吗？",
+      "confirmBody": "所有者会看到你在此填写的原因。"
+    }
+  },
+  "email": {
+    "title": "邮件",
+    "intro": "此服务器发送的账户相关邮件。“已接受”表示服务商已接收,不代表已送达。",
+    "off": {
+      "title": "邮件已关闭",
+      "body": "此服务器不发送邮件。因此账户没有地址,忘记的密码只能由管理员重置。要开启,请在 .env 中设置 EMAIL_TRANSPORT,具体方法见 docs/systems/email.md。"
+    },
+    "warnings": {
+      "title": "需要注意",
+      "blocked": "服务商因密钥或域名问题拒绝了此服务器。邮件正在等待,“忘记密码”会提示暂不可用。",
+      "held": "已达到每日或每月上限。邮件会等到重新计数后发送。",
+      "heldUntil": "已达到服务商的上限。邮件会等到 {{date}}。",
+      "day": "今日上限已使用超过 80%。密码重置可用到最后一封,其他邮件会提前停止。",
+      "month": "本月上限已使用超过 90%。",
+      "bounces": "过去 30 天超过 4% 的邮件被退回。达到此比例时,服务商可能暂停整个账户,包括密码重置。",
+      "complaints": "过去 30 天超过 0.08% 的邮件被举报为垃圾邮件。达到此比例时,服务商可能暂停整个账户,包括密码重置。",
+      "noWebhook": "未设置 RESEND_WEBHOOK_SECRET。因此此服务器无法得知退信,会继续向失效地址发送。"
+    },
+    "rows": {
+      "title": "发送",
+      "transport": "发送方式",
+      "from": "发件人",
+      "today": "今日已接受",
+      "month": "本月已接受",
+      "queued": "等待中",
+      "failed": "今日失败",
+      "bounced": "今日退信",
+      "complained": "今日被举报为垃圾邮件",
+      "lastError": "上一个错误"
+    },
+    "required": {
+      "title": "新账户",
+      "label": "要求已确认的地址",
+      "description": "从现在起,新账户必须提供地址。在确认之前,账户可以使用受邀加入的空间并与好友聊天,但不能创建空间,也不能联系陌生人。现有账户不受影响。"
+    },
+    "test": {
+      "title": "测试",
+      "description": "发送一封邮件以检查是否正常。在服务商的免费方案中,它会计入上限。",
+      "address": "发送到",
+      "submit": "发送测试邮件",
+      "queued": "测试邮件正在发送"
+    }
+  },
+  "console": {
+    "title": "管理控制台",
+    "lead": "{{instance}} · 版本 {{version}}",
+    "export": "导出为 CSV",
+    "groups": {
+      "overview": "概览",
+      "moderation": "管理",
+      "community": "社区",
+      "instance": "实例"
+    },
     "sections": {
+      "overview": "概览",
+      "reviews": "审核",
+      "reports": "举报",
+      "users": "用户",
+      "spaces": "空间",
+      "audit": "审计日志",
+      "announcements": "公告",
+      "signup": "注册规则",
+      "starter": "初始空间",
+      "bots": "机器人",
       "general": "常规",
       "registration": "注册",
+      "email": "邮件",
+      "legal": "法律",
       "federation": "联邦",
-      "streaming": "推流",
+      "streaming": "串流",
       "storage": "存储",
-      "updates": "更新",
-      "users": "用户",
-      "telemetry": "打个招呼"
+      "system": "系统"
+    },
+    "search": {
+      "label": "搜索账号和空间",
+      "placeholder": "搜索账号和空间…",
+      "accounts": "账号",
+      "spaces": "空间",
+      "nothing": "未找到“{{query}}”的结果。"
+    },
+    "dashboard": {
+      "attention": "等待你处理",
+      "caughtUp": "没有等待你处理的事项。",
+      "reports": "等待处理的举报",
+      "reviews": "等待审核的空间",
+      "alerts": "服务器问题",
+      "today": "今天",
+      "trends": "最近 30 天",
+      "stats": {
+        "accounts": "账号",
+        "online": "当前在线",
+        "active": "今日活跃",
+        "messages": "今日消息"
+      },
+      "newThisWeek": "7 天内新增 {{n}} 个",
+      "onlineRightNow": "当前已连接",
+      "delta": {
+        "up": "比前 7 天多 {{percent}}",
+        "down": "比前 7 天少 {{percent}}",
+        "same": "与前 7 天相同",
+        "new": "前 7 天没有"
+      },
+      "charts": {
+        "messages": "每日消息数",
+        "active": "每日活跃账号数",
+        "signups": "每日新增账号数",
+        "mail": "每日发送邮件数"
+      },
+      "total30": "30 天内共 {{total}}",
+      "showTable": "以表格显示",
+      "showChart": "以图表显示",
+      "day": "日期",
+      "value": "数量",
+      "security": "账号安全情况",
+      "twoFactor": "两步验证登录",
+      "confirmedEmail": "已确认的地址",
+      "ofAccounts": "{{total}} 个账号中的 {{n}} 个",
+      "standing": "当前情况",
+      "spacesTotal": "空间",
+      "spacesListed": "已在探索中列出",
+      "spacesVerified": "已认证的空间",
+      "suspended": "已封禁的账号",
+      "admins": "管理员",
+      "toSystem": "查看系统"
+    },
+    "announcements": {
+      "description": "发给所有已登录用户的消息，显示在应用上方的横幅中。它会立即发出，每个人都可以在自己的设备上关闭它。",
+      "new": "新公告",
+      "message": "消息",
+      "placeholder": "今晚 22:00 维护，大约十分钟。",
+      "tone": "类型",
+      "tones": {
+        "info": "信息",
+        "warning": "警告"
+      },
+      "duration": "持续时间",
+      "onStatusPage": "同时显示在公开状态页面",
+      "untilEnded": "直到我结束",
+      "send": "发送给所有人",
+      "preview": "显示效果",
+      "running": "正在显示",
+      "noneRunning": "当前没有公告。",
+      "sinceOpen": "自 {{date}} 起",
+      "sinceUntil": "自 {{date}} 起，至 {{until}}",
+      "end": "结束",
+      "past": "更早"
+    },
+    "signup": {
+      "description": "谁不能在此注册。在创建账号和设置地址时都会检查。已有账号的名称和地址不受影响。",
+      "challenge": "自动注册",
+      "challengeHint": "创建账号前，浏览器会完成一个小任务。这能挡住简单的脚本，数据不会离开此服务器，用户几乎察觉不到。对于仍愿付出代价的人，可使用下方列表和已确认的邮箱地址。",
+      "challengeLevels": {
+        "off": "关闭",
+        "normal": "普通",
+        "high": "高"
+      },
+      "domains": "已屏蔽的邮箱域名",
+      "domainsHint": "此域名及其所有子域名的地址都会被拒绝。",
+      "domainPlaceholder": "example.com",
+      "usernames": "保留的用户名",
+      "usernamesHint": "任何人都不能使用这些名称注册，不区分大小写。",
+      "usernamePlaceholder": "support",
+      "add": "添加",
+      "addUsual": "添加常用名称（admin、support、staff…）",
+      "empty": "这里还没有内容。",
+      "remove": "移除 {{value}}"
+    },
+    "starter": {
+      "description": "此服务器每个新账号开始时所在的公开空间，这样就没有人第一眼看到空白的应用。仅对今后创建的账号生效，不会移动已有成员。",
+      "emptyTitle": "没有初始空间",
+      "emptyBody": "新账号开始时没有空间。",
+      "add": "添加公开空间",
+      "searchPlaceholder": "搜索公开空间…",
+      "noResults": "没有这个名称的公开空间。",
+      "full": "已达上限：最多 {{max}} 个。",
+      "remove": "移除",
+      "notPublic": "已不再公开：在恢复公开之前，新账号会跳过它。"
+    },
+    "system": {
+      "description": "服务器本身的运行情况，以及在重大更改前可以手动创建的备份。",
+      "version": "版本",
+      "uptime": "已运行",
+      "memory": "已用内存",
+      "database": "数据库",
+      "socketPeople": "已连接人数：{{n}}",
+      "sockets": "打开的连接",
+      "notYet": "暂无",
+      "milliseconds": "{{n}} 毫秒",
+      "eventLoopWorst": "最差 {{n}} 毫秒",
+      "eventLoop": "负载延迟",
+      "disk": "磁盘",
+      "diskFree": "{{total}} 中可用 {{free}}",
+      "services": "服务",
+      "mail": "邮件",
+      "mailStates": {
+        "off": "已关闭",
+        "ok": "正常",
+        "held": "已暂缓",
+        "blocked": "已阻止"
+      },
+      "twoFactor": "两步验证登录",
+      "voice": "语音和视频",
+      "federation": "联邦",
+      "on": "开启",
+      "off": "关闭",
+      "backups": "备份",
+      "backUpNow": "立即备份",
+      "backupDone": "备份已完成。",
+      "backupsEvery": "每 {{interval}} 自动创建一个。",
+      "backupsManual": "不会自动创建备份。",
+      "restoreHint": "恢复备份需在服务器上运行 restore.sh。",
+      "noBackups": "还没有备份。",
+      "reasons": {
+        "pre-migration": "更新前",
+        "scheduled": "按计划",
+        "manual": "手动",
+        "console": "来自此控制台"
+      },
+      "alerts": {
+        "title": "问题",
+        "since": "自 {{date}} 起",
+        "disk_high": "磁盘已用 {{detail}}%。写满后，上传会停止，数据库也可能损坏。",
+        "backup_failed": "上一次定时备份失败：{{detail}}",
+        "backup_old": "最新的备份已有 {{detail}} 小时。",
+        "offsite_failed": "复制到另一台机器失败：{{detail}}",
+        "restart_loop": "服务器在十五分钟内启动了 {{detail}} 次。请查看日志。"
+      },
+      "translation": "消息翻译"
+    },
+    "account": {
+      "tabs": {
+        "overview": "概览",
+        "moderation": "管理",
+        "access": "登录",
+        "notes": "备注",
+        "log": "日志"
+      },
+      "storage": {
+        "title": "文件",
+        "used": "已用 {{used}}，共 {{limit}}",
+        "usedNoLimit": "已用 {{used}}，无限制",
+        "ownLimit": "单独限制（GB）",
+        "instanceDefault": "实例的限制",
+        "reset": "恢复为实例的限制",
+        "hint": "0 表示不限制。降低限制时，账号已有的内容会保留。"
+      },
+      "sessions": "此账号的登录位置",
+      "noSessions": "没有在任何地方登录。",
+      "unknownDevice": "未知设备",
+      "lastActive": "上次活跃 {{date}}",
+      "end": "退出登录",
+      "endAll": "全部退出登录",
+      "endAllTitle": "要让此账号在所有地方退出登录吗？",
+      "endAllBody": "每台设备都需要重新登录。对方会在安全活动中看到此记录。如需阻止其登录，请封禁账号。",
+      "security": "安全活动",
+      "noEvents": "没有记录。",
+      "notes": "给管理员的备注",
+      "notePlaceholder": "其他管理员应该知道的事。",
+      "notesHint": "此处只有管理员可见，对方可以在自己的数据导出中看到。",
+      "addNote": "添加备注",
+      "deleteNote": "删除备注",
+      "warning": "警告",
+      "warningHint": "来自运营方的通知，附有你的理由和申诉途径。不会改变账号的任何状态。",
+      "ground": "依据",
+      "grounds": {
+        "terms": "使用条款",
+        "illegal": "法律"
+      },
+      "warningReason": "理由（对方可见）",
+      "warn": "发送警告",
+      "warnTitle": "要发送这条警告吗？",
+      "warnBody": "对方会在应用中看到它和你的理由。",
+      "warningSent": "警告已发送。"
     }
+  },
+  "bots": {
+    "title": "机器人",
+    "switchTitle": "此实例上的机器人",
+    "switchDescription": "默认关闭。关闭后所有机器人立即停止，且无法创建新的。",
+    "switchLabel": "允许机器人",
+    "listTitle": "谁在运行什么",
+    "empty": "还没有机器人。",
+    "owner": "由 {{name}} 运行",
+    "neverUsed": "从未使用",
+    "lastUsed": "上次使用：{{time}}",
+    "remove": "删除机器人",
+    "removeTitle": "删除此机器人？",
+    "removeBody": "{{name}} 将离开所有空间，令牌失效。已发布内容会保留。",
+    "spaces_other": "在 {{formatted}} 个空间中"
   }
 }

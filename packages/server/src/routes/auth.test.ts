@@ -19,6 +19,13 @@ let sqlite: Database.Database;
 let testDb: TestDb;
 let app: FastifyInstance;
 
+vi.mock('../utils/federationAttach.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../utils/federationAttach.js')>()),
+  homeIdentityProven: vi.fn().mockResolvedValue(true),
+}));
+
+const PROOF = 'a'.repeat(64);
+
 vi.mock('../db/index.js', () => ({
   getDb: () => testDb,
   getRawDb: () => sqlite,
@@ -224,7 +231,7 @@ describe('POST /api/auth/register — federation gate split', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'alice', password: 'password123' },
+      payload: { username: 'alice', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(201);
 
@@ -232,7 +239,7 @@ describe('POST /api/auth/register — federation gate split', () => {
     const res2 = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'bob', password: 'password123', inviteToken: 'fakefakefakefakefakeXX' },
+      payload: { username: 'bob', password: 'tests-only-passphrase', inviteToken: 'fakefakefakefakefakeXX' },
     });
     expect(res2.statusCode).toBe(201);
   });
@@ -246,7 +253,7 @@ describe('POST /api/auth/register — federation gate split', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'newalice', password: 'password123' },
+      payload: { username: 'newalice', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(403);
     expect(res.json().error).toContain('invite is required');
@@ -273,7 +280,7 @@ describe('POST /api/auth/register — federation gate split', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'newalice', password: 'password123', inviteToken: token },
+      payload: { username: 'newalice', password: 'tests-only-passphrase', inviteToken: token },
     });
     expect(res.statusCode).toBe(201);
 
@@ -295,7 +302,7 @@ describe('POST /api/auth/register — federation gate split', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'newalice', password: 'password123', inviteToken: 'fakefakefakefakefakeXX' },
+      payload: { username: 'newalice', password: 'tests-only-passphrase', inviteToken: 'fakefakefakefakefakeXX' },
     });
     expect(res.statusCode).toBe(403);
     expect(res.json().code).toBe('invite_invalid');
@@ -318,7 +325,7 @@ describe('POST /api/auth/register — federation gate split', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'newalice', password: 'password123', inviteToken: token },
+      payload: { username: 'newalice', password: 'tests-only-passphrase', inviteToken: token },
     });
     expect(res.statusCode).toBe(201);
 
@@ -342,9 +349,10 @@ describe('POST /api/auth/register — federation gate split', () => {
       url: '/api/auth/register',
       payload: {
         username: 'alice@otherhost',
-        password: 'password123',
+        password: 'tests-only-passphrase',
         homeInstance: 'otherhost',
         homeUserId: 'remote-id',
+        attachProof: PROOF,
       },
     });
     expect(res.statusCode).toBe(403);
@@ -374,9 +382,10 @@ describe('POST /api/auth/register — federation gate split', () => {
       url: '/api/auth/register',
       payload: {
         username: 'alice@otherhost',
-        password: 'password123',
+        password: 'tests-only-passphrase',
         homeInstance: 'otherhost',
         homeUserId: 'remote-id',
+        attachProof: PROOF,
         inviteToken: token,
       },
     });
@@ -412,9 +421,10 @@ describe('POST /api/auth/register — federation gate split', () => {
       url: '/api/auth/register',
       payload: {
         username: 'alice@otherhost',
-        password: 'password123',
+        password: 'tests-only-passphrase',
         homeInstance: 'otherhost',
         homeUserId: 'remote-id',
+        attachProof: PROOF,
         inviteToken: token,
       },
     });
@@ -450,7 +460,7 @@ describe('POST /api/auth/register — federation gate split', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'newalice', password: 'password123', inviteToken: token },
+      payload: { username: 'newalice', password: 'tests-only-passphrase', inviteToken: token },
     });
     expect(res.statusCode).toBe(403);
   });
@@ -476,7 +486,7 @@ describe('POST /api/auth/register — federation gate split', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'eve', password: 'password123', inviteToken: token },
+      payload: { username: 'eve', password: 'tests-only-passphrase', inviteToken: token },
     });
     expect(res.statusCode).toBe(201);
 
@@ -489,7 +499,7 @@ describe('POST /api/auth/register — federation gate split', () => {
   });
 });
 
-describe('POST /api/auth/register — first-user-admin promotion', () => {
+describe('POST /api/auth/register — nobody becomes an administrator by registering', () => {
   beforeEach(() => {
     // Start from a completely empty users table (no pre-seeded admin from outer beforeEach).
     testDb.delete(schema.users).run();
@@ -503,28 +513,28 @@ describe('POST /api/auth/register — first-user-admin promotion', () => {
     }).run();
   });
 
-  it('first locally-registered user receives isAdmin = 1', async () => {
+  it('the first locally-registered user is no administrator: that is tavvit-admin\'s', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'firstuser', password: 'password123' },
+      payload: { username: 'firstuser', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(201);
 
     const user = testDb.select().from(schema.users).where(eq(schema.users.username, 'firstuser')).get();
-    expect(user?.isAdmin).toBe(1);
+    expect(user?.isAdmin).toBe(0);
   });
 
   it('second locally-registered user does NOT receive isAdmin', async () => {
     await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'firstuser', password: 'password123' },
+      payload: { username: 'firstuser', password: 'tests-only-passphrase' },
     });
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'seconduser', password: 'password123' },
+      payload: { username: 'seconduser', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(201);
 
@@ -536,7 +546,7 @@ describe('POST /api/auth/register — first-user-admin promotion', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'feduser@remote.example', password: 'password123', homeInstance: 'remote.example' },
+      payload: { username: 'feduser@remote.example', password: 'tests-only-passphrase', homeInstance: 'remote.example', homeUserId: 'home-1', attachProof: PROOF },
     });
     // Federated registration is open (federatedRegistrationOpen: 1)
     expect(res.statusCode).toBe(201);
@@ -588,9 +598,10 @@ describe('POST /api/auth/register — federation-replicated stubs are never clai
       url: '/api/auth/register',
       payload: {
         username: 'mallory@attacker.example',
-        password: 'password123',
+        password: 'tests-only-passphrase',
         homeInstance: 'attacker.example',
         homeUserId: 'shared-home-id',
+        attachProof: PROOF,
       },
     });
 
@@ -612,9 +623,10 @@ describe('POST /api/auth/register — federation-replicated stubs are never clai
       url: '/api/auth/register',
       payload: {
         username: 'mallory@otherhost',
-        password: 'password123',
+        password: 'tests-only-passphrase',
         homeInstance: 'otherhost',
         homeUserId: 'victim-home-id',
+        attachProof: PROOF,
       },
     });
 
@@ -636,9 +648,10 @@ describe('POST /api/auth/register — federation-replicated stubs are never clai
       url: '/api/auth/register',
       payload: {
         username: 'victim@otherhost.example',
-        password: 'password123',
+        password: 'tests-only-passphrase',
         homeInstance: 'otherhost',
         homeUserId: 'some-other-home-id',
+        attachProof: PROOF,
       },
     });
 

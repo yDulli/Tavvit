@@ -88,7 +88,14 @@
     "hoursShort_other": "{{count}} Std",
     "daysShort_one": "{{count}} T",
     "daysShort_other": "{{count}} T",
-    "close": "Unterhaltung schließen"
+    "close": "Unterhaltung schließen",
+    "filterLabel": "Unterhaltungen anzeigen",
+    "filterAll": "Alle",
+    "filterUnread": "Ungelesen",
+    "emptyUnread": "Keine ungelesenen Unterhaltungen.",
+    "emptyBody": "Starte eine mit einem Freund oder mit einer Gruppe von Freunden.",
+    "peerRejected": "Nachrichten können nicht weitergeleitet werden: Der Server dieser Person hat das Peering abgelehnt. Wende dich an den Admin dort.",
+    "peerAwaiting": "Nachrichten werden weitergeleitet, sobald der Admin dort die Peering-Anfrage freigibt."
   },
   "newDm": {
     "title": "Neue Direktnachricht",

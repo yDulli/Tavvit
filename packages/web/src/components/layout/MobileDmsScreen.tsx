@@ -8,9 +8,18 @@ import { useSocialStore } from '../../stores/socialStore';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
 import { Avatar } from '../ui/Avatar';
 import { AvatarStack } from '../ui/AvatarStack';
-import { Mascot } from '../ui/Mascot';
 import { resolveAssetUrl } from '../../utils/assetUrls';
 import { useNavigate } from 'react-router-dom';
+import { useFriendBuckets } from '../../hooks/useFriendBuckets';
+import { useInboxCount } from '../../hooks/useInboxCount';
+import { friendRowKey } from '../../utils/homeSummary';
+import { Icon } from '../ui/Icon';
+import { CountBadge } from '../ui/CountBadge';
+import { DmRowUnreadBadge } from './DmUnreadBadge';
+import { BAR_BUTTON, BAR_TITLE } from './mobileClasses';
+import { useQuickSwitcherStore } from '../../stores/quickSwitcherStore';
+import { describeError } from '../../i18n/errors';
+import { openDirectMessage } from '../../utils/openDirectMessage';
 import { parseFederatedUsername, isFederationGlobeApplicable, isMine, userDisplayName } from '../../utils/identity';
 import { useDmViewer } from '../../hooks/useDmViewer';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
@@ -22,12 +31,13 @@ const FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, repl
 
 function MobileFriendBubble({
   friend,
-  dmChannels,
-  onTap,
+  inVoice,
+  onOpen,
 }: {
   friend: TaggedFriend;
-  dmChannels: DmChannel[];
-  onTap: (dmId: string) => void;
+  /** The friend is connected to a voice channel; the avatar gets a green ring. */
+  inVoice: boolean;
+  onOpen: (friend: TaggedFriend) => void;
 }) {
   const canonical = useCanonicalUserView(friend as unknown as User, friend._instanceOrigin);
   // _instanceOrigin lives on TaggedFriend, not on the canonical User. Use the
@@ -39,30 +49,25 @@ function MobileFriendBubble({
 
   return (
     <button
-      onClick={() => {
-        const existingDm = dmChannels.find(dm =>
-          !dm.ownerId && dm.members.some(m => m.id === friend.id)
-        );
-        if (existingDm) {
-          onTap(existingDm.id);
-        }
-      }}
-      className="flex flex-col items-center gap-1 shrink-0 w-14"
+      onClick={() => onOpen(friend)}
+      className="flex w-16 shrink-0 flex-col items-center gap-1 rounded-md py-1 transition-colors hover:bg-interactive-hover active:bg-interactive-active"
     >
       <div className="relative">
         <Avatar
           src={avatarUrl}
           name={displayName}
           avatarColor={canonical.avatarColor}
-          size={40}
+          userId={canonical.homeUserId ?? canonical.id}
+          size={inVoice ? 36 : 40}
+          ring={inVoice ? { width: 2, color: 'rgb(var(--status-online))' } : undefined}
         />
-        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface-base ${
+        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface-channel ${
           friend.status === 'online' ? 'bg-status-online' :
           friend.status === 'idle' ? 'bg-status-idle' :
           'bg-status-dnd'
         }`} />
       </div>
-      <span className="text-[10px] text-txt-secondary truncate w-full text-center">
+      <span className="w-full truncate px-0.5 text-center text-2xs text-txt-secondary">
         {displayName}
       </span>
     </button>
@@ -117,19 +122,19 @@ function MobileDmRow({
       data-context-menu
       onClick={() => onTap(dm.id)}
       onContextMenu={(e) => onContextMenu(e, dm.id, isGroup)}
-      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-interactive-hover text-left transition-colors"
+      className="list-row w-full rounded-none px-4 py-2.5"
     >
       <div className="relative shrink-0">
         {isGroup ? (
           // Reuse the shared AvatarStack so group rows match the rest of the
           // group-DM surface (chat header, DmListItem, GroupDmSettings hero).
-          // size 40 matches the 1:1 Avatar above it; border="chat" picks the
-          // surface-chat border color used elsewhere on the messages list.
+          // size 40 matches the 1:1 Avatar above it; border="channel" is the
+          // surface this list stands on.
           <AvatarStack
             members={otherMembers}
             origin={viewer.origin}
             size={40}
-            border="chat"
+            border="channel"
             iconUrl={dm.icon}
           />
         ) : (
@@ -144,7 +149,7 @@ function MobileDmRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1 min-w-0">
-            <span className={`text-sm truncate ${isUnread ? 'font-semibold text-txt-primary' : 'text-txt-primary'}`}>
+            <span className={`truncate text-body text-txt-primary ${isUnread ? 'font-semibold' : ''}`}>
               {name}
             </span>
             {groupHasFederatedMember && (
@@ -162,31 +167,34 @@ function MobileDmRow({
             )}
           </span>
           {previewTime && (
-            <span className="text-[11px] text-txt-tertiary shrink-0">
+            <span className={`shrink-0 font-mono text-label tabular ${isUnread ? 'text-txt-secondary' : 'text-txt-tertiary'}`}>
               {formatTimestamp(previewTime)}
             </span>
           )}
         </div>
         {!isGroup && mainUser && isFederationGlobeApplicable(mainUser) && (
-          <div className="text-[10px] leading-[1.3] text-txt-tertiary truncate opacity-60">
+          <div className="text-2xs leading-[1.3] text-txt-tertiary truncate opacity-60">
             @{parseFederatedUsername(mainUser.username).domain}
           </div>
         )}
-        {preview && (
-          <p className={`text-xs truncate mt-0.5 ${isUnread ? 'text-txt-secondary font-medium' : 'text-txt-tertiary'}`}>
-            {preview}
-          </p>
+        {(preview || isUnread) && (
+          <div className="mt-0.5 flex items-center gap-2">
+            <p className={`min-w-0 flex-1 truncate text-meta ${isUnread ? 'font-medium text-txt-secondary' : 'text-txt-tertiary'}`}>
+              {preview}
+            </p>
+            {isUnread && <DmRowUnreadBadge dmId={dm.id} />}
+          </div>
         )}
       </div>
-      {isUnread && <span className="w-2.5 h-2.5 rounded-full bg-accent-primary shrink-0" />}
     </button>
   );
 }
 
 export function MobileDmsScreen() {
-  const { t } = useTranslation(['dm', 'common']);
+  const { t } = useTranslation(['dm', 'common', 'social', 'home']);
   const pushMobileScreen = useUIStore((s) => s.pushMobileScreen);
   const openModal = useUIStore((s) => s.openModal);
+  const inboxCount = useInboxCount();
 
   const dmChannels = useSpaceStore((s) => s.dmChannels);
   const readStates = useChatStore((s) => s.readStates);
@@ -195,6 +203,12 @@ export function MobileDmsScreen() {
   const f = useFormatters();
   const openContextMenu = useContextMenuStore((s) => s.open);
   const setCurrentChannel = useChatStore((s) => s.setCurrentChannel);
+  const addToast = useUIStore((s) => s.addToast);
+  const buckets = useFriendBuckets();
+  const inVoiceIds = useMemo(
+    () => new Set(buckets.inVoice.map((row) => friendRowKey(row.friend))),
+    [buckets.inVoice],
+  );
 
   // Online friends for the activity row
   const onlineFriends = useMemo(() =>
@@ -215,6 +229,15 @@ export function MobileDmsScreen() {
   const handleDmTap = (dmId: string) => {
     navigate(`/channels/@me/${dmId}`);
     pushMobileScreen('channel-chat', { channelId: dmId, spaceId: '@me' });
+  };
+
+  // Opens the conversation with a friend, creating it when there is none yet.
+  const handleOpenFriend = async (friend: TaggedFriend) => {
+    try {
+      handleDmTap(await openDirectMessage(friend, friend._instanceOrigin));
+    } catch (err) {
+      addToast(t('social:sendMessage.failed', { reason: describeError(err) }), 'warning');
+    }
   };
 
   const handleDmContextMenu = (e: React.MouseEvent, dmId: string, isGroup: boolean) => {
@@ -252,15 +275,37 @@ export function MobileDmsScreen() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-surface-base">
+    <div className="lit relative flex flex-col h-full bg-surface-channel">
       {/* Header */}
-      <header className="h-12 flex items-center justify-between px-4 border-b border-border-soft shrink-0">
-        <h1 className="text-base font-semibold text-txt-primary">{t('dm:list.title')}</h1>
-        <div className="flex items-center gap-1">
+      <header className="panel-bar flex h-12 items-center gap-1 pl-4 pr-1">
+        <h1 className={BAR_TITLE}>{t('dm:list.title')}</h1>
+        <div className="flex shrink-0 items-center">
           <button
-            onClick={() => pushMobileScreen('friends')}
-            className="h-8 px-3 rounded-lg text-xs font-medium text-accent-primary hover:bg-interactive-hover transition-colors"
+            type="button"
+            onClick={() => useQuickSwitcherStore.getState().setOpen(true)}
+            aria-label={t('common:actions.search')}
+            className={BAR_BUTTON}
           >
+            <Icon name="search" size={18} />
+          </button>
+          {/* The inbox is a screen of its own on the phone; its count is the one the desktop sidebar shows. */}
+          <button
+            type="button"
+            onClick={() => pushMobileScreen('inbox')}
+            aria-label={inboxCount > 0 ? t('home:inbox.navLabel', { count: inboxCount }) : t('home:nav.inbox')}
+            className={BAR_BUTTON}
+          >
+            <span className="relative flex h-8 w-8 items-center justify-center">
+              <Icon name="bell" size={18} />
+              {inboxCount > 0 && <CountBadge count={inboxCount} placement="corner" />}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => pushMobileScreen('friends')}
+            className="btn-quiet h-10 px-2.5"
+          >
+            <Icon name="users" size={15} />
             {t('common:labels.friends')}
           </button>
         </div>
@@ -268,14 +313,16 @@ export function MobileDmsScreen() {
 
       {/* Activity row — online friends */}
       {onlineFriends.length > 0 && (
-        <div className="px-4 py-3 border-b border-border-soft">
-          <div className="flex gap-3 overflow-x-auto no-scrollbar">
+        <div className="shrink-0 border-b border-border-hard py-2">
+          {/* The row runs to the screen's edges, so a cut-off friend reads as more
+              to scroll to; the first avatar stands over the list's avatars. */}
+          <div className="flex gap-1 overflow-x-auto px-1 no-scrollbar">
             {onlineFriends.map(friend => (
               <MobileFriendBubble
                 key={friend.id}
                 friend={friend}
-                dmChannels={dmChannels}
-                onTap={handleDmTap}
+                inVoice={inVoiceIds.has(friendRowKey(friend))}
+                onOpen={handleOpenFriend}
               />
             ))}
           </div>
@@ -283,7 +330,7 @@ export function MobileDmsScreen() {
       )}
 
       {/* DM list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-20">
         {sortedDms.map(dm => (
           <MobileDmRow
             key={dm.id}
@@ -296,19 +343,27 @@ export function MobileDmsScreen() {
         ))}
 
         {sortedDms.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-40 opacity-80">
-            <Mascot state="sleeping" className="w-20 h-20 mb-2" />
-            <p className="text-txt-tertiary text-sm">{t('dm:list.empty')}</p>
+          <div className="empty-state h-40">
+            <span className="empty-state-icon" aria-hidden="true">
+              <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a8 8 0 0 1-8 8H4l2.2-3A8 8 0 1 1 21 12Z" />
+              </svg>
+            </span>
+            <p className="empty-state-body">{t('dm:list.empty')}</p>
           </div>
         )}
       </div>
 
-      {/* FAB — New DM */}
+      {/* FAB — New DM. Anchored to this screen rather than the viewport, so it
+          clears the bottom navigation, the safe area and the voice mini bar. */}
       <button
+        type="button"
         onClick={() => openModal('newDm')}
-        className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-accent-primary text-white shadow-elevation-high flex items-center justify-center z-20 hover:bg-accent-primary-hover active:bg-accent-primary-active transition-colors"
+        aria-label={t('dm:newDm.title')}
+        title={t('dm:newDm.title')}
+        className="btn-primary absolute bottom-4 right-4 z-20 h-12 w-12 p-0 shadow-elevation-high"
       >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
         </svg>
       </button>

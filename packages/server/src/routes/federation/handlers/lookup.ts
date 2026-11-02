@@ -47,6 +47,7 @@ export function registerLookupRoutes(app: FastifyInstance): void {
           and(
             eq(schema.users.username, username),
             eq(schema.users.isDeleted, 0),
+            eq(schema.users.accountKind, 'person'),
             isNull(schema.users.homeInstance),
           ),
         )
@@ -112,6 +113,7 @@ export function registerLookupRoutes(app: FastifyInstance): void {
         .where(
           and(
             eq(schema.users.isDeleted, 0),
+            eq(schema.users.accountKind, 'person'),
             isNull(schema.users.homeInstance),
             or(eq(schema.users.id, homeUserId), eq(schema.users.homeUserId, homeUserId)),
           ),

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Friend, FriendRequest, SendFriendRequest, User } from '@backspace/shared';
+import type { Friend, FriendRequest, SendFriendRequest, User, UserSearchResult } from '@backspace/shared';
 import { api, type BackspaceApiClient } from '../api/client';
 import { getFriendsHomeOrigin, useInstanceStore, waitForAutoConnect } from './instanceStore';
 import { normalizeUserAssets } from '../utils/assetUrls';
@@ -25,7 +25,8 @@ export type ListEntry<R> = R & { _rows?: readonly R[] };
 
 export type TaggedFriend = ListEntry<FriendRow>;
 export type TaggedFriendRequest = ListEntry<FriendRequestRow>;
-export type TaggedUser = User & { _instanceOrigin: string };
+/** A person a username search found, with the instance that answered. */
+export type TaggedSearchResult = UserSearchResult & { _instanceOrigin: string };
 
 /**
  * Whether `request` was sent to the user. Its ids are the ids of the instance
@@ -94,7 +95,7 @@ function userRowRule<R extends IdentityFields & { _instanceOrigin: string }>(): 
 }
 
 const friendRule = userRowRule<FriendRow>();
-const searchRule = userRowRule<TaggedUser>();
+const searchRule = userRowRule<TaggedSearchResult>();
 
 /** A request is about its other party; a request without one is only ever itself. */
 const requestRule: PersonRule<FriendRequestRow> = {
@@ -268,7 +269,7 @@ interface SocialState {
   cancelFriendRequest: (id: string, origin: string, other?: IdentityFields) => Promise<void>;
   /** Remove the friend `row` (issued by `origin`) is a row of, on the instance whose row the entry is shown by. */
   removeFriend: (row: IdentityFields, origin: string) => Promise<void>;
-  searchUsers: (query: string) => Promise<TaggedUser[]>;
+  searchUsers: (query: string) => Promise<TaggedSearchResult[]>;
   addIncomingRequest: (request: FriendRequest, origin: string) => void;
   addOutboundRequest: (request: FriendRequest, origin: string) => void;
   addFriendFromAccepted: (friend: Friend, requestId: string, origin: string) => void;
@@ -467,45 +468,45 @@ export const useSocialStore = create<SocialState>((set, get) => ({
   },
 
   searchUsers: async (query: string) => {
-    try {
-      // Lazy import — avoids AudioManager TDZ in test environments.
-      const { useSpaceStore } = await import('./spaceStore');
+    const instances = useInstanceStore.getState().instances;
+    const connectedInstances = instances.filter(i => i.status === 'connected');
 
-      const instances = useInstanceStore.getState().instances;
-      const connectedInstances = instances.filter(i => i.status === 'connected');
+    // Pair each promise with its origin for asset normalization
+    const searches: { promise: Promise<UserSearchResult[]>; origin: string }[] = [
+      { promise: api.social.search(query), origin: '' },
+      ...connectedInstances.map(inst => ({
+        promise: inst.api.social.search(query),
+        origin: inst.origin,
+      })),
+    ];
 
-      // Pair each promise with its origin for asset normalization
-      const searches: { promise: Promise<User[]>; origin: string }[] = [
-        { promise: api.social.search(query), origin: '' },
-        ...connectedInstances.map(inst => ({
-          promise: inst.api.social.search(query),
-          origin: inst.origin,
-        })),
-      ];
-
-      const results = await Promise.allSettled(searches.map(s => s.promise));
-
-      const rows: TaggedUser[] = [];
-      results.forEach((result, i) => {
-        if (result.status !== 'fulfilled') return;
-        const origin = searches[i]!.origin;
-        for (const user of result.value) {
-          if (origin) normalizeUserAssets(user, origin);
-          rows.push({ ...user, _instanceOrigin: origin });
-          useSpaceStore.getState().upsertUserView(user, origin);
-        }
-      });
-
-      // One result per person (`userKey`), the same rule as the friends and
-      // requests lists: a person two instances return (their home's row and a
-      // replicated row of them) is one result, shown by their home's row, and
-      // two users native to different instances are two results whatever
-      // their ids (#353).
-      return groupByPerson(rows, searchRule).map(listed => shownRow(listed, searchRule));
-    } catch (err) {
-      console.error('Failed to search users:', err);
-      return [];
+    const results = await Promise.allSettled(searches.map(s => s.promise));
+    // When no instance answered, the search failed rather than found
+    // nobody: the home's refusal (a rate limit, an outage) is what the
+    // page shows.
+    if (results.every((result) => result.status === 'rejected')) {
+      const home = results[0];
+      throw home && home.status === 'rejected' ? home.reason : new Error('search_failed');
     }
+
+    // A result is narrower than a user (it carries no status or profile
+    // text), so it never replaces the fuller view the profile cache holds.
+    const rows: TaggedSearchResult[] = [];
+    results.forEach((result, i) => {
+      if (result.status !== 'fulfilled') return;
+      const origin = searches[i]!.origin;
+      for (const user of result.value) {
+        if (origin) normalizeUserAssets(user, origin);
+        rows.push({ ...user, _instanceOrigin: origin });
+      }
+    });
+
+    // One result per person (`userKey`), the same rule as the friends and
+    // requests lists: a person two instances return (their home's row and a
+    // replicated row of them) is one result, shown by their home's row, and
+    // two users native to different instances are two results whatever
+    // their ids (#353).
+    return groupByPerson(rows, searchRule).map(listed => shownRow(listed, searchRule));
   },
 
   // Called from WS handler when another user sends you a friend request.

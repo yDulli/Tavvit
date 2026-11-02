@@ -49,29 +49,29 @@ const { connectInstance, disconnectInstance, wsSend } = await import('./useWebSo
  * out.
  */
 
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const ADD = { type: 'reaction_add', messageId: 'm-1', emoji: '👍' } as const;
 
 afterEach(() => {
-  disconnectInstance(ORBIT);
+  disconnectInstance(TAVVIT);
   FakeWebSocket.all = [];
 });
 
 describe('wsSend', () => {
   it('returns false and sends nothing for an origin with no connection', () => {
-    expect(wsSend(ADD, ORBIT)).toBe(false);
+    expect(wsSend(ADD, TAVVIT)).toBe(false);
     expect(FakeWebSocket.all).toEqual([]);
   });
 
   it('returns false while the socket is still connecting, and true once it is open', () => {
-    connectInstance(ORBIT, 'token-orbit');
+    connectInstance(TAVVIT, 'token-orbit');
     const ws = FakeWebSocket.all.at(-1)!;
 
-    expect(wsSend(ADD, ORBIT)).toBe(false);
+    expect(wsSend(ADD, TAVVIT)).toBe(false);
     expect(ws.sent.filter((e) => e.type === 'reaction_add')).toEqual([]);
 
     ws.open();
-    expect(wsSend(ADD, ORBIT)).toBe(true);
+    expect(wsSend(ADD, TAVVIT)).toBe(true);
     expect(ws.sent.filter((e) => e.type === 'reaction_add')).toEqual([ADD]);
   });
 });

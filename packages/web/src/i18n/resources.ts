@@ -15,13 +15,18 @@ import desktop from '../locales/en/desktop.json';
 import dm from '../locales/en/dm.json';
 import errors from '../locales/en/errors.json';
 import federation from '../locales/en/federation.json';
+import home from '../locales/en/home.json';
+import landing from '../locales/en/landing.json';
+import help from '../locales/en/help.json';
+import roadmap from '../locales/en/roadmap.json';
+import changelog from '../locales/en/changelog.json';
+import status from '../locales/en/status.json';
+import legal from '../locales/en/legal.json';
 import mobile from '../locales/en/mobile.json';
-import project from '../locales/en/project.json';
 import search from '../locales/en/search.json';
 import settings from '../locales/en/settings.json';
 import social from '../locales/en/social.json';
 import spaces from '../locales/en/spaces.json';
-import telemetry from '../locales/en/telemetry.json';
 import uploads from '../locales/en/uploads.json';
 import voice from '../locales/en/voice.json';
 
@@ -37,13 +42,18 @@ export const resources = {
     dm,
     errors,
     federation,
+    home,
+    landing,
+    help,
+    roadmap,
+    changelog,
+    status,
+    legal,
     mobile,
-    project,
     search,
     settings,
     social,
     spaces,
-    telemetry,
     uploads,
     voice,
   },

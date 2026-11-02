@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTransferStore, type Transfer } from '../../stores/transferStore';
 import { useFormatters } from '../../i18n/formatters';
+import { Icon } from '../ui/Icon';
 
 export function TransferIndicator() {
   const { t } = useTranslation(['uploads', 'common']);
@@ -47,27 +48,22 @@ export function TransferIndicator() {
     (t) => t.state === 'active' || t.state === 'paused' || t.state === 'queued',
   );
   const failed = visible.some((t) => t.state === 'failed');
-  const idle = visible.length === 0;
 
   const badgeColor = failed ? 'bg-accent-rose' : 'bg-accent-amber';
 
   return (
     <div className="relative" ref={ref}>
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`relative w-8 h-8 flex items-center justify-center rounded-[6px] transition-colors ${
-          idle
-            ? 'text-txt-tertiary/60 hover:text-txt-tertiary hover:bg-interactive-hover'
-            : 'text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover'
-        }`}
+        data-active={open ? 'true' : undefined}
+        className="icon-btn icon-btn-lg relative"
         title={t('uploads:transfers.title')}
         aria-label={t('uploads:transfers.title')}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
-        </svg>
+        <Icon name="download" size={18} />
         {active.length > 0 && (
-          <span className={`absolute -top-0.5 -right-0.5 ${badgeColor} text-black text-[10px] font-medium rounded-full px-1.5 leading-4 min-w-[16px] text-center`}>
+          <span className={`count-badge absolute -top-0.5 -right-0.5 ${badgeColor} text-surface-base`}>
             {active.length}
           </span>
         )}
@@ -82,7 +78,7 @@ export function TransferIndicator() {
         // panel to the trigger's right and let the 300px panel extend off
         // the left of the viewport.
         <div className="fixed right-2 top-14 desktop:absolute desktop:right-0 desktop:top-full desktop:mt-2 w-[min(300px,calc(calc(100*var(--app-vw))-16px))] glass z-50 rounded-lg overflow-hidden">
-          <div className="px-3 py-2 border-b border-border-soft text-xs flex justify-between items-center">
+          <div className="flex items-center justify-between gap-2 border-b border-border-hard px-3 py-2 text-meta">
             <span className="text-txt-secondary">
               {t('uploads:transfers.count', { count: visible.length })}
             </span>
@@ -98,11 +94,11 @@ export function TransferIndicator() {
             </button>
           </div>
           {visible.length === 0 && (
-            <div className="px-3 py-6 text-center text-txt-tertiary text-xs">
+            <div className="px-3 py-6 text-center text-ui text-txt-tertiary">
               {t('uploads:transfers.empty')}
             </div>
           )}
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="max-h-[400px] overflow-y-auto scrollbar-thin">
             {visible.map((t) => (
               <TransferRow
                 key={t.id}
@@ -142,21 +138,19 @@ function TransferRow({ transfer, onPause, onResume, onAbort, onDismiss }: Transf
     transfer.state === 'failed'
       ? 'bg-accent-rose'
       : transfer.state === 'completed'
-      ? 'bg-accent-mint'
-      : 'bg-accent-mint/70';
+      ? 'bg-status-online'
+      : 'bg-txt-secondary';
   return (
-    <div className="px-3 py-2 border-b border-border-soft last:border-none">
-      <div className="flex items-center gap-2 text-[11px]">
-        <span className="text-txt-tertiary text-[10px]">
-          {transfer.type === 'upload' ? '↑' : '↓'}
-        </span>
+    <div className="px-3 py-2 border-b border-border-hard last:border-none">
+      <div className="flex items-center gap-1.5 text-ui">
+        <Icon name={transfer.type === 'upload' ? 'upload' : 'download'} size={13} className="flex-shrink-0 text-txt-tertiary" />
         <span className="text-txt-primary truncate flex-1">{transfer.file.name}</span>
       </div>
-      <div className="mt-1 h-[3px] bg-surface-input rounded overflow-hidden">
+      <div className="mt-1.5 h-[3px] bg-interactive-hover rounded-sm overflow-hidden">
         <div className={`h-full ${barColor} transition-[width]`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="mt-1 flex justify-between items-center text-[10px] text-txt-tertiary gap-2">
-        <span className="truncate">
+      <div className="mt-1.5 flex justify-between items-center text-label text-txt-tertiary gap-2">
+        <span className="tabular truncate">
           {transfer.state === 'completed'
             ? t('uploads:transfers.status.done')
             : transfer.state === 'failed'
@@ -182,7 +176,7 @@ function TransferRow({ transfer, onPause, onResume, onAbort, onDismiss }: Transf
           {(transfer.state === 'active' ||
             transfer.state === 'paused' ||
             transfer.state === 'queued') && (
-            <button onClick={onAbort} className="hover:text-accent-rose transition-colors">
+            <button onClick={onAbort} className="hover:text-txt-danger transition-colors">
               {t('common:actions.abort')}
             </button>
           )}

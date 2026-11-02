@@ -45,7 +45,7 @@ function role(id: string, color: string, position: number): Role {
   return { id, spaceId: 'space-1', name: id, color, position } as unknown as Role;
 }
 
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const me = makeUser('me', 'alice', 'Alice');
 const meOnOrbit = makeUser('me-orbit', 'alice@home.example', 'Alice');
 const kai = makeUser('kai', 'kai', 'Kai');
@@ -82,7 +82,7 @@ describe('resolveChannelUser', () => {
   it("treats another origin's id for a listed DM as that DM, never as a space channel", () => {
     useSpaceStore.setState({
       dmChannels: [homeDm],
-      dmAlternatives: new Map([['fed-1', new Map([['', homeDm.id], [ORBIT, 'dm-alt']])]]),
+      dmAlternatives: new Map([['fed-1', new Map([['', homeDm.id], [TAVVIT, 'dm-alt']])]]),
       channelToSpaceMap: new Map([['dm-alt', 'space-1']]),
       members: [member('space-1', zed)],
     });
@@ -96,7 +96,7 @@ describe('resolveChannelUser', () => {
     useSpaceStore.setState({
       dmChannels: [homeDm],
       channelOriginMap: new Map([[homeDm.id, '']]),
-      dmAlternatives: new Map([['fed-1', new Map([['', homeDm.id], [ORBIT, 'dm-alt']])]]),
+      dmAlternatives: new Map([['fed-1', new Map([['', homeDm.id], [TAVVIT, 'dm-alt']])]]),
     });
     expect(resolveChannelUser('dm-alt', kai.id)).toBeNull();
     expect(resolveChannelUser('dm-alt', kaiOnOrbit.id)).toBeNull();
@@ -152,10 +152,10 @@ describe('resolveChannelUser', () => {
 describe('getChannelMentionCandidates', () => {
   it("lists a DM's members except me, in the DM origin's id space", () => {
     useAuthStore.setState({ user: me });
-    useAuthStore.getState().recordMyRow(ORBIT, meOnOrbit.id);
+    useAuthStore.getState().recordMyRow(TAVVIT, meOnOrbit.id);
     useSpaceStore.setState({
       dmChannels: [orbitDm],
-      channelOriginMap: new Map([[orbitDm.id, ORBIT]]),
+      channelOriginMap: new Map([[orbitDm.id, TAVVIT]]),
       members: [member('space-9', zed)],
     });
     expect(getChannelMentionCandidates(orbitDm.id).map((c) => c.userId)).toEqual([kaiOnOrbit.id]);
@@ -171,11 +171,11 @@ describe('getChannelMentionCandidates', () => {
 
   it("is empty under another origin's id for a DM, never the listed entry's home ids", () => {
     useAuthStore.setState({ user: me });
-    useAuthStore.getState().recordMyRow(ORBIT, meOnOrbit.id);
+    useAuthStore.getState().recordMyRow(TAVVIT, meOnOrbit.id);
     useSpaceStore.setState({
       dmChannels: [homeDm],
       channelOriginMap: new Map([[homeDm.id, '']]),
-      dmAlternatives: new Map([['fed-1', new Map([['', homeDm.id], [ORBIT, 'dm-alt']])]]),
+      dmAlternatives: new Map([['fed-1', new Map([['', homeDm.id], [TAVVIT, 'dm-alt']])]]),
     });
     expect(getChannelMentionCandidates('dm-alt')).toEqual([]);
   });
@@ -213,10 +213,10 @@ describe('filterMentionCandidates', () => {
 describe('self in a channel', () => {
   it("is my id on the channel's origin: home id at home, the remote id on a remote DM", () => {
     useAuthStore.setState({ user: me });
-    useAuthStore.getState().recordMyRow(ORBIT, meOnOrbit.id);
+    useAuthStore.getState().recordMyRow(TAVVIT, meOnOrbit.id);
     useSpaceStore.setState({
       dmChannels: [homeDm, orbitDm],
-      channelOriginMap: new Map([[homeDm.id, ''], [orbitDm.id, ORBIT]]),
+      channelOriginMap: new Map([[homeDm.id, ''], [orbitDm.id, TAVVIT]]),
     });
     expect(getSelfIdInChannel(homeDm.id)).toBe(me.id);
     expect(getSelfIdInChannel(orbitDm.id)).toBe(meOnOrbit.id);
@@ -226,11 +226,11 @@ describe('self in a channel', () => {
 
   it("uses the origin of the copy an alternate DM id belongs to", () => {
     useAuthStore.setState({ user: me });
-    useAuthStore.getState().recordMyRow(ORBIT, meOnOrbit.id);
+    useAuthStore.getState().recordMyRow(TAVVIT, meOnOrbit.id);
     useSpaceStore.setState({
       dmChannels: [{ ...orbitDm, federatedId: 'fed-2' } as DmChannel],
-      channelOriginMap: new Map([[orbitDm.id, ORBIT]]),
-      dmAlternatives: new Map([['fed-2', new Map([[ORBIT, orbitDm.id], ['', 'dm-alt-home']])]]),
+      channelOriginMap: new Map([[orbitDm.id, TAVVIT]]),
+      dmAlternatives: new Map([['fed-2', new Map([[TAVVIT, orbitDm.id], ['', 'dm-alt-home']])]]),
     });
     expect(getSelfIdInChannel(orbitDm.id)).toBe(meOnOrbit.id);
     expect(getSelfIdInChannel('dm-alt-home')).toBe(me.id);

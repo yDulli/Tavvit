@@ -1,7 +1,6 @@
 import { getDb, schema } from '../../../db/index.js';
 import { applyRelayedDmMemberClosed } from '../../../utils/dmMemberClosed.js';
 import { getOurOrigin } from '../../../utils/federationAuth.js';
-import { collectProfileBroadcastTargetIds } from '../../../utils/userDeletion.js';
 import { connectionManager } from '../../../ws/handler.js';
 import { getDmMessageWithUser } from '../../dm.js';
 import { and, eq, isNull } from 'drizzle-orm';
@@ -166,7 +165,7 @@ export function processFileRejectedEvent(
  * Effect on success:
  *   1. Update the local stub's status column and keep the relayed activities
  *      for it in connectionManager (cleared by `[]` or offline).
- *   2. Broadcast a WS presence_update to local users via collectProfileBroadcastTargetIds
+ *   2. Broadcast a WS presence_update to local users via broadcastPresence
  *      (friends + DM members + space co-members), so the green dot updates without a
  *      page refresh on every connected client that knows this user.
  *
@@ -259,11 +258,7 @@ export function processPresenceUpdateEvent(
   // Broadcast presence_update WS event to local users who care. When the
   // activities changed they are included (possibly empty, which clears on
   // clients); otherwise the client keeps what it has.
-  const targetUserIds = collectProfileBroadcastTargetIds(localUser.id);
-  const wsPayload = presenceUpdateEvent(localUser, shownStatus, activities);
-  for (const uid of targetUserIds) {
-    connectionManager.sendToUser(uid, wsPayload);
-  }
+  connectionManager.broadcastPresence(localUser.id, presenceUpdateEvent(localUser, shownStatus, activities));
 
   accepted.push(event.messageId);
 }

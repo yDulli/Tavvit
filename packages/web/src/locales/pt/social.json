@@ -8,15 +8,12 @@
   "sections": {
     "online": "Online — {{n}}",
     "all": "Todos os amigos — {{n}}",
-    "pending": "Pendentes — {{n}}",
-    "active": "Ativos — {{n}}",
-    "offline": "Offline — {{n}}"
+    "pending": "Pendentes — {{n}}"
   },
   "empty": {
     "online": "Ninguém está online agora.",
     "all": "Nenhum amigo ainda — adicione alguém!",
-    "pending": "Nenhuma solicitação pendente — a Nori está tirando uma soneca.",
-    "activity": "Está tudo quieto por enquanto... Quando seus amigos começarem uma atividade, ela aparecerá aqui!"
+    "pending": "Nenhuma solicitação pendente — a Nori está tirando uma soneca."
   },
   "friend": {
     "viaInstance": "via {{host}}",
@@ -44,13 +41,21 @@
   },
   "add": {
     "title": "Encontrar pessoas",
-    "hint": "Pesquise por nome de usuário ou use <handle>usuario@instancia</handle> para adicionar alguém diretamente.",
-    "placeholder": "Pesquisar ou adicionar por nome de usuário...",
+    "hint": "Encontre alguém pelo nome de usuário ou digite <handle>usuario@instancia</handle> para alguém de outra instância.",
+    "placeholder": "Nome de usuário ou usuario@instancia",
     "direct": "Enviar solicitação de amizade para <handle>{{handle}}</handle>",
     "sendRequest": "Enviar solicitação",
-    "discover": "Descobrir pessoas",
     "noSearchResults": "Nenhum usuário corresponde à sua pesquisa.",
-    "noDiscoverable": "Nenhum usuário descobrível ainda — convide pessoas para entrar!"
+    "intro": "Digite um nome de usuário para encontrar alguém. Ninguém aparece aqui antes de você pesquisar, e as pessoas só são encontradas pelo nome que escolheram.",
+    "tooShort": "Digite pelo menos {{min}} caracteres de um nome de usuário.",
+    "invalidCharacters": "Nomes de usuário são formados por letras, números e sublinhados.",
+    "federationOff": "Não é possível adicionar pessoas de outras instâncias enquanto a federação estiver desativada nesta instância.",
+    "resultsLabel": "Pessoas",
+    "state": {
+      "friends": "Já são amigos",
+      "outgoing": "Solicitação enviada",
+      "incoming": "Quer adicionar você"
+    }
   },
   "mutuals": {
     "friends_one": "{{count}} amigo em comum",
@@ -74,14 +79,32 @@
     "sendMessage": "Enviar mensagem",
     "editRoles": "Editar cargos",
     "viewFull": "Ver perfil completo",
-    "addFriend": "Adicionar amigo"
+    "addFriend": "Adicionar amigo",
+    "links": "Links",
+    "editProfile": "Editar perfil",
+    "editSpaceProfile": "Editar perfil do espaço",
+    "activity": "Atividade"
   },
   "activity": {
     "title": "Ativos agora",
-    "quietTitle": "Está tudo quieto por enquanto...",
-    "quietDescription": "Quando um amigo começar uma atividade, como jogar ou ficar num canal de voz, ela aparecerá aqui!",
-    "online": "Online — {{n}}",
-    "offline": "Offline — {{n}}"
+    "onlineCount_one": "{{count}} amigo online",
+    "onlineCount_many": "{{count}} amigos online",
+    "onlineCount_other": "{{count}} amigos online",
+    "nobodyTitle": "Ninguém por aqui agora",
+    "nobodyBody": "Os amigos que ficarem online aparecem aqui, com o que estão fazendo.",
+    "noFriendsBody": "Adicione amigos para ver quem está online e o que cada um está fazendo.",
+    "addFriends": "Adicionar amigos"
   },
-  "instanceNotConnected": "Não conectado a {{host}}. Conecte-se novamente e tente de novo."
+  "instanceNotConnected": "Não conectado a {{host}}. Conecte-se novamente e tente de novo.",
+  "block": {
+    "action": "Bloquear",
+    "unblock": "Desbloquear",
+    "confirmTitle": "Bloquear {{name}}?",
+    "confirmBody": "{{name}} não poderá enviar mensagens nem pedidos de amizade para você, e você não poderá enviar mensagens para essa pessoa. A amizade termina. As mensagens dela em espaços e grupos compartilhados ficam ocultas. A pessoa não é avisada.",
+    "confirmAction": "Bloquear",
+    "failed": "Não foi possível bloquear {{name}}: {{reason}}",
+    "unblockFailed": "Não foi possível desbloquear {{name}}: {{reason}}",
+    "blocked": "{{name}} foi bloqueado.",
+    "unblocked": "{{name}} foi desbloqueado."
+  }
 }

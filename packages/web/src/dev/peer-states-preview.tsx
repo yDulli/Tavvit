@@ -61,7 +61,7 @@ function peer(
 }
 
 const PEERS: FederationPeer[] = [
-  peer('active', 'orbit.example', 'active', null, { instanceName: 'Orbit' }),
+  peer('active', 'orbit.example', 'active', null, { instanceName: 'Tavvit' }),
   peer('unreachable', 'nova.example', 'unreachable', null, { consecutiveFailures: 12 }),
   peer('pending', 'fresh.example', 'pending', null),
   peer('awaiting', 'gated.example', 'awaiting_approval', null),
@@ -84,10 +84,13 @@ const REASON_CODES: FederationPeerStatusReason[] = [
 const ADMIN_SETTINGS: InstanceAdminSettings = {
   instanceName: 'Workbench',
   registrationOpen: true,
+  emojiPolicy: 'everyone',
   federatedRegistrationOpen: true,
   discoveryEnabled: true,
   gifEnabled: false,
   maxUploadSizeMb: 100,
+  storagePerAccountGb: 5,
+  spacesPerAccount: 25,
   federationRelayEnabled: true,
   federationRelayTtlDays: 30,
   defaultAutoRotateIntervalDays: 90,
@@ -97,7 +100,7 @@ const ADMIN_SETTINGS: InstanceAdminSettings = {
   directoryLastPingAt: null,
   directoryLastError: null,
   directoryListedSpaceCount: 0,
-  supportCardEnabled: true,
+  accentColor: null,
 };
 
 const ADMIN: User = {
@@ -187,7 +190,7 @@ async function start(): Promise<void> {
       toasts: REASON_CODES.map((reasonCode) => ({
         id: `toast-${reasonCode}`,
         type: 'warning' as const,
-        message: peerRejectedToast({ peerOrigin: 'https://orbit.example', peerLabel: 'Orbit', reason: '', reasonCode }),
+        message: peerRejectedToast({ peerOrigin: 'https://orbit.example', peerLabel: 'Tavvit', reason: '', reasonCode }),
       })),
     });
   }

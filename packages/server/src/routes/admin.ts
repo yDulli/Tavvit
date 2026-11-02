@@ -1,6 +1,12 @@
+import { recordSecurityEvent } from '../security/events.js';
+import { verifyPassword } from '../utils/auth.js';
+import { refuseWithoutSecondFactor } from './twoFactor.js';
+import { SUSPENSION_LIMITS } from '@backspace/shared/src/platform.js';
+import { notifyPasswordChanged } from '../email/account.js';
+import { endOtherSessions } from '../utils/sessions.js';
 import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
-import { eq, like, or, and, ne, sql, isNull, isNotNull, gte, lte, asc, desc } from 'drizzle-orm';
+import { eq, like, or, and, ne, not, sql, isNull, isNotNull, gte, lte, asc, desc } from 'drizzle-orm';
 import { authenticate, requireAdmin, hashPassword } from '../utils/auth.js';
 import { getStorageStats, getOrphanedFiles, cleanupStorage, cleanupOldMedia, cleanupStaleTusSessions } from '../utils/storageJanitor.js';
 import { getDb, schema } from '../db/index.js';
@@ -10,25 +16,13 @@ import { tombstoneUser, collectDeletionBroadcastTargets } from '../utils/userDel
 import { deleteUploadFile } from '../utils/fileCleanup.js';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { sendError, ERROR_MESSAGES } from '../utils/httpErrors.js';
-import type { AdminUser, AdminUserListResponse, AdminResetPasswordResponse } from '@backspace/shared';
+import { toAdminUser } from '../utils/adminUser.js';
+import { activeSuspension, suspendedNow } from '../utils/suspension.js';
+import { recordPlatformAudit } from '../utils/platformAudit.js';
+import type { AdminUserListResponse, AdminResetPasswordResponse } from '@backspace/shared';
 
 function reasonOf(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
-}
-
-function toAdminUser(row: typeof schema.users.$inferSelect): AdminUser {
-  return {
-    id: row.id,
-    username: row.username,
-    displayName: row.displayName,
-    avatar: row.avatar,
-    avatarColor: row.avatarColor,
-    status: row.status ?? 'offline',
-    isAdmin: row.isAdmin === 1,
-    isDeleted: row.isDeleted === 1,
-    homeInstance: row.homeInstance,
-    createdAt: row.createdAt,
-  };
 }
 
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
@@ -59,6 +53,12 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     try {
       const dryRun = request.body?.dryRun ?? false;
       const result = cleanupStorage(dryRun);
+      if (!dryRun) {
+        recordPlatformAudit({
+          actorId: request.userId, action: 'storage_cleanup', targetType: 'instance', targetId: 'storage',
+          details: { kind: 'orphans', deletedFiles: result.deletedFiles, freedBytes: result.freedBytes },
+        });
+      }
       return reply.code(200).send(result);
     } catch (err: unknown) {
       return sendError(reply, 500, 'storage_cleanup_failed', { reason: reasonOf(err) });
@@ -74,6 +74,12 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       }
       const dryRun = request.body?.dryRun ?? false;
       const result = cleanupOldMedia(maxAgeDays, dryRun);
+      if (!dryRun) {
+        recordPlatformAudit({
+          actorId: request.userId, action: 'storage_cleanup', targetType: 'instance', targetId: 'storage',
+          details: { kind: 'media', maxAgeDays, deletedFiles: result.deletedFiles, freedBytes: result.freedBytes },
+        });
+      }
       return reply.code(200).send(result);
     } catch (err: unknown) {
       return sendError(reply, 500, 'media_cleanup_failed', { reason: reasonOf(err) });
@@ -94,6 +100,15 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       const dryRun = request.body?.dryRun ?? false;
       const thresholdMs = maxAgeHours * 60 * 60 * 1000;
       const result = cleanupStaleTusSessions(thresholdMs, dryRun);
+      if (!dryRun) {
+        recordPlatformAudit({
+          actorId: request.userId,
+          action: 'storage_cleanup',
+          targetType: 'instance',
+          targetId: 'upload-sessions',
+          details: { deletedFiles: result.deletedFiles, freedBytes: result.freedBytes },
+        });
+      }
       return reply.code(200).send({
         dryRun,
         deletedFiles: result.deletedFiles,
@@ -109,7 +124,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   // ─── User Management ────────────────────────────────────────────────────
 
   // GET /api/admin/users — paginated user list with search
-  app.get<{ Querystring: { q?: string; page?: string; pageSize?: string; showDeleted?: string; homeInstance?: string; role?: string; joinedAfter?: string; joinedBefore?: string; sort?: string } }>(
+  app.get<{ Querystring: { q?: string; page?: string; pageSize?: string; showDeleted?: string; homeInstance?: string; role?: string; status?: string; joinedAfter?: string; joinedBefore?: string; sort?: string } }>(
     '/api/admin/users',
     { preHandler: [authenticate, requireAdmin] },
     async (request, reply) => {
@@ -147,6 +162,11 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         conditions.push(eq(schema.users.isAdmin, 0));
       }
 
+      // Suspended now (utils/suspension.ts); one that ran out is not.
+      if (request.query.status === 'suspended') {
+        conditions.push(suspendedNow(Date.now()));
+      }
+
       // Date range filter
       const joinedAfter = request.query.joinedAfter;
       if (joinedAfter) {
@@ -159,7 +179,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         if (!isNaN(ts)) conditions.push(lte(schema.users.createdAt, ts));
       }
 
-      const where = conditions.length > 0 ? and(...conditions) : undefined;
+      const where = and(eq(schema.users.accountKind, 'person'), ...conditions);
 
       // Dynamic sort
       const sortParam = request.query.sort || 'newest';
@@ -186,7 +206,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         .all();
 
       const response: AdminUserListResponse = {
-        users: rows.map(toAdminUser),
+        users: rows.map((row) => toAdminUser(row)),
         total,
         page,
         pageSize,
@@ -221,7 +241,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
       const db = getDb();
       const target = db.select().from(schema.users).where(eq(schema.users.id, targetId)).get();
-      if (!target) {
+      if (!target || target.accountKind !== 'person') {
         return sendError(reply, 404, 'user_not_found');
       }
       if (target.isDeleted === 1) {
@@ -232,12 +252,17 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       if (isAdmin && target.homeInstance) {
         return sendError(reply, 403, 'federated_user_cannot_be_admin');
       }
+      // A suspended account cannot act, so it is not made an admin: it would
+      // count as one and let the last admin who can act step down.
+      if (isAdmin && activeSuspension(target)) {
+        return sendError(reply, 409, 'account_suspended');
+      }
 
-      // Demote: prevent removing the last admin
+      // Demote: prevent removing the last admin who can act
       if (!isAdmin && target.isAdmin === 1) {
         const adminCount = db.select({ count: sql<number>`count(*)` })
           .from(schema.users)
-          .where(and(eq(schema.users.isAdmin, 1), eq(schema.users.isDeleted, 0)))
+          .where(and(eq(schema.users.isAdmin, 1), eq(schema.users.isDeleted, 0), not(suspendedNow(Date.now()))))
           .get();
         if ((adminCount?.count ?? 0) <= 1) {
           return sendError(reply, 400, 'last_admin_cannot_be_demoted');
@@ -250,6 +275,12 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         .run();
 
       const updated = db.select().from(schema.users).where(eq(schema.users.id, targetId)).get()!;
+      if (target.isAdmin !== updated.isAdmin) {
+        recordPlatformAudit({
+          actorId: request.userId, action: 'user_role', targetType: 'user', targetId,
+          targetLabel: target.username, details: { isAdmin },
+        });
+      }
 
       // Broadcast user_updated so the target's UI reflects the isAdmin change
       connectionManager.sendToUser(targetId, {
@@ -277,13 +308,13 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   // POST /api/admin/users/:id/reset-password — generate temporary password
   app.post<{ Params: { id: string } }>(
     '/api/admin/users/:id/reset-password',
-    { preHandler: [authenticate, requireAdmin] },
+    { preHandler: [authenticate, requireAdmin], config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
     async (request, reply) => {
       const { id: targetId } = request.params;
       const db = getDb();
 
       const target = db.select().from(schema.users).where(eq(schema.users.id, targetId)).get();
-      if (!target) {
+      if (!target || target.accountKind !== 'person') {
         return sendError(reply, 404, 'user_not_found');
       }
       if (target.isDeleted === 1) {
@@ -300,19 +331,29 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         .set({ passwordHash: hash, passwordChangedAt: Date.now() })
         .where(eq(schema.users.id, targetId))
         .run();
+      endOtherSessions(targetId, null);
 
       // Force re-auth by disconnecting all sessions
-      connectionManager.forceDisconnectUser(targetId);
+      connectionManager.forceDisconnectUser(targetId, { reason: 'Password reset', endPresence: true });
+      notifyPasswordChanged(target);
+      recordSecurityEvent(targetId, 'password_reset');
+      recordPlatformAudit({
+        actorId: request.userId, action: 'user_password_reset', targetType: 'user', targetId, targetLabel: target.username,
+      });
 
       const response: AdminResetPasswordResponse = { temporaryPassword };
       return reply.code(200).send(response);
     },
   );
 
-  // DELETE /api/admin/users/:id — tombstone a user account
-  app.delete<{ Params: { id: string } }>(
+  // DELETE /api/admin/users/:id — tombstone a user account. It cannot be undone, so an
+  // account of this instance asks the acting admin for a reason, their password and their
+  // second factor, as deleting one's own does; a stolen session alone cannot do it. An
+  // administrator is demoted first, so a team cannot delete itself. A replicated row is a
+  // copy of an account homed elsewhere, and is cleaned up without that (FederationPanel).
+  app.delete<{ Params: { id: string }; Body: { reason?: unknown; password?: unknown; twoFactorCode?: unknown } | undefined }>(
     '/api/admin/users/:id',
-    { preHandler: [authenticate, requireAdmin] },
+    { preHandler: [authenticate, requireAdmin], config: { rateLimit: { max: 20, timeWindow: '15 minutes' } } },
     async (request, reply) => {
       const { id: targetId } = request.params;
       const db = getDb();
@@ -322,11 +363,14 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       }
 
       const target = db.select().from(schema.users).where(eq(schema.users.id, targetId)).get();
-      if (!target) {
+      if (!target || target.accountKind !== 'person') {
         return sendError(reply, 404, 'user_not_found');
       }
       if (target.isDeleted === 1) {
         return sendError(reply, 400, 'user_already_deleted');
+      }
+      if (target.isAdmin === 1) {
+        return sendError(reply, 400, 'cannot_delete_admin');
       }
 
       // Check if user owns any spaces
@@ -343,6 +387,27 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
           statusCode: 400,
           ownedSpaces,
         });
+      }
+
+      let reason: string | null = null;
+      if (target.homeInstance === null) {
+        const body = request.body ?? {};
+        reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+        if (reason.length < SUSPENSION_LIMITS.REASON_MIN_LENGTH || reason.length > SUSPENSION_LIMITS.REASON_MAX_LENGTH) {
+          return sendError(reply, 400, 'suspension_reason_invalid', {
+            min: SUSPENSION_LIMITS.REASON_MIN_LENGTH,
+            max: SUSPENSION_LIMITS.REASON_MAX_LENGTH,
+          });
+        }
+        const actor = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
+        if (!actor) return sendError(reply, 404, 'user_not_found');
+        if (typeof body.password !== 'string' || !body.password) return sendError(reply, 400, 'password_required');
+        if (!(await verifyPassword(body.password, actor.passwordHash))) {
+          return sendError(reply, 403, 'current_password_incorrect');
+        }
+        // Last, so that nothing above can use up a code and then refuse.
+        const refused = refuseWithoutSecondFactor(actor, body.twoFactorCode, request, reply);
+        if (refused) return refused;
       }
 
       // Collect broadcast targets BEFORE tombstone deletes DB rows
@@ -373,6 +438,9 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       }
 
       connectionManager.forceDisconnectUser(targetId);
+      recordPlatformAudit({
+        actorId: request.userId, action: 'user_delete', targetType: 'user', targetId, targetLabel: target.username, reason,
+      });
 
       return reply.code(200).send({ success: true });
     },

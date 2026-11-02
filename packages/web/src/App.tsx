@@ -1,12 +1,25 @@
+import { BotPortalPage } from './components/developers/BotPortalPage';
+import { BotInvitePage } from './components/bots/BotInvitePage';
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { ImprintPage, PrivacyPage, ReportPage, TermsPage } from './components/legal/LegalPages';
+import { LegalController } from './components/legal/LegalController';
+import { NotFoundPage } from './components/NotFoundPage';
 import { LoginPage } from './components/auth/LoginPage';
+import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
+import { VerifyEmailPage } from './components/auth/VerifyEmailPage';
+import { MailLanguageController } from './components/MailLanguageController';
+import { MfaPromptDialog } from './components/modals/MfaPromptDialog';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { JoinPage } from './components/JoinPage';
+import { DownloadPage } from './components/download/DownloadPage';
 import { SwAutoUpdate } from './components/ui/SwUpdatePrompt';
-import { TelemetryAsk } from './components/telemetry/TelemetryAsk';
+import { InstanceBranding } from './components/ui/InstanceBranding';
+import { AppearanceController } from './components/ui/AppearanceController';
 import { ScreenShareSetup } from './components/voice/ScreenShareSetup';
+import { ContextMenuRenderer } from './components/ui/ContextMenuRenderer';
 import { useAuthStore } from './stores/authStore';
 import { isElectron } from './platform/platform';
 
@@ -57,8 +70,15 @@ export function App() {
       )}
       <div className={showTitleBar ? 'flex-1 min-h-0' : 'contents'}>
         <SwAutoUpdate />
-        <TelemetryAsk />
+        <InstanceBranding />
+        <AppearanceController />
         <ScreenShareSetup />
+        {/* One menu for the whole app, signed in or not, so a right click
+            never falls through to the browser's own (globalContextMenu.ts). */}
+        <ContextMenuRenderer />
+        <LegalController />
+        <MailLanguageController />
+        <MfaPromptDialog />
         <Routes>
           <Route
             path="/login"
@@ -77,10 +97,45 @@ export function App() {
             }
           />
           <Route
+            path="/forgot-password"
+            element={
+              <AuthRedirect>
+                <ForgotPasswordPage />
+              </AuthRedirect>
+            }
+          />
+          {/* Public, and not behind AuthRedirect: a link works whoever is signed in on this browser. */}
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route
+            path="/channels/:spaceId/events"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/channels/:spaceId/:channelId?"
             element={
               <ProtectedRoute>
                 <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bots/:botId/add"
+            element={
+              <ProtectedRoute>
+                <BotInvitePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/developers/bots/:botId?"
+            element={
+              <ProtectedRoute>
+                <BotPortalPage />
               </ProtectedRoute>
             }
           />
@@ -97,15 +152,48 @@ export function App() {
             }
           />
           <Route
-            path="/backspace"
+            path="/friends"
             element={
               <ProtectedRoute>
                 <AppLayout />
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/inbox"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+          {/* The admin console, under the app's own frame. The server is what protects it. */}
+          <Route
+            path="/admin/:section?"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+          {/* Public: the desktop installers, for visitors and members alike. */}
+          <Route path="/download" element={<DownloadPage />} />
+          {/* Public: reachable before and without an account (docs/systems/legal.md). */}
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/imprint" element={<ImprintPage />} />
+          <Route path="/report" element={<ReportPage />} />
           <Route path="/" element={<Navigate to="/channels/@me" replace />} />
-          <Route path="*" element={<Navigate to="/channels/@me" replace />} />
+          <Route path="/channels" element={<Navigate to="/channels/@me" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
     </div>

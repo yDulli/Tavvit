@@ -150,6 +150,12 @@ export interface VoiceState {
   evictWatcher: (watcherIdentity: string) => void;
   /** Drop every watcher not among `present` (the room's participants after a full reconnect). */
   retainWatchers: (present: ReadonlySet<string>) => void;
+  /** Whether this person hears the clips others play in a call. */
+  soundboardEnabled: boolean;
+  setSoundboardEnabled: (enabled: boolean) => void;
+  /** How loud, 0-100. */
+  soundboardVolume: number;
+  setSoundboardVolume: (volume: number) => void;
   soundEffectVolume: number;                 // 0-200 (100 = default)
   setSoundEffectVolume: (volume: number) => void;
   messageSoundAllChannels: boolean;          // false (default) = DM + mention only; true = every channel
@@ -329,6 +335,10 @@ export const useVoiceStore = create<VoiceState>()(
         });
       },
 
+      soundboardEnabled: true,
+      setSoundboardEnabled: (enabled) => set({ soundboardEnabled: enabled }),
+      soundboardVolume: 80,
+      setSoundboardVolume: (volume) => set({ soundboardVolume: volume }),
       soundEffectVolume: 100,
       setSoundEffectVolume: (volume) => set({ soundEffectVolume: volume }),
       messageSoundAllChannels: false,
@@ -949,6 +959,8 @@ export const useVoiceStore = create<VoiceState>()(
         autoGainControl: state.autoGainControl,
         rnnoiseEnabled: state.rnnoiseEnabled,
         soundEffectVolume: state.soundEffectVolume,
+        soundboardEnabled: state.soundboardEnabled,
+        soundboardVolume: state.soundboardVolume,
         messageSoundAllChannels: state.messageSoundAllChannels,
         pipEnabled: state.pipEnabled,
         streamAttenuationEnabled: state.streamAttenuationEnabled,

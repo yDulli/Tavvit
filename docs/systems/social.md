@@ -1,11 +1,13 @@
 # Social & Friends System
 
 Source files:
-- `packages/server/src/routes/social.ts` -- Friend requests, friend list, unfriend, user discovery, user search
+- `packages/server/src/routes/social.ts` -- Friend requests, friend list, unfriend, finding people by username (`GET /api/social/search`)
+- `packages/server/src/utils/blocks.ts` -- `blockRefusal`: a block between two people refuses a friend request in either direction
 - `packages/server/src/routes/users.ts` -- User profile CRUD, mutuals endpoint (`GET /users/:id/mutuals`)
-- `packages/web/src/stores/socialStore.ts` -- Client-side friend/request state with cross-instance loading and origin tagging
-- `packages/web/src/stores/discoverStore.ts` -- Client-side user discovery with multi-instance fan-out
-- `packages/web/src/components/chat/FriendsPage.tsx` -- Friends page UI: tabs (Online/All/Pending/Add Friend/Activity), discover grid, search
+- `packages/web/src/stores/socialStore.ts` -- Client-side friend/request state with cross-instance loading and origin tagging, cross-instance username search
+- `packages/web/src/components/chat/FriendsPage.tsx` -- Friends page UI: the Online/All/Pending lists, the Add Friend view (username search, `name@instance` handles), the phone's Activity tab
+- `packages/web/src/utils/userViewLookup.ts` -- `usernameQueryOf` (what counts as a username query) and `useSearchResultView` (how a search result is drawn)
+- `packages/web/src/components/modals/NewDmModal.tsx`, `components/layout/DmSearchBar.tsx` -- The DM pickers, which find people with the same search
 - `packages/web/src/components/modals/UserProfileModal.tsx` -- Profile modal with friendship actions and mutual display
 - `packages/web/src/utils/mutuals.ts` -- Cross-instance mutual friend/space loading with dedup
 - `packages/web/src/utils/identity.ts` -- Federated identity helpers (parseFederatedUsername, userKey, isMine; see `client-federation.md` section 5)
@@ -14,7 +16,7 @@ Source files:
 - `packages/server/src/utils/federationOutbox.ts` -- `buildFriendContextId()`, `getFriendEventTargets()`
 - `packages/server/src/utils/federationWorker.ts` -- Initial sync friend backfill for new peers
 
-DB tables: `friends`, `friend_requests`, `users` (discoverable, homeInstance, homeUserId fields).
+DB tables: `friends`, `friend_requests`, `users` (homeInstance, homeUserId fields; the `suspended_*` columns the search reads), `user_blocks` (read by the request and search checks).
 See `docs/systems/database.md` for full schemas.
 
 ---
@@ -50,8 +52,7 @@ See `docs/systems/database.md` for full schemas.
 | `PATCH` | `/api/social/requests/:id` | Accept or decline | JWT |
 | `DELETE` | `/api/social/requests/:id` | Cancel outgoing request | JWT |
 | `DELETE` | `/api/social/friends/:id` | Remove a friend | JWT |
-| `GET` | `/api/social/discover` | Discover users | JWT, rate-limited 30/min |
-| `GET` | `/api/social/search` | Search users by name | JWT, rate-limited 30/min |
+| `GET` | `/api/social/search` | Find people by username (Section 3) | JWT, 30/min per address and 20/min per account |
 
 See `docs/systems/api.md` for full endpoint signatures.
 
@@ -61,17 +62,18 @@ See `docs/systems/api.md` for full endpoint signatures.
 
 **Input:** `SendFriendRequest`: `{ username }` for a typed handle, or `{ homeUserId, homeInstance, username? }` for a user the client already holds. The identity wins when present (both fields required together, else 400 `validation_failed`); the username is sent alongside only so that a server predating the identity fields can still serve the request. See "Addressing the target" below.
 
-**Routing:** a target on another instance goes to the federated flow in Section 6. A local target is found by lowercased username (`bare` or `bare@<own host>`), or, for an identity whose `homeInstance` is this instance, as the native user whose `id` (or native `homeUserId`) is `homeUserId`. Then:
+**Routing:** a target on another instance goes to the federated flow in Section 6. A local target is found by lowercased username (`bare` or `bare@<own host>`) among the live accounts of this instance only (`findLocalUserByUsername`: not deleted, no `homeInstance`), so the stored name of a tombstone or of a replicated row never resolves as a handle; or, for an identity whose `homeInstance` is this instance, as the native, non-deleted user whose `id` (or native `homeUserId`) is `homeUserId` (`findNativeUserByHomeId`). Then:
 1. Not found → 404 `user_not_found`
 2. **Self-friendship prevention:** `targetUser.id === request.userId` returns 400 `cannot_friend_self`
-3. **Already friends check:** Checks `friends` table in both directions (userId/friendId and friendId/userId)
-4. **Duplicate request check:** Checks `friend_requests` for any pending request between the two users in either direction
+3. **Block check:** `blockRefusal(sender, target)` (`utils/blocks.ts`): 403 `blocked_by_you` when the sender blocked the target, 403 `interaction_unavailable` when the target blocked the sender, which does not say that a block is the reason
+4. **Already friends check:** Checks `friends` table in both directions (userId/friendId and friendId/userId) → 400 `already_friends`
+5. **Duplicate request check:** Checks `friend_requests` for any pending request between the two users in either direction → 400 `friend_request_pending`
 
 **On success:**
 1. Generates snowflake ID, inserts into `friend_requests` with `status='pending'`
-2. **WS broadcast:** `friend_request_received` sent to target user with full request payload including sender profile
+2. **WS broadcast:** `friend_request_received` sent to target user with full request payload including sender profile, and `friend_request_sent` to the sender's own sessions (multi-tab sync)
 3. **Federation relay:** If either user is federated, queues `friend_request_create` event (see Section 6)
-4. Returns `{ success: true, requestId: string }`
+4. Returns `201 { success: true, requestId: string }`
 
 ### Accept/Decline (`PATCH /api/social/requests/:id`)
 
@@ -79,8 +81,10 @@ See `docs/systems/api.md` for full endpoint signatures.
 
 **Authorization:** Only the recipient (`request.toId === userId`) can accept or decline.
 
+**Only an open request is answered.** A request whose status is no longer `pending` (accepted or declined already) answers 404 `friend_request_not_found`, as an unknown id does, so answering twice changes nothing and relays nothing a second time.
+
 **Accept path:**
-1. **Transaction:** Inserts `friends` row (fromId -> userId, toId -> friendId) AND updates request status to `'accepted'`
+1. **Transaction:** Inserts the `friends` row (fromId -> userId, toId -> friendId) unless the two are already friends in either direction, AND updates request status to `'accepted'`. No duplicate friendship row is ever written
 2. **WS broadcast (after commit):** `friend_request_accepted` sent to the original sender with the accepting user's profile as a `Friend` object
 3. **Federation relay:** Queues both `friend_request_update` (status=accepted) AND `friend_add` events
 
@@ -124,42 +128,28 @@ Queries `friend_requests` with `status='pending'` where the authenticated user i
 
 ---
 
-## 3. User Discovery
+## 3. Finding people
 
-### GET /api/social/discover
-
-**Query params:** `q` (search term), `limit` (1-100, default 24), `offset` (default 0)
-
-**Filters (WHERE clause):**
-1. `discoverable = 1` -- user must opt into discovery
-2. `isDeleted = 0` -- exclude tombstoned accounts
-3. `id != myId` -- exclude self
-4. `homeInstance IS NULL OR homeInstance = ''` -- **exclude replicated federated stubs** (each instance only surfaces its own native users; federated users are discovered via the parallel fan-out from the client)
-5. If `q` provided: LIKE match on `username` or `displayName` with `%q%` pattern
-
-**Pre-loaded social graph (single query each):**
-- My friend IDs (from `friends` table, both directions)
-- My space IDs (from `space_members`)
-- Outbound pending requests (Map: toId -> requestId)
-- Inbound pending requests (Map: fromId -> requestId)
-
-**Batch optimization:** For the page of results, fetches ALL friends and space memberships for all page users in two bulk queries (using `inArray`), then builds per-user Sets for intersection computation.
-
-**Per-user computation:**
-- `mutualFriendCount`: intersection of my friends and their friends
-- `mutualSpaceCount`: intersection of my spaces and their spaces
-- `relationship`: one of `'none'` | `'friends'` | `'outbound_pending'` | `'inbound_pending'`
-- `requestId`: set when relationship is `outbound_pending` or `inbound_pending`
-
-**Sort:** `mutualFriendCount DESC`, then `createdAt DESC`
-
-**Response:** `{ users: DiscoverUser[], total: number }`
+There is no list of people to browse. A person is found by their username, or added by a handle typed whole (`name` or `name@instance`, Sections 1 and 6). The Discover People suggestions, `GET /api/social/discover` and the per-account `discoverable` setting no longer exist: the Privacy panel has no discovery switch, `PATCH /api/users/@me` ignores the field, `User` no longer carries it, and migration `0042_orbit_drop_discoverable` dropped `users.discoverable`. A peer's lookup of an exact handle (`POST /api/federation/users/lookup`, Section 6 step 5) never read that setting.
 
 ### GET /api/social/search
 
-**Query params:** `q` (min 1 character)
+**Query:** `q`, trimmed, one leading `@` dropped, lowercased. It must then be 3 to 32 characters of `a-z`, `0-9` and `_`, the characters a username is made of, else 400 `user_search_query_invalid` with `details: { min: 3, max: 32 }`. A `name@instance` handle is not a query: it fails this check and is sent as a friend request instead (Section 11).
 
-Same filter set as discover: `isDeleted = 0`, `discoverable = 1`, native-only (`homeInstance IS NULL OR ''`), excludes self. LIKE match on `username` or `displayName`, limit 10. Returns `User[]` with no mutual counts and no relationship enrichment — the client (`FriendsPage.tsx:AddFriendTab`) enriches results against the local `friends`/`requests` arrays at render time. Federated users are surfaced via the client-side cross-instance fan-out in `socialStore.searchUsers`, not via this endpoint.
+**Limits:** the route's own `@fastify/rate-limit` config, 30 per minute per client address (api.md, "Rate limiting"), and on top of it 20 per minute per account (`createFixedWindowLimit`, in memory, counted once the query is valid). Either answers 429 `rate_limited`. `DISABLE_RATE_LIMITS` turns both off.
+
+**Match:** usernames that start with the query (`username LIKE '<q>%'`, with `_` escaped so it matches only itself). The exact username comes first, then the others in username order, at most 8. No paging and no `total`, and display names are not searched: enough to find someone whose name one knows, never a way to list everyone.
+
+**Who never comes back:**
+- the caller;
+- deleted accounts (`is_deleted = 1`);
+- accounts suspended now (`suspendedNow`, `utils/suspension.ts`; a time-limited suspension whose end has passed hides no one);
+- replicated rows (`homeInstance` set). Their stored name is this instance's label for a person of another instance, not a username here; that person is found by asking their own instance (Section 8, "Cross-Instance Search");
+- anyone in a block with the caller, in either direction (`user_blocks`): the blocked person does not find the blocker, and the blocker does not find the person they blocked.
+
+**Response:** `UserSearchResult[]` (Section 13): `id`, `username`, `displayName`, `avatar`, `avatarColor`, `homeInstance`, `homeUserId`. Only what a result row shows and what a friend request or a DM needs to address the person: no status, bio, banner, mutual counts or relationship. The client works out where the viewer stands from its own lists (Section 11, "Search result rows").
+
+**Callers.** The Add Friend view through `socialStore.searchUsers`, which asks the page's instance and every connected instance (Section 8), and the two DM pickers, `NewDmModal` and `DmSearchBar`, which ask the page's own instance. All of them send a query only when it passes the server's rule, checked on the client by `usernameQueryOf` (`utils/userViewLookup.ts`) or the Add Friend view's `addQueryOf`, so a short or malformed query never leaves the client. The pickers draw a result through `useSearchResultView`: the cached view of the same person when the client holds one (for their status and current picture), else the result's own fields. A result is narrower than a user, so it is read against the `userViews` cache and never written into it.
 
 ---
 
@@ -176,6 +166,19 @@ Same filter set as discover: `isDeleted = 0`, `discoverable = 1`, native-only (`
 **Mutual spaces:** Fetches all `space_members` rows for both the caller and the target, computes intersection of space IDs. Fetches `{ id, name, icon, avatarColor }` for mutual spaces.
 
 **Response:** `{ mutualFriends: User[], mutualSpaces: { id, name, icon, avatarColor }[] }`
+
+---
+
+## Who may reach someone
+
+Two rules a person sets in Settings → Privacy (`utils/contactPolicy.ts`). On a public instance anyone can find anyone by name, and without these only a block would stop a stranger, after the first message.
+
+- **Who may start a conversation** (`users.dm_policy`, default friends and people in a shared space). `POST /api/dm` refuses with `dm_not_accepted`. A conversation the two already have stays open whatever the rule says now, calls in it too; to end one, a person blocks. Group DMs and space invites were friends-only already.
+- **Who may send a friend request** (`users.friend_request_policy`, default anyone). Refused with `friend_request_not_accepted`, after the checks that answer someone who already knows (`already_friends`, `friend_request_pending`). Name search (`GET /api/social/search`) leaves out whoever would refuse the one searching, so `nobody` also takes someone out of search.
+
+A block is checked first and says more. Nobody has a way around a rule, an administrator included.
+
+**Across instances.** The account's own instance decides, so a replicated row never refuses. A DM or friend request relayed in from another instance is not checked against these rules yet, as it is not against blocks; federation is off by default.
 
 ---
 
@@ -294,7 +297,7 @@ As of 2026-04-25, the sender's home server owns the entire federated friend-add 
 
 A request names its target by **identity** (`homeUserId` + `homeInstance`) or by **username**:
 
-- **Identity** is what the web client sends for every user it already holds: the profile modal's Add Friend and the discover/search cards on the Friends page (`friendRequestTarget` in `packages/web/src/utils/friendRequestTarget.ts`). A replicated row carries its home identity; a user native to the remote instance it was loaded from is that instance's user by its id there. A user native to the home instance is sent by username, which is their handle.
+- **Identity** is what the web client sends for every user it already holds: the profile modal's Add Friend and the search result rows on the Friends page (`friendRequestTarget` in `packages/web/src/utils/friendRequestTarget.ts`). A replicated row carries its home identity; a user native to the remote instance it was loaded from is that instance's user by its id there. A user native to the home instance is sent by username, which is their handle.
 - **Username** is for a handle the user typed (Add Friend input, and the Connections panel's Retry prefill).
 
 A user object's `username` is not a reliable name for the person: for a replicated stub it is only this instance's label, and a stub minted without a name hint is called `<homeUserId>@<domain>`. Sending that label made the peer's by-name lookup answer 404 `user_not_found`, so a removed federated friend could not be re-added from their profile (issue #339). The identity resolves whatever the stub is called.
@@ -304,6 +307,7 @@ The client sends `username` alongside the identity (`name@host` for a federated 
 #### Steps
 
 1. **Parse target.** An identity whose `homeInstance` normalizes to this server's own host (port included) or to one of its bare domain names (`isOwnDomain`), or a `username` with no `@` or whose domain after `@` normalizes to this server's own host, goes to the local-only path. Otherwise the target domain is the identity's `homeInstance` or the typed domain.
+1a. **Federation off → 403 `federation_disabled`.** A person on another instance needs federation, which is off unless the operator enabled it (`FEDERATION_ENABLED`, `config.federation.enabled`). The request says so plainly instead of reporting an unreachable peer.
 2. **resolveOriginFromHostname(targetDomain)** — resolves the target peer's full origin URL. Prefers a stored `federation_peers` row matching the typed host; for a host without a port, then the one `active` peer row on that hostname (an identity's `homeInstance` is a bare hostname while the peer's origin may carry a port; a dead row from a former ported setup does not count); falls back to mirroring `getOurOrigin()`'s scheme. Returns null → 400 `invalid_target_domain`.
 2a. **Limbo-window guard → 409 `peer_reset_pending`.** O(1) point lookup on the `federation_reset_events` origin PRIMARY KEY: if an **unresolved** row exists for `peerOrigin` (`origin = peerOrigin AND resolved_at IS NULL`), the peer was reset-detected (wipe-and-reinstall) but the admin has not yet re-peered — the local friendship/stub graph is still bound to the dead incarnation. Return 409 `peer_reset_pending` instead of the confusing `already_friends` (stale friendship) or `peer_rejected` (the `needs_attention` peer would otherwise trip `ensurePeered`). `peerOrigin` is the exact string `markPeerReset` journals (the peer's `federation_peers.origin`), so the match is a single indexed lookup; no reset in progress → one indexed miss → the normal path proceeds unchanged. See `docs/systems/federation.md` (instance-epoch self-healing) and the design spec §5.3. The equivalent guard runs on federated DM-create (`POST /api/dm`, `dm.ts`).
 3. **Authority defense.** If the calling user's `homeInstance` is set and does not normalize to this server's own host (checked via `normalizeOriginForCompare`), return 403 `not_authoritative_for_sender`. Prevents replicated/federated users from queueing relay events the home server isn't authoritative for. Runs before peering to fail fast.
@@ -322,6 +326,7 @@ The client sends `username` alongside the identity (`name@host` for a federated 
    The peering trigger target recorded in step 4 is `name@domain`. For an identity it is the local part of the `username` sent alongside when that username is on the same domain, else the `homeUserId`.
 6. **Self-friend pre-check.** If the looked-up `(homeUserId, peerOrigin)` matches the sender's canonical identity (using `normalizeOriginForCompare` for host comparison) → 400 `cannot_friend_self`.
 7. **resolveOrCreateReplicatedUser + hydrateReplicatedUserProfile** — creates or refreshes the local stub for the remote user. Tombstoned identities (resolveOrCreateReplicatedUser returns null) → 404 `user_not_found`.
+7a. **Block check**, between the resolve and the hydrate: `blockRefusal(sender, stub)` → 403 `blocked_by_you` or `interaction_unavailable`, as for a local target. Blocks are held against this instance's rows (`user_blocks`), and for a person of another instance that row is the stub, so the check waits for it. Nothing is written to `friend_requests` or queued. The check is the sender's home's: the receiving instance's `processFriendRequestCreateEvent` does not read `user_blocks`.
 8. **Direction-aware idempotency:**
    - Same-direction pending request exists → 200 with existing `requestId` (idempotent).
    - Opposite-direction pending request exists → 409 `incoming_request_exists` with existing `requestId` for client deep-link.
@@ -374,7 +379,7 @@ The client handler in `useWebSocket.ts` removes the row from `socialStore` and s
 ### End-to-End Relay Flow: Friend Request Update (Accept/Decline)
 
 **Outbound (`social.ts:PATCH /api/social/requests/:id`):**
-1. Local request status updated (+ friendship row if accepted)
+1. Local request status updated (+ friendship row if accepted and the pair is not friends already). Only a pending request is answered (Section 1), so a request is relayed as answered once
 2. Queues `friend_request_update` with `status: 'accepted' | 'declined'`
 3. If accepted, also queues `friend_add` event (two separate outbox entries)
 
@@ -468,14 +473,14 @@ type FriendRequestRow = FriendRequest & { _instanceOrigin: string };
 type ListEntry<R> = R & { _rows?: readonly R[] };
 type TaggedFriend = ListEntry<FriendRow>;
 type TaggedFriendRequest = ListEntry<FriendRequestRow>;
-type TaggedUser = User & { _instanceOrigin: string };
+type TaggedSearchResult = UserSearchResult & { _instanceOrigin: string };
 ```
 
 ### One entry per person
 
 `friends` and `requests` hold one entry per person: the friend, or a request's other party (`request.user`). Two rows are the same person when their `userKey` (each with its own origin, `client-federation.md` section 5) is equal, so a person listed by two instances (their home's row and a replicated row of them) is one entry, and two users native to different instances are two entries whatever their ids (#353). A request without a `user` is only ever itself.
 
-An entry's own fields are the row it is shown by: the row from the person's home (`isIssuedByHome`) when an instance listed one, else the first row listed. Its ids and `_instanceOrigin` therefore line up with the discover and search cards and the profile modal, and mutations go to that row's instance. When more than one instance listed the person, `_rows` holds every instance's row (the shown one included), so an event from any of those instances finds the entry; a person only one instance listed has no `_rows`.
+An entry's own fields are the row it is shown by: the row from the person's home (`isIssuedByHome`) when an instance listed one, else the first row listed. Its ids and `_instanceOrigin` therefore line up with the search result rows and the profile modal, and mutations go to that row's instance. When more than one instance listed the person, `_rows` holds every instance's row (the shown one included), so an event from any of those instances finds the entry; a person only one instance listed has no `_rows`.
 
 All list changes go through the same helpers in `socialStore.ts`: `mergeRows` (group rows by person, pick the shown row), `withRow` (add a row, or replace the row the same instance issued with the same id), `withoutPeople` (drop the people any of whose rows match), `withoutRows` (drop only the matching rows; a person whose rows all go is dropped, otherwise the entry is shown by a row that is left) and `withEachRow` (apply an update to every row).
 
@@ -489,11 +494,11 @@ Crossed requests are one entry. When the user sends Bob a request from home whil
 
 Removals that match nothing return the same arrays (and the same state), so subscribers do not re-render for, say, the second `friend_removed` that follows a relay.
 
-Other modules never read `_rows`. They look rows up through the store's exports: `friendRowAt(friends, id, origin)` (any instance's friend row, used by `presenceSubject.ts` for a server that sends only its row id), `friendEntryOf(friends, row, origin)` (the friend entry of a person), and `pendingRequestWith(requests, row, origin)` (the pending request row with a person, the one `origin` holds when it holds one, else the entry's shown row; used by the Add Friend search cards).
+Other modules never read `_rows`. They look rows up through the store's exports: `friendRowAt(friends, id, origin)` (any instance's friend row, used by `presenceSubject.ts` for a server that sends only its row id), `friendEntryOf(friends, row, origin)` (the friend entry of a person), and `pendingRequestWith(requests, row, origin)` (the pending request row with a person, the one `origin` holds when it holds one, else the entry's shown row; used by the Add Friend search result rows).
 
 ### Cross-Instance Friend Loading (`loadFriends`)
 
-1. Gets connected instances from `instanceStore`
+1. Waits for `waitForAutoConnect()`, the one helper exported from `stores/instanceStore.ts` that resolves once `_autoConnectDone` is set (at once when it already is; otherwise it subscribes, re-checks the flag after subscribing to close the race, and unsubscribes on the flip), so the fan-out never runs before the remote connections are up, which would miss their rows. `loadRequests`, `exploreStore.fetchSpaces`/`fetchMyRequests` and `utils/mutuals.ts` use the same helper. Then gets connected instances from `instanceStore`
 2. Fires `Promise.allSettled()` with:
    - Home instance: `api.social.friends()`
    - Each connected remote instance: `inst.api.social.friends()`
@@ -502,7 +507,7 @@ Other modules never read `_rows`. They look rows up through the store's exports:
 
 ### Cross-Instance Request Loading (`loadRequests`)
 
-Same `Promise.allSettled()` fan-out pattern as `loadFriends`, and one entry per other party (`mergeRows`). A cross-instance request exists as two rows, one on each instance, and both sides return it; the entry is shown by the row from the other party's home, which has their own ids and the matching `_instanceOrigin`. Matching those is what lets the Add Friend search card flip to "Request Pending" after sending. Normalizes assets for remote request user profiles.
+Same `Promise.allSettled()` fan-out pattern as `loadFriends`, and one entry per other party (`mergeRows`). A cross-instance request exists as two rows, one on each instance, and both sides return it; the entry is shown by the row from the other party's home, which has their own ids and the matching `_instanceOrigin`. Matching those is what lets an Add Friend search result row turn to "Request sent" after sending. Normalizes assets for remote request user profiles.
 
 ### Sending Friend Requests
 
@@ -514,10 +519,12 @@ After success, reloads requests via `loadRequests()`.
 
 ### Cross-Instance Search (`searchUsers`)
 
-1. Fires parallel searches to the page's instance and every connected instance, normalizes remote assets, and upserts every row into the `userViews` cache.
-2. **One result per person** (`userKey`), grouped by the same helpers as the friends and requests lists (`groupByPerson`, `shownRow`): a person two instances return (their home's row and a replicated row of them) is one result, shown by their home's row (`isIssuedByHome`) when one was returned, else by the first. Two users native to different instances are two results whatever their ids (#353). Results are plain `TaggedUser` rows without `_rows`: events do not change them.
+`searchUsers(query)` takes a username query the caller has already checked (the Add Friend view's `addQueryOf`, Section 11).
 
-The Add Friend tab matches each result to the lists by person, not by the shown row: `friendEntryOf` for "already a friend", and `pendingRequestWith` for a pending request. A card with a request is shown by that request's row of the person (its user and origin), because the request id is valid only on the instance that holds it.
+1. Fires parallel `GET /api/social/search` requests (Section 3) to the page's instance and every connected instance (`Promise.allSettled`) and normalizes remote assets. Each instance answers with its own accounts only, so a person homed on a connected instance is found there. An instance that refuses or fails (a 429, an unreachable host) adds no rows, and the call never rejects: with no answer at all it resolves to an empty list.
+2. **One result per person** (`userKey`), grouped by the same helpers as the friends and requests lists (`groupByPerson`, `shownRow`): a person two instances return (their home's row and a replicated row of them) is one result, shown by their home's row (`isIssuedByHome`) when one was returned, else by the first. Two users native to different instances are two results whatever their ids (#353). Results are `TaggedSearchResult` rows without `_rows`: events do not change them. They are not written into the `userViews` cache, because a result carries no status or profile text and must never replace the fuller view the cache holds.
+
+The Add Friend view matches each result to the lists by person, not by the shown row: `friendEntryOf` for "already a friend", and `pendingRequestWith` for a pending request. A row with a request is shown by that request's row of the person (its user and origin), because the request id is valid only on the instance that holds it.
 
 ### Instance API Resolution (`apiAt`)
 
@@ -530,9 +537,9 @@ function apiAt(origin: string): BackspaceApiClient {
 }
 ```
 
-Used by `sendFriendRequest`, `updateFriendRequest`, `cancelFriendRequest` and `removeFriend`. It is strict: an origin the client holds no entry for (a connection removed from Connections) throws `SocialInstanceNotConnectedError`, whose message is `social:instanceNotConnected` with the host, and nothing is sent. It never falls back to the page's instance, which would receive another instance's row ids and fail, or act on whichever of its own rows has the same id. The shared `getApiForOrigin` in `crossStoreResolvers.ts` keeps its fallback because other surfaces rely on it (asset URLs, for one); `apiAt` is local to `socialStore`. The callers show the error like any other failed social action (`describeError` in a toast, or the card's error line).
+Used by `sendFriendRequest`, `updateFriendRequest`, `cancelFriendRequest` and `removeFriend`. It is strict: an origin the client holds no entry for (a connection removed from Connections) throws `SocialInstanceNotConnectedError`, whose message is `social:instanceNotConnected` with the host, and nothing is sent. It never falls back to the page's instance, which would receive another instance's row ids and fail, or act on whichever of its own rows has the same id. The shared `getApiForOrigin` in `crossStoreResolvers.ts` keeps its fallback because other surfaces rely on it (asset URLs, for one); `apiAt` is local to `socialStore`. The callers show the error like any other failed social action (`describeError` in a toast, or the search result row's error line).
 
-- `updateFriendRequest(id, origin, status, other?)` and `cancelFriendRequest(id, origin, other?)` take the request's id and the origin of the instance that holds it (a request entry's `_instanceOrigin`, or a discover card's for its `requestId`), call that instance, and drop the person's request entry. `other` is the other party as `origin` issued them; a discover card passes its user, so the person's entry is found by `userKey` when the list does not hold the card's request row yet (for example a card loaded from orbit before the list reloaded). Every request action on a card goes through the store; none calls the API directly.
+- `updateFriendRequest(id, origin, status, other?)` and `cancelFriendRequest(id, origin, other?)` take the request's id and the origin of the instance that holds it (a request entry's `_instanceOrigin`, or a search result row's for its `requestId`), call that instance, and drop the person's request entry. `other` is the other party as `origin` issued them; a search result row passes its person, so the entry is found by `userKey` whichever of the person's rows the list holds. Every request action on a row goes through the store; none calls the API directly.
 - `removeFriend(row, origin)` takes any row of the person and its origin (a friend entry, or a group DM member row with the DM copy's origin), finds the friend entry by `userKey`, calls the instance the entry is shown by with that row's id, and drops the entry. It does nothing when the person is not a friend.
 
 ### WS Event Handlers
@@ -549,7 +556,7 @@ From `useWebSocket.ts`, social events are dispatched to store methods:
 | `friend_request_declined` | `removeRequestById(requestId, origin, userId)` | Same as `friend_request_cancelled` |
 | `friend_request_relay_failed` | `removeRequestById(requestId, origin)` | Drops the request entry holding row `requestId` + `origin` |
 
-All handlers also update `discoverStore` relationship state via lazy import.
+The Add Friend search result rows work out their state from these two lists at render time (Section 11), so nothing else needs updating.
 
 ### Live Updates
 
@@ -560,51 +567,7 @@ All handlers also update `discoverStore` relationship state via lazy import.
 
 ---
 
-## 9. Client-Side: discoverStore
-
-Source: `packages/web/src/stores/discoverStore.ts`
-
-### Federation-Aware Initialization Guard
-
-`fetchUsers()` starts with `await waitForAutoConnect()`, the one helper
-exported from `stores/instanceStore.ts` that resolves once
-`_autoConnectDone` is set (at once when it already is; otherwise it
-subscribes, re-checks the flag after subscribing to close the race, and
-unsubscribes on the flip). `socialStore.loadFriends`/`loadRequests`,
-`exploreStore.fetchSpaces`/`fetchMyRequests` and `utils/mutuals.ts` use the
-same helper.
-
-This ensures the discover page doesn't fire requests before all remote instance connections are established, which would miss remote users.
-
-### Multi-Instance Fan-Out
-
-1. Fires `Promise.allSettled()` to home + all connected instances' `api.social.discover(query)`
-2. Tags each user with `_instanceOrigin`
-3. **Deduplication:** By `${user.id}:${origin}` -- since the server already excludes replicated stubs from discover results, cross-instance dedup is minimal (only needed for edge cases)
-4. Sums `total` from all instances
-5. **Error handling:** If no instances respond, sets error `'Failed to reach any instance for discovery'`
-
-### State Shape
-
-```typescript
-interface DiscoverState {
-  users: TaggedDiscoverUser[];   // Origin-tagged discover users
-  searchQuery: string;           // Current search term
-  isLoading: boolean;
-  total: number;                 // Sum across all instances
-  error: string | null;
-}
-```
-
-### Relationship Updates
-
-`updateRelationship(userId, origin, relationship, requestId?)` -- Updates a specific user's relationship status in-place. Called from:
-- `UserDiscoverCard` after sending/cancelling/accepting friend requests
-- WS event handlers (friend_request_accepted, friend_removed, friend_request_cancelled, friend_request_declined)
-
----
-
-## 10. Client-Side: Mutuals
+## 9. Client-Side: Mutuals
 
 Source: `packages/web/src/utils/mutuals.ts`
 
@@ -633,7 +596,7 @@ interface MutualSpace {
 
 ---
 
-## 11. Client-Side: Identity Utilities
+## 10. Client-Side: Identity Utilities
 
 Source: `packages/web/src/utils/identity.ts`
 
@@ -647,53 +610,57 @@ Whether two rows are the same person (`userKey`) and whether a row is the signed
 
 ---
 
-## 12. FriendsPage UI
+## 11. FriendsPage UI
 
 Source: `packages/web/src/components/chat/FriendsPage.tsx`
 
-### Tabs
+### Views
 
-| Tab | Content | Key Behavior |
+| View | Content | Key Behavior |
 |-----|---------|--------------|
 | Online | Online friends only | Filters by `status !== 'offline'` |
 | All | Complete friend list | No filter |
 | Pending | Incoming + outgoing requests | Split into sections; incoming shows badge count in tab (and on the mobile nav). A request is incoming when its other party (`user`) is its sender (`isIncomingRequest`, `isOutgoingRequest` in `socialStore.ts`): its ids are the holding instance's, so `fromId` is never compared with the session row's id |
-| Add Friend | Search + discover grid | Unified search/discover with direct-add |
-| Activity | Friends grouped by activity | Active (rich presence) / Online (no activity) / Offline sections |
+| Add Friend | Find people by username, or add a `name@instance` handle | See below |
+| Activity | Online friends: on voice first, then those sharing an activity, then the rest (`useFriendBuckets`) | Phone only; a row opens the friend's profile |
 
-### Add Friend Tab: Dual-Mode Search
+On the desktop the header holds the Online, All and Pending tabs and an "Add Friend" button that opens the Add Friend view; the phone has a tab bar of all five. `?view=add` and `?view=pending` open the page on that view, and the parameter is dropped once read.
 
-The Add Friend tab merges search and discovery into a single UI:
+### Add Friend view: what the field holds
 
-1. **Empty query:** Shows discover grid (from `discoverStore.fetchUsers()`, loaded on mount)
-2. **Query entered:** Switches to search mode (debounced 300ms, uses `socialStore.searchUsers()`)
-3. **Direct-Add row:** Shown whenever the search input is non-empty and resolves to a well-formed handle (`trimmed.length > 0 && (no @ || @ at non-edge position)`). Displays the resolved form: when the typed query has no `@`, the row shows `<query>@<window.location.host>` so the user sees which instance the request will hit; when `@` is present, displays the typed query verbatim. The submit button calls `sendFriendRequest(query.trim())` — the resolved form is display-only. All routing, peering, and remote lookup happen server-side on `POST /api/social/requests` (see §6 outbound flow). Server-side `POST /api/social/requests` lowercases the lookup input before matching, so mixed-case bare handles resolve too.
+Nobody is listed before a search. `addQueryOf` reads the field (trimmed, one leading `@` dropped) and the view shows one of these:
 
-**Error handling:** Server errors surface as toasts via `mapServerErrorToMessage` in `packages/web/src/utils/friendErrors.ts`. All structured error codes returned by the federated branch (`user_not_found`, `peer_pending`, `peer_rejected`, `incoming_request_exists`, etc.) are mapped to human-readable messages there. The `ConnectInstanceModal` component still exists in the codebase but is no longer triggered by friend-add — it is used only by the Connections settings panel and space-join flows.
+| Field | Shown |
+|---|---|
+| Empty | An `.empty-state`: type a username to find someone; nobody is listed until one searches, and people are found only by the name they chose |
+| A handle `name@host` (an `@` with text on both sides) | The direct-add row, "Send friend request to name@host" with Send Request. A handle on another host is offered only while this instance federates (`useFederationEnabled`); otherwise the view says that people on other instances cannot be added while it does not. A handle on the page's own host (`window.location.host`) needs no federation |
+| Fewer than 3 letters, digits or underscores | "Type at least 3 characters of a username." |
+| Any other character, or more than 32 | "Usernames are made of letters, digits and underscores." |
+| A valid username (3 to 32 of `a-z0-9_`) | A search through `socialStore.searchUsers`, debounced 300 ms; only the newest answer is shown. A spinner while a search runs with no rows to show, then the result rows under a "People" label, or "No users match your search." |
 
-### Search Result Enrichment
+The direct-add row sends `sendFriendRequest({ username: handle })`; all routing, peering and remote lookup happen server-side on `POST /api/social/requests` (Section 6 outbound flow), which lowercases the lookup input, so mixed-case handles resolve too. Success shows a toast and clears the field. A bare name is never sent as a request from here: it is searched, and the request is sent from its result row. A search that every instance refuses (past the per-account limit, say) reads as no results, because `searchUsers` resolves to an empty list rather than failing.
 
-Raw search results (`User[]`) are enriched at render time into `TaggedDiscoverUser[]` by checking against the current `friends` and `requests` arrays in `socialStore`:
-- If friend -> `relationship: 'friends'`
-- If outbound pending request -> `relationship: 'outbound_pending'` with `requestId`
-- If inbound pending request -> `relationship: 'inbound_pending'` with `requestId`
+**Error handling:** a refused request surfaces through `describeError` (`i18n/errors`), which turns the server's error code (`user_not_found`, `peer_pending`, `peer_rejected`, `incoming_request_exists`, `blocked_by_you`, `federation_disabled`, ...) into a sentence: as a toast for the direct-add row, and on the row itself for a result row's action.
+
+### Search result rows
+
+Each result (`TaggedSearchResult`) becomes a `SearchRow` at render time, checked against the current `friends` and `requests` arrays in `socialStore`:
+- The viewer's own rows are dropped (a precomputed `Set<string>` of `${id}:${origin}` for the current user across all connected instances)
+- A friend (`friendEntryOf`) -> `relationship: 'friends'`
+- A pending request with the person (`pendingRequestWith`) -> `'outbound_pending'` or `'inbound_pending'` with its `requestId`; the row is then shown by that request's row of the person when another instance holds the request (Section 8)
 - Otherwise -> `relationship: 'none'`
 
-Self-exclusion uses a precomputed `Set<string>` of `${id}:${origin}` for the current user across all connected instances.
+`SearchResultRow` shows the avatar, the display name, `@username` and, for a result from another instance, that instance's host; a state line ("Already friends", "Request sent", "Wants to be your friend"); and the action for the relationship:
+- `none`: "Send Request", `sendFriendRequest(friendRequestTarget(row, origin))`
+- `outbound_pending`: "Cancel Request"
+- `inbound_pending`: "Accept" / "Decline"
+- `friends`: "Message", which opens the DM (`openDirectMessage`)
 
-### UserDiscoverCard
-
-Renders a card with banner, avatar, display name, username, bio, mutual counts, instance badge (for remote users), and a context-sensitive action button:
-- `none`: "Send Friend Request"
-- `outbound_pending`: "Request Pending" (click to cancel)
-- `inbound_pending`: "Accept" / "Decline" buttons
-- `friends`: "Message" button
-
-When sending a request to a remote user, constructs `baseName@originHost` format for the username. Errors from the server are surfaced as toasts via `mapServerErrorToMessage` (see `packages/web/src/utils/friendErrors.ts`).
+The avatar and the name open the profile modal. An action that fails shows its error on the row in place of the state line. Nothing on the row changes itself after an action: the store's lists follow every answer and the row's state follows them.
 
 ---
 
-## 13. UserProfileModal
+## 12. UserProfileModal
 
 Source: `packages/web/src/components/modals/UserProfileModal.tsx`
 
@@ -736,11 +703,11 @@ All actions route through `socialStore` methods, which handle instance routing v
 - User profile is loaded via `getApiForOrigin(origin)` to fetch from the correct instance
 - Banner/avatar URLs resolved through the correct API client for remote users
 - Mutuals loaded via `loadFederatedMutuals()` with cross-instance fan-out
-- Friend actions use `sendFriendRequest(user.username)` — all routing is server-side; errors surface as toasts via `mapServerErrorToMessage`
+- Add Friend sends `sendFriendRequest(friendRequestTarget(user, origin))`, the user's identity when the client holds one (Section 6, "Addressing the target"); all routing is server-side; errors surface as toasts via `describeError`
 
 ---
 
-## 14. Data Types
+## 13. Data Types
 
 ### Friend (shared)
 
@@ -776,25 +743,20 @@ interface FriendRequest {
 }
 ```
 
-### DiscoverUser (shared)
+### UserSearchResult (shared)
+
+`GET /api/social/search` (Section 3): only what an add-friend row shows and what a request or a DM needs to address the person; nothing about their status, their profile text or their other accounts.
 
 ```typescript
-interface DiscoverUser {
+interface UserSearchResult {
   id: string;
   username: string;
   displayName: string | null;
   avatar: string | null;
-  banner: string | null;
   avatarColor: AvatarColor | null;
-  bio: string | null;
-  status: UserStatus;
-  customStatus: string | null;
-  createdAt: number;
   homeInstance: string | null;
   homeUserId: string | null;
-  mutualFriendCount: number;
-  mutualSpaceCount: number;
-  relationship: 'none' | 'friends' | 'outbound_pending' | 'inbound_pending';
-  requestId?: string;
 }
 ```
+
+`DiscoverUser` is gone with the discover endpoint.

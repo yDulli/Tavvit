@@ -8,6 +8,14 @@ export function useMobileRouteSync(pathname: string): void {
     if (!match) return;
     const params = { spaceId: match[1]!, channelId: match[2]! };
     const { mobileStack: stack, pushMobileScreen } = useUIStore.getState();
+    // A space's events have an address of their own, not a channel's (a reminder links to it).
+    if (params.channelId === 'events') {
+      const top = stack.at(-1);
+      if (top?.screen !== 'space-events' || top.params?.spaceId !== params.spaceId) {
+        pushMobileScreen('space-events', { spaceId: params.spaceId });
+      }
+      return;
+    }
     const matchesRoute = (entry: (typeof stack)[number] | undefined) =>
       entry?.screen === 'channel-chat' && entry.params?.spaceId === params.spaceId
       && entry.params?.channelId === params.channelId;

@@ -41,6 +41,7 @@ const REFUSED_REASONS = new Set<string>([
   'invalid_system_message',   // relayed system message that is not a well-formed relayable event
   'invalid_target',       // edit/delete/reaction target malformed or from a non-peer; 1-on-1 create or reaction by a non-member; group op on a 1-on-1; unacceptable bootstrap; friend_add answering no pending request
   'source_peer_mismatch', // the batch's claimed source is not the peer that signed it
+  'sticker_elsewhere',    // a message or reaction names a sticker on neither the author's home nor this instance (utils/remoteMedia.ts)
   // The payload itself is malformed; sending it again sends the same payload.
   'invalid_payload',
   'invalid_status',
@@ -48,6 +49,7 @@ const REFUSED_REASONS = new Set<string>([
   'missing_federated_id',
   'missing_message_payload',
   'missing_reaction_payload',
+  'missing_pin_payload',
   'missing_membership_payload',
   'missing_ownership_payload',
   'missing_metadata_payload',

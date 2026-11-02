@@ -1,0 +1,117 @@
+{
+  "title": "Ajuda",
+  "lead": "Respostas para o que as pessoas mais perguntam.",
+  "topics": {
+    "start": {
+      "title": "Primeiros passos",
+      "items": {
+        "join": {
+          "q": "Como entro em um espaço?",
+          "a": "Abra um link de convite que alguém enviou, ou escolha um espaço em Explorar."
+        },
+        "create": {
+          "q": "Como crio meu próprio espaço?",
+          "a": "Clique no mais na barra superior e dê um nome. Depois convide pessoas com um link de convite no menu do espaço."
+        },
+        "friends": {
+          "q": "Como adiciono um amigo?",
+          "a": "Abra Amigos, clique em Adicionar amigos e digite o nome de usuário."
+        }
+      }
+    },
+    "account": {
+      "title": "Sua conta",
+      "items": {
+        "password": {
+          "q": "Esqueci minha senha",
+          "a": "Clique em Esqueceu a senha? na página de login. Um link vai para seu endereço confirmado. Sem um, quem administra este servidor pode ajudar."
+        },
+        "twoFactor": {
+          "q": "Como protejo melhor minha conta?",
+          "a": "Ative o login em dois fatores em Configurações, Segurança, e guarde seus códigos de recuperação em um lugar seguro."
+        },
+        "devices": {
+          "q": "Onde vejo quais dispositivos estão conectados?",
+          "a": "Em Configurações, Segurança. Lá você pode desconectar cada um deles."
+        },
+        "storage": {
+          "q": "Quanto posso enviar?",
+          "a": "O servidor define um tamanho por arquivo e um total para sua conta. Configurações, Conta mostra quanto você usa."
+        },
+        "delete": {
+          "q": "Como excluo minha conta?",
+          "a": "Em Configurações, Conta. Se você tiver espaços, passe-os para alguém ou exclua-os antes."
+        },
+        "username": {
+          "q": "Posso alterar meu nome de usuário?",
+          "a": "Sim, nas configurações da sua conta, uma vez a cada 30 dias. A partir daí você entra com o novo nome, e o antigo fica reservado por 30 dias, para que ninguém se passe por você. O nome de exibição pode ser alterado a qualquer momento."
+        }
+      }
+    },
+    "voice": {
+      "title": "Voz e vídeo",
+      "items": {
+        "hear": {
+          "q": "Ninguém me ouve",
+          "a": "Permita o microfone no navegador e escolha o certo em Configurações, Voz e vídeo."
+        },
+        "share": {
+          "q": "Como compartilho minha tela?",
+          "a": "Entre em um canal de voz e clique no botão de tela nos controles da chamada. O espaço precisa permitir."
+        }
+      }
+    },
+    "notifications": {
+      "title": "Notificações",
+      "items": {
+        "none": {
+          "q": "Não recebo notificações",
+          "a": "Verifique Configurações, Notificações, e se o navegador ou o celular as permite para este site."
+        },
+        "keywords": {
+          "q": "Posso ser avisado sobre uma palavra?",
+          "a": "Sim. Adicione-a em Configurações, Notificações, e você será avisado quando alguém a escrever."
+        }
+      }
+    },
+    "safety": {
+      "title": "Segurança",
+      "items": {
+        "report": {
+          "q": "Como denuncio algo?",
+          "a": "Abra o menu da mensagem e escolha Denunciar, ou use o formulário de denúncia, que funciona sem conta."
+        },
+        "block": {
+          "q": "Como bloqueio alguém?",
+          "a": "Abra o perfil e escolha Bloquear. A pessoa não poderá mais escrever para você."
+        },
+        "bots": {
+          "q": "O que um bot pode ver?",
+          "a": "O que está nos canais que o espaço o deixa ler. Um bot é marcado como tal, e outra pessoa o administra."
+        }
+      }
+    },
+    "desktop": {
+      "title": "O app para desktop",
+      "items": {
+        "where": {
+          "q": "Onde consigo?",
+          "a": "Na página de download, com link na página do produto e em Sobre."
+        },
+        "smartscreen": {
+          "q": "O Windows me avisa sobre o app",
+          "a": "O app ainda não é assinado, então o Windows não o conhece. Clique em Mais informações e depois em Executar assim mesmo."
+        }
+      }
+    },
+    "more": {
+      "title": "Outras dúvidas",
+      "items": {
+        "who": {
+          "q": "Quem administra este servidor?",
+          "a": "O aviso legal diz quem é, e como entrar em contato."
+        }
+      }
+    }
+  }
+}

@@ -26,7 +26,7 @@ import { ALL_PERMISSIONS, PermissionBits, permissionsToString } from '../../util
 // editor itself follows (permissions.md, "Role hierarchy").
 
 const SPACE_ID = 'space-1';
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 
 const SPACE: TaggedSpace = {
   id: SPACE_ID, name: 'Space', icon: null, banner: null, avatarColor: null, ownerId: 'owner',
@@ -166,10 +166,10 @@ describe('UserProfilePopout: Edit Roles', () => {
   it('knows the viewer by their id on a remote space, not their home id', () => {
     // Home id "lead"; on orbit the viewer is their replicated user "lead-local".
     seed({
-      space: { ...SPACE, _instanceOrigin: ORBIT },
+      space: { ...SPACE, _instanceOrigin: TAVVIT },
       members: [member('owner', []), member('lead-local', [LEADS]), member('helper', [HELPERS])],
     });
-    useAuthStore.getState().recordMyRow(ORBIT, 'lead-local');
+    useAuthStore.getState().recordMyRow(TAVVIT, 'lead-local');
 
     renderCard('lead-local');
     expect(editRoles()).toBeNull();
@@ -177,10 +177,10 @@ describe('UserProfilePopout: Edit Roles', () => {
 
   it('is offered on a remote space for a member ranked below the viewer there', () => {
     seed({
-      space: { ...SPACE, _instanceOrigin: ORBIT },
+      space: { ...SPACE, _instanceOrigin: TAVVIT },
       members: [member('owner', []), member('lead-local', [LEADS]), member('helper', [HELPERS])],
     });
-    useAuthStore.getState().recordMyRow(ORBIT, 'lead-local');
+    useAuthStore.getState().recordMyRow(TAVVIT, 'lead-local');
 
     renderCard('helper');
     expect(editRoles()).not.toBeNull();

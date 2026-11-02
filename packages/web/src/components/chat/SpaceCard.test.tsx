@@ -39,7 +39,7 @@ function entry(overrides: Partial<DirectoryEntry> = {}): DirectoryEntry {
     memberCount: 12,
     createdAt: 1,
     origin: 'https://orbit.example',
-    instanceName: 'Orbit',
+    instanceName: 'Tavvit',
     federatedRegistrationOpen: true,
     ...overrides,
   };

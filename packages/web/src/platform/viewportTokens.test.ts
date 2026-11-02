@@ -29,7 +29,10 @@ it('uses scaled tokens and a shared breakpoint in production styles', () => {
       if (file.endsWith(join('styles', 'globals.css'))
         && /^\s*--(?:app-vh|app-vw|app-dvh|safe-bottom|safe-top|keyboard-inset):/.test(line)) return;
       const isAuth = relative(root, file).startsWith(join('components', 'auth') + sep);
-      if (rawViewport.test(line) || (!isAuth && rawBreakpoint.test(line))) {
+      // The product page is a document outside the scaled frame: interfaceScale.ts
+      // does not run there, so `desktop:` never matches and a width is a real width.
+      const isLanding = relative(root, file).startsWith('landing' + sep);
+      if (rawViewport.test(line) || (!isAuth && !isLanding && rawBreakpoint.test(line))) {
         violations.push(`${relative(root, file)}:${index + 1}: ${line.trim()}`);
       }
     });

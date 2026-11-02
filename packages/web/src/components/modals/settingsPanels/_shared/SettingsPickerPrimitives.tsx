@@ -1,16 +1,40 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
+import { Icon } from '../../../ui/Icon';
 
 /**
- * Section wrapper used by audio/video picker subsections (AudioInputSection,
- * AudioOutputSection, …). Provides the small uppercase title above a soft
- * inset card. Settings-panel-internal — kept under `_shared/` rather than
- * promoted to `ui/` because nothing outside settings panels needs this look.
+ * The device pickers of Voice & Video: a button drawn like the app's other
+ * dropdowns (`select.input-standard`) that opens a list in the page.
+ * Settings-panel-internal, kept under `_shared/` because nothing else needs it.
  */
-export function SectionShell({ title, children }: { title: string; children: ReactNode }) {
+export function DevicePicker({ selectedLabel, open, onToggle, pickerRef, children }: {
+  selectedLabel: string;
+  open: boolean;
+  onToggle: () => void;
+  /** Lets the owner close the list on a press outside it. */
+  pickerRef: Ref<HTMLDivElement>;
+  children: ReactNode;
+}) {
   return (
-    <div>
-      <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{title}</div>
-      <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5">{children}</div>
+    <div ref={pickerRef}>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={onToggle}
+        className="input-standard flex w-full items-center justify-between gap-2 pr-2 text-left"
+      >
+        <span className="min-w-0 truncate">{selectedLabel}</span>
+        <Icon
+          name="chevron-down"
+          size={14}
+          strokeWidth={2}
+          className={`flex-shrink-0 text-txt-tertiary transition-transform duration-100 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && (
+        <div className="mt-1 max-h-64 overflow-y-auto scrollbar-thin rounded-md border border-border-soft bg-surface-input py-1">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -22,25 +46,23 @@ export interface DropdownItemProps {
 }
 
 /**
- * Single row of a settings picker dropdown (input device, output device, etc.).
- * Renders a checkmark on the active row and indents inactive labels by the
- * checkmark's width so labels align across rows. Settings-panel-internal.
+ * Single row of a device picker. A check marks the active row and the other
+ * labels are indented by its width, so they all line up.
  */
 export function DropdownItem({ label, active, onClick }: DropdownItemProps) {
   return (
     <button
       type="button"
+      aria-current={active ? 'true' : undefined}
       onClick={onClick}
-      className={`w-full px-3 py-2 text-left text-[13px] hover:bg-interactive-hover transition-colors flex items-center gap-2 ${
-        active ? 'text-txt-primary' : 'text-txt-secondary'
+      className={`flex h-8 w-full items-center gap-2 px-2.5 text-left text-ui transition-colors hover:bg-interactive-hover active:bg-interactive-active ${
+        active ? 'font-medium text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'
       }`}
     >
-      {active && (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-accent-primary flex-shrink-0">
-          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-        </svg>
-      )}
-      <span className={`truncate ${active ? '' : 'pl-6'}`}>{label}</span>
+      <span className="flex w-4 flex-shrink-0 justify-center">
+        {active && <Icon name="check" size={14} strokeWidth={2} className="text-accent-soft" />}
+      </span>
+      <span className="min-w-0 truncate">{label}</span>
     </button>
   );
 }

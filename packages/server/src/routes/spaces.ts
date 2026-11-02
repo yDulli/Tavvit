@@ -1,57 +1,73 @@
+import { spaceLimitReached } from '../utils/accountLimits.js';
+import { accountNeedsVerifiedEmail } from '../email/gate.js';
 import { MAX_OWNER_TITLE_LENGTH, normalizeOwnerTitle } from '@backspace/shared/src/constants.js';
 import { updateSpaceMemberRoutes, roleGrantRefusal } from './spaceMemberUpdate.js';
 import path from 'path';
 import type { FastifyInstance } from 'fastify';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, desc, inArray, sql, ne } from 'drizzle-orm';
 import { getDb, getRawDb, schema } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
 import { markDirectoryDirty } from '../directory/state.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { isMember, isSpaceOwner, isBanned, hasPermission, computePermissions, PermissionBits } from '../utils/permissions.js';
 import { DEFAULT_EVERYONE_PERMISSIONS, ALL_PERMISSIONS, permissionsToString, stringToPermissions, parsePermissionString, roleBitsChangeRefusal, idsHiddenFromEveryone, rolePermissionsVersion, type HeldBitsRefusal } from '@backspace/shared/src/permissions.js';
-import crypto from 'crypto';
 import { connectionManager } from '../ws/handler.js';
 import { deleteAttachmentFiles, deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
+import { pictureFileReleasable, profilePictureOf, uploadNameOf } from '../utils/profileImageRefs.js';
 import { resizeProfileImage } from '../utils/thumbnail.js';
+import {
+  discoveryStatusOf,
+  isOpenReview,
+  recordEditSteps,
+  reviewsAfterEdit,
+  reviewsAfterTransfer,
+  verificationStatusOf,
+} from '../utils/spaceReview.js';
+import { announceReviewQueue, announceReviewStep } from '../utils/reviewNotify.js';
 import { config } from '../config.js';
 import type {
+  AuditLogValue,
   CreateSpaceRequest,
   UpdateSpaceRequest,
   JoinSpaceRequest,
-  Space,
   Channel,
   ChannelCategory,
   MemberWithUser,
+  RoleWriteRequest,
   SpaceWithChannelsAndMembers,
-  Role,
 } from '@backspace/shared';
-import { AVATAR_COLORS } from '@backspace/shared';
+import {
+  AVATAR_COLORS,
+  BAN_DELETE_MESSAGE_SECONDS,
+  INVITE_EXPIRY_SECONDS,
+  INVITE_MAX_USES,
+  MODERATION_REASON_MAX_LENGTH,
+  isSpaceDefaultNotificationLevel,
+  type CreateSpaceInviteRequest,
+} from '@backspace/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { checkVoicePermissions } from '../ws/events.js';
+import { channelToWire, memberStaffBadges, memberToWire, spaceToWire } from '../utils/spaceWire.js';
+import { dropHeldTimeout, holdDepartingTimeout, restoreHeldTimeout } from '../utils/spaceModeration.js';
+import {
+  addedFields,
+  auditChange,
+  auditUserLabel,
+  changedFields,
+  recordAudit,
+  recordMemberRoleAudit,
+  removedFields,
+} from '../utils/auditLog.js';
 import { getLocalInvitePreview } from '../utils/spaceInviteSnapshot.js';
+import { VANITY_CODE_LIMITS } from '@backspace/shared/src/vanityInvites.js';
+import { consumeInvite, createInvite, generateInviteCode, listInvites, MAX_INVITES_PER_SPACE, revokeInvite, setVanityCode, usableInvite } from '../utils/spaceInvites.js';
 import { sendError } from '../utils/httpErrors';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
 import { canActOnMemberInSpace, canManageRoleInSpace, getHierarchyStanding } from '../utils/roleHierarchy.js';
 import { canActOnMember, canManageRoleAt } from '@backspace/shared/src/permissions.js';
 import { moveRoleToPosition, normalizeRolePositions, positionNextTo } from '../db/rolePositions.js';
 import { memberRolesView, roleView, rolesForViewer, viewerReadsPermissionData } from '../utils/permissionDataView.js';
-
-function rowToSpace(row: typeof schema.spaces.$inferSelect): Space {
-  return {
-    id: row.id,
-    name: row.name,
-    icon: row.icon,
-    banner: row.banner ?? null,
-    avatarColor: (row.avatarColor as Space['avatarColor']) ?? null,
-    ownerId: row.ownerId,
-    ownerTitle: row.ownerTitle,
-    inviteCode: row.inviteCode,
-    visibility: (row.visibility ?? 'private') as Space['visibility'],
-    directoryListed: row.directoryListed === 1,
-    description: row.description ?? null,
-    createdAt: row.createdAt,
-  };
-}
+import { parseRoleDisplayFields } from '../utils/roleFields.js';
 
 /**
  * The space columns the directory document serves (spec section 4). A change
@@ -59,22 +75,7 @@ function rowToSpace(row: typeof schema.spaces.$inferSelect): Space {
  */
 const DIRECTORY_SPACE_FIELDS = ['name', 'description', 'icon', 'banner', 'avatarColor', 'visibility'] as const;
 
-function rowToChannel(row: typeof schema.channels.$inferSelect): Channel {
-  return {
-    id: row.id,
-    spaceId: row.spaceId,
-    name: row.name,
-    type: row.type as Channel['type'],
-    topic: row.topic,
-    position: row.position ?? 0,
-    categoryId: row.categoryId ?? null,
-    createdAt: row.createdAt,
-  };
-}
-
-function generateInviteCode(): string {
-  return crypto.randomBytes(4).toString('hex');
-}
+export { generateInviteCode };
 
 /**
  * After a change to the space's roles, to a member's roles or to its owner
@@ -128,8 +129,12 @@ function checkSingleRoleChange(
   if (!hasPermission(actorId, spaceId, PermissionBits.MANAGE_ROLES)) {
     return { status: 403, code: 'missing_permission', details: { permission: 'MANAGE_ROLES' } };
   }
-  if (targetId === actorId) return { status: 400, code: 'cannot_change_own_roles' };
-  if (isSpaceOwner(spaceId, targetId)) return { status: 403, code: 'space_owner_only' };
+  // The owner's rights come from owning the space, not from a role, so the
+  // owner may give and take their own roles (they cannot lock themselves
+  // out); nobody else may change their own roles or the owner's.
+  const ownerActsOnSelf = targetId === actorId && isSpaceOwner(spaceId, actorId);
+  if (targetId === actorId && !ownerActsOnSelf) return { status: 400, code: 'cannot_change_own_roles' };
+  if (!ownerActsOnSelf && isSpaceOwner(spaceId, targetId)) return { status: 403, code: 'space_owner_only' };
   if (!isMember(spaceId, targetId)) return { status: 404, code: 'member_not_found' };
   const role = typeof roleId === 'string'
     ? db.select().from(schema.roles).where(and(eq(schema.roles.id, roleId), eq(schema.roles.spaceId, spaceId))).get()
@@ -137,7 +142,7 @@ function checkSingleRoleChange(
   if (!role) return { status: 400, code: 'role_not_in_space', details: { roleId: String(roleId) } };
   if (role.id === spaceId) return { status: 400, code: 'everyone_role_not_assignable' };
   const actor = getHierarchyStanding(spaceId, actorId);
-  if (!canActOnMember(actor, getHierarchyStanding(spaceId, targetId)) || !canManageRoleAt(actor, role.position ?? 0)) {
+  if ((!ownerActsOnSelf && !canActOnMember(actor, getHierarchyStanding(spaceId, targetId))) || !canManageRoleAt(actor, role.position ?? 0)) {
     return { status: 403, code: 'role_hierarchy' };
   }
   if (change === 'add') {
@@ -166,6 +171,72 @@ interface InviteJoinRefusal {
  * else gets `403 join_request_required` with the space's id, which is all a
  * client needs to send the request. Private and public spaces admit by code.
  */
+/**
+ * A moderator's reason as it is stored: trimmed, or null when there is none.
+ * Undefined when it is not one: too long, or not text at all.
+ */
+function moderationReason(value: unknown): string | null | undefined {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string') return undefined;
+  const reason = value.trim();
+  if (reason.length > MODERATION_REASON_MAX_LENGTH) return undefined;
+  return reason || null;
+}
+
+/** How many of a banned person's messages one ban takes with it, at most. */
+const BAN_DELETE_MESSAGES_MAX = 5000;
+/** Ids in one `messages_deleted` event. */
+const BAN_DELETE_EVENT_SIZE = 500;
+
+/**
+ * The person's messages in this space since `since`, removed with their
+ * attachments, the newest first up to the limit. Each channel's audience is told in
+ * batches (`messages_deleted`), so a raid's worth of messages is not hundreds of
+ * events. Returns how many went.
+ */
+function deleteRecentMessagesOf(spaceId: string, userId: string, since: number): number {
+  const db = getDb();
+  const channelIds = db.select({ id: schema.channels.id }).from(schema.channels)
+    .where(eq(schema.channels.spaceId, spaceId)).all().map((channel) => channel.id);
+  if (channelIds.length === 0) return 0;
+  const rows = db.select({ id: schema.messages.id, channelId: schema.messages.channelId }).from(schema.messages)
+    .where(and(
+      inArray(schema.messages.channelId, channelIds),
+      eq(schema.messages.userId, userId),
+      sql`${schema.messages.createdAt} >= ${since}`,
+    ))
+    .orderBy(desc(schema.messages.createdAt))
+    .limit(BAN_DELETE_MESSAGES_MAX)
+    .all();
+  if (rows.length === 0) return 0;
+
+  const ids = rows.map((row) => row.id);
+  const files: Array<{ filename: string }> = [];
+  db.transaction((tx) => {
+    for (let start = 0; start < ids.length; start += BAN_DELETE_EVENT_SIZE) {
+      const part = ids.slice(start, start + BAN_DELETE_EVENT_SIZE);
+      files.push(...tx.select({ filename: schema.attachments.filename }).from(schema.attachments)
+        .where(inArray(schema.attachments.messageId, part)).all());
+      tx.delete(schema.attachments).where(inArray(schema.attachments.messageId, part)).run();
+      tx.delete(schema.messages).where(inArray(schema.messages.id, part)).run();
+    }
+  });
+  deleteAttachmentFiles(files);
+
+  const byChannel = new Map<string, string[]>();
+  for (const row of rows) byChannel.set(row.channelId, [...(byChannel.get(row.channelId) ?? []), row.id]);
+  for (const [channelId, messageIds] of byChannel) {
+    for (let start = 0; start < messageIds.length; start += BAN_DELETE_EVENT_SIZE) {
+      connectionManager.sendToChannel(spaceId, channelId, {
+        type: 'messages_deleted',
+        messageIds: messageIds.slice(start, start + BAN_DELETE_EVENT_SIZE),
+        channelId,
+      });
+    }
+  }
+  return rows.length;
+}
+
 function inviteJoinRefusal(space: typeof schema.spaces.$inferSelect, userId: string): InviteJoinRefusal | null {
   if (isBanned(space.id, userId)) {
     return { status: 403, code: 'user_banned' };
@@ -190,8 +261,9 @@ function inviteJoinRefusal(space: typeof schema.spaces.$inferSelect, userId: str
 }
 
 /**
- * Add a member admitted by an invite code: the membership row, the user's
- * WebSocket subscription to the space, and `member_joined` to the space.
+ * Add a member admitted by an invite code: the membership row (with a
+ * timeout they left the space under put back, `restoreHeldTimeout`), the
+ * user's WebSocket subscription to the space, and `member_joined` to the space.
  */
 function admitByInvite(spaceId: string, userId: string): void {
   const db = getDb();
@@ -201,6 +273,7 @@ function admitByInvite(spaceId: string, userId: string): void {
     userId,
     joinedAt: now,
   }).run();
+  const timedOutUntil = restoreHeldTimeout(spaceId, userId, now);
 
   // Register the user in connectionManager so they receive WS broadcasts for this space
   connectionManager.addUserSpace(userId, spaceId);
@@ -208,19 +281,66 @@ function admitByInvite(spaceId: string, userId: string): void {
   // Broadcast member_joined to existing space members
   const joiningUser = db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
   if (joiningUser) {
-    const memberPayload: MemberWithUser = {
-      spaceId,
-      userId,
-      nickname: null,
-      joinedAt: now,
-      user: sanitizeUser(joiningUser),
-      roles: [],
-    };
+    const memberPayload = memberToWire(
+      { spaceId, userId, nickname: null, joinedAt: now, timedOutUntil, avatar: null, banner: null, bio: null },
+      joiningUser,
+      [],
+      now,
+    );
     connectionManager.sendToSpace(spaceId, {
       type: 'member_joined',
       spaceId,
       member: memberPayload,
     });
+  }
+}
+
+/**
+ * The fields of a space a `PATCH /api/spaces/:id` may change, as the audit
+ * log compares them (`directoryListed` as a boolean).
+ */
+function auditedSpaceFields(row: typeof schema.spaces.$inferSelect): Record<string, AuditLogValue> {
+  return {
+    name: row.name,
+    icon: row.icon,
+    banner: row.banner,
+    avatarColor: row.avatarColor,
+    visibility: row.visibility,
+    description: row.description,
+    directoryListed: row.directoryListed === 1,
+    ownerTitle: row.ownerTitle,
+    ownerGroup: row.ownerGroup === 1,
+    defaultNotificationLevel: row.defaultNotificationLevel,
+  };
+}
+
+/** The fields of a role the audit log records on its create, update and delete. */
+function auditedRoleFields(row: typeof schema.roles.$inferSelect): Record<string, AuditLogValue> {
+  return {
+    name: row.name,
+    color: row.color,
+    colorSecondary: row.colorSecondary ?? null,
+    description: row.description ?? null,
+    icon: row.icon ?? null,
+    hoist: row.hoist !== 0,
+    mentionable: row.mentionable === 1,
+    permissions: row.permissions ?? '0',
+  };
+}
+
+/**
+ * Takes a space's newly shown pictures in: their upload records go (the
+ * spaces table holds the files now), and each is fitted to its size. Only
+ * files a picture check passed come here (profilePictureOf).
+ */
+async function adoptSpacePictures(icon: string | null, banner: string | null): Promise<void> {
+  if (icon) {
+    deleteAttachmentByFilename(icon);
+    await resizeProfileImage(path.join(config.uploadDir, icon), 'icon');
+  }
+  if (banner) {
+    deleteAttachmentByFilename(banner);
+    await resizeProfileImage(path.join(config.uploadDir, banner), 'banner');
   }
 }
 
@@ -231,6 +351,11 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     const { name, icon, banner, avatarColor, visibility, description } = request.body;
 
+    if (accountNeedsVerifiedEmail(request.userId)) return sendError(reply, 403, 'email_verification_required');
+
+    const spaceLimit = spaceLimitReached(request.userId);
+    if (spaceLimit !== null) return sendError(reply, 409, 'space_limit_reached', { max: spaceLimit });
+
     if (!name || typeof name !== 'string') {
       return sendError(reply, 400, 'space_name_required');
     }
@@ -239,6 +364,13 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     if (trimmedName.length < 1 || trimmedName.length > 100) {
       return sendError(reply, 400, 'space_name_length', { min: 1, max: 100 });
     }
+
+    // A new space's pictures are the creator's own uploads or addresses
+    // elsewhere (utils/profileImageRefs.ts).
+    const iconPicture = profilePictureOf(icon, request.userId, null);
+    if (!iconPicture) return sendError(reply, 400, 'icon_url_invalid');
+    const bannerPicture = profilePictureOf(banner, request.userId, null);
+    if (!bannerPicture) return sendError(reply, 400, 'banner_url_invalid');
 
     // Validate visibility
     const validVisibilities = ['public', 'request', 'private'];
@@ -266,8 +398,8 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       tx.insert(schema.spaces).values({
         id: spaceId,
         name: trimmedName,
-        icon: icon ?? null,
-        banner: banner ?? null,
+        icon: iconPicture.stored,
+        banner: bannerPicture.stored,
         avatarColor: safeAvatarColor,
         ownerId: request.userId,
         inviteCode,
@@ -341,25 +473,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     // Register the creator in connectionManager so they receive WS broadcasts for this space
     connectionManager.addUserSpace(request.userId, spaceId);
 
-    // Clean up attachment records for icon/banner — reference is now in spaces table
-    if (icon && typeof icon === 'string' && icon.includes('/api/uploads/')) {
-      deleteAttachmentByFilename(icon);
-    }
-    if (banner && typeof banner === 'string' && banner.includes('/api/uploads/')) {
-      deleteAttachmentByFilename(banner);
-    }
+    await adoptSpacePictures(iconPicture.upload, bannerPicture.upload);
 
-    // Resize profile images to optimal dimensions
-    if (icon && typeof icon === 'string' && !icon.startsWith('http')) {
-      const filePath = path.join(config.uploadDir, path.basename(icon));
-      await resizeProfileImage(filePath, 'icon');
-    }
-    if (banner && typeof banner === 'string' && !banner.startsWith('http')) {
-      const filePath = path.join(config.uploadDir, path.basename(banner));
-      await resizeProfileImage(filePath, 'banner');
-    }
-
-    return reply.code(201).send(rowToSpace(server));
+    return reply.code(201).send(spaceToWire(server));
   });
 
   // GET /api/spaces - List user's servers
@@ -383,12 +499,13 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       .where(inArray(schema.spaces.id, spaceIds))
       .all();
 
-    return reply.code(200).send(servers.map(rowToSpace));
+    return reply.code(200).send(servers.map(spaceToWire));
   });
 
   // GET /api/spaces/:id - Get server detail with channels and members
   app.get<{ Params: { id: string } }>('/api/spaces/:id', {
     preHandler: authenticate,
+    config: { botAllowed: true },
   }, async (request, reply) => {
     const { id } = request.params;
     const db = getDb();
@@ -404,7 +521,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
 
     const channels = db.select()
       .from(schema.channels)
-      .where(eq(schema.channels.spaceId, id))
+      .where(and(eq(schema.channels.spaceId, id), ne(schema.channels.type, 'thread')))
       .all();
 
     const roles = db.select()
@@ -439,14 +556,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
           .filter(mr => mr.userId === m.userId)
           .map(mr => mr.roleId));
 
-        return {
-          spaceId: m.spaceId,
-          userId: m.userId,
-          nickname: m.nickname,
-          joinedAt: m.joinedAt,
-          user: sanitizeUser(user),
-          roles: memberRolesView(roles, assignedRoleIds),
-        };
+        return memberToWire(m, user, memberRolesView(roles, assignedRoleIds), undefined, memberStaffBadges(roles, assignedRoleIds, m.spaceId));
       })
       .filter((m): m is MemberWithUser => m !== null);
 
@@ -494,7 +604,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       const perms = computePermissions(request.userId, id, ch.id);
       if ((perms & PermissionBits.VIEW_CHANNEL) !== 0n) {
         visibleChannels.push({
-          ...rowToChannel(ch),
+          ...channelToWire(ch),
           isPrivate: privateChannelIds.has(ch.id),
           myPermissions: permissionsToString(perms),
         });
@@ -502,7 +612,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const result: SpaceWithChannelsAndMembers = {
-      ...rowToSpace(server),
+      ...spaceToWire(server),
       channels: visibleChannels,
       categories,
       members,
@@ -518,7 +628,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, icon, banner, avatarColor, visibility, description, directoryListed, ownerTitle } = request.body;
+    const { name, icon, banner, avatarColor, visibility, description, directoryListed, ownerTitle, ownerGroup, defaultNotificationLevel } = request.body;
     const db = getDb();
 
     const server = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
@@ -526,8 +636,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 404, 'space_not_found');
     }
 
-    // The title belongs to the owner, not to anyone granted MANAGE_SPACE.
-    if (ownerTitle !== undefined && server.ownerId !== request.userId) {
+    // The title and how the owner is listed belong to the owner, not to
+    // anyone granted MANAGE_SPACE.
+    if ((ownerTitle !== undefined || ownerGroup !== undefined) && server.ownerId !== request.userId) {
       return sendError(reply, 403, 'space_owner_only');
     }
 
@@ -545,6 +656,13 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       updates.ownerTitle = normalized;
     }
 
+    if (ownerGroup !== undefined) {
+      if (typeof ownerGroup !== 'boolean') {
+        return sendError(reply, 400, 'validation_failed');
+      }
+      updates.ownerGroup = ownerGroup ? 1 : 0;
+    }
+
     if (name !== undefined) {
       const trimmedName = name.trim();
       if (trimmedName.length < 1 || trimmedName.length > 100) {
@@ -557,12 +675,22 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     const oldIcon = server.icon;
     const oldBanner = server.banner;
 
+    // The space's pictures: an upload of the actor's own, an address
+    // elsewhere, or the one it shows (utils/profileImageRefs.ts).
+    let iconUpload: string | null = null;
+    let bannerUpload: string | null = null;
     if (icon !== undefined) {
-      updates.icon = icon || null;
+      const picture = profilePictureOf(icon, request.userId, oldIcon);
+      if (!picture) return sendError(reply, 400, 'icon_url_invalid');
+      updates.icon = picture.stored;
+      iconUpload = picture.upload;
     }
 
     if (banner !== undefined) {
-      updates.banner = banner || null;
+      const picture = profilePictureOf(banner, request.userId, oldBanner);
+      if (!picture) return sendError(reply, 400, 'banner_url_invalid');
+      updates.banner = picture.stored;
+      bannerUpload = picture.upload;
     }
 
     if (avatarColor !== undefined) {
@@ -588,6 +716,15 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       updates.description = trimmed || null;
     }
 
+    // The level members start with until they choose their own; null brings
+    // back the built-in default. "nothing" is each member's own choice.
+    if (defaultNotificationLevel !== undefined) {
+      if (defaultNotificationLevel !== null && !isSpaceDefaultNotificationLevel(defaultNotificationLevel)) {
+        return sendError(reply, 400, 'notification_level_invalid');
+      }
+      updates.defaultNotificationLevel = defaultNotificationLevel;
+    }
+
     // Directory listing follows the same MANAGE_SPACE rule as visibility. A
     // private space is never listed: asking for it is refused, and a listed
     // space going private is unlisted in the same write (spec section 4).
@@ -609,6 +746,20 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 400, 'no_fields_to_update');
     }
 
+    // A listed space whose name, description or pictures change goes back to
+    // review, one made private leaves Discovery, and a verified space that is
+    // renamed is verified again (utils/spaceReview.ts). The statuses are
+    // written with the edit, so no change is listed or vouched for unseen.
+    const reviewEdit = reviewsAfterEdit(server, {
+      name: updates.name ?? server.name,
+      description: updates.description !== undefined ? updates.description : server.description,
+      icon: updates.icon !== undefined ? updates.icon : server.icon,
+      banner: updates.banner !== undefined ? updates.banner : server.banner,
+      visibility: updates.visibility ?? server.visibility,
+    });
+    if (reviewEdit.discovery) updates.discoveryStatus = reviewEdit.discovery.status;
+    if (reviewEdit.verification) updates.verificationStatus = reviewEdit.verification.status;
+
     db.update(schema.spaces).set(updates).where(eq(schema.spaces.id, id)).run();
 
     const listedAfter = (updates.directoryListed ?? server.directoryListed) === 1;
@@ -620,40 +771,39 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       markDirectoryDirty(getRawDb());
     }
 
-    // Clean up old icon/banner files that were replaced
-    if (icon !== undefined && oldIcon && oldIcon !== (icon || null) && !oldIcon.startsWith('http')) {
-      deleteUploadFile(oldIcon);
-      deleteAttachmentByFilename(oldIcon);
+    // A replaced picture goes once nothing shows it any more.
+    const replacedIcon = icon !== undefined ? uploadNameOf(oldIcon) : null;
+    if (replacedIcon && replacedIcon !== uploadNameOf(updates.icon) && pictureFileReleasable(replacedIcon)) {
+      deleteUploadFile(replacedIcon);
+      deleteAttachmentByFilename(replacedIcon);
     }
-    if (banner !== undefined && oldBanner && oldBanner !== (banner || null) && !oldBanner.startsWith('http')) {
-      deleteUploadFile(oldBanner);
-      deleteAttachmentByFilename(oldBanner);
+    const replacedBanner = banner !== undefined ? uploadNameOf(oldBanner) : null;
+    if (replacedBanner && replacedBanner !== uploadNameOf(updates.banner) && pictureFileReleasable(replacedBanner)) {
+      deleteUploadFile(replacedBanner);
+      deleteAttachmentByFilename(replacedBanner);
     }
-    // Clean up attachment records for newly-set profile images — the reference
-    // now lives in the spaces table, so the attachment record is unnecessary
-    if (icon && typeof icon === 'string' && icon.includes('/api/uploads/')) {
-      deleteAttachmentByFilename(icon);
-    }
-    if (banner && typeof banner === 'string' && banner.includes('/api/uploads/')) {
-      deleteAttachmentByFilename(banner);
-    }
-
-    // Resize profile images to optimal dimensions
-    if (icon && typeof icon === 'string' && !icon.startsWith('http')) {
-      const filePath = path.join(config.uploadDir, path.basename(icon));
-      await resizeProfileImage(filePath, 'icon');
-    }
-    if (banner && typeof banner === 'string' && !banner.startsWith('http')) {
-      const filePath = path.join(config.uploadDir, path.basename(banner));
-      await resizeProfileImage(filePath, 'banner');
-    }
+    await adoptSpacePictures(iconUpload, bannerUpload);
 
     const updated = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
     if (!updated) {
       return sendError(reply, 500, 'space_update_failed');
     }
+    if (reviewEdit.discovery || reviewEdit.verification) {
+      // The space_updated below carries the badge; the steps need not.
+      for (const step of recordEditSteps(updated, request.userId, reviewEdit)) {
+        announceReviewStep(updated, step, { spaceUpdate: false });
+      }
+    }
 
-    const spaceData = rowToSpace(updated);
+    const spaceChanges = changedFields(auditedSpaceFields(server), auditedSpaceFields(updated));
+    if (spaceChanges.length > 0) {
+      recordAudit({
+        spaceId: id, actorId: request.userId, action: 'space_update',
+        targetType: 'space', targetId: id, targetLabel: updated.name, changes: spaceChanges,
+      });
+    }
+
+    const spaceData = spaceToWire(updated);
 
     // Broadcast space_updated to all space members
     connectionManager.sendToSpace(id, {
@@ -697,6 +847,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     // Capture space icon/banner before deletion
     const spaceIcon = server.icon;
     const spaceBanner = server.banner;
+    const hadOpenReview = isOpenReview(verificationStatusOf(server), discoveryStatusOf(server));
 
     // Delete all channels (messages cascade), members, folder refs, read states, then space atomically
     db.transaction((tx) => {
@@ -714,13 +865,15 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     if (server.directoryListed === 1) {
       markDirectoryDirty(getRawDb());
     }
+    if (hadOpenReview) announceReviewQueue();
 
     // Clean up all attachment files from disk
     deleteAttachmentFiles(attachmentRows);
 
-    // Clean up space icon/banner files
-    if (spaceIcon && !spaceIcon.startsWith('http')) deleteUploadFile(spaceIcon);
-    if (spaceBanner && !spaceBanner.startsWith('http')) deleteUploadFile(spaceBanner);
+    // Clean up space icon/banner files nothing else shows.
+    for (const picture of [uploadNameOf(spaceIcon), uploadNameOf(spaceBanner)]) {
+      if (picture && pictureFileReleasable(picture)) deleteUploadFile(picture);
+    }
 
     return reply.code(200).send({ success: true });
   });
@@ -758,6 +911,12 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
 
     const inviteCode = generateInviteCode();
     db.update(schema.spaces).set({ inviteCode }).where(eq(schema.spaces.id, id)).run();
+    // A new standing link, for a space left without one.
+    recordAudit({
+      spaceId: id, actorId: request.userId, action: 'invite_regenerate',
+      targetType: 'invite', targetId: inviteCode, targetLabel: null,
+      changes: [auditChange('inviteCode', server.inviteCode, inviteCode)],
+    });
 
     return reply.code(200).send({ inviteCode });
   });
@@ -780,7 +939,8 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 404, 'space_not_found');
     }
 
-    if (server.inviteCode !== inviteCode) {
+    const invite = usableInvite(inviteCode);
+    if (!invite || invite.spaceId !== server.id) {
       return sendError(reply, 400, 'invite_not_found');
     }
 
@@ -789,8 +949,11 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, refusal.status, refusal.code, refusal.details);
     }
 
+    if (!consumeInvite(invite.code)) {
+      return sendError(reply, 400, 'invite_not_found');
+    }
     admitByInvite(server.id, request.userId);
-    return reply.code(200).send(rowToSpace(server));
+    return reply.code(200).send(spaceToWire(server));
   });
 
   // POST /api/spaces/join - Join server by invite code (no server ID needed)
@@ -805,7 +968,8 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
 
     const db = getDb();
 
-    const server = db.select().from(schema.spaces).where(eq(schema.spaces.inviteCode, inviteCode)).get();
+    const invite = usableInvite(inviteCode);
+    const server = invite ? db.select().from(schema.spaces).where(eq(schema.spaces.id, invite.spaceId)).get() : undefined;
     if (!server) {
       return sendError(reply, 404, 'invite_not_found');
     }
@@ -815,13 +979,116 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, refusal.status, refusal.code, refusal.details);
     }
 
+    if (!invite || !consumeInvite(invite.code)) {
+      return sendError(reply, 404, 'invite_not_found');
+    }
     admitByInvite(server.id, request.userId);
-    return reply.code(200).send(rowToSpace(server));
+    return reply.code(200).send(spaceToWire(server));
+  });
+
+  // PUT /api/spaces/:id/vanity - The space's own invite address, or null to give it up
+  app.put<{ Params: { id: string }; Body: { code?: unknown } }>('/api/spaces/:id/vanity', {
+    preHandler: authenticate,
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const db = getDb();
+    const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
+    if (!space) {
+      return sendError(reply, 404, 'space_not_found');
+    }
+    if (!hasPermission(request.userId, id, PermissionBits.MANAGE_SPACE)) {
+      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_SPACE' });
+    }
+    const given = request.body?.code;
+    if (given !== null && typeof given !== 'string') {
+      return sendError(reply, 400, 'validation_failed', { field: 'code' });
+    }
+    const refusal = setVanityCode(id, given, request.userId);
+    if (refusal === 'invalid') {
+      return sendError(reply, 400, 'vanity_code_invalid', { min: VANITY_CODE_LIMITS.MIN_LENGTH, max: VANITY_CODE_LIMITS.MAX_LENGTH });
+    }
+    if (refusal === 'reserved') {
+      return sendError(reply, 409, 'vanity_code_reserved');
+    }
+    if (refusal === 'taken') {
+      return sendError(reply, 409, 'vanity_code_taken');
+    }
+    const updated = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
+    if (!updated) {
+      return sendError(reply, 500, 'internal_error');
+    }
+    if (updated.vanityCode !== space.vanityCode) {
+      recordAudit({
+        spaceId: id, actorId: request.userId, action: 'vanity_update',
+        targetType: 'invite', targetId: updated.vanityCode ?? space.vanityCode ?? id, targetLabel: updated.vanityCode,
+        changes: [auditChange('vanityCode', space.vanityCode, updated.vanityCode)],
+      });
+      connectionManager.sendToSpace(id, { type: 'space_updated', space: spaceToWire(updated) });
+    }
+    return reply.code(200).send({ vanityCode: updated.vanityCode });
+  });
+
+  // GET /api/spaces/:id/invites - The space's live links
+  app.get<{ Params: { id: string } }>('/api/spaces/:id/invites', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { id } = request.params;
+    if (!getDb().select({ id: schema.spaces.id }).from(schema.spaces).where(eq(schema.spaces.id, id)).get()) {
+      return sendError(reply, 404, 'space_not_found');
+    }
+    if (!hasPermission(request.userId, id, PermissionBits.MANAGE_SPACE)) {
+      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_SPACE' });
+    }
+    return reply.code(200).send({ invites: listInvites(id) });
+  });
+
+  // POST /api/spaces/:id/invites - A new link, with an end date or a limit if wanted
+  app.post<{ Params: { id: string }; Body: CreateSpaceInviteRequest }>('/api/spaces/:id/invites', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const { expiresInSeconds = null, maxUses = null } = request.body ?? {};
+    if (!getDb().select({ id: schema.spaces.id }).from(schema.spaces).where(eq(schema.spaces.id, id)).get()) {
+      return sendError(reply, 404, 'space_not_found');
+    }
+    if (!hasPermission(request.userId, id, PermissionBits.CREATE_INVITE)) {
+      return sendError(reply, 403, 'missing_permission', { permission: 'CREATE_INVITE' });
+    }
+    if (expiresInSeconds !== null && !(INVITE_EXPIRY_SECONDS as readonly number[]).includes(expiresInSeconds)) {
+      return sendError(reply, 400, 'invite_options_invalid');
+    }
+    if (maxUses !== null && !(INVITE_MAX_USES as readonly number[]).includes(maxUses)) {
+      return sendError(reply, 400, 'invite_options_invalid');
+    }
+    const now = Date.now();
+    const invite = createInvite(id, request.userId, { expiresAt: expiresInSeconds === null ? null : now + expiresInSeconds * 1000, maxUses }, now);
+    if (!invite) {
+      return sendError(reply, 409, 'invite_limit_reached', { max: MAX_INVITES_PER_SPACE });
+    }
+    recordAudit({ spaceId: id, actorId: request.userId, action: 'invite_create', targetType: 'invite', targetId: invite.code, targetLabel: null });
+    return reply.code(201).send({ invites: listInvites(id) });
+  });
+
+  // DELETE /api/spaces/:id/invites/:code - End a link
+  app.delete<{ Params: { id: string; code: string } }>('/api/spaces/:id/invites/:code', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { id, code } = request.params;
+    if (!hasPermission(request.userId, id, PermissionBits.MANAGE_SPACE)) {
+      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_SPACE' });
+    }
+    if (!revokeInvite(id, code)) {
+      return sendError(reply, 404, 'invite_not_found');
+    }
+    recordAudit({ spaceId: id, actorId: request.userId, action: 'invite_revoke', targetType: 'invite', targetId: code, targetLabel: null });
+    return reply.code(200).send({ invites: listInvites(id) });
   });
 
   // GET /api/spaces/:id/members - List server members
   app.get<{ Params: { id: string } }>('/api/spaces/:id/members', {
     preHandler: authenticate,
+    config: { botAllowed: true },
   }, async (request, reply) => {
     const { id } = request.params;
     const db = getDb();
@@ -867,14 +1134,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
           .filter(mr => mr.userId === m.userId)
           .map(mr => mr.roleId));
 
-        return {
-          spaceId: m.spaceId,
-          userId: m.userId,
-          nickname: m.nickname,
-          joinedAt: m.joinedAt,
-          user: sanitizeUser(user),
-          roles: memberRolesView(roles, assignedRoleIds),
-        };
+        return memberToWire(m, user, memberRolesView(roles, assignedRoleIds), undefined, memberStaffBadges(roles, assignedRoleIds, m.spaceId));
       })
       .filter((m): m is MemberWithUser => m !== null);
 
@@ -884,11 +1144,16 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
   updateSpaceMemberRoutes(app);
 
   // DELETE /api/spaces/:id/members/:uid - Kick member (owner) or leave (self)
-  app.delete<{ Params: { id: string; uid: string } }>('/api/spaces/:id/members/:uid', {
+  app.delete<{ Params: { id: string; uid: string }; Body: { reason?: string } | undefined }>('/api/spaces/:id/members/:uid', {
     preHandler: authenticate,
+    config: { botAllowed: true },
   }, async (request, reply) => {
     const { id, uid } = request.params;
     const db = getDb();
+    const reason = moderationReason(request.body?.reason);
+    if (reason === undefined) {
+      return sendError(reply, 400, 'moderation_reason_too_long', { max: MODERATION_REASON_MAX_LENGTH });
+    }
 
     const server = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
     if (!server) {
@@ -930,6 +1195,11 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 403, 'role_hierarchy');
     }
 
+    // Read while the member row still holds their nickname.
+    const kickedLabel = isSelf ? null : auditUserLabel(id, uid);
+    // Leaving does not lift a timeout: it is put back if they join again.
+    holdDepartingTimeout(id, uid);
+
     db.delete(schema.spaceMembers)
       .where(and(
         eq(schema.spaceMembers.spaceId, id),
@@ -953,6 +1223,17 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
         eq(schema.readStates.userId, uid),
         inArray(schema.readStates.channelId, spaceChannelIds),
       )).run();
+      db.delete(schema.threadMembers).where(and(
+        eq(schema.threadMembers.userId, uid),
+        inArray(schema.threadMembers.threadId, spaceChannelIds),
+      )).run();
+    }
+
+    if (!isSelf) {
+      recordAudit({
+        spaceId: id, actorId: request.userId, action: 'member_kick',
+        targetType: 'member', targetId: uid, targetLabel: kickedLabel, reason,
+      });
     }
 
     // Broadcast member_left event
@@ -968,11 +1249,11 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
   // Role Management
   
   // POST /api/spaces/:id/roles - Create a new role
-  app.post<{ Params: { id: string }; Body: { name: string; color?: string; permissions?: string } }>('/api/spaces/:id/roles', {
+  app.post<{ Params: { id: string }; Body: RoleWriteRequest }>('/api/spaces/:id/roles', {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, color, permissions } = request.body;
+    const { permissions } = request.body;
     const db = getDb();
 
     if (!hasPermission(request.userId, id, PermissionBits.MANAGE_ROLES)) {
@@ -1000,8 +1281,13 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       permStr = permissionsToString(DEFAULT_EVERYONE_PERMISSIONS & actorPerms);
     }
 
-    // Trim and validate name
-    const roleName = (name || 'new role').trim() || 'new role';
+    // The display fields; the name defaults to "new role".
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    const display = parseRoleDisplayFields({ ...body, name: typeof body.name === 'string' && body.name.trim() ? body.name : 'new role' });
+    if (!display.ok) {
+      return sendError(reply, 400, display.refusal.code, display.refusal.details);
+    }
+    const roleName = display.value.name ?? 'new role';
 
     // Check for case-insensitive duplicate name within the space
     const rawDb = getRawDb();
@@ -1023,7 +1309,12 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       id: roleId,
       spaceId: id,
       name: roleName,
-      color: color || '#b9bbbe',
+      color: display.value.color ?? '#b9bbbe',
+      colorSecondary: display.value.colorSecondary ?? null,
+      description: display.value.description ?? null,
+      icon: display.value.icon ?? null,
+      hoist: display.value.hoist ?? 1,
+      mentionable: display.value.mentionable ?? 0,
       // Position 0 ties with nothing but @everyone's slot; the normalisation
       // below places the newest role last, at 1, and moves the others up.
       position: 0,
@@ -1037,6 +1328,12 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 500, 'internal_error');
     }
 
+    recordAudit({
+      spaceId: id, actorId: request.userId, action: 'role_create',
+      targetType: 'role', targetId: role.id, targetLabel: role.name,
+      changes: addedFields(auditedRoleFields(role)),
+    });
+
     // A new role has no holders yet, so nobody's own access changed.
     announceAccessChange(id, []);
 
@@ -1044,11 +1341,11 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // PATCH /api/spaces/:id/roles/:roleId - Update a role
-  app.patch<{ Params: { id: string; roleId: string }; Body: { name?: string; color?: string; position?: number; above?: unknown; below?: unknown; permissions?: string; permissionsVersion?: unknown } }>('/api/spaces/:id/roles/:roleId', {
+  app.patch<{ Params: { id: string; roleId: string }; Body: RoleWriteRequest & { position?: number; above?: unknown; below?: unknown; permissionsVersion?: unknown } }>('/api/spaces/:id/roles/:roleId', {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id, roleId } = request.params;
-    const { name, color, permissions, above, below, permissionsVersion } = request.body;
+    const { permissions, above, below, permissionsVersion } = request.body;
     let position = request.body.position;
     const db = getDb();
 
@@ -1102,12 +1399,17 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
+    const display = parseRoleDisplayFields((request.body ?? {}) as Record<string, unknown>);
+    if (!display.ok) {
+      return sendError(reply, 400, display.refusal.code, display.refusal.details);
+    }
+    // @everyone is everyone: it is never listed apart or mentioned as a role.
+    if (roleId === id && (display.value.hoist !== undefined || display.value.mentionable !== undefined)) {
+      return sendError(reply, 400, 'validation_failed');
+    }
     const updates: Partial<typeof schema.roles.$inferInsert> = {};
-    if (name !== undefined) {
-      const trimmed = name.trim();
-      if (!trimmed) {
-        return sendError(reply, 400, 'role_name_required');
-      }
+    if (display.value.name !== undefined) {
+      const trimmed = display.value.name;
       // Check for case-insensitive duplicate name within the space
       const rawDb = getRawDb();
       const duplicate = rawDb.prepare(
@@ -1118,7 +1420,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       }
       updates.name = trimmed;
     }
-    if (color !== undefined) updates.color = color;
+    for (const field of ['color', 'colorSecondary', 'description', 'icon', 'hoist', 'mentionable'] as const) {
+      if (display.value[field] !== undefined) Object.assign(updates, { [field]: display.value[field] });
+    }
 
     if (permissions !== undefined) {
       const requested = parsePermissionString(permissions);
@@ -1162,6 +1466,17 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     const updated = db.select().from(schema.roles).where(eq(schema.roles.id, roleId)).get();
     if (!updated) {
       return sendError(reply, 404, 'role_not_in_space', { roleId });
+    }
+
+    // A request that only moved the role is a reorder; one that changed its
+    // name, colour or bits is an update (with the move, when it moved too).
+    const fieldChanges = changedFields(auditedRoleFields(role), auditedRoleFields(updated));
+    const positionChanges = changedFields({ position: role.position ?? 0 }, { position: updated.position ?? 0 });
+    if (fieldChanges.length > 0 || positionChanges.length > 0) {
+      recordAudit({
+        spaceId: id, actorId: request.userId, action: fieldChanges.length > 0 ? 'role_update' : 'role_reorder',
+        targetType: 'role', targetId: roleId, targetLabel: updated.name, changes: [...fieldChanges, ...positionChanges],
+      });
     }
 
     announceAccessChange(id, membersHoldingRole(id, roleId));
@@ -1226,6 +1541,11 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     });
     normalizeRolePositions(getRawDb(), id);
 
+    recordAudit({
+      spaceId: id, actorId: request.userId, action: 'role_delete',
+      targetType: 'role', targetId: roleId, targetLabel: role.name, changes: removedFields(auditedRoleFields(role)),
+    });
+
     announceAccessChange(id, holders);
 
     return reply.code(200).send({ success: true });
@@ -1234,6 +1554,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
   // POST /api/spaces/:id/members/:uid/roles - Add role to member
   app.post<{ Params: { id: string; uid: string }; Body: { roleId: string } }>('/api/spaces/:id/members/:uid/roles', {
     preHandler: authenticate,
+    config: { botAllowed: true },
   }, async (request, reply) => {
     const { id, uid } = request.params;
     const { roleId } = request.body;
@@ -1242,11 +1563,12 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     const refusal = checkSingleRoleChange(id, request.userId, uid, roleId, 'add');
     if (refusal) return sendError(reply, refusal.status, refusal.code, refusal.details);
 
-    db.insert(schema.memberRoles).values({
+    const added = db.insert(schema.memberRoles).values({
       spaceId: id,
       userId: uid,
       roleId,
     }).onConflictDoNothing().run();
+    if (added.changes > 0) recordMemberRoleAudit(id, request.userId, uid, [roleId], []);
 
     announceAccessChange(id, [uid]);
 
@@ -1256,6 +1578,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
   // DELETE /api/spaces/:id/members/:uid/roles/:roleId - Remove role from member
   app.delete<{ Params: { id: string; uid: string; roleId: string } }>('/api/spaces/:id/members/:uid/roles/:roleId', {
     preHandler: authenticate,
+    config: { botAllowed: true },
   }, async (request, reply) => {
     const { id, uid, roleId } = request.params;
     const db = getDb();
@@ -1263,11 +1586,12 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     const refusal = checkSingleRoleChange(id, request.userId, uid, roleId, 'remove');
     if (refusal) return sendError(reply, refusal.status, refusal.code, refusal.details);
 
-    db.delete(schema.memberRoles).where(and(
+    const removed = db.delete(schema.memberRoles).where(and(
       eq(schema.memberRoles.spaceId, id),
       eq(schema.memberRoles.userId, uid),
       eq(schema.memberRoles.roleId, roleId)
     )).run();
+    if (removed.changes > 0) recordMemberRoleAudit(id, request.userId, uid, [], [roleId]);
 
     announceAccessChange(id, [uid]);
 
@@ -1304,15 +1628,39 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 400, 'new_owner_not_member');
     }
 
+    const formerOwnerLabel = auditUserLabel(id, request.userId);
+    const newOwnerLabel = auditUserLabel(id, newOwnerId);
+
     // Do not transfer the previous owner's personal title to the new owner.
-    db.update(schema.spaces).set({ ownerId: newOwnerId, ownerTitle: null }).where(eq(schema.spaces.id, id)).run();
+    // The owner is never timed out, so a timeout the new owner was under ends.
+    db.transaction((tx) => {
+      tx.update(schema.spaces).set({ ownerId: newOwnerId, ownerTitle: null }).where(eq(schema.spaces.id, id)).run();
+      tx.update(schema.spaceMembers).set({ timedOutUntil: null })
+        .where(and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, newOwnerId))).run();
+    });
+
+    const reviewEdit = reviewsAfterTransfer(server);
+    if (reviewEdit.verification) {
+      db.update(schema.spaces).set({ verificationStatus: reviewEdit.verification.status }).where(eq(schema.spaces.id, id)).run();
+    }
 
     const updated = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
     if (!updated) {
       return sendError(reply, 500, 'ownership_transfer_failed');
     }
+    if (reviewEdit.verification) {
+      for (const step of recordEditSteps(updated, request.userId, reviewEdit)) {
+        announceReviewStep(updated, step, { spaceUpdate: false });
+      }
+    }
 
-    const spaceData = rowToSpace(updated);
+    recordAudit({
+      spaceId: id, actorId: request.userId, action: 'ownership_transfer',
+      targetType: 'member', targetId: newOwnerId, targetLabel: newOwnerLabel,
+      changes: [auditChange('owner', formerOwnerLabel, newOwnerLabel)],
+    });
+
+    const spaceData = spaceToWire(updated);
 
     // Broadcast space_updated so all clients see the new owner
     connectionManager.sendToSpace(id, {
@@ -1343,6 +1691,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/spaces/:id/bans - List bans
   app.get<{ Params: { id: string } }>('/api/spaces/:id/bans', {
     preHandler: authenticate,
+    config: { botAllowed: true },
   }, async (request, reply) => {
     const { id } = request.params;
     const db = getDb();
@@ -1383,15 +1732,24 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // POST /api/spaces/:id/bans - Ban a member
-  app.post<{ Params: { id: string }; Body: { userId: string; reason?: string } }>('/api/spaces/:id/bans', {
+  app.post<{ Params: { id: string }; Body: { userId: string; reason?: string; deleteMessagesSeconds?: number } }>('/api/spaces/:id/bans', {
     preHandler: authenticate,
+    config: { botAllowed: true },
   }, async (request, reply) => {
     const { id } = request.params;
-    const { userId: targetId, reason } = request.body;
+    const { userId: targetId, deleteMessagesSeconds = 0 } = request.body;
     const db = getDb();
 
     if (!targetId || typeof targetId !== 'string') {
       return sendError(reply, 400, 'user_id_required');
+    }
+
+    const reason = moderationReason(request.body.reason);
+    if (reason === undefined) {
+      return sendError(reply, 400, 'moderation_reason_too_long', { max: MODERATION_REASON_MAX_LENGTH });
+    }
+    if (!(BAN_DELETE_MESSAGE_SECONDS as readonly number[]).includes(deleteMessagesSeconds)) {
+      return sendError(reply, 400, 'ban_delete_window_invalid');
     }
 
     if (!hasPermission(request.userId, id, PermissionBits.BAN_MEMBERS)) {
@@ -1419,6 +1777,8 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const now = Date.now();
+    // Read while the member row still holds their nickname.
+    const bannedLabel = auditUserLabel(id, targetId);
 
     // Fetch channel IDs before the transaction for read_states cleanup
     const banChannelIds = db.select({ id: schema.channels.id })
@@ -1429,7 +1789,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       tx.insert(schema.bans).values({
         spaceId: id,
         userId: targetId,
-        reason: reason?.trim() || null,
+        reason,
         bannedBy: request.userId,
         createdAt: now,
       }).run();
@@ -1459,7 +1819,26 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
         eq(schema.voiceRestrictions.spaceId, id),
         eq(schema.voiceRestrictions.userId, targetId),
       )).run();
+
+      // A ban drops a timeout, one held from an earlier leave included.
+      dropHeldTimeout(id, targetId, tx);
     });
+
+    recordAudit({
+      spaceId: id, actorId: request.userId, action: 'member_ban',
+      targetType: 'member', targetId, targetLabel: bannedLabel, reason,
+    });
+
+    if (deleteMessagesSeconds > 0) {
+      const removed = deleteRecentMessagesOf(id, targetId, now - deleteMessagesSeconds * 1000);
+      if (removed > 0) {
+        recordAudit({
+          spaceId: id, actorId: request.userId, action: 'messages_bulk_delete',
+          targetType: 'member', targetId, targetLabel: bannedLabel,
+          changes: [auditChange('messages', null, String(removed))],
+        });
+      }
+    }
 
     // Broadcast member_left event so other clients update their member list
     connectionManager.sendToSpace(id, {
@@ -1472,7 +1851,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     connectionManager.sendToUser(targetId, {
       type: 'member_banned',
       spaceId: id,
-      reason: reason?.trim() || null,
+      reason,
     });
 
     return reply.code(200).send({ success: true });
@@ -1481,6 +1860,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
   // DELETE /api/spaces/:id/bans/:uid - Unban a user
   app.delete<{ Params: { id: string; uid: string } }>('/api/spaces/:id/bans/:uid', {
     preHandler: authenticate,
+    config: { botAllowed: true },
   }, async (request, reply) => {
     const { id, uid } = request.params;
     const db = getDb();
@@ -1497,6 +1877,11 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     if (result.changes === 0) {
       return sendError(reply, 404, 'ban_not_found');
     }
+
+    recordAudit({
+      spaceId: id, actorId: request.userId, action: 'member_unban',
+      targetType: 'member', targetId: uid, targetLabel: auditUserLabel(id, uid),
+    });
 
     return reply.code(200).send({ success: true });
   });

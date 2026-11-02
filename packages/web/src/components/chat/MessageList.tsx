@@ -4,6 +4,10 @@ import { formatters } from '../../i18n/formatters';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { Message } from './Message';
+import { BlockedRunNotice } from './BlockedRunNotice';
+import { useBlockStore } from '../../stores/blockStore';
+import { EMPTY_BLOCKED_PLAN, planBlockedRuns } from '../../utils/blockedRuns';
+import { ChannelIcon } from '../ui/ChannelIcon';
 import { useChatStore, type LoadAroundResult, type LoadNewerResult } from '../../stores/chatStore';
 import { useSpaceStore, useIsDmChannel, getChannelOrigin } from '../../stores/spaceStore';
 import { isMe, useMyRowForOrigin } from '../../stores/authStore';
@@ -16,6 +20,7 @@ import {
   type PendingBubble,
 } from '../../stores/pendingMessageStore';
 import { Avatar } from '../ui/Avatar';
+import { Icon } from '../ui/Icon';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
 import { AvatarStack } from '../ui/AvatarStack';
 import { useUIStore } from '../../stores/uiStore';
@@ -28,6 +33,7 @@ import { describeError } from '../../i18n/errors';
 import type { MessageWithUser } from '@backspace/shared';
 import { SystemMessage } from './SystemMessage';
 import { ChannelSystemMessage } from './ChannelSystemMessage';
+import { MessageSelectionBar } from './MessageSelectionBar';
 import { MessageJumpContext } from './messageJumpContext';
 import {
   BOTTOM_ANCHOR,
@@ -135,6 +141,8 @@ interface MessageListProps {
   /** A jump requested from outside the list (search). Taken once, then `onJumpHandled` fires. */
   jumpToMessageId?: string | null;
   onJumpHandled?: () => void;
+  /** What stands at the very start of the list instead of the channel's welcome: a thread's first message. */
+  top?: React.ReactNode;
 }
 
 function nextFrame(): Promise<void> {
@@ -189,7 +197,7 @@ function shouldShowDateDivider(prev: MessageWithUser | undefined, curr: MessageW
   return prevDate !== currDate;
 }
 
-export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: MessageListProps) {
+export function MessageList({ channelId, jumpToMessageId, onJumpHandled, top }: MessageListProps) {
   const { t } = useTranslation(['chat', 'common']);
   const messages = useChatStore((s) => s.messages.get(channelId)) ?? EMPTY_MESSAGES;
   const loadMessages = useChatStore((s) => s.loadMessages);
@@ -570,6 +578,28 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: Messa
     });
     return [...messages, ...synthesized].sort((a, b) => a.createdAt - b.createdAt);
   }, [messages, pendingBubbles, messagesById, channelId, myRow, isDm]);
+
+  // People this user blocked: their messages collapse to one line per run
+  // (utils/blockedRuns.ts). A block is the home instance's, so a channel that
+  // another instance hosts is never filtered by it: its author ids name
+  // different people.
+  const blockedIds = useBlockStore((s) => s.blockedIds);
+  const filtersBlocked = getChannelOrigin(channelId) === '';
+  const blockedPlan = useMemo(
+    () => (filtersBlocked && blockedIds.size > 0
+      ? planBlockedRuns(interleavedMessages, (userId) => blockedIds.has(userId))
+      : EMPTY_BLOCKED_PLAN),
+    [filtersBlocked, blockedIds, interleavedMessages],
+  );
+  // Runs the reader chose to read, by the id of the run's first message.
+  const [revealedRuns, setRevealedRuns] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleRun = useCallback((startId: string) => {
+    setRevealedRuns((current) => {
+      const next = new Set(current);
+      if (!next.delete(startId)) next.add(startId);
+      return next;
+    });
+  }, []);
 
   // Load on open, and again when a listing names a channel that was unknown,
   // which ends its `waiting` state.
@@ -1080,8 +1110,11 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: Messa
 
   if (!canReadHistory) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <span className="text-txt-tertiary text-[14px]">{t('chat:list.noHistoryPermission')}</span>
+      <div className="empty-state flex-1">
+        <span className="empty-state-icon" aria-hidden="true">
+          <Icon name="lock" size={18} />
+        </span>
+        <p className="empty-state-body">{t('chat:list.noHistoryPermission')}</p>
       </div>
     );
   }
@@ -1100,6 +1133,7 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: Messa
   return (
     <MessageJumpContext.Provider value={requestJump}>
     <div className="flex-1 relative min-h-0">
+      <MessageSelectionBar channelId={channelId} />
       <div
         ref={containerRef}
         className="h-full overflow-y-auto overflow-x-hidden no-scrollbar"
@@ -1108,26 +1142,14 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: Messa
         {hasMore && (
           <div style={{ height: PAGINATION_SLOT_HEIGHT_PX }}>
             {showPaginationSkeleton && (
-              <div className="px-4 pt-4" role="status" aria-label={t('chat:list.loadingOlder')}>
-                {Array.from({ length: 3 }, (_, i) => (
-                  <div
-                    key={i}
-                    className={`flex gap-3 ${i < 2 ? 'mb-5' : ''}`}
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  >
-                    <div className="skeleton skeleton-circle w-10 h-10 flex-shrink-0" style={{ animationDelay: `${i * 0.15}s` }} />
-                    <div className="flex-1 space-y-2 pt-1">
-                      <div className="skeleton skeleton-bar" style={{ width: `${22 + (i * 9) % 18}%`, animationDelay: `${i * 0.15}s` }} />
-                      <div className="skeleton skeleton-bar h-2.5" style={{ width: `${55 + (i * 11) % 35}%`, animationDelay: `${i * 0.15}s` }} />
-                    </div>
-                  </div>
-                ))}
+              <div className="px-5 pt-4" role="status" aria-label={t('chat:list.loadingOlder')}>
+                {Array.from({ length: 3 }, (_, i) => <MessageSkeleton key={i} index={i} />)}
               </div>
             )}
           </div>
         )}
 
-        {!hasMore && <WelcomeHeader channelId={channelId} />}
+        {!hasMore && (top ?? <WelcomeHeader channelId={channelId} />)}
 
         <div
           ref={contentRef}
@@ -1140,6 +1162,11 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: Messa
             const dateLabel = showDate ? formatDateDivider(msg.createdAt) : null;
             const isFirstInGroup = !prevMsg || showDate || !isSameGroup(prevMsg, msg);
             const isUnreadStart = unreadMarker?.channelId === channelId && unreadMarker.messageId === msg.id;
+            // Where this message sits in a run of blocked people's messages, if it does.
+            const blockedStartId = blockedPlan.startOf.get(msg.id);
+            const startsBlockedRun = blockedStartId === msg.id;
+            const blockedRunRevealed = blockedStartId !== undefined && revealedRuns.has(blockedStartId);
+            const blockedRunHidden = blockedStartId !== undefined && !blockedRunRevealed;
 
             // Walk back to find the nearest non-pending neighbor for "Mark Unread".
             // A `pending-${clientId}` ID would be rejected by the server, so we skip
@@ -1156,12 +1183,10 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: Messa
             return (
               <React.Fragment key={msg.id}>
                 {dateLabel && !isUnreadStart && (
-                  <div className="flex items-center px-5 my-2 select-none pointer-events-none">
-                    <div className="flex-1 h-[1px] bg-border-hard" />
-                    <span className="px-[14px] text-[11px] font-bold text-txt-tertiary leading-tight">
-                      {dateLabel}
-                    </span>
-                    <div className="flex-1 h-[1px] bg-border-hard" />
+                  <div className="flex items-center gap-3 px-5 my-4 select-none pointer-events-none">
+                    <div className="divider-fade flex-1" />
+                    <span className="label-mono">{dateLabel}</span>
+                    <div className="divider-fade flex-1" />
                   </div>
                 )}
                 {isUnreadStart && (
@@ -1178,12 +1203,23 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: Messa
                     ? <ChannelSystemMessage message={msg} />
                     : <SystemMessage message={msg} dm={currentDm ?? null} />
                 ) : (
-                  <Message
-                    message={msg}
-                    isCompact={!isFirstInGroup}
-                    isFirstInGroup={isFirstInGroup}
-                    previousMessageId={realPrevId}
-                  />
+                  <>
+                    {startsBlockedRun && (
+                      <BlockedRunNotice
+                        count={blockedPlan.counts.get(msg.id) ?? 1}
+                        revealed={blockedRunRevealed}
+                        onToggle={() => toggleRun(msg.id)}
+                      />
+                    )}
+                    {!blockedRunHidden && (
+                      <Message
+                        message={msg}
+                        isCompact={!isFirstInGroup}
+                        isFirstInGroup={isFirstInGroup}
+                        previousMessageId={realPrevId}
+                      />
+                    )}
+                  </>
                 )}
               </React.Fragment>
             );
@@ -1195,22 +1231,12 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: Messa
 
       {showInitialSkeleton && (
         <div
-          className="absolute inset-0 z-10 bg-surface-chat flex flex-col justify-end px-4 pb-6 pointer-events-none"
+          className="lit absolute inset-0 z-10 bg-surface-chat flex flex-col justify-end px-5 pointer-events-none"
+          style={{ paddingBottom: 'var(--composer-clearance, 80px)' }}
           role="status"
           aria-label={t('chat:list.loading')}
         >
-          {Array.from({ length: 7 }, (_, i) => (
-            <div key={i} className="flex gap-3 mb-5" style={{ animationDelay: `${i * 0.15}s` }}>
-              <div className="skeleton skeleton-circle w-10 h-10 flex-shrink-0" style={{ animationDelay: `${i * 0.15}s` }} />
-              <div className="flex-1 space-y-2 pt-1">
-                <div className="skeleton skeleton-bar" style={{ width: `${20 + (i * 7) % 20}%`, animationDelay: `${i * 0.15}s` }} />
-                <div className="skeleton skeleton-bar h-2.5" style={{ width: `${50 + (i * 13) % 40}%`, animationDelay: `${i * 0.15}s` }} />
-                {i % 2 === 0 && (
-                  <div className="skeleton skeleton-bar h-2.5" style={{ width: `${30 + (i * 11) % 35}%`, animationDelay: `${i * 0.15}s` }} />
-                )}
-              </div>
-            </div>
-          ))}
+          {Array.from({ length: 7 }, (_, i) => <MessageSkeleton key={i} index={i} />)}
         </div>
       )}
 
@@ -1226,12 +1252,11 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled }: Messa
       {(!isNearBottom || isDetached) && messages.length > 0 && (
         <button
           onClick={() => { void jumpToPresent(); }}
-          className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[120] glass-bubble px-4 py-2 flex items-center gap-2 rounded-full text-txt-secondary hover:text-txt-primary transition-all animate-fade-in cursor-pointer"
+          style={{ bottom: 'var(--composer-clearance, 80px)' }}
+          className="glass absolute left-1/2 z-[120] flex h-8 -translate-x-1/2 items-center gap-1.5 rounded-md pl-2 pr-3 text-ui font-medium text-txt-secondary transition-colors animate-fade-in hover:border-interactive-muted hover:text-txt-primary active:bg-surface-chat"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
-          </svg>
-          <span className="text-[13px] font-medium">{t('chat:list.jumpToPresent')}</span>
+          <Icon name="arrow-down" size={15} />
+          {t('chat:list.jumpToPresent')}
         </button>
       )}
     </div>
@@ -1251,18 +1276,38 @@ function LoadFailedNotice({ title, detail, retryLabel, onRetry }: {
   onRetry: () => void;
 }) {
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface-chat px-6">
-      <div role="alert" className="flex max-w-sm flex-col items-center gap-1 text-center">
-        <p className="text-[15px] font-semibold text-txt-primary">{title}</p>
-        <p className="text-[13px] text-txt-tertiary break-words">{detail}</p>
+    <div className="lit absolute inset-0 z-10 flex items-center justify-center bg-surface-chat px-6">
+      <div role="alert" className="empty-state">
+        <span className="empty-state-icon" aria-hidden="true">
+          <Icon name="alert" size={18} />
+        </span>
+        <p className="empty-state-title">{title}</p>
+        <p className="empty-state-body break-words">{detail}</p>
         <button
           type="button"
           onClick={onRetry}
-          className="mt-3 rounded-full bg-accent-primary px-4 py-1.5 text-[14px] font-medium text-white transition-colors hover:bg-accent-primary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-chat"
+          className="btn-primary mt-2"
         >
           {retryLabel}
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * A row while a page loads, drawn like the default look of a message: a small
+ * picture and a name on one line, the text under them.
+ */
+function MessageSkeleton({ index }: { index: number }) {
+  const delay = { animationDelay: `${index * 0.15}s` };
+  return (
+    <div className="mb-[14px] last:mb-0">
+      <div className="mb-2 flex items-center gap-2">
+        <div className="skeleton h-5 w-5 flex-shrink-0" style={delay} />
+        <div className="skeleton skeleton-bar" style={{ ...delay, width: `${88 + (index * 37) % 64}px` }} />
+      </div>
+      <div className="skeleton skeleton-bar" style={{ ...delay, width: `${44 + (index * 13) % 40}%` }} />
     </div>
   );
 }
@@ -1278,16 +1323,16 @@ function UnreadDivider({ label, name, dateLabel }: { label: string; name: string
     <div
       role="separator"
       aria-label={name}
-      className="flex items-center pl-5 pr-4 my-2 select-none pointer-events-none"
+      className="flex items-center px-5 my-4 select-none pointer-events-none"
     >
-      <div className="flex-1 h-px bg-accent-rose/50" />
+      <div className="flex-1 h-px bg-accent-primary/60" />
       {dateLabel && (
         <>
-          <span className="px-[14px] text-[11px] font-bold leading-tight text-txt-tertiary">{dateLabel}</span>
-          <div className="flex-1 h-px bg-accent-rose/50" />
+          <span className="label-mono px-3">{dateLabel}</span>
+          <div className="flex-1 h-px bg-accent-primary/60" />
         </>
       )}
-      <span className="ml-2 rounded-full bg-accent-rose/15 px-2 py-[1px] text-[11px] font-bold leading-4 text-accent-rose">
+      <span className="ml-2 rounded bg-accent-primary px-1.5 py-px font-mono text-2xs font-semibold uppercase leading-4 tracking-[0.06em] text-white">
         {label}
       </span>
     </div>
@@ -1304,6 +1349,8 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
   const isDm = useIsDmChannel(channelId);
   const navigate = useNavigate();
   const viewer = useDmViewer(isDm ? channelId : null);
+  const channelType = useSpaceStore((s) => s.channels.find((c) => c.id === channelId)?.type);
+  const channelIcon = useSpaceStore((s) => s.channels.find((c) => c.id === channelId)?.icon ?? null);
 
   if (isDm) {
     const dm = dmChannels.find(d => d.id === channelId);
@@ -1336,15 +1383,16 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
       };
 
       return (
-        <div className="px-4 pt-8 pb-4">
-          <div className="mb-2">
-            <AvatarStack members={otherMembers} origin={viewer.origin} size={80} border="chat" iconUrl={dm.icon} />
+        <div className="mx-5 mt-8 flex items-start gap-3 border-b border-border-hard pb-5">
+          <div className="flex-shrink-0">
+            <AvatarStack members={otherMembers} origin={viewer.origin} size={44} border="chat" iconUrl={dm.icon} />
           </div>
-          <h3 className="text-[32px] leading-10 font-bold text-txt-primary mt-2">{groupName}</h3>
-          <p className="text-txt-secondary text-[14px] mt-1">
+          <div className="min-w-0">
+          <h3 className="text-title font-semibold leading-tight text-txt-primary">{groupName}</h3>
+          <p className="text-txt-secondary text-ui mt-1">
             {t('chat:list.welcome.group.intro')}
           </p>
-          <p className="text-xs text-txt-tertiary mt-1">
+          <p className="text-meta text-txt-tertiary mt-1">
             <Trans
               t={t}
               i18nKey="chat:list.welcome.group.owner"
@@ -1354,7 +1402,7 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
                   <button
                     type="button"
                     onClick={handleOwnerClick}
-                    className="font-bold text-txt-secondary hover:text-txt-primary hover:underline transition-colors"
+                    className="font-semibold text-txt-secondary hover:text-txt-primary hover:underline transition-colors"
                   />
                 ) : (
                   <strong />
@@ -1363,25 +1411,25 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
             />
           </p>
           {hasFederated && (
-            <p className="text-xs text-txt-tertiary mt-1">
+            <p className="text-meta text-txt-tertiary mt-1">
               {t('chat:list.welcome.group.federatedNotice')}
             </p>
           )}
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-3 flex items-center gap-2">
             <button
               onClick={handleOpenSettings}
-              className="px-4 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-[14px] font-medium rounded-[3px] transition-colors"
+              className="btn-outline"
             >
               {t('chat:list.welcome.group.openSettings')}
             </button>
             <button
               onClick={handleLeaveGroup}
-              className="px-4 py-1.5 bg-surface-elevated hover:bg-interactive-hover text-[14px] font-medium text-txt-primary rounded-[3px] transition-colors"
+              className="btn-quiet"
             >
               {t('chat:list.welcome.group.leave')}
             </button>
           </div>
-          <div className="mt-6 border-b border-interactive-muted" />
+          </div>
         </div>
       );
     }
@@ -1398,12 +1446,13 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
     const isFriend = !!friend;
 
     return (
-      <div className="px-4 pt-8 pb-4">
-        <div className="mb-2">
-          <ProfileAvatar src={otherUser?.avatar} name={displayName} size={80} user={otherUser ?? undefined} origin={viewer.origin} />
+      <div className="mx-5 mt-8 flex items-start gap-3 border-b border-border-hard pb-5">
+        <div className="flex-shrink-0">
+          <ProfileAvatar src={otherUser?.avatar} name={displayName} size={44} user={otherUser ?? undefined} origin={viewer.origin} />
         </div>
-        <h3 className="text-[32px] leading-10 font-bold text-txt-primary">{displayName}</h3>
-        <p className="text-txt-secondary text-[14px] mt-1">
+        <div className="min-w-0">
+        <h3 className="text-title font-semibold leading-tight text-txt-primary">{displayName}</h3>
+        <p className="text-txt-secondary text-ui mt-1">
           <Trans
             t={t}
             i18nKey="chat:list.welcome.dm.intro"
@@ -1412,35 +1461,34 @@ function WelcomeHeader({ channelId }: { channelId: string }) {
           />
         </p>
         {otherUser?.homeInstance && (
-          <p className="text-xs text-txt-tertiary mt-1">
+          <p className="text-meta text-txt-tertiary mt-1">
             {t('chat:list.welcome.dm.federatedNotice')}
           </p>
         )}
         {isFriend && otherUser && (
-          <div className="mt-4">
+          <div className="mt-3">
             <button
               onClick={() => friend && removeFriend(friend, friend._instanceOrigin)}
-              className="px-4 py-1.5 bg-surface-elevated hover:bg-surface-elevated text-[14px] font-medium text-txt-primary rounded-[3px] transition-colors"
+              className="btn-outline"
             >
               {t('chat:list.welcome.dm.removeFriend')}
             </button>
           </div>
         )}
-        <div className="mt-6 border-b border-interactive-muted" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 pt-8 pb-4">
-      <div className="w-[68px] h-[68px] rounded-full bg-surface-elevated flex items-center justify-center mb-4 text-white">
-        <svg width="42" height="42" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41001 9L8.35001 15H14.35L15.41 9H9.41001Z" />
-        </svg>
+    <div className="mx-5 mt-8 flex items-start gap-3 border-b border-border-hard pb-5">
+      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md border border-border-soft text-txt-tertiary">
+        <ChannelIcon type={channelType} icon={channelIcon} size={22} />
       </div>
-      <h3 className="text-[32px] leading-10 font-bold text-txt-primary">{t('chat:list.welcome.channel.title')}</h3>
-      <p className="text-txt-secondary text-[16px] mt-2">{t('chat:list.welcome.channel.description')}</p>
-      <div className="mt-6 border-b border-interactive-muted" />
+      <div className="min-w-0">
+        <h3 className="text-title font-semibold leading-tight text-txt-primary">{t('chat:list.welcome.channel.title')}</h3>
+        <p className="text-txt-secondary text-ui mt-1">{t('chat:list.welcome.channel.description')}</p>
+      </div>
     </div>
   );
 }

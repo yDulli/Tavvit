@@ -1,4 +1,5 @@
 import type { UpdateCapability } from './updateCapability';
+import { DOWNLOAD_PAGE_URL } from './appUrl';
 import { isVersionDismissed } from './updateDismissal';
 
 /**
@@ -6,7 +7,7 @@ import { isVersionDismissed } from './updateDismissal';
  * Shared by the main process notification, the recovery surface, and the
  * renderer toast so the three cannot drift apart.
  */
-export const RELEASES_URL = 'https://github.com/TheZwiss/backspace/releases/latest';
+export const RELEASES_URL = DOWNLOAD_PAGE_URL;
 
 /**
  * Where the updater currently is.

@@ -29,7 +29,7 @@ export const LANGUAGE_STORAGE_KEY = 'backspace-language';
 
 export const supportedLanguageCodes: readonly SupportedLanguage[] = supportedLanguages.map((l) => l.code);
 
-/** The languages users can pick and detection may choose. */
+/** The languages users can pick. */
 export const availableLanguages = supportedLanguages.filter((l) => l.released);
 
 const releasedLanguageCodes: ReadonlySet<string> = new Set(availableLanguages.map((l) => l.code));
@@ -39,31 +39,16 @@ export function isSupportedLanguage(value: unknown): value is SupportedLanguage 
 }
 
 /**
- * Map a BCP 47 tag such as `de-CH` onto a shipped language, or null when the
- * base language is not shipped. Regional variants are not distinguished: a
- * Swiss German user gets German.
- */
-export function resolveSupportedLanguage(tag: string): SupportedLanguage | null {
-  const base = tag.trim().toLowerCase().split('-')[0] ?? '';
-  return isSupportedLanguage(base) ? base : null;
-}
-
-/**
- * Detection order: the stored choice, then the browser's languages in the
- * order the user ranked them, then English. Only released languages are
- * eligible; `released` exists so tests can exercise the others.
+ * The person's stored choice, otherwise English. The browser and the system are not
+ * asked: Tavvit starts in English for everyone, and another language is something a
+ * person picks. Only released languages are eligible; `released` exists so tests can
+ * exercise the others.
  */
 export function pickLanguage(
   stored: string | null,
-  browserLanguages: readonly string[],
   released: ReadonlySet<string> = releasedLanguageCodes,
 ): SupportedLanguage {
-  if (isSupportedLanguage(stored) && released.has(stored)) return stored;
-  for (const tag of browserLanguages) {
-    const match = resolveSupportedLanguage(tag);
-    if (match && released.has(match)) return match;
-  }
-  return DEFAULT_LANGUAGE;
+  return isSupportedLanguage(stored) && released.has(stored) ? stored : DEFAULT_LANGUAGE;
 }
 
 export function getLanguageDirection(language: SupportedLanguage): 'ltr' | 'rtl' {
@@ -77,6 +62,6 @@ export function getLanguageDirection(language: SupportedLanguage): 'ltr' | 'rtl'
  */
 export function readPreviewLanguage(search: string, isDev: boolean): SupportedLanguage | null {
   if (!isDev) return null;
-  const value = new URLSearchParams(search).get('lang');
-  return value ? resolveSupportedLanguage(value) : null;
+  const base = new URLSearchParams(search).get('lang')?.trim().toLowerCase().split('-')[0];
+  return isSupportedLanguage(base) ? base : null;
 }

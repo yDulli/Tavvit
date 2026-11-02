@@ -1,3 +1,36 @@
+# Every text file is stored and checked out with LF line endings, on every
+# platform. This repository is built into a Linux container and run on Linux
+# servers: a shell script or Dockerfile checked out with CRLF (Git for Windows
+# defaults to core.autocrlf=true) fails with "bad interpreter" / "exec format
+# error", and parsers that expect "\n" (the pnpm lockfile reader in
+# scripts/pr-triage, for one) reject the file outright.
+* text=auto eol=lf
+
+# Shell scripts, the Dockerfile and compose files are executed by Linux tools
+# and must never be converted, whatever the contributor's local git config says.
+*.sh text eol=lf
+Dockerfile text eol=lf
+Caddyfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary assets: never touch their bytes.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.ogg binary
+*.mp3 binary
+*.wav binary
+*.pdf binary
+*.zip binary
+
 # Flatpak consumes these files inside a Linux build sandbox. Keep their line
 # endings deterministic even when the repository is checked out on Windows.
 /io.github.TheZwiss.backspace.yml text eol=lf

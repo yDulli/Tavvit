@@ -9,7 +9,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getApiForOrigin, type TaggedSpace } from '../../stores/spaceStore';
 import { PermissionBits, stringToPermissions, permissionsToString, rolePermissionsVersion } from '../../utils/permissions';
 import { HttpError } from '../../api/client';
-import { PERMISSION_GROUPS, type PermissionGroupId } from '../../utils/permissionGroups';
+import { PERMISSION_GROUPS, usePermissionGroupTitles } from '../../utils/permissionGroups';
 import {
   viewerCanManageRoleAt,
   viewerCanSwitchBit,
@@ -296,13 +296,8 @@ function MemberRolesBody({
     openUserProfile(canonical, origin, anchor, 'right', { spaceId, userId });
   };
 
-  const groupTitle = (id: PermissionGroupId): string => {
-    switch (id) {
-      case 'general': return t('spaces:roles.groups.general');
-      case 'text': return t('spaces:roles.groups.text');
-      case 'voice': return t('spaces:roles.groups.voice');
-    }
-  };
+  const groupTitles = usePermissionGroupTitles();
+  const groupTitle = (id: keyof typeof groupTitles): string => groupTitles[id];
 
   // @everyone is the role's identifier, not a phrase, so it is not translated.
   const roleName = (role: Role): string => (role.id === spaceId ? '@everyone' : role.name);
@@ -310,20 +305,21 @@ function MemberRolesBody({
   return (
     <div className="flex flex-col h-full">
       {/* Header: who is being edited, plus the way back to the profile card */}
-      <div className="flex items-center gap-3 px-6 py-4 pr-16 border-b border-white/[0.06] flex-shrink-0">
+      <div className="flex items-center gap-3 px-5 py-3 pr-16 border-b border-border-hard flex-shrink-0">
         <Avatar
           src={canonical.avatar}
           name={displayName}
-          size={40}
+          size={36}
           status={canonical.status}
           user={canonical}
         />
-        <h2 className="flex-1 min-w-0 text-lg font-semibold text-txt-primary truncate" title={displayName}>
+        <h2 className="flex-1 min-w-0 truncate text-lead font-semibold tracking-[-0.01em] text-txt-primary" title={displayName}>
           {t('spaces:memberRoles.title', { name: displayName })}
         </h2>
         <button
+          type="button"
           onClick={handleViewProfile}
-          className="flex-shrink-0 px-3 py-1.5 text-sm font-medium rounded-full text-txt-secondary hover:bg-interactive-hover transition-colors"
+          className="btn-outline btn-sm flex-shrink-0"
         >
           {t('spaces:memberRoles.viewProfile')}
         </button>
@@ -331,11 +327,11 @@ function MemberRolesBody({
 
       <div className="flex-1 min-h-0 flex">
         {/* Left pane: membership checkboxes; clicking a row edits that role */}
-        <div className="w-72 flex-shrink-0 border-r border-white/[0.06] overflow-y-auto scrollbar-thin p-4">
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
+        <div className="w-72 flex-shrink-0 border-r border-border-hard overflow-y-auto scrollbar-thin p-4">
+          <div className="label-mono mb-1.5">
             {t('spaces:roles.listHeading')}
           </div>
-          <div className="rounded-lg bg-white/[0.02] p-2">
+          <div className="surface-card rounded-lg p-1">
             <div className="space-y-0.5">
               {sortedRoles.map((role) => {
                 const isEveryone = role.id === spaceId;
@@ -347,7 +343,7 @@ function MemberRolesBody({
                   <div
                     key={role.id}
                     onClick={() => setSelectedRoleId(role.id)}
-                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded cursor-pointer transition-colors ${
+                    className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 cursor-pointer transition-colors duration-100 ${
                       selected ? 'bg-interactive-selected' : 'hover:bg-interactive-hover'
                     }`}
                   >
@@ -359,7 +355,7 @@ function MemberRolesBody({
                       disabled={isEveryone || lock !== undefined}
                       onChange={() => toggleMembership(role.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-3.5 h-3.5 rounded border-txt-tertiary accent-accent-primary flex-shrink-0 disabled:opacity-50"
+                      className="flex-shrink-0"
                     />
                     <div
                       className={`w-3 h-3 rounded-full flex-shrink-0${lock ? ' opacity-50' : ''}`}
@@ -368,7 +364,7 @@ function MemberRolesBody({
                     <span
                       id={nameId}
                       title={name}
-                      className={`text-sm text-txt-primary truncate${lock ? ' opacity-50' : ''}`}
+                      className={`text-ui font-medium text-txt-primary truncate${lock ? ' opacity-50' : ''}`}
                     >
                       {name}
                     </span>
@@ -395,11 +391,11 @@ function MemberRolesBody({
                   className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: selectedRole.color }}
                 />
-                <h3 className="text-base font-semibold text-txt-primary truncate" title={roleName(selectedRole)}>
+                <h3 className="text-body font-semibold text-txt-primary truncate" title={roleName(selectedRole)}>
                   {roleName(selectedRole)}
                 </h3>
               </div>
-              <p className="text-xs text-txt-tertiary mt-1 mb-4">{t('spaces:memberRoles.affectsAll')}</p>
+              <p className="text-meta text-txt-tertiary mt-1 mb-4">{t('spaces:memberRoles.affectsAll')}</p>
 
               {(!canEditSelected || hasUnheldToggle) && (
                 <div className="space-y-2 mb-5">
@@ -410,11 +406,11 @@ function MemberRolesBody({
 
               {PERMISSION_GROUPS.map((group) => (
                 <div key={group.id} className="mb-5">
-                  <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
+                  <div className="label-mono mb-1.5">
                     {groupTitle(group.id)}
                   </div>
-                  <div className="rounded-lg bg-white/[0.02] p-3.5">
-                    <div className="space-y-1">
+                  <div className="surface-card rounded-lg p-1.5">
+                    <div className="space-y-0.5">
                       {group.perms.map((perm) => {
                         const isAdminBit = perm.bit === PermissionBits.ADMINISTRATOR;
                         const hasAdmin = (selectedPermissions & PermissionBits.ADMINISTRATOR) !== 0n;
@@ -426,11 +422,11 @@ function MemberRolesBody({
                         return (
                           <label
                             key={perm.key}
-                            className={`flex items-center justify-between gap-3 py-1.5 px-2 rounded group/perm ${
+                            className={`flex items-center justify-between gap-3 rounded-md px-2.5 py-2 transition-colors duration-100 group/perm ${
                               isLocked ? 'cursor-default' : 'cursor-pointer hover:bg-interactive-hover'
                             }`}
                           >
-                            <span className={`text-sm ${isLocked ? 'opacity-50 ' : ''}${isAdminBit ? 'text-txt-danger font-medium' : 'text-txt-primary'}`}>
+                            <span className={`min-w-0 text-ui font-medium ${isLocked ? 'opacity-50 ' : ''}${isAdminBit ? 'text-txt-danger' : 'text-txt-primary'}`}>
                               {name}
                             </span>
                             <span className="flex items-center gap-2 flex-shrink-0">
@@ -460,13 +456,14 @@ function MemberRolesBody({
                                   e.preventDefault();
                                   if (!isLocked) togglePermission(perm.bit);
                                 }}
-                                className={`relative w-9 h-5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary ${
-                                  isLocked ? 'cursor-default opacity-50' : 'cursor-pointer'
+                                className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-md transition-colors ${
+                                  isLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                                 } ${isOn ? 'bg-accent-primary' : 'bg-interactive-muted'}`}
                               >
-                                <div
-                                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-                                    isOn ? 'translate-x-4' : 'translate-x-0.5'
+                                <span
+                                  aria-hidden="true"
+                                  className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                                    isOn ? 'translate-x-[19px]' : 'translate-x-[3px]'
                                   }`}
                                 />
                               </div>
@@ -480,13 +477,13 @@ function MemberRolesBody({
               ))}
             </>
           ) : (
-            <div className="h-full flex items-center justify-center text-center text-sm text-txt-tertiary px-8">
+            <div className="h-full flex items-center justify-center text-center text-ui text-txt-tertiary px-8">
               {t('spaces:memberRoles.selectRole')}
             </div>
           )}
           {/* A failed save, in flow above the pill as in the roles tab. */}
           {error && (
-            <div ref={errorRef} role="alert" className="mt-1 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
+            <div ref={errorRef} role="alert" className="mt-1 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">
               {error}
             </div>
           )}
@@ -496,17 +493,18 @@ function MemberRolesBody({
           {hasChanges && (
             <div className="sticky bottom-0 z-10 pointer-events-none">
               <div className="flex justify-center pt-3 pb-1">
-                <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-2 pointer-events-auto animate-slide-up">
+                <div className="action-bar pointer-events-auto animate-slide-up">
                   <button
                     onClick={handleDiscard}
-                    className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                    className="btn-quiet"
                   >
                     {t('spaces:settings.discardChanges')}
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                    aria-busy={saving}
+                    className="btn-primary"
                   >
                     {saving ? t('common:states.saving') : t('common:actions.save')}
                   </button>

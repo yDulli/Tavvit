@@ -97,8 +97,8 @@ export function classifyDesignatedRequirement(codesignOutput: string): Signature
 /**
  * Resolves the .app bundle root from the main executable path.
  *
- * `/Applications/Backspace.app/Contents/MacOS/Backspace`
- *   -> `/Applications/Backspace.app`
+ * `/Applications/Tavvit.app/Contents/MacOS/Tavvit`
+ *   -> `/Applications/Tavvit.app`
  *
  * Exported for tests; the shape is fixed by the macOS bundle layout.
  */

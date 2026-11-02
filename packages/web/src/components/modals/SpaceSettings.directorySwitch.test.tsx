@@ -21,7 +21,10 @@ import { useInstanceStore, type ConnectedInstance } from '../../stores/instanceS
 import { api, HttpError, type BackspaceApiClient } from '../../api/client';
 import { describeError } from '../../i18n/errors';
 
-const SWITCH = 'List in the global Backspace directory';
+const SWITCH = 'List in the global Tavvit directory';
+// Retired from the catalogs (directory.md, section 10), so a `.not` on it only
+// catches this sentence coming back. Proving that no reason about the setting
+// is stated takes ADMIN_OFF_SELF, the one the panel can actually say.
 const ADMIN_OFF = 'Your instance administrator has to allow global listing.';
 // The same fact in the administrator's own voice, with the way out of it.
 const ADMIN_OFF_SELF = 'Global listing is not allowed on this instance.';
@@ -30,11 +33,13 @@ const RUNG_INTRO = 'This allows global listing for the whole instance: spaces he
 const CONFIRM_TITLE = 'List spaces from this instance publicly?';
 const CONFIRM_LABEL = 'List spaces';
 const CONFIRM_DISCLOSURE = "For each listed space this makes public: its name, description, icon, banner, member count and this instance's address. People browsing the directory load the icon and banner from this instance.";
-const CONFIRM_OPT_IN = 'Only spaces whose owners turn listing on are sent, so this switch lists no space on its own.';
-const CONFIRM_OFF = 'To stop listing later: Settings, Instance, General, the space discovery choice.';
+const CONFIRM_OPT_IN = 'Only spaces whose listing the administrators approved and whose owners opt in to the directory are sent, so this switch lists no space on its own.';
+const CONFIRM_OFF = 'To stop listing later: Admin console, General, the space discovery choice.';
 const PRIVATE_SPACE = 'Set visibility to public or request to join first.';
 const LOAD_FAILED = 'Could not load the settings.';
 const NOT_CONFIGURED = 'This instance is not configured to reach a directory, so listing this space would reach none.';
+// Shown to everyone on the tab: an approved listing waits while discovery is off.
+const DISCOVERY_OFF = 'Space discovery is turned off by the instance administrator. An approved listing appears in Explore once it is turned back on.';
 
 const limits: InstanceStreamingLimits = {
   maxBitrateKbps: 20000,
@@ -68,8 +73,8 @@ const space: TaggedSpace = {
 
 /**
  * `isAdmin` is seeded explicitly rather than left at whatever a previous test
- * put there: it now decides which of two sentences the panel states, so a
- * leaked `true` would quietly rewrite the expectations of every case below.
+ * put there: it decides whether a locked Outer Space block is drawn at all, so
+ * a leaked `true` would quietly rewrite the expectations of every case below.
  */
 function seed(spaceOverrides: Partial<TaggedSpace>, directoryEnabled: boolean, isAdmin = false): void {
   useSpaceStore.setState({ spaces: [{ ...space, ...spaceOverrides }] });
@@ -147,12 +152,36 @@ afterEach(() => {
 });
 
 describe('DiscoveryPanel directory switch', () => {
-  it('is rendered but disabled with the admin reason while the instance has the directory off', () => {
-    seed({ visibility: 'public' }, false);
+  it('is rendered but disabled with the setting named while the instance has the directory off, for its administrator', () => {
+    seed({ visibility: 'public' }, false, true);
     render(<DiscoveryPanel spaceId="space-1" />);
     expect(directorySwitch()).toBeDisabled();
-    expect(screen.getByText(ADMIN_OFF)).toBeInTheDocument();
+    expect(screen.getByText(ADMIN_OFF_SELF)).toBeInTheDocument();
     expect(screen.queryByText(PRIVATE_SPACE)).not.toBeInTheDocument();
+  });
+
+  it('draws no Outer Space block for an owner when the instance has not turned the directory on', () => {
+    // How the instance is run is not the owner's notice to read, and a locked
+    // switch with nothing to do about it is clutter.
+    for (const state of [{ directoryEnabled: false, directoryConfigured: true }, { directoryEnabled: true, directoryConfigured: false }, { directoryEnabled: false, directoryConfigured: false }]) {
+      useSpaceStore.setState({ spaces: [{ ...space, visibility: 'public' }] });
+      useSettingsStore.setState({ streamingLimits: { ...limits, ...state }, isAdmin: false });
+      const { unmount } = render(<DiscoveryPanel spaceId="space-1" />);
+      expect(screen.queryByRole('switch', { name: SWITCH })).not.toBeInTheDocument();
+      expect(screen.queryByText(ADMIN_OFF)).not.toBeInTheDocument();
+      expect(screen.queryByText(ADMIN_OFF_SELF)).not.toBeInTheDocument();
+      expect(screen.queryByText(NOT_CONFIGURED)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: RUNG_ACTION })).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('tells an owner that an approved listing waits while discovery is off, with no Outer Space block', () => {
+    useSpaceStore.setState({ spaces: [{ ...space, visibility: 'public' }] });
+    useSettingsStore.setState({ streamingLimits: { ...limits, discoveryEnabled: false, directoryEnabled: false }, isAdmin: false });
+    render(<DiscoveryPanel spaceId="space-1" />);
+    expect(screen.getByText(DISCOVERY_OFF)).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: SWITCH })).not.toBeInTheDocument();
   });
 
   it('is disabled with the visibility reason, and off, while the space is private', () => {
@@ -181,12 +210,17 @@ describe('DiscoveryPanel directory switch', () => {
     expect(directorySwitch()).toBeEnabled();
   });
 
-  it('forces the switch off when the draft visibility goes private', async () => {
+  it('follows the space when it goes private on the Access tab', async () => {
     seed({ visibility: 'public', directoryListed: true }, true);
     render(<DiscoveryPanel spaceId="space-1" />);
     expect(directorySwitch()).toHaveAttribute('aria-checked', 'true');
 
-    await userEvent.click(screen.getByRole('radio', { name: /Private/ }));
+    // What the server answers to a space going private: the listing is cleared with it.
+    act(() => {
+      useSpaceStore.setState((s) => ({
+        spaces: s.spaces.map((entry) => ({ ...entry, visibility: 'private', directoryListed: false })),
+      }));
+    });
 
     expect(directorySwitch()).toHaveAttribute('aria-checked', 'false');
     expect(directorySwitch()).toBeDisabled();
@@ -202,7 +236,6 @@ describe('DiscoveryPanel directory switch', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(updateSpace).toHaveBeenCalledWith('space-1', {
-      visibility: 'public',
       description: 'Design chatter',
       directoryListed: true,
     });
@@ -218,7 +251,6 @@ describe('DiscoveryPanel directory switch', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(updateSpace).toHaveBeenCalledWith('space-1', {
-      visibility: 'public',
       description: 'Remote chatter',
       directoryListed: true,
     });
@@ -232,7 +264,7 @@ describe('DiscoveryPanel directory switch', () => {
     // fetches it. The switch used to be enabled here and its write reached
     // nothing.
     useSpaceStore.setState({ spaces: [{ ...space, visibility: 'public' }] });
-    useSettingsStore.setState({ streamingLimits: { ...limits, directoryEnabled: true, directoryConfigured: false } });
+    useSettingsStore.setState({ streamingLimits: { ...limits, directoryEnabled: true, directoryConfigured: false }, isAdmin: true });
 
     render(<DiscoveryPanel spaceId="space-1" />);
 
@@ -245,12 +277,13 @@ describe('DiscoveryPanel directory switch', () => {
     // Both are off. The endpoint is the one the administrator cannot fix by
     // flipping the setting the other reason points at.
     useSpaceStore.setState({ spaces: [{ ...space, visibility: 'public' }] });
-    useSettingsStore.setState({ streamingLimits: { ...limits, directoryEnabled: false, directoryConfigured: false } });
+    useSettingsStore.setState({ streamingLimits: { ...limits, directoryEnabled: false, directoryConfigured: false }, isAdmin: true });
 
     render(<DiscoveryPanel spaceId="space-1" />);
 
     expect(screen.getByText(NOT_CONFIGURED)).toBeInTheDocument();
     expect(screen.queryByText(ADMIN_OFF)).not.toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_OFF_SELF)).not.toBeInTheDocument();
   });
 
   it('carries both disclosure sentences', () => {
@@ -274,6 +307,9 @@ describe('DiscoveryPanel instance flags by origin', () => {
     expect(getStreaming).toHaveBeenCalledTimes(1);
     expect(directorySwitch()).toBeDisabled();
     expect(screen.queryByText(ADMIN_OFF)).not.toBeInTheDocument();
+    // Home has the directory off (the seed), and that is no answer about the
+    // remote: stating it here would be a guess.
+    expect(screen.queryByText(ADMIN_OFF_SELF)).not.toBeInTheDocument();
 
     answer({ ...limits, discoveryEnabled: true, directoryEnabled: true });
     await waitFor(() => expect(directorySwitch()).toBeEnabled());
@@ -281,14 +317,18 @@ describe('DiscoveryPanel instance flags by origin', () => {
     expect(homeStreaming).not.toHaveBeenCalled();
   });
 
-  it('shows the remote instance\'s reasons, not home\'s, when the remote has the directory off', async () => {
+  it('follows the remote instance, not home, when the remote has the directory off: no block, and its discovery notice', async () => {
+    // Home allows listing (the seed), the remote does not. A switch that
+    // stayed would mean the remote's answer was ignored; the remote's own
+    // directory settings are not an owner's notice to read, but that an
+    // approved listing waits while its discovery is off is everyone's.
     seed({ visibility: 'public', _instanceOrigin: 'https://remote.test' }, true);
     connectRemote('https://remote.test', Promise.resolve({ ...limits, discoveryEnabled: false, directoryEnabled: false }));
 
     render(<DiscoveryPanel spaceId="space-1" />);
-    await waitFor(() => expect(screen.getByText(ADMIN_OFF)).toBeInTheDocument());
-    expect(directorySwitch()).toBeDisabled();
-    expect(screen.getByText(/Space discovery is disabled/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('switch', { name: SWITCH })).not.toBeInTheDocument());
+    expect(screen.queryByText(ADMIN_OFF)).not.toBeInTheDocument();
+    expect(screen.getByText(DISCOVERY_OFF)).toBeInTheDocument();
   });
 
   it('falls back to the store when the remote fetch fails', async () => {
@@ -313,8 +353,10 @@ describe('DiscoveryPanel instance flags by origin', () => {
 
     expect(directorySwitch()).toBeDisabled();
     expect(screen.queryByText(ADMIN_OFF)).not.toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_OFF_SELF)).not.toBeInTheDocument();
+    expect(screen.queryByText(NOT_CONFIGURED)).not.toBeInTheDocument();
     expect(screen.queryByText(PRIVATE_SPACE)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Space discovery is disabled/)).not.toBeInTheDocument();
+    expect(screen.queryByText(DISCOVERY_OFF)).not.toBeInTheDocument();
     // Nothing failed yet, so there is nothing to retry either.
     expect(screen.queryByText(LOAD_FAILED)).not.toBeInTheDocument();
     expect(homeStreaming).toHaveBeenCalledTimes(1);
@@ -322,13 +364,13 @@ describe('DiscoveryPanel instance flags by origin', () => {
 
   it('says its piece as soon as the document does arrive', async () => {
     useSpaceStore.setState({ spaces: [{ ...space, visibility: 'public' }] });
-    useSettingsStore.setState({ streamingLimits: null });
+    useSettingsStore.setState({ streamingLimits: null, isAdmin: true });
     vi.spyOn(api.settings, 'getStreaming').mockResolvedValue({ ...limits, directoryEnabled: false });
 
     render(<DiscoveryPanel spaceId="space-1" />);
-    expect(screen.queryByText(ADMIN_OFF)).not.toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_OFF_SELF)).not.toBeInTheDocument();
 
-    await waitFor(() => expect(screen.getByText(ADMIN_OFF)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(ADMIN_OFF_SELF)).toBeInTheDocument());
     expect(directorySwitch()).toBeDisabled();
   });
 
@@ -358,6 +400,8 @@ describe('DiscoveryPanel instance flags by origin', () => {
     expect(await screen.findByText(LOAD_FAILED)).toBeInTheDocument();
     expect(directorySwitch()).toBeDisabled();
     expect(screen.queryByText(ADMIN_OFF)).not.toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_OFF_SELF)).not.toBeInTheDocument();
+    expect(screen.queryByText(NOT_CONFIGURED)).not.toBeInTheDocument();
 
     homeStreaming.mockResolvedValueOnce({ ...limits, directoryEnabled: true });
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
@@ -405,8 +449,11 @@ describe('DiscoveryPanel instance flags by origin', () => {
 
     render(<DiscoveryPanel spaceId="space-1" />);
 
-    await waitFor(() => expect(screen.getByText(NOT_CONFIGURED)).toBeInTheDocument());
-    expect(directorySwitch()).toBeDisabled();
+    // Home can reach a directory (the seed), the remote cannot. The switch
+    // going away is the proof the remote's answer was the one used; the
+    // missing endpoint is the remote administrator's to hear about.
+    await waitFor(() => expect(screen.queryByRole('switch', { name: SWITCH })).not.toBeInTheDocument());
+    expect(screen.queryByText(NOT_CONFIGURED)).not.toBeInTheDocument();
   });
 
   it('a late answer for the origin left behind writes nothing', async () => {
@@ -480,11 +527,11 @@ describe('DiscoveryPanel global rung action', () => {
     expect(directorySwitch()).toBeDisabled();
   });
 
-  it('leaves the sentence alone for an owner who is not an instance admin', () => {
+  it('shows an owner who is not an instance admin neither sentence nor action', () => {
     seed({ visibility: 'public' }, false, false);
     render(<DiscoveryPanel spaceId="space-1" />);
 
-    expect(screen.getByText(ADMIN_OFF)).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_OFF)).not.toBeInTheDocument();
     expect(screen.queryByText(ADMIN_OFF_SELF)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: RUNG_ACTION })).not.toBeInTheDocument();
   });
@@ -504,8 +551,11 @@ describe('DiscoveryPanel global rung action', () => {
     const updateInstanceSettings = mockUpdateInstanceSettings();
     render(<DiscoveryPanel spaceId="space-1" />);
 
-    await waitFor(() => expect(screen.getByText(ADMIN_OFF)).toBeInTheDocument());
+    // Being an admin at home says nothing about the remote, so the block is
+    // not drawn once the remote has answered that the directory is off.
+    await waitFor(() => expect(screen.queryByRole('switch', { name: SWITCH })).not.toBeInTheDocument());
     expect(getStreaming).toHaveBeenCalled();
+    expect(screen.queryByText(ADMIN_OFF)).not.toBeInTheDocument();
     expect(screen.queryByText(ADMIN_OFF_SELF)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: RUNG_ACTION })).not.toBeInTheDocument();
     expect(updateInstanceSettings).not.toHaveBeenCalled();

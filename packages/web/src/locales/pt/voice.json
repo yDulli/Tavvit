@@ -99,7 +99,7 @@
     "subtitle": "Escolha o que compartilhar, ajuste a qualidade e comece.",
     "stageIdle": "Nada selecionado ainda",
     "stageReady": "Pronto para entrar ao vivo",
-    "permissionHintMac": "O macOS bloqueia a captura de tela até que o Backspace tenha permissão de Gravação de Tela. Conceda-a em Ajustes do Sistema → Privacidade e Segurança → Gravação de Tela e tente novamente.",
+    "permissionHintMac": "O macOS bloqueia a captura de tela até que o Tavvit tenha permissão de Gravação de Tela. Conceda-a em Ajustes do Sistema → Privacidade e Segurança → Gravação de Tela e tente novamente.",
     "retrySources": "Tentar novamente",
     "kind": {
       "monitor": "Tela",
@@ -127,15 +127,15 @@
     "customBitrateDisabled": "Taxa de bits personalizada desativada pelo administrador",
     "customBitrateDisabledByHost": "Taxa de bits personalizada desativada por {{host}}",
     "systemAudio": "Áudio do sistema",
-    "chromeEchoNote": "O Chrome pode excluir o áudio do Backspace quando o tipo de captura permite",
+    "chromeEchoNote": "O Chrome pode excluir o áudio do Tavvit quando o tipo de captura permite",
     "electronWindowsAudioNote": "O loopback do Windows pode capturar o áudio da chamada quando restrictOwnAudio não é compatível",
     "electronMacAudioNote": "O macOS 13+ exige a permissão de Gravação de Tela e Áudio do Sistema",
-    "electronLinuxAudioNote": "O Linux exige compatibilidade com PulseAudio; o áudio do Backspace também pode ser capturado",
+    "electronLinuxAudioNote": "O Linux exige compatibilidade com PulseAudio; o áudio do Tavvit também pode ser capturado",
     "systemAudioNote": {
-      "excluded": "Os espectadores ouvem o som do seu computador, mas não o chat de voz nem outros áudios do Backspace.",
-      "excludedMac": "Os espectadores ouvem o som do seu Mac, mas não o chat de voz nem outros áudios do Backspace. O macOS pede a permissão de Gravação de Tela e Áudio do Sistema.",
-      "includedWindows": "Esta versão do Windows compartilha todo o som, inclusive o chat de voz: os espectadores vão ouvir a própria voz. No Windows 11, o áudio do próprio Backspace fica de fora.",
-      "includedMac": "Esta versão do macOS compartilha todo o som, inclusive o chat de voz: os espectadores vão ouvir a própria voz. No macOS 14.2 e posteriores, o áudio do próprio Backspace fica de fora. O macOS pede a permissão de Gravação de Tela e Áudio do Sistema.",
+      "excluded": "Os espectadores ouvem o som do seu computador, mas não o chat de voz nem outros áudios do Tavvit.",
+      "excludedMac": "Os espectadores ouvem o som do seu Mac, mas não o chat de voz nem outros áudios do Tavvit. O macOS pede a permissão de Gravação de Tela e Áudio do Sistema.",
+      "includedWindows": "Esta versão do Windows compartilha todo o som, inclusive o chat de voz: os espectadores vão ouvir a própria voz. No Windows 11, o áudio do próprio Tavvit fica de fora.",
+      "includedMac": "Esta versão do macOS compartilha todo o som, inclusive o chat de voz: os espectadores vão ouvir a própria voz. No macOS 14.2 e posteriores, o áudio do próprio Tavvit fica de fora. O macOS pede a permissão de Gravação de Tela e Áudio do Sistema.",
       "includedLinux": "O Linux compartilha todo o som, inclusive o chat de voz: os espectadores vão ouvir a própria voz. Requer PulseAudio, ou PipeWire com pipewire-pulse.",
       "unavailableMac": "O áudio do sistema requer o macOS 13 ou posterior."
     },
@@ -272,5 +272,12 @@
     "stillDenied": "O acesso ao microfone continua negado. Permita-o para este site nas configurações do navegador ou do dispositivo.",
     "notFound": "Nenhum microfone encontrado.",
     "failed": "Não foi possível acessar o microfone."
+  },
+  "soundboard": {
+    "title": "Soundboard",
+    "empty": "Este espaço ainda não tem clipes.",
+    "noRight": "Você não pode reproduzir clipes aqui.",
+    "hear": "Ouvir clipes",
+    "volume": "Volume"
   }
 }

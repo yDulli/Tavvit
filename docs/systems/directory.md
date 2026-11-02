@@ -1,12 +1,13 @@
 # Space Directory ("Outer Space")
 
-The opt-in public directory of spaces. A space owner asks for a space to be
-listed, the instance admin has allowed listing on that instance, and the space
-appears in the Outer Space section of the Explore page on every Backspace
-instance that reads the same hub. Joining an entry runs the existing
-connect-then-join flow. Nothing is listed until both people act, and the hub
-never holds anything an instance does not serve on a public endpoint of its
-own.
+The opt-in public directory of spaces. A space whose Discovery listing an
+instance admin approved (the owner asks, an admin decides; spaces.md,
+"Discovery approval") is switched on for the directory in its settings, the
+instance admin has allowed listing on that instance, and the space appears in
+the Outer Space section of the Explore page on every Tavvit instance that reads
+the same hub. Joining an entry runs the existing connect-then-join flow.
+Nothing is listed until all of these hold, and the hub never holds anything an
+instance does not serve on a public endpoint of its own.
 
 Source files:
 - `packages/server/src/directory/state.ts` - the five `instance_settings` columns, `markDirectoryDirty`, `readDirectoryBrowseEnabled`, the in-memory document version
@@ -15,6 +16,9 @@ Source files:
 - `packages/server/src/routes/directory.ts` - `GET /api/directory/spaces` (the document) and `GET /api/directory` (the feed proxy)
 - `packages/server/src/routes/settings.ts` - `applyDiscoveryAndDirectory`, the discovery-off invariant, the dirty marks on both PATCH routes
 - `packages/server/src/routes/spaces.ts` - `directoryListed` on `PATCH /api/spaces/:id`, the dirty marks on update and delete
+- `packages/server/src/utils/discoveryListing.ts` - `LISTED_IN_DISCOVERY_SQL`, the Discovery approval predicate the document's query is built on
+- `packages/server/src/utils/reviewNotify.ts` - `announceReviewStep`, which marks the document dirty for a Discovery step of a space opted in to the directory
+- `packages/server/drizzle/0041_orbit_platform_admin.sql` - moved every listed space into review and set `directory_dirty`
 - `packages/server/src/routes/instance.ts` - `directoryConfigured`, `directoryAvailable` and `directoryEnabled` on the public instance info
 - `packages/server/drizzle/0015_real_tomas.sql` - the five columns; `0016_whole_loki.sql` - `directory_browse_enabled`
 - `packages/shared/src/types.ts` - `DirectoryPingError`, `DirectoryDocument`, `DirectoryDocumentSpace`, `DirectoryEntry`, `DirectoryFeed`
@@ -46,8 +50,10 @@ What the directory is for:
 
 - Communities become findable from any instance, including a fresh one with
   no peers and no connections.
-- Opt-in at both levels. The admin allows listing on the instance, the space
-  owner asks for the space. Either one alone lists nothing.
+- Opt-in at both levels, and reviewed. The admin allows listing on the
+  instance; the space's owner asks for a Discovery listing, an instance admin
+  approves it, and the space is switched on for the directory. No one of
+  these alone lists anything.
 - The instance stays the source of truth. The hub is an index of what
   instances serve on `GET /api/directory/spaces`, never a registry that holds
   anything only it knows.
@@ -71,7 +77,7 @@ the user is not connected to.
 ## 2. The model
 
 ```
-space owner flips "List in the global Backspace directory"  (or admin ladder rung, delete, visibility)
+"List in the global Tavvit directory" flipped, or a Discovery step  (or admin ladder rung, edit, delete, visibility)
         |
         v  markDirectoryDirty(): bumps the document version, drops the endpoint cache, change ping 3 s later
 instance server pinger  --POST { origin }-->  explore.backspacechat.com  (Worker + D1)
@@ -143,7 +149,11 @@ Five columns on `instance_settings` and one on `spaces` (see
 | `instance_settings.directory_dirty` | `0` or `1`: a ping is owed. Set by every change to the served document except member counts, cleared by a successful ping that was sent after the change. Survives restarts and survives the toggle being off |
 | `instance_settings.directory_last_ping_at` | ms timestamp of the last ping the hub accepted, null before the first |
 | `instance_settings.directory_last_error` | JSON `DirectoryPingError` of the last failed ping, null after a success |
-| `spaces.directory_listed` | `0` or `1`: the owner asked for this space to be listed |
+| `spaces.directory_listed` | `0` or `1`: the space is switched on for the directory (by the owner or a member with `MANAGE_SPACE`). Serves nothing without an approved Discovery listing |
+
+The directory also reads `spaces.discovery_status`, the space's Discovery
+approval (migration `0041_orbit_platform_admin`; spaces.md, "Discovery
+approval"): only `approved` lets a space be served.
 
 ```ts
 // packages/shared/src/types.ts
@@ -169,9 +179,12 @@ goes through: it sets the flag, bumps the version (which invalidates the
 document cache in `routes/directory.ts`, keyed on it), then notifies the
 pinger's change ping scheduler.
 
-A space is served (section 4) when all four hold: `directory_enabled = 1`,
-`discovery_enabled = 1`, `spaces.directory_listed = 1`, and `visibility` is
-`public` or `request`.
+A space is served (section 4) when all five hold: `directory_enabled = 1`,
+`discovery_enabled = 1`, `spaces.directory_listed = 1`, `visibility` is
+`public` or `request`, and `spaces.discovery_status = 'approved'`. The last
+two are `LISTED_IN_DISCOVERY_SQL` (`utils/discoveryListing.ts`), the predicate
+`GET /api/spaces/explore` lists by, so a space is served only while this
+instance's own Explore lists it.
 
 **What `directory_browse_enabled` gates, and what it does not.** Exactly two
 reads, both through `readDirectoryBrowseEnabled` in `directory/state.ts`, the
@@ -219,6 +232,15 @@ Transitions that call `markDirectoryDirty()`, each inside an existing handler:
   changing `name`, `description`, `icon`, `banner`, `avatarColor` or
   `visibility` while the space is listed after the write
 - `DELETE /api/spaces/:id` for a listed space
+- every Discovery step of a space with `directory_listed = 1`, through
+  `announceReviewStep` (`utils/reviewNotify.ts`): the owner's request or
+  withdrawal, an admin's decision, and an approved listing an edit sent back
+  to `pending` (spaces.md, "Review after an edit"). A listing withdrawn
+  because the space went private is marked by the `directoryListed` change
+  above, since that write clears the flag
+- migration `0041_orbit_platform_admin`, once: it moved every `public` or
+  `request` space into review, so the served document shrank, and it set
+  `directory_dirty = 1` for the boot ping to tell the hub
 
 Member counts change constantly and are refreshed by the daily ping only.
 
@@ -231,13 +253,23 @@ so the flag never silently means nothing. `Space` carries `directoryListed`
 everywhere a space is serialised: the spaces routes, the explore routes, and
 the WebSocket ready payload.
 
+Who may get a space listed is narrower than who may flip the flag. Only the
+space's owner (`spaces.owner_id`) asks for its Discovery listing
+(`PUT /api/spaces/:id/discovery`), and only an instance admin approves it
+(`POST /api/admin/spaces/:id/discovery/approve`); no space role or permission
+bit stands in for either. The flag may be switched on before the approval and
+then serves nothing until it. A listing that is withdrawn, refused or sent
+back to review takes the space out of the document and leaves the flag as it
+is; only going private clears the flag.
+
 On the wire: `GET /api/settings/instance` carries `directoryEnabled`,
 `directoryBrowseEnabled`, `directoryLastPingAt`, `directoryLastError` and
 `directoryListedSpaceCount` (the last three are read-only; the PATCH ignores
 them in the body). The count is taken through the same predicate the document
-uses (`LISTED_SPACES_WHERE` in `directory/document.ts`: public or request, and
-`directory_listed = 1`) but ignores the instance switches, so it answers "has
-any space opted in" whatever rung is stored.
+uses (`LISTED_SPACES_WHERE` in `directory/document.ts`: `LISTED_IN_DISCOVERY_SQL`,
+an approved listing on a public or request space, and `directory_listed = 1`)
+but ignores the instance switches, so it answers "how many spaces have an
+approved listing and opted in" whatever rung is stored.
 `PATCH /api/settings/instance` accepts `directoryBrowseEnabled` as a strict
 boolean (`400 field_not_boolean` otherwise) and writes it on its own: it is
 not part of the discovery invariant and nothing clears it. `GET /api/settings/streaming`
@@ -280,7 +312,7 @@ hub is a stranger and reads it like anyone else.
 |---|---|
 | `schema` | fixed at `1` |
 | `origin` | `resolveLocalOrigin()`: `PUBLIC_ORIGIN` if set, else `https://DOMAIN`, else `http://localhost:<port>`. The hub compares it with the origin it fetched and rejects a mismatch, which is how a misconfigured `DOMAIN` reaches the admin status line |
-| `instance.name` | `instance_settings.instance_name`, `Backspace` when null |
+| `instance.name` | `instance_settings.instance_name`, `Tavvit` (`DEFAULT_INSTANCE_NAME`) when null |
 | `instance.federatedRegistrationOpen` | whether this instance accepts new federated accounts; the feed shows a "Closed to new accounts" badge when false |
 | `instance.version` | `config.version` |
 | `spaces[].id` | the instance-local space id |
@@ -296,9 +328,10 @@ The envelope is always present. `spaces` is empty when `directory_enabled` or
 `discovery_enabled` is off, and the endpoint never 404s, so a hub fetch of a
 switched-off instance is a success that clears its rows.
 
-The query is the Explore query (`routes/explore.ts`) with the two extra
-predicates (`directory_listed = 1`, visibility public or request), so a member
-count means the same thing in both places. At most 200 spaces, ordered by
+The query is the Explore query (`routes/explore.ts`), which already keeps only
+an approved listing on a public or request space (`LISTED_IN_DISCOVERY_SQL`),
+with one extra predicate, `directory_listed = 1`, so a member count means the
+same thing in both places. At most 200 spaces, ordered by
 member count then creation time, the same order as Explore.
 
 **The one asset rule.** Every `icon` and `banner` in the document is either an
@@ -825,7 +858,10 @@ therefore opens an empty form rather than reviving the one that was on screen.
 
 **Why Explore looks the way it does here.** `InstanceDiscoveryHint` sits in
 the same slot directly under the chips. It names this instance's own
-discovery settings and, for an admin, changes them from the page. **The two
+discovery settings to an administrator and changes them from the page. Every
+row is for an administrator: a member cannot change any of these settings,
+and the page they came to browse is not where an instance tells them how it
+is configured, so a member gets no row at all. **The two
 settings flags come from one document**, `settingsStore.streamingLimits`,
 which any signed-in user may read and which `updateInstanceSettings` keeps
 current; `isAdmin` comes from the same store, and `directoryConfigured` and
@@ -843,11 +879,10 @@ doing. The order is the page's own sense, outgoing before incoming:
 | condition | row, in this order |
 |---|---|
 | `streamingLimits` is null (the document has not arrived) | nothing at all |
-| discovery off, not an admin | space discovery is off, spaces here are joinable by invite link only |
-| discovery off, admin | the same fact in the admin's voice, with "Turn on space discovery" |
-| not listed, admin, `directoryConfigured` true | no space here is listed in the public directory, with "List them" |
-| `directoryConfigured` true, `directoryAvailable` false, not an admin | spaces from other instances are not shown here, because their administrator turned that off |
-| `directoryConfigured` true, `directoryAvailable` false, admin | the same sentence, with "Show global spaces in Explore" |
+| not an admin | nothing at all |
+| discovery off | space discovery is off, spaces here are joinable by invite link only, with "Turn on space discovery" |
+| not listed, `directoryConfigured` true | no space here is listed in the public directory, with "List them" |
+| `directoryConfigured` true, `directoryAvailable` false | spaces from other instances are not shown here, with "Show global spaces in Explore" |
 
 The listing row does not ask whether discovery is on. It used to, by accident
 of being checked after the discovery row returned, and the accident hid the
@@ -860,19 +895,8 @@ invite-only instance the confirmation takes one extra first line
 discovery comes on with it. Only then does it call back to refill Inner
 Space, since listing alone does not change what this instance sees.
 
-A member is never given the listing row: they cannot change it, and what the
-instance publishes elsewhere is not a fact about the page they came to
-browse.
-
-**Every member row names the administrator.** A member cannot act on any of
-these settings, so a row that states only the absence reads as a fault or an
-outage, and the person who could explain it is not on the screen. Both member
-rows therefore say whose choice it is, in the same voice: "Your instance
-administrator has turned off space discovery..." and "...not shown here
-because your instance administrator turned that off." The admin halves of both
-pairs state the fact alone, because the reader chose it and is looking at the
-switch that undoes it. That is why the browse row is a `member`/`admin` pair
-of keys like the discovery row, and not one `text` shared by both.
+Each row states the fact alone, because its reader chose it and is looking at
+the switch that undoes it.
 
 **One strip, not a card each.** Two or three of these sit above the spaces
 the page is for, so the rows share one frame and one divider set rather than
@@ -899,17 +923,17 @@ rows are therefore withheld unless the endpoint is known to exist, and a
 `directoryConfigured` that has not arrived yet withholds them too, on the same
 rule as the null document below.
 
-**How a member learns the browse setting.** It cannot be read directly:
+**How the hint learns the browse setting.** It is not read directly:
 `directoryBrowseEnabled` lives on `InstanceAdminSettings`, behind
-`GET /api/settings/instance`, which is admin-only, and a member surface must
-not carry an admin-only read. What every signed-in user may read is the
-setting's *effect*: `directoryAvailable` on the public `GET /api/instance/info`
-is the endpoint and the switch together (section 9). With
-`directoryConfigured` true, an unavailable directory can only be the switch,
-so the pair is the fact, and that pair is what these two rows are derived
-from. The feed proxy's `404 directory_disabled` is the other signal the client
-already holds, through `directoryStore.status === 'disabled'`, and it is not
-used here for two reasons: it cannot separate a missing endpoint from the
+`GET /api/settings/instance`, which is admin-only and which the Explore page
+does not fetch. What the page already reads is the setting's *effect*:
+`directoryAvailable` on the public `GET /api/instance/info` is the endpoint
+and the switch together (section 9). With `directoryConfigured` true, an
+unavailable directory can only be the switch, so the pair is the fact, and
+that pair is what the browse row is derived from. The feed proxy's
+`404 directory_disabled` is the other signal the client already holds,
+through `directoryStore.status === 'disabled'`, and it is not used here for
+two reasons: it cannot separate a missing endpoint from the
 admin's switch, since section 6 answers the same code for both, and it only
 exists after a fetch the page deliberately never makes when the section is
 gated off.
@@ -1095,7 +1119,7 @@ above, each writing both stored flags:
 |------|-------|--------------------|--------------------|
 | `invite` | Invite only. Spaces here are listed nowhere. Invite links still work. | false | false |
 | `local` | Local space discovery. Spaces appear in Explore for people on this instance and on instances connected to it. | true | false |
-| `global` | Allow global listing. Each space can then be manually listed in the global Backspace directory from its own Discovery settings. | true | true |
+| `global` | Allow global listing. Approved spaces can then also be listed in the global Tavvit directory, when their owners opt in from their Discovery settings. | true | true |
 
 The selected rung is derived from the draft, not stored, so nothing can drift
 out of step with the two booleans the save sends. The combination the server
@@ -1109,17 +1133,18 @@ for `directoryEnabled: true` with discovery off, and still clears
 The rung was called "Global space discovery" until admins kept picking it
 and then asking why none of their spaces showed up: the name promised a
 result, and the rung is a permission. It lists nothing on its own; each space
-still opts in through its own switch. The label and description now say so,
-and the first note below says it again at the moment of choosing.
+still needs an approved Discovery listing and opts in through its own switch.
+The label and description now say so, and the first note below says it again
+at the moment of choosing.
 
 Under the `global` rung, indented beneath it and nowhere else, and rendered
 as a sibling of the radiogroup rather than inside it, since a radiogroup may
 own only radios:
 
 - While `directoryListedSpaceCount` is 0 and the endpoint is not known to be
-  missing, the amber note "Turning this on does not list any spaces by itself.
-  Each space still has to switch on "List in the global Backspace directory"
-  in its Discovery settings." The switch's name is interpolated from the
+  missing, the amber note "Turning this on lists no space by itself. A space
+  must have an approved listing and switch on "List in the global Tavvit
+  directory" in its Discovery settings." The switch's name is interpolated from the
   space-settings catalog key, so a rename there reaches the note. It appears as
   soon as the rung is picked in the draft. Once any space is listed the note is
   gone and the status line below gains "N spaces listed" instead. Its "Show me
@@ -1219,11 +1244,23 @@ space settings panel below sees the cleared directory flag after the ladder
 dropped to a lower rung.
 
 **Space settings, Discovery panel** (`SpaceSettings.tsx:DiscoveryPanel`), an
-"Outer Space" group with the switch "List in the global Backspace directory", always
-rendered:
+"Outer Space" group with the switch "List in the global Tavvit directory" ("Show
+this space in Outer Space on every Tavvit instance, once its listing is
+approved."). The panel opens with the space's Discovery listing request
+(`DiscoveryListingSection`; spaces.md, "The owner's tabs"), because the switch
+serves nothing until that listing is approved.
 
+- **Drawn only where it can do something** (`showOuterSpace`): for the
+  administrator of the instance the space lives on (the gate described below),
+  while that instance's settings document is unknown or failed to load (the
+  Retry line lives in the group), and wherever the instance has an endpoint and
+  allows global listing. On an instance with no hub, or one whose
+  administrator does not allow listing, nobody else sees the group, an owner
+  included: a locked switch under a fact about how the instance is run is the
+  kind of notice members are not shown. The amber notice that space discovery
+  is off on the instance follows the same gate.
 - Enabled when the instance allows it and the draft visibility is public or
-  request.
+  request. It may be switched on while the listing still waits for approval.
 - Disabled with the first reason that applies, read from the settings document
   of the instance the space lives on. The instance has no `DIRECTORY_ENDPOINT`
   (`directoryConfigured: false` on `GET /settings/streaming`), so a listing
@@ -1234,15 +1271,13 @@ rendered:
   reach no directory, not that nothing is published: the served document is
   gated on the two discovery flags and never on the endpoint, so an
   endpoint-less instance with the rung stored does serve a populated document
-  that no hub fetches.
-- Disabled with "Your instance administrator has to allow global listing."
-  when `streamingLimits.directoryEnabled` is false. Never hidden:
-  the reason under a disabled switch is what tells an owner what to do.
-- **That reason has a second voice, and an action, for the administrator
-  reading their own instance's panel**: "Global listing is not allowed on this
-  instance.", with "Turn it on" beside it. The sentence naming an absent
-  administrator, read by the administrator, was a dead end for the one person
-  who could change it. The action opens the same `ListInDirectoryConfirm` the
+  that no hub fetches. Because of the gate above, the first two reasons are
+  only ever read by that administrator.
+- **The opt-in reason is in the administrator's voice, with an action**:
+  "Global listing is not allowed on this instance.", with "Turn it on" beside
+  it, when `directoryEnabled` is false. There is no owner-voiced sentence any
+  more ("Your instance administrator has to allow global listing."): where the
+  administrator is not the reader, the group is not drawn. The action opens the same `ListInDirectoryConfirm` the
   Explore hint's "List them" opens, with one extra first line
   (`settings.discovery.directory.adminOffSelfIntro`) because this write is the
   whole global rung and not the listing flag alone: it writes
@@ -1262,9 +1297,9 @@ rendered:
   instance on every panel open to read its 403. The gate is therefore
   `isAdmin && _instanceOrigin === ''`, which is also what makes the write
   correct: `updateInstanceSettings` speaks to home and to nowhere else. For a
-  remote space the owner-voiced sentence stays exactly as it was, whatever
-  this user is at home; an admin of that instance turns the rung on from their
-  own instance's Explore page or settings.
+  remote space on an instance that does not allow listing the group is not
+  drawn, whatever this user is at home; an admin of that instance turns the
+  rung on from their own instance's Explore page or settings.
 - Disabled with "Set visibility to public or request to join first." when the
   draft visibility is private; choosing private in the panel switches the
   draft off, matching what the server does on save.
@@ -1393,7 +1428,9 @@ back is found again without anyone touching a toggle.
   read `DIRECTORY_ENDPOINT`, so an operator cannot browse one hub and list on
   another, and an empty endpoint removes Outer Space along with the pinger.
   Each direction has its own admin switch above that (section 3), and neither
-  lists anything by itself: no space is served until an owner asks.
+  lists anything by itself: no space is served until its owner has asked for a
+  Discovery listing, an admin has approved it, and the space is switched on
+  for the directory.
 - **Browsing still hands a user's address to the instances on screen.**
   Turning browsing off is all or nothing because an Outer Space card loads its
   icon and banner straight from the instance that owns the space, so a user
@@ -1425,21 +1462,13 @@ back is found again without anyone touching a toggle.
 
 ---
 
-## 14. Telemetry, and what separation buys
+## 14. No telemetry beside it
 
-The directory and telemetry are separate opt-ins with separate columns,
-separate toggles, separate copy, separate Workers and separate databases. The
-telemetry receiver keeps every promise it makes today, including that it
-never learns a domain and never fetches. What separation does not remove:
-both Workers run in the maintainer's Cloudflare account, whose request logs
-[telemetry.md](telemetry.md) already discloses, and whoever holds both
-datasets could, for a small instance, match a telemetry row's country,
-version and rounded space count to a directory origin. Separate databases
-remove the join key, not the possibility. An instance that lists spaces has
-chosen to publish its address; one that only reports telemetry has not, and
-nothing here changes that.
-
----
+Tavvit has no usage reporting (removed with migration
+`0037_orbit_drop_upstream_reporting`), so the directory is the only feature
+that can send anything about this instance anywhere, and only once an operator
+sets `DIRECTORY_ENDPOINT`. An instance that lists spaces has chosen to publish
+its address; nothing else here publishes anything.
 
 ## 15. Deferred
 

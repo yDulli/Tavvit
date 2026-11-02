@@ -100,12 +100,17 @@ beforeEach(async () => {
 
   sqlite.prepare("INSERT INTO users (id, username, password_hash, created_at) VALUES ('u1', 'u1', 'x', 1)").run();
   sqlite.prepare(
-    `INSERT INTO spaces (id, name, owner_id, invite_code, visibility, directory_listed, created_at)
-     VALUES ('A', 'Space A', 'u1', 'inv-A', 'public', 1, 1)`,
+    // Listed in Discovery, which takes an admin's approval (utils/discoveryListing.ts),
+    // and opted in to the directory by its owner: what the document carries.
+    `INSERT INTO spaces (id, name, owner_id, invite_code, visibility, directory_listed, discovery_status, created_at)
+     VALUES ('A', 'Space A', 'u1', 'inv-A', 'public', 1, 'approved', 1)`,
   ).run();
   sqlite.prepare("INSERT INTO space_members (space_id, user_id, joined_at) VALUES ('A', 'u1', 1)").run();
   sqlite.prepare(
-    "UPDATE instance_settings SET instance_name = 'Example', discovery_enabled = 1, directory_enabled = 1 WHERE id = 1",
+    // Stated outright: ensureDefaults now seeds a PRIVATE instance (federated sign-up closed), and
+    // these cases are about an instance that has opted in to being listed and accepts new accounts.
+    // Browsing is stated too: a fresh Tavvit instance has it off (migrate.test.ts pins that).
+    "UPDATE instance_settings SET instance_name = 'Example', discovery_enabled = 1, directory_enabled = 1, federated_registration_open = 1, directory_browse_enabled = 1 WHERE id = 1",
   ).run();
 
   app = await buildApp();
@@ -153,6 +158,13 @@ describe('GET /api/directory/spaces', () => {
     const after = await app.inject({ method: 'GET', url: '/api/directory/spaces' });
     expect(after.statusCode).toBe(200);
     expect(JSON.parse(after.body)).toEqual(JSON.parse(before.body));
+  });
+
+  it('leaves an opted-in space out while its listing waits for an admin', async () => {
+    sqlite.prepare("UPDATE spaces SET discovery_status = 'pending' WHERE id = 'A'").run();
+    const res = await app.inject({ method: 'GET', url: '/api/directory/spaces' });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body).spaces).toEqual([]);
   });
 
   it('builds once for two requests inside 30 s', async () => {
@@ -280,7 +292,11 @@ describe('GET /api/directory', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('is on by default, so an instance that never touched the setting browses', async () => {
+  it('is on for an instance that predates the setting, which takes the column default', async () => {
+    // A row that was never written by ensureDefaults' private-instance insert: an
+    // upgraded instance. Its browsing must not change under it.
+    sqlite.prepare('DELETE FROM instance_settings WHERE id = 1').run();
+    sqlite.prepare('INSERT INTO instance_settings (id, worker_id, instance_id, updated_at) VALUES (1, 5, ?, 1)').run('00000000-0000-4000-8000-000000000000');
     const row = sqlite.prepare('SELECT directory_browse_enabled AS v FROM instance_settings WHERE id = 1').get() as { v: number };
     expect(row.v).toBe(1);
     stubHub();

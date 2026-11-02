@@ -84,7 +84,7 @@ type PreviewState = keyof typeof STATES;
 const FRAME_WIDTH = 760;
 /** The chat column of the phone state; see `picker-long-mobile` above. */
 const PHONE_WIDTH = 600;
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const DM_ID = 'workbench-dm';
 const NAMES_DM_ID = 'workbench-names-dm';
 const NAMES_DISPLAY_DM_ID = 'workbench-names-display-dm';
@@ -273,7 +273,7 @@ function seedStores(state: PreviewState): void {
   const permissions = permissionsToString(ALL_PERMISSIONS);
   const typers = typersOf(state);
   // What the remote origin's `ready` records for the signed-in user.
-  useAuthStore.setState({ user: ME, myRowIds: new Map([[ORBIT, ME_ON_ORBIT.id]]) });
+  useAuthStore.setState({ user: ME, myRowIds: new Map([[TAVVIT, ME_ON_ORBIT.id]]) });
   useUIStore.setState({ isMobile: state === 'picker-long-mobile' });
 
   const staleRoster = state === 'dm-picker'
@@ -296,9 +296,9 @@ function seedStores(state: PreviewState): void {
       groupDm(PICKER_GROUP_ID, 'Naming things', ME, [ME, LONG_STUB, QUINN, ZED_STUB, NIKA, KAI]),
     ],
     channelOriginMap: new Map([
-      [DM_ID, ''], [GROUP_ID, ''], [REMOTE_DM_ID, ORBIT], [CHANNEL, ''], [NAMES_DM_ID, ''], [NAMES_DISPLAY_DM_ID, ''], [PICKER_GROUP_ID, ''],
+      [DM_ID, ''], [GROUP_ID, ''], [REMOTE_DM_ID, TAVVIT], [CHANNEL, ''], [NAMES_DM_ID, ''], [NAMES_DISPLAY_DM_ID, ''], [PICKER_GROUP_ID, ''],
     ]),
-    spaceChannelIndex: new Map([[CHANNEL, { spaceId: SPACE, origin: '', type: 'text' as const }]]),
+    spaceChannelIndex: new Map([[CHANNEL, { spaceId: SPACE, origin: '', type: 'text' as const, name: 'general' }]]),
     channelToSpaceMap: new Map([[CHANNEL, SPACE]]),
     channelPermissions: new Map([[CHANNEL, permissions]]),
     spaces: state === 'space-picker'

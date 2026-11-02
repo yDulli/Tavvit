@@ -35,7 +35,7 @@ export function StickerGrid({ items, noMatches, managing, removing, onSelect, on
   if (noMatches) {
     return (
       <div className="flex-1 min-h-0 px-3 pb-3">
-        <p role="status" className="flex h-40 items-center justify-center px-4 text-center text-xs text-txt-tertiary">
+        <p role="status" className="flex h-40 items-center justify-center px-4 text-center text-ui text-txt-tertiary">
           {t('stickers.noResults')}
         </p>
       </div>
@@ -46,7 +46,7 @@ export function StickerGrid({ items, noMatches, managing, removing, onSelect, on
     <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 pb-3">
       <div className="grid grid-cols-4 gap-1.5">
         {items.map(item => (
-          <div key={item.id} className="group relative min-w-0 rounded-xl hover:bg-interactive-hover transition-colors">
+          <div key={item.id} className="group relative min-w-0 rounded-lg hover:bg-interactive-hover transition-colors">
             <button
               type="button"
               data-sticker-id={item.id}
@@ -59,10 +59,10 @@ export function StickerGrid({ items, noMatches, managing, removing, onSelect, on
               <img
                 src={stickerUrl(item.token) ?? undefined}
                 alt={item.name}
-                className="aspect-square w-full object-contain transition-transform group-hover:scale-105"
+                className="aspect-square w-full object-contain"
                 loading="lazy"
               />
-              <span className="mt-1 block truncate text-[10px] text-txt-tertiary">{item.name}</span>
+              <span className="mt-1 block truncate text-2xs text-txt-tertiary group-hover:text-txt-secondary">{item.name}</span>
             </button>
             {managing && (
               <>
@@ -71,7 +71,7 @@ export function StickerGrid({ items, noMatches, managing, removing, onSelect, on
                   data-sticker-rename={item.id}
                   disabled={!!removing}
                   aria-label={t('stickers.renameNamed', { name: item.name })}
-                  className="sticker-edit-button"
+                  className="sticker-edit-button glass"
                   onClick={() => onRename(item)}
                 >
                   <PencilIcon />
@@ -80,7 +80,7 @@ export function StickerGrid({ items, noMatches, managing, removing, onSelect, on
                   type="button"
                   disabled={!!removing}
                   aria-label={t('stickers.removeNamed', { name: item.name })}
-                  className="sticker-remove-button"
+                  className="sticker-remove-button glass"
                   onClick={() => onRemove(item.id)}
                 >
                   {removing === item.id ? (

@@ -1,5 +1,5 @@
 {
-  "appName": "Backspace",
+  "appName": "Tavvit",
   "actions": {
     "save": "Save",
     "cancel": "Cancel",
@@ -42,7 +42,7 @@
     "previous": "Previous",
     "next": "Next",
     "preview": "Preview",
-    "logIn": "Log In"
+    "logIn": "Log in"
   },
   "states": {
     "loading": "Loading…",
@@ -82,7 +82,8 @@
     "searchMembers": "Search members…",
     "noMembersFound": "No members found",
     "or": "or",
-    "nameAZ": "Name (A-Z)"
+    "nameAZ": "Name (A-Z)",
+    "adminConsole": "Admin console"
   },
   "time": {
     "today": "Today at {{time}}",
@@ -111,7 +112,12 @@
   },
   "language": {
     "label": "Language",
-    "description": "Menus, buttons and system messages appear in this language. Messages from other people stay as they were written."
+    "description": "Menus, buttons and system messages appear in this language. Messages from other people stay as they were written.",
+    "translate": {
+      "label": "Translate messages into",
+      "same": "The app's language",
+      "hint": "Right-click a message, or hold it on a phone, and choose Translate."
+    }
   },
   "crash": {
     "title": "Something went wrong",
@@ -119,19 +125,185 @@
     "details": "Error details"
   },
   "app": {
-    "loading": "Loading Backspace"
+    "loading": "Loading Tavvit"
   },
   "chrome": {
     "toggleMemberList": "Toggle Member List",
     "closeSettings": "Close settings"
   },
-  "sourceCode": {
-    "label": "Source code (AGPL)",
-    "labelWithBuild": "Source code (AGPL) · {{build}}",
-    "title": "View the source code of the version this instance is running (AGPL-3.0)"
-  },
   "devices": {
     "newAudioInput": "{{label}} detected. Choose it in Voice settings to switch.",
     "unnamedAudioInput": "New audio device"
+  },
+  "connection": {
+    "lost": "Connection lost. Reconnecting…"
+  },
+  "switcher": {
+    "title": "Quick switcher",
+    "placeholder": "Jump to a conversation, friend, space or channel…",
+    "noResults": "Nothing matches “{{query}}”.",
+    "hint": "↑ ↓ to move, Enter to open, Esc to close",
+    "kind": {
+      "dm": "Conversation",
+      "friend": "Friend",
+      "space": "Space",
+      "channel": "Channel",
+      "page": "Page"
+    }
+  },
+  "activity": {
+    "line": {
+      "playing": "Playing {{name}}",
+      "listening": "Listening to {{name}}",
+      "watching": "Watching {{name}}",
+      "streaming": "Streaming {{name}}"
+    }
+  },
+  "contextMenu": {
+    "cut": "Cut",
+    "paste": "Paste",
+    "selectAll": "Select All",
+    "noSuggestions": "No Spelling Suggestions",
+    "addToDictionary": "Add to Dictionary",
+    "pasteBlocked": "The browser doesn't let Tavvit read the clipboard. Paste with {{shortcut}}.",
+    "clipboardFailed": "Couldn't copy to the clipboard.",
+    "copyUsername": "Copy Username",
+    "usernameCopied": "Username copied",
+    "editChannel": "Edit Channel",
+    "markRead": "Mark as Read",
+    "markReadFailed": "Couldn't mark it as read. Try again.",
+    "jumpToMessage": "Jump to Message",
+    "copyMessageLink": "Copy Message Link"
+  },
+  "badges": {
+    "staff": {
+      "name": "Staff",
+      "description": "Runs this instance as one of its administrators"
+    },
+    "bot": {
+      "name": "Bot",
+      "description": "A program, run by a person"
+    },
+    "server_owner": {
+      "name": "Space owner",
+      "description": "Owns this space"
+    },
+    "administrator": {
+      "name": "Administrator",
+      "description": "Holds the Administrator permission in this space"
+    },
+    "moderator": {
+      "name": "Moderator",
+      "description": "Can moderate members and messages in this space"
+    },
+    "helper": {
+      "name": "Helper",
+      "description": "Helps people find their way on this instance"
+    },
+    "founder": {
+      "name": "Founder",
+      "description": "Was there when this instance started"
+    },
+    "early_supporter": {
+      "name": "Early supporter",
+      "description": "Supported this instance early on"
+    },
+    "bug_hunter": {
+      "name": "Bug hunter",
+      "description": "Found and reported a bug"
+    },
+    "developer": {
+      "name": "Developer",
+      "description": "Works on Tavvit or on this instance"
+    },
+    "creator": {
+      "name": "Creator",
+      "description": "Makes things the community enjoys"
+    },
+    "event_participant": {
+      "name": "Event participant",
+      "description": "Took part in an event of this instance"
+    },
+    "community_contributor": {
+      "name": "Community contributor",
+      "description": "Helps the community grow"
+    },
+    "beta_tester": {
+      "name": "Beta tester",
+      "description": "Tried new features before everyone else"
+    },
+    "verified": {
+      "name": "Verified",
+      "description": "The administrators of this instance checked who runs this space"
+    },
+    "partner": {
+      "name": "Partner",
+      "description": "A community this instance works with"
+    }
+  },
+  "review": {
+    "verification": {
+      "none": "Not requested",
+      "pending": "In review",
+      "needs_info": "More information needed",
+      "verified": "Verified",
+      "rejected": "Rejected",
+      "revoked": "Revoked"
+    },
+    "discovery": {
+      "none": "Not submitted",
+      "pending": "In review",
+      "changes_requested": "Changes requested",
+      "approved": "Listed",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    },
+    "categories": {
+      "gaming": "Gaming",
+      "music": "Music",
+      "art": "Art & design",
+      "technology": "Technology",
+      "education": "Education",
+      "science": "Science",
+      "entertainment": "Entertainment",
+      "sports": "Sports",
+      "community": "Community",
+      "other": "Other"
+    },
+    "actions": {
+      "submit": "Request sent",
+      "withdraw": "Request withdrawn",
+      "approve": "Approved",
+      "reject": "Rejected",
+      "request_info": "More information requested",
+      "request_changes": "Changes requested",
+      "revoke": "Verification revoked",
+      "admin_withdraw": "Listing taken down",
+      "changed": "Back in review after an edit",
+      "migrated": "Moved into review"
+    },
+    "toast": {
+      "verification": "Verification of {{space}}: {{status}}",
+      "discovery": "Discovery listing of {{space}}: {{status}}"
+    },
+    "history": "History",
+    "noHistory": "Nothing has happened yet.",
+    "unknownActor": "A removed account",
+    "noDescription": "No description yet.",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members"
+  },
+  "notFound": {
+    "title": "Nothing here",
+    "body": "This address does not lead anywhere. The link may be old or mistyped.",
+    "toApp": "Back to the app",
+    "toHome": "To the home page"
+  },
+  "emailPrompt": {
+    "unconfirmed": "Your address {{address}} is not confirmed yet. Look for our mail, or check it in settings.",
+    "missing": "Add an email address, so you can get back in if you forget your password.",
+    "required": "Confirm your email address to create spaces and to start conversations with people who are not your friends.",
+    "open": "Open settings",
+    "dismiss": "Not now"
   }
 }

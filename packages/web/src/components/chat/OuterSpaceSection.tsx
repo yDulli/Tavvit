@@ -5,7 +5,7 @@ import { useDirectoryStore, type DirectoryFailure, type DirectoryStatus } from '
 import { useInstanceStore } from '../../stores/instanceStore';
 import { dedupeAgainstConnected, innerOrigins } from '../../utils/directory';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import { Mascot } from '../ui/Mascot';
+import { Icon } from '../ui/Icon';
 import { SpaceCard, outerEntryToSpace } from './SpaceCard';
 
 /**
@@ -90,16 +90,16 @@ export function OuterSpaceSection({ query, onConnect }: OuterSpaceSectionProps) 
     <section>
       <div className="mb-3" data-testid="outer-space-header">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-txt-tertiary">
+          <h2 className="label-mono">
             {t('spaces:explore.outer.title')}
-          </span>
+          </h2>
           {isLoading && hasEntries && (
             <span data-testid="outer-space-header-spinner" className="text-txt-tertiary">
               <LoadingSpinner size={14} />
             </span>
           )}
         </div>
-        <p className="text-[13px] text-txt-tertiary">{t('spaces:explore.outer.subtitle')}</p>
+        <p className="mt-0.5 text-ui text-txt-tertiary">{t('spaces:explore.outer.subtitle')}</p>
       </div>
 
       {isLoading && !hasEntries ? (
@@ -108,13 +108,21 @@ export function OuterSpaceSection({ query, onConnect }: OuterSpaceSectionProps) 
         </div>
       ) : status === 'ok' && !hasEntries && notice === 'none' ? (
         resultsQuery ? (
-          <p className="text-txt-tertiary text-sm py-6 text-center">{t('spaces:explore.outer.noMatches')}</p>
+          <div className="empty-state">
+            <span className="empty-state-icon" aria-hidden="true">
+              <Icon name="search" size={18} />
+            </span>
+            <p className="empty-state-body">{t('spaces:explore.outer.noMatches')}</p>
+          </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-64 opacity-80">
-            <div className="mb-3" data-testid="outer-space-mascot">
-              <Mascot state="lonely" className="w-32 h-32" />
-            </div>
-            <p className="text-txt-tertiary text-sm text-center px-6">{t('spaces:explore.outer.empty')}</p>
+          <div className="empty-state">
+            <span className="empty-state-icon" aria-hidden="true" data-testid="outer-space-mascot">
+              <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+              </svg>
+            </span>
+            <p className="empty-state-body">{t('spaces:explore.outer.empty')}</p>
           </div>
         )
       ) : (
@@ -133,13 +141,13 @@ export function OuterSpaceSection({ query, onConnect }: OuterSpaceSectionProps) 
           )}
 
           {notice === 'unreachable' && (
-            <div className="p-2.5 bg-accent-amber/10 border border-accent-amber/30 rounded text-[13px] text-accent-amber">
+            <div role="status" className="rounded-md border border-accent-amber/30 bg-accent-amber/10 px-3 py-2 text-ui text-txt-warning">
               {t('errors:directory_unreachable')}
             </div>
           )}
 
           {notice === 'error' && (
-            <div className="p-3 bg-accent-rose/10 border border-accent-rose/30 rounded text-sm text-txt-danger">
+            <div role="alert" className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">
               {t('errors:generic')}
             </div>
           )}
@@ -147,8 +155,9 @@ export function OuterSpaceSection({ query, onConnect }: OuterSpaceSectionProps) 
           {status === 'ok' && hasMore && (
             <div className="flex justify-center">
               <button
+                type="button"
                 onClick={() => { void loadMore(); }}
-                className="px-4 py-2 bg-interactive-muted hover:bg-interactive-hover text-txt-secondary text-sm font-medium rounded transition-colors"
+                className="btn-outline btn-sm"
               >
                 {t('spaces:explore.outer.showMore')}
               </button>

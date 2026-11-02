@@ -1,6 +1,10 @@
+import { needsVerifiedEmail } from '../email/gate.js';
+import { friendRequestableBy, maySendFriendRequest } from '../utils/contactPolicy.js';
+import { blockRefusal } from '../utils/blocks.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and, or, ne, like, sql, inArray, isNull } from 'drizzle-orm';
+import { eq, and, or, ne, not, sql, asc, isNull } from 'drizzle-orm';
 import { getDb, getRawDb, schema } from '../db/index.js';
+import { config } from '../config.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { connectionManager } from '../ws/handler.js';
@@ -18,11 +22,13 @@ import type {
   FriendRequest,
   SendFriendRequest,
   UpdateFriendRequest,
-  DiscoverUser,
+  UserSearchResult,
 } from '@backspace/shared';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { relayHandleOf } from './federation/stubName.js';
 import { sendError } from '../utils/httpErrors.js';
+import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
+import { suspendedNow } from '../utils/suspension.js';
 
 export function buildProfileSnapshot(user: typeof schema.users.$inferSelect): FederationRelayProfileSnapshot {
   if (user.isDeleted) {
@@ -45,6 +51,22 @@ export function buildProfileSnapshot(user: typeof schema.users.$inferSelect): Fe
   };
 }
 
+// ─── Finding people ──────────────────────────────────────────────────────────
+
+/** A username query: the characters usernames are made of, at least a whole username's minimum. */
+const USER_SEARCH_MIN_LENGTH = 3;
+const USER_SEARCH_MAX_LENGTH = 32;
+const USER_SEARCH_QUERY = /^[a-z0-9_]{3,32}$/;
+/** Results per query. */
+const USER_SEARCH_LIMIT = 8;
+/** Queries per account and minute, besides the per-address limit. */
+const userSearchLimit = createFixedWindowLimit({ max: 20, windowMs: 60 * 1000 });
+
+/** Tests reset the per-account budget between cases. */
+export function _resetUserSearchLimit(): void {
+  userSearchLimit.reset();
+}
+
 // ─── Local friend request helper ─────────────────────────────────────────────
 
 /** A user of this instance named by its username (a typed handle's local part). */
@@ -52,8 +74,15 @@ function findLocalUserByUsername(
   db: ReturnType<typeof getDb>,
   localUsername: string,
 ): typeof schema.users.$inferSelect | undefined {
-  // Match the canonical-lowercase form used by auth (auth.ts:32, 211, 256).
-  return db.select().from(schema.users).where(eq(schema.users.username, localUsername.toLowerCase())).get();
+  // Match the canonical-lowercase form used by auth (auth.ts:32, 211, 256),
+  // among live accounts of this instance: a tombstone's or a replicated row's
+  // stored name is no handle.
+  return db.select().from(schema.users).where(and(
+    eq(schema.users.username, localUsername.toLowerCase()),
+    eq(schema.users.isDeleted, 0),
+    eq(schema.users.accountKind, 'person'),
+    isNull(schema.users.homeInstance),
+  )).get();
 }
 
 /**
@@ -68,6 +97,7 @@ function findNativeUserByHomeId(
 ): typeof schema.users.$inferSelect | undefined {
   return db.select().from(schema.users).where(and(
     eq(schema.users.isDeleted, 0),
+    eq(schema.users.accountKind, 'person'),
     isNull(schema.users.homeInstance),
     or(eq(schema.users.id, homeUserId), eq(schema.users.homeUserId, homeUserId)),
   )).get();
@@ -87,6 +117,13 @@ async function handleLocalFriendRequest(
 
   if (targetUser.id === request.userId) {
     return sendError(reply, 400, 'cannot_friend_self');
+  }
+
+  // A block closes this in both directions; the person who was blocked is
+  // refused without being told why (utils/blocks.ts).
+  const blocked = blockRefusal(request.userId, targetUser.id, db);
+  if (blocked) {
+    return sendError(reply, 403, blocked);
   }
 
   // Check if already friends
@@ -110,6 +147,12 @@ async function handleLocalFriendRequest(
 
   if (existingRequest) {
     return sendError(reply, 400, 'friend_request_pending');
+  }
+
+  // The target's own rule (utils/contactPolicy.ts). After the checks above, so
+  // someone they already know about hears what they always heard.
+  if (!maySendFriendRequest(request.userId, targetUser, db)) {
+    return sendError(reply, 403, 'friend_request_not_accepted');
   }
 
   // Create the request
@@ -223,6 +266,12 @@ async function handleFederatedFriendRequest(
 ): Promise<unknown> {
   const { targetDomain, handle } = target;
 
+  // A friend on another instance needs federation, which is off unless the
+  // operator enabled it. Say so plainly rather than as an unreachable peer.
+  if (!config.federation.enabled) {
+    return sendError(reply, 403, 'federation_disabled');
+  }
+
   // 1. Resolve scheme
   const peerOrigin = resolveOriginFromHostname(targetDomain);
   if (!peerOrigin) {
@@ -326,6 +375,12 @@ async function handleFederatedFriendRequest(
   if (!stub) {
     // Tombstoned identity — refuse to resurrect.
     return sendError(reply, 404, 'user_not_found', { domain: targetDomain, handle });
+  }
+  // A block closes this in both directions, as for a local person; the person
+  // who was blocked is refused without being told why (utils/blocks.ts).
+  const blocked = blockRefusal(sender.id, stub.id, db);
+  if (blocked) {
+    return sendError(reply, 403, blocked);
   }
   const stubHydrated = await hydrateReplicatedUserProfile(stub, lookup.profile, db);
 
@@ -578,6 +633,7 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
 
     const sender = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
     if (!sender) return sendError(reply, 401, 'unauthorized');
+    if (needsVerifiedEmail(sender)) return sendError(reply, 403, 'email_verification_required');
 
     const ourOrigin = getOurOrigin();
     const ourHost = normalizeOriginForCompare(ourOrigin);
@@ -644,16 +700,26 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
     if (friendRequest.toId !== request.userId) {
       return sendError(reply, 403, 'friend_request_not_recipient');
     }
+    // A request is answered once: an accepted or declined one is no longer open.
+    if (friendRequest.status !== 'pending') {
+      return sendError(reply, 404, 'friend_request_not_found');
+    }
 
     if (status === 'accepted') {
       // Insert friend and update request status atomically
       const now = Date.now();
       db.transaction((tx) => {
-        tx.insert(schema.friends).values({
-          userId: friendRequest.fromId,
-          friendId: friendRequest.toId,
-          createdAt: now,
-        }).run();
+        const alreadyFriends = tx.select({ userId: schema.friends.userId }).from(schema.friends).where(or(
+          and(eq(schema.friends.userId, friendRequest.fromId), eq(schema.friends.friendId, friendRequest.toId)),
+          and(eq(schema.friends.userId, friendRequest.toId), eq(schema.friends.friendId, friendRequest.fromId)),
+        )).get();
+        if (!alreadyFriends) {
+          tx.insert(schema.friends).values({
+            userId: friendRequest.fromId,
+            friendId: friendRequest.toId,
+            createdAt: now,
+          }).run();
+        }
 
         tx.update(schema.friendRequests)
           .set({ status })
@@ -912,208 +978,68 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(200).send({ success: true });
   });
 
-  // GET /api/social/discover - Discover users on this instance
-  app.get<{ Querystring: { q?: string; limit?: string; offset?: string } }>('/api/social/discover', {
+  // GET /api/social/search?q=... - Find people by username (docs/systems/
+  // social.md, "Finding people"). Usernames of this instance only: the exact
+  // name first, then names that start with the query, at most
+  // USER_SEARCH_LIMIT. Enough to add someone whose name one knows, never a
+  // way to list everyone: no paging, no display names, a per-account budget
+  // on top of the per-address one. Nobody deleted, suspended or in a block
+  // with the caller comes back, and a result carries only what a row, a
+  // request or a DM needs.
+  app.get<{ Querystring: { q?: unknown } }>('/api/social/search', {
     preHandler: authenticate,
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
   }, async (request, reply) => {
+    const raw = request.query.q;
+    const q = (typeof raw === 'string' ? raw : '').trim().replace(/^@/, '').toLowerCase();
+    if (!USER_SEARCH_QUERY.test(q)) {
+      return sendError(reply, 400, 'user_search_query_invalid', { min: USER_SEARCH_MIN_LENGTH, max: USER_SEARCH_MAX_LENGTH });
+    }
+    if (!userSearchLimit.consume(request.userId)) {
+      return sendError(reply, 429, 'rate_limited');
+    }
+
     const db = getDb();
-    const q = request.query.q?.trim() || '';
-    const limit = Math.min(Math.max(parseInt(request.query.limit || '24', 10) || 24, 1), 100);
-    const offset = Math.max(parseInt(request.query.offset || '0', 10) || 0, 0);
-    const myId = request.userId;
-
-    // Build WHERE clause
-    const conditions = [
-      eq(schema.users.discoverable, 1),
-      eq(schema.users.isDeleted, 0),
-      ne(schema.users.id, myId),
-      // Exclude replicated federated users — each instance only surfaces its own native users.
-      // Federated users are discovered through the parallel fetch across connected instances.
-      sql`(${schema.users.homeInstance} IS NULL OR ${schema.users.homeInstance} = '')`,
-    ];
-
-    if (q) {
-      const pattern = `%${q}%`;
-      conditions.push(or(
-        like(schema.users.username, pattern),
-        like(schema.users.displayName, pattern),
-      )!);
-    }
-
-    // Get total count
-    const countResult = db.select({ count: sql<number>`count(*)` })
+    const me = request.userId;
+    // `_` is the one LIKE wildcard a username can hold; it is matched literally.
+    const prefix = `${q.replace(/_/g, '\\_')}%`;
+    const rows = db.select({
+      id: schema.users.id,
+      username: schema.users.username,
+      displayName: schema.users.displayName,
+      avatar: schema.users.avatar,
+      avatarColor: schema.users.avatarColor,
+      homeInstance: schema.users.homeInstance,
+      homeUserId: schema.users.homeUserId,
+    })
       .from(schema.users)
-      .where(and(...conditions))
-      .get();
-    const total = countResult?.count ?? 0;
-
-    if (total === 0) {
-      return reply.code(200).send({ users: [], total: 0 });
-    }
-
-    // Pre-load my social graph
-    const myFriendRows = db.select().from(schema.friends).where(
-      or(eq(schema.friends.userId, myId), eq(schema.friends.friendId, myId))
-    ).all();
-    const myFriendIds = new Set(myFriendRows.map(f => f.userId === myId ? f.friendId : f.userId));
-
-    const mySpaceRows = db.select({ spaceId: schema.spaceMembers.spaceId })
-      .from(schema.spaceMembers)
-      .where(eq(schema.spaceMembers.userId, myId))
-      .all();
-    const mySpaceIds = new Set(mySpaceRows.map(s => s.spaceId));
-
-    const outboundRequests = db.select().from(schema.friendRequests).where(
-      and(eq(schema.friendRequests.fromId, myId), eq(schema.friendRequests.status, 'pending'))
-    ).all();
-    const outboundMap = new Map(outboundRequests.map(r => [r.toId, r.id]));
-
-    const inboundRequests = db.select().from(schema.friendRequests).where(
-      and(eq(schema.friendRequests.toId, myId), eq(schema.friendRequests.status, 'pending'))
-    ).all();
-    const inboundMap = new Map(inboundRequests.map(r => [r.fromId, r.id]));
-
-    // Fetch page of users
-    const userRows = db.select()
-      .from(schema.users)
-      .where(and(...conditions))
-      .orderBy(sql`created_at DESC`)
-      .limit(limit)
-      .offset(offset)
+      .where(and(
+        eq(schema.users.isDeleted, 0),
+        eq(schema.users.accountKind, 'person'),
+        ne(schema.users.id, me),
+        // Replicated rows are people of other instances; their stored names
+        // are not usernames here.
+        sql`(${schema.users.homeInstance} IS NULL OR ${schema.users.homeInstance} = '')`,
+        not(suspendedNow(Date.now())),
+        friendRequestableBy(me),
+        sql`${schema.users.username} LIKE ${prefix} ESCAPE '\\'`,
+        sql`NOT EXISTS (SELECT 1 FROM user_blocks b
+          WHERE (b.blocker_id = ${me} AND b.blocked_id = ${schema.users.id})
+             OR (b.blocker_id = ${schema.users.id} AND b.blocked_id = ${me}))`,
+      ))
+      .orderBy(sql`CASE WHEN ${schema.users.username} = ${q} THEN 0 ELSE 1 END`, asc(schema.users.username))
+      .limit(USER_SEARCH_LIMIT)
       .all();
 
-    // Batch fetch friends and space memberships for all page users
-    const pageUserIds = userRows.map(r => r.id);
-
-    // Batch fetch all friends for page users
-    const pageFriendRows = pageUserIds.length > 0
-      ? db.select().from(schema.friends).where(
-          or(
-            inArray(schema.friends.userId, pageUserIds),
-            inArray(schema.friends.friendId, pageUserIds),
-          )
-        ).all()
-      : [];
-
-    // Build Map<userId, Set<friendId>> for page users
-    const friendIdsByUser = new Map<string, Set<string>>();
-    for (const f of pageFriendRows) {
-      // Map both directions
-      if (pageUserIds.includes(f.userId)) {
-        if (!friendIdsByUser.has(f.userId)) friendIdsByUser.set(f.userId, new Set());
-        friendIdsByUser.get(f.userId)!.add(f.friendId);
-      }
-      if (pageUserIds.includes(f.friendId)) {
-        if (!friendIdsByUser.has(f.friendId)) friendIdsByUser.set(f.friendId, new Set());
-        friendIdsByUser.get(f.friendId)!.add(f.userId);
-      }
-    }
-
-    // Batch fetch all space memberships for page users
-    const pageSpaceMemberRows = pageUserIds.length > 0
-      ? db.select({ userId: schema.spaceMembers.userId, spaceId: schema.spaceMembers.spaceId })
-          .from(schema.spaceMembers)
-          .where(inArray(schema.spaceMembers.userId, pageUserIds))
-          .all()
-      : [];
-
-    // Build Map<userId, Set<spaceId>> for page users
-    const spaceIdsByUser = new Map<string, Set<string>>();
-    for (const sm of pageSpaceMemberRows) {
-      if (!spaceIdsByUser.has(sm.userId)) spaceIdsByUser.set(sm.userId, new Set());
-      spaceIdsByUser.get(sm.userId)!.add(sm.spaceId);
-    }
-
-    // Compute mutual counts + relationship for each user
-    const discoverUsers: DiscoverUser[] = userRows.map(row => {
-      const u = sanitizeUser(row);
-
-      // Mutual friends (using batch-fetched data)
-      const theirFriendIds = friendIdsByUser.get(row.id) ?? new Set();
-      const mutualFriendCount = [...myFriendIds].filter(id => theirFriendIds.has(id)).length;
-
-      // Mutual spaces (using batch-fetched data)
-      const theirSpaceIds = spaceIdsByUser.get(row.id) ?? new Set();
-      const mutualSpaceCount = [...mySpaceIds].filter(id => theirSpaceIds.has(id)).length;
-
-      // Relationship
-      let relationship: DiscoverUser['relationship'] = 'none';
-      let requestId: string | undefined;
-      if (myFriendIds.has(row.id)) {
-        relationship = 'friends';
-      } else if (outboundMap.has(row.id)) {
-        relationship = 'outbound_pending';
-        requestId = outboundMap.get(row.id);
-      } else if (inboundMap.has(row.id)) {
-        relationship = 'inbound_pending';
-        requestId = inboundMap.get(row.id);
-      }
-
-      return {
-        id: u.id,
-        username: u.username,
-        displayName: u.displayName,
-        avatar: u.avatar,
-        banner: u.banner,
-        avatarColor: u.avatarColor,
-        bio: u.bio,
-        status: u.status,
-        customStatus: u.customStatus,
-        createdAt: u.createdAt,
-        homeInstance: u.homeInstance,
-        homeUserId: u.homeUserId,
-        mutualFriendCount,
-        mutualSpaceCount,
-        relationship,
-        ...(requestId ? { requestId } : {}),
-      };
-    });
-
-    // Sort: mutual friends DESC, then created_at DESC
-    discoverUsers.sort((a, b) => {
-      if (b.mutualFriendCount !== a.mutualFriendCount) return b.mutualFriendCount - a.mutualFriendCount;
-      return b.createdAt - a.createdAt;
-    });
-
-    return reply.code(200).send({ users: discoverUsers, total });
-  });
-
-  // GET /api/social/search?q=... - Search for users to add as friends
-  app.get<{ Querystring: { q: string } }>('/api/social/search', {
-    preHandler: authenticate,
-    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
-  }, async (request, reply) => {
-    const { q } = request.query;
-    const db = getDb();
-
-    if (!q || q.length < 1) {
-      return reply.code(200).send([]);
-    }
-
-    const pattern = `%${q}%`;
-
-    const conditions = [
-      eq(schema.users.isDeleted, 0),
-      eq(schema.users.discoverable, 1),
-      ne(schema.users.id, request.userId),
-      // Exclude replicated federated stubs: their stored username is
-      // `<homeUserId>@<domain>`, so a substring of the domain would match
-      // every stub from that instance. Federated users are surfaced via
-      // the client-side cross-instance fan-out instead.
-      sql`(${schema.users.homeInstance} IS NULL OR ${schema.users.homeInstance} = '')`,
-      or(
-        like(schema.users.username, pattern),
-        like(schema.users.displayName, pattern),
-      )!,
-    ];
-
-    const users = db.select()
-      .from(schema.users)
-      .where(and(...conditions))
-      .limit(10)
-      .all();
-
-    return reply.code(200).send(users.map(u => sanitizeUser(u)));
+    const results: UserSearchResult[] = rows.map((row) => ({
+      id: row.id,
+      username: row.username,
+      displayName: row.displayName,
+      avatar: row.avatar,
+      avatarColor: (row.avatarColor as UserSearchResult['avatarColor']) ?? null,
+      homeInstance: row.homeInstance,
+      homeUserId: row.homeUserId,
+    }));
+    return reply.code(200).send(results);
   });
 }

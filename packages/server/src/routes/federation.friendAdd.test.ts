@@ -31,7 +31,7 @@ setWorkerId(1);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const HOME = 'https://home.test';
-const ORBIT = 'https://orbit.test';
+const TAVVIT = 'https://orbit.test';
 const ALICE = 'alice-id';
 const BOB = 'bob-id';
 
@@ -179,7 +179,7 @@ function friendAdd(messageId: string, fromHomeUserId: string, fromInstance: stri
     timestamp: Date.now(),
     friendship: {
       from: { homeUserId: fromHomeUserId, homeInstance: fromInstance },
-      to: { homeUserId: BOB, homeInstance: ORBIT },
+      to: { homeUserId: BOB, homeInstance: TAVVIT },
       fromProfile: { username: 'alice', displayName: 'Alice', avatar: null, avatarColor: null, banner: null, bio: null, status: null },
       toProfile: { username: 'bob', displayName: 'Bob', avatar: null, avatarColor: null, banner: null, bio: null, status: 'online' },
       createdAt: Date.now(),
@@ -189,7 +189,7 @@ function friendAdd(messageId: string, fromHomeUserId: string, fromInstance: stri
 
 beforeEach(() => {
   home = makeInstance(HOME, ALICE, 'alice');
-  orbit = makeInstance(ORBIT, BOB, 'bob');
+  orbit = makeInstance(TAVVIT, BOB, 'bob');
 });
 
 describe('a friendship forms on the requester\'s instance as the answer to its pending request', () => {
@@ -352,7 +352,7 @@ describe('friend_request_update is applied to the users that are its identities 
       messageId: `${update!.messageId}:stranger`,
       friendship: {
         ...update!.friendship!,
-        to: { homeUserId: 'carol-id', homeInstance: ORBIT },
+        to: { homeUserId: 'carol-id', homeInstance: TAVVIT },
         toProfile: { username: 'carol', displayName: 'Carol', avatar: null, avatarColor: null, banner: null, bio: null, status: null },
       },
     };
@@ -418,7 +418,7 @@ describe('the WS event of a relayed friendship goes to the side that is homed he
       timestamp: Date.now(),
       friendship: {
         from: { homeUserId: ALICE, homeInstance: 'home.test' },
-        to: { homeUserId: BOB, homeInstance: ORBIT },
+        to: { homeUserId: BOB, homeInstance: TAVVIT },
         createdAt: Date.now(),
       },
     };

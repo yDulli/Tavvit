@@ -2,8 +2,14 @@ import { create } from 'zustand';
 import type { Activity } from '@backspace/shared';
 import { wsSendAll } from '../hooks/useWebSocket';
 import { userKey, type PresenceSubject } from '../utils/identity';
+import { ACTIVITY_LIMITS } from '@backspace/shared/src/activities.js';
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Wait after a game is detected: a change of window should not flicker the status. */
+const DETECTED_PUSH_DELAY_MS = 5000;
+/** Wait after the person turned sharing back on: they are watching for it. */
+const SHARING_PUSH_DELAY_MS = 600;
 
 /** An activity list delivered for one user by one origin. */
 export interface ActivityEntry {
@@ -42,7 +48,10 @@ interface ActivityState {
    */
   originRows: Map<string, Map<string, PresenceSubject>>;
   showActivity: boolean;
+  /** What this client sends: what the desktop app detected, when sharing is on. */
   myActivities: Activity[] | null;
+  /** What the desktop app detected (always empty in a browser, and while game detection is off). */
+  detectedActivities: Activity[];
 
   setUserActivities: (subject: PresenceSubject, origin: string, activities: Activity[]) => void;
   clearUserActivities: (subject: PresenceSubject, origin: string) => void;
@@ -58,8 +67,29 @@ interface ActivityState {
   /** Record (or, with null, drop) the rows an older server's `ready` listed. */
   setOriginRows: (origin: string, rows: Map<string, PresenceSubject> | null) => void;
   setShowActivity: (show: boolean) => void;
+  /** The desktop app's detected activities, replacing the previous detection. */
   pushActivities: (activities: Activity[]) => void;
   reset: () => void;
+}
+
+type StoreSet = (partial: Partial<ActivityState>) => void;
+type StoreGet = () => ActivityState;
+
+/**
+ * Send the composed list after `delayMs`, restarting the wait if another change
+ * arrives first, so only the final state goes out. Nothing is recorded or sent
+ * while sharing is off.
+ */
+function publish(set: StoreSet, get: StoreGet, delayMs: number): void {
+  const { showActivity, detectedActivities } = get();
+  if (!showActivity) return;
+  const activities = detectedActivities.slice(0, ACTIVITY_LIMITS.MAX_ACTIVITIES_PER_USER);
+  set({ myActivities: activities });
+  if (pushTimer) clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    wsSendAll({ type: 'activity_update', activities });
+    pushTimer = null;
+  }, delayMs);
 }
 
 export const useActivityStore = create<ActivityState>((set, get) => ({
@@ -68,6 +98,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   originRows: new Map(),
   showActivity: true,
   myActivities: null,
+  detectedActivities: [],
 
   setUserActivities: (subject, origin, activities) => {
     const key = userKey(subject, origin);
@@ -141,17 +172,15 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
       if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
       wsSendAll({ type: 'activity_update', activities: [] });
       set({ myActivities: null });
+    } else {
+      // What was set while sharing was off is sent now that it is on.
+      publish(set, get, SHARING_PUSH_DELAY_MS);
     }
   },
 
   pushActivities: (activities) => {
-    if (!get().showActivity) return;
-    set({ myActivities: activities });
-    if (pushTimer) clearTimeout(pushTimer);
-    pushTimer = setTimeout(() => {
-      wsSendAll({ type: 'activity_update', activities });
-      pushTimer = null;
-    }, 5000);
+    set({ detectedActivities: activities });
+    publish(set, get, DETECTED_PUSH_DELAY_MS);
   },
 
   reset: () => {
@@ -162,6 +191,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
       originRows: new Map(),
       showActivity: true,
       myActivities: null,
+      detectedActivities: [],
     });
   },
 }));

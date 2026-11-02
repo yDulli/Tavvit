@@ -25,8 +25,9 @@ vi.mock('./components/layout/AppLayout', async () => {
 vi.mock('./components/auth/LoginPage', () => ({ LoginPage: () => <div data-testid="login" /> }));
 vi.mock('./components/auth/RegisterPage', () => ({ RegisterPage: () => <div data-testid="register" /> }));
 vi.mock('./components/JoinPage', () => ({ JoinPage: () => <div data-testid="join" /> }));
+vi.mock('./components/download/DownloadPage', () => ({ DownloadPage: () => <div data-testid="download" /> }));
 vi.mock('./components/ui/SwUpdatePrompt', () => ({ SwAutoUpdate: () => null }));
-vi.mock('./components/telemetry/TelemetryAsk', () => ({ TelemetryAsk: () => null }));
+vi.mock('./components/ui/InstanceBranding', () => ({ InstanceBranding: () => null }));
 vi.mock('./components/voice/ScreenShareSetup', () => ({ ScreenShareSetup: () => null }));
 
 import { render, screen } from '@testing-library/react';
@@ -51,9 +52,21 @@ afterEach(() => {
 });
 
 describe('App routes', () => {
-  it('serves /backspace inside the app layout', () => {
-    renderAt('/backspace');
-    expect(screen.getByTestId('layout')).toHaveTextContent(/^\/backspace$/);
+  it('serves /about inside the app layout', () => {
+    renderAt('/about');
+    expect(screen.getByTestId('layout')).toHaveTextContent(/^\/about$/);
+  });
+
+  it('serves /friends inside the app layout', () => {
+    renderAt('/friends');
+    expect(screen.getByTestId('layout')).toHaveTextContent(/^\/friends$/);
+  });
+
+  it('serves the download page to everyone, outside the app layout', () => {
+    useAuthStore.setState({ token: null });
+    renderAt('/download');
+    expect(screen.getByTestId('download')).toBeInTheDocument();
+    expect(screen.queryByTestId('layout')).toBeNull();
   });
 
   it('still serves /explore inside the app layout', () => {
@@ -61,9 +74,15 @@ describe('App routes', () => {
     expect(screen.getByTestId('layout')).toHaveTextContent(/^\/explore$/);
   });
 
-  it('sends a signed-out visitor of /backspace to the login page', () => {
+  it('sends a signed-out visitor of /about to the login page', () => {
     useAuthStore.setState({ token: null });
-    renderAt('/backspace');
+    renderAt('/about');
+    expect(screen.getByTestId('login')).toBeInTheDocument();
+  });
+
+  it('sends a signed-out visitor of /friends to the login page', () => {
+    useAuthStore.setState({ token: null });
+    renderAt('/friends');
     expect(screen.getByTestId('login')).toBeInTheDocument();
   });
 });

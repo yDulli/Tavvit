@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "inbox": "Inbox",
+    "requestsLabel_one": "{{count}} friend request waiting",
+    "requestsLabel_other": "{{count}} friend requests waiting"
+  },
+  "greeting": {
+    "morning": "Good morning, {{name}}",
+    "afternoon": "Good afternoon, {{name}}",
+    "evening": "Good evening, {{name}}",
+    "night": "Still up, {{name}}?"
+  },
+  "subtitle": {
+    "online": "{{instance}} · Friends online: {{n}}",
+    "quiet": "{{instance}} · No friends online right now"
+  },
+  "empty": {
+    "title": "Your people will show up here",
+    "body": "Add friends by username, or invite them to a space with an invite link. Who is online, who is in voice and what everyone is up to appears on this page.",
+    "addFriend": "Add a friend"
+  },
+  "voice": {
+    "title": "In voice",
+    "join": "Join",
+    "joinLabel": "Join voice in {{space}}",
+    "inSpace": "in {{space}}",
+    "status": "In voice · {{space}}"
+  },
+  "messages": {
+    "caughtUp": "You're all caught up."
+  },
+  "requests": {
+    "title": "Friend requests",
+    "waiting": "Waiting for your answer: {{n}}",
+    "review": "Review"
+  },
+  "spaces": {
+    "title": "Your spaces",
+    "empty": "You are not in a space yet. Create one for your group, or join with an invite link.",
+    "create": "Create a space",
+    "join": "Join with invite",
+    "inVoice_one": "{{count}} friend in voice",
+    "inVoice_other": "{{count}} friends in voice",
+    "mentions_one": "{{count}} unread mention",
+    "mentions_other": "{{count}} unread mentions"
+  },
+  "about": {
+    "title": "About Tavvit",
+    "tagline": "A place for your people.",
+    "server": {
+      "title": "This server",
+      "address": "Address",
+      "version": "Version",
+      "sourceMissing": "Source code link is not configured for this server."
+    },
+    "developers": {
+      "title": "Developers",
+      "body": "Bots, commands and webhooks, with documentation and an API reference.",
+      "link": "Read the docs"
+    },
+    "help": {
+      "title": "Help",
+      "help": "Help",
+      "changelog": "What's new",
+      "status": "Status"
+    }
+  },
+  "inbox": {
+    "title": "Inbox",
+    "tabs": {
+      "unread": "Unread",
+      "mentions": "Mentions",
+      "saved": "Saved",
+      "keywords": "Keywords"
+    },
+    "markRead": "Mark as read",
+    "markChannelRead": "Mark the channel as read",
+    "markAll": "Mark all as read",
+    "markingAll": "Marking…",
+    "markFailed": "Could not mark it as read. Try again.",
+    "sections": {
+      "dms": "Direct messages",
+      "spaces": "Spaces"
+    },
+    "caughtUp": {
+      "title": "You're all caught up",
+      "body": "New messages and mentions show up here.",
+      "muted_one": "Nothing new, except in {{count}} muted channel.",
+      "muted_other": "Nothing new, except in {{count}} muted channels."
+    },
+    "via": {
+      "role": "your role",
+      "everyone": "everyone",
+      "keyword": "a word you watch"
+    },
+    "noMentions": {
+      "title": "No mentions yet",
+      "body": "When someone mentions you, your role or everyone in a space, it shows up here."
+    },
+    "mentionsFailed": "Some mentions could not be loaded.",
+    "retry": "Try again",
+    "older": "Show older",
+    "mutedHidden_one": "{{count}} muted channel with unread messages is not shown.",
+    "mutedHidden_other": "{{count}} muted channels with unread messages are not shown.",
+    "navLabel_one": "{{count}} item needs attention",
+    "navLabel_other": "{{count}} items need attention"
+  },
+  "actions": {
+    "newMessage": "New message",
+    "addFriend": "Add friend",
+    "createSpace": "Create space",
+    "joinSpace": "Join space"
+  },
+  "attention": {
+    "title": "Needs your attention",
+    "openInbox_one": "Open inbox ({{count}})",
+    "openInbox_other": "Open inbox ({{count}})"
+  },
+  "recent": {
+    "title": "Recent conversations",
+    "empty": "Conversations you open show up here."
+  },
+  "online": {
+    "title": "Online now",
+    "inVoice": "In voice",
+    "message": "Message {{name}}",
+    "noFriends": "Add friends to see who is around.",
+    "nobody_one": "{{count}} friend is offline right now.",
+    "nobody_other": "{{count}} friends are offline right now.",
+    "viewAll": "View all",
+    "nobodyTitle": "Nobody is online",
+    "noFriendsTitle": "No friends yet"
+  },
+  "jump": {
+    "label": "Jump to a conversation…"
+  },
+  "onboarding": {
+    "friends": {
+      "title": "Add your friends",
+      "body": "Find people by their username."
+    },
+    "space": {
+      "title": "Start a space",
+      "body": "A home for your group, with text and voice channels and the roles you choose."
+    },
+    "invite": {
+      "title": "Got an invite?",
+      "body": "Paste the invite link someone sent you to join their space."
+    }
+  },
+  "unread": {
+    "dot": "Unread"
+  },
+  "saved": {
+    "emptyTitle": "Nothing saved yet",
+    "emptyBody": "Save a message from its menu to find it again here. Only you see this list.",
+    "failed": "The saved messages could not be loaded.",
+    "remove": "Remove from Saved",
+    "remindsAt": "Reminds you on {{time}}",
+    "directMessage": "Direct message",
+    "reminderTitle": "Reminder",
+    "reminderToast": "Reminder: {{preview}}",
+    "noPreview": "A message"
+  },
+  "keywordMatches": {
+    "emptyTitle": "No matches yet",
+    "emptyBody": "Messages with your words will show up here.",
+    "failed": "The matches could not be loaded."
+  }
+}

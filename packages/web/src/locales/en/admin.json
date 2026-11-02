@@ -1,7 +1,7 @@
 {
   "general": {
     "title": "General",
-    "description": "Configure your Backspace instance. These settings affect all users.",
+    "description": "Configure your Tavvit instance. These settings affect all users.",
     "instanceName": {
       "label": "Instance Name",
       "description": "The name shown on the login page and to federated instances.",
@@ -21,13 +21,13 @@
         },
         "global": {
           "label": "Allow global listing",
-          "description": "Each space can then be manually listed in the global Backspace directory from its own Discovery settings."
+          "description": "Approved spaces can then also be listed in the global Tavvit directory, when their owners opt in from their Discovery settings."
         }
       },
       "unconfigured": "This instance is not configured to reach a directory, so nothing here can be listed globally."
     },
     "directory": {
-      "listingHint": "Turning this on does not list any spaces by itself. Each space still has to switch on \"{{setting}}\" in its Discovery settings.",
+      "listingHint": "Turning this on lists no space by itself. A space must have an approved listing and switch on \"{{setting}}\" in its Discovery settings.",
       "showMeWhere": "Show me where",
       "saveAndShowMeWhere": "Save and show me where",
       "listedCount_one": "{{count}} space listed",
@@ -55,11 +55,6 @@
       "toggleDescription": "People here see spaces from other instances in Outer Space. Their browsers load those spaces' icons and banners from the instances that own them.",
       "unavailable": "This instance is not configured to reach a directory, so there is nothing to show."
     },
-    "supportCard": {
-      "label": "Backspace page",
-      "toggleLabel": "Show the Support card",
-      "toggleDescription": "Shows a card on the Backspace page that links to the project's Ko-fi page. Turning it off hides only that card."
-    },
     "gif": {
       "label": "GIF Search",
       "description": "Enable GIF search powered by Klipy. Get a free API key from the Klipy developer portal.",
@@ -68,6 +63,21 @@
       "enabled": "Enabled",
       "notConfigured": "Not configured",
       "clearKey": "Clear key"
+    },
+    "accent": {
+      "label": "Accent colour",
+      "description": "The colour of buttons and highlights for everyone on this server.",
+      "custom": "Custom",
+      "useDefault": "Use the default",
+      "preview": "Sample",
+      "invalid": "Enter a colour like #7466e8.",
+      "tooLight": "This colour is too light: white text on a button would be hard to read.",
+      "tooDark": "This colour is too dark: it would disappear into the dark panels."
+    },
+    "emoji": {
+      "title": "Emoji",
+      "label": "Everyone can add emoji",
+      "description": "Off: only administrators add to the library. Everyone can use what is in it."
     }
   },
   "registration": {
@@ -257,6 +267,13 @@
       "saved": "Upload limit set to {{limit}}",
       "saveFailed": "Failed to update upload limit"
     },
+    "accountLimits": {
+      "label": "Limits per account",
+      "description": "So that no single account can fill the disk. Admins have no limit, 0 means none, and what an account already keeps stays when you lower a limit. A single account can get its own limit on its page.",
+      "storage": "Files per account (GB)",
+      "spaces": "Spaces per account",
+      "saved": "Limits saved"
+    },
     "cleanup": {
       "label": "Cleanup",
       "nothingFound": "No orphaned files, stale uploads, or dangling records found.",
@@ -341,57 +358,6 @@
       "description": "Some bitrate values exceed your maximum of {{max}}. Streams at those combos will be quality-degraded to your cap."
     }
   },
-  "updates": {
-    "title": "Updates",
-    "badge": {
-      "settingsAriaLabel": "Settings, instance update available",
-      "toast": "Backspace {{version}} is available for this instance",
-      "toastAction": "View"
-    },
-    "description": "What this instance is running, and how to move it forward.",
-    "loading": "Loading update status…",
-    "loadFailed": "Could not load the update status.",
-    "copyFailed": "Could not copy. Select the command and copy it by hand.",
-    "running": {
-      "label": "Running",
-      "commit": "commit {{commit}} · ",
-      "channel": {
-        "prebuilt": "prebuilt image",
-        "source": "built from source",
-        "unknown": "install method not recorded"
-      }
-    },
-    "available": {
-      "label": "Available",
-      "version": "Backspace {{version}} is available",
-      "released": "Released {{date}} · ",
-      "releaseNotes": "Release notes",
-      "fromInstallDir": "From your install directory:",
-      "scriptDescription": "Takes a database snapshot, fetches the new image, and restarts only the Backspace container. If the new version does not come up healthy, or comes up still running the old code, it puts back the version you are on now.",
-      "noScript": "I do not have update.sh",
-      "manualIntro": "update.sh ships from 1.0.5 onward. On a git checkout, <code>git pull</code> brings it in. Otherwise run the steps by hand, after taking a snapshot with <code>./backup.sh</code>.",
-      "prebuiltInstall": "Prebuilt-image install:",
-      "sourceInstall": "From-source install:",
-      "manualWarning": "Name the <code>backspace</code> service explicitly and do not pass <code>--remove-orphans</code>. Compose will suggest it if you run other containers in this project, and it would delete them."
-    },
-    "upToDate": "You are on the latest release.",
-    "disabled": {
-      "title": "Update checks are turned off",
-      "description": "This instance will not contact GitHub. Set <code>BACKSPACE_UPDATE_CHECK=true</code> in your <code>.env</code> to allow the lookup, or check the releases page yourself."
-    },
-    "rateLimited": {
-      "title": "GitHub rate-limited the lookup",
-      "description": "This says nothing about whether an update exists. Try again later."
-    },
-    "unreachable": {
-      "title": "Could not check for updates",
-      "description": "GitHub could not be reached, so this says nothing about whether an update exists. Your instance is unaffected."
-    },
-    "lastChecked": "Last checked {{when}}",
-    "noLookups": "No lookups are made",
-    "checkAgain": "Check again",
-    "checking": "Checking…"
-  },
   "users": {
     "title": "Users",
     "description": "View and manage user accounts on this instance.",
@@ -449,20 +415,560 @@
     "deleteDialog": {
       "title": "Delete User",
       "description": "Permanently delete <strong>{{username}}</strong>? This will remove them from all spaces, DMs, and friends lists. This cannot be undone.",
-      "confirm": "Delete User"
+      "confirm": "Delete User",
+      "reason": "Why (for the audit log)",
+      "password": "Your password, to confirm it is you"
     }
   },
-  "mobile": {
-    "title": "Instance",
+  "platform": {
+    "decision": {
+      "noteRequired": "Reason (required, the owner reads it)",
+      "noteOptional": "Reason (optional, the owner reads it)",
+      "notePlaceholder": "What the owner should know about this decision",
+      "counter": "{{length}}/{{max}}"
+    },
+    "reviews": {
+      "title": "Reviews",
+      "description": "Open requests, oldest first. Open one to read it in full, see the listing preview and its history, and decide with a reason.",
+      "verification": "Verification requests · {{n}}",
+      "discovery": "Listing requests · {{n}}",
+      "noVerification": "No verification request is waiting.",
+      "noDiscovery": "No listing request is waiting."
+    },
+    "spaces": {
+      "title": "Spaces",
+      "description": "Every space this instance hosts. Open one for its reviews, badges and history.",
+      "detailTitle": "Space",
+      "searchPlaceholder": "Search by name or id…",
+      "filterLabel": "Show",
+      "filters": {
+        "all": "All spaces",
+        "listed": "Listed in Explore",
+        "verified": "Verified",
+        "open_review": "Open review"
+      },
+      "empty": "No space matches.",
+      "page": "Page {{page}} of {{total}}",
+      "members_one": "{{count}} member",
+      "members_other": "{{count}} members",
+      "visibility": {
+        "public": "Public",
+        "request": "Join by request",
+        "private": "Private"
+      },
+      "created": "Created {{date}}",
+      "directoryOptIn": "Directory opt-in",
+      "ownedBy": "Owned by {{name}} (@{{username}})",
+      "ownerGone": "Owner account gone"
+    },
+    "requestedBy": "Sent by {{name}} on {{date}}",
+    "verification": {
+      "title": "Verification",
+      "name": "Name",
+      "description": "Description",
+      "category": "Category",
+      "website": "Website",
+      "profiles": "Public profiles",
+      "reason": "Reason",
+      "proof": "Proof",
+      "requested": "Sent",
+      "none": "No verification was requested.",
+      "history": "Verification history"
+    },
+    "discovery": {
+      "title": "Listing in Explore",
+      "category": "Category",
+      "requested": "Sent",
+      "lastNote": "Last note",
+      "none": "No listing was requested.",
+      "history": "Listing history"
+    },
+    "decisions": {
+      "verification": {
+        "approve": {
+          "button": "Verify",
+          "title": "Verify this space?",
+          "description": "The space shows the verified check mark wherever it is shown, until the verification is revoked.",
+          "confirm": "Verify"
+        },
+        "request_info": {
+          "button": "Ask for more information",
+          "title": "Ask for more information?",
+          "description": "The request goes back to the owner with your note. It returns to the queue when they send it again.",
+          "confirm": "Ask"
+        },
+        "reject": {
+          "button": "Reject",
+          "title": "Reject this request?",
+          "description": "The space is not verified. The owner reads your reason and can send a new request.",
+          "confirm": "Reject"
+        },
+        "revoke": {
+          "button": "Revoke",
+          "title": "Revoke the verification?",
+          "description": "The check mark disappears at once. The owner reads your reason.",
+          "confirm": "Revoke"
+        }
+      },
+      "discovery": {
+        "approve": {
+          "button": "Approve listing",
+          "title": "List this space in Explore?",
+          "description": "The space appears in Explore as the preview shows it. An edit of its name, description or pictures sends it back to review.",
+          "confirm": "Approve"
+        },
+        "request_changes": {
+          "button": "Ask for changes",
+          "title": "Ask for changes?",
+          "description": "The request goes back to the owner with your note. It returns to the queue when they send it again.",
+          "confirm": "Ask"
+        },
+        "reject": {
+          "button": "Reject",
+          "title": "Reject this listing?",
+          "description": "The space stays out of Explore. The owner reads your reason and can send a new request.",
+          "confirm": "Reject"
+        },
+        "withdraw": {
+          "button": "Take down",
+          "title": "Take this listing down?",
+          "description": "The space leaves Explore at once, or its request leaves the queue. The owner reads your reason.",
+          "confirm": "Take down"
+        }
+      }
+    },
+    "badges": {
+      "spaceTitle": "Badges",
+      "spaceHint": "Badges you give this space. Verified is not among them: it follows the verification.",
+      "userTitle": "Badges",
+      "userHint": "Badges you give this person. Staff is not among them: it follows the administrator role."
+    },
+    "audit": {
+      "title": "Audit log",
+      "description": "Everything the administrators did here: suspensions, review decisions, badges, roles, invites and settings.",
+      "filterLabel": "Show",
+      "filters": {
+        "all": "Everything",
+        "user": "Accounts",
+        "space": "Spaces",
+        "instance": "Instance"
+      },
+      "more": "Show older entries",
+      "empty": "Nothing recorded yet.",
+      "aboutSpace": "Audit log for this space",
+      "aboutUser": "Audit log for this account",
+      "by": "by {{name}}",
+      "actions": {
+        "user_suspend": "Suspended an account",
+        "user_unsuspend": "Lifted a suspension",
+        "user_role": "Changed the administrator role",
+        "user_password_reset": "Reset a password",
+        "user_delete": "Deleted an account",
+        "user_badges": "Changed the badges of an account",
+        "space_badges": "Changed the badges of a space",
+        "verification_approve": "Verified a space",
+        "verification_reject": "Rejected a verification request",
+        "verification_request_info": "Asked for more verification information",
+        "verification_revoke": "Revoked a verification",
+        "discovery_approve": "Approved a listing",
+        "discovery_reject": "Rejected a listing",
+        "discovery_request_changes": "Asked for listing changes",
+        "discovery_withdraw": "Took a listing down",
+        "settings_update": "Changed instance settings",
+        "invite_create": "Created an invite",
+        "invite_update": "Changed an invite",
+        "invite_revoke": "Revoked an invite",
+        "invite_reinstate": "Reinstated an invite",
+        "invite_delete": "Deleted an invite",
+        "storage_cleanup": "Cleaned up storage",
+        "unknown": "An action this version does not know",
+        "legal_operator_update": "Changed the operator details",
+        "legal_publish": "Published a legal document",
+        "report_decide": "Decided a report",
+        "announcement_create": "Sent an announcement",
+        "announcement_end": "Ended an announcement",
+        "user_note_add": "Added a note",
+        "user_note_delete": "Deleted a note",
+        "user_warn": "Warned an account",
+        "user_sessions_end": "Signed an account out",
+        "user_storage_limit": "Changed an account's file limit",
+        "signup_rule_add": "Added a sign-up rule",
+        "signup_rule_remove": "Removed a sign-up rule",
+        "signup_challenge_update": "Changed the check against automatic sign-ups",
+        "bots_update": "Changed whether bots are allowed",
+        "bot_delete": "Deleted a bot",
+        "starter_spaces_update": "Changed the starter spaces",
+        "backup_create": "Took a backup",
+        "accounts_export": "Exported the accounts",
+        "audit_export": "Exported the audit log",
+        "peer_trust": "Changed trust in another instance",
+        "space_vanity_revoke": "Took an invite address away"
+      },
+      "details": {
+        "until": "Until {{date}}",
+        "untilLifted": "Until lifted",
+        "storageOwn": "Own limit: {{limit}}",
+        "storageNone": "No limit",
+        "storageInstance": "The instance's limit",
+        "madeAdmin": "Made administrator",
+        "removedAdmin": "Administrator role removed",
+        "badgesAdded": "Added: {{badges}}",
+        "badgesRemoved": "Removed: {{badges}}",
+        "fields": "Changed: {{fields}}",
+        "cleanup_one": "Removed {{count}} file ({{size}})",
+        "cleanup_other": "Removed {{count}} files ({{size}})",
+        "sessions": "Sessions: {{n}}",
+        "rows": "Rows: {{n}}",
+        "peer": {
+          "initiated": "Asked to connect",
+          "approved": "Approved",
+          "denied": "Refused",
+          "revoked": "Trust taken back",
+          "reset": "Reset",
+          "removed": "Record deleted",
+          "rotated": "New shared secret"
+        }
+      }
+    },
+    "users": {
+      "detailTitle": "Account",
+      "joined": "Joined",
+      "memberships": "Spaces",
+      "friends": "Friends",
+      "messages": "Messages",
+      "ownedSpaces": "Spaces owned",
+      "statusFilter": "Status",
+      "allStatuses": "All accounts",
+      "suspendedOnly": "Suspended",
+      "manage": "Manage"
+    },
+    "suspension": {
+      "chip": "Suspended",
+      "title": "Suspension",
+      "activeUntilLifted": "Suspended since {{date}}, until an administrator lifts it.",
+      "activeUntil": "Suspended since {{since}}, until {{until}}.",
+      "lift": "Lift suspension",
+      "hint": "A suspension keeps the person out: no sign-in, no messages, no calls. Nothing of the account is deleted, and it ends by itself at the end you choose.",
+      "duration": "Duration",
+      "durations": {
+        "h1": "1 hour",
+        "h24": "24 hours",
+        "h72": "3 days",
+        "h168": "7 days",
+        "h720": "30 days",
+        "lifted": "Until lifted"
+      },
+      "reason": "Reason (required)",
+      "reasonPlaceholder": "What the person did, in a sentence they will understand",
+      "reasonShown": "The person reads this reason when they try to sign in.",
+      "suspend": "Suspend",
+      "deleted": "A deleted account cannot be suspended.",
+      "self": "You cannot suspend your own account.",
+      "adminFirst": "Remove the administrator role before suspending this account.",
+      "confirmTitle": "Suspend this account?",
+      "confirmDescription": "@{{username}} is signed out everywhere and cannot sign in. Duration: {{duration}}.",
+      "liftTitle": "Lift the suspension?",
+      "liftDescription": "@{{username}} can sign in again at once.",
+      "liftNoteLabel": "Reason (optional, kept in the audit log)",
+      "liftNotePlaceholder": "Why the suspension ends now"
+    },
+    "vanity": {
+      "title": "Own invite address",
+      "hint": "Taking it away tells the owner why, and nobody can take that address again. The other links go on working.",
+      "revoke": "Take away",
+      "confirmTitle": "Take this address away?",
+      "confirmBody": "The owner reads the reason you give here."
+    }
+  },
+  "email": {
+    "title": "Email",
+    "intro": "Mail this server sends about accounts. \"Accepted\" means the provider took it, not that it arrived.",
+    "off": {
+      "title": "Email is off",
+      "body": "This server sends no mail, so accounts have no address and a forgotten password can only be reset by an administrator. Set EMAIL_TRANSPORT in .env to switch it on: docs/systems/email.md says how."
+    },
+    "warnings": {
+      "title": "Needs attention",
+      "blocked": "The provider refuses this server, because of the key or the domain. Mail is waiting, and \"forgot password\" says it is unavailable.",
+      "held": "The day's or the month's limit is reached. Mail waits until it starts over.",
+      "heldUntil": "A limit of the provider is reached. Mail waits until {{date}}.",
+      "day": "Over 80% of today's limit is used. Password resets go on to the last mail; other mail stops earlier.",
+      "month": "Over 90% of this month's limit is used.",
+      "bounces": "Over 4% of the last 30 days' mail bounced. A provider may pause the whole account at this rate, password resets included.",
+      "complaints": "Over 0.08% of the last 30 days' mail was reported as spam. A provider may pause the whole account at this rate, password resets included.",
+      "noWebhook": "RESEND_WEBHOOK_SECRET is not set, so this server does not hear about bounces and keeps sending to addresses that fail."
+    },
+    "rows": {
+      "title": "Sending",
+      "transport": "Transport",
+      "from": "Sender",
+      "today": "Accepted today",
+      "month": "Accepted this month",
+      "queued": "Waiting",
+      "failed": "Failed today",
+      "bounced": "Bounced today",
+      "complained": "Reported as spam today",
+      "lastError": "Last error"
+    },
+    "required": {
+      "title": "New accounts",
+      "label": "Require a confirmed address",
+      "description": "From now on, a new account has to give an address. Until it is confirmed, the account can use spaces it was invited to and talk to friends, but cannot create spaces or approach strangers. Existing accounts are not concerned."
+    },
+    "test": {
+      "title": "Test",
+      "description": "Sends one mail to check that this works. On a provider's free plan it counts against the limit.",
+      "address": "Send to",
+      "submit": "Send test mail",
+      "queued": "Test mail is on its way"
+    }
+  },
+  "console": {
+    "title": "Admin console",
+    "lead": "{{instance}} · version {{version}}",
+    "export": "Export as CSV",
+    "groups": {
+      "overview": "Overview",
+      "moderation": "Moderation",
+      "community": "Community",
+      "instance": "Instance"
+    },
     "sections": {
+      "overview": "Overview",
+      "reviews": "Reviews",
+      "reports": "Reports",
+      "users": "Users",
+      "spaces": "Spaces",
+      "audit": "Audit log",
+      "announcements": "Announcements",
+      "signup": "Sign-up rules",
+      "starter": "Starter spaces",
+      "bots": "Bots",
       "general": "General",
       "registration": "Registration",
+      "email": "Email",
+      "legal": "Legal",
       "federation": "Federation",
       "streaming": "Streaming",
       "storage": "Storage",
-      "updates": "Updates",
-      "users": "Users",
-      "telemetry": "Say hi"
+      "system": "System"
+    },
+    "search": {
+      "label": "Search accounts and spaces",
+      "placeholder": "Search accounts and spaces…",
+      "accounts": "Accounts",
+      "spaces": "Spaces",
+      "nothing": "Nothing found for “{{query}}”."
+    },
+    "dashboard": {
+      "attention": "Waiting for you",
+      "caughtUp": "Nothing is waiting for you.",
+      "reports": "Reports waiting for a decision",
+      "reviews": "Spaces waiting for a review",
+      "alerts": "Problems with the server",
+      "today": "Today",
+      "trends": "The last 30 days",
+      "stats": {
+        "accounts": "Accounts",
+        "online": "Online now",
+        "active": "Active today",
+        "messages": "Messages today"
+      },
+      "newThisWeek": "{{n}} new in 7 days",
+      "onlineRightNow": "Connected right now",
+      "delta": {
+        "up": "{{percent}} more than the 7 days before",
+        "down": "{{percent}} fewer than the 7 days before",
+        "same": "The same as the 7 days before",
+        "new": "None in the 7 days before"
+      },
+      "charts": {
+        "messages": "Messages per day",
+        "active": "Active accounts per day",
+        "signups": "New accounts per day",
+        "mail": "Mail sent per day"
+      },
+      "total30": "{{total}} in 30 days",
+      "showTable": "Show as a table",
+      "showChart": "Show as a chart",
+      "day": "Day",
+      "value": "Number",
+      "security": "How safe the accounts are",
+      "twoFactor": "Two-factor sign-in",
+      "confirmedEmail": "Confirmed address",
+      "ofAccounts": "{{n}} of {{total}} accounts",
+      "standing": "Where things stand",
+      "spacesTotal": "Spaces",
+      "spacesListed": "Listed in Explore",
+      "spacesVerified": "Verified spaces",
+      "suspended": "Suspended accounts",
+      "admins": "Administrators",
+      "toSystem": "See the system"
+    },
+    "announcements": {
+      "description": "A message to everyone signed in, on a banner above the app. It goes out at once, and anyone can put it away on their device.",
+      "new": "New announcement",
+      "message": "Message",
+      "placeholder": "Maintenance tonight at 22:00, about ten minutes.",
+      "tone": "Tone",
+      "tones": {
+        "info": "Information",
+        "warning": "Warning"
+      },
+      "duration": "Runs for",
+      "onStatusPage": "Also on the public status page",
+      "untilEnded": "Until I end it",
+      "send": "Send to everyone",
+      "preview": "How it looks",
+      "running": "Running now",
+      "noneRunning": "Nothing is running.",
+      "sinceOpen": "Since {{date}}",
+      "sinceUntil": "Since {{date}}, until {{until}}",
+      "end": "End",
+      "past": "Earlier"
+    },
+    "signup": {
+      "description": "Who cannot sign up here. This is checked when an account is made and when an address is set. Accounts that already exist keep their name and address.",
+      "challenge": "Automatic sign-ups",
+      "challengeHint": "Before an account is created, the browser solves a small task. It stops simple scripts, nothing leaves this server, and people notice little of it. The lists below and confirmed addresses are for anyone who pays the price anyway.",
+      "challengeLevels": {
+        "off": "Off",
+        "normal": "Normal",
+        "high": "High"
+      },
+      "domains": "Blocked mail domains",
+      "domainsHint": "Addresses at this domain and everything under it are refused.",
+      "domainPlaceholder": "example.com",
+      "usernames": "Reserved usernames",
+      "usernamesHint": "Nobody can sign up with these names, in any spelling of upper and lower case.",
+      "usernamePlaceholder": "support",
+      "add": "Add",
+      "addUsual": "Add the usual names (admin, support, staff…)",
+      "empty": "Nothing here yet.",
+      "remove": "Remove {{value}}"
+    },
+    "starter": {
+      "description": "Public spaces every new account of this server starts in, so that nobody’s first look is an empty app. It goes for accounts made from now on and moves nobody who is already here.",
+      "emptyTitle": "No starter spaces",
+      "emptyBody": "New accounts start with no spaces.",
+      "add": "Add a public space",
+      "searchPlaceholder": "Search public spaces…",
+      "noResults": "No public space by that name.",
+      "full": "That is all: {{max}} at most.",
+      "remove": "Remove",
+      "notPublic": "No longer public: new accounts skip it until it is again."
+    },
+    "system": {
+      "description": "How the server itself is doing, and a backup when you want one before a big change.",
+      "version": "Version",
+      "uptime": "Running for",
+      "memory": "Memory in use",
+      "database": "Database",
+      "socketPeople": "People connected: {{n}}",
+      "sockets": "Open connections",
+      "notYet": "Not yet",
+      "milliseconds": "{{n}} ms",
+      "eventLoopWorst": "{{n}} ms at worst",
+      "eventLoop": "Delay under load",
+      "disk": "Disk",
+      "diskFree": "{{free}} free of {{total}}",
+      "services": "Services",
+      "mail": "Mail",
+      "mailStates": {
+        "off": "Off",
+        "ok": "Working",
+        "held": "Held back",
+        "blocked": "Blocked"
+      },
+      "twoFactor": "Two-factor sign-in",
+      "voice": "Voice and video",
+      "federation": "Federation",
+      "on": "On",
+      "off": "Off",
+      "backups": "Backups",
+      "backUpNow": "Back up now",
+      "backupDone": "The backup is done.",
+      "backupsEvery": "One is taken by itself every {{interval}}.",
+      "backupsManual": "None is taken by itself.",
+      "restoreHint": "Restoring one is done on the server, with restore.sh.",
+      "noBackups": "No backups yet.",
+      "reasons": {
+        "pre-migration": "Before an update",
+        "scheduled": "On schedule",
+        "manual": "By hand",
+        "console": "From this console"
+      },
+      "alerts": {
+        "title": "Problems",
+        "since": "Since {{date}}",
+        "disk_high": "The disk is {{detail}}% full. When it is full, uploads stop and the database can be damaged.",
+        "backup_failed": "The last scheduled backup failed: {{detail}}",
+        "backup_old": "The newest backup is {{detail}} hours old.",
+        "offsite_failed": "The copy to another machine failed: {{detail}}",
+        "restart_loop": "The server has started {{detail}} times within a quarter of an hour. Look at its log."
+      },
+      "translation": "Translating messages"
+    },
+    "account": {
+      "tabs": {
+        "overview": "Overview",
+        "moderation": "Moderation",
+        "access": "Sign-ins",
+        "notes": "Notes",
+        "log": "Log"
+      },
+      "storage": {
+        "title": "Files",
+        "used": "{{used}} of {{limit}} used",
+        "usedNoLimit": "{{used}} used, no limit",
+        "ownLimit": "Own limit in GB",
+        "instanceDefault": "The instance's limit",
+        "reset": "Back to the instance's limit",
+        "hint": "0 means no limit. What the account already keeps stays when you lower it."
+      },
+      "sessions": "Where this account is signed in",
+      "noSessions": "Not signed in anywhere.",
+      "unknownDevice": "Unknown device",
+      "lastActive": "Last active {{date}}",
+      "end": "Sign out",
+      "endAll": "Sign out everywhere",
+      "endAllTitle": "Sign this account out everywhere?",
+      "endAllBody": "Every device has to sign in again. The person sees this in their security activity. To keep them out, suspend the account.",
+      "security": "Security activity",
+      "noEvents": "Nothing recorded.",
+      "notes": "Notes for the administrators",
+      "notePlaceholder": "What the other administrators should know.",
+      "notesHint": "Only administrators see these here, and the person can read them in their data export.",
+      "addNote": "Add note",
+      "deleteNote": "Delete note",
+      "warning": "Warning",
+      "warningHint": "A notice from the operator with your reason and the way to object. It changes nothing about the account.",
+      "ground": "Based on",
+      "grounds": {
+        "terms": "The terms of use",
+        "illegal": "The law"
+      },
+      "warningReason": "Reason, shown to the person",
+      "warn": "Send warning",
+      "warnTitle": "Send this warning?",
+      "warnBody": "The person sees it in the app with your reason.",
+      "warningSent": "The warning was sent."
     }
+  },
+  "bots": {
+    "title": "Bots",
+    "switchTitle": "Bots on this instance",
+    "switchDescription": "Off by default. Turned off, every bot stops at once, and none can be made.",
+    "switchLabel": "Allow bots",
+    "listTitle": "Who runs what",
+    "empty": "No bots yet.",
+    "owner": "Run by {{name}}",
+    "neverUsed": "never used",
+    "lastUsed": "last used {{time}}",
+    "remove": "Delete bot",
+    "removeTitle": "Delete this bot?",
+    "removeBody": "{{name}} leaves every space and its token stops working. What it wrote stays.",
+    "spaces_one": "in {{formatted}} space",
+    "spaces_other": "in {{formatted}} spaces"
   }
 }

@@ -1,3 +1,5 @@
+import { parseWaveform, waveformText } from '@backspace/shared/src/voiceMessages.js';
+import { pushDmMessage } from '../../../utils/pushDelivery.js';
 import path from 'node:path';
 import { getDb, schema } from '../../../db/index.js';
 import { normalizeOriginForCompare } from '../../../utils/federationAuth.js';
@@ -11,6 +13,7 @@ import { deleteAttachmentFiles } from '../../../utils/fileCleanup.js';
 import { rewriteRelayedMentions } from '../../../utils/federationMentions.js';
 import { sanitizeUser } from '../../../utils/sanitize.js';
 import { generateSnowflake } from '../../../utils/snowflake.js';
+import { mayPostSticker } from '../../../utils/remoteMedia.js';
 import { connectionManager } from '../../../ws/handler.js';
 import { getDmMessageWithUser } from '../../dm.js';
 import { and, eq, isNull, or } from 'drizzle-orm';
@@ -124,6 +127,13 @@ export async function processCreateEvent(
   }
   const authorUser = authorEntry.localUser;
 
+  // A sticker is fetched by every reader here as soon as it shows, so it only comes from the
+  // author's home or this instance (utils/remoteMedia.ts). Checked before a copy of the conversation is made.
+  if (!isSystem && !mayPostSticker(event.message.content, authorUser.id)) {
+    rejected.push({ messageId: event.messageId, reason: 'sticker_elsewhere' });
+    return;
+  }
+
   // Resolve local DM channel: group DMs carry a federatedId and the channel
   // must already exist (bootstrapped by a prior member_add event); 1-on-1 DMs
   // are computed from the pair of home user IDs and created on demand.
@@ -196,6 +206,7 @@ export async function processCreateEvent(
       sourceInstance,
       sourceMessageId: event.messageId,
       encryptionVersion: 0,
+      forwarded: event.message.forwarded === true,
     })
     .run();
 
@@ -231,6 +242,8 @@ export async function processCreateEvent(
           height: attachment.height ?? null,
           duration: attachment.duration ?? null,
           playable: attachment.playable ?? null,
+          spoiler: attachment.spoiler === true,
+          voiceWaveform: waveformText(attachment.voiceWaveform),
           thumbnailFilename: null,  // Don't copy source thumbnail — it doesn't exist locally
           sourceUrl: attachment.sourceUrl,
           createdAt: now,
@@ -308,6 +321,7 @@ export async function processCreateEvent(
         message: fullMessage,
       });
     }
+    pushDmMessage(fullMessage, (id) => connectionManager.isUserFocused(id));
   }
 
   // Belt-and-suspenders: clear typing indicator for the author on inbound relay.
@@ -502,6 +516,11 @@ export function processUpdateEvent(
     return;
   }
 
+  if (!mayPostSticker(event.message?.content, localMsg.userId)) {
+    rejected.push({ messageId: event.messageId, reason: 'sticker_elsewhere' });
+    return;
+  }
+
   // Mention tokens carry the sender's ids; store them as this instance's.
   const content = rewriteRelayedMentions(event.message?.content ?? null, event.message?.mentions, db);
 
@@ -578,6 +597,8 @@ export function processUpdateEvent(
       height: a.height,
       duration: a.duration,
       playable: a.playable ?? null,
+      spoiler: a.spoiler,
+      voiceWaveform: parseWaveform(a.voiceWaveform),
       createdAt: a.createdAt,
     }));
 
@@ -744,6 +765,10 @@ export function processReactionAddEvent(
     return;
   }
   const reactingUser = reactor.user;
+  if (!mayPostSticker(event.reaction.emoji, reactingUser.id)) {
+    rejected.push({ messageId: event.messageId, reason: 'sticker_elsewhere' });
+    return;
+  }
 
   const reactionId = generateSnowflake();
   const now = event.reaction.createdAt || Date.now();
@@ -780,6 +805,81 @@ export function processReactionAddEvent(
       createdAt: now,
       user: sanitizeUser(reactingUser),
     },
+  });
+
+  accepted.push(event.messageId);
+}
+
+
+/**
+ * A conversation's message being pinned or unpinned on a peer. The checks are a
+ * reaction's: the sender's attribution, a peer of the conversation, a member of
+ * it. Each event sets the whole state, so a redelivery changes nothing and an
+ * older state does not replace a newer one.
+ */
+export function processPinSetEvent(
+  event: FederationRelayEvent,
+  sourceInstance: string,
+  db: ReturnType<typeof getDb>,
+  accepted: string[],
+  rejected: Array<{ messageId: string; reason: string }>,
+): void {
+  const pin = event.pin;
+  if (!pin) {
+    rejected.push({ messageId: event.messageId, reason: 'missing_pin_payload' });
+    return;
+  }
+
+  const refusal = attributionRefusal(pin, sourceInstance, db);
+  if (refusal) {
+    console.warn(`[federation] Attribution refused (${refusal}) in pin_set: homeInstance=${pin.homeInstance ? extractDomain(pin.homeInstance) : 'missing'} source=${extractDomain(sourceInstance)}`);
+    rejected.push({ messageId: event.messageId, reason: refusal });
+    return;
+  }
+
+  const localMsg = resolveLocalDmMessage(pin.messageId, pin.messageHomeInstance, sourceInstance, db);
+  if (!localMsg) {
+    rejected.push({ messageId: event.messageId, reason: 'unknown_message' });
+    return;
+  }
+
+  const scopeRefusal = reactionScopeRefusal(localMsg, pin, sourceInstance, db);
+  if (scopeRefusal) {
+    console.warn(`[federation] Refused pin_set on message ${localMsg.id} (${scopeRefusal}): ${extractDomain(sourceInstance)} is not a peer of its conversation, or the actor is not a member`);
+    rejected.push({ messageId: event.messageId, reason: scopeRefusal });
+    return;
+  }
+
+  const actor = resolveRelayActor(pin, db);
+  if (actor.kind === 'mismatch') {
+    console.warn('[federation] Refused pin_set: the actor homeUserId names a local user of another identity');
+    rejected.push({ messageId: event.messageId, reason: 'attribution_mismatch' });
+    return;
+  }
+  if (actor.kind === 'unknown') {
+    rejected.push({ messageId: event.messageId, reason: 'user_not_found' });
+    return;
+  }
+
+  // A system row takes no pin here either, and a state older than the one held changes nothing.
+  if (localMsg.type === 'system' || pin.at < (localMsg.pinChangedAt ?? 0)) {
+    accepted.push(event.messageId);
+    return;
+  }
+
+  const pinnedAt = pin.pinned ? pin.at : null;
+  const pinnedBy = pin.pinned ? actor.user.id : null;
+  db.update(schema.dmMessages)
+    .set({ pinnedAt, pinnedBy, pinChangedAt: pin.at })
+    .where(eq(schema.dmMessages.id, localMsg.id))
+    .run();
+
+  connectionManager.sendToDmMembers(localMsg.dmChannelId, {
+    type: 'message_pin_changed',
+    channelId: localMsg.dmChannelId,
+    messageId: localMsg.id,
+    pinnedAt,
+    pinnedBy,
   });
 
   accepted.push(event.messageId);

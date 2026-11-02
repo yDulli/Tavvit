@@ -1,3 +1,4 @@
+import { ExternalGate } from '../ui/ExternalMedia';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
@@ -118,27 +119,28 @@ export function GifPicker({ onGifSelect, mobile = false }: GifPickerProps) {
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-surface-elevated rounded-lg animate-pulse"
-                style={{ height: 100 + Math.random() * 60 }}
+                className="skeleton skeleton-block"
+                style={{ height: 100 + (i * 37) % 60 }}
               />
             ))}
           </div>
         ) : results.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-txt-tertiary text-sm">
+          <div className="flex h-full items-center justify-center text-ui text-txt-tertiary">
             {debouncedQuery.trim() ? t('chat:gif.noResults') : t('chat:gif.noTrending')}
           </div>
         ) : (
+          <ExternalGate url={results[0]?.previewUrl} className="m-2">
           <div className="columns-2 gap-1.5 p-1">
             {results.map((gif) => (
               <button
                 key={gif.id}
                 onClick={() => onGifSelect(gif.url)}
-                className="w-full mb-1.5 rounded-lg overflow-hidden hover:ring-2 hover:ring-accent-primary transition-all break-inside-avoid"
+                className="mb-1.5 w-full overflow-hidden rounded-lg border border-transparent transition-colors break-inside-avoid hover:border-interactive-muted"
               >
                 <img
                   src={gif.previewUrl}
                   alt={gif.title}
-                  className="w-full object-cover rounded-lg"
+                  className="w-full object-cover"
                   loading="lazy"
                   style={{
                     aspectRatio: gif.width && gif.height ? `${gif.width}/${gif.height}` : undefined,
@@ -147,16 +149,17 @@ export function GifPicker({ onGifSelect, mobile = false }: GifPickerProps) {
               </button>
             ))}
           </div>
+          </ExternalGate>
         )}
         {loadingMore && (
           <div className="flex justify-center py-2">
-            <div className="w-5 h-5 border-2 border-txt-tertiary border-t-transparent rounded-full animate-spin" />
+            <div className="h-4 w-4 rounded-full border-[1.5px] border-txt-tertiary border-r-transparent animate-spin" />
           </div>
         )}
       </div>
 
       {/* Attribution */}
-      <div className="px-3 py-1 text-[10px] text-txt-tertiary text-right shrink-0">
+      <div className="shrink-0 border-t border-border-hard px-3 py-1 text-right text-2xs text-txt-tertiary">
         {t('chat:gif.attribution')}
       </div>
     </div>

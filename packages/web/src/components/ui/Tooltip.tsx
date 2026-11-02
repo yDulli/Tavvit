@@ -10,9 +10,11 @@ interface TooltipProps {
   children: React.ReactNode;
   position?: 'top' | 'right' | 'bottom' | 'left';
   delay?: number;
+  /** Stays quiet for now, for when what it is on has opened something that says more. */
+  disabled?: boolean;
 }
 
-export function Tooltip({ content, children, position = 'right', delay = 200 }: TooltipProps) {
+export function Tooltip({ content, children, position = 'right', delay = 200, disabled = false }: TooltipProps) {
   const isMobile = useUIStore((s) => s.isMobile);
 
   const [isVisible, setIsVisible] = useState(false);
@@ -61,14 +63,22 @@ export function Tooltip({ content, children, position = 'right', delay = 200 }: 
   if (isMobile) return <>{children}</>;
 
   return (
-    <div ref={anchorRef} className="relative inline-flex" onMouseEnter={show} onMouseLeave={hide}>
+    <div
+      ref={anchorRef}
+      className="relative inline-flex"
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      // The keyboard gets what the pointer gets; a click's focus is not a request for it.
+      onFocus={(e) => { if (e.target.matches(':focus-visible')) show(); }}
+      onBlur={hide}
+    >
       {children}
-      {isVisible && createPortal(
+      {isVisible && !disabled && createPortal(
         <div
           ref={floatingRef}
           role="tooltip"
           style={style}
-          className="px-3 py-1.5 text-sm font-medium text-txt-primary glass rounded-md whitespace-nowrap pointer-events-none"
+          className="px-2 py-1 text-meta font-medium leading-snug text-txt-primary glass rounded-md whitespace-nowrap pointer-events-none animate-fade-in"
         >
           {content}
         </div>,

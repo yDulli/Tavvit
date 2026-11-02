@@ -1,8 +1,10 @@
+import { getLanguage } from '../../i18n';
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
-import { Avatar } from '../ui/Avatar';
+import { Avatar, avatarRadius } from '../ui/Avatar';
+import { Icon } from '../ui/Icon';
 import { ImageCropModal } from '../ui/ImageCropModal';
 import { AVATAR_GRADIENT_MAP } from '../../utils/gradients';
 import { AVATAR_COLORS } from '@backspace/shared';
@@ -11,7 +13,9 @@ import type { AvatarColor, CheckInviteResponse, InstanceInfoResponse } from '@ba
 import { api, HttpError, RateLimitError } from '../../api/client';
 import { useTransferStore } from '../../stores/transferStore';
 import { waitForTransferAttachment } from '../../utils/waitForTransfer';
-import { SourceCodeLink } from '../ui/SourceCodeLink';
+import { AUTH_FIELD, AUTH_LINK, AUTH_SUBMIT, AuthNotice, AuthShell } from './AuthShell';
+import { LEGAL_LIMITS } from '@backspace/shared/src/legal';
+import { useLegalStore } from '../../stores/legalStore';
 import { describeError } from '../../i18n/errors';
 
 // Single-source regex for extracting a bare invite token from a pasted full URL.
@@ -23,16 +27,44 @@ const USERNAME_MAX_LENGTH = 32;
 
 type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
+type CheckTone = 'checking' | 'good' | 'bad';
+
+const CHECK_TEXT: Record<CheckTone, string> = {
+  checking: 'text-txt-tertiary',
+  good: 'text-txt-positive',
+  bad: 'text-txt-danger',
+};
+
+/** One line saying what is being checked, or how it came out. */
+function CheckLine({ tone, id, className = '', children }: {
+  tone: CheckTone;
+  id?: string;
+  className?: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div id={id} role="status" className={`flex items-start gap-1.5 text-meta leading-4 ${CHECK_TEXT[tone]} ${className}`}>
+      {tone === 'checking'
+        ? <span aria-hidden="true" className="mt-0.5 h-3 w-3 flex-shrink-0 animate-spin rounded-full border-[1.5px] border-current border-r-transparent" />
+        : <Icon name={tone === 'good' ? 'check' : 'x'} size={14} strokeWidth={2} className="mt-px flex-shrink-0" />}
+      <span className="min-w-0 break-words">{children}</span>
+    </div>
+  );
+}
+
 export function RegisterPage() {
-  const { t } = useTranslation(['auth', 'common']);
+  const { t } = useTranslation(['auth', 'common', 'legal']);
   // Step state
   const [step, setStep] = useState<1 | 2>(1);
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
 
   // Step 1 fields
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // The field a refused "Continue" is about, until something is typed again.
+  const [invalidField, setInvalidField] = useState<'username' | 'email' | 'password' | 'confirm' | null>(null);
 
   // Username availability check
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
@@ -48,10 +80,9 @@ export function RegisterPage() {
   const [inviteCheck, setInviteCheck] = useState<CheckInviteResponse | null>(null);
   const [inviteChecking, setInviteChecking] = useState(false);
   const inviteCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Ref tracking whether the URL token has been confirmed invalid by the server.
-  // Used as the gate for the manual-entry debounce so we don't need inviteCheck?.valid
-  // in the manual-effect dep array (which would cause a dep loop via setInviteCheck).
-  const urlTokenInvalidRef = useRef(false);
+  // Whether the server has refused the invite in the address. Apart from `inviteCheck`,
+  // which from then on says how a typed code fared, and is empty while one is checked.
+  const [urlTokenInvalid, setUrlTokenInvalid] = useState(false);
 
   // Step 2 fields
   const [displayName, setDisplayName] = useState('');
@@ -65,6 +96,17 @@ export function RegisterPage() {
 
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  // The terms in force, once the instance has published any (docs/systems/legal.md).
+  const termsInForce = useLegalStore((s) => s.info?.terms.current ?? null);
+  const loadLegal = useLegalStore((s) => s.load);
+  const [legalChecked, setLegalChecked] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void loadLegal().finally(() => { if (active) setLegalChecked(true); });
+    return () => { active = false; };
+  }, [loadLegal]);
+  const minimumAge = useLegalStore((s) => s.info?.operator?.minimumAge ?? LEGAL_LIMITS.MIN_AGE_DEFAULT);
   const [retryAfter, setRetryAfter] = useState(0);
 
   const initSession = useAuthStore((s) => s.initSession);
@@ -97,24 +139,22 @@ export function RegisterPage() {
   // (b) instanceInfo has loaded AND indicates registration is closed.
   // Per spec §4.4: when registration is open, the URL invite param is silently ignored
   // (no token consumption, no validation, no rate-limit slot burned).
-  // When the result is invalid, urlTokenInvalidRef is set so the manual-entry
-  // debounce effect can use it as a stable gate without introducing a dep loop.
   useEffect(() => {
     if (!urlInviteToken) return;
     if (!instanceInfo || instanceInfo.registrationOpen) return;
     let cancelled = false;
-    urlTokenInvalidRef.current = false;
+    setUrlTokenInvalid(false);
     setInviteChecking(true);
     api.auth.checkInvite(urlInviteToken)
       .then((res) => {
         if (!cancelled) {
-          if (!res.valid) urlTokenInvalidRef.current = true;
+          setUrlTokenInvalid(!res.valid);
           setInviteCheck(res);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          urlTokenInvalidRef.current = true;
+          setUrlTokenInvalid(true);
           setInviteCheck({ valid: false, reason: 'invalid' });
         }
       })
@@ -124,16 +164,8 @@ export function RegisterPage() {
 
   // Debounced manual-entry invite validation.
   // The URL token takes precedence while it is still in-flight or has been confirmed valid.
-  // Once the URL token is confirmed invalid (urlTokenInvalidRef.current === true), this
-  // effect fires on manual input changes.
-  //
-  // We intentionally do NOT include inviteCheck?.valid in the dep array — the URL-token
-  // validation effect sets urlTokenInvalidRef synchronously when the server response arrives,
-  // and the user's next keystroke in the manual field re-triggers this effect. This avoids
-  // a dep-loop where setInviteCheck() inside this effect would mutate a dep and cause
-  // infinite re-runs.
   useEffect(() => {
-    if (urlInviteToken && !urlTokenInvalidRef.current) return; // URL token takes precedence while in flight or valid
+    if (urlInviteToken && !urlTokenInvalid) return; // URL token takes precedence while in flight or valid
 
     const trimmed = manualInviteToken.trim();
     if (!trimmed) {
@@ -157,8 +189,8 @@ export function RegisterPage() {
 
     inviteCheckTimerRef.current = setTimeout(async () => {
       if (cancelled) return;
-      // Clear stale check result (e.g., prior URL-token invalid result) before the
-      // fresh API response arrives so stale text never briefly flashes on completion.
+      // Clear the previous code's result before the fresh API response arrives so
+      // stale text never briefly flashes on completion.
       setInviteCheck(null);
       try {
         const res = await api.auth.checkInvite(token);
@@ -176,7 +208,7 @@ export function RegisterPage() {
       cancelled = true;
       if (inviteCheckTimerRef.current) clearTimeout(inviteCheckTimerRef.current);
     };
-  }, [manualInviteToken, urlInviteToken]);
+  }, [manualInviteToken, urlInviteToken, urlTokenInvalid]);
 
   // Debounced username availability check
   useEffect(() => {
@@ -267,39 +299,60 @@ export function RegisterPage() {
   // - There is no URL token, OR the URL token has already been validated as invalid
   const showManualEntry = instanceInfo !== null
     && !instanceInfo.registrationOpen
-    && (!urlInviteToken || inviteCheck?.valid === false);
+    && (!urlInviteToken || urlTokenInvalid);
 
   // ── Step 1 validation ──
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setInvalidField(null);
+
+    const refuse = (field: 'username' | 'email' | 'password' | 'confirm', message: string) => {
+      setInvalidField(field);
+      setError(message);
+    };
 
     const trimmed = username.trim();
     if (!trimmed) {
-      setError(t('auth:validation.usernameRequired'));
+      refuse('username', t('auth:validation.usernameRequired'));
       return;
     }
     if (trimmed.length < USERNAME_MIN_LENGTH || trimmed.length > USERNAME_MAX_LENGTH) {
-      setError(t('auth:validation.usernameLength', { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH }));
+      refuse('username', t('auth:validation.usernameLength', { min: USERNAME_MIN_LENGTH, max: USERNAME_MAX_LENGTH }));
       return;
     }
     if (!/^[a-z0-9_]+$/.test(trimmed)) {
-      setError(t('auth:validation.usernameCharset'));
+      refuse('username', t('auth:validation.usernameCharset'));
       return;
     }
     if (usernameStatus === 'taken' || usernameStatus === 'invalid') {
       return;
     }
+    if (instanceInfo?.email) {
+      const address = email.trim();
+      if (!address && instanceInfo.emailRequired) {
+        refuse('email', t('auth:validation.emailRequired'));
+        return;
+      }
+      if (address && !address.includes('@')) {
+        refuse('email', t('auth:validation.emailInvalid'));
+        return;
+      }
+    }
     if (!password) {
-      setError(t('auth:validation.passwordRequired'));
+      refuse('password', t('auth:validation.passwordRequired'));
       return;
     }
     if (password.length < PASSWORD_MIN_LENGTH) {
-      setError(t('auth:validation.passwordMinLength', { min: PASSWORD_MIN_LENGTH }));
+      refuse('password', t('auth:validation.passwordMinLength', { min: PASSWORD_MIN_LENGTH }));
       return;
     }
     if (password !== confirmPassword) {
-      setError(t('auth:validation.passwordMismatch'));
+      refuse('confirm', t('auth:validation.passwordMismatch'));
+      return;
+    }
+    if (termsInForce && !termsAgreed) {
+      setError(t('legal:register.agreeFirst'));
       return;
     }
 
@@ -342,8 +395,7 @@ export function RegisterPage() {
           return undefined;
         }
         // URL token takes precedence ONLY while it hasn't been confirmed invalid.
-        const urlInvalid = !!urlInviteToken && inviteCheck?.valid === false;
-        if (urlInviteToken && !urlInvalid) return urlInviteToken;
+        if (urlInviteToken && !urlTokenInvalid) return urlInviteToken;
         const trimmed = manualInviteToken.trim();
         if (trimmed) {
           const urlMatch = trimmed.match(INVITE_URL_REGEX);
@@ -362,6 +414,8 @@ export function RegisterPage() {
         displayName: dn,
         avatarColor: ac,
         ...(tokenForRegister ? { inviteToken: tokenForRegister } : {}),
+        ...(termsInForce && termsAgreed ? { acceptedTermsVersion: termsInForce.version, ageConfirmed: true } : {}),
+        ...(instanceInfo?.email && email.trim() ? { email: email.trim(), locale: getLanguage() } : {}),
       });
       localStorage.setItem('backspace_token', response.token);
 
@@ -386,7 +440,25 @@ export function RegisterPage() {
         navigate('/channels/@me');
       }
     } catch (err) {
-      if (err instanceof RateLimitError) {
+      if (err instanceof HttpError && (err.code === 'terms_not_accepted' || err.code === 'age_not_confirmed')) {
+        // The terms changed, or had not loaded: back to where they are agreed to.
+        await loadLegal();
+        setTermsAgreed(false);
+        setDirection('back');
+        setStep(1);
+        setError(t('legal:register.agreeFirst'));
+      } else if (err instanceof HttpError && (err.code === 'email_invalid' || err.code === 'email_required' || err.code === 'email_undeliverable')) {
+        // Asked on the first step, so that is where to fix it.
+        setDirection('back');
+        setStep(1);
+        setInvalidField('email');
+        setError(describeError(err));
+      } else if (err instanceof HttpError && err.code === 'password_too_common') {
+        setDirection('back');
+        setStep(1);
+        setInvalidField('password');
+        setError(describeError(err));
+      } else if (err instanceof RateLimitError) {
         setRetryAfter(err.retryAfter);
         setError('');
       } else {
@@ -405,203 +477,201 @@ export function RegisterPage() {
   // Continue button is blocked while username is invalid/taken OR when an invite is required
   // but not yet validated as valid
   const continueDisabled =
+    !legalChecked ||
     usernameStatus === 'taken' ||
     usernameStatus === 'invalid' ||
     (inviteRequired && !inviteValid);
 
+  const usernameRefused = usernameStatus === 'taken' || usernameStatus === 'invalid';
+  // The invite link in the address, as far as the server has said anything about it.
+  const urlInviteTone: CheckTone = urlTokenInvalid ? 'bad' : inviteChecking || !inviteCheck ? 'checking' : inviteCheck.valid ? 'good' : 'bad';
+  // The result under the code field is about what is typed there, never about the link.
+  const typedCodeCheck = manualInviteToken.trim() ? inviteCheck : null;
+
   return (
-    // Outer scroll container — root is `h-full overflow-hidden`, so this page must own
-    // its own scroll. Without it, mobile users with the keyboard up cannot reach the
-    // submit button on Step 2 (avatar + color picker + display name + buttons exceeds
-    // the visible viewport once the iOS keyboard claims ~300 px). `h-full` (rather than
-    // `min-h-full`) makes this element exactly viewport-height; the inner flex wrapper
-    // uses `min-h-full` so short content still centers vertically.
-    <div className="h-full overflow-y-auto bg-surface-base relative">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgb(var(--accent-primary)/0.06)_0%,transparent_50%)] pointer-events-none" />
-      <div className="min-h-full flex items-center justify-center px-4 py-6 md:py-10 relative z-10">
-        <div className="w-full max-w-[480px] bg-surface-elevated rounded-md p-6 md:p-8 shadow-elevation-high overflow-hidden">
-        {/* Progress dots */}
-        <div className="flex justify-center gap-2 mb-5">
-          <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${step === 1 ? 'bg-accent-primary' : 'bg-txt-tertiary/30'}`} />
-          <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${step === 2 ? 'bg-accent-primary' : 'bg-txt-tertiary/30'}`} />
+    // AuthShell owns the page's scroll: the root is `h-full overflow-hidden`, and
+    // without a scroller of its own a phone with the keyboard up could not reach
+    // the submit button on step 2.
+    <>
+      <AuthShell instanceInfo={instanceInfo}>
+        {/* Progress: two steps, the current one in the signal colour */}
+        <div className="mb-6 flex gap-1.5" aria-hidden="true">
+          <div className={`h-[3px] w-8 rounded-sm transition-colors ${step === 1 ? 'bg-accent-primary' : 'bg-border-soft'}`} />
+          <div className={`h-[3px] w-8 rounded-sm transition-colors ${step === 2 ? 'bg-accent-primary' : 'bg-border-soft'}`} />
         </div>
 
         {step === 1 ? (
           <div key="step1" className={`w-full${direction === 'back' ? ' animate-step-back' : ''}`}>
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-txt-primary">{t('auth:register.title')}</h1>
+            <div className="mb-8">
+              <h1 className="page-title">{t('auth:register.title')}</h1>
             </div>
 
             <form onSubmit={handleContinue}>
-              {error && (
-                <div className="mb-4 p-3 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
-                  {error}
-                </div>
-              )}
+              {error && <AuthNotice tone="danger" role="alert" title={error} />}
 
               {/* Closed-registration invite entry — shown when registration is closed and:
                   (a) no URL token is present, or (b) the URL token has already failed validation */}
               {showManualEntry && (
-                <div className="mb-4 p-3 rounded-lg bg-surface-elevated border border-white/[0.06] space-y-2">
-                  <div className="text-sm text-txt-secondary">
+                <div className="surface-card mb-5 space-y-2.5 rounded-lg p-3">
+                  <p className="text-ui leading-5 text-txt-secondary">
                     {t('auth:register.invite.closedNotice')}
-                  </div>
+                  </p>
                   <input
                     type="text"
                     value={manualInviteToken}
                     onChange={(e) => setManualInviteToken(e.target.value)}
                     placeholder={t('auth:register.invite.placeholder')}
-                    // text-base on mobile prevents iOS Safari from auto-zooming
-                    // when the field is focused (any <input> with font-size <16px triggers zoom).
-                    className="input-standard w-full px-3 py-2 text-base md:text-sm"
+                    aria-invalid={!inviteChecking && typedCodeCheck?.valid === false}
+                    className={AUTH_FIELD}
                     aria-label={t('auth:register.invite.placeholder')}
                     autoComplete="off"
                   />
                   {inviteChecking && (
-                    <div className="text-xs text-txt-tertiary">{t('auth:register.invite.checking')}</div>
+                    <CheckLine tone="checking">{t('auth:register.invite.checking')}</CheckLine>
                   )}
-                  {!inviteChecking && inviteCheck?.valid === true && (
-                    <div className="text-xs text-status-online flex items-center gap-1">
-                      <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      {t('auth:register.invite.valid', { name: inviteCheck.name })}
-                    </div>
+                  {!inviteChecking && typedCodeCheck?.valid === true && (
+                    <CheckLine tone="good">{t('auth:register.invite.valid', { name: typedCodeCheck.name })}</CheckLine>
                   )}
-                  {!inviteChecking && inviteCheck?.valid === false && (
-                    <div className="text-xs text-txt-danger">
-                      {inviteCheck.reason === 'expired' && t('auth:register.invite.expired')}
-                      {inviteCheck.reason === 'exhausted' && t('auth:register.invite.exhausted')}
-                      {inviteCheck.reason === 'invalid' && t('auth:register.invite.invalidCode')}
-                    </div>
+                  {!inviteChecking && typedCodeCheck?.valid === false && (
+                    <CheckLine tone="bad">
+                      {typedCodeCheck.reason === 'expired' && t('auth:register.invite.expired')}
+                      {typedCodeCheck.reason === 'exhausted' && t('auth:register.invite.exhausted')}
+                      {typedCodeCheck.reason === 'invalid' && t('auth:register.invite.invalidCode')}
+                    </CheckLine>
                   )}
                 </div>
               )}
 
-              {/* URL-token chip — shown only when registration is closed AND a URL token was provided.
-                  Per spec §4.4: open-registration instances silently ignore the ?invite= param.
-                  Layout: inline pill on desktop, full-width banner on mobile so the longer
-                  error copy ("Invalid invite link — please request a new one") wraps cleanly
-                  inside a 360 px viewport instead of forcing a single-line pill that overflows. */}
+              {/* The invite in the address — shown only when registration is closed AND a URL token was provided.
+                  Per spec §4.4: open-registration instances silently ignore the ?invite= param. */}
               {urlInviteToken && instanceInfo && !instanceInfo.registrationOpen && (
-                <div className="mb-4 flex md:inline-flex items-start md:items-center gap-2 px-3 py-1.5 rounded-md md:rounded-full bg-accent-primary/10 text-accent-primary text-xs">
-                  {inviteChecking ? (
-                    <>
-                      <svg className="w-3 h-3 animate-spin flex-shrink-0 mt-0.5 md:mt-0" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      <span>{t('auth:register.invite.validating')}</span>
-                    </>
-                  ) : inviteCheck?.valid === true ? (
-                    <>
-                      <svg className="w-3 h-3 flex-shrink-0 mt-0.5 md:mt-0" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      <span className="break-all">{t('auth:register.invite.using', { name: inviteCheck.name })}</span>
-                    </>
-                  ) : inviteCheck?.valid === false ? (
-                    <>
-                      <svg className="w-3 h-3 flex-shrink-0 mt-0.5 md:mt-0" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      <span>{t('auth:register.invite.invalidLink')}</span>
-                    </>
-                  ) : (
-                    <>{t('auth:register.invite.validating')}</>
-                  )}
-                </div>
+                <CheckLine tone={urlInviteTone} className="surface-card mb-5 rounded-md px-3 py-2.5">
+                  {urlInviteTone === 'checking' && t('auth:register.invite.validating')}
+                  {urlInviteTone === 'good' && inviteCheck?.valid === true && t('auth:register.invite.using', { name: inviteCheck.name })}
+                  {urlInviteTone === 'bad' && t('auth:register.invite.invalidLink')}
+                </CheckLine>
               )}
 
-              <div className="mb-5">
-                <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+              <div className="mb-4">
+                <label htmlFor="register-username" className="field-label">
                   {t('common:labels.username')} <span className="text-txt-danger">*</span>
                 </label>
                 <input
+                  id="register-username"
                   type="text"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                  // text-base on mobile prevents iOS Safari zoom-on-focus (<16px triggers it).
-                  className="input-standard w-full py-2.5 text-base md:text-sm"
+                  onChange={(e) => { setUsername(e.target.value.toLowerCase()); setInvalidField(null); }}
+                  aria-invalid={usernameRefused || invalidField === 'username'}
+                  aria-describedby={usernameStatus !== 'idle' ? 'register-username-check' : undefined}
+                  className={AUTH_FIELD}
                   autoFocus
                   autoComplete="username"
                 />
                 {usernameStatus !== 'idle' && (
-                  <div className={`mt-1.5 flex items-center gap-1.5 text-xs ${
-                    usernameStatus === 'available' ? 'text-status-online' :
-                    usernameStatus === 'checking' ? 'text-txt-tertiary' :
-                    'text-txt-danger'
-                  }`}>
-                    {usernameStatus === 'checking' && (
-                      <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                    )}
-                    {usernameStatus === 'available' && (
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                    {(usernameStatus === 'taken' || usernameStatus === 'invalid') && (
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                    <span>{usernameStatusMessage}</span>
-                  </div>
+                  <CheckLine
+                    id="register-username-check"
+                    tone={usernameStatus === 'available' ? 'good' : usernameStatus === 'checking' ? 'checking' : 'bad'}
+                    className="mt-1.5"
+                  >
+                    {usernameStatusMessage}
+                  </CheckLine>
                 )}
               </div>
 
-              <div className="mb-5">
-                <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+              {instanceInfo?.email && (
+                <div className="mb-4">
+                  <label htmlFor="register-email" className="field-label">
+                    {instanceInfo.emailRequired
+                      ? <>{t('auth:fields.email')} <span className="text-txt-danger">*</span></>
+                      : t('auth:fields.emailOptional')}
+                  </label>
+                  <input
+                    id="register-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setInvalidField(null); }}
+                    aria-invalid={invalidField === 'email'}
+                    aria-describedby="register-email-hint"
+                    className={AUTH_FIELD}
+                    autoComplete="email"
+                  />
+                  <p id="register-email-hint" className="mt-1.5 text-meta leading-4 text-txt-tertiary">{t('auth:fields.emailHint')}</p>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <label htmlFor="register-password" className="field-label">
                   {t('common:labels.password')} <span className="text-txt-danger">*</span>
                 </label>
                 <input
+                  id="register-password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input-standard w-full py-2.5 text-base md:text-sm"
+                  onChange={(e) => { setPassword(e.target.value); setInvalidField(null); }}
+                  aria-invalid={invalidField === 'password'}
+                  className={AUTH_FIELD}
                   autoComplete="new-password"
                 />
               </div>
 
               <div className="mb-5">
-                <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+                <label htmlFor="register-confirm-password" className="field-label">
                   {t('auth:fields.confirmPassword')} <span className="text-txt-danger">*</span>
                 </label>
                 <input
+                  id="register-confirm-password"
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input-standard w-full py-2.5 text-base md:text-sm"
+                  onChange={(e) => { setConfirmPassword(e.target.value); setInvalidField(null); }}
+                  aria-invalid={invalidField === 'confirm'}
+                  className={AUTH_FIELD}
                   autoComplete="new-password"
                 />
               </div>
+
+              {termsInForce && (
+                <label className="mb-5 flex items-start gap-2 text-ui leading-5 text-txt-secondary">
+                  <input
+                    type="checkbox"
+                    checked={termsAgreed}
+                    onChange={(e) => setTermsAgreed(e.target.checked)}
+                    className="mt-0.5 flex-shrink-0"
+                  />
+                  <span>
+                    <Trans
+                      t={t}
+                      i18nKey="legal:register.agree"
+                      values={{ age: minimumAge }}
+                      components={{
+                        terms: <Link to="/terms" target="_blank" rel="noopener" className={AUTH_LINK} />,
+                        privacy: <Link to="/privacy" target="_blank" rel="noopener" className={AUTH_LINK} />,
+                      }}
+                    />
+                  </span>
+                </label>
+              )}
 
               <button
                 type="submit"
                 disabled={continueDisabled}
-                // py-3 on mobile yields ≥44 px tap target (Apple HIG); py-2.5 keeps the
-                // tighter desktop look from before.
-                className="w-full py-3 md:py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className={AUTH_SUBMIT}
               >
                 {t('common:actions.continue')}
               </button>
 
               {/* Helper text when invite is required but not yet entered */}
               {inviteRequired && !manualInviteToken.trim() && !urlInviteToken && (
-                <div className="text-xs text-txt-tertiary mt-2">
+                <p className="mt-2 text-meta text-txt-tertiary">
                   {t('auth:register.invite.required')}
-                </div>
+                </p>
               )}
 
-              <p className="mt-3 text-sm text-txt-tertiary">
+              <p className="mt-4 text-ui leading-5 text-txt-tertiary">
                 <Trans
                   t={t}
                   i18nKey="auth:register.loginPrompt"
                   components={{
-                    actionLink: <Link to={`/login${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className="text-accent-primary hover:underline" />,
+                    actionLink: <Link to={`/login${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} className={AUTH_LINK} />,
                   }}
                 />
               </p>
@@ -609,30 +679,27 @@ export function RegisterPage() {
           </div>
         ) : (
           <div key="step2" className={`w-full${direction === 'forward' ? ' animate-step-forward' : ''}`}>
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-txt-primary">{t('auth:register.personalize.title')}</h1>
-              <p className="text-txt-tertiary text-sm mt-1">{t('auth:register.personalize.subtitle')}</p>
+            <div className="mb-8">
+              <h1 className="page-title">{t('auth:register.personalize.title')}</h1>
+              <p className="mt-1 text-body text-txt-tertiary">{t('auth:register.personalize.subtitle')}</p>
             </div>
 
             {retryAfter > 0 && (
-              <div className="mb-4 p-3 bg-accent-amber/10 border border-accent-amber/30 rounded text-sm">
-                <p className="font-medium text-accent-amber">{t('auth:register.rateLimited.title')}</p>
-                <p className="text-txt-secondary mt-0.5">{t('auth:register.rateLimited.retryIn', { seconds: retryAfter })}</p>
-              </div>
+              <AuthNotice tone="warning" title={t('auth:register.rateLimited.title')}>
+                <p className="mt-0.5 text-txt-secondary">{t('auth:register.rateLimited.retryIn', { seconds: retryAfter })}</p>
+              </AuthNotice>
             )}
 
-            {error && (
-              <div className="mb-4 p-3 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
-                {error}
-              </div>
-            )}
+            {error && <AuthNotice tone="danger" role="alert" title={error} />}
 
             {/* Avatar preview */}
-            <div className="flex flex-col items-center mb-5">
+            <div className="mb-5 flex items-center gap-4">
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
-                className="relative group"
+                aria-label={t('auth:register.uploadPhoto')}
+                className="group relative flex-shrink-0"
+                style={{ borderRadius: avatarRadius(80) }}
               >
                 <Avatar
                   src={avatarPreview}
@@ -640,7 +707,10 @@ export function RegisterPage() {
                   size={80}
                   avatarColor={avatarColor}
                 />
-                <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div
+                  className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                  style={{ borderRadius: avatarRadius(80) }}
+                >
                   <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -650,7 +720,7 @@ export function RegisterPage() {
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
-                className="text-xs text-accent-primary hover:underline mt-2"
+                className="btn-outline"
               >
                 {t('auth:register.uploadPhoto')}
               </button>
@@ -665,28 +735,26 @@ export function RegisterPage() {
 
             {/* Display Name */}
             <div className="mb-5">
-              <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+              <label htmlFor="register-display-name" className="field-label">
                 {t('common:labels.displayName')}
               </label>
               <input
+                id="register-display-name"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder={username.trim() || t('auth:fields.displayNamePlaceholder')}
-                className="input-standard w-full py-2.5 text-base md:text-sm"
+                className={AUTH_FIELD}
                 autoComplete="name"
               />
             </div>
 
             {/* Avatar Color Picker */}
             <div className="mb-6">
-              <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+              <p id="register-avatar-color" className="field-label">
                 {t('auth:fields.avatarColor')}
-              </label>
-              {/* Color swatch row: gap tightens on narrow viewports so the 7 swatches
-                  fit inside a 360 px viewport (p-6 inner content area is ~280 px;
-                  7×32 + 6×10 = 284 px would overflow with gap-2.5). */}
-              <div className="flex gap-2 md:gap-2.5 justify-center">
+              </p>
+              <div role="group" aria-labelledby="register-avatar-color" className="flex flex-wrap gap-2">
                 {AVATAR_COLORS.map((key) => {
                   const entry = AVATAR_GRADIENT_MAP[key];
                   return (
@@ -694,14 +762,15 @@ export function RegisterPage() {
                       key={key}
                       type="button"
                       onClick={() => setAvatarColor(key)}
-                      className="w-8 h-8 rounded-full border-2 transition-all hover:scale-110"
+                      aria-pressed={avatarColor === key}
+                      className="h-8 w-8 rounded border-2 transition-colors"
                       style={{
                         background: entry.gradient,
                         borderColor: avatarColor === key ? 'white' : 'transparent',
-                        boxShadow: avatarColor === key ? `0 0 0 2px ${entry.glow}40` : 'none',
                       }}
                       // `key` is the closed AvatarColor union; the catalog lists every member:
                       // common:colors.{mint,sky,lavender,coral,rose,teal,amber}
+                      aria-label={t(`common:colors.${key}`)}
                       title={t(`common:colors.${key}`)}
                     />
                   );
@@ -714,7 +783,8 @@ export function RegisterPage() {
               type="button"
               onClick={() => handleRegister(false)}
               disabled={isDisabled}
-              className="w-full py-3 md:py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-busy={isRegistering}
+              className={AUTH_SUBMIT}
             >
               {retryAfter > 0
                 ? t('auth:register.rateLimited.retryIn', { seconds: retryAfter })
@@ -723,13 +793,13 @@ export function RegisterPage() {
                   : t('auth:register.submit')}
             </button>
 
-            <div className="flex items-center justify-between mt-3">
+            {/* The two quiet actions line their words up with the button's edges. */}
+            <div className="mt-2 flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => { setError(''); setRetryAfter(0); setDirection('back'); setStep(1); }}
                 disabled={isRegistering}
-                // py-2 px-1 widens the tap area on mobile while keeping the visual link style.
-                className="text-sm text-txt-tertiary hover:text-txt-secondary transition-colors disabled:opacity-50 py-2 px-1 -mx-1"
+                className="btn-quiet -ml-3 h-11 desktop:h-8"
               >
                 {t('common:actions.back')}
               </button>
@@ -737,7 +807,7 @@ export function RegisterPage() {
                 type="button"
                 onClick={() => handleRegister(true)}
                 disabled={isDisabled}
-                className="text-sm text-txt-tertiary hover:text-txt-secondary transition-colors disabled:opacity-50 py-2 px-1 -mx-1"
+                className="btn-quiet -mr-3 h-11 desktop:h-8"
               >
                 {t('auth:register.skip')}
               </button>
@@ -745,14 +815,7 @@ export function RegisterPage() {
           </div>
         )}
 
-        {/* AGPL § 13: source offer for anonymous visitors, shown on both steps. */}
-        {instanceInfo && (
-          <div className="mt-6 pt-4 border-t border-white/[0.04] flex justify-center">
-            <SourceCodeLink sourceCodeUrl={instanceInfo.sourceCodeUrl} version={instanceInfo.version} commit={instanceInfo.commit} />
-          </div>
-        )}
-        </div>
-      </div>
+      </AuthShell>
 
       {/* Image Crop Modal */}
       {avatarCropSrc && (
@@ -767,6 +830,6 @@ export function RegisterPage() {
           maxOutputDimension={256}
         />
       )}
-    </div>
+    </>
   );
 }

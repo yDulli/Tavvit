@@ -178,3 +178,74 @@ describe('MarkdownRenderer', () => {
     expect(container.textContent).toBe('at 10:30:00 on fe80::a:b:c:d');
   });
 });
+
+describe('MarkdownRenderer lists', () => {
+  // A list item keeps `whitespace-pre-wrap` for typed line breaks, so a newline
+  // node beside a block in it (and in a nested list, which inherits it) would
+  // show as a blank line.
+  const newlineNodes = (element: Element) => Array.from(element.childNodes)
+    .filter((node) => node.nodeType === Node.TEXT_NODE && node.textContent === '\n');
+
+  it('has no newline nodes around a nested list', () => {
+    const { container } = render(<MarkdownRenderer content={'- one\n  - inner a\n  - inner b\n- two'} />);
+    for (const list of Array.from(container.querySelectorAll('ul, ol, li'))) {
+      expect(newlineNodes(list)).toHaveLength(0);
+    }
+    expect(container.querySelectorAll('ul ul li')).toHaveLength(2);
+  });
+
+  it('keeps a typed line break between two inline parts of an item', () => {
+    const { container } = render(<MarkdownRenderer content={'- **first**\n  **second**'} />);
+    const item = container.querySelector('li')!;
+    expect(newlineNodes(item)).toHaveLength(1);
+    expect(item.textContent).toBe('first\nsecond');
+  });
+});
+
+describe('MarkdownRenderer emoji-only messages', () => {
+  const jumbo = (content: string) => render(<MarkdownRenderer content={content} />).container.querySelector('.md-jumbo');
+
+  it('draws a message of nothing but a few native emoji large', () => {
+    expect(jumbo('😀')).not.toBeNull();
+    expect(jumbo('😀 🎉 🔥')).not.toBeNull();
+    expect(jumbo('👍🏽 🏳️‍🌈 🇩🇪')).not.toBeNull();
+  });
+
+  it('leaves words with emoji, plain numbers and very many emoji at text size', () => {
+    expect(jumbo('nice 😀')).toBeNull();
+    expect(jumbo('123')).toBeNull();
+    expect(jumbo('😀'.repeat(25))).toBeNull();
+  });
+});
+
+describe('MarkdownRenderer whitespace', () => {
+  // A message body sits in a `whitespace-pre-wrap` container so that a line break the author
+  // typed survives. react-markdown puts a newline text node between every two blocks, and under
+  // pre-wrap each of those renders as a blank line: a three-item list grew two extra lines.
+  // jsdom does no layout, so this pins the structure that prevents it.
+  it('resets whitespace to normal for the blocks, and opts paragraphs and items back in', () => {
+    const { container } = render(
+      <div className="whitespace-pre-wrap">
+        <MarkdownRenderer content={'intro:\n\n- one\n- two\n\n> quoted'} />
+      </div>,
+    );
+    const wrapper = container.querySelector('.whitespace-pre-wrap > .whitespace-normal');
+    expect(wrapper).not.toBeNull();
+    const list = container.querySelector('ul');
+    expect(list).not.toBeNull();
+    expect(wrapper!.contains(list)).toBe(true);
+    for (const item of Array.from(list!.querySelectorAll('li'))) {
+      expect(item.className).toContain('whitespace-pre-wrap');
+    }
+    for (const paragraph of Array.from(container.querySelectorAll('span.block'))) {
+      expect(paragraph.className).toContain('whitespace-pre-wrap');
+    }
+  });
+
+  it('keeps a single typed line break inside a paragraph', () => {
+    const { container } = render(<MarkdownRenderer content={'first line\nsecond line'} />);
+    const paragraph = container.querySelector('span.block');
+    expect(paragraph!.textContent).toBe('first line\nsecond line');
+    expect(paragraph!.className).toContain('whitespace-pre-wrap');
+  });
+});

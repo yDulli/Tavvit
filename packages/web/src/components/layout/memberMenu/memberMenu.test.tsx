@@ -75,28 +75,28 @@ describe('member context menu', () => {
     expect(screen.queryByRole('menuitem', { name: /Roles/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Kick' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Ban' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'Change space nickname…' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Change Space Nickname…' })).not.toBeInTheDocument();
   });
 
   it('opens only the menu on right click, hiding self and owner management actions', () => {
     mount(); rightClick();
-    expect(screen.getByRole('menuitem', { name: 'View profile' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'View Profile' })).toBeInTheDocument();
     expect(useUIStore.getState().userProfilePopout.user).toBeNull();
     rightClick('viewer');
     expect(screen.queryByRole('menuitem', { name: 'Send message' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Add Friend' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Kick' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: /Roles/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Change space nickname…' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Change Space Nickname…' })).toBeInTheDocument();
     rightClick('owner');
-    expect(screen.queryByRole('menuitem', { name: 'Change space nickname…' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Change Space Nickname…' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Ban' })).not.toBeInTheDocument();
   });
 
   it('does not offer privileged actions to ordinary members or an empty role submenu', () => {
     spaces.useSpaceStore.setState({ spacePermissions: new Map(), roles: [] });
     mount(); rightClick();
-    expect(screen.queryByRole('menuitem', { name: 'Change space nickname…' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Change Space Nickname…' })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: /Roles/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Kick' })).not.toBeInTheDocument();
   });
@@ -152,12 +152,12 @@ describe('member context menu', () => {
 
   it('saves a space nickname and offers an explicit reset', async () => {
     update.mockResolvedValue({ ...member('target'), nickname: 'Pilot' });
-    mount(); rightClick(); fireEvent.click(screen.getByRole('menuitem', { name: 'Change space nickname…' }));
+    mount(); rightClick(); fireEvent.click(screen.getByRole('menuitem', { name: 'Change Space Nickname…' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Space nickname' }), { target: { value: '  Pilot  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await screen.findByText('Pilot');
     expect(update).toHaveBeenLastCalledWith('space', 'target', { nickname: 'Pilot' });
-    rightClick('Pilot'); fireEvent.click(screen.getByRole('menuitem', { name: 'Change space nickname…' }));
+    rightClick('Pilot'); fireEvent.click(screen.getByRole('menuitem', { name: 'Change Space Nickname…' }));
     update.mockResolvedValue(member('target'));
     fireEvent.click(screen.getByRole('button', { name: 'Reset to account name' }));
     await waitFor(() => expect(update).toHaveBeenLastCalledWith('space', 'target', { nickname: null }));
@@ -166,7 +166,7 @@ describe('member context menu', () => {
   it('clears the nickname when the field is saved empty', async () => {
     spaces.useSpaceStore.setState({ members: spaces.useSpaceStore.getState().members.map(m => m.userId === 'target' ? { ...m, nickname: 'Pilot' } : m) });
     update.mockResolvedValue(member('target'));
-    mount(); rightClick('Pilot'); fireEvent.click(screen.getByRole('menuitem', { name: 'Change space nickname…' }));
+    mount(); rightClick('Pilot'); fireEvent.click(screen.getByRole('menuitem', { name: 'Change Space Nickname…' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Space nickname' }), { target: { value: '   ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(update).toHaveBeenCalledWith('space', 'target', { nickname: null }));
@@ -174,7 +174,7 @@ describe('member context menu', () => {
   });
 
   it.each(['\u200B\u200D', 'a\tb', 'evil\u202Eexe'])('refuses %j before sending, with the server rule', async value => {
-    mount(); rightClick(); fireEvent.click(screen.getByRole('menuitem', { name: 'Change space nickname…' }));
+    mount(); rightClick(); fireEvent.click(screen.getByRole('menuitem', { name: 'Change Space Nickname…' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Space nickname' }), { target: { value } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('at most 32 characters');
@@ -187,7 +187,7 @@ describe('member context menu', () => {
     const row = screen.getByText('target').closest('[role="button"]') as HTMLElement;
     row.focus();
     fireEvent.keyDown(row, { key: 'ContextMenu' });
-    expect(screen.getByRole('menuitem', { name: 'View profile' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'View Profile' })).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
     expect(useContextMenuStore.getState().menu).toBeNull();
     expect(row).toHaveFocus();
@@ -205,7 +205,7 @@ describe('member context menu', () => {
 
   it('keeps nickname input and exposes save failures', async () => {
     update.mockRejectedValue(new Error('Nickname rejected'));
-    mount(); rightClick(); fireEvent.click(screen.getByRole('menuitem', { name: 'Change space nickname…' }));
+    mount(); rightClick(); fireEvent.click(screen.getByRole('menuitem', { name: 'Change Space Nickname…' }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Pilot' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
@@ -219,7 +219,10 @@ describe('member context menu', () => {
     expect(screen.getByText(label + ' target')).toBeInTheDocument();
     expect(remove).not.toHaveBeenCalled(); expect(ban).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: label }));
-    await waitFor(() => expect(label === 'Kick' ? remove : ban).toHaveBeenCalledWith('space', 'target'));
+    await waitFor(() => {
+      if (label === 'Kick') expect(remove).toHaveBeenCalledWith('space', 'target', undefined);
+      else expect(ban).toHaveBeenCalledWith('space', 'target', undefined, 0);
+    });
     await waitFor(() => expect(screen.queryByText('target')).not.toBeInTheDocument());
   });
 
@@ -241,6 +244,15 @@ describe('member context menu', () => {
     expect(spaces.useSpaceStore.getState().members[2]?.nickname).toBeNull();
     applySpaceMemberUpdate('', updated);
     expect(spaces.useSpaceStore.getState().members[2]).toMatchObject({ nickname: 'Pilot', roles: [role], user: { status: 'online' } });
+  });
+
+  it('applies the timeout a member update carries, and keeps it when a host leaves the field out', () => {
+    applySpaceMemberUpdate('', { ...member('target'), timedOutUntil: 5_000 });
+    expect(spaces.useSpaceStore.getState().members[2]?.timedOutUntil).toBe(5_000);
+    applySpaceMemberUpdate('', member('target'));
+    expect(spaces.useSpaceStore.getState().members[2]?.timedOutUntil).toBe(5_000);
+    applySpaceMemberUpdate('', { ...member('target'), timedOutUntil: null });
+    expect(spaces.useSpaceStore.getState().members[2]?.timedOutUntil).toBeNull();
   });
   it.each(['Enter', ' '])('activates role checkboxes with %s', async key => {
     update.mockResolvedValue({ ...member('target'), roles: [role] });
@@ -270,7 +282,7 @@ describe('member context menu', () => {
   });
 
   it('opens the same profile from the menu', () => {
-    mount(); rightClick(); fireEvent.click(screen.getByRole('menuitem', { name: 'View profile' }));
+    mount(); rightClick(); fireEvent.click(screen.getByRole('menuitem', { name: 'View Profile' }));
     expect(useUIStore.getState().userProfilePopout.member).toEqual({ spaceId: 'space', userId: 'target' });
     expect(useUIStore.getState().activeModal).toBeNull();
     expect(useContextMenuStore.getState().menu).toBeNull();

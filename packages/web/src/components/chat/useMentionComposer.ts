@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState, type RefObject, type ChangeEvent, type KeyboardEvent } from 'react';
-import { useComposerStore } from '../../stores/composerStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import {
   filterMentionCandidates,
@@ -21,17 +20,18 @@ interface Options {
   channelId: string;
   draftText: string;
   textareaRef: RefObject<HTMLTextAreaElement>;
+  /** Stores the draft: the composer's lives in its store, an edit box's in its own state. */
+  onDraftChange: (value: string) => void;
 }
 
 /**
- * The composer's mention handling: the picker's state and keys, and the map
+ * A message box's mention handling: the picker's state and keys, and the map
  * between the stored draft (wire `<@id>` and `<@&id>` tokens) and the text the
  * textarea shows (`@name`). The draft stays in wire form; every other composer feature
  * works on it and converts textarea offsets with `mentionModel`.
  */
-export function useMentionComposer({ channelId, draftText, textareaRef }: Options) {
+export function useMentionComposer({ channelId, draftText, textareaRef, onDraftChange }: Options) {
   const [mentionState, setMentionState] = useState<MentionState | null>(null);
-  const setDraft = useComposerStore((s) => s.setDraft);
   const mentionCandidates = useChannelMentionCandidates(channelId);
   // Labels come from the channel's people, as the sent message's badges do,
   // so a DM shows its own members (the signed-in user included) and never the
@@ -74,7 +74,7 @@ export function useMentionComposer({ channelId, draftText, textareaRef }: Option
       const after = draftText.slice(cursorPos);
       const insertion = mentionInsertion(candidate.userId);
       const newContent = before + insertion + after;
-      setDraft(channelId, newContent);
+      onDraftChange(newContent);
       setMentionState(null);
 
       // Restore cursor position after React re-renders
@@ -87,7 +87,7 @@ export function useMentionComposer({ channelId, draftText, textareaRef }: Option
         }
       });
     },
-    [mentionState, draftText, setDraft, channelId, mentionModel, modelFor, textareaRef],
+    [mentionState, draftText, onDraftChange, mentionModel, modelFor, textareaRef],
   );
 
   const handleMentionKey = (e: KeyboardEvent): boolean => {
@@ -136,7 +136,7 @@ export function useMentionComposer({ channelId, draftText, textareaRef }: Option
       const caret = shown.toDisplay(wireCursor);
       requestAnimationFrame(() => textareaRef.current?.setSelectionRange(caret, caret));
     }
-    setDraft(channelId, value);
+    onDraftChange(value);
 
     // Detect @mention trigger
     const textBeforeCursor = value.slice(0, wireCursor);

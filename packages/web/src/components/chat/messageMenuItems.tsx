@@ -1,3 +1,5 @@
+import { REMINDER_PRESETS, type ReminderPreset } from '../../utils/reminderTimes';
+import { Icon } from '../ui/Icon';
 import React from 'react';
 import type { ContextMenuItem } from '../../stores/contextMenuStore';
 import type { MessageWithUser } from '@backspace/shared';
@@ -24,6 +26,26 @@ interface MessageMenuParams {
   onReaction: (emoji: string) => void;
   onOpenEmojiPicker: () => void;
   onMarkUnread: (messageId: string) => void;
+  /** Pin it, or take its pin off. Absent where this person may not. */
+  onTogglePin?: () => void;
+  /** Start the thread that grows from it, or open the one it has. Absent where neither can be. */
+  onThread?: () => void;
+  /** On this person's own list already. */
+  isSaved?: boolean;
+  /** Put it on their list, or take it off. Absent for a message not stored yet. */
+  onToggleSaved?: () => void;
+  /** Save it and be reminded. Absent for a message not stored yet. */
+  onRemind?: (preset: ReminderPreset) => void;
+  /** Send a copy somewhere else. Absent for a message not stored yet. */
+  onForward?: () => void;
+  /** Read it in another language, or stop. Absent for what has no words of its own or is not stored yet. */
+  onTranslate?: () => void;
+  /** A translation stands under it at the moment. */
+  isTranslated?: boolean;
+  /** Start picking messages to delete together. Absent where this person may not. */
+  onSelect?: () => void;
+  /** Report the message to the operator of the instance that holds it. Absent for one's own or a pending message. */
+  onReport?: () => void;
   imageUrl?: string | null;
   stickerSource?: string | null;
   stickerName?: string;
@@ -52,6 +74,7 @@ export function buildMessageMenuItems(params: MessageMenuParams): ContextMenuIte
     onReaction,
     onOpenEmojiPicker,
     onMarkUnread,
+    onReport,
     imageUrl,
     sourceUrl,
     videoUrl,
@@ -202,6 +225,17 @@ export function buildMessageMenuItems(params: MessageMenuParams): ContextMenuIte
     },
   });
 
+  if (params.onTranslate) {
+    items.push({
+      key: 'translate',
+      type: 'action',
+      label: params.isTranslated ? i18n.t('chat:menu.hideTranslation') : i18n.t('chat:menu.translate'),
+      hidden: !message.content || !!sourceUrl || isStickerMessage(message.content),
+      icon: <Icon name="translate" size={16} />,
+      onClick: params.onTranslate,
+    });
+  }
+
   items.push({ key: 'clipboard-sep', type: 'separator' });
 
   // ── Mark Unread ─────────────────────────────────────────────────────────
@@ -221,10 +255,80 @@ export function buildMessageMenuItems(params: MessageMenuParams): ContextMenuIte
     },
   });
 
+  // ── Thread ──────────────────────────────────────────────────────────────
+  if (params.onThread) {
+    items.push({
+      key: 'thread',
+      type: 'action',
+      label: 'thread' in message && message.thread ? i18n.t('chat:menu.openThread') : i18n.t('chat:menu.startThread'),
+      icon: <Icon name="thread" size={16} />,
+      onClick: params.onThread,
+    });
+  }
+
+  // ── Saved ──
+  if (params.onToggleSaved) {
+    items.push({
+      key: 'save',
+      type: 'action',
+      label: params.isSaved ? i18n.t('chat:menu.unsaveMessage') : i18n.t('chat:menu.saveMessage'),
+      icon: <Icon name="bookmark" size={16} />,
+      onClick: params.onToggleSaved,
+    });
+  }
+  if (params.onRemind) {
+    const { onRemind } = params;
+    items.push({
+      key: 'remind',
+      type: 'submenu',
+      label: i18n.t('chat:menu.remindMe'),
+      icon: <Icon name="clock" size={16} />,
+      children: REMINDER_PRESETS.map((preset) => ({
+        key: `remind-${preset}`,
+        type: 'action' as const,
+        label: i18n.t(`chat:menu.remind.${preset}`),
+        onClick: () => onRemind(preset),
+      })),
+    });
+  }
+
+  // ── Forward ─────────────────────────────────────────────────────────────
+  if (params.onForward) {
+    items.push({
+      key: 'forward',
+      type: 'action',
+      label: i18n.t('chat:menu.forwardMessage'),
+      icon: <Icon name="forward" size={16} />,
+      onClick: params.onForward,
+    });
+  }
+
+  // ── Pin ─────────────────────────────────────────────────────────────────
+  if (params.onTogglePin) {
+    items.push({
+      key: 'pin',
+      type: 'action',
+      label: message.pinnedAt != null ? i18n.t('chat:menu.unpinMessage') : i18n.t('chat:menu.pinMessage'),
+      icon: <Icon name="pin" size={16} />,
+      onClick: params.onTogglePin,
+    });
+  }
+
+  // ── Select several (moderator) ──────────────────────────────────────────
+  if (params.onSelect) {
+    items.push({
+      key: 'select',
+      type: 'action',
+      label: i18n.t('chat:menu.selectMessages'),
+      icon: <Icon name="check" size={16} />,
+      onClick: params.onSelect,
+    });
+  }
+
   items.push({ key: 'unread-sep', type: 'separator' });
 
   // ── Edit Message (author only; a sticker's content is a token, not text) ──
-  if (isAuthor && !isStickerMessage(message.content)) {
+  if (isAuthor && !isStickerMessage(message.content) && !('poll' in message && message.poll)) {
     items.push({
       key: 'edit',
       type: 'action',
@@ -252,6 +356,17 @@ export function buildMessageMenuItems(params: MessageMenuParams): ContextMenuIte
       ),
       onClick: onDelete,
       danger: true,
+    });
+  }
+
+  // ── Report (anyone else's message) ───────────────────────────────────────
+  if (onReport) {
+    items.push({
+      key: 'report',
+      type: 'action',
+      label: i18n.t('legal:report.menuMessage'),
+      icon: <Icon name="flag" size={16} />,
+      onClick: onReport,
     });
   }
 

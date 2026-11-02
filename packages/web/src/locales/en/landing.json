@@ -1,0 +1,392 @@
+{
+  "meta": {
+    "title": "Tavvit: group chat with channels, voice and screen sharing",
+    "description": "Tavvit is a home for your friends and communities: channels, direct messages, voice and screen sharing in one quick, quiet app. No ads, no trackers."
+  },
+  "nav": {
+    "label": "Main navigation",
+    "features": "Features",
+    "download": "Download",
+    "login": "Log in",
+    "register": "Get started",
+    "developers": "Developers",
+    "help": "Help"
+  },
+  "hero": {
+    "title": "Pull up a chair.",
+    "lead": "Group chat for your friends and communities: channels, direct messages, voice and screen sharing. No ads, no trackers.",
+    "explore": "Explore features",
+    "alt": "The Tavvit app: a space's channels on the left, a conversation in the middle and its members on the right."
+  },
+  "news": {
+    "label": "New"
+  },
+  "eyebrow": {
+    "demo": "try a seat",
+    "messages": "at the table",
+    "spaces": "a room of your own",
+    "crowds": "the guest list",
+    "voice": "the back room",
+    "conversations": "your usual spot",
+    "around": "the notice board",
+    "people": "the regulars",
+    "themes": "paint the walls",
+    "community": "the whole street",
+    "moving": "the keys",
+    "developers": "behind the bar",
+    "privacy": "house rules",
+    "anywhere": "to go",
+    "features": "all of it",
+    "questions": "ask at the bar",
+    "cta": "the door is open"
+  },
+  "statement": "Everything your group needs in one place, and nothing that follows you around. Quick to open, quiet to live in, and yours to shape.",
+  "demo": {
+    "label": "A demo channel",
+    "title": "Go on,\nsay something.",
+    "body": "This is what a channel feels like. Type a message and see who answers.",
+    "note": "A demo: the people are invented, and nothing you type leaves this page.",
+    "topic": "Say hi. Nobody bites.",
+    "placeholder": "Message #general",
+    "send": "Send",
+    "you": "You",
+    "typing": "{{name}} is typing…",
+    "online": "Online",
+    "channels": "Channels",
+    "cta": "Keep your seat",
+    "seed": {
+      "sam": "Who is still up?",
+      "lena": "Always. I think someone new just walked in.",
+      "noor": "Hey, new here? Pull up a chair and say hi!"
+    },
+    "replies": {
+      "lena": "Welcome! Grab a seat, nobody bites.",
+      "sam": "Good timing. We need one more for tonight.",
+      "noor": "I like this one. Can we keep them?",
+      "theo": "Is that why I am always last?",
+      "yuki": "Noted. I will add you to the spreadsheet.",
+      "end": "You are getting the hang of this. The real thing has voice, threads and a lot more."
+    }
+  },
+  "messages": {
+    "title": "Conversations\nthat stay readable.",
+    "body": "Replies show what they answer. Reactions stay small. Code, links and files sit where they belong, and a message that mentions you is easy to spot.",
+    "alt": "A conversation with replies, a code block, mentions and reactions."
+  },
+  "spaces": {
+    "title": "A space for every group.",
+    "body": "The raid team, the book club, the people you build things with. Each gets its own space, with channels sorted into categories and a member list that shows who does what.",
+    "alt": "A space's channel list next to its member list, grouped by coloured roles.",
+    "layers": {
+      "channels": "Channels",
+      "conversation": "Conversation",
+      "members": "Members and roles"
+    }
+  },
+  "crowds": {
+    "title": "Who's at your table?",
+    "raid": "The raid team",
+    "photo": "The photo club",
+    "dev": "The dev crew",
+    "books": "The book club",
+    "alts": {
+      "raid": "A gaming group's space: a conversation about one more round, with a code block and reactions.",
+      "photo": "A photo club's space: a channel where people give feedback on a roll of film.",
+      "dev": "A developer group's space: a code review channel with a message from a build bot.",
+      "books": "A book club's space: a conversation about this month's book."
+    }
+  },
+  "conversations": {
+    "title": "Back to where\nyou left off.",
+    "body": "Unread channels stand out, the inbox gathers what is waiting for you, and Ctrl+K takes you to any channel or conversation in a few keystrokes.",
+    "alt": "The switcher over the app: a search for a channel and what it found."
+  },
+  "around": {
+    "title": "Everything around the conversation.",
+    "body": "A group does more than talk. Side conversations, plans, votes and house rules sit right beside the chat.",
+    "thread": {
+      "title": "Threads",
+      "body": "Pull a side conversation out of the channel. Follow the ones you care about, and the rest stay out of your way.",
+      "alt": "A channel with a thread open beside it."
+    },
+    "poll": {
+      "title": "Polls",
+      "body": "Ask the room. Results stay hidden until you have voted, so the first votes do not steer the rest.",
+      "alt": "A poll with three answers and the share of votes for each."
+    },
+    "welcome": {
+      "title": "A welcome and rules",
+      "body": "Greet new people, point them to the right channels and, if you like, ask them to agree to your rules first.",
+      "alt": "A space's welcome with its rules and the channels to start in."
+    },
+    "event": {
+      "title": "Events",
+      "body": "Plan the raid or the book club, see who is going, get a reminder and add it to your calendar.",
+      "alt": "An event with its date, who is going and a button to join the voice channel."
+    },
+    "points": {
+      "voice": {
+        "title": "Voice messages and a soundboard",
+        "body": "Say it instead of typing it, and play a sound to the whole voice channel when the moment calls for one."
+      },
+      "saved": {
+        "title": "Saved messages and reminders",
+        "body": "Keep what matters in one list, and have a message brought back to you later."
+      },
+      "alerts": {
+        "title": "Keyword alerts and push",
+        "body": "Choose the words that should reach you, and get a notification even when the app is closed."
+      }
+    }
+  },
+  "profiles": {
+    "body": "A banner, a bio, pronouns, links and colours of your choice, and if you like a different picture and bio for each space.",
+    "alt": "A profile card with a banner, a bio and a role."
+  },
+  "friends": {
+    "title": "Your people,\none click away.",
+    "body": "Add friends by their username, see who is online and what they are up to, and start a direct message or a group of up to ten.",
+    "alt": "The friends page, listing who is online and what they are doing."
+  },
+  "voice": {
+    "title": "Talk when typing\nis too slow.",
+    "body": "Drop into a voice channel, turn on your camera, share your screen or ring a friend directly. Noise suppression filters out your keyboard, and push to talk is one setting away.",
+    "alt": "A voice channel with several people in it and the call controls below."
+  },
+  "features": {
+    "title": "The menu.",
+    "groups": {
+      "messages": "Messages",
+      "voice": "Voice and video",
+      "spaces": "Spaces",
+      "moderation": "Moderation",
+      "yours": "Your way",
+      "everywhere": "Where it runs",
+      "community": "Community",
+      "account": "Account and safety",
+      "developers": "Bots and webhooks"
+    },
+    "items": {
+      "replies": "Replies, mentions, reactions",
+      "emoji": "Custom emoji and stickers",
+      "files": "File uploads with previews",
+      "links": "Link previews",
+      "search": "Full-text search with filters",
+      "unread": "Read state and inbox",
+      "voiceChannels": "Voice channels",
+      "video": "Video",
+      "screen": "Screen sharing",
+      "calls": "Calls in direct messages",
+      "noise": "Noise suppression",
+      "ptt": "Push to talk",
+      "categories": "Channels and categories",
+      "roles": "Roles and permissions",
+      "overrides": "Overrides per category and channel",
+      "invites": "Invites and join requests",
+      "listing": "Public listing",
+      "spaceProfiles": "A separate profile per space",
+      "bans": "Bans and timeouts",
+      "automod": "Automatic moderation",
+      "slow": "Slow mode",
+      "audit": "Audit log",
+      "voiceMod": "Voice moderation",
+      "reports": "Report form for everyone",
+      "themes": "Seven themes, or your own colours",
+      "styles": "Three message styles",
+      "density": "Density, text size and corners",
+      "contrast": "High contrast and clear status shapes",
+      "languages": "English, German, Portuguese, Russian, Chinese",
+      "browser": "In your browser",
+      "windows": "Windows app with automatic updates",
+      "games": "Game detection on Windows",
+      "phone": "On your phone, added to the home screen",
+      "voiceMessages": "Voice messages",
+      "pins": "Pinned messages",
+      "forward": "Forwarding and spoilers",
+      "saved": "Saved messages and reminders",
+      "keywords": "Keyword alerts",
+      "soundboard": "Soundboard",
+      "threads": "Threads",
+      "events": "Events with reminders",
+      "polls": "Polls",
+      "welcome": "Welcome page and rules",
+      "template": "Start from a Discord server template",
+      "twoFactor": "Two-factor sign-in with recovery codes",
+      "devices": "Device list, sign out everywhere",
+      "export": "Download your data",
+      "deleteAccount": "Delete your own account",
+      "contactRules": "Choose who may contact you",
+      "blocking": "Blocking",
+      "botApi": "REST and socket API for bots",
+      "commands": "Slash commands with options",
+      "cards": "Cards in messages",
+      "webhooks": "Incoming webhooks",
+      "portal": "Developer portal",
+      "docs": "Public developer docs",
+      "push": "Notifications when the app is closed"
+    }
+  },
+  "community": {
+    "title": "Find a space,\nor open your own.",
+    "body": "Browse public spaces on Explore and join with one click or a request. A verified mark means the platform team has reviewed a space, and no space can list itself without that review.",
+    "alt": "The Explore page with cards for public spaces.",
+    "points": {
+      "explore": {
+        "title": "Listed after review",
+        "body": "A space appears on Explore only after the platform team has approved it."
+      },
+      "moderation": {
+        "title": "Tools for moderators",
+        "body": "Timeouts, slow mode, automatic moderation and an audit log of who did what."
+      },
+      "reports": {
+        "title": "Reports that are answered",
+        "body": "Anyone can report a message or a space, and people affected are told the decision and the reason."
+      },
+      "rights": {
+        "title": "Rights down to the channel",
+        "body": "Roles with their own colours and permissions, and exceptions for any category or channel."
+      },
+      "invites": {
+        "title": "Invites on your terms",
+        "body": "Links with an end date and a limit, or join requests you approve one by one."
+      },
+      "template": {
+        "title": "Start from a template",
+        "body": "Paste a Discord server template and get its roles, categories, channels and permissions. Messages and members stay where they are."
+      }
+    }
+  },
+  "moving": {
+    "title": "Moving in takes three steps.",
+    "one": {
+      "title": "Set up your place",
+      "body": "Start a new space, or paste a Discord server template and get its roles, categories and channels."
+    },
+    "two": {
+      "title": "Send one link",
+      "body": "Everyone joins with the same invite link. Give it an end date or a limit if you like."
+    },
+    "three": {
+      "title": "Pull up a chair",
+      "body": "Your group is in. Channels and voice work right away, and the rest is yours to shape."
+    }
+  },
+  "developers": {
+    "title": "Build on it.",
+    "body": "Bots post, react, moderate and answer slash commands through a documented API. Webhooks take a message from any program with a single address.",
+    "link": "Read the developer docs",
+    "alt": "A message from a bot, marked as one, with a card showing how a build went.",
+    "points": {
+      "api": {
+        "title": "A documented API",
+        "body": "REST and a live socket, with a quickstart that gets a first bot talking in minutes."
+      },
+      "commands": {
+        "title": "Slash commands",
+        "body": "With text, numbers, people, channels and fixed choices, and answers only the person who asked can see."
+      },
+      "rights": {
+        "title": "Bots ask, you decide",
+        "body": "A bot gets only the rights a space gives it, and its mark cannot be turned off."
+      }
+    }
+  },
+  "privacy": {
+    "title": "No ads.\nNo trackers.",
+    "body": "Pictures and videos from other websites load only after you click them, so those sites learn nothing about you until you decide.",
+    "points": {
+      "twoFactor": {
+        "title": "Two-factor sign-in",
+        "body": "An authenticator app and recovery codes guard your account."
+      },
+      "devices": {
+        "title": "Your devices in view",
+        "body": "See where you are signed in, and sign out one device or all of them."
+      },
+      "data": {
+        "title": "Take it with you, or delete it",
+        "body": "Download your data as one file, or delete your account yourself."
+      },
+      "contact": {
+        "title": "You decide who reaches you",
+        "body": "Choose who may send you a friend request or start a conversation, and block anyone."
+      }
+    }
+  },
+  "themes": {
+    "title": "Your colours,\nyour density.",
+    "body": "Seven themes or your own colours, three message styles, sharp or round corners, and the text size you read best. Tavvit stays out of the way, in whichever look you like.",
+    "alt": "The same conversation in seven different colour themes."
+  },
+  "anywhere": {
+    "title": "On your desktop.\nOn your phone.",
+    "desktop": {
+      "body": "A Windows app with global shortcuts, automatic updates and game detection, so friends can see what you are playing.",
+      "link": "Download for Windows"
+    },
+    "phone": {
+      "body": "Open Tavvit in your phone's browser and add it to the home screen. Spaces, messages and voice come along, and notifications reach you even when it is closed.",
+      "alt": "Tavvit on a phone, showing a conversation."
+    },
+    "qr": "Scan to open Tavvit on your phone"
+  },
+  "questions": {
+    "title": "Good questions.",
+    "more": "More on the help page",
+    "items": {
+      "join": {
+        "q": "How do I join a space?",
+        "a": "Open an invite link from someone in it, or browse Explore for public spaces. Some spaces let you in at once, others ask for a request first."
+      },
+      "phone": {
+        "q": "Is there a phone app?",
+        "a": "Tavvit runs in your phone's browser. Add it to the home screen and it opens like an app, with notifications. It is not in the app stores."
+      },
+      "computers": {
+        "q": "Which computers does it run on?",
+        "a": "Any with a current browser. For Windows there is also a desktop app with global shortcuts, automatic updates and game detection."
+      },
+      "moving": {
+        "q": "Can I bring my Discord server along?",
+        "a": "Its structure, yes. Paste a server template link and Tavvit sets up the roles, categories, channels and permissions. Messages and members cannot come along, so invite your people with a link."
+      },
+      "bots": {
+        "q": "Can I use bots?",
+        "a": "Yes. Anyone can write one with the public API, and whoever runs a space decides which bots come in and what they may do. Start with the developer docs."
+      },
+      "trouble": {
+        "q": "What if someone misbehaves?",
+        "a": "Moderators have timeouts, bans, automatic filters and an audit log. Anyone can report a message or a space, and people affected are told the decision and the reason."
+      }
+    }
+  },
+  "cta": {
+    "title": "There's a seat free.",
+    "body": "Create an account in a minute and start your first space, or join one you were invited to.",
+    "closed": "This server is not taking new accounts at the moment. If you have one, welcome back.",
+    "register": "Create an account",
+    "login": "Log in"
+  },
+  "closer": "That's the whole page. Your chair's still free.",
+  "footer": {
+    "product": "Product",
+    "legal": "Legal",
+    "imprint": "Legal notice",
+    "privacy": "Privacy policy",
+    "terms": "Terms of use",
+    "report": "Report content",
+    "developers": "Developers",
+    "help": "Help",
+    "changelog": "What's new",
+    "status": "Status",
+    "source": "Source code",
+    "language": "Language",
+    "roadmap": "Roadmap"
+  },
+  "life": {
+    "ok": "All systems running",
+    "down": "Something is down right now",
+    "version": "Version {{version}}"
+  }
+}

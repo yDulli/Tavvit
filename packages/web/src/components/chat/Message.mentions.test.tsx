@@ -35,7 +35,7 @@ function makeUser(id: string, username: string, displayName: string | null): Use
   };
 }
 
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const me = makeUser('me-home', 'alice', 'Alice');
 const meOnOrbit = makeUser('me-orbit', 'alice@home.example', 'Alice');
 const kaiOnOrbit = makeUser('kai-orbit', 'kai', 'Kai');
@@ -72,10 +72,10 @@ function rowOf(message: MessageWithUser): HTMLElement {
 
 beforeEach(() => {
   useAuthStore.setState({ user: me });
-  useAuthStore.getState().recordMyRow(ORBIT, meOnOrbit.id);
+  useAuthStore.getState().recordMyRow(TAVVIT, meOnOrbit.id);
   useSpaceStore.setState({
     dmChannels: [remoteDm],
-    channelOriginMap: new Map([[remoteDm.id, ORBIT]]),
+    channelOriginMap: new Map([[remoteDm.id, TAVVIT]]),
   });
 });
 
@@ -89,7 +89,7 @@ describe('Message mention highlight (#332)', () => {
   it("highlights a mention of my id on the DM's origin", () => {
     const message = dmMessage(`hey <@${meOnOrbit.id}>`);
     render(<Message message={message} isCompact={false} isFirstInGroup previousMessageId={null} />);
-    expect(rowOf(message).className).toContain('border-l-accent-amber');
+    expect(rowOf(message)).toHaveAttribute('data-mentioned', 'true');
     // The badge resolves the mention to me, in the DM's own id space.
     expect(screen.getByText('@Alice')).toBeInTheDocument();
   });
@@ -97,12 +97,12 @@ describe('Message mention highlight (#332)', () => {
   it("does not highlight my home id in a DM on another origin (that id is someone else's there)", () => {
     const message = dmMessage(`hey <@${me.id}>`);
     render(<Message message={message} isCompact={false} isFirstInGroup previousMessageId={null} />);
-    expect(rowOf(message).className).not.toContain('border-l-accent-amber');
+    expect(rowOf(message)).toHaveAttribute('data-mentioned', 'false');
   });
 
   it('does not highlight my token when it sits inside code', () => {
     const message = dmMessage(`the syntax is \`<@${meOnOrbit.id}>\``);
     render(<Message message={message} isCompact={false} isFirstInGroup previousMessageId={null} />);
-    expect(rowOf(message).className).not.toContain('border-l-accent-amber');
+    expect(rowOf(message)).toHaveAttribute('data-mentioned', 'false');
   });
 });

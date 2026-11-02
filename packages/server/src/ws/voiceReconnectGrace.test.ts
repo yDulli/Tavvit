@@ -59,14 +59,15 @@ describe('voice reconnect grace', () => {
   it('finalizes a stale space voice session exactly once', () => {
     const ws = socket();
     joinSpace('grace-expire-user', 'grace-expire-room', ws);
-    const sendSpy = vi.spyOn(connectionManager, 'sendToSpace');
+    // A space's voice events go to those who can see the channel (sendToChannel); only the count matters here.
+    const sendSpy = vi.spyOn(connectionManager, 'sendToChannel').mockImplementation(() => {});
 
     close(ws);
     vi.advanceTimersByTime(VOICE_RECONNECT_GRACE_MS * 2);
 
     expect(connectionManager.getUserRoom('grace-expire-user')).toBeNull();
-    expect(sendSpy.mock.calls.filter(([, event]) =>
-      event.type === 'voice_state_update' && event.userId === 'grace-expire-user' && event.action === 'leave',
+    expect(sendSpy.mock.calls.filter(([, channelId, event]) =>
+      channelId === 'grace-expire-room' && event.type === 'voice_state_update' && event.userId === 'grace-expire-user' && event.action === 'leave',
     )).toHaveLength(1);
   });
 

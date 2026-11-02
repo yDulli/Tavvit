@@ -1,0 +1,180 @@
+{
+  "nav": {
+    "home": "Início",
+    "about": "Sobre",
+    "inbox": "Caixa de entrada",
+    "requestsLabel_one": "{{count}} pedido de amizade aguardando",
+    "requestsLabel_many": "{{count}} pedidos de amizade aguardando",
+    "requestsLabel_other": "{{count}} pedidos de amizade aguardando"
+  },
+  "greeting": {
+    "morning": "Bom dia, {{name}}",
+    "afternoon": "Boa tarde, {{name}}",
+    "evening": "Boa noite, {{name}}",
+    "night": "Ainda acordado, {{name}}?"
+  },
+  "subtitle": {
+    "online": "{{instance}} · Amigos online: {{n}}",
+    "quiet": "{{instance}} · Nenhum amigo online agora"
+  },
+  "empty": {
+    "title": "Suas pessoas aparecerão aqui",
+    "body": "Adicione amigos pelo nome de usuário ou convide-os para um espaço com um link de convite. Quem está online, quem está na voz e o que cada um está fazendo aparece nesta página.",
+    "addFriend": "Adicionar amigo"
+  },
+  "voice": {
+    "title": "Na voz",
+    "join": "Entrar",
+    "joinLabel": "Entrar na voz em {{space}}",
+    "inSpace": "em {{space}}",
+    "status": "Na voz · {{space}}"
+  },
+  "messages": {
+    "caughtUp": "Você está em dia."
+  },
+  "requests": {
+    "title": "Pedidos de amizade",
+    "waiting": "Aguardando sua resposta: {{n}}",
+    "review": "Ver"
+  },
+  "spaces": {
+    "title": "Seus espaços",
+    "empty": "Você ainda não está em nenhum espaço. Crie um para o seu grupo ou entre com um link de convite.",
+    "create": "Criar um espaço",
+    "join": "Entrar com convite",
+    "inVoice_one": "{{count}} amigo na voz",
+    "inVoice_many": "{{count}} amigos na voz",
+    "inVoice_other": "{{count}} amigos na voz",
+    "mentions_one": "{{count}} menção não lida",
+    "mentions_many": "{{count}} menções não lidas",
+    "mentions_other": "{{count}} menções não lidas"
+  },
+  "about": {
+    "title": "Sobre o Tavvit",
+    "tagline": "Um lugar para a sua galera.",
+    "server": {
+      "title": "Este servidor",
+      "address": "Endereço",
+      "version": "Versão",
+      "sourceMissing": "O link do código-fonte não está configurado para este servidor."
+    },
+    "developers": {
+      "title": "Desenvolvedores",
+      "body": "Bots, comandos e webhooks, com documentação e referência da API.",
+      "link": "Ler a documentação"
+    },
+    "help": {
+      "title": "Ajuda",
+      "help": "Ajuda",
+      "changelog": "Novidades",
+      "status": "Status"
+    }
+  },
+  "inbox": {
+    "title": "Caixa de entrada",
+    "tabs": {
+      "unread": "Não lidas",
+      "mentions": "Menções",
+      "saved": "Salvas",
+      "keywords": "Palavras-chave"
+    },
+    "markRead": "Marcar como lida",
+    "markChannelRead": "Marcar o canal como lido",
+    "markAll": "Marcar tudo como lido",
+    "markingAll": "Marcando…",
+    "markFailed": "Não foi possível marcar como lida. Tente de novo.",
+    "sections": {
+      "dms": "Mensagens diretas",
+      "spaces": "Espaços"
+    },
+    "caughtUp": {
+      "title": "Você está em dia",
+      "body": "Novas mensagens e menções aparecem aqui.",
+      "muted_one": "Nada novo, exceto em {{count}} canal silenciado.",
+      "muted_many": "Nada novo, exceto em {{count}} canais silenciados.",
+      "muted_other": "Nada novo, exceto em {{count}} canais silenciados."
+    },
+    "via": {
+      "role": "seu cargo",
+      "everyone": "todos",
+      "keyword": "uma palavra que você acompanha"
+    },
+    "noMentions": {
+      "title": "Nenhuma menção ainda",
+      "body": "Quando alguém mencionar você, seu cargo ou todos em um espaço, isso aparece aqui."
+    },
+    "mentionsFailed": "Algumas menções não puderam ser carregadas.",
+    "retry": "Tentar novamente",
+    "older": "Mostrar mais antigas",
+    "mutedHidden_one": "{{count}} canal silenciado com mensagens não lidas não é mostrado.",
+    "mutedHidden_many": "{{count}} canais silenciados com mensagens não lidas não são mostrados.",
+    "mutedHidden_other": "{{count}} canais silenciados com mensagens não lidas não são mostrados.",
+    "navLabel_one": "{{count}} item precisa de atenção",
+    "navLabel_many": "{{count}} itens precisam de atenção",
+    "navLabel_other": "{{count}} itens precisam de atenção"
+  },
+  "actions": {
+    "newMessage": "Nova mensagem",
+    "addFriend": "Adicionar amigo",
+    "createSpace": "Criar espaço",
+    "joinSpace": "Entrar em um espaço"
+  },
+  "attention": {
+    "title": "Precisa da sua atenção",
+    "openInbox_one": "Abrir caixa de entrada ({{count}})",
+    "openInbox_many": "Abrir caixa de entrada ({{count}})",
+    "openInbox_other": "Abrir caixa de entrada ({{count}})"
+  },
+  "recent": {
+    "title": "Conversas recentes",
+    "empty": "As conversas que você abrir aparecem aqui."
+  },
+  "online": {
+    "title": "Online agora",
+    "inVoice": "Em voz",
+    "message": "Enviar mensagem para {{name}}",
+    "noFriends": "Adicione amigos para ver quem está por perto.",
+    "nobody_one": "{{count}} amigo está offline agora.",
+    "nobody_many": "{{count}} amigos estão offline agora.",
+    "nobody_other": "{{count}} amigos estão offline agora.",
+    "viewAll": "Ver todos",
+    "nobodyTitle": "Ninguém está online",
+    "noFriendsTitle": "Nenhum amigo ainda"
+  },
+  "jump": {
+    "label": "Ir para uma conversa…"
+  },
+  "onboarding": {
+    "friends": {
+      "title": "Adicione seus amigos",
+      "body": "Encontre pessoas pelo nome de usuário."
+    },
+    "space": {
+      "title": "Comece um espaço",
+      "body": "Um lugar para o seu grupo, com canais de texto e de voz e os cargos que você escolher."
+    },
+    "invite": {
+      "title": "Recebeu um convite?",
+      "body": "Cole o link de convite que alguém enviou para entrar no espaço dessa pessoa."
+    }
+  },
+  "unread": {
+    "dot": "Não lido"
+  },
+  "saved": {
+    "emptyTitle": "Nada salvo ainda",
+    "emptyBody": "Salve uma mensagem pelo menu dela para encontrá-la aqui. Só você vê esta lista.",
+    "failed": "Não foi possível carregar as mensagens salvas.",
+    "remove": "Remover de salvas",
+    "remindsAt": "Lembra você em {{time}}",
+    "directMessage": "Mensagem direta",
+    "reminderTitle": "Lembrete",
+    "reminderToast": "Lembrete: {{preview}}",
+    "noPreview": "Uma mensagem"
+  },
+  "keywordMatches": {
+    "emptyTitle": "Nenhuma ocorrência ainda",
+    "emptyBody": "Mensagens com suas palavras aparecerão aqui.",
+    "failed": "Não foi possível carregar as ocorrências."
+  }
+}

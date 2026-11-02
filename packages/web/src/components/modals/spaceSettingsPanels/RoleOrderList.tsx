@@ -211,7 +211,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
         onClick={() => onOpen(role.id)}
         onDragOver={index !== null ? handleDragOver(index) : undefined}
         onDrop={index !== null ? handleDrop(index) : undefined}
-        className={`relative flex items-center gap-1.5 rounded hover:bg-interactive-hover transition-colors cursor-pointer group/role ${
+        className={`relative flex min-h-[40px] items-center gap-1.5 rounded-md hover:bg-interactive-hover transition-colors duration-100 cursor-pointer group/role ${
           reorderable && !isMobile ? 'pl-1 pr-2' : reorderable ? 'pl-3 pr-2' : 'px-3'
         } ${dragIndex !== null && dragIndex === index ? 'opacity-50' : ''}`}
       >
@@ -253,7 +253,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
           className={`flex-1 min-w-0 flex items-center gap-2.5 py-2 rounded text-left ${FOCUS_RING}`}
         >
           <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: role.color }} />
-          <span className="text-sm text-txt-primary truncate">
+          <span className="text-ui font-medium text-txt-primary truncate">
             {/* i18n-check: allow-literal — @everyone is the role's identifier, not a phrase */}
             {isEveryone ? '@everyone' : role.name}
           </span>
@@ -273,7 +273,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
                   aria-label={t('roles.reorder.up', { name: role.name })}
                   disabled={!canUp}
                   onClick={(e) => { e.stopPropagation(); void move(index, index - 1, 'up'); }}
-                  className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} flex items-center justify-center rounded text-txt-tertiary hover:text-txt-primary hover:bg-white/[0.06] transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-txt-tertiary disabled:cursor-default ${FOCUS_RING}`}
+                  className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} flex items-center justify-center rounded text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-txt-tertiary disabled:cursor-default ${FOCUS_RING}`}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
@@ -285,7 +285,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
                   aria-label={t('roles.reorder.down', { name: role.name })}
                   disabled={!canDown}
                   onClick={(e) => { e.stopPropagation(); void move(index, index + 1, 'down'); }}
-                  className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} flex items-center justify-center rounded text-txt-tertiary hover:text-txt-primary hover:bg-white/[0.06] transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-txt-tertiary disabled:cursor-default ${FOCUS_RING}`}
+                  className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} flex items-center justify-center rounded text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-txt-tertiary disabled:cursor-default ${FOCUS_RING}`}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -326,7 +326,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
               <div
                 ref={moveErrorRef}
                 role="alert"
-                className="mx-2 mt-1 mb-1.5 px-2.5 py-1.5 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-[13px]"
+                className="mx-2 mt-1 mb-1.5 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger"
               >
                 {moveError.message}
               </div>

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as schema from '../db/schema.js';
 import { setWorkerId } from '../utils/snowflake.js';
+import { DEFAULT_EVERYONE_PERMISSIONS, permissionsToString } from '@backspace/shared/src/permissions.js';
 
 setWorkerId(1);
 
@@ -49,6 +50,14 @@ function seedSpace(spaceId: string, ownerId: string): void {
     id: spaceId,
     name: 'Test Space',
     ownerId,
+    createdAt: Date.now(),
+  }).run();
+  // Every space has @everyone: a member is only moved into a channel they could see and enter.
+  testDb.insert(schema.roles).values({
+    id: spaceId,
+    spaceId,
+    name: '@everyone',
+    permissions: permissionsToString(DEFAULT_EVERYONE_PERMISSIONS),
     createdAt: Date.now(),
   }).run();
 }

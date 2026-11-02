@@ -1,44 +1,99 @@
+import { DataExportSection } from './DataExportSection';
+import { StorageSection } from './StorageSection';
+import { StatusPicker } from '../../ui/StatusPicker';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { selectMyChosenStatus, useAuthStore } from '../../../stores/authStore';
+import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useInstanceStore } from '../../../stores/instanceStore';
 import { useSpaceStore } from '../../../stores/spaceStore';
-import { Avatar } from '../../ui/Avatar';
+import { Avatar, avatarRadius } from '../../ui/Avatar';
+import { Icon } from '../../ui/Icon';
 import { ImageCropModal } from '../../ui/ImageCropModal';
 import { DeleteAccountModal } from '../DeleteAccountModal';
 import { api } from '../../../api/client';
 import { useTransferStore } from '../../../stores/transferStore';
 import { waitForTransferAttachment } from '../../../utils/waitForTransfer';
-import { getAvatarGradient, adjustColor, mutedGradient, AVATAR_GRADIENT_MAP, BANNER_COLOR_PRESETS } from '../../../utils/gradients';
-import { AVATAR_COLORS, detachedHomeOf } from '@backspace/shared';
-import { PASSWORD_MIN_LENGTH } from '@backspace/shared/src/constants';
-import type { User, ChosenUserStatus, AvatarColor } from '@backspace/shared';
+import { getAvatarGradient, AVATAR_GRADIENT_MAP } from '../../../utils/gradients';
+import { bannerFill } from '../../../utils/placeLight';
+import { bannerBackground, profileThemeOf } from '../../../utils/profileTheme';
+import { ProfileThemeEditor } from './ProfileThemeEditor';
+import { ProfileDetailsEditor, invalidLinkDrafts, linkDrafts, linksOfDrafts, type ProfileLinkDraft } from './ProfileDetailsEditor';
+import { FormError, SettingsField, SettingsPage, SettingsSection, SWATCH_ROW, SwatchButton } from './_shared/SettingsControls';
+import { UsernameSection } from './UsernameSection';
+import { ProfileLinks } from '../../ui/ProfileLinks';
+import { profileHeaderLook, profileLayoutOf } from '../../../utils/profileLayout';
+import { AVATAR_COLORS, PROFILE_LIMITS, detachedHomeOf } from '@backspace/shared';
+import { MAX_PROFILE_IMAGE_SOURCE_BYTES, type ProfileImageCrop, type ProfileImageKind } from '@backspace/shared/src/profileImage';
+import type { User, AvatarColor, ProfileLayout } from '@backspace/shared';
 import { describeError } from '../../../i18n/errors';
+import { base64OfDataUrl, bytesOfDataUrl, isAnimatedImage } from '../../../utils/animatedImage';
+import { useFormatters } from '../../../i18n/formatters';
+import {
+  STATUS_EXPIRY_CHOICES,
+  expiryMinutes,
+  initialExpiryChoice,
+  isFutureEnd,
+  type StatusExpiryChoice,
+} from '../../../utils/customStatusExpiry';
 
 const BIO_MAX_LENGTH = 190;
+
+/** Taking a picture away, beside the button that changes it: quiet until it is meant. */
+const REMOVE_BUTTON = 'btn-quiet btn-sm text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger';
+
+/** Over a picture that is also a button: what a press does under the pointer, and a ring while it uploads. */
+function PictureOverlay({ busy, radius }: { busy: boolean; radius?: string }) {
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+        style={{ borderRadius: radius }}
+      >
+        <Icon name="upload" size={18} />
+      </span>
+      {busy && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 flex items-center justify-center bg-black/60 text-white"
+          style={{ borderRadius: radius }}
+        >
+          <span className="h-4 w-4 animate-spin rounded-full border-[1.5px] border-current border-r-transparent" />
+        </span>
+      )}
+    </>
+  );
+}
 
 export function AccountPanel() {
   const { t } = useTranslation(['settings', 'common']);
   const user = useAuthStore((s) => s.user);
-  // The chosen status lives on the account that owns it, which is not this
-  // page's account when it is a replicated row (utils/selfStatus.ts).
-  const savedStatus: ChosenUserStatus = useAuthStore(selectMyChosenStatus) ?? 'online';
   const updateProfile = useAuthStore((s) => s.updateProfile);
 
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [customStatus, setCustomStatus] = useState(user?.customStatus ?? '');
-  const [status, setStatus] = useState<ChosenUserStatus>(savedStatus);
+  const [statusExpiry, setStatusExpiry] = useState<StatusExpiryChoice>(
+    () => initialExpiryChoice(user?.customStatusExpiresAt, Date.now()),
+  );
+  const f = useFormatters();
   const [bio, setBio] = useState(user?.bio ?? '');
   const [accentColor, setAccentColor] = useState<string | null>(user?.accentColor ?? null);
+  const [accentSecondary, setAccentSecondary] = useState<string | null>(user?.accentColorSecondary ?? null);
   const [avatarColorState, setAvatarColorState] = useState<AvatarColor | null>(user?.avatarColor ?? null);
-  const [customHex, setCustomHex] = useState(user?.accentColor ?? '');
+  // The profile card's own fields: pronouns, links and the card's layout.
+  const [pronouns, setPronouns] = useState(user?.pronouns ?? '');
+  const [links, setLinks] = useState<ProfileLinkDraft[]>(() => linkDrafts(user?.profileLinks));
+  const [invalidLinks, setInvalidLinks] = useState<ReadonlySet<number>>(new Set());
+  const [layout, setLayout] = useState<ProfileLayout>(() => profileLayoutOf(user ?? {}));
 
   // Avatar upload state
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFilename, setAvatarFilename] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
+  // The original of an animated avatar, base64: the server cuts it, not the browser.
+  const [avatarAnimated, setAvatarAnimated] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Banner upload state
@@ -46,45 +101,51 @@ export function AccountPanel() {
   const [bannerFilename, setBannerFilename] = useState<string | null>(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null);
+  const [bannerAnimated, setBannerAnimated] = useState<string | null>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const addToast = useUIStore((s) => s.addToast);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      setDisplayName(user.displayName ?? '');
-      setCustomStatus(user.customStatus ?? '');
-      setStatus(savedStatus);
-      setBio(user.bio ?? '');
-      setAccentColor(user.accentColor ?? null);
-      setAvatarColorState(user.avatarColor ?? null);
-      setCustomHex(user.accentColor ?? '');
-      // Reset upload state
-      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-      if (bannerPreview) URL.revokeObjectURL(bannerPreview);
-      setAvatarPreview(null);
-      setAvatarFilename(null);
-      setBannerPreview(null);
-      setBannerFilename(null);
-    }
-  }, [user?.displayName, user?.customStatus, savedStatus, user?.bio, user?.accentColor, user?.avatarColor, user?.avatar, user?.banner]);
+  // The stored links by content: every fresh copy of the user (a reconnect's
+  // ready, a user_updated echo) carries a new array, which must not count as a
+  // change and throw away what is being edited here.
+  const storedLinksKey = JSON.stringify(user?.profileLinks ?? []);
 
-  // Password change state
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
+  // Every draft from what the instance holds: for a fresh copy of the user,
+  // on Reset and after a save. The server stores some fields in a normalised
+  // form (trimmed text, a link's full address, duplicates dropped), so a save
+  // whose result equals what was stored before must still re-seed the drafts,
+  // or the edit it normalised away would linger as unsaved.
+  const resetDraftsFrom = (source: User) => {
+    setDisplayName(source.displayName ?? '');
+    setCustomStatus(source.customStatus ?? '');
+    setStatusExpiry(initialExpiryChoice(source.customStatusExpiresAt, Date.now()));
+    setBio(source.bio ?? '');
+    setAccentColor(source.accentColor ?? null);
+    setAccentSecondary(source.accentColorSecondary ?? null);
+    setAvatarColorState(source.avatarColor ?? null);
+    setPronouns(source.pronouns ?? '');
+    setLinks(linkDrafts(source.profileLinks));
+    setInvalidLinks(new Set());
+    setLayout(profileLayoutOf(source));
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+    setAvatarPreview(null);
+    setAvatarFilename(null);
+    setBannerPreview(null);
+    setBannerFilename(null);
+  };
+
+  useEffect(() => {
+    if (user) resetDraftsFrom(user);
+  }, [user?.displayName, user?.customStatus, user?.customStatusExpiresAt, user?.bio, user?.accentColor, user?.accentColorSecondary, user?.avatarColor, user?.avatar, user?.banner, user?.pronouns, storedLinksKey, user?.profileLayout]);
 
   // Delete account state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const instances = useInstanceStore((s) => s.instances);
-  const changePassword = useAuthStore((s) => s.changePassword);
 
   // ── Detached-account re-attach (fallback path, re-attach spec §3.4) ──
   // Explicit action shown only when this client also holds an active connection
@@ -139,16 +200,23 @@ export function AccountPanel() {
   if (!user) return null;
 
   const effectiveDisplayName = displayName.trim() || user.username;
-  const effectiveAccent = accentColor;
+  const theme = profileThemeOf({ accentColor, accentColorSecondary: accentSecondary });
   const effectiveAvatarColor = avatarColorState;
+  const look = profileHeaderLook(layout, 'preview');
+  const draftLinks = linksOfDrafts(links);
+  const linksChanged = JSON.stringify(draftLinks) !== JSON.stringify((user.profileLinks ?? []).map((link) => ({ url: link.url, label: link.label ?? null })));
 
   // Change detection
   const hasChanges =
+    pronouns.trim() !== (user.pronouns ?? '') ||
+    linksChanged ||
+    layout !== profileLayoutOf(user) ||
     displayName !== (user.displayName ?? '') ||
     customStatus !== (user.customStatus ?? '') ||
-    status !== savedStatus ||
+    statusExpiry !== initialExpiryChoice(user.customStatusExpiresAt, Date.now()) ||
     bio !== (user.bio ?? '') ||
     accentColor !== (user.accentColor ?? null) ||
+    accentSecondary !== (user.accentColorSecondary ?? null) ||
     avatarColorState !== (user.avatarColor ?? null) ||
     avatarFilename !== null ||
     bannerFilename !== null;
@@ -166,30 +234,77 @@ export function AccountPanel() {
   const displayAvatarSrc = avatarPreview ?? (avatarFilename === '' ? null : currentAvatarSrc);
 
   // Banner fallback: accent gradient or avatar gradient (alpha baked into gradient colors)
-  const bannerFallback = effectiveAccent
-    ? mutedGradient(effectiveAccent, adjustColor(effectiveAccent, -40))
+  const bannerFallback = theme
+    ? bannerBackground(theme)
     : (() => {
         const g = getAvatarGradient(user.homeUserId ?? user.id, effectiveDisplayName, effectiveAvatarColor);
-        return mutedGradient(g.from, g.to);
+        return bannerFill(g.from);
       })();
 
   // ── File selection handlers ──
+  /**
+   * Reads the chosen picture. A still image goes to the crop modal as it
+   * always did. An animation (GIF, animated WebP) goes there too, to choose
+   * the area, but is kept as the original: a canvas would keep one frame.
+   */
+  const readPicture = (
+    file: File,
+    kind: ProfileImageKind,
+    open: (dataUrl: string) => void,
+    keepAnimated: (base64: string | null) => void,
+  ) => {
+    const mayAnimate = file.type === 'image/gif' || file.type === 'image/webp';
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const animated = mayAnimate && isAnimatedImage(bytesOfDataUrl(dataUrl));
+      // Still images are shrunk in the browser; only an animation has a size limit.
+      if (animated && file.size > MAX_PROFILE_IMAGE_SOURCE_BYTES) {
+        setError(t('settings:account.profile.image.animationTooLarge', { max: MAX_PROFILE_IMAGE_SOURCE_BYTES / (1024 * 1024) }));
+        return;
+      }
+      setError('');
+      keepAnimated(animated ? base64OfDataUrl(dataUrl) : null);
+      open(dataUrl);
+    };
+    reader.onerror = () => setError(t(kind === 'avatar' ? 'settings:account.profile.avatar.uploadFailed' : 'settings:account.profile.banner.uploadFailed'));
+    reader.readAsDataURL(file);
+  };
+
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setAvatarCropSrc(reader.result as string);
-    reader.readAsDataURL(file);
+    readPicture(file, 'avatar', setAvatarCropSrc, setAvatarAnimated);
     if (avatarInputRef.current) avatarInputRef.current.value = '';
   };
 
   const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setBannerCropSrc(reader.result as string);
-    reader.readAsDataURL(file);
+    readPicture(file, 'banner', setBannerCropSrc, setBannerAnimated);
     if (bannerInputRef.current) bannerInputRef.current.value = '';
+  };
+
+  /** Has the server cut the animation, then shows and keeps the finished file like an upload. */
+  const handleAnimatedCrop = async (
+    kind: ProfileImageKind,
+    source: string | null,
+    crop: ProfileImageCrop,
+  ) => {
+    if (source === null) return;
+    const isAvatar = kind === 'avatar';
+    (isAvatar ? setUploadingAvatar : setUploadingBanner)(true);
+    setError('');
+    try {
+      const { filename } = await api.users.profileImage({ kind, image: source, crop });
+      const url = api.uploads.url(filename);
+      if (isAvatar) { setAvatarPreview(url); setAvatarFilename(filename); }
+      else { setBannerPreview(url); setBannerFilename(filename); }
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      (isAvatar ? setUploadingAvatar : setUploadingBanner)(false);
+    }
   };
 
   // ── Crop complete handlers ──
@@ -247,19 +362,36 @@ export function AccountPanel() {
 
   const handleSave = async () => {
     setError('');
+    // A link the instance would refuse is pointed out here, before anything is sent.
+    const invalid = invalidLinkDrafts(links);
+    setInvalidLinks(invalid);
+    if (invalid.size > 0) {
+      setError(t('settings:account.profile.links.invalid', { max: PROFILE_LIMITS.MAX_LINK_URL_LENGTH }));
+      return;
+    }
     setIsLoading(true);
     try {
-      const updates: Record<string, string | undefined> = {};
+      const updates: Parameters<typeof updateProfile>[0] = {};
+      if (pronouns.trim() !== (user.pronouns ?? '')) updates.pronouns = pronouns.trim();
+      if (linksChanged) updates.profileLinks = draftLinks.length > 0 ? draftLinks : null;
+      if (layout !== profileLayoutOf(user)) updates.profileLayout = layout;
       if (displayName !== (user.displayName ?? '')) updates.displayName = displayName.trim();
       if (customStatus !== (user.customStatus ?? '')) updates.customStatus = customStatus.trim();
-      if (status !== savedStatus) updates.status = status;
+      // The end counts from this save. Clearing the status needs none (the server drops it with the text).
+      const expiryChanged = statusExpiry !== initialExpiryChoice(user.customStatusExpiresAt, Date.now());
+      if ((updates.customStatus !== undefined || expiryChanged) && customStatus.trim() !== '') {
+        updates.customStatusExpiresInMinutes = expiryMinutes(statusExpiry, new Date(), user.customStatusExpiresAt);
+      }
       if (bio !== (user.bio ?? '')) updates.bio = bio.trim();
       if (accentColor !== (user.accentColor ?? null)) updates.accentColor = accentColor ?? '';
+      if (accentSecondary !== (user.accentColorSecondary ?? null)) updates.accentColorSecondary = accentSecondary ?? '';
       if (avatarColorState !== (user.avatarColor ?? null)) updates.avatarColor = avatarColorState ?? '';
       if (avatarFilename !== null) updates.avatar = avatarFilename;
       if (bannerFilename !== null) updates.banner = bannerFilename;
 
-      await updateProfile(updates as Parameters<typeof updateProfile>[0]);
+      await updateProfile(updates);
+      const stored = useAuthStore.getState();
+      if (stored.user) resetDraftsFrom(stored.user);
       addToast(t('settings:account.save.updated'), 'success', 2000);
     } catch (err) {
       setError(err instanceof Error ? describeError(err) : t('settings:account.save.failed'));
@@ -268,54 +400,15 @@ export function AccountPanel() {
     }
   };
 
-  const handleChangePassword = async () => {
-    setPasswordError('');
-
-    if (newPassword.length < PASSWORD_MIN_LENGTH) {
-      setPasswordError(t('settings:account.password.tooShort', { min: PASSWORD_MIN_LENGTH }));
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      setPasswordError(t('settings:account.password.mismatch'));
-      return;
-    }
-
-    setPasswordLoading(true);
-    try {
-      await changePassword(currentPassword, newPassword);
-      addToast(t('settings:account.password.changed'), 'success', 2000);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmNewPassword('');
-    } catch (err) {
-      setPasswordError(err instanceof Error ? describeError(err) : t('settings:account.password.changeFailed'));
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
-
   const handleReset = () => {
-    setDisplayName(user.displayName ?? '');
-    setCustomStatus(user.customStatus ?? '');
-    setStatus(savedStatus);
-    setBio(user.bio ?? '');
-    setAccentColor(user.accentColor ?? null);
-    setAvatarColorState(user.avatarColor ?? null);
-    setCustomHex(user.accentColor ?? '');
-    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-    if (bannerPreview) URL.revokeObjectURL(bannerPreview);
-    setAvatarPreview(null);
-    setAvatarFilename(null);
-    setBannerPreview(null);
-    setBannerFilename(null);
+    resetDraftsFrom(user);
     setError('');
   };
 
   return (
-    <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('settings:account.title')}</h2>
+    <SettingsPage title={t('settings:account.title')}>
       {formerHome && (
-        <div className="rounded-lg bg-accent-amber/10 border border-accent-amber/25 px-3.5 py-3 text-xs text-txt-secondary leading-relaxed mb-4">
+        <div className="rounded-lg border border-accent-amber/25 bg-accent-amber/10 px-3.5 py-3 text-meta leading-relaxed text-txt-secondary">
           <span className="font-medium text-txt-primary">{t('settings:account.detached.notice')}</span>{' '}
           {t('settings:account.detached.explanation', { homeInstance: formerHome })}
           {homeConnection && (
@@ -325,7 +418,8 @@ export function AccountPanel() {
                 type="button"
                 onClick={handleReattach}
                 disabled={reattaching}
-                className="mt-2 block rounded-md bg-accent-amber/20 hover:bg-accent-amber/30 disabled:opacity-50 text-txt-primary px-3 py-1.5 text-xs font-medium transition-colors"
+                aria-busy={reattaching}
+                className="btn-outline btn-sm mt-2 flex h-auto min-h-7 whitespace-normal py-1 text-left"
               >
                 {reattaching
                   ? t('settings:account.detached.reattaching')
@@ -333,457 +427,293 @@ export function AccountPanel() {
                     ? t('settings:account.detached.reattachConfirm', { username: homeConnection.username })
                     : t('settings:account.detached.reattachButton', { homeInstance: formerHome })}
               </button>
-              {reattachError && <div className="mt-1.5 text-accent-rose">{reattachError}</div>}
+              {reattachError && <div className="mt-1.5 text-txt-danger">{reattachError}</div>}
             </>
           )}
         </div>
       )}
       {/* ── Profile Customization ── */}
-      <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          {t('settings:account.profile.sectionTitle')}
-        </div>
-
-        {/* Live Preview Card */}
-        <div className="rounded-lg overflow-hidden border border-white/[0.06] mb-4 bg-surface-channel">
-          {/* Banner area */}
-          <div
-            className="h-[80px]"
-            style={displayBannerSrc
-              ? { backgroundImage: `url(${displayBannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-              : { background: bannerFallback }
-            }
-          />
-          {/* Avatar + info */}
-          <div className="px-4 pb-3">
-            <Avatar
-              src={avatarPreview ?? (avatarFilename === '' ? null : user.avatar)}
-              name={effectiveDisplayName}
-              size={56}
-              userId={user.homeUserId ?? user.id}
-              user={{ ...user, avatarColor: effectiveAvatarColor } as User}
-              ring={{ width: 4, color: 'var(--color-surface-channel, #1e1e2a)' }}
-              className="mt-[-32px] mb-2"
-            />
-            <div
-              className="font-semibold text-[15px] leading-tight text-txt-primary"
-            >
-              {effectiveDisplayName}
-            </div>
-            <div className="text-[12px] text-txt-tertiary">@{user.username}</div>
-            {bio.trim() && (
-              <div className="text-[12px] text-txt-secondary mt-1.5 whitespace-pre-wrap break-words line-clamp-3">
-                {bio.trim()}
-              </div>
+      <SettingsSection
+        title={t('settings:account.profile.sectionTitle')}
+        lead={
+          // Live preview: the layout, pronouns and links as the card will show them.
+          <div className="overflow-hidden rounded-lg border border-border-hard bg-surface-channel">
+            {/* Banner area; the compact layout has none */}
+            {look.banner && (
+              <div
+                className={look.banner}
+                style={displayBannerSrc
+                  ? { backgroundImage: `url(${displayBannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                  : { background: bannerFallback }
+                }
+              />
             )}
+            {/* Avatar + info */}
+            <div className="px-4 pb-3">
+              <div className={look.header}>
+                <Avatar
+                  src={avatarPreview ?? (avatarFilename === '' ? null : user.avatar)}
+                  name={effectiveDisplayName}
+                  size={look.avatarSize}
+                  userId={user.homeUserId ?? user.id}
+                  user={{ ...user, avatarColor: effectiveAvatarColor } as User}
+                  ring={{ width: 4, color: 'rgb(var(--bg-channel))' }}
+                  className={look.avatar}
+                />
+                <div className="min-w-0 max-w-full">
+                  <div className="truncate text-lead font-semibold leading-tight text-txt-primary">{effectiveDisplayName}</div>
+                  <div className="truncate text-meta text-txt-tertiary">
+                    @{user.username}
+                    {pronouns.trim() && <span className="ml-1.5">· {pronouns.trim()}</span>}
+                  </div>
+                </div>
+              </div>
+              {bio.trim() && (
+                <div className="mt-1.5 line-clamp-3 whitespace-pre-wrap break-words text-meta text-txt-secondary">
+                  {bio.trim()}
+                </div>
+              )}
+              {draftLinks.length > 0 && (
+                <div className="mt-2.5">
+                  <ProfileLinks links={draftLinks} variant="chips" />
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-
-        {/* Upload controls */}
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-4">
-          {/* Avatar upload */}
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.profile.avatar.label')}</label>
-            <div className="flex items-center gap-3">
+        }
+      >
+        {/* Avatar upload */}
+        <SettingsField label={t('settings:account.profile.avatar.label')}>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              aria-label={t('settings:account.profile.avatar.change')}
+              className="group relative flex-shrink-0"
+              style={{ borderRadius: avatarRadius(64) }}
+            >
+              <Avatar
+                src={displayAvatarSrc}
+                name={effectiveDisplayName}
+                size={64}
+                userId={user.homeUserId ?? user.id}
+                user={{ ...user, avatarColor: effectiveAvatarColor } as User}
+              />
+              <PictureOverlay busy={uploadingAvatar} radius={avatarRadius(64)} />
+            </button>
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
                 disabled={uploadingAvatar}
-                className="relative group"
+                className="btn-outline btn-sm"
               >
-                <div className="w-[64px] h-[64px] rounded-full overflow-hidden">
-                  {displayAvatarSrc ? (
-                    <img src={displayAvatarSrc} alt={t('settings:account.profile.avatar.alt')} className="w-full h-full object-cover" />
-                  ) : (
-                    <Avatar
-                      src={null}
-                      name={effectiveDisplayName}
-                      size={64}
-                      userId={user.homeUserId ?? user.id}
-                      user={{ ...user, avatarColor: effectiveAvatarColor } as User}
-                    />
-                  )}
-                </div>
-                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                {uploadingAvatar && (
-                  <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
-                    <svg className="animate-spin w-5 h-5 text-white" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  </div>
-                )}
+                {t('settings:account.profile.avatar.change')}
               </button>
-              <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={() => avatarInputRef.current?.click()}
-                  disabled={uploadingAvatar}
-                  className="text-xs text-accent-primary hover:underline text-left"
-                >
-                  {t('settings:account.profile.avatar.change')}
-                </button>
-                {(displayAvatarSrc || user.avatar) && avatarFilename !== '' && (
-                  <button
-                    type="button"
-                    onClick={handleRemoveAvatar}
-                    className="text-xs text-txt-danger hover:underline text-left"
-                  >
-                    {t('common:actions.remove')}
-                  </button>
-                )}
-              </div>
-            </div>
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarSelect}
-              className="hidden"
-            />
-          </div>
-
-          {/* Banner upload */}
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.profile.banner.label')}</label>
-            <button
-              type="button"
-              onClick={() => bannerInputRef.current?.click()}
-              disabled={uploadingBanner}
-              className="relative group w-full h-[72px] rounded-lg overflow-hidden border border-white/[0.06]"
-            >
-              <div
-                className="w-full h-full"
-                style={displayBannerSrc
-                  ? { backgroundImage: `url(${displayBannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-                  : { background: mutedGradient(
-                      effectiveAccent ?? getAvatarGradient(user.homeUserId ?? user.id, effectiveDisplayName, effectiveAvatarColor).from,
-                      effectiveAccent ? adjustColor(effectiveAccent, -40) : getAvatarGradient(user.homeUserId ?? user.id, effectiveDisplayName, effectiveAvatarColor).to,
-                      0.5
-                    ) }
-                }
-              />
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              {uploadingBanner && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                  <svg className="animate-spin w-5 h-5 text-white" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                </div>
-              )}
-            </button>
-            <div className="flex gap-2 mt-1">
-              <button
-                type="button"
-                onClick={() => bannerInputRef.current?.click()}
-                disabled={uploadingBanner}
-                className="text-xs text-accent-primary hover:underline"
-              >
-                {t('settings:account.profile.banner.change')}
-              </button>
-              {(displayBannerSrc || user.banner) && bannerFilename !== '' && (
-                <button
-                  type="button"
-                  onClick={handleRemoveBanner}
-                  className="text-xs text-txt-danger hover:underline"
-                >
+              {(displayAvatarSrc || user.avatar) && avatarFilename !== '' && (
+                <button type="button" onClick={handleRemoveAvatar} className={REMOVE_BUTTON}>
                   {t('common:actions.remove')}
                 </button>
               )}
             </div>
-            <input
-              ref={bannerInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleBannerSelect}
-              className="hidden"
+          </div>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarSelect}
+            className="hidden"
+          />
+        </SettingsField>
+
+        {/* Banner upload */}
+        <SettingsField label={t('settings:account.profile.banner.label')}>
+          <button
+            type="button"
+            onClick={() => bannerInputRef.current?.click()}
+            disabled={uploadingBanner}
+            aria-label={t('settings:account.profile.banner.change')}
+            className="group relative block h-[72px] w-full overflow-hidden rounded-md border border-border-hard"
+          >
+            <div
+              className="h-full w-full"
+              style={displayBannerSrc
+                ? { backgroundImage: `url(${displayBannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                : { background: bannerFallback }
+              }
             />
+            <PictureOverlay busy={uploadingBanner} />
+          </button>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => bannerInputRef.current?.click()}
+              disabled={uploadingBanner}
+              className="btn-outline btn-sm"
+            >
+              {t('settings:account.profile.banner.change')}
+            </button>
+            {(displayBannerSrc || user.banner) && bannerFilename !== '' && (
+              <button type="button" onClick={handleRemoveBanner} className={REMOVE_BUTTON}>
+                {t('common:actions.remove')}
+              </button>
+            )}
           </div>
+          <input
+            ref={bannerInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleBannerSelect}
+            className="hidden"
+          />
+        </SettingsField>
 
-          {/* Avatar Color */}
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.profile.avatarColor.label')}</label>
-            <div className="flex gap-2">
-              {AVATAR_COLORS.map((key) => {
-                const entry = AVATAR_GRADIENT_MAP[key];
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setAvatarColorState(key)}
-                    className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
-                    style={{
-                      background: entry.gradient,
-                      borderColor: avatarColorState === key ? 'white' : 'transparent',
-                      boxShadow: avatarColorState === key ? `0 0 0 2px ${entry.glow}40` : 'none',
-                    }}
-                    title={t(`common:colors.${key}`)}
-                    aria-label={t(`common:colors.${key}`)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Banner Color */}
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.profile.bannerColor.label')}</label>
-            <div className="grid grid-cols-7 gap-1.5 mb-2">
-              {[0, 1, 2].map((row) =>
-                BANNER_COLOR_PRESETS.map((family) => {
-                  const color = family[row]!;
-                  return (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => { setAccentColor(color); setCustomHex(color); }}
-                      className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
-                      style={{
-                        backgroundColor: color,
-                        borderColor: accentColor === color ? 'white' : 'transparent',
-                        boxShadow: accentColor === color ? `0 0 0 2px ${color}40` : 'none',
-                      }}
-                      title={color}
-                    />
-                  );
-                })
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={customHex}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setCustomHex(val);
-                  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-                    setAccentColor(val);
-                  }
-                }}
-                placeholder={t('settings:account.profile.bannerColor.hexPlaceholder')}
-                className="input-standard w-24 px-2 py-1.5 text-xs font-mono"
-                maxLength={7}
+        {/* Avatar Color */}
+        <SettingsField label={t('settings:account.profile.avatarColor.label')}>
+          <div className={SWATCH_ROW}>
+            {AVATAR_COLORS.map((key) => (
+              <SwatchButton
+                key={key}
+                label={t(`common:colors.${key}`)}
+                background={AVATAR_GRADIENT_MAP[key].gradient}
+                selected={avatarColorState === key}
+                onClick={() => setAvatarColorState(key)}
               />
-              {accentColor && (
-                <div
-                  className="w-6 h-6 rounded-full border border-white/10 flex-shrink-0"
-                  style={{ backgroundColor: accentColor }}
-                />
-              )}
-              {accentColor && (
-                <button
-                  type="button"
-                  onClick={() => { setAccentColor(null); setCustomHex(''); }}
-                  className="text-xs text-txt-tertiary hover:text-txt-secondary transition-colors"
-                >
-                  {t('common:actions.clear')}
-                </button>
-              )}
-            </div>
+            ))}
           </div>
+        </SettingsField>
 
-          {/* Bio */}
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.profile.bio.label')}</label>
-            <div className="relative">
-              <textarea
-                value={bio}
-                onChange={(e) => {
-                  if (e.target.value.length <= BIO_MAX_LENGTH) setBio(e.target.value);
-                }}
-                rows={3}
-                placeholder={t('settings:account.profile.bio.placeholder')}
-                className="input-standard w-full resize-none"
-                maxLength={BIO_MAX_LENGTH}
-              />
-              <span className="absolute bottom-2 right-2 text-[10px] text-txt-tertiary">
-                {t('settings:account.profile.bio.counter', { used: bio.length, max: BIO_MAX_LENGTH })}
-              </span>
-            </div>
+        {/* Profile theme: two colours for the banner and the card */}
+        <ProfileThemeEditor
+          value={{ primary: accentColor, secondary: accentSecondary }}
+          onChange={({ primary, secondary }) => { setAccentColor(primary); setAccentSecondary(secondary); }}
+        />
+
+        <ProfileDetailsEditor
+          pronouns={pronouns}
+          onPronouns={setPronouns}
+          links={links}
+          onLinks={(next) => { setLinks(next); setInvalidLinks(new Set()); }}
+          invalidLinks={invalidLinks}
+          layout={layout}
+          onLayout={setLayout}
+        />
+
+        {/* Bio */}
+        <SettingsField label={t('settings:account.profile.bio.label')} htmlFor="profile-bio">
+          <div className="relative">
+            <textarea
+              id="profile-bio"
+              value={bio}
+              onChange={(e) => {
+                if (e.target.value.length <= BIO_MAX_LENGTH) setBio(e.target.value);
+              }}
+              rows={3}
+              placeholder={t('settings:account.profile.bio.placeholder')}
+              className="input-standard block w-full resize-none pb-6"
+              maxLength={BIO_MAX_LENGTH}
+            />
+            <span className="pointer-events-none absolute bottom-1.5 right-2.5 font-mono text-2xs tabular text-txt-tertiary">
+              {t('settings:account.profile.bio.counter', { used: bio.length, max: BIO_MAX_LENGTH })}
+            </span>
           </div>
-        </div>
-      </div>
+        </SettingsField>
+      </SettingsSection>
 
       {/* ── Account ── */}
-      <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('settings:account.details.sectionTitle')}</div>
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-4">
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.details.status.label')}</label>
+      <SettingsSection title={t('settings:account.details.sectionTitle')}>
+        <StatusPicker />
+
+        <SettingsField label={t('common:labels.displayName')} htmlFor="account-display-name">
+          <input
+            id="account-display-name"
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="input-standard w-full"
+          />
+        </SettingsField>
+
+        <SettingsField label={t('settings:account.details.customStatus.label')} htmlFor="account-custom-status">
+          <input
+            id="account-custom-status"
+            type="text"
+            value={customStatus}
+            onChange={(e) => setCustomStatus(e.target.value)}
+            className="input-standard w-full"
+            placeholder={t('settings:account.details.customStatus.placeholder')}
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label htmlFor="custom-status-expiry" className="text-meta text-txt-secondary">
+              {t('settings:account.details.customStatus.expiry.label')}
+            </label>
             <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as ChosenUserStatus)}
-              className="input-standard w-full appearance-none"
+              id="custom-status-expiry"
+              value={statusExpiry}
+              onChange={(e) => setStatusExpiry(e.target.value as StatusExpiryChoice)}
+              disabled={customStatus.trim() === ''}
+              className="input-search h-8 max-w-full py-0 text-meta"
             >
-              <option value="online">{t('common:states.online')}</option>
-              <option value="idle">{t('common:states.idle')}</option>
-              <option value="dnd">{t('common:states.doNotDisturb')}</option>
+              {isFutureEnd(user.customStatusExpiresAt, Date.now()) && (
+                <option value="keep">
+                  {t('settings:account.details.customStatus.expiry.keep', { time: f.formatDateTime(user.customStatusExpiresAt) })}
+                </option>
+              )}
+              {STATUS_EXPIRY_CHOICES.map((choice) => (
+                <option key={choice} value={choice}>
+                  {t(`settings:account.details.customStatus.expiry.choice.${choice}`)}
+                </option>
+              ))}
             </select>
           </div>
+        </SettingsField>
+      </SettingsSection>
 
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('common:labels.displayName')}</label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="input-standard w-full"
-            />
-          </div>
+      <UsernameSection />
 
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.details.customStatus.label')}</label>
-            <input
-              type="text"
-              value={customStatus}
-              onChange={(e) => setCustomStatus(e.target.value)}
-              className="input-standard w-full"
-              placeholder={t('settings:account.details.customStatus.placeholder')}
-            />
-          </div>
-        </div>
-      </div>
+      <StorageSection />
 
-      {/* ── Password ── */}
-      <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('common:labels.password')}</div>
-        <form onSubmit={(e) => { e.preventDefault(); handleChangePassword(); }} className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-3">
-          <input type="text" autoComplete="username" value={user.username} readOnly tabIndex={-1} className="sr-only" />
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.password.current.label')}</label>
-            <div className="relative">
-              <input
-                type={showCurrentPassword ? 'text' : 'password'}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="input-standard w-full pr-10"
-                placeholder={t('settings:account.password.current.placeholder')}
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                aria-label={showCurrentPassword ? t('settings:account.password.hide') : t('settings:account.password.show')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-txt-tertiary hover:text-txt-secondary transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  {showCurrentPassword ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                  ) : (
-                    <>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </>
-                  )}
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.password.new.label')}</label>
-            <div className="relative">
-              <input
-                type={showNewPassword ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="input-standard w-full pr-10"
-                placeholder={t('settings:account.password.new.placeholder', { min: PASSWORD_MIN_LENGTH })}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                aria-label={showNewPassword ? t('settings:account.password.hide') : t('settings:account.password.show')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-txt-tertiary hover:text-txt-secondary transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  {showNewPassword ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                  ) : (
-                    <>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </>
-                  )}
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1.5">{t('settings:account.password.confirm.label')}</label>
-            <input
-              type="password"
-              value={confirmNewPassword}
-              onChange={(e) => setConfirmNewPassword(e.target.value)}
-              className="input-standard w-full"
-              placeholder={t('settings:account.password.confirm.placeholder')}
-              autoComplete="new-password"
-            />
-          </div>
-
-          {passwordError && (
-            <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-xs">{passwordError}</div>
-          )}
-          <button
-            type="submit"
-            disabled={passwordLoading || !currentPassword || !newPassword || !confirmNewPassword}
-            className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {passwordLoading ? t('settings:account.password.submitting') : t('settings:account.password.submit')}
-          </button>
-        </form>
-      </div>
+      <DataExportSection />
 
       {/* ── Danger Zone ── */}
-      <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('common:labels.dangerZone')}</div>
-        <div className="rounded-lg bg-accent-rose/5 border border-accent-rose/20 p-3.5">
-          <p className="text-sm text-txt-secondary mb-3">
+      <SettingsSection title={t('common:labels.dangerZone')} tone="danger">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="min-w-0 flex-1 basis-60 text-meta leading-snug text-txt-secondary">
             {t('settings:account.danger.description')}
           </p>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="px-4 py-2 bg-accent-rose hover:bg-accent-rose/80 text-white text-sm font-medium rounded-lg transition-colors"
-          >
+          <button type="button" onClick={() => setShowDeleteModal(true)} className="btn-danger">
             {t('settings:account.danger.deleteButton')}
           </button>
         </div>
-      </div>
+      </SettingsSection>
 
-      {error && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{error}</div>
-      )}
-
-      {hasChanges && (
-        <div className="sticky bottom-0 z-10 pointer-events-none">
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-2 animate-slide-up pointer-events-auto">
-              <button
-                onClick={handleReset}
-                className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
-              >
-                {t('common:actions.reset')}
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={isLoading || uploadingAvatar || uploadingBanner}
-                className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
-              >
-                {isLoading ? t('common:states.saving') : t('common:actions.save')}
-              </button>
+      {/* What is unsaved, and what went wrong saving it, stay in view while the page scrolls. */}
+      {(error || hasChanges) && (
+        <div className="pointer-events-none sticky bottom-0 z-10 space-y-2 pb-1 pt-3">
+          {error && (
+            <div className="pointer-events-auto bg-surface-chat">
+              <FormError>{error}</FormError>
             </div>
-          </div>
+          )}
+          {hasChanges && (
+            <div className="flex justify-center">
+              <div className="action-bar pointer-events-auto animate-slide-up">
+                <button type="button" onClick={handleReset} className="btn-quiet">
+                  {t('common:actions.reset')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isLoading || uploadingAvatar || uploadingBanner}
+                  aria-busy={isLoading}
+                  className="btn-primary"
+                >
+                  {isLoading ? t('common:states.saving') : t('common:actions.save')}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -793,6 +723,7 @@ export function AccountPanel() {
         onClose={() => setAvatarCropSrc(null)}
         imageSrc={avatarCropSrc ?? ''}
         onCropComplete={handleAvatarCropComplete}
+        onAnimatedCrop={avatarAnimated !== null ? (crop) => handleAnimatedCrop('avatar', avatarAnimated, crop) : undefined}
         title={t('settings:account.profile.avatar.cropTitle')}
         cropShape="round"
         aspectRatio={1}
@@ -803,6 +734,7 @@ export function AccountPanel() {
         onClose={() => setBannerCropSrc(null)}
         imageSrc={bannerCropSrc ?? ''}
         onCropComplete={handleBannerCropComplete}
+        onAnimatedCrop={bannerAnimated !== null ? (crop) => handleAnimatedCrop('banner', bannerAnimated, crop) : undefined}
         title={t('settings:account.profile.banner.cropTitle')}
         cropShape="rect"
         aspectRatio={3}
@@ -813,6 +745,6 @@ export function AccountPanel() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
       />
-    </div>
+    </SettingsPage>
   );
 }

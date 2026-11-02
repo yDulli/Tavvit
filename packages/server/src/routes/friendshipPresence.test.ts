@@ -24,7 +24,7 @@ let testDb: TestDb;
 // orbit.test and held here as the replicated row stub-bob.
 
 const OUR_ORIGIN = 'https://nova.test';
-const ORBIT = 'orbit.test';
+const TAVVIT = 'orbit.test';
 const playing: Activity[] = [{ type: 'playing', name: 'Factorio' }];
 
 type PresenceUpdate = Extract<ServerEvent, { type: 'presence_update' }>;
@@ -104,7 +104,7 @@ beforeEach(() => {
     },
     {
       id: 'stub-bob', username: 'bob@orbit.test', displayName: 'bob', passwordHash: '!federation-replicated',
-      status: 'online', isAdmin: 0, homeInstance: ORBIT, homeUserId: 'bob-home', createdAt: 1,
+      status: 'online', isAdmin: 0, homeInstance: TAVVIT, homeUserId: 'bob-home', createdAt: 1,
     },
   ]).run();
 });
@@ -126,7 +126,7 @@ async function relayedPresenceOf(userId: string): Promise<{ targets: string[] | 
 function friendship(status?: 'accepted'): FederationRelayEvent['friendship'] {
   return {
     from: { homeUserId: 'alice', homeInstance: OUR_ORIGIN },
-    to: { homeUserId: 'bob-home', homeInstance: ORBIT },
+    to: { homeUserId: 'bob-home', homeInstance: TAVVIT },
     ...(status ? { status } : {}),
     createdAt: 2,
   };
@@ -175,7 +175,7 @@ describe('friendship presence snapshot: local accept (PATCH /api/social/requests
     expect(res.statusCode).toBe(200);
 
     const aboutBob = presenceTo('alice', 'stub-bob');
-    expect(aboutBob).toMatchObject({ status: 'online', activities: [{ type: 'listening', name: 'Radio' }], homeUserId: 'bob-home', homeInstance: ORBIT });
+    expect(aboutBob).toMatchObject({ status: 'online', activities: [{ type: 'listening', name: 'Radio' }], homeUserId: 'bob-home', homeInstance: TAVVIT });
     const aboutAlice = presenceTo('stub-bob', 'alice');
     expect(aboutAlice).toMatchObject({ status: 'online', activities: playing, homeUserId: null, homeInstance: null });
   });
@@ -185,7 +185,7 @@ describe('friendship presence snapshot: local accept (PATCH /api/social/requests
     await app.inject({ method: 'PATCH', url: '/api/social/requests/req-1', payload: { status: 'accepted' } });
 
     const relay = await relayedPresenceOf('alice');
-    expect(relay?.targets).toEqual([`https://${ORBIT}`]);
+    expect(relay?.targets).toEqual([`https://${TAVVIT}`]);
     expect(relay?.event.presenceUpdate).toMatchObject({ homeUserId: 'alice', homeInstance: OUR_ORIGIN, status: 'online', activities: playing });
   });
 
@@ -212,12 +212,12 @@ describe('friendship presence snapshot: relayed friend_add', () => {
     const fed = await import('./federation/events/friends.js');
     const accepted: string[] = [];
     const rejected: Array<{ messageId: string; reason: string }> = [];
-    await fed.processFriendAddEvent(friendAdd('fa-1'), `https://${ORBIT}`, testDb, accepted, rejected);
+    await fed.processFriendAddEvent(friendAdd('fa-1'), `https://${TAVVIT}`, testDb, accepted, rejected);
     expect(rejected).toEqual([]);
 
-    expect(presenceTo('alice', 'stub-bob')).toMatchObject({ status: 'online', activities: playing, homeUserId: 'bob-home', homeInstance: ORBIT });
+    expect(presenceTo('alice', 'stub-bob')).toMatchObject({ status: 'online', activities: playing, homeUserId: 'bob-home', homeInstance: TAVVIT });
     const relay = await relayedPresenceOf('alice');
-    expect(relay?.targets).toEqual([`https://${ORBIT}`]);
+    expect(relay?.targets).toEqual([`https://${TAVVIT}`]);
     expect(relay?.event.presenceUpdate?.activities).toEqual([{ type: 'watching', name: 'A film' }]);
   });
 
@@ -226,7 +226,7 @@ describe('friendship presence snapshot: relayed friend_add', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const fed = await import('./federation/events/friends.js');
     const rejected: Array<{ messageId: string; reason: string }> = [];
-    await fed.processFriendAddEvent(friendAdd('fa-none'), `https://${ORBIT}`, testDb, [], rejected);
+    await fed.processFriendAddEvent(friendAdd('fa-none'), `https://${TAVVIT}`, testDb, [], rejected);
     await vi.dynamicImportSettled();
 
     expect(rejected).toEqual([{ messageId: 'fa-none', reason: 'invalid_target' }]);
@@ -242,8 +242,8 @@ describe('friendship presence snapshot: one exchange per friendship', () => {
     const fed = await import('./federation/events/friends.js');
     const accepted: string[] = [];
     const rejected: Array<{ messageId: string; reason: string }> = [];
-    fed.processFriendRequestUpdateEvent(acceptedUpdate('fu-seq'), `https://${ORBIT}`, testDb, accepted, rejected);
-    await fed.processFriendAddEvent(friendAdd('fa-seq'), `https://${ORBIT}`, testDb, accepted, rejected);
+    fed.processFriendRequestUpdateEvent(acceptedUpdate('fu-seq'), `https://${TAVVIT}`, testDb, accepted, rejected);
+    await fed.processFriendAddEvent(friendAdd('fa-seq'), `https://${TAVVIT}`, testDb, accepted, rejected);
     await vi.dynamicImportSettled();
 
     expect(rejected).toEqual([]);
@@ -258,8 +258,8 @@ describe('friendship presence snapshot: one exchange per friendship', () => {
     const fed = await import('./federation/events/friends.js');
     const accepted: string[] = [];
     const rejected: Array<{ messageId: string; reason: string }> = [];
-    await fed.processFriendAddEvent(friendAdd('fa-rev'), `https://${ORBIT}`, testDb, accepted, rejected);
-    fed.processFriendRequestUpdateEvent(acceptedUpdate('fu-rev'), `https://${ORBIT}`, testDb, accepted, rejected);
+    await fed.processFriendAddEvent(friendAdd('fa-rev'), `https://${TAVVIT}`, testDb, accepted, rejected);
+    fed.processFriendRequestUpdateEvent(acceptedUpdate('fu-rev'), `https://${TAVVIT}`, testDb, accepted, rejected);
     await vi.dynamicImportSettled();
 
     expect(rejected).toEqual([]);
@@ -273,7 +273,7 @@ describe('friendship presence snapshot: one exchange per friendship', () => {
     alicesPendingRequest('req-old');
     const fed = await import('./federation/events/friends.js');
     const rejected: Array<{ messageId: string; reason: string }> = [];
-    fed.processFriendRequestUpdateEvent(acceptedUpdate('fu-old'), `https://${ORBIT}`, testDb, [], rejected);
+    fed.processFriendRequestUpdateEvent(acceptedUpdate('fu-old'), `https://${TAVVIT}`, testDb, [], rejected);
     await vi.dynamicImportSettled();
 
     expect(rejected).toEqual([]);
@@ -290,7 +290,7 @@ describe('friendship presence snapshot: failure isolation', () => {
     const fed = await import('./federation/events/friends.js');
     const accepted: string[] = [];
     const rejected: Array<{ messageId: string; reason: string }> = [];
-    await fed.processFriendAddEvent(friendAdd('fa-x'), `https://${ORBIT}`, testDb, accepted, rejected);
+    await fed.processFriendAddEvent(friendAdd('fa-x'), `https://${TAVVIT}`, testDb, accepted, rejected);
     expect(rejected).toEqual([]);
     expect(accepted).toEqual(['fa-x']);
   });
@@ -306,7 +306,7 @@ describe('friendship presence snapshot: failure isolation', () => {
     const rejected: Array<{ messageId: string; reason: string }> = [];
     fed.processFriendRequestUpdateEvent(
       { eventType: 'friend_request_update', contextType: 'friend', messageId: 'fu-x', encryptionVersion: 0, timestamp: 2, friendship: friendship('accepted') },
-      `https://${ORBIT}`, testDb, accepted, rejected,
+      `https://${TAVVIT}`, testDb, accepted, rejected,
     );
     expect(rejected).toEqual([]);
     expect(accepted).toEqual(['fu-x']);
@@ -323,9 +323,9 @@ describe('friendship presence snapshot: relayed friend_request_update (accepted)
     const rejected: Array<{ messageId: string; reason: string }> = [];
     fed.processFriendRequestUpdateEvent(
       { eventType: 'friend_request_update', contextType: 'friend', messageId: 'fu-1', encryptionVersion: 0, timestamp: 2, friendship: friendship('accepted') },
-      `https://${ORBIT}`, testDb, [], rejected,
+      `https://${TAVVIT}`, testDb, [], rejected,
     );
     expect(rejected).toEqual([]);
-    expect(presenceTo('alice', 'stub-bob')).toMatchObject({ status: 'online', activities: playing, homeUserId: 'bob-home', homeInstance: ORBIT });
+    expect(presenceTo('alice', 'stub-bob')).toMatchObject({ status: 'online', activities: playing, homeUserId: 'bob-home', homeInstance: TAVVIT });
   });
 });

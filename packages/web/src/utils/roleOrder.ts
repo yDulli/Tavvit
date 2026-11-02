@@ -91,11 +91,13 @@ export function roleMoveRequest(ranked: readonly Role[], fromIndex: number, toIn
  * `roles` with the role a successful `PATCH /roles/:rid` answered put in
  * place of its old copy, so an editor shows what was saved at once; the
  * `space_access_changed` refresh that follows brings the rest of the space.
- * Only the role's own fields change here: a move renumbers other roles too,
- * which is `moveRoleInRankOrder`'s job, so `position` is kept.
+ * Every field the answer carries is taken (name, colours, icon, description,
+ * hoist, mentionable), except `position`: a move renumbers other roles too,
+ * which is `moveRoleInRankOrder`'s job. An answer without `permissions` (the
+ * actor lost MANAGE_ROLES with the change) keeps the bits the store had.
  */
 export function withSavedRole(roles: readonly Role[], saved: Role): Role[] {
   return roles.map((r) => (r.id === saved.id
-    ? { ...r, name: saved.name, color: saved.color ?? r.color, permissions: saved.permissions ?? r.permissions }
+    ? { ...r, ...saved, position: r.position, color: saved.color ?? r.color, permissions: saved.permissions ?? r.permissions }
     : r));
 }

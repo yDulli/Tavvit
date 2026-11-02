@@ -6,12 +6,14 @@ Source files:
 - `packages/web/src/components/layout/MobileBottomNav.tsx` — Tab bar with unread badge counts, hidden when stack non-empty
 - `packages/web/src/components/layout/MobileNav.tsx` — Legacy hamburger menu (pre-MobileShell), renders only when `isMobile` true
 - `packages/web/src/components/layout/MobileScreenHeader.tsx` — Reusable back-arrow header for pushed screens
+- `packages/web/src/components/layout/MobileNavRow.tsx` — The flat 48px row that leads to a screen: the You screen, the settings hub, the instance hub
+- `packages/web/src/components/layout/mobileClasses.ts` — The class strings the phone's bars, sheets and settings panels share (`BAR_BUTTON`, `BAR_TITLE`, `SHEET_HANDLE`, `SHEET_ROW`, `PANEL_BODY`)
 - `packages/web/src/components/layout/MobileChatScreen.tsx` — Channel/DM chat view with MessageList, MessageInput, TypingIndicator
-- `packages/web/src/components/layout/MobileDmsScreen.tsx` — DM list with online friends row, unread indicators, FAB for new DM
-- `packages/web/src/components/layout/MobileSpacesScreen.tsx` — Space strip + channel list (split-pane), folder support, voice user rows
-- `packages/web/src/components/layout/MobileYouScreen.tsx` — User profile card, action rows, logout
+- `packages/web/src/components/layout/MobileDmsScreen.tsx` — DM list with online friends row, unread badges, FAB for new DM, and the phone's way into the inbox (header bell with the inbox count)
+- `packages/web/src/components/layout/MobileSpacesScreen.tsx` — Space strip (tabs across the top) + channel list, folder support, voice user rows
+- `packages/web/src/components/layout/MobileYouScreen.tsx` — Title bar with the settings gear, user profile card, action rows, logout
 - `packages/web/src/components/layout/MobileSettingsScreen.tsx` — Settings hub and direct-panel rendering via `initialPanel` prop
-- `packages/web/src/components/layout/MobileInstancePanel.tsx` — Admin-only instance settings hub (General, Registration, Federation, Streaming, Storage, Users; surfaces federation approval-count badge)
+- `packages/web/src/components/admin/AdminConsole.tsx` — The admin console; on a phone it takes the place of the shell at `/admin` ([admin.md](admin.md), "The console")
 - `packages/web/src/components/layout/MobileMembersScreen.tsx` — Space member list grouped by role, with activity cards
 - `packages/web/src/components/layout/MobileVoiceFullScreen.tsx` — Full-screen voice call view with participant grid and control bar
 - `packages/web/src/components/layout/MobileVoiceMiniBar.tsx` — Persistent mini-bar overlay during voice calls
@@ -96,8 +98,23 @@ MobileShell (calc(100*var(--app-dvh)) flex column)
   |     +-- Root screen (spaces | dms | you) — always rendered, visibility-hidden when covered
   |     +-- Stacked screens (absolute inset-0, bg-surface-base, z-10)
   +-- MobileVoiceMiniBar (conditional: when currentVoiceChannelId && voice-full not on top)
-  +-- MobileBottomNav (glass-bubble tab bar, hidden when stack non-empty)
+  +-- MobileBottomNav (tab bar on the frame's surface, hidden when stack non-empty)
 ```
+
+### Surfaces on the phone
+
+The same steps as the desktop's columns, so a screen's tone says what it is:
+
+| Surface | Screens |
+|---------|---------|
+| `bg-surface-base` | The bars: every header (`.panel-bar`), the bottom navigation, the space strip |
+| `bg-surface-channel` | Lists that lead somewhere: the channel list, the DM list, the You screen, the settings and instance hubs |
+| `bg-surface-chat` | The page: a conversation, a settings panel (`PANEL_BODY`), a full-screen dialog |
+| `bg-surface-members` | People: the members screen and the group DM info screen |
+
+The main screens carry the app's light (`.lit`, `.lit-phone`; `design-system.md`, Light). Its gradients are as cheap here as on a desktop; only the dialogs' blur is left out on a phone (`.modal-scrim`).
+
+Rows that lead somewhere are flat and hairline-free (`MobileNavRow`, `.list-row` at full width); the only card on a root screen is the profile card. Buttons in a bar are 40px (`BAR_BUTTON`, the shared `.icon-btn` at the touch size).
 
 ---
 
@@ -180,6 +197,10 @@ useEffect(() => {
 
 In-app navigation that lands on a different channel (e.g. tapping a `SpaceInviteCard` Join button while inside another chat) stacks the new `channel-chat` on top so back returns to the originating chat.
 
+### Home-Area Routes
+
+The pages that live beside the space routes (`/inbox`, `/friends`, `/explore`, `/about`, `HOME_ROUTES` in `utils/homeNav.ts`) are pushed screens on the phone, not routes the shell renders. `MobileShell` maps each address to its screen (`HOME_PAGE_SCREENS`: `inbox`, `friends`, `explore`, `about`) and pushes it when `location.pathname` becomes one of them: a deep link or reload, the quick switcher's Inbox entry (which navigates rather than pushing), a desktop window narrowed into the phone layout on one of those pages. Like the channel sync above, the effect reads the stack imperatively; a screen already on top is not pushed again. It also reads `useNavigationType()`: after the shell's first render, a `POP` that lands on one of these addresses is the back button leaving the screen that sat above it, and does not reopen the page's screen (the first render's `POP` is the deep link or reload itself, and does). In-app entry points that know they are on the phone push the screen directly instead (the DMs screen's inbox bell, the Friends button, the You screen's rows), so the address does not change and nothing is pushed twice.
+
 ### User Profile Mobile Override
 
 `uiStore:openUserProfile` detects `isMobile` and pushes a `user-profile` screen instead of showing a positioned popout:
@@ -257,17 +278,17 @@ File: `MobileBottomNav.tsx`
 
 ### Visibility
 
-Returns `null` when `mobileStack.length > 0` — hidden whenever a pushed screen is active.
+Returns `null` when `mobileStack.length > 0` — hidden whenever a pushed screen is active. The line above the active tab is a `SlidingMark`, as on the desktop's top bar.
 
 ### Tabs
 
 | Tab | Badge Type | Badge Source |
 |-----|-----------|--------------|
-| Spaces | Dot (red) | `unreadChannels` has any non-voice channel |
-| DMs | Numeric count | Count of DM channels where `lastMessage.id > readStates[dmId]` |
-| You | Dot (red) | Pending incoming friend requests (`status === 'pending'` and `fromId !== authUser.id`), an instance update badge (`useInstanceUpdateBadge`), or the Backspace page's `updated` state (`useHubUpdateState`) |
+| Spaces | Neutral dot (`bg-txt-primary`) | `unreadChannels` has any non-voice channel |
+| DMs | Numeric count (`.count-badge`) | Count of DM channels where `lastMessage.id > readStates[dmId]` |
+| You | Neutral dot (`bg-txt-primary`) | Pending incoming friend requests (`status === 'pending'` and `isIncomingRequest`) |
 
-Badge caps at `99+` for numeric badges.
+Badge caps at `99+` for numeric badges. The inbox has no tab of its own; see MobileDmsScreen below.
 
 ### Tab Tap Behavior
 
@@ -292,9 +313,9 @@ The Spaces tab prefers `useSpaceStore.getState().currentSpaceId` — the canonic
 
 ### Styling
 
-- Container: `glass-bubble` surface tier
+- Container: `bg-surface-base` with a `border-border-hard` hairline on top
 - Height: `calc(56px + var(--safe-bottom))`
-- Active tab: `text-accent-primary`; Inactive: `text-txt-secondary`
+- Active tab (`aria-current="page"`): `text-txt-primary` and a 2px × 40px violet edge on the bar's hairline, the way the desktop's top bar marks the tab you are on; inactive: `text-txt-secondary`; pressed: `bg-interactive-active`
 
 ---
 
@@ -346,24 +367,21 @@ Event options: `touchstart` is `{ passive: true }`, `touchmove` is `{ passive: f
 | `settings-account` | `MobileSettingsScreen` | `initialPanel="account"` |
 | `settings-appearance` | `MobileSettingsScreen` | `initialPanel="appearance"` |
 | `settings-voice` | `MobileSettingsScreen` | `initialPanel="voice"` |
+| `settings-activity` | `MobileSettingsScreen` | `initialPanel="activity"` |
+| `settings-emoji` | `MobileSettingsScreen` | `initialPanel="emoji"` |
 | `settings-privacy` | `MobileSettingsScreen` | `initialPanel="privacy"` |
 | `settings-connections` | `MobileSettingsScreen` | `initialPanel="connections"` |
 | `settings-keybinds` | `MobileSettingsScreen` | `initialPanel="keybinds"` (Electron-only entry; map row always present) |
 | `settings-desktop` | `MobileSettingsScreen` | `initialPanel="desktop"` (reachable everywhere; only the panel body differs by environment) |
-| `settings-instance` | `MobileInstancePanel` | — |
-| `settings-instance-general` | `GeneralPanel` (wrapped) | — |
-| `settings-instance-registration` | `RegistrationPanel` (wrapped) | — |
-| `settings-instance-federation` | `FederationPanel` (wrapped, forwards `onApprovalCountChange` → `uiStore.setFederationApprovalCount`) | — |
-| `settings-instance-streaming` | `StreamingPanel` (wrapped) | — |
-| `settings-instance-storage` | `StoragePanel` (wrapped) | — |
-| `settings-instance-users` | `UsersPanel` (wrapped) | — |
 | `members` | `MobileMembersScreen` | `{ spaceId? }` |
+| `group-dm-info` | `MobileGroupDmInfo` | `{ channelId }` |
 | `voice-full` | `MobileVoiceFullScreen` | — |
 | `explore` | `ExplorePage` | — |
-| `backspace` | `MobileBackspaceScreen`: `MobileScreenHeader` titled `project:nav.label` over `ProjectHubPage showTopBar={false}` (see [project-hub.md](project-hub.md)) | — |
+| `about` | `MobileAboutScreen` (`AboutPage` with `showTopBar={false}` under a `MobileScreenHeader`) | — |
+| `inbox` | `MobileInboxScreen` (`InboxPage` with `showTopBar={false}` under a `MobileScreenHeader`: the bar keeps the Unread / Mentions tabs and "Mark all as read") | — |
 | `user-profile` | `UserProfileModal` | `{ userId }` (opens modal via `openModal('userProfile', ...)`) |
 
-Instance settings sub-panels (`settings-instance-*`) are wrapped inline with `MobileScreenHeader` + scrollable container + `bg-surface-base`.
+`PANEL_BODY` sets a panel on the page's surface and hides its own title (`.page-title`, or a plain heading at its head), since the screen's header already says it.
 
 ---
 
@@ -371,25 +389,25 @@ Instance settings sub-panels (`settings-instance-*`) are wrapped inline with `Mo
 
 ### MobileSpacesScreen
 
-Split-pane layout: 60px `glass-strip` space strip on the left + channel list on the right.
+The spaces as a row of tabs across the top (`.tab-strip`, so a cut-off tab fades out), the channel list below, a 48px bar with the space's name between them. With no space at all, an `.empty-state` offers to create or join one; it waits 1.5 s for the socket's `ready`, so it does not flash for someone who has spaces.
 
 **Space strip features:**
-- Home/DMs button at top (navigates to DMs tab)
 - Folder-aware layout via `spaceLayout` and `folders` from spaceStore
-- Unread pill indicator on left edge (8px dot for unread, 32px bar for selected)
-- Federation badge on space icons (globe icon, amber dot if disconnected)
-- Context menu: Invite, Create Folder, Move to Folder, Remove from Folder, Transfer Ownership, Leave
-- Add Space button at bottom (opens bottom sheet: Create / Join / Explore)
+- Selected tab: `bg-interactive-selected`, primary text and a 2px violet edge; it is scrolled into view when the selection changes. A tab with something unread: primary text, weight 600 and a 6px neutral dot
+- Federation mark on a space's tab (globe icon, amber dot if disconnected)
+- Context menu: Invite, Create Folder, Move to Folder, Remove from Folder, Notification settings, Transfer Ownership, Leave
+- Add Space button at the end (opens bottom sheet: Create / Join / Explore)
 
 **Channel list features:**
 - Channels grouped by categories (collapsible)
 - Uncategorized channels rendered first
+- Rows are `.nav-item` at 40px (`data-active`, `data-unread`, a 6px neutral dot); the `#` and the speaker icon share a 16px column, so every name starts on one line
 - Text channels: `#` prefix, unread dot, selected highlight
 - Voice channels: speaker icon, inline `VoiceUserRow` for connected users with context menus
 - Voice channel tap opens `MobileVoiceJoinSheet` (not direct join)
 - Text channel tap: navigates via router + pushes `channel-chat` screen
 - Channel/category context menus for management (guarded by `MANAGE_CHANNELS` permission)
-- **Loading skeleton:** while `useSpaceStore.loadingSpaceId === selectedSpaceId`, the channel-list area renders a shimmer skeleton (uncategorized rows + category header + categorized rows). Gated through `useDelayedLoading` so cached/fast loads don't flash the placeholder. Mirrors desktop `ChannelSidebar`'s `showChannelSkeleton`. Skeleton row geometry matches the real channel rows (`px-3 py-2` with `w-4 h-4` icon → ~36px row).
+- **Loading skeleton:** while `useSpaceStore.loadingSpaceId === selectedSpaceId`, the channel-list area renders a shimmer skeleton (uncategorized rows + category header + categorized rows). Gated through `useDelayedLoading` so cached/fast loads don't flash the placeholder. Mirrors desktop `ChannelSidebar`'s `showChannelSkeleton`. Skeleton row geometry matches the real channel rows (`h-10 px-2` with `w-4 h-4` icon).
 - **Empty-state mascot — settle gate:** the "No channels yet." mascot must NOT render during the pre-skeleton load window (the < 200 ms threshold of `useDelayedLoading`). Without a settle gate, every space switch flashes the mascot for ~50–200 ms because `state.channels` only ever holds the most-recently loaded space's channels — `spaceChannels` filters to `[]` immediately on selection change while `loadSpaceDetail` is still in flight. The mascot is gated on `isSpaceSettledEmpty = !isLoadingSelectedSpace && loadedSpaceIds.has(selectedSpaceId) && spaceChannels.length === 0`. `loadedSpaceIds` is a `Set<string>` on `useSpaceStore`, populated only on successful `loadSpaceDetail` completion (not on failed loads), and pruned on `deleteSpace` / `leaveSpace` / `removeSpace` / `removeInstanceSpaces` / `reset`. Render order is therefore: skeleton (loading, > threshold) → blank (loading, < threshold) → mascot (settled empty) → real channel list. Desktop `ChannelSidebar` has no empty-state branch, so this asymmetry is mobile-only.
 
 **Layout resolution:**
@@ -399,21 +417,21 @@ Split-pane layout: 60px `glass-strip` space strip on the left + channel list on 
 
 ### MobileDmsScreen
 
-- Header: "Messages" title + "Friends" button
+- Header: "Messages" title, then search (opens the quick switcher), the inbox bell and the "Friends" button. The bell pushes the `inbox` screen and carries `useInboxCount()` as a `.count-badge` (unread mentions plus conversations with something unread, muted ones left out: the number the desktop sidebar's Inbox row and the top bar show). The bottom nav keeps its three tabs; `mobileScreen` is typed to them in `uiStore`, and the inbox is a place reached from the messages tab rather than a tab of its own.
 - Online friends activity row (horizontal scroll, shows avatar + status dot)
 - DM list sorted by last message time (newest first)
-- Each DM row: avatar, name, message preview, timestamp, unread dot
+- Each DM row (`.list-row` at full width): avatar, name, message preview, timestamp in `font-mono`, and the unread badge the desktop row shows (`DmRowUnreadBadge`: the count, or a dot from an instance that sends none)
 - Group DMs: rendered via the shared `<AvatarStack>` (size 40, `border="channel"`, `iconUrl={dm.icon}`) so single-other-member groups, 2-member overlap, and 3+ grids match the desktop sidebar; group name uses `dm.name ?? otherMembers.map(displayName).join(', ')`. A federation globe renders next to the name when any group member is federated. Context menu: "Leave Group".
 - Federated users: `@domain` subtitle below username
-- Empty state: sleeping mascot
-- FAB: New DM button (opens `newDm` modal), positioned `bottom-20 right-4`
+- Empty state: `.empty-state`
+- FAB: New DM button (`.btn-primary`, opens `newDm` modal), positioned `absolute bottom-4 right-4` in the screen rather than `fixed` in the viewport, so it clears the bottom nav, the safe area and the voice mini bar; the list keeps `pb-20` so its last row can scroll out from under it
 
 ### MobileYouScreen
 
-- Settings gear in header (pushes `settings`)
-- Profile card: banner/accent background, avatar (-10 overlap), display name, username, custom status, bio
-- Action rows (each pushes a screen): Edit Profile, Friends, Connections, Voice & Video, Backspace (pushes `backspace`). A row can carry a `badge` dot at its trailing edge; the Backspace row shows the brand primary 8px dot while `useHubUpdateState().state === 'updated'`
-- Log Out button with `ConfirmDialog`
+- A title bar like the other root screens', with the settings gear (pushes `settings`)
+- Profile card: `bg-surface-chat` with a hairline, banner/accent background, avatar (-10 overlap, a 4px ring of the card's tone), display name, username, custom status, bio
+- Action rows (`MobileNavRow`, each pushes a screen): Edit Profile, Friends, Connections, Voice & Video, About (pushes `about`). A row can carry a `badge` node at its trailing edge, which must name itself for assistive technology
+- Log Out row in `text-txt-danger`, under a hairline, with `ConfirmDialog`
 
 ---
 
@@ -426,7 +444,7 @@ Params: `{ channelId, spaceId }`
 - Loads messages and sets current channel on mount via `useChatStore`
 - Resolves channel name: DM names from member list (group: comma-separated), space channels by `#name`
 - Custom header with back button + channel name + DM call button (DMs only) + members/group-info button
-- DM call button shows for 1-on-1 and group DMs, and is hidden for space channels and deleted-partner DMs (they are read-only). It is a 44px tap target that draws a 32px round chip, so it keeps the header's icon rhythm. Its states, first match wins:
+- DM call button shows for 1-on-1 and group DMs, and is hidden for space channels and deleted-partner DMs (they are read-only). It is a 40px tap target, the size of the header's other buttons, that draws a 32px chip. Its states, first match wins:
 
   | State | When | Looks | Tap |
   |-------|------|-------|-----|
@@ -452,17 +470,6 @@ Two modes controlled by `initialPanel` prop:
 
 Both panels are mobile-fit at 360-390px viewports (single-column rows with `flex justify-between`, `min-w-0` on labels, small tap-target buttons). The gate is therefore a list-visibility decision, not a layout decision: once a desktop user happens to be on a narrow viewport (split-window, dock, etc.), the panels render correctly.
 
-### MobileInstancePanel
-
-Admin-only instance settings hub. Pre-fetches instance settings and streaming limits on mount. Lists six sub-sections (General, Registration, Federation, Streaming, Storage, Users), each pushing `settings-instance-{id}`. Mirrors the desktop `InstancePanel` exactly.
-
-The Federation row carries a numeric badge driven by `uiStore.federationApprovalCount` (capped at `99+`, styled like the unread-DM badge in `MobileBottomNav`). The badge source has two paths:
-
-1. **Initial / standalone fetch:** `MobileInstancePanel` calls `api.federation.approvalRequests()` on mount and re-fetches when `onFederationPeersChanged` fires (mirrors what `FederationPanel`'s internal `PendingApprovals` component does). This makes the badge accurate before the admin enters the Federation panel.
-2. **Live updates while inside the panel:** the wrapper around `FederationPanel` in `MobileShell.tsx` forwards the panel's `onApprovalCountChange` callback into `uiStore.setFederationApprovalCount`. As the admin approves/denies requests inside the panel, the count drops and the badge in the parent hub stays in sync.
-
-`MobileInstancePanel` is rendered behind a top-level `isAdmin` guard from `MobileSettingsScreen` — non-admin users cannot reach it.
-
 ### MobileMembersScreen
 
 Params: `{ spaceId? }` (falls back to `currentSpaceId`)
@@ -478,7 +485,7 @@ Member group resolution (`getMemberGroup`):
 2. Has roles: top role by position `{ key: roleId, label: ROLE_NAME, position }`
 3. No roles: `{ key: '__online__', label: 'ONLINE', position: -1 }`
 
-**Loading skeleton:** while `useSpaceStore.loadingSpaceId === spaceId` (the same flag that gates `MobileSpacesScreen`'s channel-list skeleton — `loadSpaceDetail` populates members alongside channels), the screen renders a shimmer skeleton (two role-section headers + circular avatar placeholders + name bars). Gated through `useDelayedLoading` so cached/fast loads don't flash the placeholder. Mirrors desktop `MemberSidebar`'s `showMemberSkeleton`. Skeleton row geometry matches the real member rows (`gap-2.5 px-2 py-2.5` with `w-9 h-9` avatar → ~52px row).
+**Loading skeleton:** while `useSpaceStore.loadingSpaceId === spaceId` (the same flag that gates `MobileSpacesScreen`'s channel-list skeleton — `loadSpaceDetail` populates members alongside channels), the screen renders a shimmer skeleton (two role-section headers + circular avatar placeholders + name bars). Gated through `useDelayedLoading` so cached/fast loads don't flash the placeholder. Mirrors desktop `MemberSidebar`'s `showMemberSkeleton`. Skeleton row geometry matches the real member rows (`.list-row` with `gap-2.5 px-2 py-2` and a `w-9 h-9` avatar → 52px row).
 
 ### MobileGroupDmInfo
 
@@ -488,16 +495,16 @@ Pushed by `MobileChatScreen`'s members button when the active channel is a group
 
 Layout:
 - Header (`MobileScreenHeader`): "Group Info" + back button.
-- Hero: `<AvatarStack size=80 border="modal" iconUrl={dm.icon}>` (or icon when set), large group name (`dm.name ?? comma-joined fallback`), `N members`, and an Edit button (owner-only) that toggles **inline edit mode** — name becomes a text input; tapping the icon opens the existing `ImageCropModal` (also used by `RegisterPage` and `CreateSpace`). Save/Cancel bar appears at the bottom of the screen, positioned via `useVisualViewportInset` so it rides above the iOS keyboard. Upload defers to Save (no orphan uploads).
-- Actions row: Add Member (any-member; opens `AddDmMemberModal`).
+- Hero: `<AvatarStack size=80 border="channel" iconUrl={dm.icon}>` (or icon when set), large group name (`dm.name ?? comma-joined fallback`), `N members`, and an Edit button (owner-only) that toggles **inline edit mode** — name becomes a text input; tapping the icon opens the existing `ImageCropModal` (also used by `RegisterPage` and `CreateSpace`). Save/Cancel bar appears at the bottom of the screen, positioned via `useVisualViewportInset` so it rides above the iOS keyboard. Upload defers to Save (no orphan uploads).
+- Actions row: Add Member (any-member; opens `AddDmMemberModal`), a full-width `.btn-outline`.
 - Members list: OWNER (crown badge), ONLINE, OFFLINE (dimmed). Uses the shared `DmMemberRow` component. Tap → `user-profile` screen. Long-press OR always-visible kebab → context menu (`Transfer Ownership` and `Remove from Group` are owner-only and hidden on self; `Remove Friend` shown when row user is a friend AND not self). The federation globe renders without a long-press tooltip — the per-row `@domain` subtitle already surfaces federated identity, so a tooltip would be redundant.
-- Destructive footer: "Leave Group" (red).
+- Destructive footer: "Leave Group" (`.btn-quiet` in the danger colour).
 
 Owner-only API calls (`updateMetadata`, `kickMember`, `transferOwnership`) route through `getApiForOrigin(getOwnerInstanceForDm(channelId))` — see `docs/systems/dm-system.md` "Owner-Only Routing Helper" for why this is distinct from `getChannelOrigin`.
 
 ### MobileScreenHeader
 
-Reusable header component used by `MobileInstancePanel`, `MobileMembersScreen`, `MobileSettingsScreen`, and inline in screenMap wrappers.
+Reusable header component used by `MobileMembersScreen`, `MobileSettingsScreen`, and inline in screenMap wrappers.
 
 ```ts
 interface MobileScreenHeaderProps {
@@ -506,10 +513,9 @@ interface MobileScreenHeaderProps {
 }
 ```
 
-- Height: 48px (`h-12`)
-- Back button calls `popMobileScreen()`
-- Bottom border: `border-border-soft`
-- Background: `bg-surface-base`
+- `.panel-bar` at 48px (`h-12`): a `--border-hard` line under it, `bg-surface-base`
+- Back button (`BAR_BUTTON`, 40px) calls `popMobileScreen()`
+- Title (`BAR_TITLE`): 15px semibold, as a dialog's; the chat, DM, You and call headers use the same
 
 **Canonical pattern — TransferIndicator in `rightActions`:** every settings/instance screen mounts `<TransferIndicator />` via the `rightActions` slot so an in-flight profile/banner upload (or any transfer initiated before navigating into settings) remains visible and controllable from the screen the user is currently on. Wired in: `MobileSettingsScreen` (hub + each direct panel mode), `MobileInstancePanel`, all six `settings-instance-*` wrappers in `MobileShell.tsx` (general / registration / federation / streaming / storage / users). The indicator is idle-cheap — a single Map subscription + small icon button when no transfers are active — so mounting it on every settings screen has no measurable performance cost. See `docs/systems/uploads.md` for the transfer-chrome surface inventory.
 
@@ -540,11 +546,11 @@ File: `MobileVoiceMiniBar.tsx`
 - Shown when `currentVoiceChannelId` is truthy
 - Hidden when `voice-full` is the top screen in `mobileStack`
 
-**Layout:** `glass-bubble` container, `mx-2 mb-1 rounded-2xl`. Positioned between `MobileScreenStack` and `MobileBottomNav` in the DOM.
+**Layout:** `glass-bubble` container, `mx-2 mb-1 rounded-lg`, 48px tall. Positioned between `MobileScreenStack` and `MobileBottomNav` in the DOM.
 
 **Content:**
-- Left: mint circle icon + channel name + participant count (tap expands to `voice-full`)
-- Right: mute toggle, deafen toggle, disconnect button
+- Left: a 32px mint tile + channel name + participant count (tap expands to `voice-full`)
+- Right: mute toggle, deafen toggle, disconnect button (`.icon-btn` at 40px)
 - Quick controls use `e.stopPropagation()` to prevent expanding on control taps
 
 **Disconnect logic:** Handles both DM calls (`dm_call_end` WS event) and space voice channels (`voice_leave` WS event), calls `disconnectFn`, clears `activeDmCall`.
@@ -570,19 +576,19 @@ File: `MobileVoiceFullScreen.tsx`
 
 The unmount cleanup clears `focusedParticipantId` so re-entering the call screen is a clean slate. Desktop is unaffected — auto-focus lives in `MobileVoiceFullScreen`, not `VoiceGrid`.
 
-**Control bar:** `glass-bubble` container with safe area padding. Five round buttons.
+**Control bar:** `glass-bubble` container with safe area padding. Five 48px square buttons with a 6px corner (`callControlClass`), spread across the bar.
 
 | Button | Action | State Colors |
 |--------|--------|-------------|
-| Mute | `voiceStore.toggleMic` | Active: `bg-accent-rose/20 text-accent-rose`, Inactive: `bg-surface-elevated text-txt-primary` |
+| Mute | `voiceStore.toggleMic` | Active: a rose tint and edge (`bg-accent-rose/20 text-accent-rose`), Inactive: a `border-border-soft` hairline and `text-txt-primary` |
 | Deafen | `voiceStore.toggleDeafen` | Same as mute |
-| Camera | `handleCameraAction` (canonical, from `utils/voiceActions`) | Active: `bg-accent-mint/20 text-accent-mint`, Inactive: same |
+| Camera | `handleCameraAction` (canonical, from `utils/voiceActions`) | Active: a mint tint and edge (`bg-accent-mint/20 text-accent-mint`), Inactive: same |
 | Screen share | `handleScreenShareAction` (canonical, from `utils/voiceActions`) | Same as camera |
-| Disconnect | DM call or space voice teardown + pop screen | Always `bg-accent-rose text-white` |
+| Disconnect | DM call or space voice teardown + pop screen | Always `.btn-danger` |
 
 **Screen-share button wiring (load-bearing).** The button calls `handleScreenShareAction`, **not** `voiceStore.toggleScreenShare`. The store action only flips the boolean — it never calls `getDisplayMedia` or publishes a track. `handleScreenShareAction` is the canonical path (also used by `VoiceControlBar` and the keybind handler): idle it opens `ScreenShareSetup` (source + quality, then "Start stream"), live it calls `stopScreenShare(room)` and broadcasts voice status. iOS Safari does not support `getDisplayMedia` and the call rejects there — that's a platform limitation, not a Backspace bug; the same call behaves identically on desktop and Android.
 
-**In-call camera switcher (mobile-only).** When `isCameraOn === true` AND `enumerateDevices()` returns more than one `videoinput`, a small chevron pill ("Switch camera", `aria-haspopup="menu"`) is overlaid on the top-right corner of the camera control button. Tapping it opens an upward-expanding menu portaled to `document.body` (so the popup escapes the control bar's `glass-bubble` clipping), pinned to the chevron's screen rect via `getBoundingClientRect()` and re-pinned on resize / capturing scroll. The menu lists every videoinput plus an "Auto (system default)" entry; the current selection is highlighted via `aria-checked` + a `text-txt-primary` accent. Selecting an entry calls `voiceStore.setCameraDeviceId(deviceId)` and closes the picker. The `useLiveKit` `syncCamera` effect picks up the store change and calls `room.switchActiveDevice('videoinput', target)` for an in-place hot-swap (no republish) — see `docs/systems/voice.md` "Hot-swap mid-call". Click-outside dismissal listens to both `mousedown` AND `touchstart` (iOS Safari does not synthesize `mousedown` reliably from a single tap).
+**In-call camera switcher (mobile-only).** When `isCameraOn === true` AND `enumerateDevices()` returns more than one `videoinput`, a small 24px button ("Switch camera", `aria-haspopup="menu"`) is overlaid on the top-right corner of the camera control button. Tapping it opens an upward-expanding menu portaled to `document.body` (so the popup escapes the control bar's `glass-bubble` clipping), pinned to the chevron's screen rect via `getBoundingClientRect()` and re-pinned on resize / capturing scroll. The menu lists every videoinput plus an "Auto (system default)" entry; the current selection is highlighted via `aria-checked` + a `text-txt-primary` accent. Selecting an entry calls `voiceStore.setCameraDeviceId(deviceId)` and closes the picker. The `useLiveKit` `syncCamera` effect picks up the store change and calls `room.switchActiveDevice('videoinput', target)` for an in-place hot-swap (no republish) — see `docs/systems/voice.md` "Hot-swap mid-call". Click-outside dismissal listens to both `mousedown` AND `touchstart` (iOS Safari does not synthesize `mousedown` reliably from a single tap).
 
 The chevron is gated on `isCameraOn && cameraDevices.length > 1` so single-camera phones / desktops never see it. On iOS Safari the videoinput list is populated only after the OS-level camera permission has been granted at least once in the current session — that grant happens when the user first turns on the camera via `handleCameraAction` (which calls `getUserMedia`), so by the time the chevron is eligible to show, labels and device IDs are available. Before grant, `enumerateDevices()` returns one entry with empty `deviceId` and no label; the gate (`length > 1`) keeps the chevron hidden, so the user sees no broken-state UI.
 
@@ -614,7 +620,7 @@ Bottom sheet for viewing and managing space folders.
 - Glass: `glass-modal` surface tier
 - Animation: `animate-slide-up-sheet` (200ms ease-out translateY)
 - Max height: `60vh`
-- Drag handle: 10x1 rounded pill
+- Drag handle: `SHEET_HANDLE`, 40 × 4 with a 2px corner, the same on every bottom sheet
 
 **Props:**
 
@@ -692,7 +698,7 @@ The chat composer (`MessageInput.tsx`) is a `glass-bubble` floating overlay on *
 │  ┌────────────────────────────────────────┐  │
 │  │ <MessageInput />                       │  │  ← `position: absolute`
 │  │  glass-bubble, translucent             │  │     `left-2 right-2 z-[110]`
-│  │  bottom = 0 (kbd open) / safe+6 (kbd   │  │     (mobile) / `desktop:left-3 desktop:right-3 desktop:bottom-3`
+│  │  bottom = 0 (kbd open) / safe+6 (kbd   │  │     (mobile) / `desktop:left-5 desktop:right-5 desktop:bottom-4`
 │  │  closed). Writes --composer-clearance  │  │
 │  │  on its parent via ResizeObserver.     │  │
 │  └────────────────────────────────────────┘  │
@@ -709,7 +715,7 @@ The MessageList content's `paddingBottom` is **dynamic**, driven by a CSS variab
 --composer-clearance = composer.height + composer.bottom-offset + 12 px
 ```
 
-Where `bottom-offset` is the gap between the wrapper's bottom edge and the composer's bottom edge (i.e. the resolved value of the composer's `bottom` style — `12 px` on desktop, `var(--safe-bottom) + 6` ≈ `40 px` on iPhone with keyboard closed, `0` on mobile with keyboard open). The `+12 px` constant is the desired breathing-room gap between the last message's bottom edge and the composer's top edge.
+Where `bottom-offset` is the gap between the wrapper's bottom edge and the composer's bottom edge (i.e. the resolved value of the composer's `bottom` style — `16 px` on desktop, `var(--safe-bottom) + 6` ≈ `40 px` on iPhone with keyboard closed, `0` on mobile with keyboard open). The `+12 px` constant is the desired breathing-room gap between the last message's bottom edge and the composer's top edge.
 
 `MessageList` reads `var(--composer-clearance, 80px)` as `paddingBottom`. The `80px` fallback covers the brief mount window before the first measurement, plus any future surface that mounts a `MessageList` without a sibling `MessageInput`.
 
@@ -721,7 +727,7 @@ Where `bottom-offset` is the gap between the wrapper's bottom edge and the compo
 
 The variable is never removed and set again while the composer is mounted. The message list holds its view against it, and a removal, even one undone in the same task, lets the browser lay the list out at the 80 px fallback and clamp its scroll offset, which leaves the newest messages under the composer (issue #361; message-list.md "Bottom clearance").
 
-**Why dynamic?** The previous static `pb-20` (80 px) was sized for the desktop case (composer ≈ 50 px tall + 12 px bottom = 62 px, leaving 18 px of gap). On iPhone with the keyboard closed, the composer's bottom-offset is `var(--safe-bottom) + 6` ≈ 40 px, so `composer-height + bottom-offset` ≈ `44 + 40` = `84 px` — already exceeding the 80 px `pb-20`, with **negative** breathing room. The composer also grows when the user replies to a message (banner adds 36 px) or stages attachments (tile row adds 184 px), so any static value is wrong for some configurations. The ResizeObserver-driven CSS variable is the only correct model.
+**Why dynamic?** The previous static `pb-20` (80 px) was sized for the desktop case (composer ≈ 46 px tall + 16 px bottom = 62 px, leaving 18 px of gap). On iPhone with the keyboard closed, the composer's bottom-offset is `var(--safe-bottom) + 6` ≈ 40 px, so `composer-height + bottom-offset` ≈ `44 + 40` = `84 px` — already exceeding the 80 px `pb-20`, with **negative** breathing room. The composer also grows when the user replies to a message (banner adds 36 px) or stages attachments (tile row adds 184 px), so any static value is wrong for some configurations. The ResizeObserver-driven CSS variable is the only correct model.
 
 The variable is scoped to the chat region's wrapper rather than `:root` so future multi-pane layouts (e.g. side-by-side DM list + chat, voice chat side-panel) don't cross-talk; a wrapper-scoped variable inherits naturally to its `MessageList` descendant.
 
@@ -758,8 +764,8 @@ When the keyboard is closed, `MobileShell` reverts to `height: calc(100 * var(--
 
 The component declares one `composerClass` shared by both modes. Differences:
 
-- Mobile inline `style={{ bottom: keyboardOpen ? '0px' : 'calc(var(--safe-bottom) + 6px)' }}` — applied only when `useUIStore.isMobile === true`. The hook is safe to call on desktop (no-ops), but the `style` is only emitted on mobile so desktop's CSS-driven `desktop:bottom-3` (12 px) constant is unaffected by the inline override.
-- Tailwind: `absolute left-2 right-2 z-[110] glass-bubble rounded-[14px] desktop:left-3 desktop:right-3 desktop:bottom-3`. The `left-2/right-2` 8 px inset is mobile; `desktop:left-3/right-3/bottom-3` overrides to 12 px on desktop. `bottom` is intentionally NOT in the Tailwind class on mobile — the inline `style.bottom` provides the dynamic value.
+- Mobile inline `style={{ bottom: keyboardOpen ? '0px' : 'calc(var(--safe-bottom) + 6px)' }}` — applied only when `useUIStore.isMobile === true`. The hook is safe to call on desktop (no-ops), but the `style` is only emitted on mobile so desktop's CSS-driven `desktop:bottom-4` (16 px) constant is unaffected by the inline override.
+- Tailwind: `absolute left-2 right-2 z-[110] glass-bubble rounded-lg desktop:left-5 desktop:right-5 desktop:bottom-4`. The `left-2/right-2` 8 px inset is mobile; on desktop `desktop:left-5/right-5` puts its edges on the 20 px the header and the messages keep, and `desktop:bottom-4` sets it 16 px off the bottom. `bottom` is intentionally NOT in the Tailwind class on mobile — the inline `style.bottom` provides the dynamic value.
 
 `TypingIndicator` is rendered inside `MessageInput` (anchored `absolute bottom-full` to the bubble) so it appears just above the composer. Mobile chat screens must NOT render an additional `TypingIndicator` themselves.
 
@@ -860,7 +866,7 @@ The mobile bottom offset is computed via `resolveMobileBottomOffset(hasStack, to
 | Root tab + in voice | `56px + 64px + 12px` | Clears `MobileBottomNav` (56px) + `MobileVoiceMiniBar` (~64px) stacked above |
 | Root tab + no voice | `56px + 12px` | Clears `MobileBottomNav` only |
 
-On mobile the container also uses `left-3 right-3` + `items-center` instead of `right-6` so toasts center horizontally with `max-w-[320px]`. This avoids horizontal overlap with bottom-bar controls (which span the full mobile width via `mx-2`) and stays inside the safe-tap zone on narrow screens.
+On mobile the container also uses `left-3 right-3` + `items-center` instead of `right-6` so toasts center horizontally with `max-w-[360px]`. This avoids horizontal overlap with bottom-bar controls (which span the full mobile width via `mx-2`) and stays inside the safe-tap zone on narrow screens.
 
 The container subscribes to `useUIStore.isMobile`, `useUIStore.mobileStack`, and `useVoiceStore.currentVoiceChannelId`, so the offset re-computes reactively whenever any of those change — no manual repositioning needed when the user enters/exits voice or pushes/pops a screen while a toast is on screen.
 
@@ -880,7 +886,7 @@ Mobile uses the same `.skeleton` / `.skeleton-bar` / `.skeleton-circle` / `.skel
 | `ExplorePage` (mobile) | `exploreStore.isLoading && spaces.length === 0` | Shared component; renders `LoadingSpinner` — used unchanged on mobile |
 | `GifPicker` (mobile sheet) | per-fetch local state | Shared component; uses `animate-pulse` placeholder tiles — used unchanged on mobile |
 
-**Sizing rule:** mobile skeleton rows must match the row geometry of the real content for that screen so the populate is smooth and no layout shift occurs. The `MobileSpacesScreen` channel-row skeleton is `px-3 py-2` with a `w-4 h-4` icon (~36 px row); the `MobileMembersScreen` row skeleton is `gap-2.5 px-2 py-2.5` with a `w-9 h-9` avatar (~52 px row). Both use staggered `animationDelay` so the shimmer cascades across rows rather than pulsing in lockstep.
+**Sizing rule:** mobile skeleton rows must match the row geometry of the real content for that screen so the populate is smooth and no layout shift occurs. The `MobileSpacesScreen` channel-row skeleton is `h-10 px-2` with a `w-4 h-4` icon (40 px row); the `MobileMembersScreen` row skeleton is `gap-2.5 px-2 py-2` with a `w-9 h-9` avatar (52 px row). Both use staggered `animationDelay` so the shimmer cascades across rows rather than pulsing in lockstep.
 
 **Why no shared `<Skeleton />` primitive:** the project's established pattern composes the existing CSS classes inline at each site (see `AppLayout.tsx`, `ChannelSidebar.tsx`, `MemberSidebar.tsx`, `MessageList.tsx`). Each site needs row geometry that matches its specific layout, so a parameterized component would either over-abstract (`<Row count={N} avatarSize={S} ...>`) or duplicate the inline approach. Adding a JSX wrapper over `<div className="skeleton">` would also obscure the visual diff between the placeholder and the real row it replaces.
 
@@ -900,3 +906,19 @@ partialize: (state) => ({
 Only `memberListOpen` and `lastChannelPerSpace` persist. Mobile navigation state (`mobileScreen`, `mobileStack`) is ephemeral and resets on page reload.
 
 `lastChannelPerSpace` is used by `MobileSpacesScreen` to remember the most-recent text channel for each space (via `setLastChannel`), and by `AppLayout`'s desktop auto-select effect to land on that channel when the user opens a space without a channelId. It is NOT what the mobile Spaces bottom-nav tap reads — that reads `useSpaceStore`'s `currentSpaceId ?? lastSelectedSpaceId` (see "Tab Tap Behavior" above). `lastSelectedSpaceId` itself lives in `useSpaceStore` and is intentionally NOT persisted — only the in-session sticky-memory semantic matters.
+
+**Pins on a phone.** `MobileChatScreen` has the pin button in its header and the same `PinsPopover` as the desktop. Picking messages to delete (`MessageSelectionBar`) sits in `MessageList`, so it is on both. Push is a setting under Notifications (`PushSection`); on an iPhone or iPad it says to put the app on the Home Screen first, the only place iOS allows it.
+
+## Forums
+
+A forum opens as the ordinary channel screen: `MobileChatScreen` shows `ForumView` in place of the messages and has no composer. Its filter wraps onto a second line, a post opens as the `thread` screen, and the new post dialog is a sheet. See [forums.md](forums.md).
+
+## Threads and events
+
+A thread is the `thread` screen (`MobileThreadScreen`): a phone has no room for it beside the channel. `openThreadView` is the one way in and chooses by `isMobile`. Followed threads stand under their channel in the space's list, as on a window.
+
+A space's events are the `space-events` screen (`MobileEventsScreen`), from the row at the top of its channels. `useMobileRouteSync` takes `/channels/<space>/events`, where a reminder leads, to this screen and not to a chat.
+
+## Voice messages on a phone
+
+The mic button in the composer records while held, and letting go anywhere ends it (`pointerup` on the window), which leads to the same preview a window has. It sets `touch-action: none` and refuses the long-press menu, so holding it does neither scroll nor select. An iPhone records `audio/mp4`, named `.m4a`.

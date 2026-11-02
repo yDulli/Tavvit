@@ -211,7 +211,7 @@ Outbound fetches use `safeFetch()` (`ssrf.ts`), which follows redirects **manual
 ### Flow
 
 1. `safeFetch(url)` — SSRF-validated fetch (initial URL + every redirect hop); throws on block, caught to return `null`
-2. Request sent with `User-Agent: BackspaceBot/1.0`, 5-second timeout via `AbortController`
+2. Request sent with `User-Agent: TavvitBot/1.0`, 5-second timeout via `AbortController`
 3. **Content-Type detection** — if response is `image/*`, `video/*`, or `audio/*`, returns early with `contentType` field set (no HTML parsing)
 4. **Size guard** — rejects responses with `Content-Length > 512KB`
 5. **Stream-read with hard limit** — reads body via `ReadableStream`, stops at 512KB even for chunked (unknown-length) responses
@@ -328,7 +328,7 @@ Used for direct image URLs where dimensions are unknown (not provided by OG tags
 ### Headers
 
 ```
-User-Agent: BackspaceBot/1.0
+User-Agent: TavvitBot/1.0
 Accept: image/*
 Range: bytes=0-32767
 ```
@@ -426,12 +426,12 @@ Two modes based on whether a provider is present:
 - Initial state: thumbnail image with play button overlay (glass-bubble style)
 - On click: replaces with `<iframe>` loading `embedUrl?autoplay=1&origin={window.location.origin}`
 - iframe permissions: `accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share`, `allowFullScreen`
-- Footer shows capitalized provider name and linked title
+- Footer shows the provider's name (`embeds/providerLabel.ts`: `youtube` is YouTube, the others capitalized) and the linked title
 
 ### ImageEmbed
 
-- When `embed.width && embed.height` are populated: wraps the `<img>` in a sized container with `style={{ aspectRatio: ${width}/${height}, maxWidth: Math.min(width, 400), maxHeight: 300 }}` (mirrors `AttachmentRenderer.tsx:81-100`). Eliminates layout shift on image load.
-- When dimensions are null: no wrapper sizing, no fallback aspect-ratio. Inner `<img>` renders within `max-w-[400px]`, `max-h-[300px]`. The absent fallback is deliberate — see the *Dimension reservation contract* section below.
+- When `embed.width && embed.height` are populated: wraps the `<img>` in a box sized by `mediaBox` (`chat/mediaBox.ts`: `aspect-ratio` and a width that fits 400 × 300 without enlarging), the one attachments use. Eliminates layout shift on image load.
+- When dimensions are null: no wrapper sizing, no fallback aspect-ratio. Inner `<img>` renders within 400 × 300: the `max-w` of the button around it, its own `max-h-[300px]`. The absent fallback is deliberate — see the *Dimension reservation contract* section below.
 - Inner `<img>`: `object-contain`, `loading="lazy"`, `referrerPolicy="no-referrer"`.
 - Image source: `embed.image ?? embed.url`.
 - Click opens image preview lightbox via `useUIStore.openImagePreview()`.
@@ -456,21 +456,20 @@ Height determination via `getIframeHeight()`:
 ### GenericEmbed
 
 - Returns `null` if no `embed.title` (no-op render)
-- Shows provider name (from `embed.provider` or parsed hostname), linked title, description (3-line clamp)
+- Shows provider name (from `embed.provider` or parsed hostname), linked title (2-line clamp), description (2-line clamp)
 - If `embed.image` exists: 80x80 thumbnail on the right side
 
 ### AudioEmbed (inline in EmbedRenderer)
 
 - Shows linked title (if present) + native `<audio>` element with `controls`, `preload="metadata"`
-- Max width 400px, left border accent
+- Max width 400px, a hairline card
 
 ### Common Styling
 
 All embed cards share:
 - `max-w-[400px]` constraint
-- `mt-2` top margin (spacing from message content)
-- `bg-surface-channel` background (matte surface tier)
-- `rounded-[4px]` or `rounded-lg` corners
+- no margin of their own: the message spaces its parts (6px, `.msg-content`)
+- `.surface-card` (a hairline over the page) and `rounded-lg` corners; the provider in `font-mono text-label`, the title in the primary text colour with an underline under the pointer, so violet is left to the link in the message itself
 - `referrerPolicy="no-referrer"` on all images
 
 ---
@@ -485,7 +484,7 @@ Embed renderers and the embed resolver share a bidirectional contract to prevent
 
 YouTube uses hardcoded 480×360 for `hqdefault.jpg` (`embedResolver.ts:153-154`). Vimeo uses OG dimensions from the metadata fetch.
 
-**Client side.** Every embed renderer whose output contains an image, iframe, or video MUST reserve dimensions when they are known. The reference pattern is `packages/web/src/components/chat/AttachmentRenderer.tsx:81-100` — wrap the media in a sized container with `style={{ aspectRatio: ${width}/${height}, maxWidth: ..., maxHeight: ... }}` (inline style, not Tailwind, because `maxWidth` is a runtime value).
+**Client side.** Every embed renderer whose output contains an image, iframe, or video MUST reserve dimensions when they are known. The reference pattern is `mediaBox` in `packages/web/src/components/chat/mediaBox.ts` — wrap the media in a box with `style={mediaBox(width, height)}`: its `aspect-ratio` and a width that fits 400 × 300 (inline style, not Tailwind, because they are runtime values), with `max-w-full` beside it for narrow columns.
 
 When dimensions are not populated (probe failed, no OG tags, non-image type), the renderer must NOT apply a fallback `aspect-ratio` with a default ratio (e.g. 4/3). A fallback wrapper produces visible letterbox bars on content whose true ratio differs and was the cause of the revert in commit `0c84029`. Renderers without dimensions must use either a structurally fixed layout (iframe with hardcoded height, fixed-size thumbnail) or render unsized; the message list's anchoring model re-applies its anchor on every size change and media load, which absorbs residual shift. See `docs/systems/message-list.md`, "Anchoring model".
 
@@ -510,7 +509,9 @@ Exposes `fetchUrlMetadata()` directly as a REST endpoint. Returns the `UrlMetada
 | `PROBE_TIMEOUT_MS` | 3,000ms | `embedResolver.ts` |
 | Metadata fetch timeout | 5,000ms | `metadataFetcher.ts` |
 | HTML body size limit | 512,000 bytes (512KB) | `metadataFetcher.ts` |
-| User-Agent | `BackspaceBot/1.0` | both fetchers |
+| User-Agent | `TavvitBot/1.0` | both fetchers |
 | Spotify iframe height | 152px | `RichEmbed.tsx` |
 | Default rich iframe height | 200px | `RichEmbed.tsx` |
 | YouTube thumbnail dimensions | 480x360 | `embedResolver.ts` |
+
+**Spoilers.** `extractUrls` leaves out what a `||spoiler||` holds: a preview of the link would give it away.

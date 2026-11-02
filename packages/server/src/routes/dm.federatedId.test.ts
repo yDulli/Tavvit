@@ -67,6 +67,7 @@ function applyMigrations(db: Database.Database): void {
 
 function seedTwoUsers(): void {
   testDb.insert(schema.users).values({
+    dmPolicy: 'anyone',
     id: 'user-A',
     username: 'alice',
     displayName: 'Alice',
@@ -77,6 +78,7 @@ function seedTwoUsers(): void {
   }).run();
 
   testDb.insert(schema.users).values({
+    dmPolicy: 'anyone',
     id: 'user-B',
     username: 'bob',
     displayName: 'Bob',
@@ -87,6 +89,7 @@ function seedTwoUsers(): void {
   }).run();
 
   testDb.insert(schema.users).values({
+    dmPolicy: 'anyone',
     id: 'user-C',
     username: 'carol',
     displayName: 'Carol',
@@ -220,6 +223,7 @@ describe('POST /api/dm finds a 1-on-1 by its key first', () => {
   it('answers 200 with the relay-created row when it holds the key under another member row for the same person', async () => {
     // An older row for bob's identity: the relay created the conversation with it.
     testDb.insert(schema.users).values({
+    dmPolicy: 'anyone',
       id: 'user-B-old', username: 'bob-old', passwordHash: 'x',
       homeUserId: 'remote-bob', homeInstance: 'https://remote.example', createdAt: Date.now(),
     }).run();

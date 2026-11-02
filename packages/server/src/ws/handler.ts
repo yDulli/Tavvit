@@ -1,15 +1,32 @@
+import { BOT_SOCKET_EVENTS } from '@backspace/shared/src/bots.js';
+import { checkBotAccess, verifyBotToken } from '../utils/botAccess.js';
+import type { MessageWithUser } from '@backspace/shared';
+import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
+import { liveSessionIds } from '../utils/sessions.js';
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
-import { verifyJwt } from '../utils/auth.js';
+import { AuthError, verifyAccessToken } from '../utils/auth.js';
+import { openReviewCounts } from '../utils/spaceReview.js';
+import type { ReviewQueueCountPayload } from '@backspace/shared/src/platform.js';
+import { openReportCount } from '../utils/reportCount.js';
 import { getDb, schema } from '../db/index.js';
-import { eq, and, or, inArray, desc, sql } from 'drizzle-orm';
+import { eq, and, or, inArray, desc, sql, ne } from 'drizzle-orm';
 import { handleClientEvent } from './events.js';
+import { pushChannelMessage } from '../utils/pushDelivery.js';
+import { threadArchived, type ThreadInfo } from '@backspace/shared/src/threads.js';
+import {
+  followersFromMessage,
+  threadFollowers,
+  threadInfoOf,
+  threadRowOf,
+  threadSummaryOf,
+  type ThreadRow,
+} from '../utils/threads.js';
 import { recordSocketAddress } from './socketAddress.js';
-import { computePermissions, PermissionBits, permissionsToString } from '../utils/permissions.js';
+import { computeChannelPermissionsFor, computePermissions, computeSpacePermissionsFor, PermissionBits, permissionsToString } from '../utils/permissions.js';
 import { idsHiddenFromEveryone } from '@backspace/shared/src/permissions.js';
 import type {
   User,
-  Space,
   SpaceWithChannelsAndMembers,
   MemberWithUser,
   Channel,
@@ -23,20 +40,20 @@ import type {
   Activity,
   PresenceIdentity,
 } from '@backspace/shared';
-import { sanitizeUser } from '../utils/sanitize.js';
+import { PUBLIC_USER_COLUMNS, sanitizeUser } from '../utils/sanitize.js';
 import { batchInArray } from '../utils/sqlBatch.js';
 import { loadOpenDmChannels } from '../utils/dmChannelWire.js';
-import { collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
+import { directContactIds } from '../utils/userDeletion.js';
+import { evictFromLiveKit } from '../utils/livekitEviction.js';
 import { statusOnConnect, type StatusSourceRow } from '../utils/presenceStatus.js';
 import { ownsChosenStatus, type ChosenUserStatus } from '@backspace/shared';
 import { attachReplicaSessionHost, showReplicaStatusOnConnect, showReplicaStatusOnDisconnect, type ReplicaSessionHost } from './replicaPresence.js';
 import { presenceIdentityOf, presenceUpdateFor, snapshotActivities } from './presenceEvent.js';
-import { touchUserActivity, parseClientKind } from '../telemetry/activity.js';
 import { isGroupConversation } from '../utils/dmConversation.js';
 import { normalizeOriginForCompare } from '../utils/federationAuth.js';
-import { utcDay } from '../telemetry/day.js';
 import { memberRolesView, rolesForViewer } from '../utils/permissionDataView.js';
-import { canCountUnread, readyUnreadCounts, unreadCountFollowUp } from './channelUnreadCounts.js';
+import { channelToWire, memberStaffBadges, memberToWire, spaceToWire } from '../utils/spaceWire.js';
+import { canCountUnread, readyUnreadCounts, unreadCountFollowUp, unreadFollowUpsFor } from './channelUnreadCounts.js';
 import { userWrittenMessages } from '../db/userWrittenMessages.js';
 
 // ─── Heartbeat State ──────────────────────────────────────────────────────────
@@ -122,7 +139,31 @@ export function getVoiceRoomElapsedSeconds(room: VoiceRoom, now = Date.now()): n
 
 // ─── ConnectionManager ─────────────────────────────────────────────────────
 
+/** What a socket was let in on, for checking it again later. */
+export interface SocketAccess {
+  /** Null for a bot, which has none. */
+  sessionId: string | null;
+  /** A bot, checked by what stops one: the switch, its account, its owner. */
+  bot?: boolean;
+  /** It said at `auth` that it reads several events in one frame. A client from before that gets them one by one. */
+  batches?: boolean;
+}
+
+/** A frame that went into a `Buffer` once, for everyone it goes to. */
+const TEXT_FRAME = { binary: false };
+
+const batchFrame = (events: readonly string[]): string => `{"type":"batch","events":[${events.join(',')}]}`;
+
+/**
+ * From this many people connected, presence waits a moment and goes out together. Everyone hears of
+ * everyone: that many coming back after a restart would be that many frames for each of them.
+ */
+const PRESENCE_BATCH_FROM_PEOPLE = 100;
+const PRESENCE_BATCH_MS = 500;
+
 class ConnectionManager implements ReplicaSessionHost {
+  // What each socket authenticated with (see `closeSessionSockets`, `revalidateSockets`).
+  private socketAccess: WeakMap<WebSocket, SocketAccess> = new WeakMap();
   // userId → Set of WebSocket connections (multiple tabs)
   private connections: Map<string, Set<WebSocket>> = new Map();
   // userId → Set of space IDs the user belongs to
@@ -175,7 +216,8 @@ class ConnectionManager implements ReplicaSessionHost {
   // userId → timestamp of last activity_update (rate limiting)
   private lastActivityUpdate: Map<string, number> = new Map();
 
-  addConnection(userId: string, ws: WebSocket): void {
+  addConnection(userId: string, ws: WebSocket, access: SocketAccess = { sessionId: null }): void {
+    this.socketAccess.set(ws, access);
     if (!this.connections.has(userId)) {
       this.connections.set(userId, new Set());
     }
@@ -191,6 +233,7 @@ class ConnectionManager implements ReplicaSessionHost {
     if (!userId) return undefined;
 
     this.wsToUser.delete(ws);
+    this.threadWatchers.delete(ws);
     const userConnections = this.connections.get(userId);
     if (userConnections) {
       userConnections.delete(ws);
@@ -335,7 +378,7 @@ class ConnectionManager implements ReplicaSessionHost {
       if (replica.status === 'offline') this.clearUserActivities(userId);
       if (replica.changed) {
         const payload = presenceUpdateFor(userId, replica.status, replica.status === 'offline' ? [] : undefined);
-        for (const uid of collectProfileBroadcastTargetIds(userId)) this.sendToUser(uid, payload);
+        this.broadcastPresence(userId, payload);
       }
       this.forgetSessionState(userId);
       return;
@@ -346,13 +389,10 @@ class ConnectionManager implements ReplicaSessionHost {
     // Clear activity state
     this.clearUserActivities(userId);
 
-    // Broadcast offline to friends + DM co-members + space co-members.
-    // Mirrors collectProfileBroadcastTargetIds (the recipient set used by
-    // user_updated). Two locally-friended users with no shared space now see
-    // each other's offline transitions live, instead of being space-only.
-    const offlinePayload = presenceUpdateFor(userId, 'offline', []);
-    const offlineTargets = collectProfileBroadcastTargetIds(userId);
-    for (const uid of offlineTargets) this.sendToUser(uid, offlinePayload);
+    // Broadcast offline to friends + DM co-members + space co-members. Two
+    // locally-friended users with no shared space now see each other's offline
+    // transitions live, instead of being space-only.
+    this.broadcastPresence(userId, presenceUpdateFor(userId, 'offline', []));
 
     // S2S: project offline to peers, as the profile_update broadcast (see queueOutboxEvent).
     // Imported lazily to avoid circular import (federationPresence → db → ws/handler).
@@ -543,12 +583,13 @@ class ConnectionManager implements ReplicaSessionHost {
     const spaceVoiceStates: Record<string, { spaceMuted: boolean; spaceDeafened: boolean; permissionMuted: boolean }> = {};
 
     // Who is currently in each of this space's voice channels the user can VIEW.
-    const voiceChannels = db.select({ id: schema.channels.id })
+    const voiceChannels = db.select({ id: schema.channels.id, categoryId: schema.channels.categoryId })
       .from(schema.channels)
       .where(and(eq(schema.channels.spaceId, spaceId), eq(schema.channels.type, 'voice')))
       .all();
+    const voicePerms = computeSpacePermissionsFor(userId, spaceId, voiceChannels).channels;
     for (const ch of voiceChannels) {
-      const chPerms = computePermissions(userId, spaceId, ch.id);
+      const chPerms = voicePerms.get(ch.id) ?? 0n;
       const hasView = (chPerms & PermissionBits.VIEW_CHANNEL) !== 0n || (chPerms & PermissionBits.ADMINISTRATOR) !== 0n;
       if (!hasView) continue;
       const room = this.getRoom(ch.id);
@@ -668,7 +709,7 @@ class ConnectionManager implements ReplicaSessionHost {
     if (!left) return null;
     if (left.room.roomType === 'space') {
       const meta = left.room.metadata as SpaceRoomMeta;
-      this.sendToSpace(meta.spaceId, {
+      this.sendToChannel(meta.spaceId, left.roomId, {
         type: 'voice_state_update', channelId: left.roomId, userId, action: 'leave',
       });
     } else if (this.afterDmCallLeave(left.roomId, userId) === 'ended') {
@@ -1232,6 +1273,77 @@ class ConnectionManager implements ReplicaSessionHost {
     this.deliver(userId, event, JSON.stringify(event), channelPerms);
   }
 
+  /** `sendToUser` for several people, serialized once. */
+  sendToUsers(userIds: Iterable<string>, event: ServerEvent): void {
+    const message = JSON.stringify(event);
+    for (const userId of userIds) this.deliver(userId, event, message);
+  }
+
+  /**
+   * Who is connected and hears when this person's presence changes: those who share a space with
+   * them, those they have direct messages with, and their friends, as
+   * `collectProfileBroadcastTargetIds` has it. This runs at every connect and disconnect, so it asks
+   * who is connected rather than reading everyone in their spaces, most of whom are not.
+   */
+  onlineProfileTargets(userId: string): string[] {
+    const spaceIds = getDb().select({ spaceId: schema.spaceMembers.spaceId }).from(schema.spaceMembers)
+      .where(eq(schema.spaceMembers.userId, userId)).all().map((row) => row.spaceId);
+    const targets = new Set<string>();
+    if (spaceIds.length > 0) {
+      for (const [otherId, otherSpaces] of this.userSpaces) {
+        if (this.connections.has(otherId) && spaceIds.some((spaceId) => otherSpaces.has(spaceId))) targets.add(otherId);
+      }
+    }
+    for (const contactId of directContactIds(userId)) {
+      if (this.connections.has(contactId)) targets.add(contactId);
+    }
+    targets.delete(userId);
+    return [...targets];
+  }
+
+  /** Presence waiting to go out, for each person who hears of it: the newest of each person it is about. */
+  private pendingPresence = new Map<string, Map<string, string>>();
+  private presenceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** A change of someone's presence, to everyone connected who hears of it. See `PRESENCE_BATCH_FROM_PEOPLE`. */
+  broadcastPresence(userId: string, event: ServerEvent): void {
+    const targets = this.onlineProfileTargets(userId);
+    if (this.connections.size < PRESENCE_BATCH_FROM_PEOPLE) {
+      this.sendToUsers(targets, event);
+      return;
+    }
+    const text = JSON.stringify(event);
+    for (const target of targets) {
+      let waiting = this.pendingPresence.get(target);
+      if (!waiting) {
+        waiting = new Map();
+        this.pendingPresence.set(target, waiting);
+      }
+      waiting.set(userId, text);
+    }
+    if (!this.presenceTimer) {
+      this.presenceTimer = setTimeout(() => this.flushPresence(), PRESENCE_BATCH_MS);
+      this.presenceTimer.unref?.();
+    }
+  }
+
+  private flushPresence(): void {
+    this.presenceTimer = null;
+    const pending = this.pendingPresence;
+    this.pendingPresence = new Map();
+    for (const [target, waiting] of pending) {
+      const texts = [...waiting.values()];
+      for (const ws of this.getUserConnections(target)) {
+        if (ws.readyState !== 1) continue; // WebSocket.OPEN
+        if (this.socketAccess.get(ws)?.batches) {
+          ws.send(texts.length === 1 ? (texts[0] as string) : batchFrame(texts));
+        } else {
+          for (const text of texts) ws.send(text);
+        }
+      }
+    }
+  }
+
   /** `sendToUser` with the event already serialized, for fan-outs that serialize it once. */
   private deliver(userId: string, event: ServerEvent, message: string, channelPerms?: bigint): void {
     const connections = this.getUserConnections(userId);
@@ -1263,15 +1375,109 @@ class ConnectionManager implements ReplicaSessionHost {
 
   /** Send to space members who have VIEW_CHANNEL on the given channel. */
   sendToChannel(spaceId: string, channelId: string, event: ServerEvent, excludeUserId?: string): void {
+    const thread = threadRowOf(channelId);
+    if (thread && event.type === 'message_created') {
+      // Before the fan-out: someone named here hears about the thread and then this message.
+      for (const userId of followersFromMessage(thread, event.message)) {
+        this.sendToUser(userId, { type: 'thread_followed', thread: threadInfoOf(thread, userId) });
+      }
+    }
+    // A thread's events go to those who follow it or have it open, not to the whole channel.
+    const audience = thread ? this.threadAudience(thread.id) : null;
     const message = JSON.stringify(event);
+    const online: string[] = [];
     for (const [userId, spaceIds] of this.userSpaces) {
-      if (spaceIds.has(spaceId) && userId !== excludeUserId) {
-        const perms = computePermissions(userId, spaceId, channelId);
-        if ((perms & PermissionBits.VIEW_CHANNEL) !== 0n) {
-          this.deliver(userId, event, message, perms);
+      if (spaceIds.has(spaceId) && userId !== excludeUserId && (!audience || audience.has(userId))) online.push(userId);
+    }
+    // Read once for all of them: this runs for every message, for everyone who is online.
+    const allowed = new Map<string, bigint>();
+    for (const [userId, perms] of computeChannelPermissionsFor(spaceId, channelId, online)) {
+      if ((perms & PermissionBits.VIEW_CHANNEL) !== 0n) allowed.set(userId, perms);
+    }
+    const followUps = unreadFollowUpsFor(event, allowed);
+    const plain = Buffer.from(message);
+    const encoded = new Map<string, { alone: Buffer; together: Buffer }>();
+    for (const userId of allowed.keys()) {
+      const followUp = followUps.get(userId);
+      let frames = followUp === undefined ? undefined : encoded.get(followUp);
+      if (followUp !== undefined && !frames) {
+        frames = { alone: Buffer.from(followUp), together: Buffer.from(batchFrame([message, followUp])) };
+        encoded.set(followUp, frames);
+      }
+      for (const ws of this.getUserConnections(userId)) {
+        if (ws.readyState !== 1) continue; // WebSocket.OPEN
+        if (!frames) {
+          ws.send(plain, TEXT_FRAME);
+        } else if (this.socketAccess.get(ws)?.batches) {
+          ws.send(frames.together, TEXT_FRAME);
+        } else {
+          ws.send(plain, TEXT_FRAME);
+          ws.send(frames.alone, TEXT_FRAME);
         }
       }
     }
+    // What the message a thread grew from shows of it moved, for everyone in its channel.
+    if (thread && (event.type === 'message_created' || event.type === 'message_deleted' || event.type === 'messages_deleted')) {
+      this.sendToChannel(spaceId, thread.parentChannelId, {
+        type: 'thread_updated',
+        parentChannelId: thread.parentChannelId,
+        starterMessageId: thread.threadStarterMessageId,
+        thread: threadSummaryOf(thread),
+      });
+    }
+    // Every new channel message passes here, whichever route made it, and people with the
+    // app closed are not among the sockets above (docs/systems/push.md).
+    if (event.type === 'message_created') {
+      pushChannelMessage(spaceId, event.message, (id) => this.isUserFocused(id));
+      for (const listener of this.channelMessageListeners) listener(spaceId, event.message);
+    }
+  }
+
+  private readonly channelMessageListeners: Array<(spaceId: string, message: MessageWithUser) => void> = [];
+
+  /** To be told of every new message of a space's channels, whichever route made it. */
+  onChannelMessage(listener: (spaceId: string, message: MessageWithUser) => void): void {
+    this.channelMessageListeners.push(listener);
+  }
+
+  /** Which thread each socket has open: it hears that thread's events while it does, following it or not. */
+  private readonly threadWatchers = new Map<WebSocket, string>();
+
+  setThreadWatch(ws: WebSocket, threadId: string | null): void {
+    if (threadId) this.threadWatchers.set(ws, threadId);
+    else this.threadWatchers.delete(ws);
+  }
+
+  private threadAudience(threadId: string): Set<string> {
+    const audience = new Set(threadFollowers(threadId));
+    for (const [ws, watched] of this.threadWatchers) {
+      if (watched !== threadId) continue;
+      const userId = this.wsToUser.get(ws);
+      if (userId) audience.add(userId);
+    }
+    return audience;
+  }
+
+  /** The sockets whose window is in front of someone: a person there needs no push. */
+  private readonly focusedSockets = new WeakSet<WebSocket>();
+
+  setClientFocus(ws: WebSocket, focused: boolean): void {
+    if (focused) this.focusedSockets.add(ws);
+    else this.focusedSockets.delete(ws);
+  }
+
+  isUserConnected(userId: string): boolean {
+    for (const ws of this.getUserConnections(userId)) {
+      if (ws.readyState === 1) return true;
+    }
+    return false;
+  }
+
+  isUserFocused(userId: string): boolean {
+    for (const ws of this.getUserConnections(userId)) {
+      if (ws.readyState === 1 && this.focusedSockets.has(ws)) return true;
+    }
+    return false;
   }
 
   /** Expose userSpaces iterator for pre-delete viewer collection. */
@@ -1314,8 +1520,10 @@ class ConnectionManager implements ReplicaSessionHost {
     if (!room) return;
 
     if (room.roomType === 'space') {
+      // Only to those who can see the channel: who is in a hidden voice channel, and that it
+      // exists at all, is not for the rest of the space (`buildSpaceVoiceState` holds the same line).
       const meta = room.metadata as SpaceRoomMeta;
-      this.sendToSpace(meta.spaceId, event, excludeUserId);
+      this.sendToChannel(meta.spaceId, roomId, event, excludeUserId);
     } else {
       this.sendToDmMembers(roomId, event, excludeUserId);
     }
@@ -1342,14 +1550,23 @@ class ConnectionManager implements ReplicaSessionHost {
     }
   }
 
-  /** Force-disconnect all WebSocket connections for a user (e.g. account deletion). */
-  forceDisconnectUser(userId: string): void {
+  /**
+   * Force-disconnect all WebSocket connections for a user: an account deleted,
+   * a password reset, a suspension. `reason` is the close reason the client
+   * sees. `endPresence` also takes the presence the sessions held down
+   * (offline to everyone who saw it, and to peers), as a last disconnect
+   * would; a deletion leaves that to its tombstone.
+   */
+  forceDisconnectUser(userId: string, options: { reason?: string; endPresence?: boolean } = {}): void {
     // Cancel any pending offline timeout
     const timeout = this.pendingOfflineTimeouts.get(userId);
     if (timeout) {
       clearTimeout(timeout);
       this.pendingOfflineTimeouts.delete(userId);
     }
+
+    // Their token stays good at LiveKit, so leaving the room here does not end the call there.
+    evictFromLiveKit(userId);
 
     // Leave the voice room they are in. This is a leave like any other: a
     // DM call it empties ends, and the end reaches the peers. A call hosted
@@ -1381,17 +1598,91 @@ class ConnectionManager implements ReplicaSessionHost {
     if (connections) {
       for (const ws of connections) {
         this.wsToUser.delete(ws);
-        try { ws.close(4001, 'Account deleted'); } catch { /* ignore */ }
+        try { ws.close(4001, options.reason ?? 'Account deleted'); } catch { /* ignore */ }
       }
       this.connections.delete(userId);
     }
 
     // Clean up user spaces
     this.userSpaces.delete(userId);
+
+    if (options.endPresence) this.finalizeDisconnect(userId);
   }
 
   getAllOnlineUserIds(): string[] {
     return Array.from(this.connections.keys());
+  }
+
+  /** How many sockets are open, and how many people they belong to. */
+  socketCounts(): { open: number; people: number } {
+    let open = 0;
+    for (const sockets of this.connections.values()) open += sockets.size;
+    return { open, people: this.connections.size };
+  }
+
+  /**
+   * Closes the sockets of ended sessions, telling each why, so the client signs out and
+   * does not knock again. Other sessions of the person are not touched, so a call on
+   * another device goes on.
+   */
+  closeSessionSockets(sessionIds: ReadonlySet<string>): void {
+    if (sessionIds.size === 0) return;
+    for (const [userId, sockets] of this.connections) {
+      const ended = [...sockets].filter((ws) => {
+        const access = this.socketAccess.get(ws);
+        return access?.sessionId ? sessionIds.has(access.sessionId) : false;
+      });
+      if (ended.length === 0) continue;
+      // LiveKit knows a person, not a session. Their call ends if this session held it, or if no
+      // device of theirs is left; one on another device goes on.
+      const voice = this.voiceWs.get(userId);
+      if ((voice && ended.includes(voice)) || ended.length === sockets.size) evictFromLiveKit(userId);
+      for (const ws of ended) refuseSocket(ws, 'session_ended', 'This session has ended');
+    }
+  }
+
+  /**
+   * Checks every open socket again: the session still there, the token not expired, the
+   * account not deleted. Sessions end through the routes, which close sockets at
+   * once; this catches what happens outside them, such as `tavvit-admin` resetting a
+   * password in its own process, and a socket that outlives its token's expiry.
+   */
+  revalidateSockets(now: number = Date.now()): void {
+    const open: Array<{ ws: WebSocket; userId: string; access: SocketAccess }> = [];
+    for (const [userId, sockets] of this.connections) {
+      for (const ws of sockets) {
+        const access = this.socketAccess.get(ws);
+        if (access) open.push({ ws, userId, access });
+      }
+    }
+    if (open.length === 0) return;
+    const db = getDb();
+    const live = liveSessionIds(open.flatMap(({ access }) => (access.sessionId ? [access.sessionId] : [])), now, db);
+    const userIds = [...new Set(open.map(({ userId }) => userId))];
+    const accounts = new Map<string, { isDeleted: number | null }>();
+    for (let start = 0; start < userIds.length; start += 500) {
+      for (const row of db.select({ id: schema.users.id, isDeleted: schema.users.isDeleted })
+        .from(schema.users).where(inArray(schema.users.id, userIds.slice(start, start + 500))).all()) {
+        accounts.set(row.id, row);
+      }
+    }
+    for (const { ws, userId, access } of open) {
+      if (access.bot) {
+        try {
+          checkBotAccess(userId);
+        } catch (err) {
+          if (err instanceof AuthError) refuseSocket(ws, err.code, err.message, err.details);
+          else throw err;
+        }
+        continue;
+      }
+      const account = accounts.get(userId);
+      if (!account || account.isDeleted === 1) {
+        refuseSocket(ws, 'account_deleted', 'This account has been deleted');
+      } else if (!access.sessionId || !live.has(access.sessionId)) {
+        refuseSocket(ws, 'session_ended', 'This session has ended');
+      }
+    }
   }
 
   getAllConnections(): Map<string, Set<WebSocket>> {
@@ -1399,6 +1690,13 @@ class ConnectionManager implements ReplicaSessionHost {
   }
 
   /** Send an event to all connected admin users. */
+  /** To everyone connected, for what concerns all of them alike. */
+  sendToEveryone(event: ServerEvent): void {
+    for (const userId of this.connections.keys()) {
+      this.sendToUser(userId, event);
+    }
+  }
+
   sendToAdmins(event: ServerEvent): void {
     const db = getDb();
     for (const userId of this.connections.keys()) {
@@ -1413,77 +1711,6 @@ class ConnectionManager implements ReplicaSessionHost {
 
 export const connectionManager = new ConnectionManager();
 attachReplicaSessionHost(connectionManager);
-
-// The pong path runs every 30 seconds per socket, so a database that keeps
-// refusing this write would flood the log at one line per socket per pong. One
-// line per hour is the compromise: quiet enough that a persistent fault does
-// not bury everything else, loud enough that an outage lasting a week stays
-// visible for the whole week. A one-shot flag was the earlier form and it went
-// permanently silent after the first failure, so an outage that began before
-// anyone looked left no trace at all.
-const ACTIVITY_WARN_INTERVAL_MS = 60 * 60 * 1000;
-let activityWarnedAt = 0;
-
-/**
- * The last UTC day each live connection recorded activity for.
- *
- * Keyed on the socket, so it dies with the socket and holds nothing across
- * reconnects. `touchUserActivity` already refuses to rewrite a row that holds
- * today, so this memo changes no stored value; what it avoids is the round
- * trip. Without it an `UPDATE` runs for every socket on every pong, which on an
- * instance holding a few hundred desktop clients open is constant write-lock
- * churn on `users` for a column that moves once a day.
- *
- * A miss is always safe: a connection with no memo simply writes, and the
- * statement's own predicate makes that a no-op when the day is already there.
- */
-const activityDayByConnection: WeakMap<object, string> = new WeakMap();
-
-/**
- * Day-coarse activity for the opt-in telemetry counts. `authMessage` is the
- * parsed auth message on the auth path (its optional `client` field names the
- * client kind) and null on a heartbeat pong, which touches the day only.
- *
- * A failed write is swallowed: this bookkeeping is optional, and it runs on the
- * auth path (where a throw would look like a rejected token) and inside the
- * 'pong' listener (where an uncaught throw would take the process down).
- *
- * `connection` is the socket, used as the key of a per-connection memo of the
- * day already recorded. Given, a pong that has already recorded today returns
- * without touching the database. Omitted, every call writes.
- */
-export function recordConnectionActivity(
-  userId: string,
-  authMessage: Record<string, unknown> | null,
-  now: Date,
-  connection?: object,
-): void {
-  const today = utcDay(now);
-  // The auth path is never skipped: it carries the client kind, which can
-  // differ from what the row holds even on a day already recorded. Only the
-  // pong path, which touches the day and nothing else, has anything to skip.
-  if (authMessage === null && connection !== undefined
-    && activityDayByConnection.get(connection) === today) {
-    return;
-  }
-  try {
-    const db = getDb();
-    if (authMessage) {
-      touchUserActivity(db, userId, today, parseClientKind(authMessage.client));
-    } else {
-      touchUserActivity(db, userId, today);
-    }
-    // Recorded only after the write did not throw, so a failing database is
-    // retried on the next pong rather than memoised as done.
-    if (connection !== undefined) activityDayByConnection.set(connection, today);
-  } catch (err) {
-    const at = now.getTime();
-    if (activityWarnedAt === 0 || at - activityWarnedAt >= ACTIVITY_WARN_INTERVAL_MS) {
-      activityWarnedAt = at;
-      console.warn(`[ws] could not record activity: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-}
 
 // ─── WebSocket Rate Limiter (Token Bucket) ─────────────────────────────────
 
@@ -1515,6 +1742,8 @@ class WsRateLimiter {
 }
 
 /** The `ready` payload for `userId`: everything a client needs to start, sent once per connection. */
+const NO_ROLES: ReadonlySet<string> = new Set();
+
 export function buildReadyPayload(userId: string): {
   user: User;
   spaces: SpaceWithChannelsAndMembers[];
@@ -1527,6 +1756,7 @@ export function buildReadyPayload(userId: string): {
   voiceUserStates: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }>;
   spaceVoiceStates: Record<string, { spaceMuted: boolean; spaceDeafened: boolean; permissionMuted: boolean }>;
   supportsPoke: boolean;
+  followedThreads: ThreadInfo[];
   unreadCounts: Record<string, number>;
   readStates: ReadState[];
   activeCalls: ActiveCallInfo[];
@@ -1536,6 +1766,8 @@ export function buildReadyPayload(userId: string): {
   awaitingApprovalPeerOrigins: string[];
   activePeerOrigins: string[];
   pendingApprovalCount: number;
+  reviewQueueCount: ReviewQueueCountPayload | null;
+  reportQueueCount: number | null;
 } {
   const db = getDb();
 
@@ -1570,10 +1802,10 @@ export function buildReadyPayload(userId: string): {
       .where(inArray(schema.spaces.id, spaceIds))
       .all();
 
-    // Batch: all channels for all spaces (1 query instead of N)
+    // Batch: all channels for all spaces (1 query instead of N). Threads come apart, below.
     const allChannels = batchInArray(
       spaceIds,
-      ids => db.select().from(schema.channels).where(inArray(schema.channels.spaceId, ids)).all(),
+      ids => db.select().from(schema.channels).where(and(inArray(schema.channels.spaceId, ids), ne(schema.channels.type, 'thread'))).all(),
     );
     const channelsBySpace = new Map<string, (typeof allChannels)>();
     for (const ch of allChannels) {
@@ -1666,56 +1898,45 @@ export function buildReadyPayload(userId: string): {
 
       const memberUserIds = memberRows.map(m => m.userId);
       const users = memberUserIds.length > 0
-        ? batchInArray(memberUserIds, ids => db.select().from(schema.users).where(inArray(schema.users.id, ids)).all())
+        ? batchInArray(memberUserIds, ids => db.select(PUBLIC_USER_COLUMNS).from(schema.users).where(inArray(schema.users.id, ids)).all())
         : [];
       const userMap = new Map(users.map(u => [u.id, u]));
 
-      const memberRoleRows = db.select()
+      const rolesOfMember = new Map<string, Set<string>>();
+      for (const row of db.select({ userId: schema.memberRoles.userId, roleId: schema.memberRoles.roleId })
         .from(schema.memberRoles)
         .where(eq(schema.memberRoles.spaceId, spaceRow.id))
-        .all();
+        .all()) {
+        const held = rolesOfMember.get(row.userId);
+        if (held) held.add(row.roleId);
+        else rolesOfMember.set(row.userId, new Set([row.roleId]));
+      }
 
       const members: MemberWithUser[] = memberRows
         .map(m => {
           const u = userMap.get(m.userId);
           if (!u) return null;
 
-          const assignedRoleIds = new Set(memberRoleRows
-            .filter(mr => mr.userId === m.userId)
-            .map(mr => mr.roleId));
+          const assignedRoleIds = rolesOfMember.get(m.userId) ?? NO_ROLES;
 
-          return {
-            spaceId: m.spaceId,
-            userId: m.userId,
-            nickname: m.nickname,
-            joinedAt: m.joinedAt,
-            user: sanitizeUser(u),
-            roles: memberRolesView(roles, assignedRoleIds),
-          };
+          return memberToWire(m, u, memberRolesView(roles, assignedRoleIds), undefined, memberStaffBadges(roles, assignedRoleIds, m.spaceId));
         })
         .filter((m): m is MemberWithUser => m !== null);
 
-      // Compute space-level permissions for this user
-      const spacePerms = computePermissions(userId, spaceRow.id);
+      // This user's permissions in the space and in each of its channels
+      const { space: spacePerms, channels: channelPerms } = computeSpacePermissionsFor(userId, spaceRow.id, channels);
 
       // Filter channels by VIEW_CHANNEL and attach per-channel permissions
       const visibleChannels: Channel[] = [];
       for (const ch of channels) {
-        const chPerms = computePermissions(userId, spaceRow.id, ch.id);
+        const chPerms = channelPerms.get(ch.id) ?? 0n;
         const hasView = (chPerms & PermissionBits.VIEW_CHANNEL) !== 0n || (chPerms & PermissionBits.ADMINISTRATOR) !== 0n;
         if (hasView) {
           visibleChannelIdSet.add(ch.id);
           if (canCountUnread(chPerms)) countableChannelIds.push(ch.id);
           visibleChannels.push({
-            id: ch.id,
-            spaceId: ch.spaceId,
-            name: ch.name,
-            type: ch.type as Channel['type'],
-            topic: ch.topic,
-            position: ch.position ?? 0,
-            categoryId: ch.categoryId ?? null,
+            ...channelToWire(ch),
             isPrivate: privateChannelIds.has(ch.id),
-            createdAt: ch.createdAt,
             lastMessageId: lastMsgMap.get(ch.id) ?? null,
             myPermissions: permissionsToString(chPerms),
           });
@@ -1723,18 +1944,7 @@ export function buildReadyPayload(userId: string): {
       }
 
       spaces.push({
-        id: spaceRow.id,
-        name: spaceRow.name,
-        icon: spaceRow.icon,
-        banner: spaceRow.banner ?? null,
-        avatarColor: (spaceRow.avatarColor as Space['avatarColor']) ?? null,
-        ownerId: spaceRow.ownerId,
-        ownerTitle: spaceRow.ownerTitle,
-        inviteCode: spaceRow.inviteCode,
-        visibility: (spaceRow.visibility ?? 'private') as SpaceWithChannelsAndMembers['visibility'],
-        directoryListed: spaceRow.directoryListed === 1,
-        description: spaceRow.description ?? null,
-        createdAt: spaceRow.createdAt,
+        ...spaceToWire(spaceRow),
         channels: visibleChannels,
         categories: categoriesBySpace.get(spaceRow.id) ?? [],
         members,
@@ -2002,6 +2212,25 @@ export function buildReadyPayload(userId: string): {
       .get();
     pendingApprovalCount = countResult?.count ?? 0;
   }
+  // The platform's open review requests, for the admin area's count.
+  const reviewQueueCount = userRow?.isAdmin === 1 ? openReviewCounts() : null;
+  const reportQueueCount = userRow?.isAdmin === 1 ? openReportCount() : null;
+
+  // The threads this person follows and can still see, while they are active.
+  const followedThreads: ThreadInfo[] = [];
+  const followedRows = db.select().from(schema.threadMembers)
+    .innerJoin(schema.channels, eq(schema.channels.id, schema.threadMembers.threadId))
+    .where(eq(schema.threadMembers.userId, userId))
+    .all();
+  for (const { channels: row } of followedRows) {
+    if (!row.parentChannelId) continue;
+    const permissions = computePermissions(userId, row.spaceId, row.id);
+    if (!canCountUnread(permissions)) continue;
+    const info = threadInfoOf(row as ThreadRow, userId);
+    if (threadArchived(info, Date.now())) continue;
+    followedThreads.push(info);
+    countableChannelIds.push(row.id);
+  }
 
   const unreadCounts = readyUnreadCounts(
     userId,
@@ -2009,8 +2238,49 @@ export function buildReadyPayload(userId: string): {
     dmChannels.map(dm => dm.id),
     new Map(readStateRows.map(rs => [rs.channelId, rs.lastReadMessageId])),
   );
-  return { supportsPoke: true, unreadCounts, user, spaces, dmChannels, folders, spaceLayout, layoutUpdatedAt, voiceStates, voiceChannelElapsedSeconds, voiceUserStates, spaceVoiceStates, readStates, activeCalls, userActivities, userActivityIdentities, rejectedPeerOrigins, awaitingApprovalPeerOrigins, activePeerOrigins, pendingApprovalCount };
+  return { supportsPoke: true, followedThreads, unreadCounts, user, spaces, dmChannels, folders, spaceLayout, layoutUpdatedAt, voiceStates, voiceChannelElapsedSeconds, voiceUserStates, spaceVoiceStates, readStates, activeCalls, userActivities, userActivityIdentities, rejectedPeerOrigins, awaitingApprovalPeerOrigins, activePeerOrigins, pendingApprovalCount, reviewQueueCount, reportQueueCount };
 }
+
+/**
+ * Sends a socket away for good: why, with a code the client acts on, then the close.
+ * The client signs out on these rather than knocking again (hooks/useWebSocket.ts).
+ */
+function refuseSocket(ws: WebSocket, code: ErrorCode, message: string, details?: ErrorDetails): void {
+  try {
+    ws.send(JSON.stringify({ type: 'error', message, code, ...(details ? { details } : {}) }));
+    ws.close(4001, message);
+  } catch { /* The socket is already gone. */ }
+}
+
+/**
+ * Sockets waiting for their `ready`, one to a turn of the event loop. Everyone connects again at
+ * once after a restart, and building one `ready` takes a while in a large space: done as they
+ * arrive, nothing else gets a turn, and sockets run out their time waiting to be read.
+ */
+const readyQueue: Array<() => void> = [];
+let readyQueueRuns = false;
+
+function runReadyQueue(): void {
+  try {
+    readyQueue.shift()?.();
+  } catch (err) {
+    // One socket's trouble must not leave all the others waiting for ever.
+    console.error('[ws] A socket could not be made ready', err);
+  }
+  if (readyQueue.length > 0) setImmediate(runReadyQueue);
+  else readyQueueRuns = false;
+}
+
+function inTurnForReady(job: () => void): void {
+  readyQueue.push(job);
+  if (!readyQueueRuns) {
+    readyQueueRuns = true;
+    setImmediate(runReadyQueue);
+  }
+}
+
+/** What a client may say while its `ready` waits its turn. It has no reason to say much. */
+const MOST_HELD_FRAMES = 32;
 
 export async function registerWebSocket(app: FastifyInstance): Promise<void> {
   app.get('/ws', { websocket: true }, (socket, request) => {
@@ -2018,9 +2288,13 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
     // Per-address limits on events key on this, as the HTTP limiter does.
     recordSocketAddress(ws, request.ip);
     let authenticated = false;
+    let authAsked = false;
+    const heldFrames: Record<string, unknown>[] = [];
     let userId: string | undefined;
     let username: string | undefined;
     let isFederated = false;
+    let isBot = false;
+    let socketAccess: SocketAccess = { sessionId: null };
 
     // Set auth timeout - must authenticate within 10 seconds
     const authTimeout = setTimeout(() => {
@@ -2031,6 +2305,9 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
     }, 10000);
 
     ws.on('message', (data: Buffer | string) => {
+      // A socket told to go (a suspension, a session ended) is heard no further, though
+      // the closing handshake can take a client as long as it likes.
+      if (ws.readyState !== ws.OPEN) return;
       let parsed: Record<string, unknown>;
       try {
         const raw = typeof data === 'string' ? data : data.toString('utf-8');
@@ -2044,6 +2321,12 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
       wsIsAlive.set(ws, true);
 
       if (!authenticated) {
+        if (authAsked) {
+          // Its `ready` is waiting its turn. A ping needs no account to answer.
+          if (parsed.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+          else if (heldFrames.length < MOST_HELD_FRAMES) heldFrames.push(parsed);
+          return;
+        }
         // First message must be auth
         if (parsed.type !== 'auth' || typeof parsed.token !== 'string') {
           ws.send(JSON.stringify({ type: 'error', message: 'First message must be auth' }));
@@ -2051,85 +2334,93 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
           return;
         }
 
-        try {
-          const payload = verifyJwt(parsed.token);
-          userId = payload.userId;
-          username = payload.username;
-
-          // Reject deleted users and revoked tokens
-          const db = getDb();
-          const userRow = db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
-          if (!userRow || userRow.isDeleted) {
-            ws.send(JSON.stringify({ type: 'error', message: 'This account has been deleted' }));
-            ws.close();
-            return;
-          }
-          // Token revocation: reject tokens issued before last password change
-          if (userRow.passwordChangedAt && payload.iat) {
-            if (payload.iat < Math.floor(userRow.passwordChangedAt / 1000)) {
-              ws.send(JSON.stringify({ type: 'error', message: 'Token has been revoked' }));
-              ws.close();
-              return;
+        // It has asked in time, however long the queue is.
+        authAsked = true;
+        clearTimeout(authTimeout);
+        const token = parsed.token;
+        const batches = parsed.batch === true;
+        inTurnForReady(() => {
+          if (ws.readyState !== ws.OPEN) return;
+          try {
+            // The same check as every REST request (utils/auth.ts). A refusal carries
+            // its code, and the client signs out instead of reconnecting.
+            let userRow: ReturnType<typeof verifyAccessToken>['user'];
+            if (token.startsWith('Bot ')) {
+              userRow = verifyBotToken(token.slice(4));
+              userId = userRow.id;
+              username = userRow.username;
+              isBot = true;
+              socketAccess = { sessionId: null, bot: true };
+            } else {
+              const access = verifyAccessToken(token);
+              userRow = access.user;
+              userId = access.payload.userId;
+              username = access.payload.username;
+              socketAccess = { sessionId: access.sessionId };
             }
-          }
 
-          authenticated = true;
-          isFederated = !!userRow.homeInstance;
-          clearTimeout(authTimeout);
+            socketAccess.batches = batches;
+            authenticated = true;
+            isFederated = !!userRow.homeInstance;
+            clearTimeout(authTimeout);
 
-          // Publish the user's live presence: for a native row its
-          // chosen_status (idle and dnd survive reconnects and restarts), for a
-          // replicated row what ws/replicaPresence.ts shows.
-          const connectStatus = connectionManager.publishConnectStatus(userRow);
+            // Publish the user's live presence: for a native row its
+            // chosen_status (idle and dnd survive reconnects and restarts), for a
+            // replicated row what ws/replicaPresence.ts shows.
+            const connectStatus = connectionManager.publishConnectStatus(userRow);
 
-          // Add connection
-          connectionManager.addConnection(userId, ws);
+            // Add connection
+            connectionManager.addConnection(userId, ws, socketAccess);
 
-          // Captured for the pong closure: `userId` is a mutable outer binding, so
-          // its narrowing to a string does not survive into the callback.
-          const activeUserId = userId;
-          recordConnectionActivity(activeUserId, parsed, new Date());
-
-          // Mark alive for heartbeat detection; browsers auto-respond to ping frames (RFC 6455)
-          wsIsAlive.set(ws, true);
-          ws.on('pong', () => {
+            // Mark alive for heartbeat detection; browsers auto-respond to ping frames (RFC 6455)
             wsIsAlive.set(ws, true);
-            // `ws` is the memo key: this socket writes the day once and then
-            // stops asking until the day rolls over.
-            recordConnectionActivity(activeUserId, null, new Date(), ws);
-          });
+            ws.on('pong', () => {
+              wsIsAlive.set(ws, true);
+            });
 
-          // Build and send ready payload
-          const readyData = buildReadyPayload(userId);
-          ws.send(JSON.stringify({
-            type: 'ready',
-            ...readyData,
-          }));
+            // Build and send ready payload
+            const readyData = buildReadyPayload(userId);
+            ws.send(JSON.stringify({
+              type: 'ready',
+              ...readyData,
+            }));
 
-          // Broadcast the connect status to friends + DM co-members + space co-members.
-          const connectPayload = presenceUpdateFor(userId, connectStatus);
-          const connectTargets = collectProfileBroadcastTargetIds(userId);
-          for (const uid of connectTargets) connectionManager.sendToUser(uid, connectPayload);
+            // Broadcast the connect status to friends + DM co-members + space co-members.
+            const connectPayload = presenceUpdateFor(userId, connectStatus);
+            connectionManager.broadcastPresence(userId, connectPayload);
 
-          // S2S: project it to peers, as the profile_update broadcast (see queueOutboxEvent).
-          // No-op for a replicated row: its home instance owns the projection.
-          // The relay is a full snapshot, so it carries the activities another
-          // session of this user already reported (none on a first connection).
-          const _uid = userId;
-          const connectActivities = connectionManager.getUserActivities(_uid);
-          void import('../utils/federationPresence.js').then(({ queuePresenceRelay }) => {
-            try { queuePresenceRelay(_uid, connectStatus, connectActivities); } catch (e) { console.warn('[ws] queuePresenceRelay(connect) failed', e); }
-          });
-        } catch {
-          ws.send(JSON.stringify({ type: 'error', message: 'Invalid token' }));
-          ws.close();
-        }
+            // S2S: project it to peers, as the profile_update broadcast (see queueOutboxEvent).
+            // No-op for a replicated row: its home instance owns the projection.
+            // The relay is a full snapshot, so it carries the activities another
+            // session of this user already reported (none on a first connection).
+            const _uid = userId;
+            const connectActivities = connectionManager.getUserActivities(_uid);
+            void import('../utils/federationPresence.js').then(({ queuePresenceRelay }) => {
+              try { queuePresenceRelay(_uid, connectStatus, connectActivities); } catch (e) { console.warn('[ws] queuePresenceRelay(connect) failed', e); }
+            });
+          } catch (error) {
+            const refusal = error instanceof AuthError ? error : new AuthError('Invalid token', 401);
+            refuseSocket(ws, refusal.code, refusal.message, refusal.details);
+          }
+          if (!authenticated) return;
+          for (const frame of heldFrames.splice(0)) handleFrame(frame);
+        });
         return;
       }
 
+      handleFrame(parsed);
+    });
+
+    const handleFrame = (parsed: Record<string, unknown>): void => {
       // Fast-path heartbeat — never reaches business logic
       if (parsed.type === 'ping') {
         ws.send(JSON.stringify({ type: 'pong' }));
+        return;
+      }
+
+      // A bot says only what is on its list (docs/systems/bots.md). Deny by default, as on the routes.
+      if (isBot && (typeof parsed.type !== 'string' || !BOT_SOCKET_EVENTS.includes(parsed.type))) {
+        ws.send(JSON.stringify({ type: 'error', message: 'This is not open to bots', code: 'bot_route_forbidden' }));
         return;
       }
 
@@ -2150,7 +2441,7 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
           } catch { /* ws may already be closed */ }
         }
       }
-    });
+    };
 
     ws.on('close', () => {
       clearTimeout(authTimeout);
@@ -2171,6 +2462,11 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
   const HEARTBEAT_INTERVAL_MS = 30_000;
 
   heartbeatInterval = setInterval(() => {
+    try {
+      connectionManager.revalidateSockets();
+    } catch (err) {
+      app.log.error({ err }, 'Could not check open sockets');
+    }
     for (const [, userConnections] of connectionManager.getAllConnections()) {
       for (const ws of userConnections) {
         if (wsIsAlive.get(ws) === false) {

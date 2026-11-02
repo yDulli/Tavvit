@@ -123,6 +123,28 @@ describe('UserProfilePopout', () => {
     expect(closed).toBe(true);
   });
 
+  it("paints the person's profile theme: a gradient banner and a tinted card", () => {
+    const user: User = { ...makeUser(), accentColor: '#7443fc', accentColorSecondary: '#45affd' };
+    const { container } = render(
+      <MemoryRouter>
+        <UserProfilePopout user={user} origin="" onClose={() => {}} anchor={anchorAt(300, 200)} />
+      </MemoryRouter>,
+    );
+    const card = container.querySelector<HTMLElement>('[data-user-profile-popout]')!;
+    expect(card.style.backgroundImage).toContain('rgba(116, 67, 252, 0.2)');
+    expect(card.style.borderColor).toContain('116, 67, 252');
+    // Both colours are in the banner, the first before the second.
+    const banner = card.firstElementChild as HTMLElement;
+    expect(banner.style.background).toContain('116, 67, 252');
+    expect(banner.style.background).toContain('69, 175, 253');
+  });
+
+  it('leaves the card plain for a person without a theme', () => {
+    const { container } = renderCard(anchorAt(300, 200));
+    const card = container.querySelector<HTMLElement>('[data-user-profile-popout]')!;
+    expect(card.style.backgroundImage).toBe('');
+  });
+
   it('shows a display name that contains "@" in full, and splits only the username', () => {
     const user: User = { ...makeUser(), displayName: 'ada@work', username: 'ada' };
     const { container } = render(

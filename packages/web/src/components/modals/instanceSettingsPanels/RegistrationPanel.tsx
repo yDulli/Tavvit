@@ -7,6 +7,7 @@ import type { InviteLinkSummary, InviteRedemption, InviteStatus } from '@backspa
 import { api } from '../../../api/client';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { Icon } from '../../ui/Icon';
 import { Toggle } from '../../ui/Toggle';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { Modal } from '../../ui/Modal';
@@ -46,11 +47,20 @@ function inviteStatusDotColor(status: InviteStatus): string {
 
 function inviteStatusPillColor(status: InviteStatus): string {
   switch (status) {
-    case 'expired':   return 'bg-accent-rose/15 text-accent-rose';
+    case 'expired':   return 'bg-accent-rose/15 text-txt-danger';
     case 'exhausted': return 'bg-accent-amber/15 text-accent-amber';
-    case 'revoked':   return 'bg-white/5 text-txt-tertiary';
+    case 'revoked':   return 'bg-white/[0.06] text-txt-secondary';
     case 'active':    return ''; // never rendered for active
   }
+}
+
+/** One expiry choice: a chosen one is edged in violet, like the option cards of the settings pages. */
+function expiryChipClass(chosen: boolean): string {
+  return `h-7 rounded-md border px-2.5 text-meta font-medium transition-colors duration-100 disabled:opacity-50 ${
+    chosen
+      ? 'border-accent-primary bg-accent-primary/[0.12] text-txt-primary'
+      : 'border-border-soft text-txt-tertiary hover:border-interactive-muted hover:bg-interactive-hover hover:text-txt-primary'
+  }`;
 }
 
 function inviteStatusLabel(status: InviteStatus): string {
@@ -164,13 +174,14 @@ function FilterDropdown({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-txt-tertiary hover:text-txt-secondary bg-white/[0.04] hover:bg-white/[0.06] rounded transition-colors"
+        aria-expanded={open}
+        className="btn-outline btn-sm"
       >
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="opacity-60">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
         {t('common:actions.filter')}
-        <span className="text-[10px]">▾</span>
+        <Icon name="chevron-down" size={12} className="text-txt-tertiary" />
       </button>
 
       {open && (
@@ -179,7 +190,7 @@ function FilterDropdown({
           <div className="absolute right-0 top-full mt-1 z-50 glass rounded-lg p-1.5 w-48">
             {view === 'archived' && (
               <>
-                <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-2 py-1">
+                <div className="label-mono px-2 py-1">
                   {t('admin:invites.filter.status')}
                 </div>
                 {archivedStatusOptions.map((s) => (
@@ -187,20 +198,20 @@ function FilterDropdown({
                     key={s}
                     type="button"
                     onClick={() => handleArchivedStatusToggle(s)}
-                    className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded ${
+                    className={`flex h-7 w-full items-center gap-2 rounded-md px-2 text-meta transition-colors duration-100 ${
                       archivedStatusFilter.has(s)
-                        ? 'text-txt-primary bg-white/[0.04]'
-                        : 'text-txt-tertiary'
-                    } hover:bg-white/[0.06] transition-colors`}
+                        ? 'bg-interactive-selected text-txt-primary'
+                        : 'text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary'
+                    }`}
                   >
                     <div className={`w-2 h-2 rounded-full ${inviteStatusDotColor(s)}`} />
                     <span>{inviteStatusLabel(s)}</span>
                   </button>
                 ))}
-                <div className="h-px bg-white/[0.06] my-1" />
+                <div className="h-px bg-border-hard my-1" />
               </>
             )}
-            <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-2 py-1">
+            <div className="label-mono px-2 py-1">
               {t('common:actions.sortBy')}
             </div>
             {view === 'active'
@@ -209,11 +220,11 @@ function FilterDropdown({
                     key={opt.key}
                     type="button"
                     onClick={() => { onActiveSortChange(opt.key); setOpen(false); }}
-                    className={`w-full text-left px-2 py-1.5 text-xs rounded ${
+                    className={`h-7 w-full rounded-md px-2 text-left text-meta transition-colors duration-100 ${
                       activeSort === opt.key
-                        ? 'text-accent-lavender bg-accent-lavender/[0.08]'
-                        : 'text-txt-primary'
-                    } hover:bg-white/[0.06] transition-colors`}
+                        ? 'bg-interactive-selected text-txt-primary'
+                        : 'text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary'
+                    }`}
                   >
                     {opt.label}
                   </button>
@@ -223,11 +234,11 @@ function FilterDropdown({
                     key={opt.key}
                     type="button"
                     onClick={() => { onArchivedSortChange(opt.key); setOpen(false); }}
-                    className={`w-full text-left px-2 py-1.5 text-xs rounded ${
+                    className={`h-7 w-full rounded-md px-2 text-left text-meta transition-colors duration-100 ${
                       archivedSort === opt.key
-                        ? 'text-accent-lavender bg-accent-lavender/[0.08]'
-                        : 'text-txt-primary'
-                    } hover:bg-white/[0.06] transition-colors`}
+                        ? 'bg-interactive-selected text-txt-primary'
+                        : 'text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary'
+                    }`}
                   >
                     {opt.label}
                   </button>
@@ -306,11 +317,8 @@ function ExpirySelector({ value, customDateTime, onChange, showKeep, disabled }:
             type="button"
             onClick={() => onChange('keep', customDateTime)}
             disabled={disabled}
-            className={`px-2.5 py-1 text-xs rounded transition-colors disabled:opacity-50 ${
-              value === 'keep'
-                ? 'bg-accent-primary text-white'
-                : 'bg-surface-input text-txt-tertiary hover:text-txt-secondary'
-            }`}
+            aria-pressed={value === 'keep'}
+            className={expiryChipClass(value === 'keep')}
           >
             {t('admin:invites.expiry.keepCurrent')}
           </button>
@@ -321,11 +329,8 @@ function ExpirySelector({ value, customDateTime, onChange, showKeep, disabled }:
             type="button"
             onClick={() => onChange(p.id, customDateTime)}
             disabled={disabled}
-            className={`px-2.5 py-1 text-xs rounded transition-colors disabled:opacity-50 ${
-              value === p.id
-                ? 'bg-accent-primary text-white'
-                : 'bg-surface-input text-txt-tertiary hover:text-txt-secondary'
-            }`}
+            aria-pressed={value === p.id}
+            className={expiryChipClass(value === p.id)}
           >
             {expiryPresetLabel(p.id)}
           </button>
@@ -338,7 +343,7 @@ function ExpirySelector({ value, customDateTime, onChange, showKeep, disabled }:
           onChange={(e) => onChange('custom', e.target.value)}
           min={toDatetimeLocalValue(Date.now() + 60_000)}
           disabled={disabled}
-          className="input-standard w-full px-3 py-2 text-sm mt-2"
+          className="input-standard mt-2 h-8 w-full py-0"
         />
       )}
     </div>
@@ -467,14 +472,14 @@ function CreateInviteModal({ onClose, onCreated }: CreateInviteModalProps) {
       {/* Decorative icon + helper text — kept inside children so the visual
           identity (lavender icon chip + descriptive paragraph) is preserved
           across desktop and mobile fullscreen. */}
-      <div className="flex items-start gap-3 -mt-1 mb-4">
-        <div className="w-10 h-10 rounded-lg bg-accent-lavender/15 flex items-center justify-center flex-shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent-lavender">
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-border-hard text-txt-tertiary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
         </div>
-        <p className="text-[13px] text-txt-secondary leading-snug min-w-0">
+        <p className="text-ui text-txt-secondary leading-snug min-w-0">
           {t('admin:invites.createModal.description')}
         </p>
       </div>
@@ -488,7 +493,7 @@ function CreateInviteModal({ onClose, onCreated }: CreateInviteModalProps) {
       >
         {/* Name */}
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-2">{t('admin:invites.form.name')}</div>
+          <div className="field-label">{t('admin:invites.form.name')}</div>
           <input
             ref={nameInputRef}
             type="text"
@@ -503,27 +508,25 @@ function CreateInviteModal({ onClose, onCreated }: CreateInviteModalProps) {
 
         {/* Max uses */}
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-2">{t('admin:invites.form.maxUses')}</div>
+          <div className="field-label">{t('admin:invites.form.maxUses')}</div>
           <div className="flex items-center gap-4 flex-wrap">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-ui cursor-pointer">
               <input
                 type="radio"
                 name="maxUsesMode"
                 checked={unlimited}
                 onChange={() => setUnlimited(true)}
                 disabled={submitting}
-                className="accent-accent-primary"
               />
               <span className="text-txt-primary">{t('admin:invites.form.unlimited')}</span>
             </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-ui cursor-pointer">
               <input
                 type="radio"
                 name="maxUsesMode"
                 checked={!unlimited}
                 onChange={() => setUnlimited(false)}
                 disabled={submitting}
-                className="accent-accent-primary"
               />
               <input
                 type="number"
@@ -535,7 +538,7 @@ function CreateInviteModal({ onClose, onCreated }: CreateInviteModalProps) {
                 }}
                 onClick={() => setUnlimited(false)}
                 disabled={submitting}
-                className="input-standard w-16 text-center disabled:opacity-50"
+                className="input-standard tabular h-8 w-16 px-2 py-0 text-center font-mono text-ui"
               />
               <span className="text-txt-secondary">{t('admin:invites.form.uses')}</span>
             </label>
@@ -544,7 +547,7 @@ function CreateInviteModal({ onClose, onCreated }: CreateInviteModalProps) {
 
         {/* Expiry */}
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-2">{t('admin:invites.form.expires')}</div>
+          <div className="field-label">{t('admin:invites.form.expires')}</div>
           <ExpirySelector
             value={expiryId}
             customDateTime={customDateTime}
@@ -561,20 +564,20 @@ function CreateInviteModal({ onClose, onCreated }: CreateInviteModalProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-center pt-2">
-          <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-3 animate-slide-up">
+        <div className="flex justify-end pt-2">
+          <div className="action-bar">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-3 py-1 text-sm text-txt-secondary hover:text-txt-primary transition-colors disabled:opacity-50"
+              className="btn-quiet"
             >
               {t('common:actions.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+              className="btn-primary"
             >
               {submitting ? t('admin:invites.createModal.submitting') : t('admin:invites.createModal.submit')}
             </button>
@@ -689,14 +692,14 @@ function EditInviteModal({ invite, onClose, onUpdated }: EditInviteModalProps) {
       mobileStyle="fullscreen"
       maxWidth="max-w-md"
     >
-      <div className="flex items-start gap-3 -mt-1 mb-4">
-        <div className="w-10 h-10 rounded-lg bg-accent-lavender/15 flex items-center justify-center flex-shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent-lavender">
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-border-hard text-txt-tertiary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
         </div>
-        <p className="text-[13px] text-txt-secondary leading-snug min-w-0">
+        <p className="text-ui text-txt-secondary leading-snug min-w-0">
           {t('admin:invites.editModal.description')}
         </p>
       </div>
@@ -710,7 +713,7 @@ function EditInviteModal({ invite, onClose, onUpdated }: EditInviteModalProps) {
       >
         {/* Name */}
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-2">{t('admin:invites.form.name')}</div>
+          <div className="field-label">{t('admin:invites.form.name')}</div>
           <input
             ref={nameInputRef}
             type="text"
@@ -724,29 +727,27 @@ function EditInviteModal({ invite, onClose, onUpdated }: EditInviteModalProps) {
 
         {/* Max uses */}
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-2">
-            {t('admin:invites.form.maxUses')} <span className="normal-case font-normal text-txt-tertiary">{t('admin:invites.editModal.used', { used: invite.usedCount })}</span>
+          <div className="field-label">
+            {t('admin:invites.form.maxUses')} <span className="font-normal text-txt-tertiary">{t('admin:invites.editModal.used', { used: invite.usedCount })}</span>
           </div>
           <div className="flex items-center gap-4 flex-wrap">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-ui cursor-pointer">
               <input
                 type="radio"
                 name="editMaxUsesMode"
                 checked={unlimited}
                 onChange={() => setUnlimited(true)}
                 disabled={submitting}
-                className="accent-accent-primary"
               />
               <span className="text-txt-primary">{t('admin:invites.form.unlimited')}</span>
             </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-ui cursor-pointer">
               <input
                 type="radio"
                 name="editMaxUsesMode"
                 checked={!unlimited}
                 onChange={() => setUnlimited(false)}
                 disabled={submitting}
-                className="accent-accent-primary"
               />
               <input
                 type="number"
@@ -758,7 +759,7 @@ function EditInviteModal({ invite, onClose, onUpdated }: EditInviteModalProps) {
                 }}
                 onClick={() => setUnlimited(false)}
                 disabled={submitting}
-                className="input-standard w-16 text-center disabled:opacity-50"
+                className="input-standard tabular h-8 w-16 px-2 py-0 text-center font-mono text-ui"
               />
               <span className="text-txt-secondary">{t('admin:invites.form.uses')}</span>
             </label>
@@ -767,7 +768,7 @@ function EditInviteModal({ invite, onClose, onUpdated }: EditInviteModalProps) {
 
         {/* Expiry */}
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-2">{t('admin:invites.form.expires')}</div>
+          <div className="field-label">{t('admin:invites.form.expires')}</div>
           <ExpirySelector
             value={expiryId}
             customDateTime={customDateTime}
@@ -781,20 +782,20 @@ function EditInviteModal({ invite, onClose, onUpdated }: EditInviteModalProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-center pt-2">
-          <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-3 animate-slide-up">
+        <div className="flex justify-end pt-2">
+          <div className="action-bar">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-3 py-1 text-sm text-txt-secondary hover:text-txt-primary transition-colors disabled:opacity-50"
+              className="btn-quiet"
             >
               {t('common:actions.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+              className="btn-primary"
             >
               {submitting ? t('admin:invites.editModal.submitting') : t('admin:invites.editModal.submit')}
             </button>
@@ -913,14 +914,14 @@ function ReinstateInviteModal({ invite, onClose, onReinstated }: ReinstateInvite
       mobileStyle="fullscreen"
       maxWidth="max-w-md"
     >
-      <div className="flex items-start gap-3 -mt-1 mb-4">
-        <div className="w-10 h-10 rounded-lg bg-accent-lavender/15 flex items-center justify-center flex-shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent-lavender">
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-border-hard text-txt-tertiary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
         </div>
-        <p className="text-[13px] text-txt-secondary leading-snug min-w-0">{subtitle}</p>
+        <p className="text-ui text-txt-secondary leading-snug min-w-0">{subtitle}</p>
       </div>
 
       <form
@@ -932,36 +933,34 @@ function ReinstateInviteModal({ invite, onClose, onReinstated }: ReinstateInvite
       >
         {/* Amber callout — only for revoked variant to reinforce the "new URL" consequence */}
         {isRevoked && (
-          <div className="p-3 rounded-lg bg-accent-amber/10 border border-accent-amber/20 text-[13px] text-accent-amber">
+          <div className="rounded-md border border-accent-amber/30 bg-accent-amber/10 px-3 py-2 text-ui text-accent-amber">
             {t('admin:invites.reinstateModal.newLinkWarning')}
           </div>
         )}
 
         {/* Max uses */}
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-2">
-            {t('admin:invites.form.maxUses')} <span className="normal-case font-normal text-txt-tertiary">{t('admin:invites.reinstateModal.maxUsesMeta', { max: invite.maxUses ?? '∞', used: invite.usedCount })}</span>
+          <div className="field-label">
+            {t('admin:invites.form.maxUses')} <span className="font-normal text-txt-tertiary">{t('admin:invites.reinstateModal.maxUsesMeta', { max: invite.maxUses ?? '∞', used: invite.usedCount })}</span>
           </div>
           <div className="flex items-center gap-4 flex-wrap">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-ui cursor-pointer">
               <input
                 type="radio"
                 name="reinstateMaxUsesMode"
                 checked={unlimited}
                 onChange={() => setUnlimited(true)}
                 disabled={submitting}
-                className="accent-accent-primary"
               />
               <span className="text-txt-primary">{t('admin:invites.form.unlimited')}</span>
             </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-ui cursor-pointer">
               <input
                 type="radio"
                 name="reinstateMaxUsesMode"
                 checked={!unlimited}
                 onChange={() => setUnlimited(false)}
                 disabled={submitting}
-                className="accent-accent-primary"
               />
               <input
                 type="number"
@@ -973,7 +972,7 @@ function ReinstateInviteModal({ invite, onClose, onReinstated }: ReinstateInvite
                 }}
                 onClick={() => setUnlimited(false)}
                 disabled={submitting}
-                className="input-standard w-16 text-center disabled:opacity-50"
+                className="input-standard tabular h-8 w-16 px-2 py-0 text-center font-mono text-ui"
               />
               <span className="text-txt-secondary">{t('admin:invites.form.uses')}</span>
             </label>
@@ -982,7 +981,7 @@ function ReinstateInviteModal({ invite, onClose, onReinstated }: ReinstateInvite
 
         {/* Expiry */}
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-2">{t('admin:invites.form.expires')}</div>
+          <div className="field-label">{t('admin:invites.form.expires')}</div>
           <ExpirySelector
             value={expiryId}
             customDateTime={customDateTime}
@@ -997,20 +996,20 @@ function ReinstateInviteModal({ invite, onClose, onReinstated }: ReinstateInvite
         </div>
 
         {/* Actions */}
-        <div className="flex justify-center pt-2">
-          <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-3 animate-slide-up">
+        <div className="flex justify-end pt-2">
+          <div className="action-bar">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-3 py-1 text-sm text-txt-secondary hover:text-txt-primary transition-colors disabled:opacity-50"
+              className="btn-quiet"
             >
               {t('common:actions.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+              className="btn-primary"
             >
               {submitting
                 ? t('admin:invites.reinstateModal.submitting')
@@ -1074,13 +1073,13 @@ function RedemptionsModal({ invite, onClose }: RedemptionsModalProps) {
       mobileStyle="fullscreen"
       maxWidth="max-w-lg"
     >
-      <div className="flex items-start gap-3 -mt-1 mb-4">
-        <div className="w-10 h-10 rounded-lg bg-accent-sky/15 flex items-center justify-center flex-shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-accent-sky">
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-border-hard text-txt-tertiary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
           </svg>
         </div>
-        <p className="text-[13px] text-txt-secondary leading-snug min-w-0">
+        <p className="text-ui text-txt-secondary leading-snug min-w-0">
           {t('admin:invites.redemptions.description')}
         </p>
       </div>
@@ -1090,17 +1089,17 @@ function RedemptionsModal({ invite, onClose }: RedemptionsModalProps) {
           horizontal margin + padding compensates the body's `p-4` so the
           background can extend edge-to-edge. */}
       <div
-        className="sticky top-0 z-10 -mx-4 px-4 pb-3 space-y-3 bg-[var(--glass-modal-bg)] backdrop-blur-md"
+        className="sticky top-0 z-10 -mx-4 px-4 pb-3 space-y-3 bg-surface-elevated"
       >
         {invite.status === 'revoked' && (
-          <div className="bg-accent-rose/10 border border-accent-rose/30 rounded p-2.5 text-xs text-accent-rose leading-relaxed">
+          <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-meta leading-snug text-txt-danger">
             {invite.revokedAt
               ? t('admin:invites.redemptions.revokedNoticeDated', { date: f.formatNumericDate(invite.revokedAt) })
               : t('admin:invites.redemptions.revokedNotice')}
           </div>
         )}
 
-        <div className="text-sm text-txt-tertiary">
+        <div className="text-ui text-txt-tertiary">
           {invite.maxUses !== null
             ? t('admin:invites.redemptions.usesOfMax', { count: invite.usedCount, max: invite.maxUses })
             : t('admin:invites.redemptions.uses', { count: invite.usedCount })}
@@ -1109,9 +1108,9 @@ function RedemptionsModal({ invite, onClose }: RedemptionsModalProps) {
 
       <div className="-mx-1">
         {redemptions === null ? (
-          <div className="text-sm text-txt-tertiary px-3 py-2">{t('common:states.loading')}</div>
+          <div className="text-ui text-txt-tertiary px-3 py-2">{t('common:states.loading')}</div>
         ) : redemptions.length === 0 ? (
-          <div className="text-sm text-txt-tertiary px-3 py-2">
+          <div className="text-ui text-txt-tertiary px-3 py-2">
             {error ? t('admin:invites.redemptions.loadFailedInline') : t('admin:invites.redemptions.empty')}
           </div>
         ) : (
@@ -1124,9 +1123,9 @@ function RedemptionsModal({ invite, onClose }: RedemptionsModalProps) {
               return (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between gap-3 py-1.5 px-3 rounded hover:bg-surface-input cursor-default"
+                  className="flex items-center justify-between gap-3 rounded-md px-3 py-1.5 hover:bg-interactive-hover"
                 >
-                  <span className="text-sm text-txt-primary truncate">
+                  <span className="text-ui text-txt-primary truncate">
                     {r.registrantUsername}
                     {(r.isDeleted || showCurrent) && (
                       <span className="text-txt-tertiary">
@@ -1137,7 +1136,7 @@ function RedemptionsModal({ invite, onClose }: RedemptionsModalProps) {
                       </span>
                     )}
                   </span>
-                  <span className="text-xs text-txt-tertiary shrink-0">
+                  <span className="tabular shrink-0 font-mono text-label text-txt-tertiary">
                     {f.formatDateTime(r.redeemedAt)}
                   </span>
                 </div>
@@ -1267,49 +1266,47 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
   return (
     <>
       <div
-        className={`bg-white/[0.02] rounded-md transition-colors ${
-          expanded ? 'border border-white/[0.06]' : ''
-        }`}
+        className={expanded ? 'bg-interactive-hover' : ''}
       >
         {/* Collapsed clickable header */}
         <div
-          className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-white/[0.02] rounded-md"
+          className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3 px-3 py-2 transition-colors duration-100 hover:bg-interactive-hover"
           onClick={onToggleExpand}
         >
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className={`w-2 h-2 rounded-full shrink-0 ${inviteStatusDotColor(invite.status)}`} />
             <div className="min-w-0">
               <div
-                className="text-sm font-medium truncate text-txt-primary"
+                className="text-ui font-medium truncate text-txt-primary"
                 title={invite.name}
               >
                 {invite.name}
               </div>
-              <div className="text-[11px] text-txt-tertiary truncate">{subtitle}</div>
+              <div className="mt-0.5 truncate text-meta text-txt-tertiary">{subtitle}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0 ml-2">
+          <div className="flex items-center gap-2 shrink-0">
             {!isActive && (
               <span
-                className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded ${inviteStatusPillColor(invite.status)}`}
+                className={`inline-flex items-center rounded px-1.5 py-px text-2xs font-medium ${inviteStatusPillColor(invite.status)}`}
               >
                 {inviteStatusLabel(invite.status)}
               </span>
             )}
-            <span className="text-txt-tertiary text-xs">{expanded ? '▾' : '▸'}</span>
+            <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={15} className="text-txt-tertiary" />
           </div>
         </div>
 
         {/* Expanded body */}
         {expanded && (
           <div className="px-3 pb-3">
-            <div className="border-t border-white/[0.05] pt-3">
+            <div className="border-t border-border-hard pt-3">
               {/* Row 1: USED · (EXPIRES | terminal-status AT) · CREATED */}
               <div className="grid grid-cols-3 gap-3 mb-3">
                 <div>
-                  <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('admin:invites.row.used')}</div>
+                  <div className="label-mono mb-0.5">{t('admin:invites.row.used')}</div>
                   <div
-                    className={`text-xs ${
+                    className={`text-meta ${
                       usageNearLimit ? 'text-accent-amber font-medium' : 'text-txt-secondary'
                     }`}
                   >
@@ -1318,40 +1315,40 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
                 </div>
                 {isActive ? (
                   <div>
-                    <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('admin:invites.row.expires')}</div>
-                    <div className="text-xs text-txt-secondary">{formatExpiry(invite)}</div>
+                    <div className="label-mono mb-0.5">{t('admin:invites.row.expires')}</div>
+                    <div className="text-meta text-txt-secondary">{formatExpiry(invite)}</div>
                   </div>
                 ) : (
                   <div>
-                    <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">
+                    <div className="label-mono mb-0.5">
                       {archivedTerminalLabel}
                     </div>
-                    <div className="text-xs text-txt-secondary">{archivedTerminalValue}</div>
+                    <div className="text-meta text-txt-secondary">{archivedTerminalValue}</div>
                   </div>
                 )}
                 <div>
-                  <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('admin:invites.row.created')}</div>
-                  <div className="text-xs text-txt-secondary">{f.formatRelativeTime(invite.createdAt)}</div>
+                  <div className="label-mono mb-0.5">{t('admin:invites.row.created')}</div>
+                  <div className="text-meta text-txt-secondary">{f.formatRelativeTime(invite.createdAt)}</div>
                 </div>
               </div>
 
               {/* Row 2: CREATED BY · TOKEN · LAST REDEEMED */}
               <div className="grid grid-cols-3 gap-3 mb-3">
                 <div>
-                  <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('admin:invites.row.createdByLabel')}</div>
-                  <div className="text-xs text-txt-secondary truncate" title={createdByLabel}>
+                  <div className="label-mono mb-0.5">{t('admin:invites.row.createdByLabel')}</div>
+                  <div className="text-meta text-txt-secondary truncate" title={createdByLabel}>
                     {createdByLabel}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('admin:invites.row.token')}</div>
-                  <div className="text-xs font-mono text-txt-secondary" title={invite.token}>
+                  <div className="label-mono mb-0.5">{t('admin:invites.row.token')}</div>
+                  <div className="text-meta font-mono text-txt-secondary" title={invite.token}>
                     {tokenDisplay}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-txt-tertiary uppercase tracking-wider mb-0.5">{t('admin:invites.row.lastRedeemed')}</div>
-                  <div className="text-xs text-txt-secondary">{lastRedeemedDisplay}</div>
+                  <div className="label-mono mb-0.5">{t('admin:invites.row.lastRedeemed')}</div>
+                  <div className="text-meta text-txt-secondary">{lastRedeemedDisplay}</div>
                 </div>
               </div>
 
@@ -1362,28 +1359,28 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleCopy(); }}
-                      className="px-3 py-1.5 text-xs font-medium bg-accent-lavender/10 text-accent-lavender hover:bg-accent-lavender/20 rounded transition-colors"
+                      className="btn-outline btn-sm"
                     >
                       {t('admin:invites.row.copyLink')}
                     </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setShowEdit(true); }}
-                      className="px-3 py-1.5 text-xs font-medium bg-accent-lavender/10 text-accent-lavender hover:bg-accent-lavender/20 rounded transition-colors"
+                      className="btn-outline btn-sm"
                     >
                       {t('common:actions.edit')}
                     </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setConfirmRevoke(true); }}
-                      className="px-3 py-1.5 text-xs font-medium bg-accent-rose/10 text-txt-danger hover:bg-accent-rose/20 rounded transition-colors"
+                      className="btn-quiet btn-sm text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger"
                     >
                       {t('admin:invites.row.revoke')}
                     </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setShowRedemptions(true); }}
-                      className="text-[11px] text-txt-tertiary hover:text-txt-secondary underline decoration-dotted transition-colors ml-1"
+                      className="btn-quiet btn-sm"
                     >
                       {t('admin:invites.row.viewRedemptions')}
                     </button>
@@ -1393,21 +1390,21 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setShowReinstate(true); }}
-                      className="px-3 py-1.5 text-xs font-medium bg-status-online/10 text-status-online hover:bg-status-online/20 rounded transition-colors"
+                      className="btn-outline btn-sm"
                     >
                       {t('admin:invites.row.reinstate')}
                     </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-                      className="px-3 py-1.5 text-xs font-medium bg-accent-rose/10 text-txt-danger hover:bg-accent-rose/20 rounded transition-colors"
+                      className="btn-quiet btn-sm text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger"
                     >
                       {t('admin:invites.row.deletePermanently')}
                     </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setShowRedemptions(true); }}
-                      className="text-[11px] text-txt-tertiary hover:text-txt-secondary underline decoration-dotted transition-colors ml-1"
+                      className="btn-quiet btn-sm"
                     >
                       {t('admin:invites.row.viewRedemptions')}
                     </button>
@@ -1586,7 +1583,7 @@ export function RegistrationPanel() {
     return list;
   }, [invites, tab, activeSort, archivedSort, archivedStatusFilter]);
 
-  if (!draft) return <div className="text-sm text-txt-tertiary">{t('common:states.loadingSettings')}</div>;
+  if (!draft) return <div className="text-ui text-txt-tertiary">{t('common:states.loadingSettings')}</div>;
 
   const hasChanges = !!instanceSettings && (
     draft.registrationOpen !== instanceSettings.registrationOpen ||
@@ -1624,25 +1621,26 @@ export function RegistrationPanel() {
   return (
     <>
     <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-      <h2 className="text-lg font-semibold text-txt-primary">{t('admin:registration.title')}</h2>
-      <div className="text-xs text-txt-tertiary">
-        {t('admin:registration.description')}
+      <div>
+        <h2 className="page-title">{t('admin:registration.title')}</h2>
+        <p className="mt-1 text-meta leading-snug text-txt-tertiary">{t('admin:registration.description')}</p>
       </div>
 
       {/* Public registration */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('admin:registration.public.label')}</div>
-        <div className="rounded-lg bg-white/[0.02] p-3.5">
+        <div className="label-mono mb-1.5">{t('admin:registration.public.label')}</div>
+        <div className="surface-card rounded-lg p-4">
           <label className="flex items-center justify-between cursor-pointer gap-4">
-            <div className="flex-1">
-              <div className="text-sm font-medium text-txt-primary">{t('admin:registration.public.toggleLabel')}</div>
-              <div className="text-xs text-txt-tertiary mt-0.5">
+            <div className="min-w-0 flex-1">
+              <div className="text-ui font-medium text-txt-primary">{t('admin:registration.public.toggleLabel')}</div>
+              <div className="mt-0.5 text-meta leading-snug text-txt-tertiary">
                 {t('admin:registration.public.toggleDescription')}
               </div>
             </div>
             <Toggle
               enabled={draft.registrationOpen}
               onChange={(v) => setDraft({ ...draft, registrationOpen: v })}
+              ariaLabel={t('admin:registration.public.toggleLabel')}
             />
           </label>
         </div>
@@ -1650,57 +1648,60 @@ export function RegistrationPanel() {
 
       {/* Federated registration */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('admin:registration.federated.label')}</div>
-        <div className="rounded-lg bg-white/[0.02] p-3.5">
+        <div className="label-mono mb-1.5">{t('admin:registration.federated.label')}</div>
+        <div className="surface-card rounded-lg p-4">
           <label className="flex items-center justify-between cursor-pointer gap-4">
-            <div className="flex-1">
-              <div className="text-sm font-medium text-txt-primary">{t('admin:registration.federated.toggleLabel')}</div>
-              <div className="text-xs text-txt-tertiary mt-0.5">
+            <div className="min-w-0 flex-1">
+              <div className="text-ui font-medium text-txt-primary">{t('admin:registration.federated.toggleLabel')}</div>
+              <div className="mt-0.5 text-meta leading-snug text-txt-tertiary">
                 {t('admin:registration.federated.toggleDescription')}
               </div>
             </div>
             <Toggle
               enabled={draft.federatedRegistrationOpen}
               onChange={(v) => setDraft({ ...draft, federatedRegistrationOpen: v })}
+              ariaLabel={t('admin:registration.federated.toggleLabel')}
             />
           </label>
         </div>
       </div>
 
       {/* Invite Links */}
-      <div className="border-t border-white/[0.06] pt-5">
+      <div>
         {/* Row 1: heading + create button */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider">{t('admin:invites.label')}</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="label-mono">{t('admin:invites.label')}</div>
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-lg transition-colors"
+            className="btn-primary btn-sm"
           >
             {t('admin:invites.create')}
           </button>
         </div>
 
         {/* Row 2: tab strip (left) + FilterDropdown (right) */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex bg-white/[0.04] rounded-md p-0.5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex rounded-md border border-border-soft bg-surface-input p-0.5">
             <button
               type="button"
               onClick={() => handleTabSwitch('active')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                tab === 'active' ? 'bg-white/[0.08] text-txt-primary' : 'text-txt-tertiary hover:text-txt-secondary'
+              aria-pressed={tab === 'active'}
+              className={`h-6 rounded px-2.5 text-meta font-medium transition-colors duration-100 ${
+                tab === 'active' ? 'bg-surface-elevated text-txt-primary' : 'text-txt-tertiary hover:bg-interactive-hover hover:text-txt-primary'
               }`}
             >
-              {t('admin:invites.tabs.active')} <span className="text-[10px] text-txt-tertiary ml-0.5">{activeCount}</span>
+              {t('admin:invites.tabs.active')} <span className="tabular ml-0.5 font-mono text-label text-txt-tertiary">{activeCount}</span>
             </button>
             <button
               type="button"
               onClick={() => handleTabSwitch('archived')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                tab === 'archived' ? 'bg-white/[0.08] text-txt-primary' : 'text-txt-tertiary hover:text-txt-secondary'
+              aria-pressed={tab === 'archived'}
+              className={`h-6 rounded px-2.5 text-meta font-medium transition-colors duration-100 ${
+                tab === 'archived' ? 'bg-surface-elevated text-txt-primary' : 'text-txt-tertiary hover:bg-interactive-hover hover:text-txt-primary'
               }`}
             >
-              {t('admin:invites.tabs.archived')} <span className="text-[10px] text-txt-tertiary ml-0.5">{archivedCount}</span>
+              {t('admin:invites.tabs.archived')} <span className="tabular ml-0.5 font-mono text-label text-txt-tertiary">{archivedCount}</span>
             </button>
           </div>
           <FilterDropdown
@@ -1715,17 +1716,21 @@ export function RegistrationPanel() {
         </div>
 
         {invitesLoading ? (
-          <div className="text-sm text-txt-tertiary">{t('common:states.loading')}</div>
+          <div className="text-ui text-txt-tertiary">{t('common:states.loading')}</div>
         ) : invites.length === 0 ? (
-          <div className="text-sm text-txt-tertiary">
-            {tab === 'active' ? t('admin:invites.emptyActive') : t('admin:invites.emptyArchived')}
+          <div className="surface-card rounded-lg">
+            <div className="empty-state">
+              <p className="empty-state-body">{tab === 'active' ? t('admin:invites.emptyActive') : t('admin:invites.emptyArchived')}</p>
+            </div>
           </div>
         ) : displayInvites.length === 0 ? (
-          <div className="text-[11px] text-txt-tertiary py-3 text-center">
-            {t('admin:invites.noMatch')}
+          <div className="surface-card rounded-lg">
+            <div className="empty-state">
+              <p className="empty-state-body">{t('admin:invites.noMatch')}</p>
+            </div>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="surface-card divide-y divide-border-hard overflow-hidden rounded-lg">
             {displayInvites.map((inv) => (
               <InviteRow
                 key={inv.id}
@@ -1743,23 +1748,26 @@ export function RegistrationPanel() {
 
       {/* Status messages */}
       {saveError && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{saveError}</div>
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{saveError}</div>
       )}
       {/* Save / Reset bar */}
       {hasChanges && (
         <div className="sticky bottom-0 z-10 pointer-events-none">
           <div className="flex justify-center pt-3 pb-1">
-            <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-2 animate-slide-up pointer-events-auto">
+            <div className="action-bar animate-slide-up pointer-events-auto">
               <button
+                type="button"
                 onClick={handleReset}
-                className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                className="btn-quiet"
               >
                 {t('common:actions.reset')}
               </button>
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                aria-busy={saving}
+                className="btn-primary"
               >
                 {saving ? t('common:states.saving') : t('common:actions.save')}
               </button>

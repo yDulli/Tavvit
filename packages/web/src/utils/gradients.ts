@@ -1,30 +1,40 @@
 /**
- * Aether Drift gradient palettes for avatars and server icons.
+ * Tavvit's palettes for avatars and space icons.
  * Deterministic color assignment based on entity ID (snowflake) or name.
+ *
+ * Seven muted tones, each a little lighter at its top, as if lit from above; every
+ * one carries white initials at 3:1 or better.
+ * The names are the `AvatarColor` values stored in the database, so they stay;
+ * only the colours behind them changed. A space's tile is the same hue a step
+ * deeper than a person's, so a space and a person are never the same picture.
+ *
+ * `gradient` is the CSS background of the tile, `from` and `to` its colour, `glow`
+ * the colour of a selection ring.
  */
 
 import type { AvatarColor } from '@backspace/shared';
 
 export interface GradientEntry {
-  from: string;      // hex start color
-  to: string;        // hex end color
-  gradient: string;  // CSS linear-gradient (derived from from/to)
-  glow: string;      // hex glow color (hand-curated most prominent color)
+  from: string;      // hex colour of the tile
+  to: string;        // the same colour
+  gradient: string;  // the CSS background of the tile
+  glow: string;      // hex colour of a selection ring around it
 }
 
-function grad(from: string, to: string, glow: string): GradientEntry {
-  return { from, to, gradient: `linear-gradient(135deg, ${from}, ${to})`, glow };
+/** A tile's fill, in the shape every reader of these palettes expects. */
+function flat(color: string): GradientEntry {
+  return { from: color, to: color, gradient: `linear-gradient(170deg, ${adjustColor(color, 22)} 0%, ${color} 62%)`, glow: color };
 }
 
-// ── Avatar gradients (user fallbacks) ──
+// ── Avatar tiles (user fallbacks) ──
 const AVATAR_GRADIENTS: GradientEntry[] = [
-  grad('#059669', '#10b981', '#10b981'),   // mint
-  grad('#3b82f6', '#6366f1', '#6366f1'),   // sky
-  grad('#a78bfa', '#c084fc', '#c084fc'),   // lavender
-  grad('#f97316', '#ef4444', '#f97316'),   // coral
-  grad('#f43f5e', '#ec4899', '#ec4899'),   // rose
-  grad('#14b8a6', '#06b6d4', '#06b6d4'),   // teal
-  grad('#f59e0b', '#eab308', '#f59e0b'),   // amber
+  flat('#2f8f6a'),   // mint
+  flat('#3a72c8'),   // sky
+  flat('#6d5ec8'),   // lavender
+  flat('#c8553a'),   // coral
+  flat('#b84a72'),   // rose
+  flat('#25818c'),   // teal
+  flat('#a87414'),   // amber
 ];
 
 export const AVATAR_GRADIENT_MAP: Record<AvatarColor, GradientEntry> = {
@@ -37,29 +47,26 @@ export const AVATAR_GRADIENT_MAP: Record<AvatarColor, GradientEntry> = {
   amber:    AVATAR_GRADIENTS[6]!,
 };
 
-// ── Space icon gradients (space fallbacks) ──
+// ── Space tiles (space fallbacks): the same hues, a step deeper ──
 export const SPACE_GRADIENTS: GradientEntry[] = [
-  grad('#ef4444', '#f97316', '#f97316'),   // red-orange
-  grad('#ec4899', '#f472b6', '#ec4899'),   // pink
-  grad('#14b8a6', '#06b6d4', '#06b6d4'),   // teal-cyan
-  grad('#f59e0b', '#eab308', '#f59e0b'),   // amber-yellow
-  grad('#3b82f6', '#6366f1', '#6366f1'),   // blue-indigo
-  grad('#a78bfa', '#c084fc', '#c084fc'),   // lavender
-  grad('#059669', '#10b981', '#10b981'),   // mint
+  flat('#a8442c'),   // coral
+  flat('#9a3c5f'),   // rose
+  flat('#1e6b74'),   // teal
+  flat('#8d600f'),   // amber
+  flat('#2f5ea8'),   // sky
+  flat('#5a4da8'),   // lavender
+  flat('#26765a'),   // mint
 ];
 
 export const SPACE_GRADIENT_MAP: Record<AvatarColor, GradientEntry> = {
-  coral:    SPACE_GRADIENTS[0]!,   // red-orange
-  rose:     SPACE_GRADIENTS[1]!,   // pink
-  teal:     SPACE_GRADIENTS[2]!,   // teal-cyan
-  amber:    SPACE_GRADIENTS[3]!,   // amber-yellow
-  sky:      SPACE_GRADIENTS[4]!,   // blue-indigo
-  lavender: SPACE_GRADIENTS[5]!,   // lavender
-  mint:     SPACE_GRADIENTS[6]!,   // mint
+  coral:    SPACE_GRADIENTS[0]!,
+  rose:     SPACE_GRADIENTS[1]!,
+  teal:     SPACE_GRADIENTS[2]!,
+  amber:    SPACE_GRADIENTS[3]!,
+  sky:      SPACE_GRADIENTS[4]!,
+  lavender: SPACE_GRADIENTS[5]!,
+  mint:     SPACE_GRADIENTS[6]!,
 };
-
-// ── Home button (DM / Backspace) — fixed indigo-purple gradient ──
-export const HOME_GRADIENT: GradientEntry = grad('#6366f1', '#8b5cf6', '#8b5cf6');
 
 /** djb2 hash → stable unsigned 32-bit integer. */
 function hashString(str: string): number {

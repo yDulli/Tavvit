@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChannelNotificationPolicy } from '../../hooks/useNotificationSettings';
 import { BellOffIcon } from './ChannelMutedIndicator';
+import { Icon } from '../ui/Icon';
 import { ChannelNotificationPopover } from './ChannelNotificationPopover';
 
 /**
@@ -30,18 +31,11 @@ export function ChannelNotificationButton({ channelId, channelName }: { channelI
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`w-8 h-8 flex items-center justify-center transition-colors rounded-[6px] ${
-          open ? 'text-txt-primary bg-interactive-active' : 'text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover'
-        }`}
+        data-active={open}
+        className="icon-btn icon-btn-lg"
         title={muted ? `${t('spaces:main.notificationSettings')} (${t('spaces:notifications.mutedIndicator')})` : t('spaces:main.notificationSettings')}
       >
-        {muted ? (
-          <BellOffIcon size={24} />
-        ) : (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-          </svg>
-        )}
+        {muted ? <BellOffIcon size={18} /> : <Icon name="bell" size={18} />}
       </button>
       <ChannelNotificationPopover
         open={open}

@@ -1,6 +1,7 @@
 import { config } from '../config.js';
 import { getRawDb } from '../db/index.js';
 import { createSnapshot, pruneSnapshots } from './backup.js';
+import { clearAlert, raiseAlert } from './operatorAlerts.js';
 
 let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -15,9 +16,11 @@ export function startBackupWorker(): void {
     try {
       const snap = createSnapshot(getRawDb(), 'scheduled');
       pruneSnapshots();
+      clearAlert('backup_failed');
       console.log(`[backup] scheduled snapshot written: ${snap}`);
     } catch (err) {
       console.error(`[backup] scheduled snapshot failed: ${(err as Error).message}`);
+      raiseAlert('backup_failed', (err as Error).message);
     }
   }, intervalMs);
   // Do not keep the event loop alive solely for backups.

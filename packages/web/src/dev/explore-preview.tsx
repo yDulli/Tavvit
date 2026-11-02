@@ -191,7 +191,7 @@ const INNER_SPACES: TaggedExploreSpace[] = [
   },
   {
     id: 'inner-3',
-    name: 'Orbit Ops',
+    name: 'Tavvit Ops',
     icon: null,
     banner: null,
     avatarColor: 'sky',
@@ -278,6 +278,7 @@ const OUTER_ENTRIES: DirectoryEntry[] = [
 ];
 
 const INSTANCE_INFO: InstanceInfoResponse = {
+  emojiPolicy: 'everyone',
   name: 'Workbench',
   version: '0.0.0-dev',
   registrationOpen: true,
@@ -288,7 +289,6 @@ const INSTANCE_INFO: InstanceInfoResponse = {
   directoryConfigured: true,
   directoryAvailable: true,
   directoryEnabled: true,
-  supportCardEnabled: true,
 };
 
 /**
@@ -604,7 +604,7 @@ function seedConnectionsScene(scene: Scene): void {
     instances: [
       liveInstance('https://nova.example', 'Nova', 'connected'),
       liveInstance(EXPIRED_ORIGIN, 'Zwiss', 'error'),
-      liveInstance('https://orbit.example', 'Orbit', 'disconnected'),
+      liveInstance('https://orbit.example', 'Tavvit', 'disconnected'),
     ],
     registry: new Map([
       ['https://nova.example', registryEntry('https://nova.example', 'Nova', 'connected')],

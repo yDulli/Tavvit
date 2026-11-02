@@ -1,0 +1,238 @@
+{
+  "links": {
+    "label": "法律信息",
+    "terms": "使用条款",
+    "privacy": "隐私政策",
+    "imprint": "法律声明",
+    "report": "举报内容",
+    "source": "源代码"
+  },
+  "shell": {
+    "back": "返回应用",
+    "backHome": "返回首页"
+  },
+  "documents": {
+    "terms": {
+      "title": "使用条款"
+    },
+    "privacy": {
+      "title": "隐私政策"
+    },
+    "missing": "此文档尚未发布。请咨询此服务器的运营者。",
+    "meta": "版本 {{version}}，自 {{date}} 起生效"
+  },
+  "imprint": {
+    "title": "法律声明",
+    "missing": "此服务器的运营者尚未填写这些信息。",
+    "provider": "提供者",
+    "representative": "代表人",
+    "contact": "联系方式",
+    "register": "登记信息",
+    "vatId": "增值税号",
+    "editorial": "编辑内容负责人",
+    "dsaContact": "联络点（DSA 第 11 和 12 条）",
+    "dsaContactBody": "{{email}}，可使用德语或英语"
+  },
+  "report": {
+    "pageTitle": "举报内容",
+    "pageIntro": "向此服务器的运营者举报违法内容或违反条款的行为。无需账户。",
+    "dialogTitle": "举报",
+    "about": "您正在举报",
+    "category": "有什么问题？",
+    "categoryChoose": "请选择",
+    "categories": {
+      "hate": "仇恨言论或煽动",
+      "violence": "威胁或煽动暴力",
+      "child_safety": "儿童性虐待",
+      "terrorism": "恐怖主义内容",
+      "defamation": "侮辱或诽谤",
+      "privacy": "未经同意公开私人信息",
+      "copyright": "侵犯版权",
+      "fraud": "欺诈或恶意软件",
+      "other_illegal": "其他违法内容",
+      "terms_violation": "违反条款但不违法"
+    },
+    "where": "内容在哪里？",
+    "wherePlaceholder": "链接，或空间、频道和时间",
+    "explanation": "为什么这违法或违反条款？",
+    "explanationPlaceholder": "请说明内容是什么以及违反了什么。",
+    "explanationHint": "至少 {{min}} 个字符。",
+    "name": "您的姓名",
+    "email": "您的电子邮箱",
+    "contactOptional": "此类别可以不填写姓名和地址。",
+    "goodFaith": "据我所知，我举报的内容真实且完整。",
+    "send": "发送举报",
+    "sentTitle": "已收到您的举报。",
+    "sentBody": "运营者会查看并作出决定。如果您留了电子邮箱，可能会收到回复。",
+    "sentBodyAccount": "运营者会查看并作出决定。您会在应用中收到结果通知。",
+    "close": "关闭",
+    "menuMessage": "举报消息",
+    "menuUser": "举报此人",
+    "menuSpace": "举报空间"
+  },
+  "terms": {
+    "dialogTitle": "使用条款",
+    "required": "要继续使用此服务器，请同意其使用条款。",
+    "upcoming": "使用条款将于 {{date}} 变更。您现在就可以阅读并同意。",
+    "changes": "变更内容",
+    "logOut": "退出登录",
+    "later": "稍后",
+    "accept": "我同意",
+    "retry": "重试"
+  },
+  "notices": {
+    "reason": "原因",
+    "ground": {
+      "illegal": "此决定依据法律作出。",
+      "terms": "此决定依据使用条款作出。"
+    },
+    "untilLifted": "在运营者解除之前一直有效。",
+    "until": "有效期至 {{date}}。",
+    "redress": "您可以联系运营者对此决定提出异议。您仍可诉诸法院。",
+    "contact": "联系方式：{{email}}",
+    "ok": "知道了",
+    "listTitle": "运营者通知",
+    "content_removed": {
+      "title": "您的内容已被移除"
+    },
+    "account_suspended": {
+      "title": "您的账户已被停用"
+    },
+    "listing_withdrawn": {
+      "title": "您的空间已从列表中移除"
+    },
+    "report_decided": {
+      "title": "您的举报已有结果",
+      "outcome": {
+        "no_action": "运营者查看了您的举报，认为无需采取行动。",
+        "content_removed": "运营者已移除您举报的内容。",
+        "account_suspended": "运营者已停用您举报的账户。",
+        "listing_withdrawn": "运营者已将您举报的空间从列表中移除。",
+        "handled": "运营者已根据您的举报采取行动。"
+      }
+    },
+    "warning": {
+      "title": "你收到了一条警告"
+    },
+    "address_withdrawn": {
+      "title": "你的空间的专属地址已被收回"
+    }
+  },
+  "external": {
+    "notice": "此内容来自 {{host}}。加载时该服务器会得知您的 IP 地址。",
+    "load": "加载",
+    "always": "始终允许",
+    "compactTitle": "从 {{host}} 加载",
+    "compactLoad": "加载",
+    "settingsTitle": "来自其他服务器的内容",
+    "settingsLabel": "始终加载来自其他服务器的内容",
+    "settingsDescription": "链接预览、GIF 和视频来自其他服务器，它们会看到您的 IP 地址。关闭后，每次都由您决定。",
+    "playLoads": "播放时将从 {{name}} 加载，对方会看到您的 IP 地址。"
+  },
+  "register": {
+    "agree": "我已年满 {{age}} 岁并同意<terms>使用条款</terms>。<privacy>隐私政策</privacy>说明了如何处理我的数据。",
+    "agreeFirst": "请同意使用条款以继续。"
+  },
+  "admin": {
+    "title": "法律信息",
+    "description": "运营服务器的人就是其提供者，并对此处发生的事情负责。请填写您的信息，然后发布使用条款和隐私政策。",
+    "operator": {
+      "title": "谁在运营此服务器",
+      "description": "公开显示在法律声明中，并用于草稿。",
+      "kind": "运营方",
+      "kinds": {
+        "person": "个人",
+        "organization": "公司或协会"
+      },
+      "minimumAge": "最低年龄",
+      "name": "全名，或名称和法律形式",
+      "address": "邮寄地址",
+      "addressHint": "可以通过邮寄联系到您的地址。邮政信箱不够。",
+      "email": "电子邮箱",
+      "emailHint": "用于咨询、异议和主管机关。您从这里回复举报。",
+      "representative": "代表人（可选）",
+      "phone": "电话（可选）",
+      "register": "登记信息（可选）",
+      "vatId": "增值税号（可选）",
+      "editorial": "编辑内容负责人（可选）",
+      "hosting": "托管服务商的名称和地址（可选）",
+      "dpo": "数据保护负责人（可选）",
+      "save": "保存信息",
+      "saved": "已保存。"
+    },
+    "documents": {
+      "title": "使用条款和隐私政策",
+      "description": "每次发布都是一个新版本。旧版本会保留，因为同意记录会指明对应的版本。",
+      "kindLabel": "文档",
+      "languageLabel": "语言",
+      "languages": {
+        "de": "德语",
+        "en": "英语"
+      },
+      "insertDraft": "插入草稿",
+      "loadLatest": "载入已发布版本",
+      "operatorFirst": "请先填写谁在运营此服务器。",
+      "draftWarning": "草稿根据此服务器已启用的功能生成，但不构成法律建议。请阅读、修改，并在公开发布前请律师审核。",
+      "textLabel": "正文（Markdown）",
+      "effective": "生效日期（可选）",
+      "effectiveHint": "留空则立即生效。变更时请给大家留出时间，例如 30 天。",
+      "changes": "变更内容",
+      "changesRequired": "必填：大家再次同意前会读到这段内容。",
+      "changesHint": "首个版本和隐私政策可不填。",
+      "publish": "发布：{{title}}",
+      "published": "已发布。"
+    },
+    "history": {
+      "title": "已发布的版本",
+      "version": "版本 {{version}}",
+      "effective": "自 {{date}} 起生效"
+    },
+    "reports": {
+      "title": "举报",
+      "description": "任何人都可以举报违法内容或违反条款的行为。由您逐一决定；受影响的人和举报者都会收到通知。",
+      "tabs": {
+        "open": "待处理",
+        "closed": "已决定"
+      },
+      "emptyOpen": "没有待处理的举报。",
+      "emptyClosed": "还没有已决定的举报。",
+      "detailTitle": "举报",
+      "category": "举报类别",
+      "explanation": "说明",
+      "where": "位置",
+      "reported": "被举报的{{type}}（当时的样子）",
+      "targets": {
+        "message": "消息",
+        "dm_message": "私信",
+        "user": "用户",
+        "space": "空间",
+        "link": "地址"
+      },
+      "unknownAuthor": "作者未知",
+      "attachments": "附件：{{names}}",
+      "reporter": "举报者",
+      "anonymous": "未提供",
+      "replyByEmail": "此服务器不会写信给举报人:请用你自己的地址确认并回复此举报。",
+      "decision": "决定",
+      "decisions": {
+        "no_action": "无需采取行动",
+        "content_removed": "移除内容",
+        "account_suspended": "停用账户",
+        "listing_withdrawn": "将空间从列表中移除",
+        "handled": "已在管理区域的其他地方处理"
+      },
+      "ground": "依据",
+      "groundChoose": "请选择",
+      "grounds": {
+        "illegal": "法律",
+        "terms": "使用条款"
+      },
+      "duration": "时长",
+      "note": "原因",
+      "noteHint": "受影响的人会读到这段内容。请说明所依据的规则或法律以及发生了什么。",
+      "noteHintNoAction": "仅供您自己记录。举报者只会得知结果。",
+      "decide": "决定",
+      "noteTooLong": "停用原因最多 {{max}} 个字符。"
+    }
+  }
+}

@@ -99,7 +99,7 @@
     "subtitle": "Wähle, was du teilst, stelle die Qualität ein und starte.",
     "stageIdle": "Noch nichts ausgewählt",
     "stageReady": "Bereit zum Start",
-    "permissionHintMac": "macOS blockiert die Bildschirmaufnahme, solange Backspace keine Berechtigung dafür hat. Erteile sie unter Systemeinstellungen → Datenschutz & Sicherheit → Bildschirmaufnahme und versuche es dann erneut.",
+    "permissionHintMac": "macOS blockiert die Bildschirmaufnahme, solange Tavvit keine Berechtigung dafür hat. Erteile sie unter Systemeinstellungen → Datenschutz & Sicherheit → Bildschirmaufnahme und versuche es dann erneut.",
     "retrySources": "Erneut suchen",
     "kind": {
       "monitor": "Bildschirm",
@@ -127,15 +127,15 @@
     "customBitrateDisabled": "Eigene Bitrate vom Administrator deaktiviert",
     "customBitrateDisabledByHost": "Eigene Bitrate von {{host}} deaktiviert",
     "systemAudio": "Systemaudio",
-    "chromeEchoNote": "Chrome kann Backspace-Audio ausschließen, wenn die Aufnahmeart dies unterstützt",
+    "chromeEchoNote": "Chrome kann Tavvit-Audio ausschließen, wenn die Aufnahmeart dies unterstützt",
     "electronWindowsAudioNote": "Windows-Loopback kann Anrufaudio erfassen, wenn restrictOwnAudio nicht unterstützt wird",
     "electronMacAudioNote": "macOS 13+ benötigt die Berechtigung für Bildschirm- und Systemaudioaufnahmen",
-    "electronLinuxAudioNote": "Linux benötigt PulseAudio-Kompatibilität; Backspace-Audio kann ebenfalls aufgenommen werden",
+    "electronLinuxAudioNote": "Linux benötigt PulseAudio-Kompatibilität; Tavvit-Audio kann ebenfalls aufgenommen werden",
     "systemAudioNote": {
-      "excluded": "Zuschauer hören den Ton deines Computers, aber nicht den Sprachchat und kein anderes Backspace-Audio.",
-      "excludedMac": "Zuschauer hören den Ton deines Macs, aber nicht den Sprachchat und kein anderes Backspace-Audio. macOS fragt nach der Berechtigung für Bildschirm- und Systemaudioaufnahmen.",
-      "includedWindows": "Diese Windows-Version teilt den gesamten Ton, auch den Sprachchat: Zuschauer hören ihre eigene Stimme. Unter Windows 11 wird das eigene Audio von Backspace ausgelassen.",
-      "includedMac": "Diese macOS-Version teilt den gesamten Ton, auch den Sprachchat: Zuschauer hören ihre eigene Stimme. Ab macOS 14.2 wird das eigene Audio von Backspace ausgelassen. macOS fragt nach der Berechtigung für Bildschirm- und Systemaudioaufnahmen.",
+      "excluded": "Zuschauer hören den Ton deines Computers, aber nicht den Sprachchat und kein anderes Tavvit-Audio.",
+      "excludedMac": "Zuschauer hören den Ton deines Macs, aber nicht den Sprachchat und kein anderes Tavvit-Audio. macOS fragt nach der Berechtigung für Bildschirm- und Systemaudioaufnahmen.",
+      "includedWindows": "Diese Windows-Version teilt den gesamten Ton, auch den Sprachchat: Zuschauer hören ihre eigene Stimme. Unter Windows 11 wird das eigene Audio von Tavvit ausgelassen.",
+      "includedMac": "Diese macOS-Version teilt den gesamten Ton, auch den Sprachchat: Zuschauer hören ihre eigene Stimme. Ab macOS 14.2 wird das eigene Audio von Tavvit ausgelassen. macOS fragt nach der Berechtigung für Bildschirm- und Systemaudioaufnahmen.",
       "includedLinux": "Linux teilt den gesamten Ton, auch den Sprachchat: Zuschauer hören ihre eigene Stimme. Benötigt PulseAudio oder PipeWire mit pipewire-pulse.",
       "unavailableMac": "Systemaudio benötigt macOS 13 oder neuer."
     },
@@ -270,5 +270,12 @@
     "stillDenied": "Der Mikrofonzugriff ist weiterhin verweigert. Erlaube ihn für diese Seite in den Browser- oder Geräteeinstellungen.",
     "notFound": "Kein Mikrofon gefunden.",
     "failed": "Auf das Mikrofon konnte nicht zugegriffen werden."
+  },
+  "soundboard": {
+    "title": "Soundboard",
+    "empty": "Dieser Space hat noch keine Clips.",
+    "noRight": "Du darfst hier keine Clips abspielen.",
+    "hear": "Clips hören",
+    "volume": "Lautstärke"
   }
 }

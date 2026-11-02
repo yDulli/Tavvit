@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { isNavigationAllowed } from './navigationPolicy';
 
-const PICKER_URL = 'file:///Applications/Backspace.app/Contents/Resources/resources/instance-picker.html';
+const APP_ORIGIN = 'https://tavvit.com';
 
 describe('isNavigationAllowed', () => {
   it('allows same-origin navigation (a normal in-app link/redirect)', () => {
@@ -9,29 +9,29 @@ describe('isNavigationAllowed', () => {
       isNavigationAllowed({
         targetUrl: 'https://chat.example.com/channels/123',
         currentUrl: 'https://chat.example.com/app',
-        pickerFileUrl: PICKER_URL,
+        appOrigin: APP_ORIGIN,
         knownInstanceOrigins: new Set(),
       })
     ).toBe(true);
   });
 
-  it('allows navigation to the bundled file:// instance picker', () => {
+  it('allows navigation back to the app server from anywhere, the recovery page included', () => {
     expect(
       isNavigationAllowed({
-        targetUrl: PICKER_URL,
-        currentUrl: null,
-        pickerFileUrl: PICKER_URL,
+        targetUrl: 'https://tavvit.com/channels/@me',
+        currentUrl: 'file:///opt/Tavvit/resources/app.asar/resources/recovery.html',
+        appOrigin: APP_ORIGIN,
         knownInstanceOrigins: new Set(),
       })
     ).toBe(true);
   });
 
-  it('denies navigation to a file:// URL that is not the picker', () => {
+  it('denies navigation to any file:// URL', () => {
     expect(
       isNavigationAllowed({
         targetUrl: 'file:///etc/passwd',
         currentUrl: null,
-        pickerFileUrl: PICKER_URL,
+        appOrigin: APP_ORIGIN,
         knownInstanceOrigins: new Set(),
       })
     ).toBe(false);
@@ -42,7 +42,7 @@ describe('isNavigationAllowed', () => {
       isNavigationAllowed({
         targetUrl: 'https://peer.example.org/join/abc123',
         currentUrl: 'https://chat.example.com/app',
-        pickerFileUrl: PICKER_URL,
+        appOrigin: APP_ORIGIN,
         knownInstanceOrigins: new Set(['https://peer.example.org']),
       })
     ).toBe(true);
@@ -53,7 +53,7 @@ describe('isNavigationAllowed', () => {
       isNavigationAllowed({
         targetUrl: 'https://evil.example.net/phish',
         currentUrl: 'https://chat.example.com/app',
-        pickerFileUrl: PICKER_URL,
+        appOrigin: APP_ORIGIN,
         knownInstanceOrigins: new Set(['https://peer.example.org']),
       })
     ).toBe(false);
@@ -64,7 +64,7 @@ describe('isNavigationAllowed', () => {
       isNavigationAllowed({
         targetUrl: 'not a url',
         currentUrl: 'https://chat.example.com/app',
-        pickerFileUrl: PICKER_URL,
+        appOrigin: APP_ORIGIN,
         knownInstanceOrigins: new Set(),
       })
     ).toBe(false);
@@ -75,7 +75,7 @@ describe('isNavigationAllowed', () => {
       isNavigationAllowed({
         targetUrl: 'javascript:alert(1)',
         currentUrl: 'https://chat.example.com/app',
-        pickerFileUrl: PICKER_URL,
+        appOrigin: APP_ORIGIN,
         knownInstanceOrigins: new Set(),
       })
     ).toBe(false);
@@ -86,7 +86,7 @@ describe('isNavigationAllowed', () => {
       isNavigationAllowed({
         targetUrl: 'https://evil.example.net/phish',
         currentUrl: null,
-        pickerFileUrl: PICKER_URL,
+        appOrigin: APP_ORIGIN,
         knownInstanceOrigins: new Set(),
       })
     ).toBe(false);
@@ -97,7 +97,7 @@ describe('isNavigationAllowed', () => {
       isNavigationAllowed({
         targetUrl: 'https://chat.example.com/app',
         currentUrl: 'not a url',
-        pickerFileUrl: PICKER_URL,
+        appOrigin: APP_ORIGIN,
         knownInstanceOrigins: new Set(),
       })
     ).toBe(false);

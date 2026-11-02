@@ -92,7 +92,14 @@
     "daysShort_one": "{{count}} d",
     "daysShort_many": "{{count}} d",
     "daysShort_other": "{{count}} d",
-    "close": "Fechar conversa"
+    "close": "Fechar conversa",
+    "filterLabel": "Mostrar conversas",
+    "filterAll": "Todas",
+    "filterUnread": "Não lidas",
+    "emptyUnread": "Nenhuma conversa não lida.",
+    "emptyBody": "Comece uma com um amigo ou com um grupo de amigos.",
+    "peerRejected": "Não é possível encaminhar mensagens: o servidor dessa pessoa recusou o peering. Fale com o administrador de lá.",
+    "peerAwaiting": "As mensagens serão entregues assim que o administrador de lá aprovar a solicitação de peering."
   },
   "newDm": {
     "title": "Nova mensagem direta",

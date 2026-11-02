@@ -67,7 +67,7 @@ export interface PeeredHarness {
   home: SpawnedInstance;
   /** The peers `home` is peered with, in the order they were requested. */
   remotes: SpawnedInstance[];
-  /** Admin JWT for `home` (first registered user auto-becomes admin). */
+  /** Admin JWT for `home`. */
   homeAdminToken: string;
   /** Admin JWTs for each remote, index-aligned with `remotes`. */
   remoteAdminTokens: string[];

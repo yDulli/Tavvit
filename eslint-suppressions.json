@@ -20,18 +20,8 @@
       "count": 3
     }
   },
-  "packages/desktop/src/recovery.ts": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "packages/server/src/db/pendingMigrations.test.ts": {
     "@typescript-eslint/no-require-imports": {
-      "count": 1
-    }
-  },
-  "packages/server/src/index.ts": {
-    "@typescript-eslint/no-unused-vars": {
       "count": 1
     }
   },
@@ -145,7 +135,7 @@
   },
   "packages/server/src/routes/spaces.ts": {
     "@typescript-eslint/no-unused-vars": {
-      "count": 2
+      "count": 1
     }
   },
   "packages/server/src/routes/users.ts": {
@@ -213,11 +203,6 @@
       "count": 3
     }
   },
-  "packages/web/src/components/JoinPage.tsx": {
-    "react-hooks/exhaustive-deps": {
-      "count": 1
-    }
-  },
   "packages/web/src/components/auth/RegisterPage.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
@@ -234,19 +219,6 @@
   "packages/web/src/components/chat/ExplorePage.search.test.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 2
-    }
-  },
-  "packages/web/src/components/chat/FriendsPage.test.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 6
-    },
-    "@typescript-eslint/no-unused-vars": {
-      "count": 2
-    }
-  },
-  "packages/web/src/components/chat/FriendsPage.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
     }
   },
   "packages/web/src/components/chat/InstanceDiscoveryHint.test.tsx": {
@@ -286,11 +258,6 @@
   },
   "packages/web/src/components/layout/ChannelSidebar.tsx": {
     "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
-  "packages/web/src/components/layout/DmListItem.tsx": {
-    "@typescript-eslint/no-explicit-any": {
       "count": 1
     }
   },
@@ -323,11 +290,6 @@
   "packages/web/src/components/layout/MobileVoiceFullScreen.test.tsx": {
     "@typescript-eslint/no-explicit-any": {
       "count": 6
-    }
-  },
-  "packages/web/src/components/layout/SpaceSidebar.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
     }
   },
   "packages/web/src/components/modals/AddDmMemberModal.tsx": {
@@ -365,16 +327,6 @@
       "count": 1
     }
   },
-  "packages/web/src/components/modals/NewDmModal.tsx": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    }
-  },
-  "packages/web/src/components/modals/UserProfileModal.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "packages/web/src/components/modals/instanceSettingsPanels/FederationPanel.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 3
@@ -406,11 +358,6 @@
     }
   },
   "packages/web/src/components/ui/ContextMenuRenderer.tsx": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
-  "packages/web/src/components/ui/UserProfilePopout.tsx": {
     "@typescript-eslint/no-unused-vars": {
       "count": 1
     }
@@ -461,11 +408,6 @@
     },
     "@typescript-eslint/no-unused-vars": {
       "count": 4
-    }
-  },
-  "packages/web/src/hooks/useMascotAnimation.ts": {
-    "react-hooks/exhaustive-deps": {
-      "count": 1
     }
   },
   "packages/web/src/hooks/useTrackStats.ts": {

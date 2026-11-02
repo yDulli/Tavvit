@@ -1,5 +1,5 @@
 # ============================================================
-# Backspace — Reverse-proxy / Tunnel override
+# Tavvit — Reverse-proxy / Tunnel override
 # ============================================================
 # Overlay for Mode 2 (behind your own reverse proxy) and Mode 3 (tunnel, e.g.
 # Cloudflare Tunnel / Tailscale). Layer it on top of the base compose file:

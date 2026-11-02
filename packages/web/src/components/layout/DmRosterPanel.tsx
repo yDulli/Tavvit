@@ -1,15 +1,18 @@
+import { describeCodedError } from '../../i18n/errors';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { User } from '@backspace/shared';
 import { useChatStore } from '../../stores/chatStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
+import { selectPeoplePanelOpen } from '../../stores/peoplePanel';
 import { useSocialStore } from '../../stores/socialStore';
 import { isMine, parseFederatedUsername, userKey } from '../../utils/identity';
 import { useDmViewer } from '../../hooks/useDmViewer';
 import { kickFromGroupDm, transferGroupDmOwnership } from '../../utils/groupDmOwnerActions';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DmMemberRow, type DmMemberRowAction } from './DmMemberRow';
+import { SidePanel } from './SidePanel';
 import { visualPixels } from '../../platform/interfaceScale';
 import { pointAnchor } from '../../hooks/useFloatingPosition';
 
@@ -24,7 +27,7 @@ import { pointAnchor } from '../../hooks/useFloatingPosition';
  */
 export function DmRosterPanel() {
   const { t } = useTranslation(['dm', 'common']);
-  const memberListOpen = useUIStore((s) => s.memberListOpen);
+  const memberListOpen = useUIStore(selectPeoplePanelOpen);
   const openUserProfile = useUIStore((s) => s.openUserProfile);
   const addToast = useUIStore((s) => s.addToast);
 
@@ -112,7 +115,7 @@ export function DmRosterPanel() {
         await removeFriendStore(member, viewer.origin);
       } catch (err) {
         addToast(
-          err instanceof Error ? err.message : t('dm:removeFriend.failed'),
+          describeCodedError(err, t('dm:removeFriend.failed')),
           'warning',
           3000,
         );
@@ -135,7 +138,7 @@ export function DmRosterPanel() {
       setPendingKick(null);
     } catch (err) {
       addToast(
-        err instanceof Error ? err.message : t('dm:kick.failed'),
+        describeCodedError(err, t('dm:kick.failed')),
         'warning',
         3000,
       );
@@ -157,7 +160,7 @@ export function DmRosterPanel() {
       setPendingTransfer(null);
     } catch (err) {
       addToast(
-        err instanceof Error ? err.message : t('dm:transfer.failed'),
+        describeCodedError(err, t('dm:transfer.failed')),
         'warning',
         3000,
       );
@@ -172,21 +175,18 @@ export function DmRosterPanel() {
   // Width / surface mirror `MemberSidebar` so toggling visually swaps a
   // like-shaped column.
   return (
-    <div
-      data-dm-roster-panel
-      className="w-60 bg-surface-members flex-shrink-0 overflow-y-auto select-none no-scrollbar hidden desktop:block border-l border-border-hard"
-    >
+    <SidePanel data-dm-roster-panel>
       <div className="p-3">
         <h3
           data-dm-roster-header
-          className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-2"
+          className="label-mono px-2 mb-3"
         >
           {t('dm:roster.sectionCount', { label: t('common:labels.members'), total: totalCount })}
         </h3>
 
         {ownerMember && (
           <div data-dm-roster-section="owner" className="mb-4">
-            <h4 className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-1">
+            <h4 className="label-mono px-2 mb-1">
               {t('dm:roster.owner')}
             </h4>
             <DmMemberRow
@@ -204,7 +204,7 @@ export function DmRosterPanel() {
 
         {onlineMembers.length > 0 && (
           <div data-dm-roster-section="online" className="mb-4">
-            <h4 className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-1">
+            <h4 className="label-mono px-2 mb-1">
               {t('dm:roster.sectionCount', { label: t('common:states.online'), total: onlineMembers.length })}
             </h4>
             {onlineMembers.map((m) => (
@@ -224,23 +224,26 @@ export function DmRosterPanel() {
         )}
 
         {offlineMembers.length > 0 && (
-          <div data-dm-roster-section="offline" className="opacity-60">
-            <h4 className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-1">
+          <div data-dm-roster-section="offline">
+            <h4 className="label-mono px-2 mb-1">
               {t('dm:roster.sectionCount', { label: t('common:states.offline'), total: offlineMembers.length })}
             </h4>
-            {offlineMembers.map((m) => (
-              <DmMemberRow
-                key={m.id}
-                member={m}
-                isOwner={false}
-                isSelf={isMine(m, viewer.origin, viewer.self)}
-                origin={viewer.origin}
-                callerIsOwner={callerIsOwner}
-                isFriend={isFriendOfCaller(m)}
-                showKebab
-                onMenuAction={handleMenuAction}
-              />
-            ))}
+            {/* The people are dimmed, as in a space's member list; the heading is not. */}
+            <div className="opacity-60">
+              {offlineMembers.map((m) => (
+                <DmMemberRow
+                  key={m.id}
+                  member={m}
+                  isOwner={false}
+                  isSelf={isMine(m, viewer.origin, viewer.self)}
+                  origin={viewer.origin}
+                  callerIsOwner={callerIsOwner}
+                  isFriend={isFriendOfCaller(m)}
+                  showKebab
+                  onMenuAction={handleMenuAction}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -274,6 +277,6 @@ export function DmRosterPanel() {
         variant="warning"
         loading={submitting}
       />
-    </div>
+    </SidePanel>
   );
 }

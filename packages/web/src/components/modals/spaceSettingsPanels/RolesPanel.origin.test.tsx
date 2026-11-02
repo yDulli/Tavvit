@@ -23,11 +23,11 @@ import { ALL_PERMISSIONS, PermissionBits, permissionsToString } from '../../../u
 // never to the viewer's home instance.
 
 const SPACE_ID = 'space-1';
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 
 const SPACE: TaggedSpace = {
   id: SPACE_ID, name: 'Space', icon: null, banner: null, avatarColor: null, ownerId: 'owner',
-  inviteCode: null, visibility: 'public', directoryListed: false, description: null, createdAt: 1, _instanceOrigin: ORBIT,
+  inviteCode: null, visibility: 'public', directoryListed: false, description: null, createdAt: 1, _instanceOrigin: TAVVIT,
 };
 
 function role(id: string, name: string, position: number, permissions: bigint): Role {
@@ -74,7 +74,7 @@ beforeEach(() => {
     spacePermissions: new Map([[SPACE_ID, permissionsToString(ALL_PERMISSIONS)]]),
     loadSpaceDetail: vi.fn(async () => undefined),
   });
-  useAuthStore.getState().recordMyRow(ORBIT, 'lead-local');
+  useAuthStore.getState().recordMyRow(TAVVIT, 'lead-local');
 });
 
 afterEach(() => {
@@ -90,7 +90,7 @@ describe('RolesPanel on a space of another instance', () => {
   beforeEach(() => {
     const remote = remoteClient();
     roles = remote.roles;
-    setApiForOriginResolver((origin) => (origin === ORBIT ? remote.client : api));
+    setApiForOriginResolver((origin) => (origin === TAVVIT ? remote.client : api));
     homeSpies = [
       vi.spyOn(api.roles, 'create'),
       vi.spyOn(api.roles, 'update'),

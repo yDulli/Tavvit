@@ -3,7 +3,8 @@ import { config } from '../../config.js';
 import { getDb, schema } from '../../db/index.js';
 import { getOurOrigin, normalizeOriginForCompare } from '../../utils/federationAuth.js';
 import { generateSnowflake } from '../../utils/snowflake.js';
-import { and, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, eq, isNull, not, or, sql } from 'drizzle-orm';
+import { suspendedNow } from '../../utils/suspension.js';
 import { firstFreeUsername, handleFromHint, renamePlaceholderNamedStub } from './stubName.js';
 import { scheduleHomeRecordPull } from '../../utils/federationStubBackfill.js';
 import { projectReplicaStatus } from '../../ws/replicaPresence.js';
@@ -62,8 +63,9 @@ export interface RelayActor {
  *                  relay the user causes can arrive first). The two cannot be
  *                  told apart from here, so the claim is refused without being
  *                  called a forgery.
- *   - `no_such_user` — there is no live native user with that id. Nothing that
- *                  arrives later can make the claim true.
+ *   - `no_such_user` — there is no live native user with that id: none, a
+ *                  deleted one, or one suspended now (docs/systems/admin.md,
+ *                  "Suspensions"), whose sessions on a peer act for nobody here.
  *
  * Presence is the ONLY thing that makes a homeward relay legitimate: such an
  * event can only genuinely exist if the user holds an account on that peer and
@@ -96,6 +98,7 @@ export function localUserStandingOnPeer(
       eq(schema.users.id, homeUserId),
       isNull(schema.users.homeInstance),
       eq(schema.users.isDeleted, 0),
+      not(suspendedNow(Date.now())),
     ))
     .get();
   if (!nativeUser) return 'no_such_user';

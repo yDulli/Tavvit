@@ -1,13 +1,29 @@
 #!/usr/bin/env bash
-# Restore the Backspace SQLite DB from a snapshot in data/backups/.
-# Usage:
-#   ./restore.sh                 List available snapshots.
-#   ./restore.sh <snapshot.db>   Restore the named snapshot (path or basename).
+# Restore the Tavvit database from a snapshot in data/backups/.
+#
+#   bash restore.sh                 List the available snapshots, newest first.
+#   bash restore.sh <snapshot.db>   Restore the named snapshot (path or file name).
+#
+# The current database is copied to data/backups/ first (as "...-pre-restore.db"),
+# so a restore can itself be undone. Only the database is restored: uploaded files
+# in data/uploads are untouched. See docs/tavvit/BACKUP-AND-RESTORE.md.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 BACKUP_DIR="data/backups"
 DB="data/backspace.db"
+
+DOCKER="docker"
+COMPOSE="docker compose"
+if ! docker info >/dev/null 2>&1; then
+  if sudo docker info >/dev/null 2>&1; then
+    DOCKER="sudo docker"
+    COMPOSE="sudo docker compose"
+  else
+    echo "Error: cannot reach the Docker daemon. Is it running, and are you in the docker group?" >&2
+    exit 1
+  fi
+fi
 
 if [[ ! -d "$BACKUP_DIR" ]]; then
   echo "No backups directory at $BACKUP_DIR." >&2
@@ -28,7 +44,7 @@ if [[ $# -eq 0 ]]; then
     printf "  %s  (%s)\n" "$(basename "$f")" "$(du -h "$f" | cut -f1)"
   done
   echo ""
-  echo "Restore with: ./restore.sh <snapshot-filename>"
+  echo "Restore with: bash restore.sh <snapshot-filename>"
   exit 0
 fi
 
@@ -44,16 +60,15 @@ echo "This will REPLACE $DB. The current DB is saved first as a pre-restore snap
 read -rp "Continue? [y/N] " yn
 [[ "${yn,,}" == "y" ]] || { echo "Aborted."; exit 0; }
 
-echo "[1/3] Stopping backspace container..."
-docker compose stop backspace
+echo "[1/3] Stopping the Tavvit container..."
+$COMPOSE stop backspace
 
-# data/backspace.db and data/backups/ are container-owned (uid 1000, the non-root runtime
-# user). The host user cannot cp/rm them directly, so do the swap inside a throwaway root
-# container that mounts data/ (root can rewrite the uid-1000-owned files).
-# (youruser is in the docker group on both boxes — no sudo prompt.)
+# data/backspace.db and data/backups/ belong to the container's unprivileged user
+# (uid 1000), so the host user may not be able to copy or remove them. The swap
+# therefore runs inside a throwaway root container that mounts data/.
 TS="$(date -u +%Y%m%dT%H%M%S)"
-echo "[2/3] Swapping DB inside a root container (pre-restore copy + WAL clear + install)..."
-docker run --rm -v "$(pwd)/data:/data" alpine sh -c '
+echo "[2/3] Swapping the database inside a root container (pre-restore copy, WAL clear, install)..."
+$DOCKER run --rm -v "$(pwd)/data:/data" alpine sh -c '
   set -e
   if [ -f /data/backspace.db ]; then
     cp /data/backspace.db "/data/backups/backspace-$1-pre-restore.db"
@@ -62,6 +77,6 @@ docker run --rm -v "$(pwd)/data:/data" alpine sh -c '
   cp "/data/backups/$2" /data/backspace.db
 ' sh "$TS" "$SNAP_NAME"
 
-echo "[3/3] Starting backspace container..."
-docker compose start backspace
-echo "Done. Watch health: docker compose logs -f backspace"
+echo "[3/3] Starting the Tavvit container..."
+$COMPOSE start backspace
+echo "Done. Watch it come up:  docker compose logs -f backspace"

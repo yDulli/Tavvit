@@ -11,6 +11,12 @@ export const PermissionBits = {
   CREATE_INVITE:        1n << 5n,
   KICK_MEMBERS:         1n << 6n,
   BAN_MEMBERS:          1n << 7n,
+  // Time a member out: for a while they cannot post, react or join voice
+  // (docs/systems/spaces.md, "Moderation"). Subject to the role hierarchy,
+  // like kick and ban.
+  MODERATE_MEMBERS:     1n << 8n,
+  // Read the space's audit log (Server settings → Audit log).
+  VIEW_AUDIT_LOG:       1n << 9n,
   SEND_MESSAGES:        1n << 10n,
   MANAGE_MESSAGES:      1n << 11n,
   ATTACH_FILES:         1n << 12n,
@@ -20,6 +26,15 @@ export const PermissionBits = {
   // rejects such a message (see shared/src/mentions.ts). Deliberately not in
   // DEFAULT_EVERYONE_PERMISSIONS: mass pings are granted per role.
   MENTION_EVERYONE:     1n << 15n,
+  // Pin and unpin a channel's messages. MANAGE_MESSAGES includes it, in the
+  // routes (routes/pins.ts) and in the client's menu; a role can hold it alone.
+  PIN_MESSAGES:         1n << 16n,
+  // Start a thread from a message. Writing in one takes SEND_MESSAGES in its channel.
+  CREATE_THREADS:       1n << 17n,
+  // Announce, change and call off events in the space.
+  MANAGE_EVENTS:        1n << 18n,
+  // Make, rename and delete a channel's webhooks.
+  MANAGE_WEBHOOKS:      1n << 19n,
   CONNECT:              1n << 20n,
   SPEAK:                1n << 21n,
   MUTE_MEMBERS:         1n << 22n,
@@ -27,6 +42,10 @@ export const PermissionBits = {
   MOVE_MEMBERS:         1n << 24n,
   STREAM:               1n << 25n,
   DISCONNECT_MEMBERS:   1n << 26n,
+  // Play a clip of the space's soundboard in a call you are in.
+  USE_SOUNDBOARD:       1n << 27n,
+  // Add, rename and remove the space's clips.
+  MANAGE_SOUNDS:        1n << 28n,
 } as const;
 
 export type PermissionBit = (typeof PermissionBits)[keyof typeof PermissionBits];
@@ -35,6 +54,7 @@ export const ALL_PERMISSIONS = Object.values(PermissionBits).reduce((a, b) => a 
 
 export const DEFAULT_EVERYONE_PERMISSIONS =
   PermissionBits.VIEW_CHANNEL |
+  PermissionBits.USE_SOUNDBOARD |
   PermissionBits.SEND_MESSAGES |
   PermissionBits.CREATE_INVITE |
   PermissionBits.CONNECT |
@@ -42,6 +62,7 @@ export const DEFAULT_EVERYONE_PERMISSIONS =
   PermissionBits.ATTACH_FILES |
   PermissionBits.READ_MESSAGE_HISTORY |
   PermissionBits.ADD_REACTIONS |
+  PermissionBits.CREATE_THREADS |
   PermissionBits.STREAM;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

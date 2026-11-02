@@ -1,8 +1,9 @@
 import type { ServerEvent } from '@backspace/shared';
-import { and, eq, isNull, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { computePermissions, PermissionBits } from '../utils/permissions.js';
 import { userWrittenMessages } from '../db/userWrittenMessages.js';
+import { batchInArray } from '../utils/sqlBatch.js';
 
 /**
  * Exact unread message counts for the sidebar badges (websocket.md,
@@ -114,6 +115,107 @@ function dmCount(userId: string, dmChannelId: string): number | null {
     .get();
   if (!membership) return null;
   return countDmUnread(userId, dmChannelId, readCursor(userId, dmChannelId));
+}
+
+/**
+ * As many of a channel's newest messages as answer nearly everyone's count at once: it takes more
+ * than the cap only for someone who wrote many of them themselves, and that one is asked for alone.
+ */
+const NEWEST_READ_AT_ONCE = UNREAD_COUNT_CAP * 2;
+
+const asNumber = (id: string): bigint => (/^\d+$/.test(id) ? BigInt(id) : 0n);
+
+/**
+ * `countChannelUnread` for everyone in `userIds`, from one read of the channel's newest messages.
+ * The same answers (`channelUnreadCounts.test.ts` compares them), without a query for each person
+ * who is online whenever someone writes.
+ */
+export function channelUnreadCountsFor(channelId: string, userIds: readonly string[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  if (userIds.length === 0) return counts;
+  const db = getDb();
+
+  // Newest first, as the index holds them.
+  const newest = db.select({ id: schema.messages.id, userId: schema.messages.userId }).from(schema.messages)
+    .where(and(eq(schema.messages.channelId, channelId), userWrittenMessages()))
+    .orderBy(desc(sql`CAST(${schema.messages.id} AS INTEGER)`))
+    .limit(NEWEST_READ_AT_ONCE)
+    .all();
+  const ids = newest.map((row) => asNumber(row.id));
+  const placesOf = new Map<string, number[]>();
+  newest.forEach((row, place) => {
+    const places = placesOf.get(row.userId);
+    if (places) places.push(place);
+    else placesOf.set(row.userId, [place]);
+  });
+
+  const cursors = new Map(batchInArray([...userIds], (chunk) => db.select({ userId: schema.readStates.userId, id: schema.readStates.lastReadMessageId })
+    .from(schema.readStates)
+    .where(and(eq(schema.readStates.channelId, channelId), inArray(schema.readStates.userId, chunk))).all())
+    .map((row) => [row.userId, row.id]));
+
+  /** How many of the list come before the first entry `isPast` says yes to. */
+  const placeOf = (length: number, isPast: (place: number) => boolean): number => {
+    let low = 0;
+    let high = length;
+    while (low < high) {
+      const middle = (low + high) >> 1;
+      if (isPast(middle)) high = middle;
+      else low = middle + 1;
+    }
+    return low;
+  };
+
+  for (const userId of userIds) {
+    const cursorText = cursors.get(userId) ?? '0';
+    const cursor = asNumber(cursorText);
+    const newer = placeOf(ids.length, (place) => (ids[place] as bigint) <= cursor);
+    const own = placesOf.get(userId);
+    const ownNewer = own ? placeOf(own.length, (place) => (own[place] as number) >= newer) : 0;
+    const counted = newer - ownNewer;
+    // All that was read is newer than their cursor, and they wrote so much of it that it may go on.
+    if (newer === NEWEST_READ_AT_ONCE && counted < UNREAD_COUNT_CAP) counts.set(userId, countChannelUnread(userId, channelId, cursorText));
+    else counts.set(userId, Math.min(counted, UNREAD_COUNT_CAP));
+  }
+  return counts;
+}
+
+/** The space channel an event in it moves the count of, or null when it moves none. */
+function countedChannelOf(event: ServerEvent): string | null {
+  switch (event.type) {
+    case 'message_created':
+      return event.message.channelId;
+    case 'message_deleted':
+      return event.channelId;
+    case 'channel_updated':
+      return event.channel.id;
+    default:
+      return null;
+  }
+}
+
+/**
+ * `unreadCountFollowUp` for everyone a channel's event goes to, as text ready to send: who is in
+ * `permsOf`, with their rights in that channel. People with the same count share one string.
+ */
+export function unreadFollowUpsFor(event: ServerEvent, permsOf: ReadonlyMap<string, bigint>): Map<string, string> {
+  const followUps = new Map<string, string>();
+  const channelId = countedChannelOf(event);
+  if (!channelId) return followUps;
+  const readers = [...permsOf].filter(([, perms]) => canCountUnread(perms)).map(([userId]) => userId);
+  const counts = channelUnreadCountsFor(channelId, readers);
+  const textFor = new Map<number, string>();
+  for (const userId of permsOf.keys()) {
+    // A channel someone may not read counts zero, so a badge clears when access is lost.
+    const count = counts.get(userId) ?? 0;
+    let text = textFor.get(count);
+    if (text === undefined) {
+      text = JSON.stringify(countEvent(channelId, count));
+      textFor.set(count, text);
+    }
+    followUps.set(userId, text);
+  }
+  return followUps;
 }
 
 function isSpaceChannel(channelId: string): boolean {

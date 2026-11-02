@@ -129,7 +129,7 @@ function SidebarIconSample({ space }: { space: TaggedSpace }) {
   return (
     <div className="fixed left-4 top-4 z-[10000] flex items-center gap-3 rounded-lg bg-surface-channel px-3 py-2 text-xs text-txt-tertiary">
       <div
-        className="flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-bold text-white"
+        className="flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-semibold text-white"
         style={{ background: grad.gradient }}
       >
         {space.name.charAt(0)}
@@ -191,7 +191,7 @@ function Workbench({ scene }: { scene: Scene }) {
     case 'keybinds':
     case 'keybinds-portal':
       return (
-        <div className="glass-modal m-6 w-[640px] rounded-xl p-6">
+        <div className="glass-modal m-6 w-[640px] p-6">
           <KeybindsPanel />
         </div>
       );
@@ -229,7 +229,7 @@ function Workbench({ scene }: { scene: Scene }) {
     case 'mention':
       return (
         <Frame>
-          <div className="bg-surface-chat p-4 text-[15px] leading-[1.375rem] text-txt-message">
+          <div className="bg-surface-chat p-4 text-lead leading-[1.375rem] text-txt-message">
             <p>
               Thanks <MentionBadge userId={KAI.id} channelId="chan-1" /> for the recordings, and
               {' '}<MentionBadge userId="u-gone" channelId="chan-1" /> for the old ones.
@@ -290,6 +290,7 @@ async function main(): Promise<void> {
       name: 'Workbench',
       version: '1.7.0',
       registrationOpen: false,
+      emojiPolicy: 'everyone',
       federatedRegistrationOpen: true,
       instanceId: 'instance-1',
       sourceCodeUrl: 'https://github.com/TheZwiss/backspace',
@@ -297,7 +298,6 @@ async function main(): Promise<void> {
       directoryConfigured: false,
       directoryAvailable: false,
       directoryEnabled: false,
-      supportCardEnabled: false,
     };
     answer('/instance/info', info);
   }

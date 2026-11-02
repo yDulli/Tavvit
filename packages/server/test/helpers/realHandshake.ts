@@ -4,7 +4,7 @@ import {
   type SpawnedInstance,
   type TwoInstanceHarness,
 } from './twoInstanceHarness.js';
-import { registerLocal } from './testUsers.js';
+import { makeAdmin, registerLocal } from './testUsers.js';
 import { openInspector } from './dbInspect.js';
 import { buildHeadersForOrigin } from './hmacSign.js';
 
@@ -79,12 +79,11 @@ export async function bootTwoInstancesForHandshake(): Promise<TwoInstanceHarness
 }
 
 /**
- * Register the FIRST user on a fresh instance, which auto-becomes admin
- * (verified auth.ts:203-223: `isFirstUser = userCount === 0 && !homeInstance`).
- * Returns just the admin JWT.
+ * Register someone and make them an administrator (`makeAdmin`). Returns just the admin JWT.
  */
 export async function registerAdmin(inst: SpawnedInstance): Promise<{ token: string }> {
   const u = await registerLocal(inst, 'admin');
+  makeAdmin(inst, u.id);
   return { token: u.token };
 }
 

@@ -1,5 +1,3 @@
-import { splitMentions } from '@backspace/shared/src/mentions';
-
 /**
  * The client's readers of mention tokens in message content.
  *
@@ -17,7 +15,4 @@ import { splitMentions } from '@backspace/shared/src/mentions';
  */
 export { splitMentions, type MentionPart } from '@backspace/shared/src/mentions';
 
-/** Whether `content` mentions any of `userIds` with a `<@id>` token outside code. */
-export function contentMentionsAny(content: string, userIds: ReadonlySet<string>): boolean {
-  return splitMentions(content).some((part) => part.kind === 'user' && userIds.has(part.userId));
-}
+export { contentMentionsAny } from '@backspace/shared/src/notificationRules';

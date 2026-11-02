@@ -1,32 +1,47 @@
 # ============================================================
-# Backspace — All-in-one production deployment
+# Tavvit — All-in-one production deployment
 # ============================================================
 # Run ./install.sh for first-time setup, or configure manually:
 #   1. Copy .env.example to .env and fill in values
 #   2. Generate livekit.yaml (if enabling voice)
 #   3. docker compose up -d --build
+#   4. ./tavvit-admin.sh create <username> --admin     (registration is closed)
+#
+# The compose service and container are still called `backspace`. That is an
+# internal name, kept so the upstream scripts (update.sh, backup.sh, restore.sh)
+# and future upstream merges keep working; nothing a user sees uses it.
 # ============================================================
 
 services:
-  # ── Backspace application server ──────────────────────────
+  # ── Tavvit application server ──────────────────────────────
   backspace:
-    # Prebuilt multi-arch image on GHCR (published by .github/workflows/
-    # docker-publish.yml). `docker compose pull` / install.sh's default path
-    # fetches this so weak/ARM hosts skip the heavy local build. Both `image:`
-    # and `build:` are declared: if the image isn't present locally and can't be
-    # pulled, `docker compose up --build` (install.sh's fallback, and deploy.sh)
-    # builds from source instead and tags the result under this same ref.
-    # Override the tag with BACKSPACE_IMAGE_TAG in .env (defaults to `latest`).
-    image: ${BACKSPACE_IMAGE:-ghcr.io/thezwiss/backspace}:${BACKSPACE_IMAGE_TAG:-latest}
+    # Tavvit is built from this checkout and tagged `tavvit:local`. There is no
+    # public Tavvit image: the one upstream publishes on GHCR is Backspace, a
+    # different program, so it is never pulled. `pull_policy: never` stops Compose
+    # from asking any registry for the name `tavvit`, which nobody here controls.
+    #
+    # To run an image you publish yourself, set in .env:
+    #   BACKSPACE_IMAGE=ghcr.io/<you>/tavvit  BACKSPACE_IMAGE_TAG=<tag>
+    #   BACKSPACE_PULL_POLICY=missing
+    # and install with BACKSPACE_BUILD=false (see install.sh).
+    image: ${BACKSPACE_IMAGE:-tavvit}:${BACKSPACE_IMAGE_TAG:-local}
+    pull_policy: ${BACKSPACE_PULL_POLICY:-never}
     build:
       context: .
       args:
-        # AGPL-3.0 § 13: bake the running build's git commit into the image so
-        # /api/instance/info advertises the exact version. deploy.sh exports
-        # BACKSPACE_COMMIT before `docker compose build`; empty when unset.
+        # AGPL-3.0 § 13: bake the running build's id (git commit, or the id of an
+        # uploaded release) into the image so /api/instance/info advertises the
+        # exact version. install.sh and update.sh pass it as a build argument;
+        # empty when unset.
         BACKSPACE_COMMIT: ${BACKSPACE_COMMIT:-}
     container_name: backspace
     restart: unless-stopped
+    # Bounded, because the privacy policy says so (docs/systems/legal.md).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - ./data:/app/data
     env_file:
@@ -41,6 +56,11 @@ services:
       # install.sh generates this before bringing the stack up; this guard only
       # bites the manual `cp .env.example .env && docker compose up` path.
       - "JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env - generate one with: openssl rand -hex 32}"
+      # Where the server itself reaches LiveKit, to put someone out of a call. Caddy reaches it the
+      # same way; the public LIVEKIT_URL has a path LiveKit's client would drop.
+      - LIVEKIT_API_URL=${LIVEKIT_API_URL:-http://host.docker.internal:7880}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - internal
     healthcheck:
@@ -64,6 +84,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy-sites:/etc/caddy/sites:ro
       - caddy-data:/data
       - caddy-config:/config
     networks:
@@ -85,6 +106,35 @@ services:
     profiles:
       - voice
 
+  # ── LibreTranslate: translates messages on this server ───
+  # Activated by COMPOSE_PROFILES=translate in .env, with TRANSLATION_PROVIDER=libretranslate
+  # (docs/systems/translation.md). It has no port outside: only the app reaches it. The first
+  # start downloads the languages, which takes a while and several gigabytes.
+  libretranslate:
+    image: libretranslate/libretranslate:v1.9.6
+    container_name: libretranslate
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      # The languages messages can be translated into. Set LT_LOAD_ONLY= (empty) in .env for all it has.
+      - LT_LOAD_ONLY=${LT_LOAD_ONLY-ar,bg,cs,da,de,el,en,es,fi,fr,hu,id,it,ja,ko,nl,pl,pt,ro,ru,sv,tr,uk,zh}
+    volumes:
+      - libretranslate-models:/home/libretranslate/.local
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "./venv/bin/python scripts/healthcheck.py"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30m
+    profiles:
+      - translate
+
 networks:
   internal:
     driver: bridge
@@ -92,3 +142,4 @@ networks:
 volumes:
   caddy-data:
   caddy-config:
+  libretranslate-models:

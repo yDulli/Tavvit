@@ -271,10 +271,17 @@ const NO_USER: User = {
 export function useChannelUser(channelId: string | null, userId: string | null): ChannelUser | null {
   const sources = useSources();
   const facts = useFacts(channelId);
-  const found = useMemo(
-    () => (channelId && userId ? findChannelUser(sources, facts, channelId, userId) : null),
-    [sources, facts, channelId, userId],
-  );
+  const sessionUser = useAuthStore((s) => s.user);
+  const found = useMemo(() => {
+    if (!channelId || !userId) return null;
+    const hit = findChannelUser(sources, facts, channelId, userId);
+    if (hit) return hit;
+    // The signed-in user is known without a roster: a mention of them in a
+    // home channel whose members are not loaded (the inbox, Home) still
+    // names them.
+    if (facts.origin === '' && sessionUser?.id === userId) return fromDmUser(sessionUser, '');
+    return null;
+  }, [sources, facts, channelId, userId, sessionUser]);
   const canonical = useCanonicalUserView(found?.user ?? NO_USER, found?.origin ?? '');
   return useMemo(() => (found ? { ...found, user: canonical } : null), [found, canonical]);
 }

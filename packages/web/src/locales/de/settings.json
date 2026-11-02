@@ -86,7 +86,6 @@
     },
     "title": "Sprache & Video",
     "volume": {
-      "sectionTitle": "Lautstärke",
       "soundEffects": {
         "label": "Lautstärke der Soundeffekte"
       },
@@ -129,14 +128,176 @@
       "privacy": "Privatsphäre",
       "connections": "Verbindungen",
       "keybinds": "Tastenkürzel",
+      "developers": "Entwickler",
       "desktop": "Desktop",
-      "instance": "Instanz"
+      "instance": "Admin-Konsole",
+      "emoji": "Emojis",
+      "games": "Spiele",
+      "notifications": "Benachrichtigungen",
+      "accessibility": "Barrierefreiheit",
+      "language": "Sprache",
+      "security": "Sicherheit"
     },
     "logOut": "Abmelden",
     "backToMenu": "Zurück zum Einstellungsmenü"
   },
   "appearance": {
-    "title": "Darstellung"
+    "title": "Darstellung",
+    "theme": {
+      "title": "Theme",
+      "description": "Die Farben der Flächen in der App. Wird auf diesem Gerät gespeichert.",
+      "name": {
+        "carbon": "Karbon",
+        "slate": "Schiefer",
+        "ink": "Tinte",
+        "moss": "Flechte",
+        "clay": "Ton",
+        "harbor": "Hafen",
+        "plum": "Pflaume",
+        "custom": "Eigenes"
+      },
+      "custom": {
+        "hue": "Farbton",
+        "strength": "Farbstärke",
+        "depth": "Tiefe",
+        "reset": "Zurück zu Karbon"
+      }
+    },
+    "accent": {
+      "title": "Akzentfarbe",
+      "description": "Die Farbe von Buttons und Hervorhebungen. Ohne eigene Farbe gilt die Farbe, die dieser Server gewählt hat.",
+      "useInstance": "Farbe des Servers verwenden",
+      "hex": "Eigene Farbe (Hex)",
+      "problem": {
+        "too_light": "Zu hell: weißer Text auf Buttons wäre schwer lesbar.",
+        "too_dark": "Zu dunkel: sie ginge auf den dunklen Flächen unter."
+      },
+      "name": {
+        "vermilion": "Zinnober",
+        "violet": "Tavvit-Violett",
+        "blue": "Blau",
+        "sky": "Himmel",
+        "teal": "Petrol",
+        "lime": "Moos",
+        "amber": "Bernstein",
+        "orange": "Orange",
+        "crimson": "Karmesin",
+        "rose": "Rosé",
+        "orchid": "Orchidee"
+      }
+    },
+    "reading": {
+      "title": "Lesbarkeit",
+      "textSize": {
+        "label": "Schriftgröße im Chat",
+        "description": "Wie groß Nachrichtentext in Chats dargestellt wird."
+      },
+      "reduceMotion": {
+        "label": "Bewegung reduzieren",
+        "description": "Schaltet Animationen wie gleitende Panels ab. Animierte Bilder bewegen sich weiter."
+      },
+      "light": {
+        "label": "Umgebungslicht",
+        "description": "Ein weiches Licht in der Farbe des Ortes, an dem du gerade bist."
+      }
+    },
+    "shape": {
+      "title": "Form",
+      "corners": {
+        "label": "Ecken",
+        "description": "Wie eckig oder rund Buttons, Karten und Felder sind.",
+        "options": {
+          "sharp": "Eckig",
+          "standard": "Standard",
+          "round": "Rund"
+        }
+      },
+      "avatars": {
+        "label": "Profilbilder",
+        "description": "Die Form, in die jedes Profilbild geschnitten wird.",
+        "options": {
+          "rounded": "Abgerundet",
+          "circle": "Kreis",
+          "square": "Quadrat"
+        }
+      },
+      "sidebar": {
+        "label": "Breite der Seitenleiste",
+        "description": "Wie breit die Liste der Kanäle und Unterhaltungen ist.",
+        "options": {
+          "narrow": "Schmal",
+          "standard": "Standard",
+          "wide": "Breit"
+        }
+      }
+    },
+    "messages": {
+      "title": "Nachrichten",
+      "style": {
+        "label": "Stil",
+        "description": "Wie Nachrichten in allen Chats angeordnet sind.",
+        "options": {
+          "bubbles": {
+            "label": "Blasen",
+            "description": "Jede Nachricht auf einer Karte, deine rechts."
+          },
+          "rows": {
+            "label": "Zeilen",
+            "description": "Bild, Name und Text in offenen Zeilen."
+          },
+          "lines": {
+            "label": "Protokoll",
+            "description": "Zeit, Name und Text in einer Zeile."
+          }
+        }
+      },
+      "density": {
+        "label": "Abstand",
+        "description": "Wie viel Platz zwischen Nachrichten ist.",
+        "options": {
+          "compact": "Kompakt",
+          "cozy": "Gemütlich",
+          "spacious": "Großzügig"
+        }
+      },
+      "clock": {
+        "label": "Uhrzeit",
+        "description": "Wie Uhrzeiten geschrieben werden.",
+        "options": {
+          "auto": "Wie die Sprache",
+          "12h": "12 Stunden",
+          "24h": "24 Stunden"
+        }
+      },
+      "underlineLinks": {
+        "label": "Links unterstreichen",
+        "description": "Links sind unterstrichen, nicht nur farbig."
+      }
+    },
+    "typeface": {
+      "title": "Typografie",
+      "label": "Schrift",
+      "description": "Die Schrift der ganzen App. Chinesischer Text nutzt immer die des Systems.",
+      "options": {
+        "geist": "Geist",
+        "plexSans": "Plex",
+        "inter": "Inter",
+        "grotesk": "Grotesk",
+        "mono": "Mono",
+        "system": "System"
+      }
+    },
+    "access": {
+      "title": "Barrierefreiheit",
+      "contrast": {
+        "label": "Höherer Kontrast",
+        "description": "Hellerer Nebentext und deutlichere Kanten."
+      },
+      "status": {
+        "label": "Farbenblind-freundlicher Status",
+        "description": "Online, abwesend und beschäftigt in gut unterscheidbaren Farben."
+      }
+    }
   },
   "account": {
     "title": "Mein Konto",
@@ -176,6 +337,51 @@
         "label": "Über mich",
         "placeholder": "Erzähl der Welt etwas über dich…",
         "counter": "{{used}}/{{max}}"
+      },
+      "image": {
+        "animationTooLarge": "Animierte Bilder dürfen höchstens {{max}} MB groß sein. Wähle ein kleineres."
+      },
+      "theme": {
+        "label": "Profil-Theme",
+        "hint": "Zwei Farben, die dein Banner färben und deine Profilkarte tönen.",
+        "presets": "Fertige Themes",
+        "preset": {
+          "nebula": "Nebel",
+          "ember": "Glut",
+          "tide": "Gezeiten",
+          "moss": "Moos",
+          "dusk": "Dämmerung",
+          "sol": "Sonne",
+          "slate": "Schiefer"
+        },
+        "first": "Erste Farbe",
+        "second": "Zweite Farbe",
+        "picker": "{{name}}: Farbwähler",
+        "hex": "{{name}}: Hex-Code",
+        "preview": "So sieht deine Profilkarte aus"
+      },
+      "pronouns": {
+        "label": "Pronomen",
+        "placeholder": "z. B. sie/ihr, er/ihm",
+        "counter": "{{used}}/{{max}}"
+      },
+      "links": {
+        "label": "Links",
+        "hint": "Bis zu {{max}} Webadressen auf deiner Profilkarte, jeweils mit optionaler Beschriftung.",
+        "url": "Linkadresse",
+        "urlPlaceholder": "https://…",
+        "labelField": "Linkbeschriftung",
+        "labelPlaceholder": "Beschriftung (optional)",
+        "add": "Link hinzufügen",
+        "remove": "Link entfernen",
+        "invalid": "Gib eine Webadresse ein, die mit https:// oder http:// beginnt und höchstens {{max}} Zeichen lang ist."
+      },
+      "layout": {
+        "label": "Kartenlayout",
+        "hint": "Wie der obere Teil deiner Profilkarte angeordnet ist.",
+        "standard": "Standard",
+        "centered": "Zentriert",
+        "compact": "Kompakt"
       }
     },
     "details": {
@@ -186,7 +392,19 @@
       },
       "customStatus": {
         "label": "Eigener Status",
-        "placeholder": "Was machst du gerade?"
+        "placeholder": "Was machst du gerade?",
+        "expiry": {
+          "label": "Löschen nach",
+          "keep": "Aktuelles Ende behalten ({{time}})",
+          "choice": {
+            "30": "30 Minuten",
+            "60": "1 Stunde",
+            "240": "4 Stunden",
+            "10080": "7 Tage",
+            "never": "Nicht löschen",
+            "today": "Heute"
+          }
+        }
       }
     },
     "password": {
@@ -256,42 +474,84 @@
         "spacesFailed": "Spaces konnten nicht verarbeitet werden",
         "deleteFailed": "Konto konnte nicht gelöscht werden"
       }
+    },
+    "dataExport": {
+      "title": "Eine Kopie deiner Daten",
+      "description": "Alles, was dieser Server über dein Konto hat: dein Profil, was du geschrieben hast, deine Dateien. Das dauert einen Moment und bleibt eine Woche bereit.",
+      "pending": "Deine Kopie wird vorbereitet. Du kannst das hier schließen; sie ist da, wenn du wiederkommst.",
+      "ready": "Deine Kopie liegt bis {{date}} bereit.",
+      "download": "Herunterladen",
+      "failed": "Die Kopie konnte nicht erstellt werden. Bitte versuche es noch einmal.",
+      "password": "Dein Passwort",
+      "request": "Kopie anfordern"
+    },
+    "storage": {
+      "title": "Deine Dateien",
+      "description": "Was du geschickt hast, zählt hier, jede Datei einmal, auch wenn du sie weitergeleitet hast. Löschst du die Nachrichten, in denen sie steckt, wird wieder Platz frei.",
+      "used": "{{used}} von {{limit}} belegt",
+      "usedNoLimit": "{{used}} belegt"
+    },
+    "username": {
+      "change": "Ändern",
+      "newLabel": "Neuer Benutzername",
+      "hint": "{{min}} bis {{max}} Kleinbuchstaben, Ziffern oder Unterstriche.",
+      "warning": "Danach meldest du dich mit dem neuen Namen an. Ändern kannst du ihn erst nach {{days}} Tagen wieder, und so lange bleibt dein alter Name reserviert, damit sich niemand für dich ausgeben kann.",
+      "submit": "Benutzernamen ändern",
+      "changed": "Du heißt jetzt @{{username}}",
+      "nextChange": "Du kannst ihn am {{date}} wieder ändern.",
+      "homeOnly": "Dieser Name wird auf dem Server festgelegt, von dem dein Konto stammt.",
+      "connected": "Dieses Konto ist mit anderen Servern verbunden, die es unter diesem Namen kennen. Deshalb lässt er sich vorerst nicht ändern."
     }
   },
   "privacy": {
     "title": "Privatsphäre",
-    "discovery": {
-      "sectionTitle": "Entdecken",
-      "label": "Andere dürfen mein Profil finden",
-      "description": "Wenn aktiviert, erscheint dein Profil unter „Leute entdecken“. Über den genauen Benutzernamen kann dich jeder hinzufügen."
-    },
     "activity": {
       "sectionTitle": "Aktivitätsstatus",
       "label": "Aktivitätsstatus teilen",
       "description": "Andere dürfen sehen, was du gerade machst, etwa welche Spiele du spielst oder welche Musik du hörst."
+    },
+    "blocked": {
+      "sectionTitle": "Blockierte Personen",
+      "description": "Blockierte Personen können dir keine Nachrichten und keine Freundschaftsanfragen schicken, und ihre Nachrichten in gemeinsamen Spaces und Gruppen werden ausgeblendet. Sie erfahren es nicht.",
+      "empty": "Du hast niemanden blockiert.",
+      "loading": "Wird geladen …",
+      "loadFailed": "Deine blockierten Personen konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "unblock": "Blockierung aufheben",
+      "since": "Blockiert am {{date}}"
+    },
+    "contact": {
+      "title": "Wer dich erreichen kann",
+      "dm": {
+        "label": "Wer ein Gespräch mit dir beginnen darf",
+        "description": "Gespräche, die du schon hast, bleiben offen. Um eines zu beenden, blockiere die Person.",
+        "options": {
+          "anyone": "Alle",
+          "friendsAndSpaces": "Freunde und Leute aus gemeinsamen Spaces",
+          "friends": "Nur Freunde",
+          "nobody": "Niemand"
+        }
+      },
+      "requests": {
+        "label": "Wer dir Freundschaftsanfragen schicken darf",
+        "description": "Alle anderen finden dich bei der Suche nach Namen nicht.",
+        "options": {
+          "anyone": "Alle",
+          "sharedSpaces": "Leute aus gemeinsamen Spaces",
+          "nobody": "Niemand"
+        }
+      }
     }
   },
   "connections": {
     "title": "Verbindungen"
   },
-  "instance": {
-    "tabs": {
-      "general": "Allgemein",
-      "registration": "Registrierung",
-      "federation": "Föderation",
-      "streaming": "Streaming",
-      "storage": "Speicher",
-      "users": "Nutzer",
-      "updates": "Updates",
-      "telemetry": "Hallo sagen"
-    }
-  },
   "keybinds": {
     "portal": {
-      "description": "Unter Wayland verwaltet das System alle Backspace-Tastenkürzel. Weise Tasten in den Systemeinstellungen für Tastenkürzel unter Backspace zu, ändere oder entferne sie dort. Lokale Browser-/X11-Belegungen werden hier nicht verwendet.",
+      "description": "Unter Wayland verwaltet das System alle Tavvit-Tastenkürzel. Weise Tasten in den Systemeinstellungen für Tastenkürzel unter Tavvit zu, ändere oder entferne sie dort. Lokale Browser-/X11-Belegungen werden hier nicht verwendet.",
       "idle": "Die erstmalige Registrierung aller verfügbaren Aktionen wird vorbereitet.",
       "pending": "Verbindung zum Desktop-Portal wird hergestellt. Wenn ein Systemdialog erscheint, weise den gewünschten Aktionen Tastenkürzel zu.",
-      "ready": "Backspace ist registriert. Öffne die Systemeinstellungen für Tastenkürzel, um Belegungen zu ändern oder zu entfernen. Die Liste unten ist schreibgeschützt und wird bei der Rückkehr zu Backspace aktualisiert.",
+      "ready": "Tavvit ist registriert. Öffne die Systemeinstellungen für Tastenkürzel, um Belegungen zu ändern oder zu entfernen. Die Liste unten ist schreibgeschützt und wird bei der Rückkehr zu Tavvit aktualisiert.",
       "unavailable": "Das Portal ist nicht verfügbar, die Berechtigung wurde verweigert oder die Sitzung wurde beendet. Ein Global-Shortcuts-Portal-Backend ist erforderlich. Lokale Belegungen sind unter Wayland deaktiviert.",
       "retry": "Tastenkürzel registrieren oder neu verbinden",
       "assigned": "System-Tastenkürzel: {{shortcut}}",
@@ -333,7 +593,7 @@
     },
     "accessibility": {
       "title": "Bedienungshilfen-Berechtigung erforderlich",
-      "description": "Damit globale Tastenkürzel außerhalb der App funktionieren, braucht Backspace die Berechtigung für Bedienungshilfen.",
+      "description": "Damit globale Tastenkürzel außerhalb der App funktionieren, braucht Tavvit die Berechtigung für Bedienungshilfen.",
       "grant": "Berechtigung erteilen"
     },
     "hookError": {
@@ -343,6 +603,10 @@
     "conflict": {
       "message": "<strong>{{combo}}</strong> ist bereits mit <strong>{{action}}</strong> belegt. Überschreiben?",
       "overwrite": "Überschreiben"
+    },
+    "typingKey": {
+      "title": "Dieses Kürzel braucht Strg, Alt oder die Systemtaste",
+      "description": "Buchstaben, Ziffern, Leertaste, Enter, Tab und Rücktaste gehen nur zusammen mit Strg, Alt oder der Systemtaste. Allein würde die App alles mithören, was du in anderen Programmen tippst, deshalb hört sie nicht darauf. Funktionstasten, Maustasten und Tasten wie die Feststelltaste gehen auch allein."
     }
   },
   "desktop": {
@@ -350,7 +614,7 @@
     "autoLaunch": {
       "openAtLogin": {
         "label": "Beim Anmelden starten",
-        "description": "Backspace automatisch starten, wenn du dich anmeldest"
+        "description": "Tavvit automatisch starten, wenn du dich anmeldest"
       },
       "startMinimized": {
         "label": "Minimiert starten",
@@ -358,7 +622,7 @@
       }
     },
     "updates": {
-      "appName": "Backspace Desktop",
+      "appName": "Tavvit Desktop",
       "versionLabel": "Version {{version}}",
       "checking": "Suche nach Updates…",
       "checkingShort": "Suche…",
@@ -376,58 +640,292 @@
       "external": "Updates werden über deine Flatpak-Softwareverwaltung installiert",
       "download": "Herunterladen",
       "restart": "Neu starten",
-      "manualNote": "Diese Version kann Updates nicht selbst installieren. Neue Versionen lädst du von GitHub herunter und ersetzt die App damit von Hand. Die Schritte für deine Plattform stehen in den Versionshinweisen.",
-      "externalNote": "Flatpak wendet Updates atomar außerhalb der App an. Nutze deine Softwareverwaltung oder den Befehl <code>flatpak update</code>, um Backspace zu aktualisieren."
-    },
-    "instance": {
-      "current": "Aktuell verbundene Instanz",
-      "change": "Instanz wechseln"
+      "manualNote": "Diese Version kann sich nicht selbst aktualisieren. Lade neue Versionen von der Download-Seite dieses Servers herunter und installiere sie von Hand.",
+      "externalNote": "Flatpak wendet Updates atomar außerhalb der App an. Nutze deine Softwareverwaltung oder den Befehl <code>flatpak update</code>, um Tavvit zu aktualisieren.",
+      "autoNote": "Updates laden und installieren sich selbst: Tavvit startet neu, wenn es im Infobereich liegt oder der Computer ein paar Minuten nicht benutzt wurde, nie während eines Anrufs."
     }
   },
-  "desktopDownload": {
-    "title": "Desktop",
-    "intro": "Globale Tastenkürzel, Start beim Anmelden und ein Symbol im Infobereich.",
-    "unsupported": "Die Desktop-App läuft unter Windows, Linux und macOS.",
-    "name": {
-      "windows": "Windows",
-      "mac": "macOS",
-      "linux": "Linux"
+  "emoji": {
+    "title": "Emojis",
+    "intro": "Eine gemeinsame Bibliothek von Bildern für alle auf diesem Server. Nutze sie in jedem Chat: tippe :name: oder wähle eines im Emoji-Menü.",
+    "add": {
+      "title": "Emoji hinzufügen",
+      "choose": "Bild auswählen",
+      "change": "Anderes Bild auswählen",
+      "hint": "PNG, JPEG, WebP oder GIF, bis {{max}} MB. Es wird auf 128 Pixel verkleinert, und ein animiertes GIF bewegt sich weiter.",
+      "name": "Name",
+      "namePlaceholder": "party_papagei",
+      "submit": "Emoji hinzufügen",
+      "submitting": "Wird hinzugefügt …",
+      "tooLarge": "Diese Datei ist größer als {{max}} MB.",
+      "unreadable": "Diese Datei konnte nicht gelesen werden.",
+      "counter": "Du hast {{used}} von {{max}} hinzugefügt.",
+      "added": ":{{name}}: hinzugefügt"
     },
-    "tag": {
-      "windows": "Dieser PC",
-      "mac": "Dieser Mac",
-      "linux": "Dieser Rechner"
+    "library": {
+      "title": "Bibliothek",
+      "count_one": "{{count}} Emoji",
+      "count_other": "{{count}} Emojis",
+      "search": "Emojis suchen",
+      "empty": "Noch keine Emojis. Füge das erste hinzu.",
+      "noMatches": "Kein Emoji passt zur Suche.",
+      "loadFailed": "Die Emojis konnten nicht geladen werden.",
+      "retry": "Erneut versuchen"
     },
-    "covers": {
-      "windows": "x64 oder arm64",
-      "mac": "Läuft auf Macs mit Apple Silicon und Intel",
-      "linux": "AppImage oder deb-Paket, x64 oder arm64"
+    "row": {
+      "rename": "Umbenennen",
+      "save": "Speichern",
+      "delete": "Löschen",
+      "yours": "Von dir",
+      "renamed": "Umbenannt in :{{name}}:",
+      "removed": ":{{name}}: entfernt",
+      "nameLabel": "Name von :{{name}}:",
+      "deleteConfirm": {
+        "title": ":{{name}}: löschen?",
+        "body": "Es verschwindet aus den Reaktionen, und alte Nachrichten, die es verwenden, zeigen stattdessen :{{name}}:.",
+        "action": "Löschen"
+      }
     },
-    "download": {
-      "windows": "Für Windows herunterladen",
-      "mac": "Für macOS herunterladen",
-      "linux": "Für Linux herunterladen"
+    "adminsOnly": "Auf diesem Server fügen Administratoren Emoji hinzu. Alles in der Bibliothek dürfen alle benutzen."
+  },
+  "games": {
+    "title": "Spielaktivität",
+    "intro": "Zeig deinen Freunden, was du spielst, so wie die Desktop-App es auf diesem Computer sieht.",
+    "browserOnly": "Ein Browser kann nicht sehen, welche Programme laufen. Die Spielerkennung funktioniert deshalb in der Tavvit-Desktop-App. Alles andere funktioniert hier wie gewohnt.",
+    "getDesktop": "Desktop-App holen",
+    "detect": {
+      "label": "Erkennen, was ich spiele",
+      "description": "An, bis du es ausschaltest. Alle 15 Sekunden schaut Tavvit, was auf diesem Computer läuft: Spiele aus Steam, Epic Games oder GOG und eine Liste bekannter Spiele. Geteilt wird nur der Name des Spiels, und nur solange das Teilen unter „Privatsphäre“ an ist."
     },
-    "picker": {
-      "architecture": "Architektur",
-      "format": "Paketformat"
+    "now": {
+      "title": "Gerade erkannt",
+      "playing": "Spielt {{name}}",
+      "none": "Kein Spiel läuft, das Tavvit kennt."
     },
-    "arch": {
-      "appleSilicon": "Apple Silicon",
-      "intel": "Intel",
-      "x64": "x64",
-      "arm64": "arm64"
+    "sharingOff": "Das Teilen deiner Aktivität ist unter Privatsphäre aus, deine Freunde sehen das also nicht.",
+    "mine": {
+      "title": "Meine Spiele",
+      "description": "Diese hast du früher selbst hinzugefügt. Sie werden weiter erkannt, bis du sie entfernst.",
+      "remove": "{{name}} entfernen"
     },
-    "kind": {
-      "appimage": "AppImage",
-      "deb": "deb"
+    "updateApp": "Diese Version der Tavvit-Desktop-App kann noch keine Spiele erkennen. Lade die neueste Version einmal herunter und installiere sie; danach hält sie sich selbst aktuell."
+  },
+  "notifications": {
+    "device": {
+      "title": "Auf diesem Gerät",
+      "app": "Die Desktop-App zeigt Benachrichtigungen, solange ihr Fenster im Hintergrund ist.",
+      "granted": "Benachrichtigungen sind an. Du bekommst eine, wenn etwas für dich da ist und dieser Tab im Hintergrund liegt.",
+      "default": "Benachrichtigungen sind aus. Dein Browser fragt dich einmal danach.",
+      "denied": "Dein Browser blockiert Benachrichtigungen für diese Seite. Erlaube sie in den Website-Einstellungen und lade die Seite dann neu.",
+      "unsupported": "Dieser Browser bietet keine Benachrichtigungen an.",
+      "turnOn": "Benachrichtigungen einschalten",
+      "test": "Test-Benachrichtigung senden",
+      "testBody": "So sieht eine Benachrichtigung aus."
     },
-    "archGuessed": {
-      "windows": "Dein Browser sagt nicht, welchen Prozessor dieser PC hat, deshalb ist x64 vorausgewählt.",
-      "mac": "Dein Browser sagt nicht, welchen Chip dieser Mac hat, deshalb ist Apple Silicon vorausgewählt.",
-      "linux": "Dein Browser sagt nicht, welchen Prozessor dieser Rechner hat, deshalb ist x64 vorausgewählt."
+    "content": {
+      "title": "Was sie zeigen",
+      "showText": {
+        "label": "Nachrichtentext anzeigen",
+        "description": "Aus: Eine Benachrichtigung sagt nur, wer geschrieben hat, damit niemand auf deinem Bildschirm mitliest."
+      },
+      "directMessages": {
+        "label": "Direktnachrichten",
+        "description": "Aus: kein Ton und keine Benachrichtigung für Direktnachrichten und Gruppenchats. Als ungelesen erscheinen sie trotzdem."
+      },
+      "appBadge": {
+        "label": "Zahl der Ungelesenen am App-Symbol"
+      }
     },
-    "version": "Version {{version}}",
-    "allReleases": "Alle Versionen auf GitHub"
+    "sounds": {
+      "title": "Töne",
+      "messageSound": {
+        "label": "Ton für neue Nachrichten",
+        "description": "Für eine Nachricht, die dich benachrichtigen würde."
+      },
+      "callSound": {
+        "label": "Klingelton für Anrufe",
+        "description": "Aus: Ein eingehender Anruf erscheint nur auf dem Bildschirm."
+      }
+    },
+    "spaces": {
+      "title": "Spaces",
+      "description": "Wie viel dir jeder Space sagen darf. Das gilt für dein Konto, also auch auf deinen anderen Geräten.",
+      "muted": "Stumm",
+      "empty": "Du bist noch in keinem Space."
+    },
+    "push": {
+      "title": "Push auf diesem Gerät",
+      "toggle": "Auch bei geschlossener App benachrichtigen",
+      "toggleHint": "Läuft über den Push-Dienst deines Browsers. Der sieht nur, wann etwas ankommt, nicht was darin steht.",
+      "installFirst": "Auf dem iPhone oder iPad geht das, sobald Tavvit auf deinem Home-Bildschirm liegt: Tippe auf Teilen, dann auf „Zum Home-Bildschirm“, und öffne es von dort.",
+      "denied": "Dein Browser wurde angewiesen, keine Benachrichtigungen von Tavvit zu zeigen. Das lässt sich in seinen Einstellungen für diese Seite ändern."
+    },
+    "keywords": {
+      "title": "Stichwörter",
+      "description": "Eine Nachricht mit einem dieser Wörter benachrichtigt dich wie eine Erwähnung, in Kanälen, die auf Erwähnungen stehen. Nur du siehst sie.",
+      "placeholder": "Wort hinzufügen",
+      "add": "Hinzufügen",
+      "remove": "{{word}} entfernen",
+      "limit": "{{used}} von {{max}}"
+    }
+  },
+  "security": {
+    "sessions": {
+      "title": "Wo du angemeldet bist",
+      "description": "Jedes Gerät, das auf diesem Server angemeldet ist. Erkennst du eines nicht, melde es ab und ändere dein Passwort.",
+      "loading": "Wird geladen…",
+      "unknownDevice": "Unbekanntes Gerät",
+      "thisDevice": "Dieses Gerät",
+      "lastActive": "Aktiv {{date}}",
+      "signOut": "Abmelden",
+      "signOutOthers": "Überall sonst abmelden",
+      "signOutOthersConfirm": {
+        "title": "Überall sonst abmelden?",
+        "description": "Alle anderen Geräte werden sofort abgemeldet und brauchen dein Passwort, um zurückzukommen."
+      },
+      "signedIn": "Angemeldet {{date}}",
+      "signOutAll": "Überall abmelden",
+      "signOutAllConfirm": {
+        "title": "Überall abmelden?",
+        "description": "Alle Geräte werden abgemeldet, auch dieses. Du meldest dich danach mit deinem Passwort neu an."
+      }
+    },
+    "email": {
+      "title": "E-Mail-Adresse",
+      "description": "Damit wir erkennen, dass du es bist, und für den Fall, dass du dein Passwort vergisst. Andere sehen sie nie.",
+      "none": "Noch keine Adresse. Ohne bestätigte Adresse kann nur ein Administrator ein vergessenes Passwort zurücksetzen.",
+      "confirmed": "Bestätigt",
+      "unconfirmed": "Nicht bestätigt",
+      "pending": "Wartet auf Bestätigung: {{address}}. Deine aktuelle Adresse gilt bis dahin weiter.",
+      "waiting": "Wir haben einen Link an {{address}} geschickt. Er gilt 24 Stunden. Schau auch im Spam-Ordner nach.",
+      "undeliverable": "Mails an diese Adresse konnten nicht zugestellt werden, deshalb geht nichts mehr dorthin. Nimm eine andere Adresse.",
+      "sendFailed": "Die letzte Bestätigungsmail konnte nicht gesendet werden. Versuche es später noch einmal.",
+      "sent": "Link gesendet",
+      "resend": "Link erneut senden",
+      "cancel": "Änderung abbrechen",
+      "change": "Ändern",
+      "remove": "Entfernen",
+      "newAddress": "Neue E-Mail-Adresse",
+      "submit": "Bestätigungslink senden",
+      "removeConfirm": {
+        "title": "E-Mail-Adresse entfernen?",
+        "description": "Ohne bestätigte Adresse kann nur ein Administrator ein vergessenes Passwort zurücksetzen."
+      }
+    },
+    "passwordRecovery": {
+      "confirmed": "Wenn du dein Passwort vergisst, schicken wir einen Link an {{address}}.",
+      "none": "Wenn du dein Passwort vergisst, kann es nur ein Administrator zurücksetzen, bis du eine bestätigte Adresse hast.",
+      "noMail": "Dieser Server versendet keine E-Mails. Wenn du dein Passwort vergisst, kann es nur ein Administrator zurücksetzen."
+    },
+    "overview": {
+      "title": "Übersicht",
+      "none": "Noch keine",
+      "on": "An",
+      "off": "Aus",
+      "changed": "Geändert {{date}}",
+      "neverChanged": "Seit der Anmeldung nicht geändert",
+      "devices_one": "{{count}} Gerät",
+      "devices_other": "{{count}} Geräte"
+    },
+    "twoFactor": {
+      "title": "Zwei-Faktor-Anmeldung",
+      "description": "Zum Anmelden braucht es zusätzlich einen Code aus einer Authenticator-App wie Aegis, Google Authenticator, Microsoft Authenticator oder 1Password. Wer dein Passwort bekommt, kommt so trotzdem nicht hinein.",
+      "off": "Aus. Zum Anmelden reicht dein Passwort.",
+      "unavailable": "Auf diesem Server nicht verfügbar: Der Betreiber hat sie nicht eingerichtet.",
+      "enable": "Einschalten",
+      "disable": "Ausschalten",
+      "regenerate": "Neue Wiederherstellungscodes erstellen",
+      "activate": "Einschalten",
+      "confirmPassword": "Gib zum Beginnen dein Passwort ein.",
+      "scan": "Scanne das mit deiner Authenticator-App und gib dann den angezeigten Code ein.",
+      "qrLabel": "QR-Code für deine Authenticator-App",
+      "manual": "Scannen geht nicht? Gib diesen Schlüssel in der App ein:",
+      "firstCode": "Code aus der App",
+      "codeLabel": "Code aus deiner App oder Wiederherstellungscode",
+      "codeHint": "Für dieses Konto ist die Zwei-Faktor-Anmeldung an.",
+      "enabledSince": "An seit {{date}}.",
+      "codesLeft_one": "Noch {{count}} Wiederherstellungscode.",
+      "codesLeft_other": "Noch {{count}} Wiederherstellungscodes.",
+      "codesLow": "Dir gehen die Wiederherstellungscodes aus. Erstelle neue, solange du dich noch anmelden kannst.",
+      "disableIntro": "Zum Anmelden reicht dann wieder dein Passwort. Gib zur Bestätigung dein Passwort und einen Code ein.",
+      "regenerateIntro": "Deine alten Wiederherstellungscodes funktionieren dann nicht mehr. Gib zur Bestätigung dein Passwort und einen Code ein.",
+      "recovery": {
+        "intro": "Bewahre sie sicher auf, nicht beim Handy. Jeder bringt dich einmal hinein, falls du es verlierst. Sie werden nur jetzt angezeigt.",
+        "copy": "Kopieren",
+        "copied": "Kopiert",
+        "copyFailed": "Kopieren fehlgeschlagen",
+        "download": "Herunterladen",
+        "saved": "Ich habe sie sicher aufbewahrt",
+        "done": "Fertig"
+      }
+    },
+    "activity": {
+      "title": "Sicherheitsaktivität",
+      "description": "Was in den letzten 90 Tagen mit diesem Konto passiert ist.",
+      "empty": "Noch nichts.",
+      "kinds": {
+        "login": "Angemeldet",
+        "login_new_device": "Von einem neuen Gerät angemeldet",
+        "login_failed": "Anmeldung fehlgeschlagen",
+        "mfa_failed": "Falscher Code nach richtigem Passwort",
+        "password_changed": "Passwort geändert",
+        "username_changed": "Benutzername geändert",
+        "password_reset": "Passwort zurückgesetzt",
+        "email_added": "E-Mail-Adresse bestätigt",
+        "email_changed": "E-Mail-Adresse geändert",
+        "email_removed": "E-Mail-Adresse entfernt",
+        "two_factor_on": "Zwei-Faktor-Anmeldung eingeschaltet",
+        "two_factor_off": "Zwei-Faktor-Anmeldung ausgeschaltet",
+        "two_factor_reset": "Zwei-Faktor-Anmeldung vom Betreiber zurückgesetzt",
+        "recovery_regenerated": "Neue Wiederherstellungscodes erstellt",
+        "recovery_used": "Wiederherstellungscode benutzt",
+        "session_revoked": "Ein Gerät wurde abgemeldet",
+        "sessions_ended": "Geräte wurden abgemeldet",
+        "sessions_ended_by_admin": "Ein Administrator hat dich abgemeldet"
+      }
+    }
+  },
+  "developers": {
+    "title": "Bots",
+    "description": "Ein Bot ist ein Programm, das du selbst betreibst, mit einem eigenen Konto. Du stehst für das ein, was er tut. Bis zu {{max}}.",
+    "open": "Entwickler-Portal öffnen",
+    "docs": "Zur Dokumentation",
+    "disabled": "Der Betreiber dieser Instanz hat Bots nicht eingeschaltet.",
+    "nameLabel": "Name des Bots",
+    "create": "Anlegen",
+    "tokenTitle": "Das Token von {{name}}",
+    "tokenDescription": "Kopiere es jetzt: Es wird nicht noch einmal angezeigt. Wer es hat, handelt als dieser Bot. Behandle es also wie ein Passwort.",
+    "tokenLabel": "Bot-Token",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "listTitle": "Deine Bots",
+    "neverUsed": "Noch nie benutzt",
+    "lastUsed": "Zuletzt benutzt: {{time}}",
+    "inviteLabel": "Adresse, um ihn in einen Space zu holen",
+    "rotate": "Neues Token",
+    "rotateTitle": "Neues Token vergeben?",
+    "rotateBody": "Das alte Token von {{name}} funktioniert sofort nicht mehr, und ein laufender Bot wird getrennt.",
+    "remove": "Bot löschen",
+    "removeTitle": "Diesen Bot löschen?",
+    "removeBody": "{{name}} verlässt jeden Space, und sein Token funktioniert nicht mehr. Was er geschrieben hat, bleibt.",
+    "portal": {
+      "title": "Entwickler-Portal",
+      "backToApp": "Zurück zu Tavvit",
+      "allBots": "Alle Bots",
+      "profile": "Profil",
+      "descriptionLabel": "Was er tut",
+      "pictureChange": "Bild ändern",
+      "pictureRemove": "Bild entfernen",
+      "cropTitle": "Bild zuschneiden",
+      "saved": "Gespeichert",
+      "tokenHint": "Das Token wird einmal angezeigt, wenn es erstellt wird. Ein neues stoppt das alte sofort.",
+      "inviteDescription": "Wer diese Adresse öffnet und einen Space verwalten darf, wählt den Space und sieht, was der Bot anfragt. Er bekommt nur Rechte, die diese Person selbst hat, und nie Administrator.",
+      "inviteRights": "Was er anfragt",
+      "commands": "Befehle",
+      "commandsHint": "Was dein Programm zuletzt bei der Instanz angemeldet hat.",
+      "noCommands": "Noch keine.",
+      "spaces": "Spaces",
+      "noSpaces": "Er ist noch in keinem Space."
+    }
   }
 }

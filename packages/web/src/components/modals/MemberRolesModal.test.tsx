@@ -24,7 +24,7 @@ import { ALL_PERMISSIONS, PermissionBits, permissionsToString, stringToPermissio
 // whose permissions changed, and keeps up with the member as the store moves.
 
 const SPACE_ID = 'space-1';
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 
 const SPACE: TaggedSpace = {
   id: SPACE_ID, name: 'Space', icon: null, banner: null, avatarColor: null, ownerId: 'owner',
@@ -244,10 +244,10 @@ describe('MemberRolesModal: hierarchy and held bits', () => {
 
   it('ranks the viewer by their id on a remote space', () => {
     seed({
-      space: { ...SPACE, _instanceOrigin: ORBIT },
+      space: { ...SPACE, _instanceOrigin: TAVVIT },
       members: [member('owner', []), member('lead-local', [LEADS]), member('helper', [HELPERS])],
     });
-    useAuthStore.getState().recordMyRow(ORBIT, 'lead-local');
+    useAuthStore.getState().recordMyRow(TAVVIT, 'lead-local');
     open('helper');
     expect(checkbox('Council')).toBeDisabled();
     expect(checkbox('Helpers')).toBeEnabled();
@@ -355,12 +355,12 @@ describe('MemberRolesModal: saving', () => {
 
   it('writes to the space\'s own instance', async () => {
     seed({
-      space: { ...SPACE, _instanceOrigin: ORBIT },
+      space: { ...SPACE, _instanceOrigin: TAVVIT },
       members: [member('owner', []), member('lead-local', [LEADS]), member('helper', [HELPERS])],
     });
-    useAuthStore.getState().recordMyRow(ORBIT, 'lead-local');
+    useAuthStore.getState().recordMyRow(TAVVIT, 'lead-local');
     const remote = { spaces: { updateMember: vi.fn(async () => member('helper', [])) }, roles: { update: vi.fn() } };
-    setApiForOriginResolver((origin) => (origin === ORBIT ? (remote as unknown as BackspaceApiClient) : api));
+    setApiForOriginResolver((origin) => (origin === TAVVIT ? (remote as unknown as BackspaceApiClient) : api));
     const home = vi.spyOn(api.spaces, 'updateMember');
     open('helper');
 

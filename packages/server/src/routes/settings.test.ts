@@ -279,13 +279,22 @@ describe('directory fields on GET /api/settings/instance', () => {
 });
 
 describe('directoryListedSpaceCount on GET /api/settings/instance', () => {
-  function addSpace(id: string, visibility: 'private' | 'request' | 'public', directoryListed: 0 | 1): void {
+  // A space reaches the directory document only when it is listed in
+  // Discovery, which takes an admin's approval (utils/discoveryListing.ts),
+  // and opted in by its owner. A seed is approved unless the case says not.
+  function addSpace(
+    id: string,
+    visibility: 'private' | 'request' | 'public',
+    directoryListed: 0 | 1,
+    discoveryStatus: string | null = 'approved',
+  ): void {
     testDb.insert(schema.spaces).values({
       id,
       name: id,
       ownerId: ADMIN_ID,
       visibility,
       directoryListed,
+      discoveryStatus,
       createdAt: Date.now(),
     }).run();
   }
@@ -304,6 +313,17 @@ describe('directoryListedSpaceCount on GET /api/settings/instance', () => {
     addSpace('private-flagged', 'private', 1);
     const res = await app.inject({ method: 'GET', url: '/api/settings/instance' });
     expect(res.json().directoryListedSpaceCount).toBe(2);
+  });
+
+  it('does not count an opted-in space whose listing an admin has not approved', async () => {
+    addSpace('public-listed', 'public', 1);
+    addSpace('waiting', 'public', 1, 'pending');
+    addSpace('asked-again', 'request', 1, 'changes_requested');
+    addSpace('refused', 'public', 1, 'rejected');
+    addSpace('withdrawn', 'request', 1, 'withdrawn');
+    addSpace('never-asked', 'public', 1, null);
+    const res = await app.inject({ method: 'GET', url: '/api/settings/instance' });
+    expect(res.json().directoryListedSpaceCount).toBe(1);
   });
 
   it('counts opted-in spaces while the instance switch is off', async () => {

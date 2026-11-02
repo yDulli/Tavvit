@@ -25,8 +25,22 @@ describe('ActivityCard', () => {
 
     render(<ActivityCard activities={[activity]} />);
 
-    expect(screen.getByText('Escape from Tarkov')).toBeInTheDocument();
+    expect(screen.getByText('Играет в Escape from Tarkov')).toBeInTheDocument();
     expect(screen.getByText('Прошло 32 мин.')).toBeInTheDocument();
+  });
+
+  it('says what the person does: playing, listening to, watching', () => {
+    const { rerender } = render(<ActivityCard activities={[{ type: 'playing', name: 'Factorio' }]} />);
+    expect(screen.getByText('Playing Factorio')).toBeInTheDocument();
+    rerender(<ActivityCard activities={[{ type: 'listening', name: 'Lo-fi' }]} />);
+    expect(screen.getByText('Listening to Lo-fi')).toBeInTheDocument();
+    rerender(<ActivityCard activities={[{ type: 'watching', name: 'Dune' }]} />);
+    expect(screen.getByText('Watching Dune')).toBeInTheDocument();
+  });
+
+  it('shows the details line when there is one', () => {
+    render(<ActivityCard activities={[{ type: 'playing', name: 'Factorio', details: 'Nauvis' }]} />);
+    expect(screen.getByText('Nauvis')).toBeInTheDocument();
   });
 
   it('renders emoji shortcodes in a custom status (issue #252)', () => {

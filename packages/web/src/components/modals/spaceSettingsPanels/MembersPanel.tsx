@@ -1,7 +1,8 @@
+import { RoleIcon } from '../../../roles/RoleIcon';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../../ui/Avatar';
-import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { MemberRemovalDialog } from '../../layout/memberMenu/MemberRemovalDialog';
 import { useSpaceStore, getApiForOrigin } from '../../../stores/spaceStore';
 import { parseFederatedUsername, isFederationGlobeApplicable, userDisplayName } from '../../../utils/identity';
 import { useSpaceOrigin } from '../../../hooks/useSpaceOrigin';
@@ -18,6 +19,7 @@ import {
 import { useFormatters } from '../../../i18n/formatters';
 import { LOCK_ICON } from '../../ui/LockNote';
 import { describeError } from '../../../i18n/errors';
+import { Icon } from '../../ui/Icon';
 import type { MemberWithUser, Role } from '@backspace/shared';
 
 
@@ -92,14 +94,14 @@ function MembersPanelRow({
   return (
     <div>
       <div
-        className={`flex items-center justify-between p-2 rounded transition-colors ${
+        className={`flex min-h-[52px] items-center justify-between gap-3 px-3 py-2 transition-colors duration-100 ${
           expandable ? 'cursor-pointer hover:bg-interactive-hover' : ''
         } ${isExpanded ? 'bg-interactive-hover' : ''}`}
         onClick={() => {
           if (expandable) onToggleExpand(member.userId);
         }}
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           <Avatar
             src={canonical.avatar}
             name={displayName}
@@ -108,68 +110,82 @@ function MembersPanelRow({
             user={canonical}
           />
           <div className="min-w-0">
-            <div className="text-sm font-medium truncate">
+            <div className="text-ui font-medium text-txt-primary truncate">
               {displayName}
               {isFederationGlobeApplicable(canonical) && (
-                <span className="ml-1 text-[10px] text-txt-tertiary opacity-60">@{parseFederatedUsername(canonical.username).domain}</span>
+                <span className="ml-1 text-2xs text-txt-tertiary opacity-60">@{parseFederatedUsername(canonical.username).domain}</span>
               )}
             </div>
-            <div className="flex items-center gap-1 flex-wrap">
+            <div className="mt-0.5 flex items-center gap-1 flex-wrap">
+              {/* The owner's mark comes from owning the space, never from a role. */}
               {isOwner && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-rose/20 text-txt-danger font-medium">
+                <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-px rounded bg-accent-amber/10 text-accent-amber font-medium">
+                  <Icon name="crown" size={10} />
                   {t('spaces:settings.members.owner')}
                 </span>
               )}
               {member.roles?.filter((r) => r.id !== spaceId).map((r) => (
                 <span
                   key={r.id}
-                  className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                  className="inline-flex items-center gap-1 text-2xs px-1.5 py-px rounded font-medium"
                   style={{ backgroundColor: `${r.color}20`, color: r.color }}
                 >
+                  {r.icon && <RoleIcon icon={r.icon} color={r.color} colorSecondary={r.colorSecondary} size={11} />}
                   {r.name}
                 </span>
               ))}
               {!isOwner && (!member.roles || member.roles.filter((r) => r.id !== spaceId).length === 0) && (
-                <span className="text-[10px] text-txt-tertiary">{t('spaces:settings.members.noRoles')}</span>
+                <span className="text-2xs text-txt-tertiary">{t('spaces:settings.members.noRoles')}</span>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           {canBan && !isSelf && !isOwner && (
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); onPendingAction({ type: 'ban', userId: member.userId, displayName }); }}
-              className="px-2 py-1 text-xs text-txt-danger hover:bg-accent-rose/10 rounded transition-colors"
+              className="btn-quiet btn-sm hover:bg-accent-rose/10 hover:text-txt-danger"
             >
               {t('spaces:settings.members.ban')}
             </button>
           )}
           {canKick && !isSelf && !isOwner && (
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); onPendingAction({ type: 'kick', userId: member.userId, displayName }); }}
-              className="px-2 py-1 text-xs text-txt-danger hover:bg-accent-rose/10 rounded transition-colors"
+              className="btn-quiet btn-sm hover:bg-accent-rose/10 hover:text-txt-danger"
             >
               {t('spaces:settings.members.kick')}
             </button>
           )}
           {expandable && (
-            <svg
-              className={`w-4 h-4 text-txt-tertiary transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+            <button
+              type="button"
+              aria-expanded={isExpanded}
+              aria-label={displayName}
+              onClick={(e) => { e.stopPropagation(); onToggleExpand(member.userId); }}
+              className="icon-btn"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+              <svg
+                className={`w-4 h-4 transition-transform duration-100 ${isExpanded ? 'rotate-90' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           )}
         </div>
       </div>
 
       {/* Role checkboxes — only shown when expanded */}
       {isExpanded && expandable && (
-        <div className="mt-1 mb-1 ml-10 space-y-1">
+        <div className="space-y-1.5 border-t border-border-hard py-2.5 pl-[56px] pr-3">
           {assignableRoles.map((role) => {
             const lock = roleLocks.get(role.id);
             const manageable = lock === undefined;
@@ -184,10 +200,9 @@ function MembersPanelRow({
                   checked={memberRoleIds.has(role.id)}
                   disabled={!manageable}
                   onChange={() => onRoleToggle(member.userId, role.id, memberRoleIds)}
-                  className="w-3.5 h-3.5 rounded border-txt-tertiary accent-accent-primary"
                 />
                 <span
-                  className="text-xs font-medium"
+                  className="text-ui font-medium"
                   style={{ color: role.color !== '#9ca3af' ? role.color : undefined }}
                 >
                   {role.name}
@@ -196,7 +211,7 @@ function MembersPanelRow({
             );
           })}
           {lockKinds.length > 0 && (
-            <div className="flex items-start gap-2 pt-1 text-[12px] leading-snug text-txt-tertiary">
+            <div className="flex items-start gap-2 pt-1 text-meta leading-snug text-txt-tertiary">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="flex-shrink-0 mt-[2px]">
                 <path d={LOCK_ICON} />
               </svg>
@@ -206,16 +221,18 @@ function MembersPanelRow({
             </div>
           )}
           {hasPendingChanges && (
-            <div className="flex items-center gap-2 mt-1.5">
+            <div className="flex items-center gap-1.5 pt-1">
               <button
+                type="button"
                 onClick={() => onSaveRoles(member.userId)}
-                className="px-2 py-0.5 text-xs bg-accent-primary hover:bg-accent-primary/80 text-white rounded transition-colors"
+                className="btn-primary btn-sm"
               >
                 {t('common:actions.save')}
               </button>
               <button
+                type="button"
                 onClick={() => onCancelRoleChange(member.userId)}
-                className="px-2 py-0.5 text-xs text-txt-tertiary hover:text-txt-secondary transition-colors"
+                className="btn-quiet btn-sm"
               >
                 {t('common:actions.cancel')}
               </button>
@@ -226,6 +243,9 @@ function MembersPanelRow({
     </div>
   );
 }
+
+/** The role filter's value for members who hold no role besides @everyone. */
+const NO_ROLE = '__none__';
 
 interface MembersPanelProps {
   spaceId: string;
@@ -252,6 +272,8 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [pendingAction, setPendingAction] = useState<{ type: 'kick' | 'ban'; userId: string; displayName: string } | null>(null);
+  const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
 
   // Assignable roles: exclude @everyone (where role.id === spaceId)
   const assignableRoles = roles.filter((r) => r.id !== spaceId);
@@ -301,6 +323,19 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
     }
   };
 
+  // The list narrowed to a role (or to members without one) and a name. A role
+  // deleted while it is chosen stops filtering.
+  const activeRoleFilter = roleFilter === NO_ROLE || assignableRoles.some((r) => r.id === roleFilter) ? roleFilter : '';
+  const needle = query.trim().toLowerCase();
+  const shownMembers = members.filter((member) => {
+    const own = member.roles?.filter((r) => r.id !== spaceId) ?? [];
+    if (activeRoleFilter === NO_ROLE ? own.length > 0 : activeRoleFilter !== '' && !own.some((r) => r.id === activeRoleFilter)) return false;
+    if (!needle) return true;
+    return [member.nickname, member.user.displayName, member.user.username]
+      .some((name) => !!name && name.toLowerCase().includes(needle));
+  });
+  const filtering = activeRoleFilter !== '' || needle !== '';
+
   const handleCancelRoleChange = (userId: string) => {
     setPendingRoleChanges((prev) => {
       const next = new Map(prev);
@@ -309,40 +344,54 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
     });
   };
 
-  const handleKick = async (userId: string) => {
-    try {
-      await spaceApi.spaces.removeMember(spaceId, userId);
-      await loadSpaceDetail(spaceId);
-    } catch (err) {
-      setError(describeError(err));
-    }
-  };
-
-  const handleBan = async (userId: string) => {
-    try {
-      await spaceApi.spaces.ban(spaceId, userId);
-      await loadSpaceDetail(spaceId);
-    } catch (err) {
-      setError(describeError(err));
-    }
-  };
 
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('common:labels.members')}</h2>
+      <div>
+        <h2 className="page-title">{t('common:labels.members')}</h2>
+        <p className="mt-1 text-meta leading-snug text-txt-tertiary">{t('spaces:settings.members.description')}</p>
+      </div>
       {error && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{error}</div>
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{error}</div>
       )}
-      <p className="text-xs text-txt-tertiary">{t('spaces:settings.members.description')}</p>
 
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          {t('spaces:settings.members.listHeading', { total: f.formatNumber(members.length) })}
+        <div className="label-mono mb-1.5">
+          {filtering
+            ? t('spaces:settings.members.listHeadingFiltered', { shown: f.formatNumber(shownMembers.length), total: f.formatNumber(members.length) })
+            : t('spaces:settings.members.listHeading', { total: f.formatNumber(members.length) })}
         </div>
-        <div className="rounded-lg bg-white/[0.02] p-2">
-          <div className="space-y-0.5">
-            {members.map((member) => (
+        <div className="mb-2 flex flex-wrap gap-2">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('spaces:settings.members.searchPlaceholder')}
+            aria-label={t('spaces:settings.members.searchPlaceholder')}
+            className="input-search h-8 min-w-0 flex-1 py-0 text-ui"
+          />
+          <select
+            value={activeRoleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            aria-label={t('spaces:settings.members.filterRole')}
+            className="input-search h-8 max-w-[45%] py-0 text-ui"
+          >
+            <option value="">{t('spaces:settings.members.filterAll')}</option>
+            {[...assignableRoles].sort((a, b) => b.position - a.position).map((role) => (
+              <option key={role.id} value={role.id}>{role.name}</option>
+            ))}
+            <option value={NO_ROLE}>{t('spaces:settings.members.noRoles')}</option>
+          </select>
+        </div>
+        <div className="surface-card overflow-hidden rounded-lg">
+          {shownMembers.length === 0 && (
+            <div className="empty-state">
+              <p className="empty-state-body">{t('spaces:settings.members.noMatch')}</p>
+            </div>
+          )}
+          <div className="divide-y divide-border-hard">
+            {shownMembers.map((member) => (
               <MembersPanelRow
                 key={member.userId}
                 member={member}
@@ -370,31 +419,15 @@ export function MembersPanel({ spaceId }: MembersPanelProps) {
         </div>
       </div>
 
-      <ConfirmDialog
-        isOpen={pendingAction !== null}
-        onClose={() => setPendingAction(null)}
-        onConfirm={async () => {
-          if (!pendingAction) return;
-          if (pendingAction.type === 'kick') {
-            await handleKick(pendingAction.userId);
-          } else {
-            await handleBan(pendingAction.userId);
-          }
-          setPendingAction(null);
-        }}
-        title={
-          pendingAction?.type === 'ban'
-            ? t('spaces:settings.members.confirm.banTitle', { name: pendingAction.displayName })
-            : t('spaces:settings.members.confirm.kickTitle', { name: pendingAction?.displayName ?? '' })
-        }
-        description={
-          pendingAction?.type === 'ban'
-            ? t('spaces:settings.members.confirm.banDescription')
-            : t('spaces:settings.members.confirm.kickDescription')
-        }
-        variant={pendingAction?.type === 'ban' ? 'danger' : 'warning'}
-        confirmLabel={pendingAction?.type === 'ban' ? t('spaces:settings.members.ban') : t('spaces:settings.members.kick')}
-      />
+      {pendingAction && (
+        <MemberRemovalDialog
+          target={{ origin: space._instanceOrigin ?? '', spaceId, userId: pendingAction.userId }}
+          action={pendingAction.type}
+          name={pendingAction.displayName}
+          onClose={() => setPendingAction(null)}
+          onDone={() => { void loadSpaceDetail(spaceId); }}
+        />
+      )}
     </div>
   );
 }

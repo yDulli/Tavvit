@@ -1,0 +1,164 @@
+{
+  "nav": {
+    "home": "主页",
+    "about": "关于",
+    "inbox": "收件箱",
+    "requestsLabel_other": "{{count}} 个好友请求待处理"
+  },
+  "greeting": {
+    "morning": "早上好，{{name}}",
+    "afternoon": "下午好，{{name}}",
+    "evening": "晚上好，{{name}}",
+    "night": "还没睡吗，{{name}}？"
+  },
+  "subtitle": {
+    "online": "{{instance}} · 在线好友：{{n}}",
+    "quiet": "{{instance}} · 目前没有好友在线"
+  },
+  "empty": {
+    "title": "你的朋友会出现在这里",
+    "body": "通过用户名添加好友，或用邀请链接邀请他们加入空间。谁在线、谁在语音中、大家都在做什么，都会显示在这个页面上。",
+    "addFriend": "添加好友"
+  },
+  "voice": {
+    "title": "语音中",
+    "join": "加入",
+    "joinLabel": "加入 {{space}} 的语音",
+    "inSpace": "在 {{space}}",
+    "status": "语音中 · {{space}}"
+  },
+  "messages": {
+    "caughtUp": "你已看完所有消息。"
+  },
+  "requests": {
+    "title": "好友请求",
+    "waiting": "等待你回复：{{n}}",
+    "review": "查看"
+  },
+  "spaces": {
+    "title": "你的空间",
+    "empty": "你还没有加入任何空间。可以为你的小组创建一个，或使用邀请链接加入。",
+    "create": "创建空间",
+    "join": "通过邀请加入",
+    "inVoice_other": "{{count}} 位好友在语音中",
+    "mentions_other": "{{count}} 条未读提及"
+  },
+  "about": {
+    "title": "关于 Tavvit",
+    "tagline": "属于你和朋友的地方。",
+    "server": {
+      "title": "此服务器",
+      "address": "地址",
+      "version": "版本",
+      "sourceMissing": "此服务器尚未配置源代码链接。"
+    },
+    "developers": {
+      "title": "开发者",
+      "body": "机器人、命令和 Webhook，附文档和 API 参考。",
+      "link": "查看文档"
+    },
+    "help": {
+      "title": "帮助",
+      "help": "帮助",
+      "changelog": "更新内容",
+      "status": "状态"
+    }
+  },
+  "inbox": {
+    "title": "收件箱",
+    "tabs": {
+      "unread": "未读",
+      "mentions": "提及",
+      "saved": "已保存",
+      "keywords": "关键词"
+    },
+    "markRead": "标记为已读",
+    "markChannelRead": "将频道标记为已读",
+    "markAll": "全部标记为已读",
+    "markingAll": "正在标记…",
+    "markFailed": "无法标记为已读，请重试。",
+    "sections": {
+      "dms": "私信",
+      "spaces": "空间"
+    },
+    "caughtUp": {
+      "title": "全部已读",
+      "body": "新消息和提及会显示在这里。",
+      "muted_other": "没有新内容，除了 {{count}} 个已静音的频道。"
+    },
+    "via": {
+      "role": "你的身份组",
+      "everyone": "所有人",
+      "keyword": "你关注的词语"
+    },
+    "noMentions": {
+      "title": "还没有提及",
+      "body": "当有人提及你、你的身份组或空间中的所有人时，会显示在这里。"
+    },
+    "mentionsFailed": "部分提及无法加载。",
+    "retry": "重试",
+    "older": "显示更早的",
+    "mutedHidden_other": "{{count}} 个有未读消息的已静音频道未显示。",
+    "navLabel_other": "{{count}} 项需要处理"
+  },
+  "actions": {
+    "newMessage": "新消息",
+    "addFriend": "添加好友",
+    "createSpace": "创建空间",
+    "joinSpace": "加入空间"
+  },
+  "attention": {
+    "title": "需要你处理",
+    "openInbox_other": "打开收件箱（{{count}}）"
+  },
+  "recent": {
+    "title": "最近的对话",
+    "empty": "你打开过的对话会显示在这里。"
+  },
+  "online": {
+    "title": "当前在线",
+    "inVoice": "语音中",
+    "message": "给 {{name}} 发消息",
+    "noFriends": "添加好友，看看谁在线。",
+    "nobody_other": "{{count}} 位好友当前离线。",
+    "viewAll": "查看全部",
+    "nobodyTitle": "没有人在线",
+    "noFriendsTitle": "还没有好友"
+  },
+  "jump": {
+    "label": "跳转到对话…"
+  },
+  "onboarding": {
+    "friends": {
+      "title": "添加你的好友",
+      "body": "通过用户名查找他人。"
+    },
+    "space": {
+      "title": "开启一个空间",
+      "body": "为你的小组建一个家，设置文字和语音频道以及你选择的身份组。"
+    },
+    "invite": {
+      "title": "收到邀请了吗？",
+      "body": "粘贴别人发给你的邀请链接，即可加入对方的空间。"
+    }
+  },
+  "unread": {
+    "dot": "未读"
+  },
+  "saved": {
+    "emptyTitle": "还没有保存内容",
+    "emptyBody": "通过消息菜单保存后可在此找到。只有你能看到此列表。",
+    "failed": "无法加载已保存的消息。",
+    "remove": "从已保存中移除",
+    "remindsAt": "将于 {{time}} 提醒",
+    "directMessage": "私信",
+    "reminderTitle": "提醒",
+    "reminderToast": "提醒：{{preview}}",
+    "noPreview": "一条消息"
+  },
+  "keywordMatches": {
+    "emptyTitle": "暂无匹配",
+    "emptyBody": "包含你关注词语的消息会显示在这里。",
+    "failed": "无法加载匹配结果。"
+  }
+}

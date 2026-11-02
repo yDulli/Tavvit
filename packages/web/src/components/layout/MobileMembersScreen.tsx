@@ -1,6 +1,7 @@
+import { RoleIcon } from '../../roles/RoleIcon';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { MemberWithUser, Activity } from '@backspace/shared';
+import type { MemberWithUser, Activity, Role } from '@backspace/shared';
 import { useFormatters } from '../../i18n/formatters';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useActivityStore, activitiesFor } from '../../stores/activityStore';
@@ -11,15 +12,20 @@ import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
 import { parseFederatedUsername, isFederationGlobeApplicable, spaceMemberName } from '../../utils/identity';
 import { useSpaceOrigin } from '../../hooks/useSpaceOrigin';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { resolveAssetUrl } from '../../utils/assetUrls';
 import { MobileScreenHeader } from './MobileScreenHeader';
 import { OwnerTitleHeading } from './OwnerTitleHeading';
+import { MemberTimeoutIndicator } from './memberMenu/MemberTimeoutIndicator';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
-import { groupMembers, memberNameColor, type MemberGroupKind } from '../../utils/memberGroups';
+import { groupMembers, memberNameStyle, memberIconRole, ownerGroupTitle, ownerHasOwnGroup, type MemberGroupKind } from '../../utils/memberGroups';
+import { Icon } from '../ui/Icon';
 
 function MobileMemberRow({
   member,
   isOffline,
   colorStyle,
+  ownerMark,
+  iconRole,
   activities,
   isRichActivity,
   accentClass,
@@ -28,6 +34,9 @@ function MobileMemberRow({
   member: MemberWithUser;
   isOffline: boolean;
   colorStyle: React.CSSProperties | undefined;
+  /** The owner's crown title, when the owner is listed among the roles. */
+  ownerMark: string | null;
+  iconRole: Role | null;
   activities: Activity[];
   isRichActivity: boolean;
   accentClass: string;
@@ -38,8 +47,8 @@ function MobileMemberRow({
   const displayName = spaceMemberName(member, canonical);
 
   const rowClass = isRichActivity
-    ? `flex items-center gap-2.5 px-4 py-2.5 rounded-[10px] mb-1 cursor-pointer transition-colors glass-pill border-l-2 ${accentClass} active:bg-interactive-hover`
-    : 'flex items-center gap-2.5 px-4 py-2.5 rounded-[4px] cursor-pointer transition-colors active:bg-interactive-hover';
+    ? `list-row gap-2.5 px-2 py-2 mb-1 cursor-pointer glass-pill border-l-2 ${accentClass}`
+    : 'list-row gap-2.5 px-2 py-2 cursor-pointer';
 
   return (
     <div
@@ -47,7 +56,7 @@ function MobileMemberRow({
       className={rowClass}
     >
       <Avatar
-        src={canonical.avatar}
+        src={(member.avatar ? resolveAssetUrl(member.avatar, origin) : null) ?? canonical.avatar}
         name={displayName}
         size={36}
         status={isOffline ? 'offline' : canonical.status}
@@ -55,14 +64,23 @@ function MobileMemberRow({
         user={canonical}
       />
       <div className="flex-1 min-w-0">
-        <span
-          className={`text-[13.5px] leading-[1.2] font-medium truncate ${colorStyle ? (isOffline ? 'opacity-60' : '') : (isOffline ? 'text-txt-tertiary' : 'text-txt-primary')}`}
-          style={colorStyle}
-        >
-          {displayName}
+        <span className="flex min-w-0 items-center gap-1">
+          <span
+            className={`min-w-0 text-ui leading-[1.2] font-medium truncate ${colorStyle ? (isOffline ? 'opacity-60' : '') : (isOffline ? 'text-txt-tertiary' : 'text-txt-primary')}`}
+            style={colorStyle}
+          >
+            {displayName}
+          </span>
+          {ownerMark && (
+            <span role="img" aria-label={ownerMark} title={ownerMark} className="inline-flex flex-shrink-0 text-accent-amber">
+              <Icon name="crown" size={13} />
+            </span>
+          )}
+          {iconRole?.icon && <RoleIcon icon={iconRole.icon} color={iconRole.color} colorSecondary={iconRole.colorSecondary} size={14} />}
+          <MemberTimeoutIndicator timedOutUntil={member.timedOutUntil} />
         </span>
         {!isOffline && isFederationGlobeApplicable(canonical) && (
-          <div className="text-[10px] leading-[1.3] text-txt-tertiary truncate opacity-60">@{parseFederatedUsername(canonical.username).domain}</div>
+          <div className="text-2xs leading-[1.3] text-txt-tertiary truncate opacity-60">@{parseFederatedUsername(canonical.username).domain}</div>
         )}
         {!isOffline && (
           <ActivityCard
@@ -99,14 +117,17 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
   const isLoadingSpace = !!loadingSpaceId && loadingSpaceId === spaceId;
   const showMemberSkeleton = useDelayedLoading(isLoadingSpace);
 
-  const { groups: roleGroups, offline: offlineMembers } = useMemo(() => groupMembers(members, ownerId), [members, ownerId]);
+  const ownerGroup = ownerHasOwnGroup(space);
+  const { groups: roleGroups, offline: offlineMembers } = useMemo(() => groupMembers(members, ownerId, ownerGroup), [members, ownerId, ownerGroup]);
 
   const totalCount = members.length;
 
-  const getMemberColor = (member: MemberWithUser): React.CSSProperties | undefined => {
-    const color = memberNameColor(member, ownerId);
-    return color ? { color } : undefined;
-  };
+  const getMemberColor = (member: MemberWithUser): React.CSSProperties | undefined => memberNameStyle(member, ownerId);
+  // Badges are shown on the profile only (docs/systems/badges.md); the owner
+  // listed among the roles keeps the crown.
+  const ownerMarkOf = (member: MemberWithUser): string | null => (
+    !ownerGroup && member.userId === ownerId ? (space && ownerGroupTitle(space)) || t('spaces:members.groups.owner') : null
+  );
 
   const handleMemberClick = (member: MemberWithUser) => {
     const origin = useSpaceStore.getState().spaces.find(s => s.id === member.spaceId)?._instanceOrigin ?? '';
@@ -133,6 +154,8 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
         member={member}
         isOffline={isOffline}
         colorStyle={colorStyle}
+        ownerMark={ownerMarkOf(member)}
+        iconRole={memberIconRole(member)}
         activities={activities}
         isRichActivity={isRichActivity}
         accentClass={accentClass}
@@ -144,13 +167,13 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
   const onlineCount = roleGroups.reduce((sum, g) => sum + g.members.length, 0);
 
   return (
-    <div className="flex flex-col h-full bg-surface-base">
+    <div className="flex flex-col h-full bg-surface-members">
       <MobileScreenHeader title={totalCount > 0 ? t('spaces:members.titleWithCount', { count: totalCount }) : t('common:labels.members')} />
       <div className="flex-1 overflow-y-auto p-3">
         {showMemberSkeleton ? (
           <div className="px-2 pt-2" role="status" aria-label={t('spaces:members.loading')}>
             {/* Role group 1 — match real row geometry: w-9 h-9 avatar +
-                gap-2.5 + py-2.5 → ~52px row height. */}
+                gap-2.5 + py-2 → 52px row height. */}
             <div
               className="skeleton skeleton-bar h-2 w-[35%] mb-2"
               style={{ animationDelay: '0s' }}
@@ -158,7 +181,7 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
             {Array.from({ length: 2 }, (_, i) => (
               <div
                 key={`g1-${i}`}
-                className="flex items-center gap-2.5 px-2 py-2.5 mb-1"
+                className="flex items-center gap-2.5 px-2 py-2"
                 style={{ animationDelay: `${i * 0.12}s` }}
               >
                 <div
@@ -181,7 +204,7 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
             {Array.from({ length: 5 }, (_, i) => (
               <div
                 key={`g2-${i}`}
-                className="flex items-center gap-2.5 px-2 py-2.5 mb-1"
+                className="flex items-center gap-2.5 px-2 py-2"
                 style={{ animationDelay: `${(i + 2) * 0.12}s` }}
               >
                 <div
@@ -198,8 +221,8 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
             ))}
           </div>
         ) : onlineCount === 0 && offlineMembers.length === 0 ? (
-          <div className="flex items-center justify-center h-40 text-txt-tertiary text-sm">
-            {t('common:labels.noMembersFound')}
+          <div className="empty-state h-40">
+            <p className="empty-state-body">{t('common:labels.noMembersFound')}</p>
           </div>
         ) : (
           <>
@@ -208,7 +231,7 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
                 {group.kind === 'owner' && space ? (
                   <OwnerTitleHeading key={space.id} space={space} count={group.members.length} touch />
                 ) : (
-                  <h3 className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-1">
+                  <h3 className="label-mono px-2 mb-1">
                     {groupHeading(group.kind, group.label)} — {formatNumber(group.members.length)}
                   </h3>
                 )}
@@ -218,7 +241,7 @@ export function MobileMembersScreen({ params }: MobileMembersScreenProps) {
 
             {offlineMembers.length > 0 && (
               <div>
-                <h3 className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-1">
+                <h3 className="label-mono px-2 mb-1">
                   {t('common:states.offline')} — {formatNumber(offlineMembers.length)}
                 </h3>
                 {offlineMembers.map((m) => renderMember(m, true))}

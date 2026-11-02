@@ -1,7 +1,7 @@
 import React from 'react';
 import { tokenizeMarkdownSourceEmoji } from '../../utils/emojiShortcodes';
 
-const MARK_CLASS = 'bg-accent-primary/30 text-txt-primary rounded-sm px-0.5';
+const MARK_CLASS = 'bg-accent-primary/30 text-txt-primary rounded-sm';
 
 /** Every case-insensitive occurrence of the query in the text, as [start, end) ranges. */
 function matchRanges(text: string, query: string): Array<[number, number]> {

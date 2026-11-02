@@ -1,28 +1,26 @@
-import { DmUnreadBadge } from './DmUnreadBadge';
-import { SpaceUnreadBadge } from './SpaceUnreadBadge';
+import { useDmUnreadCount } from './DmUnreadBadge';
+import { useSpaceUnreadCount } from './SpaceUnreadBadge';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { CountBadge } from '../ui/CountBadge';
+import { Icon } from '../ui/Icon';
+import { SlidingMark } from '../ui/SlidingMark';
 import ReactDOM from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useSpaceStore, getMyUserIdForOrigin } from '../../stores/spaceStore';
+import { useSpaceStore } from '../../stores/spaceStore';
 import type { TaggedSpace } from '../../stores/spaceStore';
 import { resolveSpaceLayout, type ResolvedSpaceLayoutItem } from '../../utils/spaceLayout';
-import { spaceInviteUrl } from '../../utils/inviteParser';
 import { activeHomeNavItem } from '../../utils/homeNav';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useInstanceStore } from '../../stores/instanceStore';
 import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextMenuStore';
 import { Tooltip } from '../ui/Tooltip';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { TransferOwnershipModal } from '../modals/TransferOwnershipModal';
-import { NotificationSettingsModal, type NotificationSettingsModalTarget } from '../notifications/NotificationSettingsModal';
+import { useSpaceContextMenu } from './spaceMenu/useSpaceContextMenu';
 import type { SpaceLayoutItem, SpaceFolder } from '@backspace/shared';
 
 import { getSpaceGradient } from '../../utils/gradients';
-import { isElectron } from '../../platform/platform';
 import { useFloatingPosition } from '../../hooks/useFloatingPosition';
-import { describeCodedError } from '../../i18n/errors';
 
 // ─── Resolved layout types ─────────────────────────────────────────────────
 
@@ -65,109 +63,129 @@ interface SidebarItemProps {
   dropIndicator?: 'before' | 'after' | 'merge' | null;
 }
 
-function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMenu, type = 'space', actionType, hasUnread, dimmed, federationBadge, federationDisconnected, tooltipText, draggable, onDragStart, onDragOver, onDragEnd, onDrop, isDragging, dropIndicator }: SidebarItemProps) {
-  const { t } = useTranslation(['spaces', 'common']);
-  const [isHovered, setIsHovered] = useState(false);
-  const firstLetter = name.charAt(0).toUpperCase();
+/**
+ * The violet edge under the tab of the place (Home, a space, Explore) the
+ * person is in. It sits on the bar's own hairline, where the tab meets the
+ * page below it.
+ */
+function ActiveMark() {
+  return <span aria-hidden="true" data-active-mark className="active-line pointer-events-none absolute inset-x-2 bottom-0 h-[2px]" />;
+}
 
-  const getPillHeight = () => {
-    if (active) return 'h-8';
-    if (isHovered) return 'h-4';
-    if (hasUnread && !active) return 'h-2';
-    return 'h-2 scale-0';
-  };
+/** A small neutral marker for news in a space or in Home that has no count to show. */
+function UnreadDot() {
+  return <span aria-hidden="true" className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-txt-primary" />;
+}
 
-  const backgroundStyle = useMemo((): React.CSSProperties | undefined => {
-    if (type === 'action') {
-      return {
-        background: isHovered ? 'rgba(134, 239, 172, 0.12)' : 'rgba(255, 255, 255, 0.04)',
-      };
-    }
+/** A space's unread count, or the dot when it has news but no count. */
+function SpaceTabUnread({ spaceId, hasUnread }: { spaceId: string; hasUnread: boolean }) {
+  const { t } = useTranslation('spaces');
+  const { total, muted } = useSpaceUnreadCount(spaceId);
+  if (total > 0) {
+    const label = total > 99 ? t('sidebar.space.unreadMessagesOver99') : t('sidebar.space.unreadMessages', { count: total });
+    return <CountBadge count={total} muted={muted} label={label} />;
+  }
+  return hasUnread ? <UnreadDot /> : null;
+}
 
-    if (type === 'dm') {
-      const lit = active || isHovered;
-      return { background: lit ? 'rgb(var(--accent-primary))' : 'rgb(var(--interactive-muted))' };
-    }
+/** Home's count of unread direct messages, or the dot. */
+function HomeTabUnread({ hasUnread }: { hasUnread: boolean }) {
+  const { t } = useTranslation('spaces');
+  const total = useDmUnreadCount();
+  if (total > 0) {
+    const label = total > 99 ? t('sidebar.dmUnreadMessagesOver99') : t('sidebar.dmUnreadMessages', { count: total });
+    return <CountBadge count={total} label={label} />;
+  }
+  return hasUnread ? <UnreadDot /> : null;
+}
 
-    // Space type — if it has a custom icon image, no gradient needed
-    if (icon) return undefined;
-
-    const spaceGrad = getSpaceGradient(id, name, avatarColor);
-    return { background: spaceGrad.gradient };
-  }, [type, id, name, icon, avatarColor, isHovered, active]);
-
-  const getButtonClasses = () => {
-    const base = 'w-10 h-10 flex items-center justify-center duration-200 overflow-hidden [transition:border-radius_0.2s,background_0.2s,color_0.2s]';
-
-    if (type === 'dm') {
-      return `${base} text-white ${active ? 'rounded-[13px]' : 'rounded-[20px] hover:rounded-[13px]'}`;
-    }
-
-    if (type === 'action') {
-      return `${base} rounded-[20px] hover:rounded-[13px] text-accent-mint`;
-    }
-
-    if (icon) {
-      return `${base} ${active ? 'rounded-[13px]' : 'rounded-[20px] hover:rounded-[13px]'}`;
-    }
-
-    return `${base} text-white ${active ? 'rounded-[13px]' : 'rounded-[20px] hover:rounded-[13px]'}`;
-  };
-
-  const buttonContent = (
-    <button onClick={onClick} className={`${getButtonClasses()} ${dimmed ? 'opacity-40 saturate-50' : ''}`} style={backgroundStyle} title={tooltipText ? undefined : name} aria-current={active ? 'page' : undefined}>
-      {type === 'dm' ? (
-        <img src="/icons/logo-mark.svg" alt={t('common:appName')} className="w-5 h-auto" />
-      ) : type === 'action' ? (
-        actionType === 'add' ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-          </svg>
-        ) : actionType === 'explore' ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5.5-2.5l7.51-3.49L17.5 6.5 9.99 9.99 6.5 17.5zm5.5-6.6c.61 0 1.1.49 1.1 1.1s-.49 1.1-1.1 1.1-1.1-.49-1.1-1.1.49-1.1 1.1-1.1z" />
-          </svg>
-        ) : (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
-          </svg>
-        )
-      ) : icon ? (
-        <img
-          src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
-          alt={name}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <span className="text-[15px] font-bold">{firstLetter}</span>
-      )}
-    </button>
+/** A space's picture in a tab: its icon, or its first letter on its colour. */
+function SpaceGlyph({ id, name, icon, avatarColor, size = 20 }: { id: string; name: string; icon?: string | null; avatarColor?: string | null; size?: number }) {
+  if (icon) {
+    return (
+      <img
+        src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
+        alt=""
+        className="flex-shrink-0 rounded object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  const tone = getSpaceGradient(id, name, avatarColor);
+  return (
+    <span
+      aria-hidden="true"
+      className="flex flex-shrink-0 items-center justify-center rounded font-mono text-label font-semibold leading-none text-white"
+      style={{ width: size, height: size, background: tone.gradient }}
+    >
+      {name.charAt(0).toUpperCase()}
+    </span>
   );
+}
 
-  const innerContent = (
-    <div className={`relative ${dropIndicator === 'merge' ? 'scale-110 ring-2 ring-accent-mint/60 rounded-full' : ''} transition-transform duration-150`}>
-      {buttonContent}
-      {type === 'space' && <SpaceUnreadBadge spaceId={id} />}
-      {type === 'dm' && <DmUnreadBadge />}
+/**
+ * A tab of the bar: 32px tall, a 5px corner, never a capsule. The one you are
+ * in is a step lighter with the violet edge under it (ActiveMark); one with news
+ * you have not seen is in the primary colour and a heavier weight.
+ */
+const TAB = 'relative flex h-8 flex-shrink-0 items-center gap-1.5 rounded-md px-2 text-ui transition-colors duration-100 active:bg-interactive-active';
+const TAB_ACTIVE = 'bg-interactive-selected font-medium text-txt-primary';
+const TAB_UNREAD = 'font-semibold text-txt-primary hover:bg-interactive-hover';
+const TAB_IDLE = 'font-medium text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary';
+
+function tabTone(active: boolean, unread: boolean): string {
+  if (active) return TAB_ACTIVE;
+  return unread ? TAB_UNREAD : TAB_IDLE;
+}
+
+function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMenu, type = 'space', actionType, hasUnread, dimmed, federationBadge, federationDisconnected, tooltipText, draggable, onDragStart, onDragOver, onDragEnd, onDrop, isDragging, dropIndicator }: SidebarItemProps) {
+  // The actions (create, join, explore) are quiet icon tiles; their name is the native tooltip.
+  if (type === 'action') {
+    return (
+      <div className="relative flex h-full flex-shrink-0 items-center">
+        <button
+          type="button"
+          onClick={onClick}
+          title={name}
+          aria-label={name}
+          aria-current={active ? 'page' : undefined}
+          data-active={active}
+          className="icon-btn icon-btn-lg"
+        >
+          <Icon name={actionType === 'add' ? 'plus' : actionType === 'explore' ? 'compass' : 'login'} size={18} />
+        </button>
+        {active && <ActiveMark />}
+      </div>
+    );
+  }
+
+  const unread = !!hasUnread && !active;
+  const tab = (
+    <button
+      type="button"
+      onClick={onClick}
+      title={type === 'dm' ? name : undefined}
+      aria-current={active ? 'page' : undefined}
+      className={`${TAB} ${tabTone(active, unread)} ${dimmed ? 'opacity-40 saturate-50' : ''} ${dropIndicator === 'merge' ? 'ring-1 ring-accent-primary' : ''}`}
+    >
+      {/* Home's glyph takes the tab's own colour, never the violet. */}
+      {type === 'dm'
+        ? <Icon name="home" size={16} className="flex-shrink-0" />
+        : <SpaceGlyph id={id} name={name} icon={icon} avatarColor={avatarColor} />}
+      <span className="max-w-[168px] truncate compact:max-w-[112px]">{name}</span>
       {federationBadge && (
-        <div className="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-surface-base flex items-center justify-center">
-          {federationDisconnected ? (
-            <div className="w-[8px] h-[8px] rounded-full bg-accent-amber" />
-          ) : (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-            </svg>
-          )}
-        </div>
+        federationDisconnected
+          ? <span aria-hidden="true" className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-amber" />
+          : <Icon name="globe" size={12} className="flex-shrink-0 text-txt-tertiary" />
       )}
-    </div>
+      {type === 'space' && <SpaceTabUnread spaceId={id} hasUnread={unread} />}
+      {type === 'dm' && <HomeTabUnread hasUnread={unread} />}
+    </button>
   );
 
   return (
     <div
-      className={`relative flex items-center mb-1.5 w-full justify-center ${isDragging ? 'opacity-50' : ''}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className={`relative flex h-full flex-shrink-0 items-center ${isDragging ? 'opacity-50' : ''}`}
       onContextMenu={onContextMenu}
       draggable={draggable}
       onDragStart={onDragStart}
@@ -175,30 +193,20 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
       onDragEnd={onDragEnd}
       onDrop={onDrop}
     >
-      {/* Drop indicator lines — offset into the mb-1.5 gap so adjacent items share one line */}
       {dropIndicator === 'before' && (
-        <div className="absolute -top-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <span className="absolute -left-[2px] top-2.5 bottom-2.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
       )}
       {dropIndicator === 'after' && (
-        <div className="absolute -bottom-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <span className="absolute -right-[2px] top-2.5 bottom-2.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
       )}
-
-      {/* Pill Indicator */}
-      {(type === 'space' || type === 'dm') && (
-        <div className="absolute -left-0 w-2 h-10 flex items-center">
-          <div
-            className={`bg-white rounded-r-full transition-all duration-200 origin-left ${getPillHeight()} w-1`}
-          />
-        </div>
-      )}
-
-      {tooltipText ? (
-        <Tooltip content={tooltipText} position="right" delay={300}>
-          {innerContent}
+      {tooltipText && tooltipText !== name ? (
+        <Tooltip content={tooltipText} position="bottom" delay={300}>
+          {tab}
         </Tooltip>
       ) : (
-        innerContent
+        tab
       )}
+      {active && <ActiveMark />}
     </div>
   );
 }
@@ -212,50 +220,38 @@ function MiniSpaceIcon({ space }: { space: TaggedSpace }) {
       <img
         src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
         alt=""
-        className="w-full h-full object-cover rounded-[3px]"
+        className="w-full h-full object-cover rounded-[1px]"
       />
     );
   }
   const grad = getSpaceGradient(space.id, space.name, space.avatarColor);
   return (
     <div
-      className="w-full h-full rounded-[3px] flex items-center justify-center text-white"
+      className="w-full h-full rounded-[1px]"
       style={{ background: grad.gradient }}
-    >
-      <span className="text-[7px] font-bold leading-none">{space.name.charAt(0).toUpperCase()}</span>
-    </div>
+    />
   );
 }
 
-// ─── Folder icon (2×2 grid with glass-pill) ───────────────────────────────
+// ─── Folder glyph (2×2 grid of its spaces) ───────────────────────────────
 
-function FolderIcon({ spaces, color, isActive, isHovered }: { spaces: TaggedSpace[]; color: string | null; isActive: boolean; isHovered: boolean }) {
+function FolderGlyph({ spaces, color }: { spaces: TaggedSpace[]; color: string | null }) {
   const display = spaces.slice(0, 4);
-  const remaining = spaces.length - 4;
-  const borderColor = color ? `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.3)` : undefined;
   return (
-    <div
-      className={`relative w-10 h-10 flex items-center justify-center overflow-hidden glass-pill [transition:border-radius_0.2s] ${
-        isActive || isHovered ? 'rounded-[13px]' : 'rounded-[16px]'
-      }`}
-      style={borderColor ? { borderColor } : undefined}
+    <span
+      aria-hidden="true"
+      className="grid h-5 w-5 flex-shrink-0 grid-cols-2 gap-[2px] rounded p-[2px]"
+      style={{ backgroundColor: color ? `${color}33` : 'rgb(255 255 255 / 0.06)' }}
     >
-      <div className="grid grid-cols-2 gap-[2px] w-[28px] h-[28px] relative z-[1]">
-        {display.map((s) => (
-          <div key={s.id} className="w-[13px] h-[13px]">
-            <MiniSpaceIcon space={s} />
-          </div>
-        ))}
-        {display.length < 4 && Array.from({ length: 4 - display.length }).map((_, i) => (
-          <div key={`empty-${i}`} className="w-[13px] h-[13px] rounded-[3px] bg-white/[0.04]" />
-        ))}
-      </div>
-      {remaining > 0 && (
-        <div className="absolute bottom-0 right-0 text-[7px] font-bold text-txt-tertiary bg-surface-base rounded-tl-sm px-0.5">
-          +{remaining}
-        </div>
-      )}
-    </div>
+      {display.map((s) => (
+        <span key={s.id} className="block h-full w-full overflow-hidden">
+          <MiniSpaceIcon space={s} />
+        </span>
+      ))}
+      {display.length < 4 && Array.from({ length: 4 - display.length }).map((_, i) => (
+        <span key={`empty-${i}`} className="block h-full w-full rounded-[1px] bg-white/[0.06]" />
+      ))}
+    </span>
   );
 }
 
@@ -297,8 +293,8 @@ function FolderFlyout({
   const floatingRef = useRef<HTMLDivElement>(null);
 
   const { style } = useFloatingPosition(anchorRef, floatingRef, {
-    placement: 'right',
-    offset: 12,
+    placement: 'bottom',
+    offset: 6,
   });
 
   // Intra-folder DnD state
@@ -401,16 +397,16 @@ function FolderFlyout({
   return ReactDOM.createPortal(
     <div
       ref={floatingRef}
-      className="w-[220px] max-h-[360px] overflow-y-auto glass rounded-lg py-1.5 animate-in fade-in zoom-in-95 duration-100"
+      className="w-[240px] max-h-[360px] overflow-y-auto scrollbar-thin glass rounded-lg py-1 animate-slide-up"
       style={style}
     >
       {/* Folder header */}
       {(folder.name || isRenaming) && (
-        <div className="px-3 pb-1.5 pt-0.5">
+        <div className="px-3.5 pb-1 pt-1.5">
           {isRenaming ? (
             <input
               autoFocus
-              className="input-search w-full px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-txt-tertiary"
+              className="input-search w-full px-1.5 py-0.5 label-mono"
               defaultValue={folder.name || ''}
               onBlur={(e) => onRename(e.currentTarget.value)}
               onKeyDown={(e) => {
@@ -419,7 +415,7 @@ function FolderFlyout({
               }}
             />
           ) : (
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-txt-tertiary">
+            <span className="label-mono">
               {folder.name}
             </span>
           )}
@@ -434,19 +430,19 @@ function FolderFlyout({
         const isFederated = !!origin;
         const isDimmed = isFederated && disconnectedOrigins.has(origin);
         const icon = space.icon;
-        const grad = !icon ? getSpaceGradient(space.id, space.name, space.avatarColor) : null;
 
         return (
           <React.Fragment key={space.id}>
             {/* Drop indicator: before first item */}
             {idx === 0 && flyoutDrop?.targetSpaceId === space.id && flyoutDrop.position === 'before' && (
-              <div className="h-0.5 bg-accent-mint rounded-full mx-2.5 my-0.5" />
+              <div className="mx-2.5 my-0.5 h-0.5 rounded-[1px] bg-accent-primary" />
             )}
 
             <button
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 mx-1 rounded-md transition-colors ${
-                isDimmed ? 'opacity-40 saturate-50' : ''
-              } ${isActive ? 'bg-white/[0.10]' : 'hover:bg-white/[0.06]'}`}
+              type="button"
+              aria-current={isActive ? 'page' : undefined}
+              data-unread={hasUnread}
+              className={`nav-item mx-1 ${isDimmed ? 'opacity-40 saturate-50' : ''}`}
               style={{ width: 'calc(100% - 8px)' }}
               draggable
               onDragStart={(e) => onDragStart(e, space.id)}
@@ -462,40 +458,20 @@ function FolderFlyout({
               }}
             >
               {/* Space icon */}
-              <div className="relative">
-                <SpaceUnreadBadge spaceId={space.id} />
-                <div className="w-8 h-8 rounded-[10px] flex-shrink-0 overflow-hidden flex items-center justify-center" style={grad ? { background: grad.gradient } : undefined}>
-                  {icon ? (
-                    <img
-                      src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-[13px] font-bold text-white">{space.name.charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
-              </div>
+              <SpaceGlyph id={space.id} name={space.name} icon={icon} avatarColor={space.avatarColor} />
 
               {/* Name */}
-              <span className="text-sm text-txt-primary truncate flex-1 text-left">{space.name}</span>
+              <span className="min-w-0 flex-1 truncate text-left">{space.name}</span>
 
               {/* Federation badge */}
-              {isFederated && !isDimmed && (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80 flex-shrink-0">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                </svg>
-              )}
+              {isFederated && !isDimmed && <Icon name="globe" size={12} className="text-txt-tertiary flex-shrink-0" />}
 
-              {/* Unread dot */}
-              {hasUnread && (
-                <div className="w-2 h-2 rounded-full bg-white flex-shrink-0" />
-              )}
+              <SpaceTabUnread spaceId={space.id} hasUnread={hasUnread} />
             </button>
 
             {/* Drop indicator: after item */}
             {flyoutDrop?.targetSpaceId === space.id && flyoutDrop.position === 'after' && (
-              <div className="h-0.5 bg-accent-mint rounded-full mx-2.5 my-0.5" />
+              <div className="mx-2.5 my-0.5 h-0.5 rounded-[1px] bg-accent-primary" />
             )}
           </React.Fragment>
         );
@@ -538,28 +514,13 @@ function FolderSlot({
   onDrop: (e: React.DragEvent) => void;
   anchorRef: (el: HTMLDivElement | null) => void;
 }) {
-  const { t } = useTranslation(['spaces', 'common']);
-  const [isHovered, setIsHovered] = useState(false);
-
-  const getPillHeight = () => {
-    if (isActive) return 'h-8';
-    if (isHovered) return 'h-4';
-    if (hasUnread) return 'h-2';
-    return 'h-2 scale-0';
-  };
-
-  const iconContent = (
-    <button onClick={onToggleFlyout}>
-      <FolderIcon spaces={folderSpaces} color={folder.color} isActive={isActive || isFlyoutOpen} isHovered={isHovered} />
-    </button>
-  );
+  const { t } = useTranslation(['spaces', 'common', 'home']);
+  const label = folder.name || t('spaces:sidebar.folder.tooltip', { count: folderSpaces.length });
 
   return (
     <div
       ref={anchorRef}
-      className={`relative flex items-center mb-1.5 w-full justify-center ${isDragging ? 'opacity-50' : ''}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className={`relative flex h-full flex-shrink-0 items-center ${isDragging ? 'opacity-50' : ''}`}
       onContextMenu={onContextMenu}
       draggable
       onDragStart={onDragStart}
@@ -567,31 +528,24 @@ function FolderSlot({
       onDragEnd={onDragEnd}
       onDrop={onDrop}
     >
-      {/* Drop indicators — offset into the mb-1.5 gap so adjacent items share one line */}
       {dropIndicator === 'before' && (
-        <div className="absolute -top-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <span className="absolute -left-[2px] top-2.5 bottom-2.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
       )}
       {dropIndicator === 'after' && (
-        <div className="absolute -bottom-[3px] left-3 right-3 h-[2px] bg-accent-mint rounded-full z-10" />
+        <span className="absolute -right-[2px] top-2.5 bottom-2.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
       )}
-      {dropIndicator === 'merge' && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="w-12 h-12 rounded-[16px] ring-2 ring-accent-mint/60" />
-        </div>
-      )}
-
-      {/* Pill indicator */}
-      <div className="absolute -left-0 w-2 h-10 flex items-center">
-        <div className={`bg-white rounded-r-full transition-all duration-200 origin-left ${getPillHeight()} w-1`} />
-      </div>
-
-      {isFlyoutOpen ? (
-        iconContent
-      ) : (
-        <Tooltip content={folder.name || t('spaces:sidebar.folder.tooltip', { count: folderSpaces.length })} position="right" delay={300}>
-          {iconContent}
-        </Tooltip>
-      )}
+      <button
+        type="button"
+        onClick={onToggleFlyout}
+        aria-expanded={isFlyoutOpen}
+        className={`${TAB} ${tabTone(isActive || isFlyoutOpen, hasUnread)} ${dropIndicator === 'merge' ? 'ring-1 ring-accent-primary' : ''}`}
+      >
+        <FolderGlyph spaces={folderSpaces} color={folder.color} />
+        <span className="max-w-[140px] truncate compact:max-w-[96px]">{label}</span>
+        {hasUnread && !isActive && <UnreadDot />}
+        <Icon name="chevron-down" size={13} className={`flex-shrink-0 text-txt-tertiary transition-transform ${isFlyoutOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isActive && <ActiveMark />}
     </div>
   );
 }
@@ -599,7 +553,7 @@ function FolderSlot({
 // ─── SpaceSidebar (main component) ────────────────────────────────────────
 
 export function SpaceSidebar() {
-  const { t } = useTranslation(['spaces', 'common']);
+  const { t } = useTranslation(['spaces', 'common', 'home']);
   const spaces = useSpaceStore((s) => s.spaces);
   const currentSpaceId = useSpaceStore((s) => s.currentSpaceId);
   const setCurrentSpace = useSpaceStore((s) => s.setCurrentSpace);
@@ -608,13 +562,10 @@ export function SpaceSidebar() {
   const folders = useSpaceStore((s) => s.folders);
   const spaceLayout = useSpaceStore((s) => s.spaceLayout);
   const updateSpaceLayout = useSpaceStore((s) => s.updateSpaceLayout);
-  const generateInvite = useSpaceStore((s) => s.generateInvite);
-  const leaveSpace = useSpaceStore((s) => s.leaveSpace);
   const showDms = useUIStore((s) => s.showDms);
   const setShowDms = useUIStore((s) => s.setShowDms);
   const openModal = useUIStore((s) => s.openModal);
   const addToast = useUIStore((s) => s.addToast);
-  const floatingPanelHeight = useUIStore((s) => s.floatingPanelHeight);
   const currentChannelId = useChatStore((s) => s.currentChannelId);
   const setCurrentChannel = useChatStore((s) => s.setCurrentChannel);
   const unreadChannels = useChatStore((s) => s.unreadChannels);
@@ -626,10 +577,7 @@ export function SpaceSidebar() {
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
   const folderAnchorRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Modal state for context menu actions that spawn modals
-  const [transferModalSpaceId, setTransferModalSpaceId] = useState<string | null>(null);
-  const [notificationTarget, setNotificationTarget] = useState<NotificationSettingsModalTarget | null>(null);
-  const [leaveConfirmSpaceId, setLeaveConfirmSpaceId] = useState<string | null>(null);
+  // The folder whose name is being edited in place
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
 
   // DnD state
@@ -639,82 +587,10 @@ export function SpaceSidebar() {
 
   const openContextMenu = useContextMenuStore((s) => s.open);
 
+  const spaceMenu = useSpaceContextMenu();
   const handleSpaceContextMenu = useCallback((spaceId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    const space = useSpaceStore.getState().spaces.find(sp => sp.id === spaceId);
-    if (!space) return;
-    const isOwner = space.ownerId === getMyUserIdForOrigin((space as TaggedSpace)._instanceOrigin ?? '');
-
-    const items: ContextMenuItem[] = [
-      {
-        key: 'invite',
-        type: 'action',
-        label: t('common:actions.invitePeople'),
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-          </svg>
-        ),
-        onClick: async () => {
-          try {
-            const code = await useSpaceStore.getState().generateInvite(spaceId);
-            await navigator.clipboard.writeText(spaceInviteUrl((space as TaggedSpace)._instanceOrigin, code));
-            useUIStore.getState().addToast(
-              t(space.visibility === 'request' ? 'spaces:sidebar.space.inviteCopiedRequest' : 'spaces:sidebar.space.inviteCopied'),
-              'success',
-              3000,
-            );
-          } catch (err) {
-            useUIStore.getState().addToast(describeCodedError(err, t('spaces:sidebar.space.inviteFailed')), 'warning', 3000);
-          }
-        },
-      },
-      {
-        key: 'notifications',
-        type: 'action',
-        label: t('spaces:notifications.open'),
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
-          </svg>
-        ),
-        // The settings live on the instance that hosts the space.
-        onClick: () => setNotificationTarget({
-          kind: 'space',
-          origin: (space as TaggedSpace)._instanceOrigin ?? '',
-          spaceId,
-          spaceName: space.name,
-        }),
-      },
-      {
-        key: 'transfer',
-        type: 'action',
-        label: t('spaces:sidebar.space.transferOwnership'),
-        hidden: !isOwner,
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M16 13h-3V3h-2v10H8l4 4 4-4zM4 19v2h16v-2H4z" />
-          </svg>
-        ),
-        onClick: () => setTransferModalSpaceId(spaceId),
-      },
-      {
-        key: 'leave',
-        type: 'action',
-        label: t('spaces:sidebar.space.leave'),
-        hidden: isOwner,
-        danger: true,
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5a2 2 0 00-2 2v4h2V5h14v14H5v-4H3v4a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
-          </svg>
-        ),
-        onClick: () => setLeaveConfirmSpaceId(spaceId),
-      },
-    ];
-
-    openContextMenu({ x: e.clientX, y: e.clientY }, items);
-  }, [openContextMenu, t]);
+    spaceMenu.open(spaceId, e);
+  }, [spaceMenu]);
 
   // Set of disconnected origins
   const disconnectedOrigins = useMemo(() => {
@@ -798,27 +674,27 @@ export function SpaceSidebar() {
     e.dataTransfer.dropEffect = 'move';
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const relY = e.clientY - rect.top;
-    const height = rect.height;
+    const relX = e.clientX - rect.left;
+    const width = rect.width;
 
     let position: 'before' | 'after' | 'merge';
     if (targetType === 'folder' || dragState.dragType === 'space') {
-      // Space items: top 25% = before, middle 50% = merge, bottom 25% = after
-      if (relY < height * 0.25) {
+      // Tabs: left 25% = before, middle 50% = merge, right 25% = after
+      if (relX < width * 0.25) {
         position = 'before';
-      } else if (relY > height * 0.75) {
+      } else if (relX > width * 0.75) {
         position = 'after';
       } else {
         // Merge zone: only if dragging a space onto another space or folder
         if (dragState.dragType === 'space' && dragState.dragId !== targetId) {
           position = 'merge';
         } else {
-          position = relY < height * 0.5 ? 'before' : 'after';
+          position = relX < width * 0.5 ? 'before' : 'after';
         }
       }
     } else {
       // Folder dragging: only before/after, no merge
-      position = relY < height * 0.5 ? 'before' : 'after';
+      position = relX < width * 0.5 ? 'before' : 'after';
     }
 
     // Normalize 'before' to previous item's 'after' so the drop indicator
@@ -1080,20 +956,49 @@ export function SpaceSidebar() {
     }
   }, [openFolderId, resolvedLayout]);
 
+  // The tab of the place you are in is never left outside the strip, however
+  // you got there (a link, the quick switcher, the folder flyout).
+  const stripRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    stripRef.current?.querySelector('[data-active-mark]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [currentSpaceId, showDms, resolvedLayout]);
+
+  // The strip has no scrollbar, so a mouse wheel moves it sideways. A trackpad's
+  // sideways swipe and Shift + wheel already do.
+  const handleStripWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (event.deltaX !== 0 || event.shiftKey) return;
+    // Firefox reports a mouse wheel in lines, the others in pixels.
+    event.currentTarget.scrollLeft += event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * 16 : event.deltaY;
+  };
+
+  // Once scrolled, the strip's start fades out too (globals.css, `.tab-strip`).
+  const [stripScrolled, setStripScrolled] = useState(false);
+
   return (
-    <nav data-pip-obstacle="left" className="w-[72px] bg-surface-base flex flex-col items-center py-3 overflow-y-auto flex-shrink-0 no-scrollbar select-none desktop:fixed desktop:inset-y-0 desktop:left-0 desktop:z-[100] desktop:glass-strip" style={{ paddingBottom: floatingPanelHeight + 24, ...(isElectron() ? { top: 'var(--titlebar-inset)' } : {}) }} onDragOver={(e) => { if (dragState) e.preventDefault(); }} onDrop={handleDrop}>
+    <nav className="flex h-full min-w-0 flex-1 items-center select-none" onDragOver={(e) => { if (dragState) e.preventDefault(); }} onDrop={handleDrop}>
+      {/* Home and the spaces scroll sideways when they outgrow the bar; the
+          actions after them stay put, so they are never the ones cut off. */}
+      <div
+        ref={stripRef}
+        onWheel={handleStripWheel}
+        onScroll={(event) => setStripScrolled(event.currentTarget.scrollLeft > 0)}
+        data-scrolled={stripScrolled}
+        className="tab-strip sliding-list flex h-full min-w-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden no-scrollbar scroll-px-4 pl-1"
+      >
+      <SlidingMark variant="line" selector="[data-active-mark]" />
       <SidebarItem
         id="@me"
-        name={t('spaces:sidebar.directMessages')}
-        // The Backspace page is reached from the DM sidebar, so `@me` stays
-        // lit there; `showDms` alone is only set on the `@me` route.
-        active={showDms || activeHomeNavItem(location.pathname, currentChannelId) === 'backspace'}
+        name={t('home:nav.home')}
+        // Friends and About are reached from the home sidebar, so the tile stays
+        // lit there; `showDms` alone is only set on the `@me` route. Explore is
+        // not on this list: it has its own tile below.
+        active={showDms || ['friends', 'about'].includes(activeHomeNavItem(location.pathname, currentChannelId) ?? '')}
         onClick={handleDmClick}
         type="dm"
         hasUnread={hasDmUnread}
       />
 
-      <div className="w-8 h-[2px] bg-white/[0.06] rounded-full mb-1.5 shrink-0" />
+      <span aria-hidden="true" className="mx-1 h-5 w-px flex-shrink-0 bg-border-hard" />
 
       {/* Unified space list (ordered by user layout) */}
       {resolvedLayout.map((item) => {
@@ -1150,11 +1055,7 @@ export function SpaceSidebar() {
                   key: 'rename',
                   type: 'action',
                   label: t('spaces:sidebar.folder.rename'),
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                    </svg>
-                  ),
+                  icon: <Icon name="edit" size={16} />,
                   onClick: () => {
                     setRenamingFolderId(folderRef.id);
                     setOpenFolderId(folderRef.id);
@@ -1165,17 +1066,23 @@ export function SpaceSidebar() {
                   type: 'custom',
                   render: () => (
                     <div className="px-3 py-1.5">
-                      <p className="text-[11px] text-txt-tertiary mb-1.5">{t('spaces:sidebar.folder.color')}</p>
+                      <p className="label-mono mb-1.5">{t('spaces:sidebar.folder.color')}</p>
                       <div className="flex gap-1.5">
                         <button
-                          className={`w-5 h-5 rounded-full border-2 ${!folderRef.color ? 'border-white/40' : 'border-transparent'} bg-white/10`}
+                          type="button"
+                          aria-pressed={!folderRef.color}
+                          aria-label={t('common:states.default')}
+                          className={`h-5 w-5 rounded border-2 bg-white/10 ${!folderRef.color ? 'border-txt-primary' : 'border-transparent hover:border-white/30'}`}
                           onClick={() => { handleFolderColorChange(folderRef.id, null); useContextMenuStore.getState().close(); }}
                           title={t('common:states.default')}
                         />
                         {FOLDER_COLORS.map((c) => (
                           <button
                             key={c.name}
-                            className={`w-5 h-5 rounded-full border-2 ${folderRef.color === c.value ? 'border-white/40' : 'border-transparent'}`}
+                            type="button"
+                            aria-pressed={folderRef.color === c.value}
+                            aria-label={t(c.labelKey)}
+                            className={`h-5 w-5 rounded border-2 ${folderRef.color === c.value ? 'border-txt-primary' : 'border-transparent hover:border-white/30'}`}
                             style={{ background: c.value }}
                             onClick={() => { handleFolderColorChange(folderRef.id, c.value); useContextMenuStore.getState().close(); }}
                             title={t(c.labelKey)}
@@ -1194,11 +1101,7 @@ export function SpaceSidebar() {
                   type: 'action',
                   label: t('spaces:sidebar.folder.ungroup'),
                   danger: true,
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm12 6V8h-2v4H10v2h4v4h2v-4h4v-2h-4z" />
-                    </svg>
-                  ),
+                  icon: <Icon name="grid" size={16} />,
                   onClick: () => handleUngroup(folderRef.id),
                 },
               ];
@@ -1215,8 +1118,10 @@ export function SpaceSidebar() {
           />
         );
       })}
+      </div>
 
-      <div className="w-8 h-[2px] bg-white/[0.06] rounded-full mb-1.5 shrink-0" />
+      <div className="flex h-full flex-shrink-0 items-center gap-0.5 pr-1">
+      <span aria-hidden="true" className="mx-1 h-5 w-px flex-shrink-0 bg-border-hard" />
 
       <SidebarItem
         id="add-space"
@@ -1244,41 +1149,9 @@ export function SpaceSidebar() {
         type="action"
         actionType="explore"
       />
+      </div>
 
-      {transferModalSpaceId && (
-        <TransferOwnershipModal
-          spaceId={transferModalSpaceId}
-          onClose={() => setTransferModalSpaceId(null)}
-        />
-      )}
-      {notificationTarget && (
-        <NotificationSettingsModal
-          target={notificationTarget}
-          onClose={() => setNotificationTarget(null)}
-        />
-      )}
-      {leaveConfirmSpaceId && (() => {
-        const space = spaces.find(s => s.id === leaveConfirmSpaceId);
-        return (
-          <ConfirmDialog
-            isOpen={true}
-            onClose={() => setLeaveConfirmSpaceId(null)}
-            onConfirm={() => {
-              if (currentSpaceId === leaveConfirmSpaceId) {
-                navigate('/channels/@me');
-                setCurrentSpace(null);
-                setShowDms(true);
-              }
-              leaveSpace(leaveConfirmSpaceId);
-              setLeaveConfirmSpaceId(null);
-            }}
-            title={space ? t('spaces:sidebar.space.leaveConfirm.titleNamed', { name: space.name }) : t('spaces:sidebar.space.leaveConfirm.title')}
-            description={t('spaces:sidebar.space.leaveConfirm.description')}
-            variant="danger"
-            confirmLabel={t('common:actions.leave')}
-          />
-        );
-      })()}
+      {spaceMenu.dialogs}
 
       {openFolderId && (() => {
         const folderItem = resolvedLayout.find(

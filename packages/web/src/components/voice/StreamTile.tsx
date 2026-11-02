@@ -2,6 +2,9 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '../../i18n/formatters';
 import { Avatar } from '../ui/Avatar';
+import { Icon } from '../ui/Icon';
+import { LiveBadge } from './LiveBadge';
+import { VoiceIcon } from './voiceIcons';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextMenuStore';
 import { getActiveRoom, setStreamSubscription } from '../../hooks/useLiveKit';
@@ -23,6 +26,8 @@ import {
 interface StreamTileProps {
   tile: StreamTileType;
   large?: boolean;
+  /** A tile too short for the full placeholder: the focus strip, a crowded grid, a phone. */
+  compact?: boolean;
   stats: TrackStatsSnapshot | null;
 }
 
@@ -52,7 +57,7 @@ function StreamQualityItem() {
 
   return (
     <div className="p-3">
-      <div className="text-xs text-txt-tertiary mb-2 font-medium uppercase tracking-wider">
+      <div className="label-mono mb-2">
         {t('voice:stream.quality')}
       </div>
       <div className="relative">
@@ -63,12 +68,11 @@ function StreamQualityItem() {
             setOpen(n);
             setCloseGuard(n);
           }}
-          className="w-full flex items-center justify-between px-2 py-1.5 text-sm text-txt-secondary hover:bg-interactive-hover rounded transition-colors"
+          aria-expanded={open}
+          className="w-full flex items-center justify-between px-2 py-1.5 font-mono text-meta text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary active:bg-interactive-active rounded-md transition-colors duration-100"
         >
           <span>{t('voice:stream.qualityValue', { height: screenShareConfig.height, fps: screenShareConfig.fps })}</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7 10l5 5 5-5z" />
-          </svg>
+          <Icon name="chevron-down" size={14} />
         </button>
         {open && (
           <ScreenShareSettingsPopover
@@ -94,22 +98,21 @@ function StreamVolumeItem({ userId }: { userId: string }) {
 
   return (
     <div className="p-3">
-      <div className="text-xs text-txt-tertiary mb-2 font-medium uppercase tracking-wider">
+      <div className="label-mono mb-2">
         {t('voice:stream.volume')}
       </div>
       <div className="flex items-center gap-2">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0">
-          <path d="M3 9v6h4l5 5V4L7 9H3z" />
-        </svg>
+        <Icon name="volume" size={16} className="text-txt-tertiary flex-shrink-0" />
         <input
           type="range"
           min="0"
           max="200"
           value={streamVolume}
           onChange={(e) => setStreamVolume(userId, parseInt(e.target.value))}
-          className="flex-1 min-w-0 accent-accent-primary h-1"
+          aria-label={t('voice:stream.volume')}
+          className="flex-1 min-w-0 cursor-pointer accent-accent-primary h-1"
         />
-        <span className="text-xs text-txt-secondary min-w-[32px] flex-shrink-0 text-right">
+        <span className="tabular font-mono text-label text-txt-secondary min-w-[36px] flex-shrink-0 text-right">
           {f.formatPercent(streamVolume)}
         </span>
       </div>
@@ -128,12 +131,17 @@ function StreamAttenuationItem() {
 
   return (
     <div>
-      <div className="py-1.5">
+      <div className="py-1">
+        {/* The geometry of ContextMenuRenderer's rows: this is one more row of that menu. */}
         <button
           onClick={() => setAttenuationEnabled(!streamAttenuationEnabled)}
-          className="w-full text-left px-2 py-1.5 mx-1.5 text-sm rounded-sm flex items-center gap-2 text-txt-secondary hover:bg-accent-primary hover:text-white"
-          style={{ width: 'calc(100% - 12px)' }}
+          role="menuitemcheckbox"
+          aria-checked={streamAttenuationEnabled}
+          className="min-h-8 text-left px-2 py-1.5 mx-1 text-ui font-medium leading-snug rounded-md flex items-center gap-2.5 text-txt-secondary transition-colors hover:bg-interactive-selected hover:text-txt-primary"
+          style={{ width: 'calc(100% - 8px)' }}
         >
+          {/* The stream menu's rows have icons, so this label starts at their x too. */}
+          <span aria-hidden="true" className="h-4 w-4 flex-shrink-0" />
           <span className="flex-1">{t('voice:stream.attenuation')}</span>
           <div
             className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
@@ -152,7 +160,7 @@ function StreamAttenuationItem() {
       </div>
       {streamAttenuationEnabled && (
         <div className="p-3 pt-0">
-          <div className="text-xs text-txt-tertiary mb-2 font-medium uppercase tracking-wider">
+          <div className="label-mono mb-2">
             {t('voice:stream.attenuationStrength')}
           </div>
           <div className="flex items-center gap-2">
@@ -162,9 +170,10 @@ function StreamAttenuationItem() {
               max="100"
               value={streamAttenuationStrength}
               onChange={(e) => setAttenuationStrength(parseInt(e.target.value))}
-              className="flex-1 min-w-0 accent-accent-primary h-1"
+              aria-label={t('voice:stream.attenuationStrength')}
+              className="flex-1 min-w-0 cursor-pointer accent-accent-primary h-1"
             />
-            <span className="text-xs text-txt-secondary min-w-[32px] flex-shrink-0 text-right">
+            <span className="tabular font-mono text-label text-txt-secondary min-w-[36px] flex-shrink-0 text-right">
               {f.formatPercent(streamAttenuationStrength)}
             </span>
           </div>
@@ -201,7 +210,7 @@ function handleViewerWatchToggle(sharer: StreamWatchTarget, watching: boolean): 
   void room.localParticipant.publishData(payload, { reliable: true });
 }
 
-export function StreamTile({ tile, large, stats }: StreamTileProps) {
+export function StreamTile({ tile, large, compact, stats }: StreamTileProps) {
   const { t } = useTranslation(['voice', 'common']);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -307,10 +316,7 @@ export function StreamTile({ tile, large, stats }: StreamTileProps) {
           type: 'action',
           label: t('voice:stream.stop'),
           danger: true,
-          icon: React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor', className: 'flex-shrink-0' },
-            React.createElement('path', { d: 'M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z' }),
-            React.createElement('line', { x1: 4, y1: 4, x2: 20, y2: 20, stroke: 'currentColor', strokeWidth: 2 }),
-          ),
+          icon: <VoiceIcon name="screen-off" size={16} />,
           onClick: async () => {
             const room = getActiveRoom();
             if (room) {
@@ -322,9 +328,7 @@ export function StreamTile({ tile, large, stats }: StreamTileProps) {
           key: 'change-stream',
           type: 'action',
           label: t('voice:stream.change'),
-          icon: React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor', className: 'flex-shrink-0' },
-            React.createElement('path', { d: 'M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z' }),
-          ),
+          icon: <Icon name="refresh" size={16} />,
           onClick: async () => {
             const room = getActiveRoom();
             if (room) {
@@ -348,9 +352,7 @@ export function StreamTile({ tile, large, stats }: StreamTileProps) {
             key: 'stop-watching',
             type: 'action',
             label: t('voice:stream.stopWatching'),
-            icon: React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor', className: 'flex-shrink-0' },
-              React.createElement('path', { d: 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z' }),
-            ),
+            icon: <VoiceIcon name="eye-off" size={16} />,
             onClick: () => {
               useVoiceStore.getState().unwatchStream(userId);
               setStreamSubscription(getActiveRoom(), identity, false);
@@ -362,9 +364,7 @@ export function StreamTile({ tile, large, stats }: StreamTileProps) {
             key: 'watch-stream',
             type: 'action',
             label: t('voice:stream.watch'),
-            icon: React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'currentColor', className: 'flex-shrink-0' },
-              React.createElement('path', { d: 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z' }),
-            ),
+            icon: <VoiceIcon name="eye" size={16} />,
             onClick: () => {
               useVoiceStore.getState().watchStream(userId);
               setStreamSubscription(getActiveRoom(), identity, true);
@@ -420,9 +420,7 @@ export function StreamTile({ tile, large, stats }: StreamTileProps) {
   return (
     <div
       data-context-menu
-      className={`relative bg-surface-base rounded-xl overflow-hidden flex items-center justify-center group transition-all duration-200 ring-1 ring-white/[0.06] hover:ring-white/10 ${
-        'h-full w-full'
-      }`}
+      className="relative bg-surface-channel rounded-lg overflow-hidden flex items-center justify-center group transition-shadow duration-100 ring-1 ring-border-hard hover:ring-interactive-muted h-full w-full"
       onContextMenu={handleContextMenu}
     >
       {hasVideo && isWatching ? (
@@ -434,20 +432,20 @@ export function StreamTile({ tile, large, stats }: StreamTileProps) {
           className="w-full h-full object-contain bg-black"
         />
       ) : (
-        <div data-testid="stream-tile-placeholder" className={`w-full h-full min-h-0 flex items-center justify-center bg-surface-channel ${large ? 'px-4 py-6' : 'px-4 pt-9 pb-3'}`}>
-          <div className={large ? 'flex flex-col items-center gap-3 min-w-0' : 'flex w-full max-w-[280px] min-w-0 items-center gap-3'}>
+        <div data-testid="stream-tile-placeholder" className={`w-full h-full min-h-0 flex items-center justify-center ${large ? 'px-4 py-6' : compact ? 'px-2 pt-7 pb-1.5' : 'px-4 pt-9 pb-3'}`}>
+          <div className={large ? 'flex flex-col items-center gap-3 min-w-0' : `flex w-full max-w-[280px] min-w-0 items-center ${compact ? 'gap-2' : 'gap-3'}`}>
             <div className="relative flex-shrink-0">
-              <Avatar src={avatar} name={displayName} size={large ? 80 : 44} userId={avatarUserId} user={user ?? undefined} />
+              <Avatar src={avatar} name={displayName} size={large ? 80 : compact ? 28 : 44} userId={avatarUserId} user={user ?? undefined} />
             </div>
             <div className={`${large ? 'text-center' : 'text-left flex-1'} min-w-0`}>
-              <p className={`text-txt-primary font-semibold ${large ? 'text-sm' : 'text-xs leading-tight line-clamp-2'}`}>
+              <p className={`text-txt-primary font-medium ${large ? 'text-body' : compact ? 'text-label leading-tight line-clamp-1' : 'text-meta leading-tight line-clamp-2'}`}>
                 {t('voice:stream.isStreaming', { name: displayName })}
               </p>
               {!isLocal && (
                 <button
                   onClick={handleWatch}
                   aria-label={t('voice:stream.watch')}
-                  className={`${large ? 'mt-2 px-4 py-1.5' : 'mt-2 w-full min-h-7 px-3 py-1 text-[11px]'} whitespace-nowrap bg-accent-primary hover:bg-accent-primary/80 rounded text-white font-semibold transition-colors`}
+                  className={`btn-primary whitespace-nowrap ${large ? 'mt-3' : compact ? 'btn-sm mt-1 !h-6 w-full' : 'btn-sm mt-2 w-full'}`}
                 >
                   {t(large ? 'voice:stream.watch' : 'voice:stream.watchShort')}
                 </button>
@@ -458,21 +456,19 @@ export function StreamTile({ tile, large, stats }: StreamTileProps) {
       )}
 
       {/* LIVE badge — top left */}
-      <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-accent-rose rounded text-[11px] font-bold text-white uppercase tracking-wide">
-        {t('voice:badges.live')}
-      </div>
+      <LiveBadge className="absolute top-2 left-2 h-5" />
 
       {/* Stream status — in focus mode this is the visual peer of the Grid
           action: same top edge, height, radius, and surface treatment. */}
       {(healthWarning || (qualityBadge && hasVideo)) && (
         <div className={`absolute top-2 left-20 ${large ? 'right-24' : 'right-2'} flex items-start justify-end gap-1.5 pointer-events-none`}>
           {healthWarning && (
-            <div className={`${large ? 'h-7 rounded-lg' : 'rounded'} min-w-0 max-w-full px-2 bg-black/75 border border-status-idle/40 flex items-center text-[10px] leading-[15px] text-white/90 truncate`}>
+            <div className={`${large ? 'h-7 rounded-md' : 'h-5 rounded'} min-w-0 max-w-full px-2 bg-black/75 border border-status-idle/40 flex items-center text-2xs text-white/90 truncate`}>
               {t(STREAM_HEALTH_KEYS[healthWarning])}
             </div>
           )}
           {qualityBadge && hasVideo && (
-            <div data-testid="stream-quality-badge" className={`${large ? 'h-7 px-3 rounded-lg' : 'px-1.5 py-0.5 rounded'} flex-shrink-0 bg-black/60 flex items-center text-[10px] font-bold text-white/70 uppercase tracking-wide`}>
+            <div data-testid="stream-quality-badge" className={`${large ? 'h-7 px-2.5 rounded-md text-label' : 'h-5 px-1.5 rounded text-2xs'} tabular flex-shrink-0 bg-black/60 flex items-center font-mono font-medium text-white/80 uppercase`}>
               {qualityBadge.fps !== null
                 ? t('voice:stream.qualityValue', { height: qualityBadge.height, fps: qualityBadge.fps })
                 // i18n-check: allow-literal "720p" is the format's name and reads the same in every language
@@ -483,25 +479,16 @@ export function StreamTile({ tile, large, stats }: StreamTileProps) {
       )}
 
       {/* Bottom overlay */}
-      {hasVideo && isWatching && <div data-testid="stream-tile-caption" className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+      {hasVideo && isWatching && <div data-testid="stream-tile-caption" className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent ${compact ? 'px-2 py-1' : 'px-3 py-2'}`}>
         <div className="flex items-center gap-1.5 min-w-0">
-          {/* Screen icon */}
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="text-white/70 flex-shrink-0"
-          >
-            <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" />
-          </svg>
+          <Icon name="monitor" size={14} className="text-white/70 flex-shrink-0" />
           <span
-            className={`font-semibold text-white truncate ${large ? 'text-base' : 'text-[13px]'}`}
+            className={`font-medium text-white truncate ${large ? 'text-lead' : compact ? 'text-meta' : 'text-ui'}`}
           >
             {displayName}
           </span>
           {isLocal && (
-            <span className="text-[10px] text-white/40 font-medium">{t('voice:badges.you')}</span>
+            <span className="flex-shrink-0 text-label text-white/70">{t('voice:badges.you')}</span>
           )}
         </div>
       </div>}

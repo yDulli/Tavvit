@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   DEFAULT_NOTIFICATION_LEVEL,
   isMuteActive,
+  isSpaceDefaultNotificationLevel,
   resolveChannelNotificationPolicy,
   type NotificationLevel,
   type NotificationMuteDuration,
@@ -12,6 +13,7 @@ import { describeCodedError } from '../../i18n/errors';
 import { Toggle } from '../ui/Toggle';
 import { useFormatters } from '../../i18n/formatters';
 import { useUIStore } from '../../stores/uiStore';
+import { useSpaceStore } from '../../stores/spaceStore';
 import {
   selectNotificationSetting,
   useNotificationSettingsStore,
@@ -33,7 +35,10 @@ export interface NotificationSettingsControlsProps {
   channelId: string | null;
 }
 
-/** A level row's value: a level, or `inherit` for a channel that follows its space. */
+/**
+ * A level row's value: a level, or `inherit` for a channel that follows its
+ * space and for a space that follows the default its moderators set.
+ */
 type LevelChoice = NotificationLevel | 'inherit';
 
 const LEVELS: readonly NotificationLevel[] = ['all', 'mentions', 'nothing'];
@@ -61,6 +66,12 @@ export function NotificationSettingsControls({ origin, spaceId, channelId }: Not
   const spaceSetting = useNotificationSettingsStore((s) => selectNotificationSetting(s, origin, { spaceId, channelId: null }));
   // Re-render when a timed mute ends while the controls are open.
   useNotificationSettingsStore((s) => s.clock);
+  // The level the space's moderators set as everyone's starting point, from
+  // the space as the instance that hosts it describes it.
+  const spaceDefault = useSpaceStore((s) => {
+    const level = s.spaces.find((space) => space.id === spaceId && (space._instanceOrigin ?? '') === origin)?.defaultNotificationLevel;
+    return isSpaceDefaultNotificationLevel(level) ? level : null;
+  });
   const [saving, setSaving] = useState(false);
   const levelHeadingId = useId();
 
@@ -68,11 +79,23 @@ export function NotificationSettingsControls({ origin, spaceId, channelId }: Not
   const now = Date.now();
   const ownMuted = isMuteActive(own, now);
   const spaceMuted = isChannel && isMuteActive(spaceSetting, now);
-  // What a channel inherits, shown on its "Space default" row.
-  const inheritedLevel = resolveChannelNotificationPolicy(spaceSetting, undefined, now).level;
+  // What the "Space default" row stands for: for a channel, the level of its
+  // space; for the space itself, the default its moderators set.
+  const inheritedLevel = isChannel
+    ? resolveChannelNotificationPolicy(spaceSetting, undefined, now, spaceDefault).level
+    : spaceDefault ?? DEFAULT_NOTIFICATION_LEVEL;
+  // Where the level in force comes from, so the controls can say when it is
+  // the moderators' default rather than a choice of the member's own.
+  const effective = isChannel
+    ? resolveChannelNotificationPolicy(spaceSetting, own, now, spaceDefault)
+    : resolveChannelNotificationPolicy(own, undefined, now, spaceDefault);
+  const followsSpaceDefault = effective.levelSource === 'spaceDefault';
 
-  const selected: LevelChoice = own?.level ?? (isChannel ? 'inherit' : DEFAULT_NOTIFICATION_LEVEL);
-  const choices: readonly LevelChoice[] = isChannel ? ['inherit', ...LEVELS] : LEVELS;
+  // A space only offers a row to follow when its moderators set a default;
+  // without one, clearing the choice is the same as Only @mentions.
+  const offersInherit = isChannel || spaceDefault !== null;
+  const selected: LevelChoice = own?.level ?? (offersInherit ? 'inherit' : DEFAULT_NOTIFICATION_LEVEL);
+  const choices: readonly LevelChoice[] = offersInherit ? ['inherit', ...LEVELS] : LEVELS;
 
   const levelLabel = (level: NotificationLevel): string => {
     switch (level) {
@@ -118,7 +141,7 @@ export function NotificationSettingsControls({ origin, spaceId, channelId }: Not
 
   const onChoose = (choice: LevelChoice): void => {
     if (choice === selected || saving) return;
-    // A space has no "inherit": clearing it is choosing the default.
+    // "inherit" clears the member's own choice, for a channel and a space alike.
     void save({ level: choice === 'inherit' ? null : choice });
   };
 
@@ -135,12 +158,12 @@ export function NotificationSettingsControls({ origin, spaceId, channelId }: Not
   };
 
   return (
-    <div className="flex flex-col gap-3" aria-busy={saving}>
+    <div className="flex flex-col gap-2.5" aria-busy={saving}>
       <div>
-        <div id={levelHeadingId} className="px-1 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-txt-tertiary">
+        <div id={levelHeadingId} className="px-2.5 pb-1.5 label-mono">
           {t('spaces:notifications.levelHeading')}
         </div>
-        <div role="radiogroup" aria-labelledby={levelHeadingId} className="flex flex-col gap-[2px]">
+        <div role="radiogroup" aria-labelledby={levelHeadingId} className="flex flex-col gap-px">
           {choices.map((choice, index) => {
             const checked = choice === selected;
             return (
@@ -153,7 +176,7 @@ export function NotificationSettingsControls({ origin, spaceId, channelId }: Not
                 disabled={saving}
                 onClick={() => onChoose(choice)}
                 onKeyDown={(e) => onRadioKeyDown(e, index)}
-                className={`w-full flex items-center gap-2.5 px-2.5 h-9 rounded-[6px] text-left text-[14px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary disabled:opacity-60 ${
+                className={`w-full flex items-center gap-2.5 px-2.5 h-8 rounded-md text-left text-ui transition-colors -outline-offset-2 active:bg-interactive-active disabled:opacity-50 ${
                   checked ? 'text-txt-primary bg-interactive-selected' : 'text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover'
                 }`}
               >
@@ -163,17 +186,20 @@ export function NotificationSettingsControls({ origin, spaceId, channelId }: Not
             );
           })}
         </div>
+        {followsSpaceDefault && (
+          <p className="px-2.5 pt-1.5 text-meta text-txt-tertiary">{t('spaces:notifications.spaceDefaultNote')}</p>
+        )}
       </div>
 
-      <div className="h-px bg-glass-border" />
+      <div className="divider-fade" />
 
       <div>
-        <div className="px-1 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-txt-tertiary">
+        <div className="px-2.5 pb-1.5 label-mono">
           {t('spaces:notifications.muteHeading')}
         </div>
         {ownMuted && own ? (
-          <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
-            <span className="text-[13px] text-txt-secondary min-w-0">
+          <div className="flex items-center justify-between gap-3 px-2.5 py-1">
+            <span className="text-ui text-txt-secondary min-w-0">
               {own.mutedUntil === null
                 ? t('spaces:notifications.mutedIndefinitely')
                 : t('spaces:notifications.mutedUntil', { time: formatMuteEnd(own.mutedUntil) })}
@@ -182,20 +208,20 @@ export function NotificationSettingsControls({ origin, spaceId, channelId }: Not
               type="button"
               disabled={saving}
               onClick={() => void save({ mute: null })}
-              className="flex-shrink-0 px-3 h-8 rounded-[6px] text-[13px] font-medium text-txt-primary bg-interactive-hover hover:bg-interactive-active transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary disabled:opacity-60"
+              className="btn-outline btn-sm flex-shrink-0"
             >
               {t('spaces:notifications.unmute')}
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-1">
+          <div className="grid grid-cols-2 gap-px">
             {MUTE_DURATIONS.map((duration) => (
               <button
                 key={duration}
                 type="button"
                 disabled={saving}
                 onClick={() => void save({ mute: duration })}
-                className="px-2.5 h-8 rounded-[6px] text-left text-[13px] text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover transition-colors truncate focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary disabled:opacity-60"
+                className="px-2.5 h-8 rounded-md text-left text-ui text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover active:bg-interactive-active transition-colors truncate -outline-offset-2 disabled:opacity-50"
               >
                 {durationLabel(duration)}
               </button>
@@ -203,20 +229,20 @@ export function NotificationSettingsControls({ origin, spaceId, channelId }: Not
           </div>
         )}
         {spaceMuted && (
-          <p className="px-2.5 pt-1.5 text-[12px] text-accent-amber">{t('spaces:notifications.spaceMuted')}</p>
+          <p className="px-2.5 pt-1.5 text-meta text-accent-amber">{t('spaces:notifications.spaceMuted')}</p>
         )}
       </div>
 
       {!isChannel && (
         <>
-          <div className="h-px bg-glass-border" />
+          <div className="divider-fade" />
           <div>
-            <div className="px-1 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-txt-tertiary">
+            <div className="px-2.5 pb-1.5 label-mono">
               {t('spaces:notifications.massHeading')}
             </div>
             {(['suppressEveryone', 'suppressRoles'] as const).map((field) => (
-              <div key={field} className="flex items-center justify-between gap-3 px-2.5 h-9">
-                <span className="text-[14px] text-txt-secondary min-w-0 truncate">{t(`spaces:notifications.${field}`)}</span>
+              <div key={field} className="flex items-center justify-between gap-3 px-2.5 h-8">
+                <span className="text-ui text-txt-secondary min-w-0 truncate">{t(`spaces:notifications.${field}`)}</span>
                 <Toggle
                   enabled={own?.[field] === true}
                   disabled={saving}
@@ -225,12 +251,12 @@ export function NotificationSettingsControls({ origin, spaceId, channelId }: Not
                 />
               </div>
             ))}
-            <p className="px-2.5 pt-1 text-[12px] text-txt-tertiary">{t('spaces:notifications.massNote')}</p>
+            <p className="px-2.5 pt-1 text-meta text-txt-tertiary">{t('spaces:notifications.massNote')}</p>
           </div>
         </>
       )}
 
-      <p className="px-1 text-[12px] text-txt-tertiary">{t('spaces:notifications.dmNote')}</p>
+      <p className="px-2.5 pb-1 text-meta text-txt-tertiary">{t('spaces:notifications.dmNote')}</p>
     </div>
   );
 }

@@ -190,7 +190,8 @@ describe('a DM created from each UI entry point lands in the conversation\'s one
     renderAt(<DmSearchBar />);
 
     await userEvent.click(screen.getByRole('button'));
-    fireEvent.change(await screen.findByRole('textbox'), { target: { value: 'bo' } });
+    // People are searched by a whole username's worth of letters (three or more).
+    fireEvent.change(await screen.findByRole('textbox'), { target: { value: 'bob' } });
     // bob appears once as a person to message (the listed copy does not name him recognisably).
     const results = await screen.findAllByText('bob', {}, { timeout: 2000 });
     await userEvent.click(results[results.length - 1]!);
@@ -215,6 +216,44 @@ describe('a DM created from each UI entry point lands in the conversation\'s one
 
     await waitFor(() => expect(currentPath).toBe('/channels/@me/dm-group-new'));
     expect(rowIds()).toEqual(['dm-bob-home', 'dm-group-new']);
+  });
+});
+
+describe('the DM pickers find people by username only', () => {
+  /** Longer than both pickers' 300ms search debounce. */
+  const pastTheDebounce = () => new Promise((resolve) => setTimeout(resolve, 400));
+
+  beforeEach(() => {
+    vi.mocked(api.social.search).mockResolvedValue([]);
+  });
+
+  it('the New DM modal asks nothing for less than a username, then asks in lower case without the @', async () => {
+    useUIStore.getState().openModal('newDm');
+    renderAt(<NewDmModal />);
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'bo' } });
+    await pastTheDebounce();
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'bob!' } });
+    await pastTheDebounce();
+    expect(api.social.search).not.toHaveBeenCalled();
+    expect(screen.queryByText('No users found')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '@Bob' } });
+    await waitFor(() => expect(api.social.search).toHaveBeenCalledWith('bob'));
+    expect(await screen.findByText('No users found')).toBeInTheDocument();
+  });
+
+  it('the DM search bar asks nothing for less than a username, then asks in lower case without the @', async () => {
+    renderAt(<DmSearchBar />);
+    await userEvent.click(screen.getByRole('button'));
+    const input = await screen.findByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'bo' } });
+    await pastTheDebounce();
+    expect(api.social.search).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: '@Bob' } });
+    await waitFor(() => expect(api.social.search).toHaveBeenCalledWith('bob'));
   });
 });
 

@@ -7,9 +7,21 @@ import { deriveGridTiles } from '../../hooks/useLiveKit';
 import { useGridLayout } from '../../hooks/useGridLayout';
 import type { ParticipantInfo, GridTile } from '../../hooks/useLiveKit';
 import { useTrackStats } from '../../hooks/useTrackStats';
+import { Icon } from '../ui/Icon';
 
 interface VoiceGridProps {
   participants: ParticipantInfo[];
+}
+
+/** Below this height a tile's full-size avatar would run into its caption. */
+const COMPACT_TILE_HEIGHT = 140;
+
+/** A tile is pressed to focus it; a press on something inside it belongs to that control. */
+function pressOnKey(event: React.KeyboardEvent, press: () => void): void {
+  if (event.target !== event.currentTarget) return;
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  press();
 }
 
 export function VoiceGrid({ participants }: VoiceGridProps) {
@@ -58,17 +70,11 @@ export function VoiceGrid({ participants }: VoiceGridProps) {
   if (tiles.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="text-txt-tertiary/40 mx-auto mb-3"
-          >
-            <path d="M11 5L6 9H2V15H6L11 19V5ZM15.54 8.46C16.48 9.4 17 10.67 17 12S16.48 14.6 15.54 15.54L14.12 14.12C14.69 13.55 15 12.79 15 12S14.69 10.45 14.12 9.88L15.54 8.46Z" />
-          </svg>
-          <p className="text-txt-tertiary text-sm">
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <Icon name="volume" size={18} />
+          </div>
+          <p className="empty-state-body">
             {t('voice:grid.waitingForOthers')}
           </p>
         </div>
@@ -81,11 +87,11 @@ export function VoiceGrid({ participants }: VoiceGridProps) {
     : null;
 
   // Render a single tile polymorphically
-  const renderTile = (tile: GridTile, large?: boolean) =>
+  const renderTile = (tile: GridTile, size: { large?: boolean; compact?: boolean }) =>
     tile.kind === 'user' ? (
-      <VoiceUser tile={tile} large={large} />
+      <VoiceUser tile={tile} {...size} />
     ) : (
-      <StreamTile tile={tile} large={large} stats={streamStats} />
+      <StreamTile tile={tile} {...size} stats={streamStats} />
     );
 
   // Focus mode: one large tile + bottom strip
@@ -99,63 +105,53 @@ export function VoiceGrid({ participants }: VoiceGridProps) {
           onClick={() => setFocusedParticipant(null)}
           title={t('voice:grid.returnToGridHint')}
         >
-          {renderTile(focusedTile, true)}
+          {renderTile(focusedTile, { large: true })}
           {/* Grid button — top-right */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               setFocusedParticipant(null);
             }}
-            className="absolute top-4 right-4 z-10 h-7 px-3 bg-black/60 hover:bg-black/80 rounded-lg flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+            className="absolute top-4 right-4 z-10 flex h-7 items-center gap-1.5 rounded-md bg-black/60 px-2.5 text-meta font-medium text-white/80 transition-colors duration-100 hover:bg-black/80 hover:text-white active:bg-black/90"
             title={t('voice:grid.backToGrid')}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M3 3h8v8H3V3zm0 10h8v8H3v-8zm10-10h8v8h-8V3zm0 10h8v8h-8v-8z" />
-            </svg>
-            <span className="text-xs font-medium">{t('voice:grid.gridButton')}</span>
+            <Icon name="grid" size={14} />
+            {t('voice:grid.gridButton')}
           </button>
         </div>
 
         {/* Centered Hide/Show Members button — divider between focused tile and strip */}
         {otherTiles.length > 0 && (
-          <div className="flex justify-center flex-shrink-0 py-1">
+          <div className="flex justify-center flex-shrink-0 py-0.5">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setStripHidden(!stripHidden);
               }}
-              className="px-4 py-1 bg-black/50 hover:bg-black/70 rounded-full flex items-center gap-2 text-white/60 hover:text-white transition-colors text-xs"
+              className="btn-quiet btn-sm"
               title={stripHidden ? t('voice:grid.showMembers') : t('voice:grid.hideMembers')}
+              aria-expanded={!stripHidden}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                {stripHidden
-                  ? <path d="M7 14l5-5 5 5z" />
-                  : <path d="M7 10l5 5 5-5z" />
-                }
-              </svg>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M14 8.00598C14 10.211 12.206 12.006 10 12.006C7.795 12.006 6 10.211 6 8.00598C6 5.80098 7.794 4.00598 10 4.00598C12.206 4.00598 14 5.80098 14 8.00598ZM2 19.006C2 15.473 5.29 13.006 10 13.006C14.711 13.006 18 15.473 18 19.006V20.006H2V19.006ZM20 20.006H22V19.006C22 16.451 20.178 14.471 17.532 13.471C19.461 14.601 20 16.561 20 19.006V20.006Z" />
-              </svg>
-              <span>{stripHidden ? t('voice:grid.showMembers') : t('voice:grid.hideMembers')}</span>
+              <Icon name={stripHidden ? 'chevron-up' : 'chevron-down'} size={14} />
+              {stripHidden ? t('voice:grid.showMembers') : t('voice:grid.hideMembers')}
             </button>
           </div>
         )}
 
-        {/* Bottom strip of other tiles */}
+        {/* Bottom strip of other tiles. The auto margins centre a short row;
+            `justify-center` would push a long one out past the scrollable start. */}
         {!stripHidden && otherTiles.length > 0 && (
-          <div className="h-[120px] max-h-[calc(20*var(--app-vh))] min-h-[80px] flex-shrink-0 flex items-center justify-center gap-2 p-2 bg-surface-base/50 overflow-x-auto no-scrollbar">
+          <div className="h-[120px] max-h-[calc(20*var(--app-vh))] min-h-[80px] flex-shrink-0 flex items-center gap-2 p-2 overflow-x-auto no-scrollbar">
             {otherTiles.map((t) => (
               <div
                 key={t.key}
+                role="button"
+                tabIndex={0}
                 onClick={() => setFocusedParticipant(t.key)}
-                className="h-full aspect-video flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                onKeyDown={(e) => pressOnKey(e, () => setFocusedParticipant(t.key))}
+                className="h-full aspect-video flex-shrink-0 cursor-pointer rounded-lg first:ml-auto last:mr-auto"
               >
-                {renderTile(t)}
+                {renderTile(t, { compact: true })}
               </div>
             ))}
           </div>
@@ -180,10 +176,13 @@ export function VoiceGrid({ participants }: VoiceGridProps) {
         {tiles.map((t) => (
           <div
             key={t.key}
+            role="button"
+            tabIndex={0}
             onClick={() => setFocusedParticipant(t.key)}
-            className="cursor-pointer hover:opacity-90 transition-opacity"
+            onKeyDown={(e) => pressOnKey(e, () => setFocusedParticipant(t.key))}
+            className="cursor-pointer rounded-lg"
           >
-            {renderTile(t)}
+            {renderTile(t, { compact: tileHeight < COMPACT_TILE_HEIGHT })}
           </div>
         ))}
       </div>

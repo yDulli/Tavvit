@@ -1,4 +1,4 @@
-# Backspace — Caddy reverse proxy configuration
+# Tavvit — Caddy reverse proxy configuration
 # DOMAIN is read from the container environment (set via docker-compose.yml)
 
 {$DOMAIN} {
@@ -18,11 +18,26 @@
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
     }
 
+    # The page and its scripts are mostly text, and a visitor waits for every
+    # byte. API answers stay out (they mix secrets with what a person typed, the
+    # shape a compression side channel needs), and so do the installers, whose
+    # updater wants their exact bytes and ranges, and the typefaces, which are
+    # compressed already.
+    @compressible {
+        not path /api/* /ws /livekit/* /downloads/* /fonts/*
+    }
+    encode @compressible zstd gzip
+
     # LiveKit signaling — strip /livekit prefix, forward to host-mode LiveKit
     handle_path /livekit/* {
         reverse_proxy host.docker.internal:7880
     }
 
-    # Backspace API, WebSocket, and frontend — Docker DNS resolves "backspace"
+    # Tavvit API, WebSocket, and frontend — Docker DNS resolves the service name "backspace"
     reverse_proxy backspace:3000
 }
+
+# More addresses for this server, such as a domain that forwards to the main one.
+# The files are yours: updates never touch data/ (docs/tavvit/DEPLOYMENT.md, "More
+# domains"). None there is fine: a pattern that matches nothing only logs a warning.
+import /etc/caddy/sites/*.caddy

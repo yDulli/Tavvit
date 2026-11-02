@@ -1,7 +1,7 @@
 /**
  * The content of a space channel system message (`messages.type = 'system'`),
- * stored as JSON by the instance hosting the space. The only one so far is a
- * poke; docs/systems/websocket.md, "Channel pokes", holds the rules.
+ * stored as JSON by the instance hosting the space: a poke (docs/systems/
+ * websocket.md, "Channel pokes", holds the rules) or a message being pinned.
  *
  * - The instance hosting the space writes the row; no client sends content
  *   for it, and it is never relayed to a peer.
@@ -13,10 +13,13 @@
  *   names the target from the space's roster while they are in it, as every
  *   other surface of the space does, and uses the snapshot only for someone
  *   who is no longer there.
+ * - A pin's line names the pinned message by `messageId`; a client jumps to it
+ *   and says nothing about it, so the line says no more than the channel does.
  * - System messages cannot be edited.
  */
 export type ChannelSystemEvent =
-  | { event: 'channel_poke'; targetUserId: string; targetDisplayName: string };
+  | { event: 'channel_poke'; targetUserId: string; targetDisplayName: string }
+  | { event: 'message_pinned'; messageId: string };
 
 type Fields = Record<string, unknown>;
 
@@ -52,6 +55,10 @@ export function parseChannelSystemEvent(content: string | null | undefined): Cha
     const targetDisplayName = text(value.targetDisplayName);
     if (!targetUserId || !targetDisplayName) return null;
     return { event: 'channel_poke', targetUserId, targetDisplayName };
+  }
+  if (value.event === 'message_pinned') {
+    const messageId = text(value.messageId);
+    return messageId ? { event: 'message_pinned', messageId } : null;
   }
   return null;
 }

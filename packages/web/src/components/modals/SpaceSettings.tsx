@@ -1,17 +1,23 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { SoundsPanel } from './spaceSettingsPanels/SoundsPanel';
+import { WelcomePanel } from './spaceSettingsPanels/WelcomePanel';
+import { Fragment, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '../../i18n/formatters';
 import { describeError } from '../../i18n/errors';
 import { Modal } from '../ui/Modal';
+import { Icon } from '../ui/Icon';
+import { SlidingMark } from '../ui/SlidingMark';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { Avatar } from '../ui/Avatar';
+import { CountBadge } from '../ui/CountBadge';
 import { Toggle } from '../ui/Toggle';
-import { api } from '../../api/client';
 import { getApiForOrigin } from '../../utils/crossStoreResolvers';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
-import { OverviewPanel, MembersPanel, RolesPanel, BansPanel, SettingsPanelSuspense } from './lazySettingsPanels';
+import { OverviewPanel, YourSpacePanel, InvitesPanel, MembersPanel, RolesPanel, BansPanel, ModerationPanel, AuditLogPanel, VerificationPanel, SettingsPanelSuspense } from './lazySettingsPanels';
+import { DiscoveryListingSection } from './spaceSettingsPanels/DiscoveryListingSection';
+import { useIsSpaceOwner } from '../../hooks/useIsSpaceOwner';
 import { useVisibilityOptions } from './spaceSettingsPanels/spaceOptions';
 import { ListInDirectoryConfirm } from './DirectoryConfirmations';
 import type { SpaceVisibility, JoinRequest, InstanceStreamingLimits } from '@backspace/shared';
@@ -161,7 +167,7 @@ function useInstanceDiscoveryFlags(origin: string): InstanceDiscoveryFlagsState 
 }
 
 /**
- * Visibility, the directory switch and the description of one space. The save
+ * The listing, the directory switch and the description of one space. The save
  * goes through the store's `updateSpace`, which resolves the client for the
  * space's own instance and merges the answer back; a remote space must never
  * be saved through the home client. The instance flags come from the instance
@@ -170,11 +176,11 @@ function useInstanceDiscoveryFlags(origin: string): InstanceDiscoveryFlagsState 
  */
 export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
   const { t } = useTranslation(['spaces', 'common']);
-  const visibilityOptions = useVisibilityOptions();
   const spaces = useSpaceStore((s) => s.spaces);
   const updateSpace = useSpaceStore((s) => s.updateSpace);
   const isHomeAdmin = useSettingsStore((s) => s.isAdmin);
   const updateInstanceSettings = useSettingsStore((s) => s.updateInstanceSettings);
+  const isOwner = useIsSpaceOwner(spaceId);
 
   const space = spaces.find(s => s.id === spaceId);
   const { flags, failed: flagsFailed, loading: flagsLoading, retry: retryFlags } =
@@ -191,9 +197,7 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
   const directoryEnabled = flags?.directoryEnabled ?? false;
   const directoryConfigured = flags?.directoryConfigured ?? false;
 
-  const [visibility, setVisibility] = useState<SpaceVisibility>(
-    (space?.visibility as SpaceVisibility) ?? 'private'
-  );
+  const visibility = (space?.visibility as SpaceVisibility) ?? 'private';
   const [directoryListed, setDirectoryListed] = useState(space?.directoryListed ?? false);
   const [description, setDescription] = useState(space?.description ?? '');
   const addToast = useUIStore((s) => s.addToast);
@@ -209,7 +213,6 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
 
   useEffect(() => {
     if (space) {
-      setVisibility((space.visibility as SpaceVisibility) ?? 'private');
       setDirectoryListed(space.directoryListed);
       setDescription(space.description ?? '');
     }
@@ -218,17 +221,8 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
   if (!space) return null;
 
   const hasChanges =
-    visibility !== ((space.visibility as SpaceVisibility) ?? 'private') ||
     directoryListed !== space.directoryListed ||
     description !== (space.description ?? '');
-
-  // The server refuses a listed private space and clears the listing when a
-  // space goes private; the draft does the same, so the switch never shows a
-  // state the save would refuse and a save cannot silently lose the listing.
-  const chooseVisibility = (next: SpaceVisibility) => {
-    setVisibility(next);
-    if (next === 'private') setDirectoryListed(false);
-  };
 
   /**
    * Whether the person reading the "an administrator has to turn this on"
@@ -256,32 +250,35 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
   const spaceIsHome = (space._instanceOrigin ?? '') === '';
   const canEnableRung = isHomeAdmin && spaceIsHome;
 
-  // Always rendered: the reason under a disabled switch is what tells an owner
-  // whose instance has the directory off, or whose space is private, what to do.
-  // The endpoint is asked before the admin's opt-in, because it is the
-  // deeper fact and the one the admin cannot change: on an instance with no
-  // `DIRECTORY_ENDPOINT`, "your administrator has to turn this on" points an
-  // owner at a switch that would not help. What is missing is a hub to fetch
-  // the listing document, not the document, which this instance serves from
-  // the two discovery flags either way.
-  //
-  // The opt-in reason has two voices. To an owner it names the person who has
-  // to act; to the administrator reading their own instance's panel it names
-  // the setting instead, because telling admins that an administrator has to
-  // act is how this panel came to be a dead end for the one person who could
-  // change it.
+  // The reason under a disabled switch tells the person who can act what to
+  // do. Two of the reasons are facts about how the instance is run, and those
+  // are for its administrator only (see `showOuterSpace`): the endpoint, which
+  // is asked before the opt-in because it is the deeper fact and the one the
+  // administrator cannot change by flipping the setting the other reason
+  // points at (on an instance with no `DIRECTORY_ENDPOINT` the document is
+  // still served from the two discovery flags, but no hub fetches it), and the
+  // opt-in itself, which names the setting. The third, a private space, is
+  // about the space and is for its owner.
   const directoryReason = flagsUnknown
     ? null
     : !directoryConfigured
       ? t('spaces:settings.discovery.directory.notConfigured')
       : !directoryEnabled
-        ? canEnableRung
-          ? t('spaces:settings.discovery.directory.adminOffSelf')
-          : t('spaces:settings.discovery.directory.adminOff')
+        ? t('spaces:settings.discovery.directory.adminOffSelf')
         : visibility === 'private'
           ? t('spaces:settings.discovery.directory.privateSpace')
           : null;
   const directoryLocked = flagsUnknown || directoryReason !== null;
+  // The Outer Space block is an instance feature. Where the instance has not
+  // switched it on (no hub, or the opt-in is off) an owner who is not the
+  // administrator can do nothing with it, and a locked switch under a reason
+  // about how the instance is run is exactly the notice members are not
+  // shown, so the block is not drawn for them at all. The administrator of
+  // the instance the space lives on keeps it with its reason and its action.
+  // So does an owner while the answer is still loading or failed, because the
+  // retry line lives in the block. The two reasons above are only reachable
+  // when this is true because of `canEnableRung`.
+  const showOuterSpace = canEnableRung || flagsUnknown || (directoryConfigured && directoryEnabled);
   // The reason that has a way out of it, which is the opt-in one and only for
   // an admin of the instance the space lives on. Derived, so it cannot be
   // offered under a reason that has moved on.
@@ -323,7 +320,7 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
     setSaving(true);
     setSaveError('');
     try {
-      await updateSpace(spaceId, { visibility, description: description.trim(), directoryListed });
+      await updateSpace(spaceId, { description: description.trim(), directoryListed });
       addToast(t('common:states.settingsSaved'), 'success', 2000);
     } catch (err) {
       setSaveError(describeError(err));
@@ -333,7 +330,6 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
   };
 
   const handleReset = () => {
-    setVisibility((space.visibility as SpaceVisibility) ?? 'private');
     setDirectoryListed(space.directoryListed);
     setDescription(space.description ?? '');
     setSaveError('');
@@ -341,52 +337,28 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('spaces:settings.discovery.title')}</h2>
+      <h2 className="page-title">{t('spaces:settings.discovery.title')}</h2>
+      {/* Everyone who sees this tab learns that an approved listing is not
+          shown while the instance has space discovery off. */}
       {!flagsUnknown && !discoveryEnabled && (
-        <div className="p-2.5 bg-accent-amber/10 border border-accent-amber/30 rounded text-[13px] text-accent-amber">
+        <div className="rounded-md border border-accent-amber/30 bg-accent-amber/10 px-3 py-2 text-ui text-accent-amber">
           {t('spaces:settings.discovery.disabledNotice')}
         </div>
       )}
 
-      <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('spaces:settings.discovery.visibility.label')}</div>
-        <p className="text-xs text-txt-tertiary mb-2">{t('spaces:settings.discovery.visibility.hint')}</p>
-        <div className="rounded-lg bg-white/[0.02] p-3.5">
-          <div className="space-y-1.5">
-            {visibilityOptions.map((opt) => (
-              <label
-                key={opt.value}
-                className={`flex items-start gap-3 p-2.5 rounded cursor-pointer transition-colors ${
-                  visibility === opt.value
-                    ? 'bg-interactive-selected'
-                    : 'hover:bg-interactive-hover'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="visibility"
-                  value={opt.value}
-                  checked={visibility === opt.value}
-                  onChange={() => chooseVisibility(opt.value)}
-                  className="mt-0.5 accent-accent-primary"
-                />
-                <div>
-                  <div className="text-sm font-medium text-txt-primary">{opt.label}</div>
-                  <div className="text-xs text-txt-tertiary">{opt.desc}</div>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Listing takes an admin's approval (admin.md, "Discovery approval");
+          visibility below only says how people join. Keyed by space, so
+          another space's request never shows under this one. */}
+      <DiscoveryListingSection key={space.id} space={space} isOwner={isOwner} />
 
+      {showOuterSpace && (
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('spaces:explore.outer.title')}</div>
-        <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-2.5">
+        <div className="label-mono mb-1.5">{t('spaces:explore.outer.title')}</div>
+        <div className="surface-card rounded-lg p-4 space-y-2.5">
           <label className={`flex items-center justify-between gap-4 ${directoryLocked ? 'cursor-default' : 'cursor-pointer'}`}>
-            <div>
-              <div className="text-sm font-medium text-txt-primary">{t('spaces:settings.discovery.directory.label')}</div>
-              <div className="text-xs text-txt-tertiary mt-0.5">{t('spaces:settings.discovery.directory.hint')}</div>
+            <div className="min-w-0">
+              <div className="text-ui font-medium text-txt-primary">{t('spaces:settings.discovery.directory.label')}</div>
+              <div className="mt-0.5 text-meta leading-snug text-txt-tertiary">{t('spaces:settings.discovery.directory.hint')}</div>
             </div>
             <Toggle
               enabled={directoryListed}
@@ -397,20 +369,21 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
           </label>
           {directoryReason !== null && (
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-              <p className="text-xs text-txt-secondary">{directoryReason}</p>
+              <p className="text-meta leading-snug text-txt-secondary">{directoryReason}</p>
               {rungActionOffered && (
                 <button
                   type="button"
                   onClick={() => setConfirmingRung(true)}
                   disabled={rungPending}
-                  className="text-xs font-medium text-accent-primary hover:text-accent-primary/80 transition-colors disabled:text-txt-tertiary disabled:cursor-default"
+                  aria-busy={rungPending}
+                  className="btn-outline btn-sm"
                 >
                   {t('spaces:settings.discovery.directory.adminOffSelfAction')}
                 </button>
               )}
             </div>
           )}
-          {rungError && <p className="text-xs text-txt-danger">{rungError}</p>}
+          {rungError && <p className="text-meta text-txt-danger">{rungError}</p>}
           {rungActionOffered && (
             <ListInDirectoryConfirm
               isOpen={confirmingRung}
@@ -425,7 +398,7 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
             // is the one line that says why and the only way back: the same
             // treatment the Streaming panel gives its own failed load, at the
             // scale of a reason under a switch.
-            <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-xs flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-meta text-txt-danger">
               <span>{t('common:states.loadSettingsFailed')}</span>
               <button
                 type="button"
@@ -437,14 +410,15 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
               </button>
             </div>
           )}
-          <p className="text-xs text-txt-tertiary">{t('spaces:settings.discovery.directory.disclosure')}</p>
+          <p className="text-meta leading-snug text-txt-tertiary">{t('spaces:settings.discovery.directory.disclosure')}</p>
         </div>
       </div>
+      )}
 
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('spaces:settings.discovery.description.label')}</div>
-        <p className="text-xs text-txt-tertiary mb-2">{t('spaces:settings.discovery.description.hint')}</p>
-        <div className="rounded-lg bg-white/[0.02] p-3.5">
+        <div className="label-mono mb-1.5">{t('spaces:settings.discovery.description.label')}</div>
+        <p className="mb-2 text-meta leading-snug text-txt-tertiary">{t('spaces:settings.discovery.description.hint')}</p>
+        <div className="surface-card rounded-lg p-4">
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value.slice(0, DESCRIPTION_MAX_LENGTH))}
@@ -452,34 +426,30 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
             rows={3}
             className="input-standard w-full resize-none"
           />
-          <div className="text-[11px] text-txt-tertiary text-right">
+          <div className="tabular mt-1 text-right font-mono text-label text-txt-tertiary">
             {t('spaces:settings.discovery.description.counter', { length: description.length, max: DESCRIPTION_MAX_LENGTH })}
           </div>
         </div>
       </div>
 
       {saveError && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{saveError}</div>
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{saveError}</div>
       )}
-      {/* Pending Join Requests — only shown when visibility is 'request' */}
-      {(visibility === 'request' || (space.visibility as SpaceVisibility) === 'request') && (
-        <JoinRequestsSection spaceId={spaceId} />
-      )}
-
       {hasChanges && (
         <div className="sticky bottom-0 z-10 pointer-events-none">
           <div className="flex justify-center pt-3 pb-1">
-            <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-2 animate-slide-up pointer-events-auto">
+            <div className="action-bar animate-slide-up pointer-events-auto">
               <button
                 onClick={handleReset}
-                className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                className="btn-quiet"
               >
                 {t('common:actions.reset')}
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                aria-busy={saving}
+                className="btn-primary"
               >
                 {saving ? t('common:states.saving') : t('common:actions.save')}
               </button>
@@ -491,7 +461,123 @@ export function DiscoveryPanel({ spaceId }: { spaceId: string }) {
   );
 }
 
-function JoinRequestsSection({ spaceId }: { spaceId: string }) {
+/**
+ * Who gets in: the space's visibility, and the people asking when it takes
+ * requests. The save goes through the store's `updateSpace`, like the Discovery
+ * panel's. The server clears a directory listing when a space goes private.
+ */
+export function AccessPanel({ spaceId, onRequestCountChange }: { spaceId: string; onRequestCountChange?: (count: number) => void }) {
+  const { t } = useTranslation(['spaces', 'common']);
+  const visibilityOptions = useVisibilityOptions();
+  const space = useSpaceStore((s) => s.spaces.find((entry) => entry.id === spaceId));
+  const updateSpace = useSpaceStore((s) => s.updateSpace);
+  const addToast = useUIStore((s) => s.addToast);
+  const saved = (space?.visibility as SpaceVisibility) ?? 'private';
+  const [visibility, chooseVisibility] = useState<SpaceVisibility>(saved);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    chooseVisibility(saved);
+  }, [saved]);
+
+  if (!space) return null;
+
+  const hasChanges = visibility !== saved;
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError('');
+    try {
+      await updateSpace(spaceId, { visibility });
+      addToast(t('common:states.settingsSaved'), 'success', 2000);
+    } catch (err) {
+      setSaveError(describeError(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    chooseVisibility(saved);
+    setSaveError('');
+  };
+
+  return (
+    <div className="space-y-5">
+      <h2 className="page-title">{t('spaces:settings.nav.tabs.access')}</h2>
+
+      <div>
+        <div className="label-mono mb-1.5">{t('spaces:settings.discovery.visibility.label')}</div>
+        <p className="mb-2 text-meta leading-snug text-txt-tertiary">{t('spaces:settings.discovery.visibility.hint')}</p>
+        <div className="surface-card rounded-lg p-1.5">
+          <div className="space-y-0.5">
+            {visibilityOptions.map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex items-start gap-3 rounded-md p-2.5 cursor-pointer transition-colors duration-100 ${
+                  visibility === opt.value
+                    ? 'bg-interactive-selected'
+                    : 'hover:bg-interactive-hover'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="visibility"
+                  value={opt.value}
+                  checked={visibility === opt.value}
+                  onChange={() => chooseVisibility(opt.value)}
+                  className="mt-0.5"
+                />
+                <div className="min-w-0">
+                  <div className="text-ui font-medium text-txt-primary">{opt.label}</div>
+                  <div className="mt-0.5 text-meta leading-snug text-txt-tertiary">{opt.desc}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {saveError && (
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{saveError}</div>
+      )}
+      {(visibility === 'request' || saved === 'request') && (
+        <JoinRequestsSection spaceId={spaceId} origin={space._instanceOrigin ?? ''} onCountChange={onRequestCountChange} />
+      )}
+
+      {hasChanges && (
+        <div className="sticky bottom-0 z-10 pointer-events-none">
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="action-bar animate-slide-up pointer-events-auto">
+              <button
+                onClick={handleReset}
+                className="btn-quiet"
+              >
+                {t('common:actions.reset')}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                aria-busy={saving}
+                className="btn-primary"
+              >
+                {saving ? t('common:states.saving') : t('common:actions.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The pending join requests of a request space. They are stored by the
+ * instance that hosts the space, so they are read from and decided on there
+ * (`origin`), never through the home client for a remote space.
+ */
+function JoinRequestsSection({ spaceId, origin, onCountChange }: { spaceId: string; origin: string; onCountChange?: (count: number) => void }) {
   const { t } = useTranslation(['spaces', 'common']);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const f = useFormatters();
@@ -501,53 +587,64 @@ function JoinRequestsSection({ spaceId }: { spaceId: string }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    api.explore.getJoinRequests(spaceId, 'pending')
-      .then(({ requests: reqs }) => {
+    const read = async () => {
+      try {
+        const { requests: reqs } = await getApiForOrigin(origin).explore.getJoinRequests(spaceId, 'pending');
         if (!cancelled) {
           setRequests(reqs);
-          setLoading(false);
+          onCountChange?.(reqs.length);
         }
-      })
-      .catch(() => {
+      } catch {
+        // Nothing to list: the section stays empty, as it did for a refusal.
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    };
+    void read();
     return () => { cancelled = true; };
-  }, [spaceId]);
+  }, [spaceId, origin, onCountChange]);
 
   const handleDecide = async (requestId: string, action: 'accept' | 'decline') => {
     setActionError('');
     try {
-      await api.explore.decideJoinRequest(spaceId, requestId, action);
-      setRequests(prev => prev.filter(r => r.id !== requestId));
+      await getApiForOrigin(origin).explore.decideJoinRequest(spaceId, requestId, action);
+      const left = requests.filter(r => r.id !== requestId);
+      setRequests(left);
+      onCountChange?.(left.length);
     } catch (err) {
       setActionError(describeError(err));
     }
   };
 
   return (
-    <div className="pt-4 border-t border-border-soft">
-      <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-2">
-        {t('spaces:settings.discovery.requests.title')}
+    <div>
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className="label-mono">{t('spaces:settings.discovery.requests.title')}</span>
+        {requests.length > 0 && <CountBadge count={requests.length} />}
       </div>
 
       {actionError && (
-        <div className="mb-2 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-xs">
+        <div className="mb-2 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-meta text-txt-danger">
           {actionError}
         </div>
       )}
 
       {loading ? (
-        <div className="text-sm text-txt-tertiary">{t('common:states.loading')}</div>
+        <div className="text-ui text-txt-tertiary">{t('common:states.loading')}</div>
       ) : requests.length === 0 ? (
-        <div className="text-sm text-txt-tertiary">{t('spaces:settings.discovery.requests.empty')}</div>
+        <div className="surface-card rounded-lg">
+          <div className="empty-state">
+            <p className="empty-state-body">{t('spaces:settings.discovery.requests.empty')}</p>
+          </div>
+        </div>
       ) : (
-        <div className="space-y-2 max-h-[240px] overflow-y-auto scrollbar-thin">
+        <div className="surface-card max-h-[260px] divide-y divide-border-hard overflow-y-auto scrollbar-thin rounded-lg">
           {requests.map((req) => {
             const user = req.user;
             const displayName = user?.displayName ?? user?.username ?? t('common:states.unknown');
 
             return (
-              <div key={req.id} className="flex items-start gap-3 p-2.5 rounded bg-surface-base">
+              <div key={req.id} className="flex items-start gap-3 px-3 py-2.5">
                 <Avatar
                   src={user?.avatar}
                   name={displayName}
@@ -556,32 +653,36 @@ function JoinRequestsSection({ spaceId }: { spaceId: string }) {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium text-txt-primary truncate">{displayName}</span>
+                    <span className="text-ui font-medium text-txt-primary truncate">{displayName}</span>
                     {user?.username && (
-                      <span className="text-xs text-txt-tertiary">@{user.username}</span>
+                      <span className="text-meta text-txt-tertiary">@{user.username}</span>
                     )}
                   </div>
                   {req.message && (
-                    <p className="text-xs text-txt-secondary mt-0.5 line-clamp-2">{req.message}</p>
+                    <p className="text-meta text-txt-secondary mt-0.5 line-clamp-2">{req.message}</p>
                   )}
-                  <span className="text-[10px] text-txt-tertiary">
+                  <span className="tabular font-mono text-label text-txt-tertiary">
                     {f.formatNumericDate(req.createdAt)}
                   </span>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-0.5 flex-shrink-0">
                   <button
+                    type="button"
                     onClick={() => handleDecide(req.id, 'accept')}
-                    className="p-1.5 rounded text-status-online hover:bg-status-online/20 transition-colors"
+                    className="icon-btn text-txt-positive hover:bg-status-online/15 hover:text-txt-positive"
                     title={t('common:actions.accept')}
+                    aria-label={t('common:actions.accept')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                     </svg>
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleDecide(req.id, 'decline')}
-                    className="p-1.5 rounded text-txt-danger hover:bg-accent-rose/20 transition-colors"
+                    className="icon-btn hover:bg-accent-rose/10 hover:text-txt-danger"
                     title={t('common:actions.decline')}
+                    aria-label={t('common:actions.decline')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
@@ -597,13 +698,21 @@ function JoinRequestsSection({ spaceId }: { spaceId: string }) {
   );
 }
 
-type SpaceSettingsTab = 'overview' | 'discovery' | 'members' | 'roles' | 'bans';
+type SpaceSettingsTab = 'you' | 'overview' | 'welcome' | 'sounds' | 'access' | 'invites' | 'discovery' | 'verification' | 'moderation' | 'members' | 'roles' | 'bans' | 'audit';
 
-const SPACE_SETTINGS_TABS: readonly SpaceSettingsTab[] = ['overview', 'discovery', 'members', 'roles', 'bans'];
+const SPACE_SETTINGS_TABS: readonly SpaceSettingsTab[] = ['you', 'overview', 'welcome', 'sounds', 'access', 'invites', 'discovery', 'verification', 'moderation', 'members', 'roles', 'bans', 'audit'];
 
 function isSpaceSettingsTab(value: unknown): value is SpaceSettingsTab {
   return typeof value === 'string' && (SPACE_SETTINGS_TABS as readonly string[]).includes(value);
 }
+
+type SpaceSettingsGroup = 'general' | 'management';
+
+/** The navigation's sections and their tabs, in order. A tab the viewer may not open is left out. */
+const SPACE_SETTINGS_NAV: readonly { group: SpaceSettingsGroup; tabs: readonly SpaceSettingsTab[] }[] = [
+  { group: 'general', tabs: ['you', 'overview', 'welcome', 'sounds', 'access', 'invites', 'discovery', 'verification', 'moderation'] },
+  { group: 'management', tabs: ['members', 'roles', 'bans', 'audit'] },
+];
 
 export function SpaceSettingsModal() {
   const { t } = useTranslation(['spaces', 'common']);
@@ -615,95 +724,157 @@ export function SpaceSettingsModal() {
   const spaces = useSpaceStore((s) => s.spaces);
   const spacePermissions = useSpaceStore((s) => s.spacePermissions);
 
-  const [tab, setTab] = useState<SpaceSettingsTab>('overview');
+  const [tab, setTab] = useState<SpaceSettingsTab>('you');
   const [mobileView, setMobileView] = useState<'tabs' | 'content'>('tabs');
+  const [pendingRequests, setPendingRequests] = useState(0);
 
   const isOpen = activeModal === 'spaceSettings';
   const space = spaces.find(s => s.id === currentSpaceId);
   const mySpacePerms = currentSpaceId ? spacePermissions.get(currentSpaceId) : undefined;
   const canManageSpace = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_SPACE);
+  const canManageSounds = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_SOUNDS);
   const canManageRoles = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_ROLES);
   const canBanMembers = hasPermissionBit(mySpacePerms, PermissionBits.BAN_MEMBERS);
+  const canViewAuditLog = hasPermissionBit(mySpacePerms, PermissionBits.VIEW_AUDIT_LOG);
+  const canKickMembers = hasPermissionBit(mySpacePerms, PermissionBits.KICK_MEMBERS);
+  // Verification is asked for by the owner alone (admin.md, "Verification").
+  const isOwner = useIsSpaceOwner(currentSpaceId ?? '');
+
+  // Which tabs this viewer may open: the permission each panel's routes
+  // check on the instance that hosts the space.
+  const allowed: Record<SpaceSettingsTab, boolean> = {
+    you: true,
+    overview: canManageSpace,
+    access: canManageSpace,
+    invites: canManageSpace,
+    discovery: canManageSpace,
+    verification: isOwner,
+    moderation: canManageSpace,
+    welcome: canManageSpace,
+    sounds: canManageSounds,
+    // The list is for those who can act on it; everyone else has the member list beside the chat.
+    members: canManageRoles || canKickMembers || canBanMembers,
+    roles: canManageRoles,
+    bans: canBanMembers,
+    audit: canViewAuditLog,
+  };
 
   // Reset tab and mobile view when modal opens. A caller may name the tab
   // to open on (`openModal('spaceSettings', { tab: 'discovery' })`); a tab
-  // this user cannot see falls back to the overview, and on mobile a named
-  // tab opens straight on its content, as user settings does.
+  // this user cannot see falls back to the first one they can use, and on
+  // mobile a named tab opens straight on its content, as user settings does.
   const requestedTab = isOpen ? modalData.tab : undefined;
   useEffect(() => {
     if (!isOpen) return;
-    const allowed: Record<SpaceSettingsTab, boolean> = {
-      overview: true,
-      discovery: canManageSpace,
-      members: true,
-      roles: canManageRoles,
-      bans: canBanMembers,
-    };
     const deepLinked = isSpaceSettingsTab(requestedTab) && allowed[requestedTab];
-    setTab(deepLinked ? requestedTab : 'overview');
+    setTab(deepLinked ? requestedTab : canManageSpace ? 'overview' : 'you');
     setMobileView(deepLinked ? 'content' : 'tabs');
     // Only the opening decides the tab: a permission that changes while the
     // modal is open must not throw the user back to where they came in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, requestedTab]);
 
+  // The count beside Access, without opening it. Only a space that takes
+  // requests has any, and it is read from the instance that hosts the space.
+  const requestOrigin = space?._instanceOrigin ?? '';
+  const takesRequests = isOpen && canManageSpace && space?.visibility === 'request';
+  useEffect(() => {
+    setPendingRequests(0);
+    if (!takesRequests || !currentSpaceId) return undefined;
+    let live = true;
+    getApiForOrigin(requestOrigin).explore.getJoinRequests(currentSpaceId, 'pending')
+      .then(({ requests }) => { if (live) setPendingRequests(requests.length); })
+      .catch(() => { /* The panel says so itself when it is opened. */ });
+    return () => { live = false; };
+  }, [takesRequests, currentSpaceId, requestOrigin]);
+
   if (!space || !currentSpaceId) return null;
 
-  const tabClass = (target: typeof tab) =>
-    `w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-      tab === target ? 'bg-interactive-selected text-txt-primary font-medium' : 'text-txt-tertiary hover:text-txt-secondary hover:bg-interactive-hover'
-    }`;
+  const tabLabels: Record<SpaceSettingsTab, string> = {
+    you: t('spaces:settings.nav.tabs.you'),
+    overview: t('spaces:settings.nav.tabs.overview'),
+    access: t('spaces:settings.nav.tabs.access'),
+    invites: t('spaces:settings.nav.tabs.invites'),
+    discovery: t('spaces:settings.nav.tabs.discovery'),
+    verification: t('spaces:settings.nav.tabs.verification'),
+    moderation: t('spaces:settings.nav.tabs.moderation'),
+    welcome: t('spaces:settings.nav.tabs.welcome'),
+    sounds: t('spaces:settings.nav.tabs.sounds'),
+    members: t('common:labels.members'),
+    roles: t('spaces:settings.nav.tabs.roles'),
+    bans: t('spaces:settings.nav.tabs.bans'),
+    audit: t('spaces:settings.nav.tabs.audit'),
+  };
+  const groupLabels: Record<SpaceSettingsGroup, string> = {
+    general: t('spaces:settings.nav.general'),
+    management: t('spaces:settings.nav.management'),
+  };
 
-  const handleTabClick = (target: typeof tab) => {
+  const handleTabClick = (target: SpaceSettingsTab) => {
     setTab(target);
     if (isMobile) setMobileView('content');
   };
 
+  // One `.nav-item` per tab under a mono label per section; the open one is a
+  // step lighter with the violet edge. On the phone the rows are taller, for
+  // a thumb.
+  const renderNav = (layout: 'desktop' | 'mobile'): ReactNode =>
+    SPACE_SETTINGS_NAV.map(({ group, tabs }, index) => {
+      const visible = tabs.filter((entry) => allowed[entry]);
+      if (visible.length === 0) return null;
+      return (
+        <Fragment key={group}>
+          <div className={`label-mono px-2.5 pb-1.5 ${index > 0 ? 'pt-5' : 'pt-1'}`}>{groupLabels[group]}</div>
+          {visible.map((entry) => (
+            <button
+              key={entry}
+              type="button"
+              onClick={() => handleTabClick(entry)}
+              className={`nav-item w-full ${layout === 'mobile' ? 'h-11' : ''}`}
+              data-active={tab === entry}
+              aria-current={tab === entry ? 'page' : undefined}
+            >
+              <span className="min-w-0 flex-1 truncate">{tabLabels[entry]}</span>
+              {entry === 'access' && pendingRequests > 0 && <CountBadge count={pendingRequests} />}
+              {layout === 'mobile' && <Icon name="chevron-right" size={15} className="flex-shrink-0 text-txt-tertiary" />}
+            </button>
+          ))}
+        </Fragment>
+      );
+    });
+
   return (
     <Modal isOpen={isOpen} onClose={closeModal} size="settings" mobileStyle="fullscreen">
       <div className="flex h-full">
-        {/* Desktop Sidebar */}
-        <div className="hidden desktop:flex w-52 flex-shrink-0 flex-col p-4 gap-3">
-          {/* Space card */}
-          <div className="glass-bubble rounded-lg p-3 flex items-center gap-3">
+        {/* Desktop navigation: a flat column on the sidebar colour, parted from
+            the page by a hairline, like the app's own sidebars. */}
+        <div className="hidden desktop:flex w-60 flex-shrink-0 flex-col border-r border-border-hard bg-surface-channel">
+          {/* The space these settings belong to */}
+          <div className="panel-bar flex items-center gap-2.5 px-4">
             <Avatar
               src={space.icon}
               name={space.name}
-              size={36}
+              size={28}
               userId={space.id}
               avatarColor={space.avatarColor}
               palette="space"
             />
             <div className="min-w-0">
-              <div className="text-sm font-medium text-txt-primary truncate">{space.name}</div>
+              <div className="truncate text-ui font-medium leading-tight text-txt-primary">{space.name}</div>
+              <div className="truncate font-mono text-label leading-tight text-txt-tertiary">{t('spaces:settings.title')}</div>
             </div>
           </div>
 
-          {/* Nav list */}
-          <div className="glass-bubble rounded-lg p-2 flex-1 flex flex-col">
-            <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.general')}</div>
-            <button onClick={() => handleTabClick('overview')} className={tabClass('overview')}>{t('spaces:settings.nav.tabs.overview')}</button>
-            {canManageSpace && (
-              <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>{t('spaces:settings.nav.tabs.discovery')}</button>
-            )}
-
-            <div className="border-t border-white/[0.04] my-2 mx-2" />
-            <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
-            <button onClick={() => handleTabClick('members')} className={tabClass('members')}>{t('common:labels.members')}</button>
-            {canManageRoles && (
-              <button onClick={() => handleTabClick('roles')} className={tabClass('roles')}>{t('spaces:settings.nav.tabs.roles')}</button>
-            )}
-            {canBanMembers && (
-              <button onClick={() => handleTabClick('bans')} className={tabClass('bans')}>{t('spaces:settings.nav.tabs.bans')}</button>
-            )}
-          </div>
+          <nav aria-label={t('spaces:settings.title')} className="sliding-list flex flex-1 flex-col overflow-y-auto scrollbar-thin px-2 py-3">
+            <SlidingMark variant="row" />
+            {renderNav('desktop')}
+          </nav>
         </div>
 
         {/* Mobile: Tab list */}
         {isMobile && mobileView === 'tabs' && (
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {/* Mobile space card */}
-            <div className="glass-bubble rounded-lg p-3 flex items-center gap-3">
+            <div className="rounded-lg border border-border-hard bg-surface-channel p-3 flex items-center gap-3">
               <Avatar
                 src={space.icon}
                 name={space.name}
@@ -713,53 +884,48 @@ export function SpaceSettingsModal() {
                 palette="space"
               />
               <div className="min-w-0">
-                <div className="text-sm font-medium text-txt-primary truncate">{space.name}</div>
+                <div className="truncate text-body font-medium text-txt-primary">{space.name}</div>
+                <div className="truncate font-mono text-meta text-txt-tertiary">{t('spaces:settings.title')}</div>
               </div>
             </div>
 
-            <div className="glass-bubble rounded-lg p-2 space-y-0.5">
-              <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.general')}</div>
-              <button onClick={() => handleTabClick('overview')} className={tabClass('overview')}>{t('spaces:settings.nav.tabs.overview')}</button>
-              {canManageSpace && (
-                <button onClick={() => handleTabClick('discovery')} className={tabClass('discovery')}>{t('spaces:settings.nav.tabs.discovery')}</button>
-              )}
-
-              <div className="border-t border-white/[0.04] my-2 mx-2" />
-              <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t('spaces:settings.nav.management')}</div>
-              <button onClick={() => handleTabClick('members')} className={tabClass('members')}>{t('common:labels.members')}</button>
-              {canManageRoles && (
-                <button onClick={() => handleTabClick('roles')} className={tabClass('roles')}>{t('spaces:settings.nav.tabs.roles')}</button>
-              )}
-              {canBanMembers && (
-                <button onClick={() => handleTabClick('bans')} className={tabClass('bans')}>{t('spaces:settings.nav.tabs.bans')}</button>
-              )}
-            </div>
+            <nav aria-label={t('spaces:settings.title')} className="rounded-lg border border-border-hard bg-surface-channel p-2">
+              {renderNav('mobile')}
+            </nav>
           </div>
         )}
 
         {/* Content area (desktop always, mobile only when viewing content) */}
         {(!isMobile || mobileView === 'content') && (
-          <div className="flex-1 min-w-0 overflow-y-auto scrollbar-thin py-6">
+          <div className="panel-light flex-1 min-w-0 overflow-y-auto scrollbar-thin bg-surface-chat py-6">
             <div className="px-6 max-w-[640px] mx-auto">
               {/* Mobile back button */}
               {isMobile && (
                 <button
+                  type="button"
                   onClick={() => setMobileView('tabs')}
-                  className="flex items-center gap-1.5 text-txt-tertiary hover:text-txt-secondary mb-4 text-sm"
+                  className="btn-quiet -ml-2 mb-4 px-2"
                   aria-label={t('spaces:settings.backAria')}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-                  </svg>
+                  <Icon name="chevron-left" size={16} />
                   {t('spaces:settings.title')}
                 </button>
               )}
               <SettingsPanelSuspense key={tab}>
-                {tab === 'overview' && <OverviewPanel spaceId={currentSpaceId} />}
+                {tab === 'you' && <YourSpacePanel spaceId={currentSpaceId} />}
+                {tab === 'overview' && canManageSpace && <OverviewPanel spaceId={currentSpaceId} />}
+                {tab === 'welcome' && canManageSpace && <WelcomePanel key={currentSpaceId} spaceId={currentSpaceId} />}
+                {tab === 'sounds' && canManageSounds && <SoundsPanel key={currentSpaceId} spaceId={currentSpaceId} />}
+                {tab === 'access' && canManageSpace && <AccessPanel key={currentSpaceId} spaceId={currentSpaceId} onRequestCountChange={setPendingRequests} />}
+                {tab === 'invites' && canManageSpace && <InvitesPanel key={currentSpaceId} spaceId={currentSpaceId} />}
                 {tab === 'discovery' && canManageSpace && <DiscoveryPanel spaceId={currentSpaceId} />}
-                {tab === 'members' && <MembersPanel spaceId={currentSpaceId} />}
+                {tab === 'verification' && isOwner && <VerificationPanel key={currentSpaceId} spaceId={currentSpaceId} />}
+                {/* Keyed by space: a different space's rules or log never shows in the same form. */}
+                {tab === 'moderation' && canManageSpace && <ModerationPanel key={currentSpaceId} spaceId={currentSpaceId} />}
+                {tab === 'members' && allowed.members && <MembersPanel spaceId={currentSpaceId} />}
                 {tab === 'roles' && canManageRoles && <RolesPanel spaceId={currentSpaceId} />}
                 {tab === 'bans' && canBanMembers && <BansPanel spaceId={currentSpaceId} />}
+                {tab === 'audit' && canViewAuditLog && <AuditLogPanel key={currentSpaceId} spaceId={currentSpaceId} />}
               </SettingsPanelSuspense>
             </div>
           </div>

@@ -99,7 +99,7 @@ function InviteResultFriendRow({
   const { baseName } = parseFederatedUsername(canonical.username);
   const dn = canonical.displayName ?? baseName;
   return (
-    <div className="flex items-center gap-3 px-3 py-2 rounded-[4px]">
+    <div className="flex items-center gap-3 rounded-md px-2.5 py-2">
       <Avatar
         src={canonical.avatar}
         name={dn}
@@ -108,17 +108,17 @@ function InviteResultFriendRow({
         avatarColor={canonical.avatarColor}
       />
       <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-medium text-txt-primary truncate">{dn}</div>
-        <div className="text-[11px] text-txt-tertiary truncate">@{canonical.username}</div>
+        <div className="text-ui font-medium text-txt-primary truncate">{dn}</div>
+        <div className="text-label text-txt-tertiary truncate">@{canonical.username}</div>
       </div>
       {status?.kind === 'success' && (
-        <span className="text-[12px] text-accent-mint flex-shrink-0">{t('spaces:invite.status.sent')}</span>
+        <span className="text-meta text-txt-positive flex-shrink-0">{t('spaces:invite.status.sent')}</span>
       )}
       {status?.kind === 'failure' && (
-        <span className="text-[12px] text-txt-danger flex-shrink-0">{t('spaces:invite.status.failed', { reason: status.reason })}</span>
+        <span className="text-meta text-txt-danger flex-shrink-0">{t('spaces:invite.status.failed', { reason: status.reason })}</span>
       )}
       {status?.kind === 'pending' && (
-        <span className="text-[12px] text-txt-tertiary flex-shrink-0">...</span>
+        <span className="text-meta text-txt-tertiary flex-shrink-0">...</span>
       )}
     </div>
   );
@@ -145,11 +145,11 @@ function InviteSelectFriendRow({
     <button
       onClick={() => onToggle(friendKey(friend), friend)}
       disabled={alreadyMember || sending}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-[4px] transition-colors text-left ${
+      className={`w-full flex items-center gap-3 rounded-md px-2.5 py-2 transition-colors duration-100 text-left ${
         alreadyMember
           ? 'opacity-40 cursor-not-allowed'
           : isSelected
-            ? 'bg-accent-mint/[0.08]'
+            ? 'bg-interactive-selected'
             : 'hover:bg-interactive-hover'
       }`}
     >
@@ -162,19 +162,19 @@ function InviteSelectFriendRow({
         avatarColor={canonical.avatarColor}
       />
       <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-medium text-txt-primary truncate">{dn}</div>
-        <div className="text-[11px] text-txt-tertiary truncate">
+        <div className="text-ui font-medium text-txt-primary truncate">{dn}</div>
+        <div className="text-label text-txt-tertiary truncate">
           {alreadyMember ? t('spaces:invite.alreadyMember') : `@${canonical.username}`}
         </div>
       </div>
       {!alreadyMember && (
         <div
-          className={`w-[18px] h-[18px] rounded flex-shrink-0 flex items-center justify-center ${
-            isSelected ? 'bg-accent-mint' : 'border-2 border-border-hard'
+          className={`h-4 w-4 flex-shrink-0 rounded flex items-center justify-center border ${
+            isSelected ? 'border-accent-primary bg-accent-primary' : 'border-border-soft bg-surface-input'
           }`}
         >
           {isSelected && (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-surface-base">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-white" aria-hidden="true">
               <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
@@ -214,8 +214,10 @@ export function InviteModal() {
   const [results, setResults] = useState<Map<string, SendStatus>>(new Map());
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const inviteUrl = inviteCode
-    ? spaceInviteUrl(instanceOrigin, inviteCode)
+  // A space's own address reads better than a code, so it is the link to pass on.
+  const linkCode = currentSpace?.vanityCode || inviteCode;
+  const inviteUrl = linkCode
+    ? spaceInviteUrl(instanceOrigin, linkCode)
     : '';
 
   // Fetch / generate the per-space invite code on open.
@@ -392,7 +394,7 @@ export function InviteModal() {
       mobileStyle="sheet"
     >
       <div className="space-y-3">
-        <p className="text-[13px] text-txt-tertiary">
+        <p className="text-ui text-txt-tertiary">
           {joinsByRequest ? t('spaces:invite.introRequest') : t('spaces:invite.intro')}
         </p>
 
@@ -402,12 +404,13 @@ export function InviteModal() {
             {selectedFriends.map((f) => (
               <span
                 key={friendKey(f)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] bg-accent-mint/15 text-accent-mint"
+                className="flex h-6 items-center gap-1 rounded-md border border-border-soft bg-surface-input pl-2 pr-1 text-meta text-txt-primary"
               >
                 {f.displayName ?? parseFederatedUsername(f.username).baseName}
                 <button
+                  type="button"
                   onClick={() => removeFriend(friendKey(f))}
-                  className="opacity-60 hover:opacity-100 transition-opacity text-[14px] leading-none"
+                  className="flex h-4 w-4 items-center justify-center rounded text-body leading-none text-txt-tertiary transition-colors duration-100 hover:bg-interactive-hover hover:text-txt-primary"
                   aria-label={t('spaces:invite.removeSelected', { name: f.displayName ?? f.username })}
                 >
                   &times;
@@ -425,12 +428,12 @@ export function InviteModal() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('spaces:invite.searchPlaceholder')}
-            className="input-search w-full py-2 text-[14px]"
+            className="input-search h-8 w-full py-0"
           />
         )}
 
         {/* Friend list / Results view */}
-        <div className="max-h-[280px] overflow-y-auto space-y-[2px]">
+        <div className="max-h-[280px] overflow-y-auto scrollbar-thin space-y-0.5">
           {inResultsView ? (
             selectedFriends.map((f) => (
               <InviteResultFriendRow
@@ -442,7 +445,7 @@ export function InviteModal() {
           ) : (
             <>
               {filteredFriends.length === 0 && (
-                <div className="py-4 text-center text-txt-tertiary text-[14px]">
+                <div className="py-4 text-center text-ui text-txt-tertiary">
                   {query.trim()
                     ? t('spaces:invite.noMatches')
                     : t('spaces:invite.noFriends')}
@@ -467,51 +470,54 @@ export function InviteModal() {
           <div className="flex gap-2">
             {hasFailures && (
               <button
+                type="button"
                 onClick={onRetryFailed}
                 disabled={sending}
-                className="flex-1 py-2 rounded-md text-[13px] font-semibold transition-colors bg-accent-mint text-surface-base hover:bg-accent-mint/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary flex-1"
               >
                 {t('spaces:invite.retryFailed')}
               </button>
             )}
             <button
+              type="button"
               onClick={closeModal}
-              className="flex-1 py-2 rounded-md text-[13px] font-semibold glass-pill text-txt-primary"
+              className="btn-outline flex-1"
             >
               {t('common:actions.done')}
             </button>
           </div>
         ) : (
           <button
+            type="button"
             onClick={onSubmit}
             disabled={selectedFriends.length === 0 || sending || codeLoading}
-            className="w-full py-2 rounded-md text-[13px] font-semibold transition-colors bg-accent-mint text-surface-base hover:bg-accent-mint/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-busy={sending}
+            className="btn-primary w-full"
           >
             {sending ? t('spaces:invite.sending') : submitLabel}
           </button>
         )}
 
         {/* Share-link footer */}
-        <div className="pt-3 border-t border-white/[0.06]">
-          <p className="text-[12px] text-txt-tertiary mb-2">
+        <div className="pt-3 border-t border-border-hard">
+          <p className="text-meta text-txt-tertiary mb-2">
             {t('spaces:invite.shareLink')}
           </p>
           {codeError && (
-            <div className="mb-2 text-[12px] text-txt-danger">{codeError}</div>
+            <div className="mb-2 text-meta text-txt-danger">{codeError}</div>
           )}
           <div className="flex items-center gap-2">
             <input
               type="text"
               value={codeLoading ? t('spaces:invite.generating') : inviteUrl}
               readOnly
-              className="input-embedded flex-1 font-mono text-xs px-2 py-1.5"
+              className="input-standard h-8 min-w-0 flex-1 px-2 py-0 font-mono text-meta"
             />
             <button
+              type="button"
               onClick={handleCopy}
               disabled={codeLoading || !inviteUrl}
-              className={`glass-pill px-3 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                linkCopied ? 'text-accent-mint' : 'text-txt-primary'
-              }`}
+              className={`btn-outline ${linkCopied ? 'text-txt-positive' : ''}`}
             >
               {linkCopied ? t('common:actions.copied') : t('common:actions.copy')}
             </button>

@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 export const SOURCE_LANGUAGE = 'en';
 export const LOCALES_DIR = 'packages/web/src/locales';
 export const WEB_SRC_DIR = 'packages/web/src';
-export const FORMATTERS_FILE = 'packages/web/src/i18n/formatters.ts';
+export const FORMATTERS_FILE = 'packages/web/src/i18n/createFormatters.ts';
 export const ERRORS_TS = 'packages/shared/src/errors.ts';
 export const ALLOWLIST_FILE = 'scripts/i18n-allowlist.json';
 export const PENDING_FILE = 'scripts/i18n-pending.txt';

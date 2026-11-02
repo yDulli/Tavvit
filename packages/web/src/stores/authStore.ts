@@ -1,9 +1,12 @@
+import { useCommandReplyStore } from './commandReplyStore';
+import { dropThisDevicesPush } from '../utils/pushSubscription';
+import { deviceId } from '../utils/deviceId';
 import { useChannelPokeStore } from './channelPokeStore';
 import { useUnreadCountStore } from './unreadCountStore';
 import { useMemo } from 'react';
 import { create } from 'zustand';
-import { isChosenUserStatus, type ChosenUserStatus, type FederatedIdentity, type User } from '@backspace/shared';
-import { api } from '../api/client';
+import { isChosenUserStatus, type ChosenUserStatus, type DmPolicy, type FriendRequestPolicy, type FederatedIdentity, type ProfileLayout, type ProfileLink, type User } from '@backspace/shared';
+import { api, createApiClient, HttpError } from '../api/client';
 import { useChatStore } from './chatStore';
 import { useSpaceStore } from './spaceStore';
 import { useSocialStore } from './socialStore';
@@ -14,6 +17,12 @@ import { useSettingsStore } from './settingsStore';
 import { useExploreStore } from './exploreStore';
 import { useDirectoryStore } from './directoryStore';
 import { useNotificationSettingsStore } from './notificationSettingsStore';
+import { useBlockStore } from './blockStore';
+import { useEmojiStore } from './emojiStore';
+import { useInboxStore } from './inboxStore';
+import { useKeywordStore } from './keywordStore';
+import { useSavedStore } from './savedStore';
+import { useReviewStore } from './reviewStore';
 import { deleteAccountOnRemotes } from '../utils/federationOps';
 import { homeHostOf, homeIdentityOf, isMine, ownRowAt, selfIdentityOf, type IdentityFields, type SelfIdentity } from '../utils/identity';
 import { myChosenStatus, statusAuthority, type OwnStatusReport } from '../utils/selfStatus';
@@ -45,8 +54,8 @@ interface AuthState {
   register: (username: string, password: string, displayName?: string, avatarColor?: string) => Promise<void>;
   logout: () => void;
   loadUser: () => Promise<void>;
-  updateProfile: (data: { displayName?: string; avatar?: string; banner?: string; accentColor?: string; avatarColor?: string; bio?: string; customStatus?: string; status?: ChosenUserStatus }) => Promise<void>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  updateProfile: (data: { displayName?: string; avatar?: string; banner?: string; accentColor?: string; accentColorSecondary?: string; avatarColor?: string; bio?: string; pronouns?: string; profileLinks?: ProfileLink[] | null; profileLayout?: ProfileLayout | null; customStatus?: string; customStatusExpiresInMinutes?: number | null; status?: ChosenUserStatus; dmPolicy?: DmPolicy; friendRequestPolicy?: FriendRequestPolicy }) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string, twoFactorCode?: string) => Promise<void>;
   deleteAccount: (password: string, username: string) => Promise<void>;
   setUser: (user: User) => void;
   /** A connected instance's `ready` named `userId` as the signed-in user's row there. */
@@ -87,7 +96,14 @@ function resetUserStores() {
   useExploreStore.getState().reset();
   useDirectoryStore.getState().reset();
   useNotificationSettingsStore.getState().reset();
-  useSettingsStore.getState().resetUpdateState();
+  useBlockStore.getState().reset();
+  useEmojiStore.getState().reset();
+  useInboxStore.getState().reset();
+  useCommandReplyStore.getState().reset();
+  useSavedStore.getState().reset();
+  useKeywordStore.getState().reset();
+  useSettingsStore.getState().resetSessionState();
+  useReviewStore.getState().reset();
 }
 
 const TRUE_HOME_STATUS_KEY_PREFIX = 'backspace_true_home_status';
@@ -156,6 +172,8 @@ function lastTrueHomeStatus(user: User | null, now: number): KeptTrueHomeStatus 
  * live report, a new session and signing out cancel it.
  */
 let keptStatusExpiry: ReturnType<typeof setTimeout> | null = null;
+/** How many times in a row loadUser got no answer about the token: its next wait doubles with each. */
+let loadUserFailures = 0;
 
 function cancelKeptStatusExpiry(): void {
   if (keptStatusExpiry === null) return;
@@ -224,7 +242,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (username: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.auth.login({ username, password });
+      const device = deviceId();
+      const response = await api.auth.login({ username, password, ...(device ? { deviceId: device } : {}) });
       get().initSession(response.token, response.user);
     } catch (err) {
       set({ isLoading: false, error: err instanceof Error ? err.message : 'Login failed' });
@@ -244,7 +263,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    // The session ends on the server too, or the token would go on working. Not through
+    // `api`: it would treat a 401 as this page's session, and by the time the answer
+    // comes someone may have signed in again.
+    const token = get().token;
+    if (token) void createApiClient('', () => token).auth.logout().catch(() => {});
     localStorage.removeItem('backspace_token');
+    void dropThisDevicesPush().catch(() => {});
     resetUserStores();
     cancelKeptStatusExpiry();
     set({ token: null, user: null, trueHomeStatus: null, myRowIds: new Map() });
@@ -257,12 +282,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     try {
       const user = await api.users.me();
+      loadUserFailures = 0;
       // A value already in the page (the true home's report, or the kept
       // report a sign-in started from, with its expiry) is kept as it is.
       set({ user, trueHomeStatus: get().trueHomeStatus ?? seedTrueHomeStatus(user), isLoading: false });
       // Auto-connect to remote instances (fire-and-forget)
       useInstanceStore.getState().autoConnectAll().catch(() => {});
-    } catch {
+    } catch (error) {
+      // Only the server saying no ends a session. A network failure, a 500 or a
+      // 429 says nothing about the token, and signing out over one would cost the
+      // person a full login. Stay on the loading state for a moment, then let
+      // useAuth ask again.
+      if (!(error instanceof HttpError) || error.status >= 500 || error.status === 408 || error.status === 429) {
+        loadUserFailures += 1;
+        setTimeout(() => set({ isLoading: false }), Math.min(1000 * 2 ** (loadUserFailures - 1), 30_000));
+        return;
+      }
+      loadUserFailures = 0;
       localStorage.removeItem('backspace_token');
       cancelKeptStatusExpiry();
       set({ token: null, user: null, trueHomeStatus: null, myRowIds: new Map(), isLoading: false });
@@ -293,12 +329,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  changePassword: async (currentPassword: string, newPassword: string) => {
+  changePassword: async (currentPassword: string, newPassword: string, twoFactorCode?: string) => {
     // Change on this instance only. Remote instances are NOT touched: each
     // federated account authenticates with its own home-issued per-remote
     // secret, so the home password is not a credential anywhere else and there
     // is nothing to propagate (client-federation.md §1).
-    const response = await api.users.changePassword({ currentPassword, newPassword });
+    const response = await api.users.changePassword({ currentPassword, newPassword, ...(twoFactorCode ? { twoFactorCode } : {}) });
 
     // Update token in state and localStorage
     localStorage.setItem('backspace_token', response.token);

@@ -183,3 +183,70 @@ describe('explore routes — error codes', () => {
     expect(JSON.parse(decided.body).code).toBe('join_request_decided');
   });
 });
+
+describe('GET /api/spaces/explore — what Discovery lists', () => {
+  let app: FastifyInstance;
+
+  beforeEach(async () => {
+    sqlite = new Database(':memory:');
+    testDb = drizzle(sqlite, { schema });
+    applyMigrations(sqlite);
+    testDb.insert(schema.instanceSettings).values({ id: 1, discoveryEnabled: 1, updatedAt: Date.now() }).run();
+    seedUser(CALLER_ID, 'caller');
+    seedUser(OWNER_ID, 'owner');
+    app = await buildApp();
+  });
+
+  function setDiscoveryStatus(id: string, status: string | null): void {
+    testDb.update(schema.spaces).set({ discoveryStatus: status }).where(eq(schema.spaces.id, id)).run();
+  }
+
+  it('lists a space only while it is open to join and an admin has approved its listing', async () => {
+    for (const [id, visibility, status] of [
+      ['approved-public', 'public', 'approved'],
+      ['approved-request', 'request', 'approved'],
+      ['approved-private', 'private', 'approved'],
+      ['pending', 'public', 'pending'],
+      ['changes-requested', 'public', 'changes_requested'],
+      ['rejected', 'request', 'rejected'],
+      ['withdrawn', 'public', 'withdrawn'],
+      ['never-asked', 'public', null],
+    ] as const) {
+      seedSpace(id, visibility);
+      setDiscoveryStatus(id, status);
+    }
+    const res = await app.inject({ method: 'GET', url: '/api/spaces/explore' });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { spaces: Array<{ id: string }>; total: number; totalAll: number };
+    expect(body.spaces.map(s => s.id).sort()).toEqual(['approved-public', 'approved-request']);
+    expect(body.total).toBe(2);
+    expect(body.totalAll).toBe(2);
+  });
+
+  it('carries the category of the approved request and the badges the space shows', async () => {
+    seedSpace('chess', 'public');
+    setDiscoveryStatus('chess', 'approved');
+    testDb.update(schema.spaces)
+      .set({ verificationStatus: 'verified', badges: JSON.stringify(['partner']) })
+      .where(eq(schema.spaces.id, 'chess')).run();
+    testDb.insert(schema.spaceDiscoveryRequests).values({
+      spaceId: 'chess', category: 'gaming', requestedBy: OWNER_ID, requestedAt: 1,
+    }).run();
+    const res = await app.inject({ method: 'GET', url: '/api/spaces/explore' });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body)).toMatchObject({
+      total: 1,
+      discoveryEnabled: true,
+      spaces: [{ id: 'chess', category: 'gaming', badges: ['verified', 'partner'], memberCount: 1, joined: false }],
+    });
+  });
+
+  it('lists nothing while the instance has Discovery switched off', async () => {
+    seedSpace('approved-public', 'public');
+    setDiscoveryStatus('approved-public', 'approved');
+    testDb.update(schema.instanceSettings).set({ discoveryEnabled: 0 }).where(eq(schema.instanceSettings.id, 1)).run();
+    const res = await app.inject({ method: 'GET', url: '/api/spaces/explore' });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body)).toEqual({ spaces: [], total: 0, discoveryEnabled: false });
+  });
+});

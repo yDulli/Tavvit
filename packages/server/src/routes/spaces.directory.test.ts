@@ -40,6 +40,8 @@ vi.mock('../ws/handler.js', () => ({
     addUserSpace: vi.fn(),
     sendToSpace: vi.fn(),
     sendToUser: vi.fn(),
+    // An edit that moves a review tells the admins the queue's size (utils/reviewNotify.ts).
+    sendToAdmins: vi.fn(),
   },
 }));
 
@@ -183,6 +185,18 @@ describe('PATCH /api/spaces/:id directoryListed', () => {
     expect(res.statusCode).toBe(200);
     expect(readSpace()?.directoryListed).toBe(1);
     expect(markDirectoryDirty).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks dirty when a rename sends a listed, approved space back to review, out of the document', async () => {
+    seedSpace('public', 1);
+    testDb.update(schema.spaces).set({ discoveryStatus: 'approved' }).where(eq(schema.spaces.id, SPACE_ID)).run();
+    testDb.insert(schema.spaceDiscoveryRequests).values({
+      spaceId: SPACE_ID, category: 'gaming', requestedBy: OWNER_ID, requestedAt: now,
+    }).run();
+    const res = await patchSpace({ name: 'Renamed' });
+    expect(res.statusCode).toBe(200);
+    expect(readSpace()).toMatchObject({ directoryListed: 1, discoveryStatus: 'pending' });
+    expect(markDirectoryDirty).toHaveBeenCalled();
   });
 
   it('does not mark when an unlisted space changes a served field', async () => {

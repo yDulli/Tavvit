@@ -34,6 +34,14 @@
         "voice": {
           "name": "语音",
           "description": "进行语音和视频畅聊"
+        },
+        "announcement": {
+          "name": "公告",
+          "description": "只有你允许的人能发帖，其他空间可以关注"
+        },
+        "forum": {
+          "name": "论坛",
+          "description": "每个帖子都是独立的讨论，带标题和标签"
         }
       },
       "nameLabel": "频道名称",
@@ -67,7 +75,66 @@
         "note": "没有显式访问权限的成员将无法看到此频道。拥有管理员权限的用户或空间拥有者始终可以查看所有频道。",
         "unhideOnSave": "保存后，所有成员都将看到此频道。"
       },
-      "deleteButton": "删除频道"
+      "deleteButton": "删除频道",
+      "slowmode": {
+        "label": "慢速模式",
+        "off": "关闭",
+        "hint": "成员两次发言之间需要等待的时间。可以管理消息或此频道的人不受限制。"
+      },
+      "webhooks": {
+        "title": "Webhook",
+        "description": "其他程序可通过此地址向该频道发布消息。知道地址的人都能在此发言，请像对待密码一样保管。",
+        "nameLabel": "名称",
+        "create": "创建",
+        "empty": "此频道还没有 Webhook。",
+        "onlyOnce": "{{name}} 的地址。请立即复制：它不会再次显示。",
+        "addressLabel": "Webhook 地址",
+        "copied": "已复制",
+        "howTo": "向其发送带有 \"content\" 字段的 JSON，例如：",
+        "rename": "重命名 Webhook",
+        "neverUsed": "从未使用",
+        "lastUsed": "上次使用：{{time}}",
+        "rotate": "新地址",
+        "rotateTitle": "更换新地址？",
+        "rotateBody": "{{name}} 的旧地址将立即失效。地址泄露时请使用此功能。",
+        "remove": "删除 Webhook",
+        "removeTitle": "删除此 Webhook？",
+        "removeBody": "{{name}} 的地址将失效。已发布的内容会保留。"
+      },
+      "announcement": {
+        "label": "公告频道",
+        "hint": "只有你在“权限”中允许的人能发帖，其他空间可以关注。"
+      },
+      "tags": {
+        "title": "标签",
+        "intro": "帖子可以带这些标签，列表也可以按标签筛选。最多 {{max}} 个。",
+        "empty": "还没有标签。",
+        "nameLabel": "标签名称",
+        "colorLabel": "标签颜色",
+        "noColor": "无颜色",
+        "add": "添加标签",
+        "remove": "移除标签"
+      },
+      "follows": {
+        "followersTitle": "关注此频道的频道",
+        "followersEmpty": "还没有频道关注此频道。",
+        "followingTitle": "此频道关注的频道",
+        "place": "{{space}} 的 #{{channel}}",
+        "remove": "取消关注",
+        "removeTitle": "要取消关注吗？",
+        "removeBody": "新帖将不再送达该频道。已收到的内容会保留。"
+      },
+      "icon": {
+        "label": "图标",
+        "hint": "在频道出现的所有位置替代频道类型图标。不设置时保留类型图标。",
+        "default": "频道类型图标",
+        "emoji": "表情符号",
+        "useDefault": "使用类型图标",
+        "tabs": {
+          "icons": "图标",
+          "emoji": "表情符号"
+        }
+      }
     },
     "delete": {
       "title": "删除 #{{name}}？",
@@ -175,19 +242,17 @@
     "title": "探索",
     "searchPlaceholder": "搜索空间…",
     "discoveryOff": {
-      "member": "您的实例管理员已关闭空间发现。此处的空间只能通过邀请链接加入。",
       "admin": "本实例已关闭空间发现。此处的空间只能通过邀请链接加入。",
       "enable": "开启空间发现",
       "failed": "无法更改该设置。"
     },
     "browseOff": {
-      "member": "此处不显示来自其他实例的空间，因为您的实例管理员已关闭该功能。",
       "admin": "此处不显示来自其他实例的空间。",
       "action": "在“探索”中显示全局空间",
       "confirm": {
         "title": "在此显示来自其他实例的空间？",
         "exposure": "那些实例会看到每个加载其内容的浏览器的 IP 地址，而本实例的管理员无法控制它们。",
-        "off": "以后要停止显示：设置、实例、常规、在“探索”中显示全局空间的开关。",
+        "off": "以后要停止显示：管理控制台、常规、在“探索”中显示全局空间的开关。",
         "action": "显示全局空间"
       }
     },
@@ -196,13 +261,13 @@
       "action": "列入目录",
       "confirm": {
         "title": "公开列出本实例的空间？",
-        "optIn": "只有其拥有者自行开启列入的空间才会被提交，因此该开关本身不会列入任何空间。",
-        "off": "以后要停止列入：设置、实例、常规、空间发现选项。",
+        "optIn": "只有经管理员批准收录、且其拥有者自行选择列入目录的空间才会被提交，因此该开关本身不会列入任何空间。",
+        "off": "以后要停止列入：管理控制台、常规、空间发现选项。",
         "action": "列入空间"
       }
     },
     "noMatches": "没有匹配您搜索的空间。",
-    "empty": "暂无可发现的空间。",
+    "empty": "暂无已收录的空间。",
     "joinedSection": "已加入",
     "notConnected": "未连接到 {{host}}",
     "inner": {
@@ -213,8 +278,8 @@
     },
     "outer": {
       "title": "外部空间",
-      "subtitle": "遍布 Backspace 的社区",
-      "empty": "外面还什么都没有。加入目录的空间会显示在这里。",
+      "subtitle": "遍布 Tavvit 的社区",
+      "empty": "外面还什么都没有。已获批准收录、且其拥有者选择列入目录的空间会显示在这里。",
       "noMatches": "外部空间中没有匹配您搜索的空间。",
       "showMore": "显示更多",
       "connectAndJoin": "连接并加入",
@@ -256,7 +321,8 @@
       "pending": "待处理",
       "request": "申请",
       "sending": "正在发送…"
-    }
+    },
+    "lead": "可以加入的空间：对所有人开放，或通过申请加入。"
   },
   "settings": {
     "title": "空间设置",
@@ -266,9 +332,17 @@
       "management": "管理",
       "tabs": {
         "overview": "概览",
+        "welcome": "欢迎与规则",
+        "sounds": "音效板",
         "discovery": "发现",
         "roles": "身份组",
-        "bans": "封禁名单"
+        "bans": "封禁名单",
+        "moderation": "审核",
+        "audit": "审计日志",
+        "verification": "认证",
+        "you": "你的设置",
+        "access": "访问权限",
+        "invites": "邀请"
       }
     },
     "discardChanges": "放弃修改",
@@ -300,14 +374,20 @@
         "button": "删除空间",
         "confirmAgain": "再次点击以确认删除",
         "failed": "删除空间失败"
+      },
+      "notifications": {
+        "title": "通知",
+        "label": "默认通知",
+        "description": "成员在自行选择之前会使用这个级别。Tavvit 本身的默认设置是仅 @提及。",
+        "builtIn": "Tavvit 默认"
       }
     },
     "discovery": {
       "title": "发现设置",
-      "disabledNotice": "实例管理员已禁用空间发现功能。在重新启用发现功能之前，更改可见性将不会生效。",
+      "disabledNotice": "实例管理员已关闭空间发现功能。重新开启后，已获批准的收录才会显示在“探索”中。",
       "visibility": {
         "label": "可见性",
-        "hint": "控制谁可以发现并加入此空间。",
+        "hint": "他人加入此空间的方式。收录到“探索”需另行申请，并由管理员批准。",
         "options": {
           "private": {
             "label": "私密",
@@ -315,19 +395,18 @@
           },
           "request": {
             "label": "需申请加入",
-            "description": "在“探索”中可见；他人可以申请加入"
+            "description": "他人可以申请加入；获批后可收录到“探索”"
           },
           "public": {
             "label": "公开",
-            "description": "在“探索”中可见；任何人均可立即加入"
+            "description": "任何人均可立即加入；获批后可收录到“探索”"
           }
         }
       },
       "directory": {
-        "label": "列入全局 Backspace 目录",
-        "hint": "在每个 Backspace 实例的外部空间中显示此空间。",
+        "label": "列入全局 Tavvit 目录",
+        "hint": "收录获批后，在每个 Tavvit 实例的外部空间中显示此空间。",
         "notConfigured": "本实例未配置可访问的目录，因此此空间无法列入任何目录。",
-        "adminOff": "需要实例管理员先允许列入全局目录。",
         "adminOffSelf": "本实例不允许列入全局目录。",
         "adminOffSelfAction": "开启",
         "adminOffSelfIntro": "这会为整个实例允许列入全局目录：此处的空间将可在“探索”中被发现，实例也会开始向公开目录上报自身。",
@@ -363,7 +442,340 @@
       "kickFailed": "踢出成员失败",
       "banFailed": "封禁成员失败",
       "rolesAboveYou": "与您的最高身份组同级或更高的身份组已锁定。",
-      "rolesUnheld": "无法授予拥有您没有的权限的身份组。"
+      "rolesUnheld": "无法授予拥有您没有的权限的身份组。",
+      "listHeadingFiltered": "成员（{{shown}}/{{total}}）",
+      "searchPlaceholder": "搜索成员",
+      "filterRole": "按身份组筛选",
+      "filterAll": "所有身份组",
+      "noMatch": "没有符合筛选条件的成员。",
+      "reason": {
+        "label": "原因（可选）",
+        "hint": "版主可在审核日志中看到。不会告知对方。"
+      },
+      "deleteMessages": {
+        "label": "同时删除其消息",
+        "none": "保留",
+        "hour": "最近一小时的",
+        "day": "最近 24 小时的",
+        "week": "最近 7 天的"
+      }
+    },
+    "moderation": {
+      "title": "审核",
+      "intro": "此空间会自动对每条消息应用这些规则。违反规则的消息不会发出，发送者会得知原因。",
+      "off": "关闭",
+      "filter": {
+        "title": "消息过滤",
+        "description": "在文字频道中发送或编辑消息时检查。"
+      },
+      "words": {
+        "label": "屏蔽词",
+        "empty": "还没有屏蔽词。",
+        "inputLabel": "要屏蔽的词或短语",
+        "placeholder": "添加词或短语",
+        "fullPlaceholder": "列表已满",
+        "remove": "移除“{{word}}”",
+        "full": "列表最多可容纳 {{max}} 项。",
+        "duplicate": "“{{word}}”已在列表中。",
+        "hint": "按完整单词匹配，不区分大小写。在开头或结尾加上 * 也会匹配更长单词中的内容，例如 *spam*。",
+        "counter": "{{used}}/{{max}}",
+        "invalid": "无法屏蔽此内容。请使用同一行内的可见字符。"
+      },
+      "links": {
+        "label": "屏蔽链接",
+        "description": "拒绝包含网页链接的消息。"
+      },
+      "invites": {
+        "label": "屏蔽邀请",
+        "description": "拒绝包含空间邀请链接的消息。"
+      },
+      "mentions": {
+        "label": "最多提及数",
+        "description": "一条消息最多可以提及多少个用户和身份组。"
+      },
+      "posting": {
+        "title": "谁可以发言",
+        "description": "让全新的账号和新成员先待一段时间，然后才能发言。"
+      },
+      "accountAge": {
+        "label": "账号最短注册时长",
+        "description": "账号需要注册多久才能在这里发言。"
+      },
+      "memberAge": {
+        "label": "最短成员时长",
+        "description": "成为成员多久之后才能发言。"
+      },
+      "exempt": "拥有者、管理员以及可以管理消息或空间的成员不受这些规则限制。",
+      "slowmodeNote": "慢速模式在每个频道自己的设置中设定。"
+    },
+    "audit": {
+      "title": "审计日志",
+      "intro": "谁在此空间中更改了什么，最新的在前。",
+      "filters": {
+        "action": "操作",
+        "allActions": "所有操作",
+        "actor": "操作人",
+        "anyone": "任何人"
+      },
+      "loadOlder": "加载更早的记录",
+      "empty": {
+        "title": "暂无记录",
+        "body": "对空间、频道、身份组和成员的更改会显示在这里。"
+      },
+      "emptyFiltered": {
+        "title": "没有匹配的记录",
+        "body": "试试其他操作或人员。"
+      },
+      "reason": "原因：{{reason}}",
+      "showChanges_other": "显示 {{count}} 项更改",
+      "hideChanges": "隐藏更改",
+      "unknownTarget": "（未知）",
+      "actions": {
+        "spaceUpdate": "空间已更改",
+        "moderationUpdate": "审核规则已更改",
+        "inviteRegenerate": "邀请链接已创建",
+        "channelCreate": "频道已创建",
+        "channelUpdate": "频道已更改",
+        "channelDelete": "频道已删除",
+        "categoryCreate": "分类已创建",
+        "categoryUpdate": "分类已更改",
+        "categoryDelete": "分类已删除",
+        "overrideUpdate": "权限覆盖已更改",
+        "overrideDelete": "权限覆盖已移除",
+        "roleCreate": "身份组已创建",
+        "roleUpdate": "身份组已更改",
+        "roleDelete": "身份组已删除",
+        "roleReorder": "身份组顺序已调整",
+        "memberRolesUpdate": "成员身份组已更改",
+        "memberKick": "成员已被踢出",
+        "memberBan": "成员已被封禁",
+        "memberUnban": "封禁已解除",
+        "memberTimeout": "成员已被禁言",
+        "memberTimeoutRemove": "禁言已解除",
+        "messageDelete": "消息已删除",
+        "threadCreate": "子区已创建",
+        "threadUpdate": "子区已重命名",
+        "threadDelete": "子区已删除",
+        "welcomeUpdate": "欢迎与规则已更改",
+        "webhookDelete": "Webhook 已删除",
+        "soundDelete": "音频片段已移除",
+        "botAdd": "机器人已添加",
+        "soundUpdate": "音频片段已更改",
+        "soundCreate": "音频片段已添加",
+        "webhookUpdate": "Webhook 已更改",
+        "webhookCreate": "Webhook 已创建",
+        "eventDelete": "活动已取消",
+        "eventUpdate": "活动已更改",
+        "eventCreate": "活动已发布",
+        "messagePin": "消息已置顶",
+        "messageUnpin": "消息已取消置顶",
+        "joinRequestApprove": "加入申请已批准",
+        "joinRequestDecline": "加入申请已拒绝",
+        "ownershipTransfer": "所有权已转让",
+        "templateImport": "已导入 Discord 模板",
+        "inviteCreate": "已创建邀请链接",
+        "inviteRevoke": "已撤销邀请链接",
+        "messagesBulkDelete": "随封禁删除的消息",
+        "channelMessagesDelete": "消息已清理",
+        "forumTagsUpdate": "论坛标签已更改",
+        "channelFollowCreate": "已开始关注",
+        "channelFollowDelete": "已取消关注",
+        "vanityUpdate": "专属地址已更改"
+      },
+      "sentences": {
+        "spaceUpdate": "{{actor}} 更改了空间设置",
+        "moderationUpdate": "{{actor}} 更改了审核规则",
+        "inviteRegenerate": "{{actor}} 创建了邀请链接",
+        "channelCreate": "{{actor}} 创建了 {{target}}",
+        "channelUpdate": "{{actor}} 更改了 {{target}}",
+        "channelDelete": "{{actor}} 删除了 {{target}}",
+        "categoryCreate": "{{actor}} 创建了分类 {{target}}",
+        "categoryUpdate": "{{actor}} 更改了分类 {{target}}",
+        "categoryDelete": "{{actor}} 删除了分类 {{target}}",
+        "overrideUpdate": "{{actor}} 更改了 {{target}} 中的权限",
+        "overrideDelete": "{{actor}} 移除了 {{target}} 中的一项权限覆盖",
+        "roleCreate": "{{actor}} 创建了身份组 {{target}}",
+        "roleUpdate": "{{actor}} 更改了身份组 {{target}}",
+        "roleDelete": "{{actor}} 删除了身份组 {{target}}",
+        "roleReorder": "{{actor}} 调整了身份组顺序",
+        "memberRolesUpdate": "{{actor}} 更改了 {{target}} 的身份组",
+        "memberKick": "{{actor}} 踢出了 {{target}}",
+        "memberBan": "{{actor}} 封禁了 {{target}}",
+        "memberUnban": "{{actor}} 解除了对 {{target}} 的封禁",
+        "memberTimeout": "{{actor}} 禁言了 {{target}}",
+        "memberTimeoutRemove": "{{actor}} 解除了 {{target}} 的禁言",
+        "messageDelete": "{{actor}} 删除了 {{target}} 的一条消息",
+        "threadCreate": "{{actor}} 创建了子区 {{target}}",
+        "threadUpdate": "{{actor}} 重命名了子区 {{target}}",
+        "threadDelete": "{{actor}} 删除了子区 {{target}}",
+        "welcomeUpdate": "{{actor}} 更改了欢迎与规则",
+        "webhookDelete": "{{actor}} 删除了 Webhook {{target}}",
+        "soundDelete": "{{actor}} 移除了音频片段 {{target}}",
+        "botAdd": "{{actor}} 添加了机器人 {{target}}",
+        "soundUpdate": "{{actor}} 更改了音频片段 {{target}}",
+        "soundCreate": "{{actor}} 添加了音频片段 {{target}}",
+        "webhookUpdate": "{{actor}} 更改了 Webhook {{target}}",
+        "webhookCreate": "{{actor}} 创建了 Webhook {{target}}",
+        "eventDelete": "{{actor}} 取消了活动 {{target}}",
+        "eventUpdate": "{{actor}} 更改了活动 {{target}}",
+        "eventCreate": "{{actor}} 发布了活动 {{target}}",
+        "messagePin": "{{actor}} 置顶了 {{target}} 的一条消息",
+        "messageUnpin": "{{actor}} 取消置顶了 {{target}} 的一条消息",
+        "joinRequestApprove": "{{actor}} 批准了 {{target}} 的加入申请",
+        "joinRequestDecline": "{{actor}} 拒绝了 {{target}} 的加入申请",
+        "ownershipTransfer": "{{actor}} 将所有权转让给了 {{target}}",
+        "templateImport": "{{actor}} 导入了 Discord 模板 {{target}}",
+        "unknown": "{{actor}} 做了一项此版本尚不认识的更改（{{action}}）",
+        "inviteCreate": "{{actor}} 创建了邀请链接",
+        "inviteRevoke": "{{actor}} 撤销了邀请链接",
+        "messagesBulkDelete": "{{actor}} 删除了 {{target}} 的近期消息",
+        "channelMessagesDelete": "{{actor}} 删除了 {{target}} 中的多条消息",
+        "forumTagsUpdate": "{{actor}} 更改了 {{target}} 的标签",
+        "channelFollowCreate": "{{actor}} 将 {{target}} 与其他空间的频道相连",
+        "channelFollowDelete": "{{actor}} 断开了 {{target}} 与其他空间频道的连接",
+        "vanityUpdate": "{{actor}} 更改了空间的专属地址"
+      },
+      "fields": {
+        "name": "名称",
+        "topic": "主题",
+        "slowmodeSeconds": "慢速模式",
+        "permissions": "权限",
+        "allow": "允许",
+        "deny": "拒绝",
+        "color": "颜色",
+        "visibility": "可见性",
+        "roleAdded": "添加的身份组",
+        "roleRemoved": "移除的身份组",
+        "durationSeconds": "时长",
+        "icon": "图标",
+        "banner": "横幅",
+        "avatarColor": "图标颜色",
+        "description": "描述",
+        "directoryListed": "列入目录",
+        "defaultNotificationLevel": "默认通知",
+        "ownerTitle": "拥有者头衔",
+        "position": "位置",
+        "category": "分类",
+        "blockLinks": "屏蔽链接",
+        "blockInvites": "屏蔽邀请",
+        "maxMentions": "最多提及数",
+        "minAccountAgeMinutes": "账号最短注册时长",
+        "minMemberAgeMinutes": "最短成员时长",
+        "type": "类型",
+        "channel": "频道",
+        "target": "适用对象",
+        "owner": "拥有者",
+        "inviteCode": "邀请码",
+        "blockedWordAdded": "已屏蔽的词",
+        "blockedWordRemoved": "已取消屏蔽的词",
+        "colorSecondary": "第二种颜色",
+        "hoist": "单独显示",
+        "mentionable": "所有人可提及",
+        "ownerGroup": "所有者单独成组",
+        "template": "模板",
+        "roles": "身份组",
+        "categories": "分类",
+        "channels": "频道",
+        "messages": "消息",
+        "tags": "标签",
+        "vanityCode": "地址"
+      }
+    },
+    "you": {
+      "notifications": "通知",
+      "profile": {
+        "title": "你在这里的资料",
+        "description": "你在此空间的昵称、头像和简介。你的账户不受影响。",
+        "action": "编辑空间资料"
+      },
+      "leave": {
+        "title": "退出",
+        "description": "你将无法访问其频道。收到邀请后可以再回来。"
+      }
+    },
+    "invites": {
+      "intro": "进入此空间的链接。撤销后立即失效；通过它加入的人会留下。",
+      "new": {
+        "title": "新链接",
+        "expiry": {
+          "label": "到期",
+          "never": "永不",
+          "minutes30": "30 分钟后",
+          "hour1": "1 小时后",
+          "hours6": "6 小时后",
+          "day1": "1 天后",
+          "days7": "7 天后",
+          "days30": "30 天后"
+        },
+        "uses": {
+          "label": "可进入",
+          "noLimit": "不限人数",
+          "people_one": "{{count}} 人",
+          "people_other": "{{count}} 人"
+        },
+        "create": "创建链接"
+      },
+      "list": {
+        "title": "有效链接",
+        "standing": "主链接",
+        "uses_one": "已使用 {{count}} 次",
+        "uses_other": "已使用 {{count}} 次",
+        "usesOf": "已使用 {{uses}}/{{max}}",
+        "noEnd": "不会到期",
+        "ends": "{{date}} 到期",
+        "by": "由 {{name}} 创建",
+        "revoke": "撤销",
+        "copied": "邀请链接已复制",
+        "copyFailed": "无法复制链接",
+        "empty": "没有有效链接。想加入的人需要新的链接。"
+      },
+      "revokeConfirm": {
+        "title": "撤销此链接？",
+        "description": "无论分享到哪里，它都会立即失效。",
+        "standing": "无论分享到哪里，它都会立即失效。下次打开邀请窗口时，此空间会获得新的主链接。"
+      },
+      "vanity": {
+        "title": "专属地址",
+        "intro": "由文字组成的链接，和其他邀请链接一样可以加入，且永不过期。",
+        "label": "地址",
+        "hint": "{{min}} 到 {{max}} 个小写字母、数字或连字符。",
+        "copy": "复制链接",
+        "copied": "已复制",
+        "remove": "放弃此地址"
+      }
+    },
+    "welcome": {
+      "title": "欢迎与规则",
+      "description": "新成员首次进入此空间时看到的内容。",
+      "messageTitle": "欢迎消息",
+      "messageDescription": "简单介绍这个地方。格式与消息相同。",
+      "rulesTitle": "规则",
+      "rulesDescription": "显示在欢迎消息下方。",
+      "requiredLabel": "成员必须同意",
+      "requiredDescription": "此后加入的成员在同意前只能阅读。现有成员和可管理空间的成员不受影响。",
+      "rulesMissing": "请先填写规则。",
+      "channelsTitle": "入门频道",
+      "channelsDescription": "最多 {{max}} 个，显示在欢迎消息下方。",
+      "saved": "已保存。"
+    },
+    "sounds": {
+      "title": "音效板",
+      "description": "通话中的任何人都可以播放的短音频。每个最长 {{seconds}} 秒、最大 {{size}}。每个人都可以为自己调低或关闭。",
+      "add": "添加音频片段",
+      "count": "{{used}} / {{max}}",
+      "emptyTitle": "还没有音频片段",
+      "emptyBody": "Tavvit 不附带音频片段。请添加你自己的，并确保有权分享。",
+      "tooLarge": "该文件超过 {{max}}。",
+      "tooLong": "该音频片段超过 {{max}} 秒。",
+      "notAudio": "此浏览器无法读取该音频文件。",
+      "untitled": "音频片段",
+      "preview": "试听 {{name}}",
+      "rename": "重命名音频片段",
+      "nameLabel": "音频片段名称",
+      "seconds": "{{seconds}} 秒",
+      "remove": "移除 {{name}}",
+      "removeTitle": "移除此音频片段？",
+      "removeBody": "{{name}} 将对此空间的所有人消失。"
     }
   },
   "bans": {
@@ -404,9 +816,15 @@
     "nameEmpty": "身份组名称不能为空",
     "nameDuplicate": "已存在同名的身份组",
     "groups": {
-      "general": "常规",
-      "text": "文字",
-      "voice": "语音"
+      "voice": "语音",
+      "space": "空间",
+      "roles": "身份组",
+      "members": "成员",
+      "moderation": "管理",
+      "channels": "频道与分类",
+      "invites": "邀请",
+      "messages": "消息与文件",
+      "advanced": "高级"
     },
     "saved": "身份组已保存",
     "copy": "复制身份组",
@@ -453,7 +871,15 @@
       "moveMembers": "移动成员",
       "stream": "视频推流",
       "disconnectMembers": "断开成员连接",
-      "mentionEveryone": "提及 @everyone、@here 和身份组"
+      "mentionEveryone": "提及 @everyone、@here 和身份组",
+      "pinMessages": "置顶消息",
+      "createThreads": "创建子区",
+      "manageEvents": "管理活动",
+      "manageWebhooks": "管理 Webhook",
+      "useSoundboard": "使用音效板",
+      "manageSounds": "管理音效板",
+      "moderateMembers": "禁言成员",
+      "viewAuditLog": "查看审计日志"
     },
     "tristate": {
       "deny": "拒绝",
@@ -480,7 +906,11 @@
     "removeUnheldShort": "只有拥有这些权限的人才能移除它",
     "aboveYouRole": "此身份组与您的最高身份组同级或更高。您可以查看其权限覆盖，但无法更改或移除。",
     "aboveYouMember": "此成员与您同级或更高。您可以查看其权限覆盖，但无法更改或移除。",
-    "aboveYouShort": "与您的最高身份组同级或更高"
+    "aboveYouShort": "与您的最高身份组同级或更高",
+    "descriptions": {
+      "moderateMembers": "在一段时间内禁止成员发消息、添加反应和加入语音频道。只对身份组低于你的成员有效。",
+      "viewAuditLog": "查看谁更改了此空间的设置、身份组、频道和成员。"
+    }
   },
   "sidebar": {
     "directMessages": "私信列表",
@@ -592,7 +1022,10 @@
     "menu": {
       "profile": "查看个人资料",
       "nickname": "修改空间昵称…",
-      "roles": "身份组"
+      "roles": "身份组",
+      "timeout": "禁言…",
+      "removeTimeout": "解除禁言",
+      "spaceProfile": "编辑空间资料"
     },
     "nickname": {
       "title": "修改空间昵称",
@@ -601,7 +1034,21 @@
       "descriptionOther": "仅在当前空间生效，不会修改 {{name}} 的账号名称。留空则显示账号名称。",
       "reset": "恢复为账号名称",
       "shownAs": "在此空间的昵称：{{nickname}}"
-    }
+    },
+    "timeout": {
+      "title": "禁言 {{name}}",
+      "description": "禁言期间，对方仍可阅读，但不能在此空间发消息、添加反应或加入语音频道。",
+      "duration": "时长",
+      "ends": "结束时间：{{time}}",
+      "reason": "原因（可选）",
+      "reasonPlaceholder": "发生了什么？",
+      "reasonHint": "会记录在审计日志中。",
+      "reasonCounter": "{{length}}/{{max}}",
+      "confirm": "禁言",
+      "done": "{{name}} 已被禁言至 {{time}}",
+      "removed": "已解除 {{name}} 的禁言"
+    },
+    "timedOutUntil": "禁言至 {{time}}"
   },
   "mobile": {
     "addSheet": {
@@ -680,6 +1127,384 @@
     "suppressEveryone": "屏蔽 @everyone 和 @here 提醒",
     "suppressRoles": "屏蔽 @身份组 提醒",
     "massHeading": "群组提及",
-    "massNote": "@here 与 @everyone 通知的成员相同。直接提及你的消息始终会通知你。"
+    "massNote": "@here 与 @everyone 通知的成员相同。直接提及你的消息始终会通知你。",
+    "spaceDefaultNote": "这是此空间的管理员设定的默认级别。选择其他级别即可设置你自己的偏好。"
+  },
+  "roleDisplay": {
+    "gradient": "渐变",
+    "secondColor": "第二种颜色",
+    "preview": "效果：",
+    "icon": "图标",
+    "removeIcon": "移除图标",
+    "description": "说明",
+    "descriptionPlaceholder": "这个身份组是做什么的",
+    "hoist": "单独显示成员",
+    "hoistHint": "以此为最高显示身份组的成员会在成员列表中单独成组。",
+    "mentionable": "所有人都可以提及此身份组",
+    "mentionableHint": "关闭时，只有可以提及 @everyone 的成员才能 @ 此身份组。",
+    "membersTitle_other": "{{count}} 位成员",
+    "membersEmpty": "还没有人拥有这个身份组。",
+    "removeMember": "收回 {{name}} 的身份组",
+    "addMember": "添加",
+    "addMemberPlaceholder": "授予给…"
+  },
+  "ownerDisplay": {
+    "title": "所有权",
+    "ownGroup": "将所有者单独成组显示",
+    "ownGroupHint": "关闭时，你会以皇冠标记显示在自己的身份组下。你的权限来自拥有此空间，而不是身份组。"
+  },
+  "import": {
+    "title": "从 Discord 导入",
+    "titleInto": "导入到 {{space}}",
+    "intro": "用 Discord 服务器模板创建空间：身份组及其权限、分类、频道和频道权限。",
+    "introInto": "将 Discord 模板的身份组、分类和频道添加到此空间。已有的内容不会被修改或删除。",
+    "source": {
+      "linkLabel": "模板链接或代码",
+      "linkPlaceholder": "discord.new/… 或 discord.com/template/…",
+      "linkInvalid": "这不是模板链接或代码。",
+      "howTo": "在 Discord 中：服务器设置 → 服务器模板 → 复制链接。",
+      "load": "加载",
+      "loading": "加载中…",
+      "or": "或",
+      "file": "导入模板文件",
+      "fileHint": "包含模板的 .json 文件，例如从 discord.com/api/v10/guilds/templates/CODE 保存的文件。",
+      "fileInvalid": "该文件不是模板。",
+      "fileTooLarge": "文件大于 2 MB。"
+    },
+    "notTransferred": {
+      "title": "模板不包含的内容",
+      "body": "模板是结构的快照，而不是备份。消息、成员、机器人、Webhook、表情、贴纸、服务器图标、活动、子区和集成都会留在 Discord。"
+    },
+    "preview": {
+      "by": "作者：{{name}}",
+      "uses_other": "已使用 {{count}} 次",
+      "spaceName": "空间名称",
+      "counts": {
+        "roles": "身份组",
+        "categories": "分类",
+        "channels": "频道",
+        "overrides": "频道权限",
+        "skipped": "已跳过"
+      },
+      "rolesTitle": "身份组",
+      "rolesHint": "从高到低。Tavvit 没有的权限，或你在这里无法授予的权限，都会标出。",
+      "channelsTitle": "分类与频道",
+      "noCategory": "无分类",
+      "action": {
+        "create": "新建",
+        "reuse": "已存在",
+        "updateEveryone": "@everyone",
+        "keepEveryone": "不变",
+        "skip": "跳过"
+      },
+      "converted": "已转换",
+      "unsupported_other": "{{count}} 项 Tavvit 没有的权限",
+      "withheld_other": "{{count}} 项你无法授予的权限",
+      "hoist": "单独显示",
+      "mentionable": "可提及",
+      "notesTitle": "须知",
+      "import": "导入"
+    },
+    "notes": {
+      "channel_converted": "#{{subject}} 在 Discord 中是{{detail}}，在这里将成为普通频道。",
+      "channel_unsupported": "{{subject}} 被略过：Tavvit 没有类似 Discord 类型 {{detail}} 的频道。",
+      "channel_exists": "#{{subject}} 已存在，将被跳过。",
+      "category_reused": "分类 {{subject}} 已存在，其频道会放入其中。",
+      "role_reused": "身份组 {{subject}} 已存在，将原样使用。",
+      "role_renamed": "第二个名为 {{detail}} 的身份组将改名为 {{subject}}。",
+      "role_icon_dropped": "{{subject}} 的图标无法导入，之后可以设置一个表情。",
+      "everyone_kept": "@everyone 保留此空间的权限。",
+      "roles_below_existing": "新身份组会放在此空间现有身份组的下方。",
+      "permissions_per_channel": "{{subject}} 中的频道保留各自的权限，与 Discord 相同。",
+      "member_overwrite_dropped": "{{subject}} 中针对单个成员的权限无法导入。",
+      "reference_missing": "{{subject}} 引用了模板中不存在的身份组或分类。",
+      "slowmode_adjusted": "#{{subject}} 的慢速模式改为 {{detail}}，这是 Tavvit 最接近的档位。",
+      "topic_shortened": "#{{subject}} 的主题已被缩短。",
+      "name_changed": "{{detail}} 在这里叫作 #{{subject}}。",
+      "nsfw_dropped": "#{{subject}} 在 Discord 中有年龄限制；Tavvit 没有这个设置。",
+      "slowmode_off": "#{{subject}} 的慢速模式已关闭：Tavvit 没有这么短的档位。",
+      "override_withheld": "你无法在 {{subject}} 中设置 {{detail}}：你自己没有这些权限，因此已略过。",
+      "override_hierarchy": "{{subject}} 中针对 {{detail}} 的权限已略过：这些身份组不在你的最高身份组之下。"
+    },
+    "importing": "正在导入…",
+    "done": {
+      "title": "已导入",
+      "adjustedTitle": "已调整的权限",
+      "followUpTitle": "接下来",
+      "followUp": {
+        "invite": "邀请你的成员：没有人会自动迁移过来。",
+        "permissions": "检查那些失去了 Tavvit 没有的权限的身份组。",
+        "bots": "机器人、Webhook 和集成需要重新设置。"
+      },
+      "open": "打开空间"
+    },
+    "entry": {
+      "title": "从 Discord 导入",
+      "action": "导入模板",
+      "hint": "添加 Discord 服务器模板中的身份组、分类和频道。已有的内容不会被修改或删除。",
+      "createSpace": "从 Discord 导入",
+      "createSpaceHint": "从 Discord 服务器模板开始"
+    },
+    "discordTypes": {
+      "stage": "舞台频道",
+      "media": "媒体频道"
+    }
+  },
+  "spaceProfile": {
+    "title": "你在 {{space}} 的资料",
+    "titlePlain": "你的空间资料",
+    "intro": "只在这个空间中显示。留空的内容将使用你账号的资料。",
+    "notLoaded": "请先打开这个空间，再编辑你在其中的资料。",
+    "avatar": "头像",
+    "banner": "横幅",
+    "bio": "关于我",
+    "bioPlaceholder": "这个空间的成员应该了解你的什么",
+    "bioCounter": "{{used}}/{{max}}",
+    "fromAccount": "来自你的账号",
+    "uploadAvatar": "上传头像",
+    "uploadBanner": "上传横幅",
+    "useAccountAvatar": "使用账号头像",
+    "useAccountBanner": "使用账号横幅",
+    "useAccountBio": "使用账号简介",
+    "uploading": "正在上传…",
+    "uploadFailed": "图片上传失败。",
+    "saved": "空间资料已保存",
+    "cropAvatar": "裁剪头像",
+    "cropBanner": "裁剪横幅"
+  },
+  "verification": {
+    "title": "认证",
+    "ownerOnly": "只有此空间的拥有者可以申请认证。",
+    "intro": "通过认证后，空间名称旁会在“探索”和空间详情中显示认证标记，表示本实例的管理员已核实是谁在运营此空间。请提供公开、可核实的信息；切勿发送身份证件或其他个人文件。",
+    "statusLabel": "状态",
+    "adminNote": "审核人员的备注",
+    "sentAt": "申请发送于 {{date}}",
+    "withdraw": "撤回申请",
+    "sent": "认证申请已发送",
+    "status": {
+      "none": "此空间尚未认证，也没有待处理的申请。",
+      "pending": "您的申请正在等待管理员处理。有结果时您会收到通知。",
+      "needs_info": "审核人员需要更多信息。请阅读他们的备注，然后重新发送申请。",
+      "verified": "此空间已通过认证。凡是显示此空间的地方，都会显示认证标记。",
+      "rejected": "申请未获批准。您可以提供更充分的信息，重新发送申请。",
+      "revoked": "认证已被撤销。您可以发送新的申请。"
+    },
+    "form": {
+      "title": "申请",
+      "privacy": "您在此处发送的内容仅本实例的管理员可见。",
+      "identity": "名称和描述",
+      "noDescription": "暂无描述。",
+      "identityHint": "取自空间当前的信息。如需更改，请在发送前前往“概览”或“发现”进行修改。",
+      "category": "类别",
+      "website": "网站（可选）",
+      "profiles": "公开主页（可选，最多 {{max}} 个）",
+      "profileAria": "公开主页 {{index}}",
+      "addProfile": "添加主页",
+      "reason": "为什么此空间应当获得认证？",
+      "reasonPlaceholder": "谁在运营此空间、它面向哪些人，以及认证标记能为大家带来什么帮助。",
+      "counter": "已输入 {{length}} 个字符（需 {{min}}–{{max}} 个）",
+      "proof": "审核人员如何核实？",
+      "proofPlaceholder": "例如，官方网站或官方账号上提及此空间的页面或公开帖子。",
+      "send": "发送申请",
+      "sendAgain": "重新发送",
+      "urlPlaceholder": "https://…"
+    },
+    "withdrawDialog": {
+      "title": "撤回认证申请？",
+      "description": "该申请将移出审核队列。您之后可以发送新的申请。"
+    }
+  },
+  "listing": {
+    "title": "“探索”收录",
+    "ownerOnly": "收录到“探索”需由此空间的拥有者申请，并由本实例的管理员批准。",
+    "intro": "可见性只决定他人如何加入。只有在本实例的管理员批准收录后，空间才会出现在“探索”中。更改已收录空间的名称、描述、图标或横幅后，空间将重新进入审核。",
+    "statusLabel": "状态",
+    "adminNote": "审核人员的备注",
+    "sentAt": "申请发送于 {{date}}",
+    "preview": "收录后的展示效果",
+    "criteria": {
+      "title": "审核人员关注的要点",
+      "visibility": "空间为公开，或接受加入申请",
+      "description": "已填写描述",
+      "icon": "已设置图标（推荐）",
+      "honest": "名称和描述如实说明了空间的主题",
+      "rules": "遵守本实例的规则"
+    },
+    "category": "类别",
+    "needsVisibility": "请先将空间设为公开或需申请加入。",
+    "needsDescription": "请先为空间添加描述。",
+    "send": "申请收录",
+    "sendAgain": "重新发送",
+    "unlist": "从“探索”撤下",
+    "withdraw": "撤回申请",
+    "sent": "收录申请已发送",
+    "status": {
+      "none": "此空间未收录到“探索”。",
+      "pending": "您的申请正在等待管理员处理。获批之前，此空间不会出现在“探索”中。",
+      "changes_requested": "审核人员要求进行修改。请完成修改，然后重新发送申请。",
+      "approved": "此空间已收录到“探索”。",
+      "rejected": "收录申请未获批准。您可以发送新的申请。",
+      "withdrawn": "收录已撤回。您可以发送新的申请。"
+    },
+    "withdrawDialog": {
+      "title": "撤回收录？",
+      "description": "此空间将从“探索”中移除，或申请将移出审核队列。新的申请需要重新审核。"
+    },
+    "resubmitDialog": {
+      "title": "重新提交收录申请？",
+      "description": "在管理员批准新的类别之前，该空间将从“探索”中移除。"
+    }
+  },
+  "roleIcons": {
+    "none": "无图标",
+    "fromBefore": "以前的表情符号",
+    "groups": {
+      "rank": "等级",
+      "power": "力量",
+      "play": "娱乐与创作",
+      "make": "建造",
+      "nature": "自然",
+      "life": "生活"
+    },
+    "names": {
+      "crown": "皇冠",
+      "crownb": "简约皇冠",
+      "shield": "盾牌",
+      "shieldstar": "星形盾牌",
+      "shieldok": "对勾盾牌",
+      "trophy": "奖杯",
+      "medal": "奖牌",
+      "star": "星星",
+      "star4": "四角星",
+      "sparkle": "闪光",
+      "diamond": "钻石",
+      "key": "钥匙",
+      "flag": "旗帜",
+      "banner": "横幅",
+      "sword": "剑",
+      "bolt": "闪电",
+      "fire": "火焰",
+      "skull": "骷髅",
+      "wand": "魔杖",
+      "target": "靶心",
+      "hammer": "锤子",
+      "ghost": "幽灵",
+      "alien": "外星人",
+      "robot": "机器人",
+      "mask": "面具",
+      "eye": "眼睛",
+      "gamepad": "游戏手柄",
+      "joystick": "摇杆",
+      "dice": "骰子",
+      "puzzle": "拼图",
+      "music": "音乐",
+      "headset": "耳机",
+      "mic": "麦克风",
+      "guitar": "吉他",
+      "film": "电影",
+      "camera": "相机",
+      "brush": "画笔",
+      "palette": "调色板",
+      "pen": "钢笔",
+      "book": "书",
+      "gradcap": "学士帽",
+      "code": "代码",
+      "terminal": "终端",
+      "bug": "虫子",
+      "chip": "芯片",
+      "flask": "烧瓶",
+      "atom": "原子",
+      "rocket": "火箭",
+      "planet": "行星",
+      "compass": "指南针",
+      "wrench": "扳手",
+      "megaphone": "扩音器",
+      "handshake": "握手",
+      "leaf": "树叶",
+      "tree": "树",
+      "lotus": "莲花",
+      "moon": "月亮",
+      "sun": "太阳",
+      "snow": "雪花",
+      "waves": "波浪",
+      "mountain": "山",
+      "storm": "风暴",
+      "paw": "爪印",
+      "bird": "鸟",
+      "cat": "猫",
+      "butterfly": "蝴蝶",
+      "feather": "羽毛",
+      "fish": "鱼",
+      "heart": "爱心",
+      "coffee": "咖啡",
+      "pizza": "披萨",
+      "cake": "蛋糕",
+      "gift": "礼物",
+      "beer": "啤酒",
+      "handheart": "关怀之手",
+      "anchor": "锚",
+      "globe": "地球",
+      "infinity": "无限",
+      "hourglass": "沙漏",
+      "bell": "铃铛"
+    }
+  },
+  "events": {
+    "title": "活动",
+    "intro": "此空间即将举行的活动。",
+    "create": "新建活动",
+    "emptyTitle": "暂无计划",
+    "emptyBody": "此处有计划后会显示在本页。",
+    "emptyManage": "发布游戏之夜、会议或其他可参加的活动。",
+    "pastHeading": "刚结束",
+    "ended": "已结束",
+    "range": "{{start}} 至 {{end}}",
+    "going": "已参加",
+    "iAmGoing": "我要参加",
+    "nobodyYet": "还没有人。",
+    "joinVoice": "加入 {{channel}}",
+    "openChannel": "打开 {{channel}}",
+    "addToCalendar": "添加到日历",
+    "remove": "取消活动",
+    "removeTitle": "取消此活动？",
+    "removeBody": "{{title}} 将对所有人消失，参加名单也会一并删除。",
+    "reminder": "{{title}} 即将开始",
+    "startsSoon": "即将开始",
+    "form": {
+      "title": "新建活动",
+      "editTitle": "更改活动",
+      "name": "名称",
+      "start": "开始",
+      "end": "结束（可选）",
+      "startPast": "活动必须在未来开始。",
+      "endBeforeStart": "结束时间必须晚于开始时间。",
+      "channel": "频道",
+      "noChannel": "无",
+      "location": "地点（可选）",
+      "description": "内容（可选）",
+      "create": "发布"
+    },
+    "goingCount_other": "{{formatted}} 人参加",
+    "upcomingCount_other": "{{formatted}} 个即将举行的活动"
+  },
+  "welcome": {
+    "title": "欢迎来到 {{space}}",
+    "rules": "规则",
+    "startHere": "从这里开始",
+    "mustAccept": "你可以阅读内容，但发言、回应或加入通话前须同意这些规则。",
+    "later": "稍后",
+    "agree": "我同意",
+    "gotIt": "知道了"
+  },
+  "botInvite": {
+    "title": "添加机器人",
+    "runBy": "由 {{name}} 运行",
+    "warning": "机器人由其所有者运行，而非此实例。它能看到角色允许的内容并可转发。请只添加你信任的机器人。",
+    "spaceLabel": "空间",
+    "spacePick": "选择空间",
+    "noSpaces": "你在此实例上没有可管理的空间。",
+    "permissionsLabel": "请求的权限",
+    "noPermissions": "没有超出普通成员的权限。",
+    "add": "添加到空间"
   }
 }

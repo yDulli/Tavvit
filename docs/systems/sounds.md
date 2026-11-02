@@ -12,7 +12,7 @@ Source files:
 - Audio engine: `packages/web/src/audio/AudioManager.ts`
 - Alert gate (Do Not Disturb): `packages/web/src/utils/alerts.ts`
   (`playAlertSound`, `showAlertNotification`), pure rule `isAlertAllowed` in
-  `utils/notificationFilters.ts`; OS notifications raised by
+  `shared/src/notificationRules.ts` (re-exported by `utils/notificationFilters.ts`; the server reads the same rule for a push, push.md); OS notifications raised by
   `packages/web/src/components/NotificationController.tsx`
 - Pure helpers: `packages/web/src/utils/notificationFilters.ts`,
   `packages/web/src/utils/streamWatchProtocol.ts`,
@@ -34,10 +34,10 @@ Source files:
 
 | File | Event | Audience | Trigger |
 |---|---|---|---|
-| `mute.ogg` | "I am now muted" (any cause) | self | `effectiveMuted` flips true while LK-connected. Effective = self toggle ∪ space-mute ∪ permission-mute. Suppressed when the deafen state also flipped this tick (see Mute/deafen cue selection). |
-| `unmute.ogg` | "I am no longer muted" | self | `effectiveMuted` flips false while LK-connected. Suppressed when the deafen state also flipped this tick. |
-| `deafen.ogg` | "I am now deafened" | self | `effectiveDeafened` flips true while LK-connected. Takes priority over the coincident mute cue. |
-| `undeafen.ogg` | "I am no longer deafened" | self | `effectiveDeafened` flips false while LK-connected. Takes priority over the coincident unmute cue. |
+| `mute.ogg` | "I am now muted" (any cause) | self | `effectiveMuted` flips true between two samples on the same side of the room: in it, effective = self toggle ∪ space-mute ∪ permission-mute; outside every room, the user's own toggle (the top bar's button), so the button answers before any join. Never on the join/leave boundary. Suppressed when the deafen state also flipped this tick (see Mute/deafen cue selection). |
+| `unmute.ogg` | "I am no longer muted" | self | `effectiveMuted` flips false, in a room or outside every room as for `mute.ogg`. Suppressed when the deafen state also flipped this tick. |
+| `deafen.ogg` | "I am now deafened" | self | `effectiveDeafened` flips true, in a room or outside every room as for `mute.ogg`. Takes priority over the coincident mute cue. |
+| `undeafen.ogg` | "I am no longer deafened" | self | `effectiveDeafened` flips false, in a room or outside every room as for `mute.ogg`. Takes priority over the coincident unmute cue. |
 | `camera_on.ogg` | self camera enabled | self | `voiceStore.isCameraOn` flips true. |
 | `camera_off.ogg` | self camera disabled | self | `voiceStore.isCameraOn` flips false. |
 | `user_join.ogg` | someone (incl. self) joined the voice channel | everyone in call | self `isLiveKitConnected` flips true OR a remote participant appears in `participants[]`. |
@@ -137,9 +137,15 @@ not governed by them.
 **Values.** A level, `all` | `mentions` | `nothing`, and a mute: off, or on
 until a time (1 h, 8 h, 24 h from when it was set, server clock) or until
 lifted. A space's level defaults to `mentions`; a channel's level is "not
-chosen" until set, and then it inherits its space's. A channel is muted while
-its own mute or its space's is in force. `resolveChannelNotificationPolicy`
-in `@backspace/shared` holds the inheritance and mute rules in one place.
+chosen" until set, and then it inherits its space's. A space's moderators may
+set a default level for its members (`Space.defaultNotificationLevel`, `all`
+or `mentions`; spaces.md, "Default notification level"): it sits between the
+member's own choice for the space and the built-in `mentions`, so it applies
+only to a member who has not chosen. A channel is muted while its own mute or
+its space's is in force. `resolveChannelNotificationPolicy` in
+`@backspace/shared` holds the inheritance and mute rules in one place; its
+fourth argument is the space's default, and `levelSource` names
+`spaceDefault` when the level in force comes from it.
 The space setting also has two switches, `suppressEveryone` and
 `suppressRoles` (off by default). They are space-wide only: a channel inherits
 them and cannot set them, so a channel's level never undoes them.
@@ -167,7 +173,12 @@ filter itself compares `mutedUntil` with the time of each message.
 `hooks/useNotificationSettings.ts` resolves a channel's origin and space from
 the space-channel index (`getChannelNotificationPolicy` for event-time code,
 `useChannelNotificationPolicy` for render). A channel the index does not know
-yet resolves to the defaults.
+yet resolves to the defaults. The space default reaches the store through
+`setSpaceDefaultLevelLookup`, which `spaceStore` registers; when a space's
+default changes (`space_updated`), `spaceStore` calls `spaceDefaultsChanged`,
+a clock bump, so open controls and the alert filter follow at once. The
+controls show a "Space default" row only for a space that has one, and a note
+when the level in force comes from it.
 
 **Applied in one place.** `messageAlertsUser` reads the channel's policy and
 passes it to `isMessageAlert`, so `message.ogg` and the OS notification follow
@@ -435,6 +446,10 @@ ping is dropped and the sharer hears no cue for it, as before.
 
 ---
 
+## This device's choices
+
+`stores/notificationPrefsStore.ts`, in the browser's storage: `showMessageText` (a notification says only who wrote), `directMessages` (no sound and no notification for DMs and groups), `messageSound`, `callSound`, `appBadge`. `messageAlertsUser` and `playAlertSound` read them at alert time. The Notifications tab holds these, the sound volume and "every message", whether this device may show notifications at all (`requestNotificationPermission`, only on a click), and one row per space for its level.
+
 ## Settings
 
 | Key | Type | Default | Storage |
@@ -464,3 +479,13 @@ of them is a future change that requires sourcing new audio:
   `disconnect.ogg` for forced disconnects)
 - Friend request received / accepted
 - Mention-everyone / @here (Backspace doesn't currently parse these)
+
+## Soundboard
+
+A space's short clips, each played **on each listener's own device**, not through anyone's microphone or the room: so everyone can turn them down or off for themselves alone (`shared/src/soundboard.ts`, `routes/soundboard.ts`, `stores/soundboardStore.ts`, `SoundboardButton`, `SoundsPanel`). No clips come with Tavvit, so there is no license question: what is there, a space added.
+
+**Adding:** `POST /api/spaces/:id/sounds` with MANAGE_SOUNDS (bit 28), at most 24 per space, 512 KB and 5 seconds. The body is JSON with the file in base64, as an emoji's. What it is comes from its first bytes (`sniffAudio`), never from what a client says, and the stored file is served as that, with `nosniff` and a CSP that allows nothing. ffprobe gives the length; an instance without it takes what the browser measured, under the same limit. Files are `uploads/sounds/<id>.audio`. Deleting a space takes the rows, and the files go at the next start (`removeUnusedSoundFiles`). `GET /api/sounds/:id/audio` is for those in the space.
+
+**Playing:** `POST /api/channels/:id/soundboard/:soundId/play` takes being in that call right now (`sound_not_in_call`), USE_SOUNDBOARD (bit 27) in the channel, not being held back, and a clip of this space. At most 6 in 10 seconds per person. Then everyone in the room gets `soundboard_play` over the socket. The client plays it through `AudioManager.playClip`, if the listener has "Hear clips" on, is in that call and is not deafened, at their own volume. Decoded clips are kept in memory, so a second play starts at once.
+
+The panel hangs off `VoiceControlBar` and the phone's call screen. A call between two people has no soundboard: it belongs to a space.

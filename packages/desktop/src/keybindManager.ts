@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GlobalShortcutsPortal } from './globalShortcutsPortal';
 import { isWayland, PortalKeybindStatus } from './portalShortcut';
+import { acceptedKeybinds, type KeybindConfig } from './keybindPolicy';
 
 // ---------------------------------------------------------------------------
 // Uiohook keycode → DOM event.code mapping
@@ -63,14 +64,11 @@ function djb2(code: string): number {
 
 // Pre-compute: uiohook keycode → djb2 hash (same values the web UI stores)
 const UIOHOOK_TO_HASH = new Map<number, number>();
+// And back: the hash the web UI stores → the DOM code, for keybindPolicy's rule on typing keys.
+const HASH_TO_DOM_CODE = new Map<number, string>();
 for (const [keycode, domCode] of Object.entries(UIOHOOK_TO_DOM_CODE)) {
   UIOHOOK_TO_HASH.set(Number(keycode), djb2(domCode));
-}
-
-interface KeybindConfig {
-  actionId: string;
-  keys: number[];
-  mouseButton?: number;
+  HASH_TO_DOM_CODE.set(djb2(domCode), domCode);
 }
 
 export class KeybindManager {
@@ -139,7 +137,7 @@ export class KeybindManager {
     }
   }
 
-  updateKeybinds(keybinds: KeybindConfig[]): void {
+  updateKeybinds(requested: unknown): void {
     if (this.portalStatus) {
       // Local settings belong to the browser/X11 backend, never to the portal.
       // In particular renderer unmount or clearing local storage must not close
@@ -147,6 +145,9 @@ export class KeybindManager {
       this.sendPortalStatus(this.portalStatus);
       return;
     }
+    // The page is remote code and the hook hears the whole computer: only what the settings can
+    // produce, and nothing that types text on its own (keybindPolicy.ts).
+    const keybinds = acceptedKeybinds(requested, (hash) => HASH_TO_DOM_CODE.get(hash));
     this.keybinds = keybinds;
     for (const actionId of this.activeActions) {
       if (!keybinds.some((kb) => kb.actionId === actionId)) {

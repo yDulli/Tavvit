@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
 import { thumbFilename } from './thumbnail.js';
@@ -54,12 +54,18 @@ export function deleteAttachmentByFilename(filename: string): void {
   const db = getDb();
   const safeName = path.basename(filename);
 
-  // Read the record first to get the thumbnail filename before deleting
+  // Read the record first to get the thumbnail filename before deleting.
+  // Only an upload no message holds: a message's attachment stays the
+  // message's whatever a picture field says (utils/profileImageRefs.ts).
   const record = db.select({
     id: schema.attachments.id,
     thumbnailFilename: schema.attachments.thumbnailFilename,
   }).from(schema.attachments)
-    .where(eq(schema.attachments.filename, safeName))
+    .where(and(
+      eq(schema.attachments.filename, safeName),
+      isNull(schema.attachments.messageId),
+      isNull(schema.attachments.dmMessageId),
+    ))
     .get();
   if (!record) return;
 

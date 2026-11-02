@@ -1,5 +1,8 @@
-import React, { useEffect } from 'react';
+import { ForumView } from '../chat/ForumView';
+import { FollowChannelButton } from '../chat/FollowChannelButton';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useActiveDmCall } from '../../hooks/useActiveDmCall';
 import { useUIStore } from '../../stores/uiStore';
@@ -7,6 +10,11 @@ import { useChatStore } from '../../stores/chatStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { MessageList } from '../chat/MessageList';
 import { MessageInput } from '../chat/MessageInput';
+import { PinsPopover } from '../chat/PinsPopover';
+import { ThreadsPopover } from '../chat/ThreadsPopover';
+import { openThreadView } from '../../utils/openThread';
+import { Icon } from '../ui/Icon';
+import { useCanPinInChannel } from '../../utils/pinPermission';
 import { TransferIndicator } from './TransferIndicator';
 import { isMine, userDisplayName } from '../../utils/identity';
 import { formatDmHeaderName, formatDmInputLabel, isDeletedPartnerDm } from '../../utils/dmFormatters';
@@ -14,6 +22,7 @@ import { DmDeletedNotice } from '../chat/DmDeletedNotice';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { canStartDmCall, startDmCall, cancelOutgoingDmCall, isDmCallRunning, joinDmCall } from '../../utils/voiceActions';
 import { useDmViewer } from '../../hooks/useDmViewer';
+import { BAR_BUTTON, BAR_TITLE } from './mobileClasses';
 import type { User } from '@backspace/shared';
 
 const FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, replicatedInstances: [] } as unknown as User;
@@ -23,7 +32,7 @@ interface MobileChatScreenProps {
 }
 
 export function MobileChatScreen({ params }: MobileChatScreenProps) {
-  const { t } = useTranslation(['mobile', 'spaces', 'dm', 'common']);
+  const { t } = useTranslation(['mobile', 'spaces', 'dm', 'common', 'chat']);
   const outgoingCall = useVoiceStore((s) => s.outgoingCall);
   // The DM call's conversation as this client opens it (never the call's key).
   const { dmChannelId: dmCallChannel } = useActiveDmCall();
@@ -35,6 +44,41 @@ export function MobileChatScreen({ params }: MobileChatScreenProps) {
   const channelId = params?.channelId;
   const spaceId = params?.spaceId;
   const isDm = spaceId === '@me';
+
+  // `?message=<id>` opens the conversation at that message (the inbox's
+  // mentions link this way), as MainContent does on the desktop. Only the
+  // screen the address names takes it, and it is consumed, so coming back to
+  // the conversation later opens it at the end as usual.
+  const [jumpToMessageId, setJumpToMessageId] = useState<string | null>(null);
+  const clearJumpRequest = useCallback(() => setJumpToMessageId(null), []);
+  const [pinsOpen, setPinsOpen] = useState(false);
+  const pinsButtonRef = useRef<HTMLButtonElement>(null);
+  const closePins = useCallback(() => setPinsOpen(false), []);
+  const canPinHere = useCanPinInChannel(params?.channelId);
+  const [threadsOpen, setThreadsOpen] = useState(false);
+  const threadsButtonRef = useRef<HTMLButtonElement>(null);
+  const closeThreads = useCallback(() => setThreadsOpen(false), []);
+  const { pathname } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedMessageId = searchParams.get('message');
+  const linkedThreadId = searchParams.get('thread');
+  const isAddressedScreen = !!channelId && pathname === `/channels/${spaceId}/${channelId}`;
+  useEffect(() => {
+    // `?thread=<id>` opens a thread of this channel, and `message` then means a message in it.
+    if (!linkedThreadId || !isAddressedScreen || !channelId) return;
+    openThreadView(linkedThreadId, channelId, linkedMessageId);
+    const next = new URLSearchParams(searchParams);
+    next.delete('thread');
+    next.delete('message');
+    setSearchParams(next, { replace: true });
+  }, [linkedThreadId, linkedMessageId, isAddressedScreen, channelId, searchParams, setSearchParams]);
+  useEffect(() => {
+    if (!linkedMessageId || linkedThreadId || !isAddressedScreen) return;
+    setJumpToMessageId(linkedMessageId);
+    const next = new URLSearchParams(searchParams);
+    next.delete('message');
+    setSearchParams(next, { replace: true });
+  }, [linkedMessageId, linkedThreadId, isAddressedScreen, searchParams, setSearchParams]);
 
   const loadMessages = useChatStore((s) => s.loadMessages);
   const setCurrentChannel = useChatStore((s) => s.setCurrentChannel);
@@ -91,6 +135,8 @@ export function MobileChatScreen({ params }: MobileChatScreenProps) {
   // it and always rendered the joined-names fallback). 1-on-1 DMs keep the
   // canonical-view lookup so replicated aliases still surface the home
   // account's displayName.
+  const spaceChannel = !isDm && channelId ? channels.find(c => c.id === channelId) : undefined;
+  const isForum = spaceChannel?.type === 'forum';
   let channelName: string;
   let inputPlaceholder: string | undefined;
   if (isDm) {
@@ -105,49 +151,70 @@ export function MobileChatScreen({ params }: MobileChatScreenProps) {
       inputPlaceholder = t('spaces:main.dm.composerPlaceholder', { target: `@${channelName}` });
     }
   } else {
-    const ch = channelId ? channels.find(c => c.id === channelId) : undefined;
-    channelName = ch?.name || t('mobile:chat.unknownChannel');
+    channelName = spaceChannel?.name || t('mobile:chat.unknownChannel');
   }
 
   return (
-    <div className="flex flex-col h-full bg-surface-chat">
+    <div className="lit flex flex-col h-full bg-surface-chat">
       {/* Header */}
-      <header className="h-12 flex items-center gap-2 px-3 border-b border-border-soft bg-surface-base shrink-0">
+      <header className="panel-bar flex h-12 items-center gap-1 bg-surface-base px-1">
         <button
           type="button"
           onClick={popMobileScreen}
-          className="w-8 h-8 flex items-center justify-center text-txt-secondary hover:text-txt-primary"
+          className={BAR_BUTTON}
           aria-label={t('common:actions.back')}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
         </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-semibold text-txt-primary truncate">
-            {isDm ? channelName : `# ${channelName}`}
-          </h1>
-        </div>
+        <h1 className={BAR_TITLE}>
+          {isDm || isForum || spaceChannel?.type === 'announcement' ? channelName : `# ${channelName}`}
+        </h1>
         <TransferIndicator />
-        {/* DM call button. The 44px button is the tap target; what is drawn is
-            the inner 32px chip, so the header keeps one icon rhythm (-mx-1.5
-            gives the extra tap area back to the gaps). Idle, join and busy are
+        {/* DM call button. The 40px button is the tap target, the header's
+            size; what is drawn is the inner 32px chip. Idle, join and busy are
             bare icons like the other header actions, join tinted mint; ringing
-            and in-call get the round tinted chip the voice mini bar uses for
-            its call controls. */}
+            and in-call get the tinted chip the voice mini bar uses for its
+            call controls. */}
         {dm && !dmPartnerDeleted && (
           <button
             type="button"
             onClick={handleCall}
             disabled={callState === 'busy'}
-            className="group w-11 h-11 -mx-1.5 shrink-0 flex items-center justify-center rounded-full disabled:cursor-not-allowed"
+            className="group flex h-10 w-10 shrink-0 items-center justify-center rounded-md disabled:cursor-not-allowed"
             aria-label={callLabel}
           >
-            <span className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${callChipClass}`}>
+            <span className={`w-8 h-8 rounded-md flex items-center justify-center transition-colors ${callChipClass}`}>
               <svg className={`w-5 h-5 ${callState === 'ringing' ? 'rotate-[135deg]' : ''}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
               </svg>
             </span>
+          </button>
+        )}
+        {spaceChannel?.type === 'announcement' && (
+          <FollowChannelButton channelId={spaceChannel.id} channelName={spaceChannel.name} compact className={BAR_BUTTON} />
+        )}
+        {channelId && !isDm && !isForum && (
+          <button
+            ref={threadsButtonRef}
+            type="button"
+            onClick={() => setThreadsOpen(!threadsOpen)}
+            className={BAR_BUTTON}
+            aria-label={t('chat:thread.listTitle')}
+          >
+            <Icon name="thread" size={20} />
+          </button>
+        )}
+        {channelId && !isForum && (
+          <button
+            ref={pinsButtonRef}
+            type="button"
+            onClick={() => setPinsOpen(!pinsOpen)}
+            className={BAR_BUTTON}
+            aria-label={t('chat:pins.title')}
+          >
+            <Icon name="pin" size={20} />
           </button>
         )}
         {/* Members button — shown for space channels AND group DMs. 1-on-1
@@ -165,7 +232,7 @@ export function MobileChatScreen({ params }: MobileChatScreenProps) {
               }
             }}
             type="button"
-            className="w-8 h-8 flex items-center justify-center text-txt-secondary hover:text-txt-primary"
+            className={BAR_BUTTON}
             aria-label={isDm && isGroup ? t('dm:groupInfo.title') : t('common:labels.members')}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
@@ -187,10 +254,25 @@ export function MobileChatScreen({ params }: MobileChatScreenProps) {
           TypingIndicator is rendered inside MessageInput itself (anchored
           `absolute bottom-full` to the bubble), so we don't render it here. */}
       <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-        {channelId && <MessageList channelId={channelId} />}
-        {channelId && (dmPartnerDeleted
+        {spaceChannel && isForum && <ForumView channel={spaceChannel} />}
+        {channelId && !isForum && <MessageList channelId={channelId} jumpToMessageId={jumpToMessageId} onJumpHandled={clearJumpRequest} />}
+        {channelId && !isForum && (dmPartnerDeleted
           ? <DmDeletedNotice />
           : <MessageInput channelId={channelId} channelName={channelName} placeholder={inputPlaceholder} />)}
+        {channelId && !isForum && (
+          <PinsPopover
+            open={pinsOpen}
+            onClose={closePins}
+            anchorRef={pinsButtonRef}
+            channelId={channelId}
+            isDm={isDm}
+            canUnpin={isDm ? !dmPartnerDeleted : canPinHere}
+            onJumpToMessage={(id) => { setJumpToMessageId(id); setPinsOpen(false); }}
+          />
+        )}
+        {channelId && !isDm && !isForum && (
+          <ThreadsPopover open={threadsOpen} onClose={closeThreads} anchorRef={threadsButtonRef} channelId={channelId} />
+        )}
       </div>
     </div>
   );

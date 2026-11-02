@@ -12,7 +12,7 @@ import type { User } from '@backspace/shared';
  * `useVoiceParticipantMeta` reads it with that origin.
  */
 
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 
 const mocks = vi.hoisted(() => ({
   token: vi.fn(),
@@ -75,7 +75,7 @@ beforeEach(() => {
     this.emit(RoomEvent.Disconnected, DisconnectReason.CLIENT_INITIATED);
   });
   useVoiceStore.setState({ ...useVoiceStore.getInitialState(), isMuted: false, currentVoiceChannelId: 'channel' });
-  useAuthStore.setState({ user: me, myRowIds: new Map([[ORBIT, 'o-7']]) });
+  useAuthStore.setState({ user: me, myRowIds: new Map([[TAVVIT, 'o-7']]) });
 });
 afterEach(() => {
   cleanup();
@@ -85,10 +85,10 @@ afterEach(() => {
 
 describe('the local participant row', () => {
   it("is the user's row on the instance hosting the call", async () => {
-    mocks.origin = ORBIT;
+    mocks.origin = TAVVIT;
     const row = await listedLocalRow('o-7:jannis');
     expect(row?.id).toBe('o-7');
-    expect(isMe(row!, ORBIT)).toBe(true);
+    expect(isMe(row!, TAVVIT)).toBe(true);
   });
 
   it("is the session row on the page's own instance", async () => {

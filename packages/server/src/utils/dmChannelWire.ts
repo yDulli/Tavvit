@@ -4,11 +4,25 @@ import type { getDb } from '../db/index.js';
 import { schema } from '../db/index.js';
 import { sanitizeUser } from './sanitize.js';
 import { batchInArray } from './sqlBatch.js';
+import { mediaOriginsFor, shownPicture } from './remoteMedia.js';
 
 type Db = ReturnType<typeof getDb>;
 type DmChannelRow = typeof schema.dmChannels.$inferSelect;
 type UserRow = typeof schema.users.$inferSelect;
 type DmMessageRow = typeof schema.dmMessages.$inferSelect;
+
+/**
+ * A group's icon as its members' clients fetch it by themselves: a file here, or an address on
+ * the home of its owner or of a member, who set it there. An address anywhere else, stored before
+ * that was checked, is shown as none (utils/remoteMedia.ts).
+ */
+function groupIconShown(channel: DmChannelRow, members: UserRow[]): string | null {
+  const icon = channel.icon ?? null;
+  if (!icon || !/^https?:\/\//i.test(icon)) return shownPicture(icon, []);
+  const origins = new Set(mediaOriginsFor(channel.ownerHomeInstance));
+  for (const member of members) for (const origin of mediaOriginsFor(member.homeInstance)) origins.add(origin);
+  return shownPicture(icon, [...origins]);
+}
 
 /**
  * The one place a `DmChannel` is put on the wire. The ready payload,
@@ -33,7 +47,7 @@ export function toDmChannelWire(
     ownerHomeInstance: channel.ownerHomeInstance ?? null,
     createdAt: channel.createdAt,
     name: channel.name ?? null,
-    icon: channel.icon ?? null,
+    icon: groupIconShown(channel, members),
     metadataUpdatedAt: channel.metadataUpdatedAt ?? 0,
     members: members.map(u => sanitizeUser(u)),
     lastMessage: lastMessage ?? null,

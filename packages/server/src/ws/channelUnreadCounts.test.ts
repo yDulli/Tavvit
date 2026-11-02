@@ -193,3 +193,62 @@ describe('follow-up events', () => {
     expect(unreadCountFollowUp('me', { type: 'channel_ack', channelId: 'unknown', messageId: '1' })).toBeNull();
   });
 });
+
+describe('counting for everyone at once', () => {
+  it('says what counting for each of them says', async () => {
+    const { channelUnreadCountsFor } = await import('./channelUnreadCounts.js');
+    const people = ['me', 'other', 'third', 'silent'];
+    // A long channel, by turns, with the newest ones mostly by one person.
+    for (let i = 0; i < 400; i++) addMessage(newId(i), 'chat', people[i % 3] as string);
+    for (let i = 400; i < 700; i++) addMessage(newId(i), 'chat', i % 10 === 0 ? 'other' : 'me');
+    sqlite.prepare("INSERT INTO messages (id, channel_id, user_id, content, type, created_at) VALUES (?, 'chat', 'other', '{}', 'system', 1)")
+      .run(String(newId(700)));
+
+    for (const place of [OLD_ID, '0', String(newId(5)), String(newId(399)), String(newId(420)), String(newId(600)), String(newId(650)), String(newId(699)), String(newId(700)), String(newId(9999)), 'not-a-number']) {
+      for (const person of people) setCursor(person, 'chat', place);
+      const together = channelUnreadCountsFor('chat', people);
+      for (const person of people) {
+        expect(together.get(person), `${person} at ${place}`).toBe(countChannelUnread(person, 'chat', place));
+      }
+    }
+  });
+
+  it('counts for someone who has read nothing, and someone with no messages to read', async () => {
+    const { channelUnreadCountsFor } = await import('./channelUnreadCounts.js');
+    expect(channelUnreadCountsFor('chat', ['me']).get('me')).toBe(0);
+    addMessage(newId(1), 'chat', 'other');
+    addMessage(newId(2), 'chat', 'me');
+    const together = channelUnreadCountsFor('chat', ['me', 'other', 'silent']);
+    expect(together.get('me')).toBe(1);
+    expect(together.get('other')).toBe(1);
+    expect(together.get('silent')).toBe(2);
+  });
+
+  it('reads one query for the channel, not one for each person', async () => {
+    const { channelUnreadCountsFor } = await import('./channelUnreadCounts.js');
+    for (let i = 0; i < 20; i++) addMessage(newId(i), 'chat', 'other');
+    const people = Array.from({ length: 300 }, (_unused, at) => `person-${at}`);
+    const spy = vi.spyOn(sqlite, 'prepare');
+    channelUnreadCountsFor('chat', people);
+    expect(spy.mock.calls.length).toBeLessThanOrEqual(3);
+    spy.mockRestore();
+  });
+
+  it('follows an event with the count for each, and zero for who may not read', async () => {
+    const { unreadFollowUpsFor } = await import('./channelUnreadCounts.js');
+    addMessage(newId(1), 'chat', 'other');
+    addMessage(newId(2), 'chat', 'other');
+    setCursor('me', 'chat', String(newId(1)));
+    const event = { type: 'message_deleted', channelId: 'chat', messageId: 'x' } as unknown as ServerEvent;
+    const followUps = unreadFollowUpsFor(event, new Map([['me', READ], ['silent', READ], ['barred', PermissionBits.VIEW_CHANNEL]]));
+    expect(JSON.parse(followUps.get('me') ?? '{}')).toEqual({ type: 'channel_unread_count', counts: { chat: 1 } });
+    expect(JSON.parse(followUps.get('silent') ?? '{}')).toEqual({ type: 'channel_unread_count', counts: { chat: 2 } });
+    expect(JSON.parse(followUps.get('barred') ?? '{}')).toEqual({ type: 'channel_unread_count', counts: { chat: 0 } });
+  });
+
+  it('follows no event that moves no count', async () => {
+    const { unreadFollowUpsFor } = await import('./channelUnreadCounts.js');
+    const event = { type: 'typing', channelId: 'chat', userId: 'x', username: 'x' } as unknown as ServerEvent;
+    expect(unreadFollowUpsFor(event, new Map([['me', READ]])).size).toBe(0);
+  });
+});

@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useVoiceStore } from '../../../stores/voiceStore';
 import { AudioManager } from '../../../audio/AudioManager';
 import { useAudioDevices } from '../../../hooks/useAudioDevices';
-import { SectionShell, DropdownItem } from './_shared/SettingsPickerPrimitives';
+import { Icon } from '../../ui/Icon';
+import { DevicePicker, DropdownItem } from './_shared/SettingsPickerPrimitives';
+import { SettingsSection, SliderRow } from './_shared/SettingsControls';
 
 export function AudioInputSection() {
   const { t } = useTranslation(['settings', 'common']);
@@ -93,46 +95,39 @@ export function AudioInputSection() {
 
   if (permState === 'unknown') {
     return (
-      <SectionShell title={t('voice.input.title')}>
-        <div className="text-sm text-txt-tertiary">{t('voice.input.checkingAccess')}</div>
-      </SectionShell>
+      <SettingsSection title={t('voice.input.title')}>
+        <p className="text-ui text-txt-tertiary">{t('voice.input.checkingAccess')}</p>
+      </SettingsSection>
     );
   }
 
   if (permState === 'denied') {
     return (
-      <SectionShell title={t('voice.input.title')}>
-        <div className="space-y-2">
-          <div className="text-sm text-txt-primary">⚠ {t('voice.input.accessDenied.title')}</div>
-          <div className="text-xs text-txt-tertiary">
-            {t('voice.input.accessDenied.description')}
+      <SettingsSection title={t('voice.input.title')}>
+        <div className="flex items-start gap-2.5">
+          <Icon name="alert" size={16} className="mt-px flex-shrink-0 text-txt-warning" />
+          <div className="min-w-0">
+            <p className="text-ui font-medium text-txt-primary">{t('voice.input.accessDenied.title')}</p>
+            <p className="mt-0.5 text-meta leading-snug text-txt-tertiary">{t('voice.input.accessDenied.description')}</p>
+            <button type="button" onClick={() => { requestPermission().catch(() => {}); }} className="btn-outline btn-sm mt-2.5">
+              {t('voice.input.accessDenied.retry')}
+            </button>
           </div>
-          <button
-            onClick={() => { requestPermission().catch(() => {}); }}
-            className="text-xs px-3 py-1.5 rounded-md bg-surface-base hover:bg-interactive-hover text-txt-secondary transition-colors"
-          >
-            {t('voice.input.accessDenied.retry')}
-          </button>
         </div>
-      </SectionShell>
+      </SettingsSection>
     );
   }
 
   if (permState === 'prompt') {
     return (
-      <SectionShell title={t('voice.input.title')}>
-        <div className="space-y-3">
-          <div className="text-xs text-txt-tertiary">
-            {t('voice.input.permissionPrompt.description')}
-          </div>
-          <button
-            onClick={() => { requestPermission().catch(() => {}); }}
-            className="text-[13px] px-3 py-2 rounded-md bg-accent-primary hover:bg-accent-primary-hover text-white font-medium transition-colors"
-          >
+      <SettingsSection title={t('voice.input.title')}>
+        <div>
+          <p className="text-meta leading-snug text-txt-tertiary">{t('voice.input.permissionPrompt.description')}</p>
+          <button type="button" onClick={() => { requestPermission().catch(() => {}); }} className="btn-primary mt-2.5">
             {t('voice.input.permissionPrompt.enable')}
           </button>
         </div>
-      </SectionShell>
+      </SettingsSection>
     );
   }
 
@@ -155,72 +150,49 @@ export function AudioInputSection() {
   const activeBars = Math.round(micLevel * micBars * (inputVolume / 100));
 
   return (
-    <SectionShell title={t('voice.input.title')}>
-      <div className="space-y-3">
-        <div ref={dropdownRef}>
-          <button
-            type="button"
-            onClick={() => setListOpen((v) => !v)}
-            className="w-full px-3 py-2 flex items-center justify-between rounded-md bg-surface-base hover:bg-interactive-hover transition-colors"
-          >
-            <span className="text-[13px] text-txt-primary truncate text-left">{selectedLabel}</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
-              className={`text-txt-tertiary flex-shrink-0 ml-2 transition-transform ${listOpen ? 'rotate-90' : ''}`}>
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-            </svg>
-          </button>
-          {listOpen && (
-            <div className="mt-1 rounded-md bg-surface-base border border-border-hard py-1 max-h-64 overflow-y-auto">
-              <DropdownItem label={systemDefaultLabel} active={inputDeviceId === 'default'} onClick={() => handleSelect('default')} />
-              {inputs.filter(d => d.deviceId !== 'default').map((d) => (
-                <DropdownItem
-                  key={d.deviceId}
-                  label={inputLabels.get(d.deviceId) ?? d.deviceId}
-                  active={inputDeviceId === d.deviceId}
-                  onClick={() => handleSelect(d.deviceId)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+    <SettingsSection title={t('voice.input.title')}>
+      <div>
+        <DevicePicker selectedLabel={selectedLabel} open={listOpen} onToggle={() => setListOpen((v) => !v)} pickerRef={dropdownRef}>
+          <DropdownItem label={systemDefaultLabel} active={inputDeviceId === 'default'} onClick={() => handleSelect('default')} />
+          {inputs.filter(d => d.deviceId !== 'default').map((d) => (
+            <DropdownItem
+              key={d.deviceId}
+              label={inputLabels.get(d.deviceId) ?? d.deviceId}
+              active={inputDeviceId === d.deviceId}
+              onClick={() => handleSelect(d.deviceId)}
+            />
+          ))}
+        </DevicePicker>
         {resolvedHint && (
-          <div className="text-xs text-txt-tertiary -mt-1">{t('voice.input.device.currentlyUsing', { label: resolvedHint })}</div>
+          <p className="mt-1.5 text-meta text-txt-tertiary">{t('voice.input.device.currentlyUsing', { label: resolvedHint })}</p>
         )}
         {inputs.length === 0 && (
-          <div className="text-xs text-txt-tertiary">{t('voice.input.device.none')}</div>
+          <p className="mt-1.5 text-meta text-txt-tertiary">{t('voice.input.device.none')}</p>
         )}
-
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="text-[13px] font-medium text-txt-primary">{t('voice.input.volume.label')}</div>
-            <div className="text-xs text-txt-tertiary tabular-nums">{t('common:units.percent', { value: inputVolume })}</div>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={200}
-            value={inputVolume}
-            onChange={(e) => setInputVolume(Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
-            style={{
-              background: `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${inputVolume / 2}%, rgb(var(--interactive-muted)) ${inputVolume / 2}%, rgb(var(--interactive-muted)) 100%)`,
-            }}
-          />
-          <div className="flex items-center gap-[3px] mt-2">
-            {Array.from({ length: micBars }).map((_, i) => (
-              <div
-                key={i}
-                className={`flex-1 h-[6px] rounded-[1px] transition-colors duration-75 ${
-                  i < activeBars ? 'bg-status-online' : 'bg-interactive-muted'
-                }`}
-              />
-            ))}
-          </div>
-          <div className="text-xs text-txt-tertiary mt-1.5">
-            {t('voice.input.meter.hint')}
-          </div>
-        </div>
       </div>
-    </SectionShell>
+
+      <div>
+        <SliderRow
+          id="input-volume"
+          label={t('voice.input.volume.label')}
+          value={inputVolume}
+          min={0}
+          max={200}
+          valueLabel={t('common:units.percent', { value: inputVolume })}
+          onChange={setInputVolume}
+        />
+        <div className="mt-2 flex items-center gap-[3px]" aria-hidden="true">
+          {Array.from({ length: micBars }).map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 flex-1 rounded-[1px] transition-colors duration-75 ${
+                i < activeBars ? 'bg-status-online' : 'bg-interactive-muted'
+              }`}
+            />
+          ))}
+        </div>
+        <p className="mt-1.5 text-meta text-txt-tertiary">{t('voice.input.meter.hint')}</p>
+      </div>
+    </SettingsSection>
   );
 }

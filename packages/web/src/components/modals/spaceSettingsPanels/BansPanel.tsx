@@ -58,37 +58,42 @@ export function BansPanel({ spaceId }: BansPanelProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-txt-tertiary text-sm">{t('spaces:bans.loading')}</div>
+        <div className="text-txt-tertiary text-ui">{t('spaces:bans.loading')}</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('spaces:bans.title')}</h2>
+      <div>
+        <h2 className="page-title">{t('spaces:bans.title')}</h2>
+        <p className="mt-1 text-meta leading-snug text-txt-tertiary">{t('spaces:bans.description')}</p>
+      </div>
       {error && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{error}</div>
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{error}</div>
       )}
 
-      <p className="text-xs text-txt-tertiary">{t('spaces:bans.description')}</p>
-
       {bans.length === 0 ? (
-        <div className="text-center py-8 text-txt-tertiary text-sm">{t('spaces:bans.empty')}</div>
+        <div className="surface-card rounded-lg">
+          <div className="empty-state">
+            <p className="empty-state-body">{t('spaces:bans.empty')}</p>
+          </div>
+        </div>
       ) : (
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
+          <div className="label-mono mb-1.5">
             {t('spaces:bans.listHeading', { total: f.formatNumber(bans.length) })}
           </div>
-          <div className="rounded-lg bg-white/[0.02] p-2">
-            <div className="space-y-0.5">
+          <div className="surface-card overflow-hidden rounded-lg">
+            <div className="divide-y divide-border-hard">
               {bans.map((ban) => {
                 const displayName = ban.user?.displayName ?? ban.user?.username ?? ban.userId;
                 const moderatorName = ban.moderator?.displayName ?? ban.moderator?.username ?? ban.bannedBy;
                 const bannedDate = f.formatNumericDate(ban.createdAt);
 
                 return (
-                  <div key={ban.userId} className="flex items-center justify-between p-2 rounded hover:bg-interactive-hover transition-colors">
-                    <div className="flex items-center gap-2 min-w-0">
+                  <div key={ban.userId} className="flex min-h-[52px] items-center justify-between gap-3 px-3 py-2">
+                    <div className="flex items-center gap-3 min-w-0">
                       <Avatar
                         src={ban.user?.avatar ?? null}
                         name={displayName}
@@ -96,8 +101,8 @@ export function BansPanel({ spaceId }: BansPanelProps) {
                         userId={ban.userId}
                       />
                       <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">{displayName}</div>
-                        <div className="text-[11px] text-txt-tertiary truncate">
+                        <div className="text-ui font-medium text-txt-primary truncate">{displayName}</div>
+                        <div className="mt-0.5 text-meta text-txt-tertiary truncate">
                           {ban.reason
                             ? t('spaces:bans.bannedByWithReason', { moderator: moderatorName, date: bannedDate, reason: ban.reason })
                             : t('spaces:bans.bannedBy', { moderator: moderatorName, date: bannedDate })}
@@ -105,8 +110,9 @@ export function BansPanel({ spaceId }: BansPanelProps) {
                       </div>
                     </div>
                     <button
+                      type="button"
                       onClick={() => handleUnban(ban.userId)}
-                      className="px-2 py-1 text-xs text-txt-secondary hover:text-txt-primary hover:bg-surface-base rounded transition-colors flex-shrink-0"
+                      className="btn-outline btn-sm"
                     >
                       {t('spaces:bans.unban')}
                     </button>

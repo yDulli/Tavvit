@@ -20,7 +20,7 @@ vi.mock('../stores/activityStore', () => ({
 import { useSocialStore } from '../stores/socialStore';
 import { presenceSubjectOf } from './presenceSubject';
 
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 
 function friend(id: string, homeInstance: string | null, homeUserId: string): Friend {
   return {
@@ -34,7 +34,7 @@ describe('presenceSubjectOf for a server that sends only its row id', () => {
   beforeEach(() => {
     useSocialStore.getState().reset();
     // Bob's entry is shown by orbit's native row; the page's instance holds a replicated row of him.
-    useSocialStore.getState().addFriendFromAccepted(friend('b-1', null, 'b-1'), 'r-o', ORBIT);
+    useSocialStore.getState().addFriendFromAccepted(friend('b-1', null, 'b-1'), 'r-o', TAVVIT);
     useSocialStore.getState().addFriendFromAccepted(friend('nb', 'orbit.example', 'b-1'), 'r-h', '');
   });
 
@@ -43,6 +43,6 @@ describe('presenceSubjectOf for a server that sends only its row id', () => {
   });
 
   it('takes an id the delivering instance never listed as native there', () => {
-    expect(presenceSubjectOf({ userId: 'nb' }, ORBIT)).toEqual({ id: 'nb' });
+    expect(presenceSubjectOf({ userId: 'nb' }, TAVVIT)).toEqual({ id: 'nb' });
   });
 });

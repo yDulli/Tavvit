@@ -31,7 +31,7 @@ export function SystemMessage({ message, dm }: SystemMessageProps) {
 
   if (event?.event === 'space_invite') {
     return (
-      <div className="px-4 py-1">
+      <div className="px-5 py-1">
         <SpaceInviteCard payload={event} senderName={actorName} />
       </div>
     );
@@ -39,8 +39,8 @@ export function SystemMessage({ message, dm }: SystemMessageProps) {
 
   const icon = dmSystemIcon(event);
   return (
-    <div className="flex items-center justify-center py-1 px-4 select-none">
-      <span className="text-xs text-txt-tertiary">
+    <div className="flex items-center justify-center py-1 px-5 select-none">
+      <span className="text-meta text-txt-tertiary text-center">
         {icon && <span className="mr-1.5">{icon}</span>}
         {dmSystemText(event, actorName, 'timeline')}
       </span>

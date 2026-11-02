@@ -22,6 +22,12 @@ export interface SpaceChannelEntry {
   /** The instance that issued its id ('' is home). */
   readonly origin: string;
   readonly type: Channel['type'];
+  /** Its name, so a channel of a space that is not open can still be named (inbox, quick switcher). */
+  readonly name: string;
+  /** A thread's channel. A thread is here because it is followed or open; no listing names it. */
+  readonly parentChannelId?: string;
+  /** The icon its space gave it, so a list away from the space shows it too (ChannelIcon). */
+  readonly icon?: string;
 }
 
 export type SpaceChannelIndex = ReadonlyMap<string, SpaceChannelEntry>;
@@ -61,7 +67,14 @@ export function putSpaceListings(
   const lastMessageIds = new Map(tables.lastMessageIds);
   for (const space of spaces) {
     for (const channel of space.channels) {
-      index.set(channel.id, { spaceId: space.id, origin, type: channel.type });
+      index.set(channel.id, {
+        spaceId: space.id,
+        origin,
+        type: channel.type,
+        name: channel.name,
+        ...(channel.parentChannelId ? { parentChannelId: channel.parentChannelId } : {}),
+        ...(channel.icon ? { icon: channel.icon } : {}),
+      });
       if (channel.myPermissions) permissions.set(channel.id, channel.myPermissions);
       // Voice channels have no text to read; unread tracking skips them.
       if (channel.type !== 'voice' && channel.lastMessageId) lastMessageIds.set(channel.id, channel.lastMessageId);
@@ -70,9 +83,11 @@ export function putSpaceListings(
   return { index, permissions, lastMessageIds };
 }
 
-/** Forget `channelIds` in every table. Ids the index does not hold are ignored. */
+/** Forget `channelIds`, with their threads, in every table. Ids the index does not hold are ignored. */
 export function dropChannels(tables: SpaceChannelTables, channelIds: Iterable<string>): SpaceChannelTables {
-  const ids = [...channelIds].filter((id) => tables.index.has(id));
+  const known = new Set([...channelIds].filter((id) => tables.index.has(id)));
+  const threads = channelIdsWhere(tables.index, (entry) => entry.parentChannelId !== undefined && known.has(entry.parentChannelId));
+  const ids = [...known, ...threads];
   if (ids.length === 0) return tables;
   const index = new Map(tables.index);
   const permissions = new Map(tables.permissions);
@@ -114,7 +129,7 @@ export function replaceSpaceChannels(
   channels: readonly Channel[],
 ): { tables: SpaceChannelTables; dropped: string[] } {
   const listed = new Set(channels.map((c) => c.id));
-  const dropped = channelIdsWhere(tables.index, (e) => inSpace(e, spaceId, origin)).filter((id) => !listed.has(id));
+  const dropped = channelIdsWhere(tables.index, (e) => inSpace(e, spaceId, origin) && e.type !== 'thread').filter((id) => !listed.has(id));
   return { tables: putChannels(dropChannels(tables, dropped), spaceId, origin, channels), dropped };
 }
 

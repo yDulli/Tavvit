@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { initializeInterfaceScale, isMobileViewport, layoutPixels, visualPixels } from './interfaceScale';
+import { COMPACT_LAYOUT_BREAKPOINT, initializeInterfaceScale, isCompactViewport, isMobileViewport, layoutPixels, visualPixels } from './interfaceScale';
+import { selectPeoplePanelOpen } from '../stores/peoplePanel';
 import { INTERFACE_SCALES, normalizeInterfaceScale, useInterfaceScaleStore } from '../stores/interfaceScaleStore';
 import { computeFloatingPosition, pointAnchor } from '../hooks/useFloatingPosition';
 import { InterfaceScaleSection } from '../components/modals/settingsPanels/InterfaceScaleSection';
@@ -29,8 +30,40 @@ afterEach(() => {
   document.documentElement.style.removeProperty('--titlebar-inset');
   delete window.backspace;
   delete document.documentElement.dataset.viewport;
+  delete document.documentElement.dataset.width;
   vi.restoreAllMocks();
-  useUIStore.setState({ isMobile: false, activeModal: null, mobileStack: [] });
+  useUIStore.setState({ isMobile: false, activeModal: null, mobileStack: [], isCompact: false, compactPanelOpen: false, memberListOpen: true });
+});
+
+describe('compact width', () => {
+  it.each([
+    [1024, 100, 'compact'], [1199, 100, 'compact'], [1200, 100, 'wide'], [1440, 100, 'wide'],
+    [1440, 125, 'compact'], [1800, 125, 'wide'],
+  ])('marks width %i at scale %i as %s', (width, scale, expected) => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(Number(width));
+    useInterfaceScaleStore.getState().setScale(Number(scale));
+    startInterfaceScale();
+    expect(document.documentElement.dataset.width).toBe(expected);
+    expect(isCompactViewport()).toBe(expected === 'compact');
+    expect(layoutPixels(Number(width)) < COMPACT_LAYOUT_BREAKPOINT).toBe(expected === 'compact');
+  });
+
+  it('keeps the people column out of the way in a compact window without touching the wide choice', () => {
+    const ui = useUIStore.getState();
+    ui.setIsCompact(true);
+    expect(selectPeoplePanelOpen(useUIStore.getState())).toBe(false);
+    useUIStore.getState().toggleMemberList();
+    expect(selectPeoplePanelOpen(useUIStore.getState())).toBe(true);
+    expect(useUIStore.getState().memberListOpen).toBe(true);
+    useUIStore.getState().closeCompactPanel();
+    expect(selectPeoplePanelOpen(useUIStore.getState())).toBe(false);
+    useUIStore.getState().toggleMemberList();
+    useUIStore.getState().setIsCompact(false);
+    expect(useUIStore.getState().compactPanelOpen).toBe(false);
+    expect(selectPeoplePanelOpen(useUIStore.getState())).toBe(true);
+    useUIStore.getState().toggleMemberList();
+    expect(useUIStore.getState().memberListOpen).toBe(false);
+  });
 });
 
 describe('interface scale', () => {

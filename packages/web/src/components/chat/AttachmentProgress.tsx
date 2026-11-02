@@ -2,13 +2,14 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TransferState } from '../../stores/transferStore';
 import { useFormatters } from '../../i18n/formatters';
+import { Icon } from '../ui/Icon';
 
 interface Props {
   loaded: number;
   total: number;
   state: TransferState;
   filename: string;
-  /** Optional human-readable error surfaced as a hover tooltip when state==='failed'. */
+  /** Optional human-readable error, shown in the tile and as a tooltip when state==='failed'. */
   error?: string;
   onPause?: () => void;
   onResume?: () => void;
@@ -16,57 +17,64 @@ interface Props {
   size?: 'tile' | 'pill';
 }
 
+/** A small button on a picture: legible over anything the picture holds. */
+const OVERLAY_BUTTON = 'flex h-5 w-5 items-center justify-center rounded bg-black/60 text-white transition-colors hover:bg-black/80 active:bg-black/90';
+
 export function AttachmentProgress({ loaded, total, state, filename, error, onPause, onResume, onAbort, size = 'tile' }: Props) {
   const { t } = useTranslation(['chat', 'common']);
   const { formatBytes, formatPercent } = useFormatters();
   const pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
-  const bg = state === 'failed' ? 'bg-accent-rose/30' : state === 'paused' ? 'bg-white/5' : 'bg-accent-mint/30';
+  const failed = state === 'failed';
   const isFinal = state === 'completed' || state === 'aborted';
-  // Desaturate the conic-gradient ring when paused so it can't be mistaken for
-  // active progress. Active uses mint; paused uses a muted grey.
-  const ringColor = state === 'paused' ? 'rgba(180,180,190,.5)' : 'rgba(180,220,200,.85)';
-  const ringTrack = 'rgba(255,255,255,.15)';
-  const ringTitle = state === 'failed'
+  // Paused is the same ring turned down, so it cannot be taken for progress.
+  const ringColor = state === 'paused' ? 'rgb(var(--text-tertiary))' : 'rgb(var(--text-primary))';
+  const ringTrack = 'rgb(255 255 255 / 0.15)';
+  const ringTitle = failed
     ? error
     : state === 'paused'
       ? t('chat:attachment.progress.pausedTitle', { percent: formatPercent(pct) })
       : undefined;
   return (
-    <div className={`absolute inset-0 flex flex-col items-center justify-center gap-2 backdrop-blur-[2px] ${state === 'failed' ? 'bg-accent-rose/20' : 'bg-black/50'} pointer-events-auto`}>
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/70 pointer-events-auto">
       <div
-        className={`w-9 h-9 rounded-full ${bg} flex items-center justify-center`}
-        style={state !== 'failed' ? { background: `conic-gradient(${ringColor} ${pct}%, ${ringTrack} ${pct}%)` } : undefined}
+        className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${failed ? 'bg-accent-rose/30' : ''}`}
+        style={failed ? undefined : { background: `conic-gradient(${ringColor} ${pct}%, ${ringTrack} ${pct}%)` }}
         title={ringTitle}
       >
-        <div className="w-7 h-7 rounded-full bg-surface-overlay text-[10px] text-txt-primary flex items-center justify-center font-medium">
+        <div className="tabular flex h-7 w-7 items-center justify-center whitespace-nowrap rounded-full bg-surface-input font-mono text-2xs text-txt-primary">
           {state === 'paused' ? (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true">
-              <rect x="2" y="1.5" width="2" height="7" rx="0.5" />
-              <rect x="6" y="1.5" width="2" height="7" rx="0.5" />
-            </svg>
-          ) : state === 'failed' ? (
-            '!'
+            <Icon name="pause" size={12} strokeWidth={2.25} />
+          ) : failed ? (
+            <Icon name="alert" size={16} className="text-txt-danger" />
           ) : (
             formatPercent(pct)
           )}
         </div>
       </div>
       {size === 'tile' && (
-        <div className="text-[10px] text-txt-primary text-center leading-tight px-1">
-          <div className="truncate max-w-[120px]">{filename}</div>
-          <div className="opacity-60">{formatBytes(loaded)} / {formatBytes(total)}</div>
+        <div className="w-full px-2 text-center text-2xs leading-tight text-txt-primary">
+          <div className="truncate">{filename}</div>
+          {failed
+            ? <div className="line-clamp-2 text-txt-danger">{error ?? t('chat:message.upload.failed')}</div>
+            : <div className="tabular truncate font-mono text-txt-secondary">{formatBytes(loaded)} / {formatBytes(total)}</div>}
         </div>
       )}
       {!isFinal && (
         <div className="absolute top-1 right-1 flex gap-1">
           {state === 'paused' && onResume && (
-            <button onClick={onResume} className="bg-black/60 hover:bg-black/80 text-white w-5 h-5 rounded text-[9px]" aria-label={t('common:actions.resume')}>▶</button>
+            <button onClick={onResume} className={OVERLAY_BUTTON} aria-label={t('common:actions.resume')}>
+              <Icon name="play" size={12} strokeWidth={2} />
+            </button>
           )}
           {state === 'active' && onPause && (
-            <button onClick={onPause} className="bg-black/60 hover:bg-black/80 text-white w-5 h-5 rounded text-[9px]" aria-label={t('common:actions.pause')}>⏸</button>
+            <button onClick={onPause} className={OVERLAY_BUTTON} aria-label={t('common:actions.pause')}>
+              <Icon name="pause" size={12} strokeWidth={2.25} />
+            </button>
           )}
           {onAbort && (
-            <button onClick={onAbort} className="bg-black/60 hover:bg-black/80 text-white w-5 h-5 rounded text-[9px]" aria-label={t('common:actions.abort')}>✕</button>
+            <button onClick={onAbort} className={OVERLAY_BUTTON} aria-label={t('common:actions.abort')}>
+              <Icon name="x" size={12} strokeWidth={2.25} />
+            </button>
           )}
         </div>
       )}

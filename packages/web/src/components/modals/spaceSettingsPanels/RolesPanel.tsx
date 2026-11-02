@@ -4,7 +4,8 @@ import { useSpaceStore, getApiForOrigin } from '../../../stores/spaceStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { HttpError, type RoleUpdateBody } from '../../../api/client';
 import { PermissionBits, stringToPermissions, permissionsToString, rolePermissionsVersion } from '../../../utils/permissions';
-import { PERMISSION_GROUPS, type PermDef, type PermissionGroupId } from '../../../utils/permissionGroups';
+import { PERMISSION_GROUPS, usePermissionDescriptions, usePermissionGroupTitles, type PermDef } from '../../../utils/permissionGroups';
+import { RoleDisplayFields, RoleMembers } from './RoleDisplayFields';
 import { usePermissionNames } from '../../ui/OverrideEntry';
 import { describeError } from '../../../i18n/errors';
 import type { Role } from '@backspace/shared';
@@ -99,16 +100,18 @@ export function RolesPanel({ spaceId }: RolesPanelProps) {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('spaces:roles.title')}</h2>
+      <h2 className="page-title">{t('spaces:roles.title')}</h2>
       {error && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{error}</div>
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{error}</div>
       )}
 
-      <div className="sticky top-0 z-10 pointer-events-none pb-3">
+      <div className="sticky top-0 z-10 pointer-events-none">
         <button
+          type="button"
           onClick={handleCreateRole}
           disabled={creating || !canCreateRole}
-          className="glass-bubble rounded-full px-3 py-1.5 flex items-center gap-1.5 text-sm text-txt-primary hover:text-txt-secondary transition-colors pointer-events-auto disabled:opacity-50"
+          aria-busy={creating}
+          className="btn-outline bg-surface-chat pointer-events-auto"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <line x1="12" y1="5" x2="12" y2="19" />
@@ -119,10 +122,10 @@ export function RolesPanel({ spaceId }: RolesPanelProps) {
       </div>
 
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('spaces:roles.listHeading')}</div>
-        <p className="text-xs text-txt-tertiary">{t('spaces:roles.description')}</p>
-        <p className="text-xs text-txt-tertiary mb-2">{t('spaces:roles.hierarchyHint')}</p>
-        <div className="rounded-lg bg-white/[0.02] p-2">
+        <div className="label-mono mb-1.5">{t('spaces:roles.listHeading')}</div>
+        <p className="text-meta leading-snug text-txt-tertiary">{t('spaces:roles.description')}</p>
+        <p className="mb-2 text-meta leading-snug text-txt-tertiary">{t('spaces:roles.hierarchyHint')}</p>
+        <div className="surface-card rounded-lg p-1">
           <RoleOrderList
             spaceId={spaceId}
             onOpen={(roleId) => { setIsNewRole(false); setEditingRoleId(roleId); }}
@@ -144,9 +147,57 @@ interface RoleEditViewProps {
   onCopied: (newRoleId: string) => void;
 }
 
+/** A role's display fields as the editor drafts them. */
+interface RoleDisplay {
+  name: string;
+  color: string;
+  colorSecondary: string | null;
+  description: string;
+  icon: string;
+  hoist: boolean;
+  mentionable: boolean;
+}
+
+function displayOf(role: Role): RoleDisplay {
+  return {
+    name: role.name,
+    color: role.color,
+    colorSecondary: role.colorSecondary ?? null,
+    description: role.description ?? '',
+    icon: role.icon ?? '',
+    hoist: role.hoist !== false,
+    mentionable: role.mentionable === true,
+  };
+}
+
+function sameDisplay(a: RoleDisplay, b: RoleDisplay): boolean {
+  return a.name === b.name && a.color === b.color && a.colorSecondary === b.colorSecondary
+    && a.description === b.description && a.icon === b.icon && a.hoist === b.hoist && a.mentionable === b.mentionable;
+}
+
+/**
+ * Display fields in the form the instance stores them: a name trimmed with
+ * its runs of space collapsed, colours in lower case, description and icon
+ * trimmed. Drafts and the stored role are compared in this form on both
+ * sides, so an edit that would store nothing new is no change, and a role
+ * stored before these rules (a double space in its name) opens clean.
+ */
+function storedForm(display: RoleDisplay): RoleDisplay {
+  return {
+    name: display.name.trim().replace(/\s+/g, ' '),
+    color: display.color.toLowerCase(),
+    colorSecondary: display.colorSecondary?.toLowerCase() ?? null,
+    description: display.description.trim(),
+    icon: display.icon.trim(),
+    hoist: display.hoist,
+    mentionable: display.mentionable,
+  };
+}
+
 function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: RoleEditViewProps) {
   const { t } = useTranslation(['spaces', 'common']);
   const permissionNames = usePermissionNames();
+  const permissionDescriptions = usePermissionDescriptions();
   const loadSpaceDetail = useSpaceStore((s) => s.loadSpaceDetail);
   const setRoles = useSpaceStore((s) => s.setRoles);
   const roles = useSpaceStore((s) => s.roles);
@@ -189,6 +240,38 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
   };
 
   const [draftColor, setDraftColor] = useState(role.color);
+  const [draftColorSecondary, setDraftColorSecondary] = useState<string | null>(role.colorSecondary ?? null);
+  const [draftDescription, setDraftDescription] = useState(role.description ?? '');
+  const [draftIcon, setDraftIcon] = useState(role.icon ?? '');
+  const [draftHoist, setDraftHoist] = useState(role.hoist !== false);
+  const [draftMentionable, setDraftMentionable] = useState(role.mentionable === true);
+  // The display fields follow the stored role like the permissions do: a
+  // field nobody touched here takes on what someone else saved meanwhile, so
+  // their change is shown instead of reading as an edit of the viewer's (and
+  // being written back over theirs on the next save).
+  const storedDisplay = displayOf(role);
+  const draftDisplay = storedForm({
+    name: draftName,
+    color: draftColor,
+    colorSecondary: draftColorSecondary,
+    description: draftDescription,
+    icon: draftIcon,
+    hoist: draftHoist,
+    mentionable: draftMentionable,
+  });
+  const [syncedDisplay, setSyncedDisplay] = useState(storedDisplay);
+  if (!sameDisplay(syncedDisplay, storedDisplay)) {
+    // Untouched means equal to what was last synced, in stored form.
+    const synced = storedForm(syncedDisplay);
+    setSyncedDisplay(storedDisplay);
+    if (draftDisplay.name === synced.name) setDraftName(storedDisplay.name);
+    if (draftDisplay.color === synced.color) setDraftColor(storedDisplay.color);
+    if (draftDisplay.colorSecondary === synced.colorSecondary) setDraftColorSecondary(storedDisplay.colorSecondary);
+    if (draftDisplay.description === synced.description) setDraftDescription(storedDisplay.description);
+    if (draftDisplay.icon === synced.icon) setDraftIcon(storedDisplay.icon);
+    if (draftDisplay.hoist === synced.hoist) setDraftHoist(storedDisplay.hoist);
+    if (draftDisplay.mentionable === synced.mentionable) setDraftMentionable(storedDisplay.mentionable);
+  }
   // The permissions this edit started from, and the draft made from them.
   // The save names the version of the base (permissions.md, "Concurrent
   // edits"), so a change someone else saved meanwhile is refused rather than
@@ -213,10 +296,19 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
   const [saveError, setSaveError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const hasNameChange = !isEveryone && draftName.trim() !== role.name;
-  const hasColorChange = !isEveryone && draftColor !== role.color;
+  // Compared in the form the instance stores, on both sides, so a save leaves
+  // nothing that looks unsaved.
+  const storedRole = storedForm(storedDisplay);
+  const hasNameChange = !isEveryone && draftDisplay.name !== storedRole.name;
+  const hasColorChange = !isEveryone && draftDisplay.color !== storedRole.color;
+  const hasColorSecondaryChange = !isEveryone && draftDisplay.colorSecondary !== storedRole.colorSecondary;
+  const hasDescriptionChange = !isEveryone && draftDisplay.description !== storedRole.description;
+  const hasIconChange = !isEveryone && draftDisplay.icon !== storedRole.icon;
+  const hasHoistChange = !isEveryone && draftDisplay.hoist !== storedRole.hoist;
+  const hasMentionableChange = !isEveryone && draftDisplay.mentionable !== storedRole.mentionable;
+  const hasDisplayChange = hasColorSecondaryChange || hasDescriptionChange || hasIconChange || hasHoistChange || hasMentionableChange;
   const hasPermChange = draftPermissions !== stringToPermissions(basePermissions);
-  const hasChanges = hasNameChange || hasColorChange || hasPermChange;
+  const hasChanges = hasNameChange || hasColorChange || hasDisplayChange || hasPermChange;
 
   const togglePermission = (bit: bigint) => {
     if (!canEdit || !viewerCanSwitchBit(held, bit)) return;
@@ -229,8 +321,13 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
     setSaveError('');
     try {
       const data: RoleUpdateBody = {};
-      if (hasNameChange) data.name = draftName.trim();
-      if (hasColorChange) data.color = draftColor;
+      if (hasNameChange) data.name = draftDisplay.name;
+      if (hasColorChange) data.color = draftDisplay.color;
+      if (hasColorSecondaryChange) data.colorSecondary = draftDisplay.colorSecondary;
+      if (hasDescriptionChange) data.description = draftDisplay.description || null;
+      if (hasIconChange) data.icon = draftDisplay.icon || null;
+      if (hasHoistChange) data.hoist = draftHoist;
+      if (hasMentionableChange) data.mentionable = draftMentionable;
       if (hasPermChange) {
         data.permissions = permissionsToString(draftPermissions);
         data.permissionsVersion = rolePermissionsVersion(basePermissions);
@@ -240,6 +337,16 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
       const savedPermissions = saved.permissions ?? data.permissions ?? basePermissions;
       setBasePermissions(savedPermissions);
       setDraftPermissions(stringToPermissions(savedPermissions));
+      // The drafts take the stored form of what was saved.
+      const savedDisplay = displayOf(saved);
+      setDraftName(savedDisplay.name);
+      setDraftColor(savedDisplay.color);
+      setDraftColorSecondary(savedDisplay.colorSecondary);
+      setDraftDescription(savedDisplay.description);
+      setDraftIcon(savedDisplay.icon);
+      setDraftHoist(savedDisplay.hoist);
+      setDraftMentionable(savedDisplay.mentionable);
+      setSyncedDisplay(savedDisplay);
       // Show what was saved at once; space_access_changed refreshes the rest.
       setRoles(withSavedRole(useSpaceStore.getState().roles, saved));
       addToast(t('spaces:roles.saved'), 'success', 2000);
@@ -267,6 +374,11 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
   const handleDiscard = () => {
     setDraftName(role.name);
     setDraftColor(role.color);
+    setDraftColorSecondary(role.colorSecondary ?? null);
+    setDraftDescription(role.description ?? '');
+    setDraftIcon(role.icon ?? '');
+    setDraftHoist(role.hoist !== false);
+    setDraftMentionable(role.mentionable === true);
     setBasePermissions(storedPermissions);
     setDraftPermissions(stringToPermissions(storedPermissions));
     setConfirmDelete(false);
@@ -306,6 +418,11 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
       const newRole = await roleApi().create(spaceId, {
         name: uniqueName,
         color: role.color,
+        colorSecondary: role.colorSecondary ?? null,
+        description: role.description ?? null,
+        icon: role.icon ?? null,
+        hoist: role.hoist !== false,
+        mentionable: role.mentionable === true,
         permissions: role.permissions ?? undefined,
       });
       // The editor moves to the copy, so it has to be in the list now.
@@ -318,21 +435,17 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
     }
   };
 
-  const groupTitle = (id: PermissionGroupId): string => {
-    switch (id) {
-      case 'general': return t('spaces:roles.groups.general');
-      case 'text': return t('spaces:roles.groups.text');
-      case 'voice': return t('spaces:roles.groups.voice');
-    }
-  };
+  const groupTitles = usePermissionGroupTitles();
+  const groupTitle = (id: keyof typeof groupTitles): string => groupTitles[id];
 
   return (
     <div className="space-y-5">
       {/* Back button */}
-      <div className="sticky top-0 z-10 pointer-events-none pb-3">
+      <div className="sticky top-0 z-10 pointer-events-none">
         <button
+          type="button"
           onClick={onBack}
-          className="glass-bubble rounded-full px-3 py-1.5 flex items-center gap-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors pointer-events-auto"
+          className="btn-quiet -ml-2 bg-surface-chat pointer-events-auto"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -342,7 +455,7 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
       </div>
 
       {isNew && !hasChanges && (
-        <div className="p-2 bg-status-online/10 border border-status-online/30 rounded text-status-online text-sm">
+        <div className="rounded-md border border-status-online/30 bg-status-online/10 px-3 py-2 text-ui text-txt-positive">
           {t('spaces:roles.created')}
         </div>
       )}
@@ -360,11 +473,11 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
       {/* Identity card (Name + Color — not shown for @everyone) */}
       {!isEveryone && (
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('spaces:roles.identity')}</div>
+          <div className="label-mono mb-1.5">{t('spaces:roles.identity')}</div>
           {/* A disabled fieldset disables every control inside it. */}
-          <fieldset disabled={!canEdit} className={`rounded-lg bg-white/[0.02] p-3.5 space-y-4 min-w-0 ${canEdit ? '' : 'opacity-60'}`}>
+          <fieldset disabled={!canEdit} className={`surface-card rounded-lg p-4 space-y-4 min-w-0 ${canEdit ? '' : 'opacity-60'}`}>
             <div>
-              <label className="block text-xs text-txt-secondary mb-1.5">
+              <label className="field-label">
                 {t('spaces:roles.nameLabel')}
               </label>
               <input
@@ -376,60 +489,80 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
                   setNameError(validateName(e.target.value));
                 }}
                 onBlur={() => setNameError(validateName(draftName))}
-                className={`input-standard w-full${nameError ? ' ring-2 ring-accent-rose' : ''}`}
+                aria-invalid={nameError ? true : undefined}
+                className="input-standard w-full"
               />
               {nameError && (
-                <p className="text-xs text-txt-danger mt-1">{nameError}</p>
+                <p className="text-meta text-txt-danger mt-1">{nameError}</p>
               )}
             </div>
             <div>
-              <label className="block text-xs text-txt-secondary mb-1.5">
+              <label className="field-label">
                 {t('spaces:roles.colorLabel')}
               </label>
               <div className="flex items-center gap-2 flex-wrap">
                 {PRESET_COLORS.map((c) => (
                   <button
                     key={c}
+                    type="button"
                     onClick={() => setDraftColor(c)}
-                    className={`w-7 h-7 rounded-full border-2 transition-all ${
-                      draftColor === c ? 'border-white scale-110' : 'border-transparent hover:scale-105'
+                    aria-label={c}
+                    aria-pressed={draftColor === c}
+                    className={`w-7 h-7 rounded-md border-2 transition-colors duration-100 ${
+                      draftColor === c ? 'border-white' : 'border-transparent hover:border-white/40'
                     }`}
                     style={{ backgroundColor: c }}
                   />
                 ))}
-                <label className="relative w-7 h-7 rounded-full border-2 border-border-soft hover:border-accent-primary transition-colors cursor-pointer overflow-hidden">
+                <label className="relative w-7 h-7 rounded-md border border-border-soft hover:border-interactive-muted transition-colors duration-100 cursor-pointer overflow-hidden">
                   <input
                     type="color"
                     value={draftColor}
                     onChange={(e) => setDraftColor(e.target.value)}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-red-400 via-green-400 to-blue-400" />
+                  <div className="w-full h-full bg-gradient-to-br from-red-400 via-green-400 to-blue-400" />
                 </label>
                 <input
                   type="text"
                   value={draftColor}
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setDraftColor(v);
+                    if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setDraftColor(v.toLowerCase());
                   }}
-                  className="input-standard w-20 px-2 py-1 text-xs font-mono"
+                  className="input-standard h-7 w-20 px-2 py-0 font-mono text-meta"
                   maxLength={7}
                 />
               </div>
             </div>
+            <RoleDisplayFields
+              name={draftName.trim() || role.name}
+              color={draftColor}
+              colorSecondary={draftColorSecondary}
+              onColorSecondary={setDraftColorSecondary}
+              icon={draftIcon}
+              onIcon={setDraftIcon}
+              description={draftDescription}
+              onDescription={setDraftDescription}
+              hoist={draftHoist}
+              onHoist={setDraftHoist}
+              mentionable={draftMentionable}
+              onMentionable={setDraftMentionable}
+            />
           </fieldset>
         </div>
       )}
 
+      {!isEveryone && space && <RoleMembers space={space} role={role} />}
+
       {/* Permission groups — each gets its own section card */}
       {PERMISSION_GROUPS.map((group) => (
         <div key={group.id}>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
+          <div className="label-mono mb-1.5">
             {groupTitle(group.id)}
           </div>
-          <div className="rounded-lg bg-white/[0.02] p-3.5">
-            <div className="space-y-1">
+          <div className="surface-card rounded-lg p-1.5">
+            <div className="space-y-0.5">
               {group.perms.map((perm) => {
                 const isAdminBit = perm.bit === PermissionBits.ADMINISTRATOR;
                 const hasAdmin = (draftPermissions & PermissionBits.ADMINISTRATOR) !== 0n;
@@ -437,16 +570,22 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
                 const isInherited = !isAdminBit && hasAdmin;
                 const isUnheld = canEdit && !viewerCanSwitchBit(held, perm.bit);
                 const isLocked = isInherited || !canEdit || isUnheld;
-                const name = permissionNames[perm.key];
+                const name = permissionNames[perm.key] ?? perm.key;
+                const description = permissionDescriptions[perm.key];
                 return (
                   <label
                     key={perm.key}
-                    className={`flex items-center justify-between gap-3 py-1.5 px-2 rounded group/perm ${
+                    className={`flex items-center justify-between gap-3 rounded-md px-2.5 py-2 transition-colors duration-100 group/perm ${
                       isLocked ? 'cursor-default' : 'cursor-pointer hover:bg-interactive-hover'
                     }`}
                   >
-                    <span className={`text-sm ${isLocked ? 'opacity-50 ' : ''}${isAdminBit ? 'text-txt-danger font-medium' : 'text-txt-primary'}`}>
-                      {name}
+                    <span className={`min-w-0 ${isLocked ? 'opacity-50' : ''}`}>
+                      <span className={`block text-ui font-medium ${isAdminBit ? 'text-txt-danger' : 'text-txt-primary'}`}>
+                        {name}
+                      </span>
+                      {description && (
+                        <span className="mt-0.5 block text-meta leading-snug text-txt-tertiary">{description}</span>
+                      )}
                     </span>
                     <span className="flex items-center gap-2 flex-shrink-0">
                       {isUnheld && (
@@ -475,13 +614,14 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
                           e.preventDefault();
                           if (!isLocked) togglePermission(perm.bit);
                         }}
-                        className={`relative w-9 h-5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary ${
-                          isLocked ? 'cursor-default opacity-50' : 'cursor-pointer'
+                        className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-md transition-colors ${
+                          isLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                         } ${isOn ? 'bg-accent-primary' : 'bg-interactive-muted'}`}
                       >
-                        <div
-                          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-                            isOn ? 'translate-x-4' : 'translate-x-0.5'
+                        <span
+                          aria-hidden="true"
+                          className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                            isOn ? 'translate-x-[19px]' : 'translate-x-[3px]'
                           }`}
                         />
                       </div>
@@ -495,51 +635,50 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
       ))}
 
       {saveError && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{saveError}</div>
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{saveError}</div>
       )}
       <div className="sticky bottom-0 z-10 pointer-events-none">
           <div className="flex justify-center pt-3 pb-1">
-            <div className={`glass-bubble rounded-full px-4 py-2 flex items-center gap-2 pointer-events-auto${
+            <div className={`action-bar pointer-events-auto${
               isEveryone ? ' animate-slide-up' : ''
             }`}>
               {hasChanges && (
                 <>
                   <button
                     onClick={handleDiscard}
-                    className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                    className="btn-quiet"
                   >
                     {t('spaces:settings.discardChanges')}
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={saving || (!isEveryone && !draftName.trim()) || !!nameError}
-                    className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                    aria-busy={saving}
+                    className="btn-primary"
                   >
                     {saving ? t('common:states.saving') : t('common:actions.save')}
                   </button>
                 </>
               )}
               {hasChanges && (
-                <div className="w-px h-5 bg-white/10" />
+                <div className="w-px h-5 bg-border-soft" />
               )}
               <button
                 onClick={handleCopy}
                 disabled={copying || !canCopy}
-                className="px-3 py-1.5 text-sm font-medium rounded-full text-txt-secondary hover:bg-interactive-hover transition-colors disabled:opacity-50"
+                className="btn-quiet"
               >
                 {copying ? t('spaces:roles.copying') : t('spaces:roles.copy')}
               </button>
               {offersDelete && (
                 <>
-                  <div className="w-px h-5 bg-white/10" />
+                  <div className="w-px h-5 bg-border-soft" />
                   <button
+                    type="button"
                     onClick={handleDelete}
                     disabled={deleting || deleteCarriesUnheld}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors disabled:opacity-50 ${
-                      confirmDelete
-                        ? 'bg-accent-rose/15 text-accent-rose'
-                        : 'text-accent-rose hover:bg-accent-rose/10'
-                    }`}
+                    aria-busy={deleting}
+                    className={confirmDelete ? 'btn-danger' : 'btn-quiet text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger'}
                   >
                     {deleting ? t('spaces:roles.deleting') : confirmDelete ? t('spaces:roles.confirmDelete') : t('spaces:roles.delete')}
                   </button>

@@ -97,14 +97,16 @@ export function TypingIndicator({ channelId }: TypingIndicatorProps) {
   }
 
   return (
-    <div className="absolute bottom-full left-1 right-1 desktop:left-4 desktop:right-4 mb-1 px-3 flex items-center text-[12px] text-txt-secondary font-medium select-none pointer-events-none animate-typing-in motion-reduce:animate-none">
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="flex shrink-0 gap-[2px] bg-surface-elevated/20 rounded-full px-2 py-1">
-          <div className="w-[5px] h-[5px] bg-txt-message rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.8s' }} />
-          <div className="w-[5px] h-[5px] bg-txt-message rounded-full animate-bounce" style={{ animationDelay: '150ms', animationDuration: '0.8s' }} />
-          <div className="w-[5px] h-[5px] bg-txt-message rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.8s' }} />
+    // Starts at the edge the messages start at, on the page's own colour, so a
+    // message scrolling behind it never runs through its text.
+    <div className="absolute bottom-full left-3 right-3 desktop:left-0 desktop:right-0 mb-px flex items-center text-meta leading-4 text-txt-secondary select-none pointer-events-none animate-typing-in motion-reduce:animate-none">
+      <div className="-mx-1 flex min-w-0 items-center gap-2 rounded-sm bg-surface-chat px-1">
+        <div aria-hidden="true" className="flex shrink-0 items-center gap-[3px]">
+          <span className="typing-dot" />
+          <span className="typing-dot" style={{ animationDelay: '160ms' }} />
+          <span className="typing-dot" style={{ animationDelay: '320ms' }} />
         </div>
-        <span data-typing-line className="flex min-w-0 max-w-[400px] font-bold whitespace-nowrap">
+        <span data-typing-line className="flex min-w-0 max-w-[400px] whitespace-nowrap">
           {line}
         </span>
       </div>

@@ -67,9 +67,9 @@ export function ChannelNotificationPopover({ open, onClose, anchorRef, channelId
       role="dialog"
       aria-label={t('spaces:notifications.channelTitle', { channel: channelName })}
       style={style}
-      className="w-[300px] glass rounded-lg shadow-xl p-3 animate-fade-in"
+      className="w-[300px] glass rounded-lg p-2 animate-fade-in"
     >
-      <div className="px-1 pb-2 text-[14px] font-semibold text-txt-primary truncate">
+      <div className="truncate px-2.5 pb-2.5 pt-1 text-body font-semibold text-txt-primary">
         {t('spaces:notifications.channelTitle', { channel: channelName })}
       </div>
       <NotificationSettingsControls origin={location.origin} spaceId={location.spaceId} channelId={channelId} />

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '../ui/Modal';
+import { Icon } from '../ui/Icon';
 import { ImageCropModal } from '../ui/ImageCropModal';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -126,10 +127,24 @@ export function CreateSpaceModal() {
     <Modal isOpen={isOpen} onClose={handleClose} title={t('spaces:create.title')} mobileStyle="sheet">
       <form onSubmit={handleSubmit}>
         {error && (
-          <div className="mb-3 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
+          <div className="mb-3 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">
             {error}
           </div>
         )}
+
+        {/* A community moving over starts from its Discord server's structure. */}
+        <button
+          type="button"
+          onClick={() => useUIStore.getState().openModal('discordImport')}
+          className="list-row mb-4 w-full border border-border-hard text-left"
+        >
+          <Icon name="download" size={16} className="flex-shrink-0 text-txt-tertiary" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-ui font-medium text-txt-primary">{t('spaces:import.entry.createSpace')}</span>
+            <span className="block text-meta text-txt-tertiary">{t('spaces:import.entry.createSpaceHint')}</span>
+          </span>
+          <Icon name="chevron-right" size={15} className="flex-shrink-0 text-txt-tertiary" />
+        </button>
 
         {/* Icon Picker */}
         <div className="flex justify-center mb-4">
@@ -137,7 +152,7 @@ export function CreateSpaceModal() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingIcon}
-            className="relative w-20 h-20 rounded-full border-2 border-dashed border-border-soft hover:border-accent-primary transition-colors flex items-center justify-center overflow-hidden group"
+            className="relative w-16 h-16 rounded-xl border border-border-soft hover:border-interactive-muted transition-colors duration-100 flex items-center justify-center overflow-hidden group"
             style={!iconPreview ? { background: getSpaceGradient(undefined, name || 'S', avatarColor).gradient } : undefined}
           >
             {iconPreview ? (
@@ -159,8 +174,8 @@ export function CreateSpaceModal() {
                   </svg>
                 ) : (
                   <>
-                    <span className="text-2xl font-bold">{(name || 'S').charAt(0).toUpperCase()}</span>
-                    <span className="text-[9px] font-medium opacity-60">{t('spaces:create.icon.upload')}</span>
+                    <span className="text-2xl font-semibold">{(name || 'S').charAt(0).toUpperCase()}</span>
+                    <span className="text-2xs font-medium opacity-60">{t('spaces:create.icon.upload')}</span>
                   </>
                 )}
               </div>
@@ -177,7 +192,7 @@ export function CreateSpaceModal() {
             <button
               type="button"
               onClick={handleRemoveIcon}
-              className="ml-2 self-start mt-1 text-txt-tertiary hover:text-txt-danger text-xs transition-colors"
+              className="btn-quiet btn-sm ml-2 self-start hover:bg-accent-rose/10 hover:text-txt-danger"
             >
               {t('common:actions.remove')}
             </button>
@@ -186,7 +201,7 @@ export function CreateSpaceModal() {
 
         {/* Icon Color */}
         <div className="mb-4">
-          <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+          <label className="field-label">
             {t('spaces:create.icon.colorLabel')}
           </label>
           <div className="flex gap-2 justify-center">
@@ -197,7 +212,7 @@ export function CreateSpaceModal() {
                   key={key}
                   type="button"
                   onClick={() => setAvatarColor(key)}
-                  className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
+                  className="w-7 h-7 rounded-md border-2 transition-colors"
                   style={{
                     background: entry.gradient,
                     borderColor: avatarColor === key ? 'white' : 'transparent',
@@ -212,7 +227,7 @@ export function CreateSpaceModal() {
 
         {/* Space Name */}
         <div className="mb-4">
-          <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+          <label className="field-label">
             {t('spaces:create.name.label')}
           </label>
           <input
@@ -227,14 +242,14 @@ export function CreateSpaceModal() {
 
         {/* Visibility */}
         <div className="mb-4">
-          <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-2">
+          <div className="field-label">
             {t('spaces:create.visibilityLabel')}
           </div>
           <div className="space-y-1.5">
             {visibilityOptions.map((opt) => (
               <label
                 key={opt.value}
-                className={`flex items-start gap-3 p-2.5 rounded cursor-pointer transition-colors ${
+                className={`flex items-start gap-3 rounded-md p-2.5 cursor-pointer transition-colors duration-100 ${
                   visibility === opt.value
                     ? 'bg-interactive-selected'
                     : 'hover:bg-interactive-hover'
@@ -246,11 +261,11 @@ export function CreateSpaceModal() {
                   value={opt.value}
                   checked={visibility === opt.value}
                   onChange={() => setVisibility(opt.value)}
-                  className="mt-0.5 accent-accent-primary"
+                  className="mt-0.5"
                 />
-                <div>
-                  <div className="text-sm font-medium text-txt-primary">{opt.label}</div>
-                  <div className="text-xs text-txt-tertiary">{opt.desc}</div>
+                <div className="min-w-0">
+                  <div className="text-ui font-medium text-txt-primary">{opt.label}</div>
+                  <div className="mt-0.5 text-meta leading-snug text-txt-tertiary">{opt.desc}</div>
                 </div>
               </label>
             ))}
@@ -259,7 +274,7 @@ export function CreateSpaceModal() {
 
         {/* Description */}
         <div className="mb-4">
-          <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
+          <div className="field-label">
             {t('spaces:create.description.label')}
           </div>
           <textarea
@@ -269,26 +284,27 @@ export function CreateSpaceModal() {
             rows={3}
             className="input-standard w-full resize-none"
           />
-          <div className="text-[11px] text-txt-tertiary text-right">
+          <div className="tabular mt-1 text-right font-mono text-label text-txt-tertiary">
             {t('spaces:create.description.counter', { length: description.length, max: DESCRIPTION_MAX_LENGTH })}
           </div>
         </div>
 
         {/* Actions */}
         <div className="sticky bottom-0 z-10 pointer-events-none">
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="glass-bubble rounded-full px-3 py-2 flex items-center gap-3 pointer-events-auto">
+          <div className="flex justify-end pt-3 pb-1">
+            <div className="action-bar pointer-events-auto">
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                className="btn-quiet"
               >
                 {t('common:actions.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading || uploadingIcon}
-                className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                aria-busy={isLoading}
+                className="btn-primary"
               >
                 {isLoading ? t('spaces:create.submitting') : t('spaces:create.submit')}
               </button>

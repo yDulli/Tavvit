@@ -5,6 +5,8 @@ import { getDb, schema } from '../../db/index.js';
 import { deleteUploadFile } from '../../utils/fileCleanup.js';
 import { sanitizeUser } from '../../utils/sanitize.js';
 import { generateSnowflake } from '../../utils/snowflake.js';
+import { isUploadOn, mediaOriginsFor } from '../../utils/remoteMedia.js';
+import { storedUploadName } from '../../utils/uploadNames.js';
 import { collectProfileBroadcastTargetIds } from '../../utils/userDeletion.js';
 import { safeFetch } from '../../utils/ssrf.js';
 import { connectionManager } from '../../ws/handler.js';
@@ -13,7 +15,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { FederationRelayEvent, FederationRelayProfileSnapshot, FederationUserLookupProfile } from '@backspace/shared';
 import { extractDomain, resolveRelayActor } from './identity.js';
-import { announceUserUpdated, applyPlaceholderRename, handleFromHint } from './stubName.js';
+import { announceUserUpdated, applyHomeHandle, applyPlaceholderRename, handleFromHint } from './stubName.js';
 
 /**
  * Hydrate a replicated user stub with profile data from a relay event.
@@ -162,7 +164,7 @@ export async function downloadProfileAsset(
 
   const ext = path.extname(new URL(url).pathname) || '.webp';
   const localId = generateSnowflake();
-  const finalFilename = `${localId}${ext}`;
+  const finalFilename = storedUploadName(localId, ext);
   const tempFilename = `temp_${localId}${ext}`;
   const tempPath = path.join(config.uploadDir, tempFilename);
   const finalPath = path.join(config.uploadDir, finalFilename);
@@ -284,6 +286,9 @@ async function resolveHomeAsset(value: string | null, homeOrigin: string): Promi
   if (!value) return null;
   const baseUrl = homeOrigin.startsWith('http') ? homeOrigin : `https://${homeOrigin}`;
   const absoluteUrl = value.startsWith('http') ? value : `${baseUrl}/api/uploads/${value}`;
+  // Only a file of the home is fetched or kept. An address anywhere else would be fetched by
+  // everyone here who sees the person, so it becomes no picture (utils/remoteMedia.ts).
+  if (!isUploadOn(absoluteUrl, mediaOriginsFor(homeOrigin))) return null;
   return (await downloadProfileAsset(absoluteUrl, baseUrl)) ?? absoluteUrl;
 }
 
@@ -405,7 +410,9 @@ export async function processProfileUpdateEvent(
     return;
   }
 
-  await applyHomeProfile(localUser, {
+  // A person can change their name at home. Only a newer version may say so, so an old event cannot bring an old name back.
+  const newer = isNewerHomeProfile(payload.profileUpdatedAt ?? null, localUser.profileUpdatedAt);
+  const applied = await applyHomeProfile(localUser, {
     profileUpdatedAt: payload.profileUpdatedAt ?? null,
     username: payload.username,
     displayName: payload.displayName,
@@ -415,6 +422,11 @@ export async function processProfileUpdateEvent(
     avatarColor: payload.avatarColor,
     bio: payload.bio,
   }, sourceInstance, db);
+  if (newer) {
+    const named = applyHomeHandle(applied, payload.username, db);
+    if (named.moved) announceUserUpdated(named.moved);
+    if (named.user !== applied) announceUserUpdated(named.user);
+  }
 
   accepted.push(event.messageId);
 }

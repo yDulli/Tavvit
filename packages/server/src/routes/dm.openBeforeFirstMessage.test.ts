@@ -152,6 +152,7 @@ describe('#360: a 1-on-1 reaches the recipient with its first message', () => {
       { id: 'alice', username: 'alice', passwordHash: 'x', createdAt: now },
       { id: 'carol', username: 'carol', passwordHash: 'x', createdAt: now },
     ]).run();
+    testDb.update(schema.users).set({ dmPolicy: 'anyone' }).run();
     sockets.clear();
     await connect('alice');
     await connect('carol');
@@ -254,6 +255,7 @@ describe('opening a 1-on-1 that re-keys another row tells that row\'s members', 
       { id: 'carol', username: 'carol', passwordHash: 'x', createdAt: now },
       { id: 'dave', username: 'dave', passwordHash: 'x', createdAt: now },
     ]).run();
+    testDb.update(schema.users).set({ dmPolicy: 'anyone' }).run();
     const { oneOnOneKey } = await import('../utils/dmConversation.js');
     const key = (a: string, b: string) => oneOnOneKey({ id: a, homeUserId: null }, { id: b, homeUserId: null });
     // 'drifted' carries the alice-dave key but holds alice and carol; 'aliceCarol'

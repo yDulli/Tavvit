@@ -4,6 +4,7 @@ import { MAX_STICKER_NAME_LENGTH, normalizeStickerName, stickerUrl, type Persona
 import { api } from '../../api/client';
 import { describeError } from '../../i18n/errors';
 import { usePickerEscapeClaim } from './pickerEscape';
+import { Icon } from '../ui/Icon';
 
 interface StickerRenameFormProps {
   sticker: PersonalSticker;
@@ -61,21 +62,19 @@ export function StickerRenameForm({ sticker, onRenamed, onCancel }: StickerRenam
 
   return (
     <form onSubmit={event => void submit(event)} aria-labelledby={headingId} className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between border-b border-border-soft px-4 py-3">
-        <h3 id={headingId} className="text-sm font-semibold">{t('chat:stickers.renameTitle')}</h3>
+      <div className="flex items-center justify-between border-b border-border-hard py-2 pl-4 pr-2">
+        <h3 id={headingId} className="text-ui font-semibold">{t('chat:stickers.renameTitle')}</h3>
         <button type="button" disabled={saving} onClick={onCancel} className="sticker-icon-button" aria-label={t('chat:stickers.cancel')}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-            <path d="m6 6 12 12M6 18 18 6" />
-          </svg>
+          <Icon name="x" size={16} />
         </button>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin p-4 space-y-3">
-        <div className="flex min-h-40 items-center justify-center rounded-xl border border-border-soft bg-surface-input/40 p-4 sticker-checkerboard">
+        <div className="flex min-h-40 items-center justify-center rounded-lg border border-border-hard bg-surface-input/40 p-4 sticker-checkerboard">
           <img src={stickerUrl(sticker.token) ?? undefined} alt={sticker.name} className="h-32 w-full object-contain" />
         </div>
         <div>
-          <label htmlFor={inputId} className="mb-1.5 block text-xs font-medium text-txt-secondary">
+          <label htmlFor={inputId} className="field-label">
             {t('chat:stickers.name')}
           </label>
           <input
@@ -95,13 +94,13 @@ export function StickerRenameForm({ sticker, onRenamed, onCancel }: StickerRenam
           />
         </div>
         {error && (
-          <p id={`${inputId}-error`} role="alert" className="rounded-lg bg-accent-rose/10 px-3 py-2 text-xs text-txt-danger">
+          <p id={`${inputId}-error`} role="alert" className="rounded-md border border-accent-rose/25 bg-accent-rose/10 px-3 py-2 text-meta text-txt-danger">
             {error}
           </p>
         )}
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border-soft px-4 py-3">
+      <div className="flex shrink-0 items-center justify-end gap-1.5 border-t border-border-hard px-3 py-2">
         <button type="button" disabled={saving} onClick={onCancel} className="sticker-secondary-button">
           {t('chat:stickers.cancel')}
         </button>

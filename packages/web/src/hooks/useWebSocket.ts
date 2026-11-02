@@ -1,15 +1,28 @@
+import { useCommandReplyStore } from '../stores/commandReplyStore';
+import { useSoundboardStore } from '../stores/soundboardStore';
+import { useKeywordStore } from '../stores/keywordStore';
+import { useSavedStore } from '../stores/savedStore';
+import { sendNotification } from '../platform/notifications';
+import { alertsAllowed } from '../utils/alerts';
+import { useEventStore } from '../stores/eventStore';
+import { useWelcomeStore } from '../stores/welcomeStore';
 import { receiveChannelPoke } from '../components/chat/channelPoke';
 import { useChannelPokeStore } from '../stores/channelPokeStore';
 import { applySpaceMemberUpdate } from '../stores/spaceMemberUpdates';
 import { useUnreadCountStore } from '../stores/unreadCountStore';
 import React, { useEffect, useRef } from 'react';
 import { isMyIdentity, useAuthStore } from '../stores/authStore';
-import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin } from '../stores/spaceStore';
+import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin, selectMyRoleIdsInChannel } from '../stores/spaceStore';
 import { useChatStore } from '../stores/chatStore';
+import { useMessageSelection } from '../stores/messageSelectionStore';
+import { usePinRevision } from '../stores/pinStore';
+import { useForumStore } from '../stores/forumStore';
+import { useThreadStore } from '../stores/threadStore';
+import { windowInFocus } from '../utils/windowFocus';
 import { useVoiceStore } from '../stores/voiceStore';
 import { useSocialStore } from '../stores/socialStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import type { ServerEvent, ClientEvent, ActiveCallInfo, Activity, FederatedIdentity, User } from '@backspace/shared';
+import type { ServerEvent, ClientEvent, ActiveCallInfo, Activity, FederatedIdentity, MessageWithUser, User } from '@backspace/shared';
 import { resolveAssetUrl, normalizeUserAssets, normalizeMessageAssets } from '../utils/assetUrls';
 import { broadcastVoiceStatus, broadcastDeafenViaLiveKit } from '../utils/voice';
 import { dmCallCredentialsFrom, dmCallIds, dmCallOrigin, dmCallRefFrom, dmCallRoomKey } from '../utils/dmCall';
@@ -22,10 +35,20 @@ import { useUIStore } from '../stores/uiStore';
 import { describeErrorCode } from '../i18n/errors';
 import { useActivityStore } from '../stores/activityStore';
 import { presenceSubjectOf, readyActivityEntries, readyRowIndex } from '../utils/presenceSubject';
-import { useDiscoverStore } from '../stores/discoverStore';
+import { useReviewStore } from '../stores/reviewStore';
+import { useLegalStore } from '../stores/legalStore';
+import { useAnnouncementStore } from '../stores/announcementStore';
+import { handleUnauthorized } from '../api/client';
+import i18n from '../i18n';
+import { discoveryStatusKey, verificationStatusKey } from '../i18n/review';
+import { isDiscoveryStatus, isVerificationStatus } from '@backspace/shared/src/platform';
 import { useFederationStore } from '../stores/federationStore';
 import { notePendingOriginReady } from '../stores/pendingMessageRehydrate';
 import { useNotificationSettingsStore } from '../stores/notificationSettingsStore';
+import { useBlockStore } from '../stores/blockStore';
+import { useEmojiStore } from '../stores/emojiStore';
+import { useInboxStore } from '../stores/inboxStore';
+import { messageMentions } from '../utils/notificationFilters';
 import { detectClientKind } from '../platform/clientKind';
 import { ConnectionState as LiveKitConnectionState } from 'livekit-client';
 
@@ -75,6 +98,8 @@ interface ConnectionState {
   ws: WebSocket | null;
   heartbeatWorker: Worker | null;
   reconnectAttempts: number;
+  /** The token the open socket authenticated with: `token` may have moved on since. */
+  socketToken: string | null;
   reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   token: string;
 }
@@ -252,6 +277,29 @@ function isLoadedRosterSpace(spaceId: string, origin: string): boolean {
  * one on the same socket is a state refresh (instances up to 1.7.0 send one
  * as a permission refresh), not a new session: no event was missed.
  */
+/**
+ * A new space channel message that mentions the signed-in user joins the
+ * inbox at once (stores/inboxStore.ts), by the same rule the highlight and
+ * the alert use (`messageMentions`).
+ */
+function noteLiveMention(origin: string, message: MessageWithUser): void {
+  if (message.type === 'system') return;
+  const myId = origin === '' ? useAuthStore.getState().user?.id : getMyUserIdForOrigin(origin);
+  if (!myId || message.userId === myId) return;
+  const spaceState = useSpaceStore.getState();
+  const spaceId = spaceState.channelToSpaceMap.get(message.channelId);
+  if (spaceId === undefined) return;
+  const how = messageMentions({
+    myId,
+    myRoleIds: selectMyRoleIdsInChannel(spaceState, message.channelId),
+    content: message.content,
+    mentionEveryone: message.mentionEveryone,
+    mentionRoleIds: message.mentionRoleIds,
+  });
+  const via = how.direct ? 'user' : how.role ? 'role' : how.everyone ? 'everyone' : null;
+  if (via) useInboxStore.getState().addLive(origin, { spaceId, channelId: message.channelId, message, via });
+}
+
 function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered = false): void {
   const isHome = origin === HOME_ORIGIN;
   const { setUser } = useAuthStore.getState();
@@ -272,6 +320,15 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       useUnreadCountStore.getState().updateCounts(origin, event.counts);
       break;
     case 'ready':
+      wsSend({ type: 'client_focus', focused: windowInFocus() }, origin);
+      // A new socket hears nothing of an open thread until it says so again.
+      {
+        const watching = useThreadStore.getState().watching;
+        if (watching?.origin === origin) {
+          wsSend({ type: 'thread_watch', threadId: watching.threadId }, origin);
+          void useChatStore.getState().loadMessages(watching.threadId, true);
+        }
+      }
       useChannelPokeStore.getState().setHost(origin, event.supportsPoke === true);
       // This instance names the signed-in user's row there (the home's is the
       // session row itself, set below). The one record of "my ids".
@@ -282,16 +339,20 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
         useSettingsStore.getState().setIsAdmin(event.user.isAdmin ?? false);
         useSettingsStore.getState().fetchStreamingLimits();
         useSettingsStore.getState().fetchGifEnabled();
-        // Whose acknowledgements to read: the store cannot import authStore
-        // without dragging the audio pipeline into every settings test.
-        useSettingsStore.getState().setUpdateAckUser(event.user.id);
-        // This is what moved the release lookup off the Updates panel: the dot
-        // has to be able to appear before an admin ever navigates there. Gated
-        // on the flag this event just delivered, not on store state.
-        if (event.user.isAdmin === true) {
-          void useSettingsStore.getState().fetchUpdateStatus();
-        }
+        // Blocks are the home instance's; the list is read again on every
+        // (re)connect, so a block made while this tab was offline is not missed.
+        void useBlockStore.getState().load();
+        // So are the terms: a version may have taken effect while this tab was offline.
+        void useLegalStore.getState().load();
+        void useLegalStore.getState().loadNotices();
+        // Custom emoji are the home instance's too, and may have changed while this tab was away.
+        void useEmojiStore.getState().load();
       }
+      // Each instance answers for the mentions in its own spaces. A fresh first
+      // page on every (re)connect, so nothing said while away is missed.
+      void useInboxStore.getState().loadOrigin(origin);
+      void useSavedStore.getState().loadIds(origin);
+      if (origin === '') void useKeywordStore.getState().load();
 
       // Normalize asset URLs for remote origins before dispatching to stores
       if (!isHome) {
@@ -309,6 +370,8 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       // The DM part goes through the merge module, whose pin rule moves a
       // conversation first listed from a sibling to its home copy.
       populateFromReady(origin, event.spaces, event.folders, event.dmChannels, event.spaceLayout, event.layoutUpdatedAt);
+      useSpaceStore.getState().registerThreads(origin, event.followedThreads ?? []);
+      useThreadStore.getState().setFollowedFrom(origin, event.followedThreads ?? []);
       // Pending messages restored at boot wait for the ready that lists their channel.
       notePendingOriginReady(origin);
       // This instance's notification settings for the spaces it hosts, read
@@ -433,15 +496,13 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       if (event.user.showActivity !== undefined) {
         useActivityStore.setState({ showActivity: event.user.showActivity });
       }
-
       // Re-push local Electron activities after reconnect (sleep/wake, network blip, etc.)
       // The process scanner keeps running but onActivityDetected only fires on change,
       // so if the same app was active before and after sleep, nothing would re-push.
       if (isHome && window.backspace?.getCurrentActivity) {
         window.backspace.getCurrentActivity().then((activity: unknown) => {
-          if (activity) {
-            useActivityStore.getState().pushActivities([activity as Activity]);
-          }
+          // No game is reported as well: one that ended during the outage goes.
+          useActivityStore.getState().pushActivities(activity ? [activity as Activity] : []);
         }).catch(() => {});
       }
 
@@ -633,6 +694,12 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
           }
         }
 
+        // The platform's open review requests, for the admin area's count.
+        useReviewStore.getState().setQueue(event.reviewQueueCount ?? null);
+        useReviewStore.getState().setReportsOpen(event.reportQueueCount ?? null);
+        // What the operator announced while this socket was down.
+        void useAnnouncementStore.getState().load();
+
         // Admin toast for pending approval requests
         if (event.pendingApprovalCount && event.pendingApprovalCount > 0) {
           const { addToast } = useUIStore.getState();
@@ -660,12 +727,13 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       if (event.message.user) upsertUserView(event.message.user, origin);
       if (event.message.replyTo?.user) upsertUserView(event.message.replyTo.user, origin);
       addRealtimeMessage(event.message.channelId, event.message);
+      noteLiveMention(origin, event.message);
       {
         const { currentChannelId, markChannelUnread } = useChatStore.getState();
         const { voiceChannelIds } = useSpaceStore.getState();
         const myId = isHome ? useAuthStore.getState().user?.id : getMyUserIdForOrigin(origin);
         // Skip voice channels — they have no text reading/acking UI
-        if (event.message.type !== 'system' && event.message.channelId !== currentChannelId && event.message.userId !== myId && !voiceChannelIds.has(event.message.channelId)) {
+        if (event.message.type !== 'system' && event.message.channelId !== currentChannelId && event.message.channelId !== useThreadStore.getState().watching?.threadId && event.message.userId !== myId && !voiceChannelIds.has(event.message.channelId)) {
           markChannelUnread(event.message.channelId);
         }
       }
@@ -685,10 +753,109 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       if (event.message.user) upsertUserView(event.message.user, origin);
       if (event.message.replyTo?.user) upsertUserView(event.message.replyTo.user, origin);
       updateMessage(event.message);
+      useInboxStore.getState().updateLive(origin, event.message);
+      break;
+
+    case 'command_reply':
+      useCommandReplyStore.getState().add(event);
+      break;
+
+    case 'soundboard_play':
+      void useSoundboardStore.getState().hear(origin, event.channelId, event.soundId);
+      break;
+
+    case 'space_sounds_changed':
+      if (useSpaceStore.getState().currentSpaceId === event.spaceId) {
+        useSoundboardStore.getState().load(origin, event.spaceId).catch(() => undefined);
+      }
+      break;
+
+    case 'saved_changed':
+      useSavedStore.getState().applyChanged(origin, event.messageId, event.saved);
+      break;
+
+    case 'saved_reminder': {
+      useSavedStore.getState().applyReminderDone(origin, event.item.id);
+      useUIStore.getState().addToast(i18n.t('home:saved.reminderToast', { preview: event.preview }), 'info', 10_000);
+      if (alertsAllowed('message') && !document.hasFocus()) {
+        sendNotification(i18n.t('home:saved.reminderTitle'), event.preview, {
+          channelId: event.item.channelId,
+          ...(event.item.spaceId ? { spaceId: event.item.spaceId } : {}),
+        });
+      }
+      break;
+    }
+
+    case 'event_updated':
+      useEventStore.getState().applyUpdate(origin, event.event);
+      break;
+
+    case 'event_deleted':
+      useEventStore.getState().applyDelete(origin, event.spaceId, event.eventId);
+      break;
+
+    case 'event_reminder': {
+      const text = i18n.t('spaces:events.reminder', { title: event.title });
+      useUIStore.getState().addToast(text, 'info', 10_000);
+      if (alertsAllowed('message') && !document.hasFocus()) sendNotification(event.title, i18n.t('spaces:events.startsSoon'), { spaceId: event.spaceId });
+      break;
+    }
+
+    case 'space_welcome_changed':
+      if (useSpaceStore.getState().currentSpaceId === event.spaceId) {
+        useWelcomeStore.getState().load(origin, event.spaceId).catch(() => undefined);
+      }
+      break;
+
+    case 'thread_followed':
+      useSpaceStore.getState().registerThreads(origin, [event.thread]);
+      useThreadStore.getState().addFollowed(origin, event.thread);
+      break;
+
+    case 'thread_unfollowed':
+      useThreadStore.getState().removeFollowed(event.threadId);
+      break;
+
+    case 'thread_updated':
+      if (event.starterMessageId) useChatStore.getState().applyThreadSummary(event.parentChannelId, event.starterMessageId, event.thread);
+      useThreadStore.getState().applySummary(event.thread);
+      useForumStore.getState().applySummary(event.parentChannelId, event.thread);
+      break;
+
+    case 'thread_deleted':
+      if (event.starterMessageId) useChatStore.getState().applyThreadSummary(event.parentChannelId, event.starterMessageId, null);
+      useThreadStore.getState().markGone(event.threadId);
+      useSpaceStore.getState().removeChannel(event.threadId);
+      useForumStore.getState().removePost(event.parentChannelId, event.threadId);
+      break;
+
+    case 'forum_tags_updated':
+      useForumStore.getState().setTags(event.channelId, event.tags);
+      break;
+
+    case 'poll_updated':
+      useChatStore.getState().applyPoll(event.channelId, event.messageId, event.poll);
+      break;
+
+    case 'message_pin_changed':
+      useChatStore.getState().applyMessagePin(event.channelId, event.messageId, { pinnedAt: event.pinnedAt, pinnedBy: event.pinnedBy });
+      usePinRevision.getState().bump();
       break;
 
     case 'message_deleted':
       removeMessage(event.messageId, event.channelId);
+      useInboxStore.getState().removeLive(origin, event.messageId);
+      useMessageSelection.getState().drop([event.messageId]);
+      usePinRevision.getState().bump();
+      break;
+
+    case 'messages_deleted':
+      for (const messageId of event.messageIds) {
+        removeMessage(messageId, event.channelId);
+        useInboxStore.getState().removeLive(origin, messageId);
+      }
+      useMessageSelection.getState().drop(event.messageIds);
+      usePinRevision.getState().bump();
       break;
 
     case 'typing': {
@@ -734,7 +901,12 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
           useAuthStore.getState().logout();
           break;
         }
-        setUser(event.user);
+        // Some emitters send the public view, which leaves out the account's own
+        // fields (its agreement to the terms among them); those stay as they are.
+        {
+          const current = useAuthStore.getState().user;
+          setUser(current ? { ...current, ...event.user } : event.user);
+        }
       }
       {
         // The true home's row of a replicated session carries the choice too.
@@ -747,7 +919,6 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
         // Each removal goes through userUpdateReach, as the updates above do.
         useSocialStore.getState().removeDeletedUser(event.user, origin);
         useActivityStore.getState().clearUserActivities(event.user, origin);
-        useDiscoverStore.getState().removeDeletedUser(event.user, origin);
         useChatStore.getState().clearTypingForDeletedUser(event.user, origin);
       }
       break;
@@ -979,6 +1150,7 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
     case 'dm_message_deleted':
       if (!isHome && !activePeerOrigins.has(origin)) break;
       removeMessage(event.messageId, event.dmChannelId);
+      usePinRevision.getState().bump();
       break;
 
     case 'embeds_resolved': {
@@ -1086,36 +1258,41 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       upsertUserView(event.friend as unknown as User, origin);
       const { addFriendFromAccepted } = useSocialStore.getState();
       addFriendFromAccepted(event.friend, event.requestId, origin);
-      import('../stores/discoverStore').then(({ useDiscoverStore }) => {
-        useDiscoverStore.getState().updateRelationship(event.friend.id, origin, 'friends');
-      });
       break;
     }
 
     case 'friend_removed': {
       const { removeFriendLocally } = useSocialStore.getState();
       removeFriendLocally(event.userId, origin);
-      import('../stores/discoverStore').then(({ useDiscoverStore }) => {
-        useDiscoverStore.getState().updateRelationship(event.userId, origin, 'none');
-      });
+      break;
+    }
+
+    case 'emoji_upserted': {
+      if (isHome) useEmojiStore.getState().upsert(event.emoji);
+      break;
+    }
+
+    case 'emoji_removed': {
+      if (isHome) useEmojiStore.getState().drop(event.emojiId);
+      break;
+    }
+
+    case 'blocks_updated': {
+      // Only the home instance blocks on this user's behalf; an id from another
+      // instance's socket would name a different person.
+      if (isHome) useBlockStore.getState().applyIds(event.blockedUserIds);
       break;
     }
 
     case 'friend_request_cancelled': {
       const { removeRequestById } = useSocialStore.getState();
       removeRequestById(event.requestId, origin, event.userId);
-      import('../stores/discoverStore').then(({ useDiscoverStore }) => {
-        useDiscoverStore.getState().updateRelationship(event.userId, origin, 'none');
-      });
       break;
     }
 
     case 'friend_request_declined': {
       const { removeRequestById } = useSocialStore.getState();
       removeRequestById(event.requestId, origin, event.userId);
-      import('../stores/discoverStore').then(({ useDiscoverStore }) => {
-        useDiscoverStore.getState().updateRelationship(event.userId, origin, 'none');
-      });
       break;
     }
 
@@ -1308,6 +1485,7 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
     case 'channel_deleted': {
       // Deleted, or hidden from this user by an override change.
       useSpaceStore.getState().removeChannel(event.channelId);
+      useThreadStore.getState().dropChannel(event.channelId);
       if (useChatStore.getState().currentChannelId === event.channelId) {
         useChatStore.getState().setCurrentChannel(null);
       }
@@ -1403,8 +1581,81 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       void refreshSpaceAccess(origin, event.spaceId);
       break;
 
+    // Platform administration (admin.md): a step in one of the owner's
+    // reviews, which open panels reload and the owner is told of; and the
+    // open-request count of the home instance, for its admins.
+    case 'space_review_updated': {
+      useReviewStore.getState().noteUpdate(event.spaceId);
+      const status = event.process === 'verification'
+        ? i18n.t(verificationStatusKey(isVerificationStatus(event.status) ? event.status : null))
+        : i18n.t(discoveryStatusKey(isDiscoveryStatus(event.status) ? event.status : null));
+      const message = event.process === 'verification'
+        ? i18n.t('common:review.toast.verification', { space: event.spaceName, status })
+        : i18n.t('common:review.toast.discovery', { space: event.spaceName, status });
+      useUIStore.getState().addToast(message, 'info', 6000);
+      break;
+    }
+
+    case 'report_queue_count':
+      if (isHome) useReviewStore.getState().setReportsOpen(event.open);
+      break;
+
+    case 'legal_updated':
+      if (isHome) void useLegalStore.getState().load();
+      break;
+
+    case 'user_notice':
+      if (isHome) useLegalStore.getState().addNotice(event.notice);
+      break;
+
+    case 'announcements_changed':
+      if (isHome) void useAnnouncementStore.getState().load();
+      break;
+
+    case 'review_queue_count':
+      if (isHome) useReviewStore.getState().setQueue({ verificationOpen: event.verificationOpen, discoveryOpen: event.discoveryOpen });
+      break;
+
     case 'error': {
       console.error(`WebSocket error (${origin || 'home'}):`, event.message);
+      // The token no longer opens this account. Unless this device already holds a newer
+      // one (a password change in another tab), it is over: home signs out, another
+      // instance's connection stops and says it needs signing in again.
+      if (event.code === 'session_ended' || event.code === 'account_deleted' || event.code === 'unauthorized') {
+        if (isHome) {
+          const conn = connections.get(origin);
+          const stored = localStorage.getItem('backspace_token');
+          if (conn && stored && stored !== conn.socketToken) {
+            conn.token = stored;
+            conn.ws?.close();
+          } else {
+            handleUnauthorized();
+          }
+        } else {
+          disconnectFromOrigin(origin);
+          void import('../stores/instanceStore').then(({ useInstanceStore }) => {
+            useInstanceStore.getState().setInstanceStatus(origin, 'error', describeErrorCode(event.code!, event.message, event.details));
+          });
+        }
+        break;
+      }
+      // A suspended account holds no session (admin.md, "Suspensions"): home
+      // signs it out instead of reconnecting, and the sign-in page says why.
+      if (event.code === 'account_suspended' && isHome) {
+        handleUnauthorized();
+        break;
+      }
+      // Another instance keeps this account out: the client stops knocking
+      // there and says so once, on the connection's row and as a notice.
+      if (event.code === 'account_suspended') {
+        const message = describeErrorCode(event.code, event.message, event.details);
+        disconnectFromOrigin(origin);
+        void import('../stores/instanceStore').then(({ useInstanceStore }) => {
+          useInstanceStore.getState().setInstanceStatus(origin, 'error', message);
+        });
+        useUIStore.getState().addToast(message, 'warning');
+        break;
+      }
       // A refused dm_call_start names its DM: the call this client is placing
       // there never started, so the calling state and its ring go. A refused
       // dm_call_accept names the call the client joined on its side before
@@ -1470,6 +1721,7 @@ function getOrCreateConnection(origin: string, token: string): ConnectionState {
       ws: null,
       heartbeatWorker: null,
       reconnectAttempts: 0,
+      socketToken: null,
       reconnectTimer: undefined,
       token,
     };
@@ -1492,8 +1744,8 @@ function connectToOrigin(origin: string, token: string): void {
   conn.ws = ws;
 
   ws.onopen = () => {
-    conn.reconnectAttempts = 0;
-    ws.send(JSON.stringify({ type: 'auth', token: conn.token, client: detectClientKind() }));
+    conn.socketToken = conn.token;
+    ws.send(JSON.stringify({ type: 'auth', token: conn.token, client: detectClientKind(), batch: true }));
     startHeartbeat(conn);
   };
 
@@ -1507,27 +1759,41 @@ function connectToOrigin(origin: string, token: string): void {
       console.error(`Failed to parse WebSocket message (${origin || 'home'})`);
       return;
     }
-    const readyAlreadyDelivered = readyDelivered;
-    if (event.type === 'ready') readyDelivered = true;
-    try {
-      handleEvent(origin, event, readyAlreadyDelivered);
-    } catch (err) {
-      console.error('Error handling WS event "%s" (%s):', event.type, origin || 'home', err);
+    // Several events in one frame, as `auth` above said this client reads them.
+    for (const each of event.type === 'batch' ? event.events : [event]) {
+      const readyAlreadyDelivered = readyDelivered;
+      if (each.type === 'ready') {
+        readyDelivered = true;
+        // Only a socket that was let in counts as a success. One that opens and is
+        // refused must not start the backoff over.
+        conn.reconnectAttempts = 0;
+      }
+      try {
+        handleEvent(origin, each, readyAlreadyDelivered);
+      } catch (err) {
+        console.error('Error handling WS event "%s" (%s):', each.type, origin || 'home', err);
+      }
     }
   };
 
   ws.onclose = () => {
     conn.ws = null;
     stopHeartbeat(conn);
+    // A connection dropped on purpose (by hand, or refused for good) keeps
+    // the status that says why, and is not tried again.
+    const stillWanted = connections.get(origin) === conn && conn.token !== '';
     // Mark remote instance as disconnected in instanceStore
-    if (origin !== HOME_ORIGIN) {
+    if (origin !== HOME_ORIGIN && stillWanted) {
       import('../stores/instanceStore').then(({ useInstanceStore }) => {
         useInstanceStore.getState().setInstanceStatus(origin, 'disconnected', 'Connection lost — reconnecting');
       });
     }
     // Only reconnect if the connection is still registered (not explicitly disconnected)
-    if (connections.has(origin) && conn.token) {
-      const delay = Math.min(1000 * Math.pow(2, conn.reconnectAttempts), 30000);
+    if (stillWanted) {
+      // Spread out: after a restart everyone is told at the same moment, and would all knock
+      // again at the same moments too.
+      const longest = Math.min(1000 * Math.pow(2, conn.reconnectAttempts), 30000);
+      const delay = longest / 2 + Math.random() * (longest / 2);
       conn.reconnectAttempts++;
       conn.reconnectTimer = setTimeout(() => connectToOrigin(origin, conn.token), delay);
     }
@@ -1625,6 +1891,11 @@ export function useWebSocket() {
     if (token && (!homeInitialized || token !== prevToken.current)) {
       homeInitialized = true;
       connectToOrigin(HOME_ORIGIN, token);
+      // A new token on an open socket (a changed password, an upgraded session): it
+      // goes on with the new one, because the old one's session may be gone. A call
+      // survives this: the server waits for a voice session's socket to come back.
+      const conn = connections.get(HOME_ORIGIN);
+      if (conn?.ws?.readyState === WebSocket.OPEN && conn.socketToken !== token) conn.ws.close();
     } else if (!token && homeInitialized) {
       homeInitialized = false;
       disconnectFromOrigin(HOME_ORIGIN);

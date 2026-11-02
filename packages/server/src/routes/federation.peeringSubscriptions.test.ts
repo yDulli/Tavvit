@@ -177,7 +177,7 @@ describe('GET /api/federation/peering-subscriptions', () => {
     seedOutboundRequest({
       id: 'req-A',
       origin: 'https://orbit.example',
-      instanceName: 'Orbit',
+      instanceName: 'Tavvit',
       subscribers: [
         { id: 'sub-A-alice-old', userId: 'alice', reason: 'friend_add', target: 'someone@orbit.example', createdAt: t0 },
         { id: 'sub-A-bob', userId: 'bob', reason: 'space_join', target: 'invite-xyz', createdAt: t0 + 100 },
@@ -235,7 +235,7 @@ describe('GET /api/federation/peering-subscriptions', () => {
       id: 'sub-A-alice-old',
       requestId: 'req-A',
       peerOrigin: 'https://orbit.example',
-      peerInstanceName: 'Orbit',
+      peerInstanceName: 'Tavvit',
       triggerReason: 'friend_add',
       triggerTarget: 'someone@orbit.example',
       createdAt: t0,

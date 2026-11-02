@@ -92,7 +92,8 @@ export function SwAutoUpdate() {
     onRegisteredSW(_swUrl, registration) {
       if (!registration) return;
       setInterval(() => {
-        registration.update();
+        // A check that fails (offline, a worker being replaced) is simply made again next time.
+        void registration.update().catch(() => undefined);
       }, UPDATE_CHECK_INTERVAL_MS);
     },
     // Suppresses the plugin's own immediate reload, which would ignore voice.

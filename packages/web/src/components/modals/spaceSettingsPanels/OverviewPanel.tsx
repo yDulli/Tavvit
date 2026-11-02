@@ -1,23 +1,94 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useId, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { ImageCropModal } from '../../ui/ImageCropModal';
 import { getSpaceGradient, SPACE_GRADIENT_MAP } from '../../../utils/gradients';
-import { AVATAR_COLORS } from '@backspace/shared';
-import type { AvatarColor } from '@backspace/shared';
+import { AVATAR_COLORS, isSpaceDefaultNotificationLevel } from '@backspace/shared';
+import type { AvatarColor, SpaceDefaultNotificationLevel } from '@backspace/shared';
 import { useSpaceStore } from '../../../stores/spaceStore';
 import { useSelfIdentity } from '../../../stores/authStore';
 import { useSpaceOrigin } from '../../../hooks/useSpaceOrigin';
 import { useUIStore } from '../../../stores/uiStore';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../../api/client';
+import { api, type SpaceUpdateBody } from '../../../api/client';
 import { useTransferStore } from '../../../stores/transferStore';
 import { waitForTransferAttachment } from '../../../utils/waitForTransfer';
 import { hasPermissionBit, PermissionBits } from '../../../utils/permissions';
 import { describeError } from '../../../i18n/errors';
 import { useAvatarColorNames } from './spaceOptions';
+import { SegmentedControl } from '../settingsPanels/_shared/SettingsControls';
+import { Toggle } from '../../ui/Toggle';
+import { Avatar } from '../../ui/Avatar';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { Icon } from '../../ui/Icon';
+import { ownerHasOwnGroup } from '../../../utils/memberGroups';
+
+/** The default-notifications choice: one of the space levels, or Tavvit's own default (stored as null). */
+type DefaultLevelChoice = SpaceDefaultNotificationLevel | 'builtIn';
+
+/** The stored default of a space, as this panel reads it; anything unknown counts as none. */
+function storedDefaultLevel(level: unknown): SpaceDefaultNotificationLevel | null {
+  return isSpaceDefaultNotificationLevel(level) ? level : null;
+}
 
 interface OverviewPanelProps {
   spaceId: string;
+}
+
+/**
+ * Whether the member list shows the owner in a group of their own, saved at
+ * once. Off, the owner is listed under their own top shown role and marked by
+ * a crown (spaces.md, "Ownership and roles").
+ */
+function OwnerListingSection({ spaceId, ownerGroup }: { spaceId: string; ownerGroup: boolean }) {
+  const { t } = useTranslation(['spaces', 'common']);
+  const updateSpace = useSpaceStore((s) => s.updateSpace);
+  const addToast = useUIStore((s) => s.addToast);
+  const [saving, setSaving] = useState(false);
+  const toggle = async (next: boolean) => {
+    setSaving(true);
+    try {
+      await updateSpace(spaceId, { ownerGroup: next });
+    } catch (err) {
+      addToast(describeError(err), 'warning');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div>
+      <div className="label-mono mb-1.5">{t('spaces:ownerDisplay.title')}</div>
+      <div className="surface-card rounded-lg p-4">
+        <label className="flex items-center justify-between gap-4">
+          <span className="min-w-0">
+            <span className="block text-ui font-medium text-txt-primary">{t('spaces:ownerDisplay.ownGroup')}</span>
+            <span className="mt-0.5 block text-meta leading-snug text-txt-tertiary">{t('spaces:ownerDisplay.ownGroupHint')}</span>
+          </span>
+          <Toggle enabled={ownerGroup} disabled={saving} onChange={(next) => { void toggle(next); }} ariaLabel={t('spaces:ownerDisplay.ownGroup')} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+/** Opens the Discord template import for this space, for whoever may add its roles and channels. */
+function DiscordImportEntry({ spaceId }: { spaceId: string }) {
+  const { t } = useTranslation(['spaces']);
+  const openModal = useUIStore((s) => s.openModal);
+  const permissions = useSpaceStore((s) => s.spacePermissions.get(spaceId));
+  const canImport = hasPermissionBit(permissions, PermissionBits.MANAGE_ROLES) && hasPermissionBit(permissions, PermissionBits.MANAGE_CHANNELS);
+  if (!canImport) return null;
+  return (
+    <div>
+      <div className="label-mono mb-1.5">{t('spaces:import.entry.title')}</div>
+      <div className="flex flex-wrap items-center justify-between gap-3 surface-card rounded-lg p-4">
+        <p className="min-w-0 flex-1 basis-60 text-meta leading-snug text-txt-tertiary">{t('spaces:import.entry.hint')}</p>
+        <button type="button" className="btn-outline btn-sm" onClick={() => openModal('discordImport', { spaceId })}>
+          <Icon name="download" size={14} />
+          {t('spaces:import.entry.action')}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function OverviewPanel({ spaceId }: OverviewPanelProps) {
@@ -55,10 +126,16 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
   const bannerFileInputRef = useRef<HTMLInputElement>(null);
 
   const [avatarColorState, setAvatarColorState] = useState<AvatarColor | null>(space?.avatarColor ?? null);
+  // The level members start with until they choose their own; null keeps Tavvit's default.
+  const [defaultLevel, setDefaultLevel] = useState<SpaceDefaultNotificationLevel | null>(
+    storedDefaultLevel(space?.defaultNotificationLevel),
+  );
+  const defaultLevelLabelId = useId();
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Transfer ownership state
@@ -69,6 +146,12 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
   const [transferSearch, setTransferSearch] = useState('');
   const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
   const [transferring, setTransferring] = useState(false);
+
+  // A saved default (here or by another moderator) replaces the draft, like the other fields.
+  const savedDefaultLevel = storedDefaultLevel(space?.defaultNotificationLevel);
+  useEffect(() => {
+    setDefaultLevel(savedDefaultLevel);
+  }, [savedDefaultLevel]);
 
   useEffect(() => {
     if (space) {
@@ -112,7 +195,8 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
   const hasIconChange = iconFilename !== null;
   const hasBannerChange = bannerFilename !== null;
   const hasAvatarColorChange = avatarColorState !== (space.avatarColor ?? null);
-  const hasChanges = hasNameChange || hasIconChange || hasBannerChange || hasAvatarColorChange;
+  const hasDefaultLevelChange = defaultLevel !== savedDefaultLevel;
+  const hasChanges = hasNameChange || hasIconChange || hasBannerChange || hasAvatarColorChange || hasDefaultLevelChange;
 
   const currentIconUrl = space.icon
     ? (space.icon.startsWith('http') ? space.icon : api.uploads.url(space.icon))
@@ -210,7 +294,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
     setSaving(true);
     setSaveError('');
     try {
-      const updates: { name?: string; icon?: string; banner?: string; avatarColor?: string } = {};
+      const updates: SpaceUpdateBody = {};
       if (hasNameChange) updates.name = spaceName.trim();
       if (hasIconChange) {
         updates.icon = iconFilename === '' ? '' : iconFilename!;
@@ -220,6 +304,9 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
       }
       if (hasAvatarColorChange) {
         updates.avatarColor = avatarColorState ?? '';
+      }
+      if (hasDefaultLevelChange) {
+        updates.defaultNotificationLevel = defaultLevel;
       }
       await updateSpace(spaceId, updates);
       setIconFilename(null);
@@ -243,6 +330,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
   const handleDiscard = () => {
     setSpaceName(space.name);
     setAvatarColorState(space.avatarColor ?? null);
+    setDefaultLevel(savedDefaultLevel);
     setIconFilename(null);
     if (iconPreview) {
       URL.revokeObjectURL(iconPreview);
@@ -257,16 +345,16 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      return;
-    }
+    setDeleting(true);
     try {
       await deleteSpace(spaceId);
       closeModal();
       navigate('/channels/@me');
     } catch (err) {
       setSaveError(describeError(err));
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
     }
   };
 
@@ -299,14 +387,14 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
   return (
     <>
       <div className="space-y-5">
-        <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('spaces:settings.nav.tabs.overview')}</h2>
+        <h2 className="page-title">{t('spaces:settings.nav.tabs.overview')}</h2>
         {/* Space Identity */}
         <div>
-          <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('spaces:settings.overview.identity')}</div>
-          <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-4">
+          <div className="label-mono mb-1.5">{t('spaces:settings.overview.identity')}</div>
+          <div className="surface-card rounded-lg p-4 space-y-4">
         {/* Space Icon */}
         <div>
-          <label className="block text-xs text-txt-secondary mb-1.5">
+          <label className="field-label">
             {t('spaces:settings.overview.iconLabel')}
           </label>
           <div className="flex items-center gap-3">
@@ -314,9 +402,9 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
               type="button"
               onClick={() => canManageSpace && fileInputRef.current?.click()}
               disabled={!canManageSpace || uploadingIcon}
-              className={`relative w-16 h-16 rounded-full bg-surface-input border-2 border-dashed border-border-soft flex items-center justify-center overflow-hidden group ${
-                canManageSpace ? 'hover:border-accent-primary cursor-pointer' : 'cursor-default'
-              } transition-colors`}
+              className={`relative w-16 h-16 rounded-xl bg-surface-input border border-border-soft flex items-center justify-center overflow-hidden group ${
+                canManageSpace ? 'hover:border-interactive-muted cursor-pointer' : 'cursor-default'
+              } transition-colors duration-100`}
             >
               {displayIconSrc ? (
                 <>
@@ -332,7 +420,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
                 </>
               ) : (
                 <div
-                  className="w-full h-full rounded-full flex items-center justify-center text-white text-xl font-bold"
+                  className="w-full h-full flex items-center justify-center text-white text-xl font-semibold"
                   style={{ background: getSpaceGradient(space.id, space.name, avatarColorState).gradient }}
                 >
                   {space.name.charAt(0).toUpperCase()}
@@ -358,7 +446,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
               <button
                 type="button"
                 onClick={handleRemoveIcon}
-                className="text-xs text-txt-tertiary hover:text-txt-danger transition-colors"
+                className="btn-quiet btn-sm hover:bg-accent-rose/10 hover:text-txt-danger"
               >
                 {t('common:actions.remove')}
               </button>
@@ -368,7 +456,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
 
         {/* Space Avatar Color */}
         <div>
-          <label className="block text-xs text-txt-secondary mb-1.5">
+          <label className="field-label">
             {t('spaces:settings.overview.colorLabel')}
           </label>
           <div className="flex gap-2">
@@ -380,11 +468,12 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
                   type="button"
                   onClick={() => canManageSpace && setAvatarColorState(key)}
                   disabled={!canManageSpace}
-                  className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110 disabled:cursor-default disabled:hover:scale-100"
+                  aria-label={colorNames[key]}
+                  aria-pressed={avatarColorState === key}
+                  className="w-7 h-7 rounded-md border-2 transition-colors duration-100 disabled:cursor-default"
                   style={{
                     background: entry.gradient,
                     borderColor: avatarColorState === key ? 'white' : 'transparent',
-                    boxShadow: avatarColorState === key ? `0 0 0 2px ${entry.glow}40` : 'none',
                   }}
                   title={colorNames[key]}
                 />
@@ -395,7 +484,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
 
         {/* Space Banner */}
         <div>
-          <label className="block text-xs text-txt-secondary mb-1.5">
+          <label className="field-label">
             {t('spaces:settings.overview.bannerLabel')}
           </label>
           <div className="flex flex-col gap-2">
@@ -403,9 +492,9 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
               type="button"
               onClick={() => canManageSpace && bannerFileInputRef.current?.click()}
               disabled={!canManageSpace || uploadingBanner}
-              className={`relative w-full h-24 rounded-lg bg-surface-input border-2 border-dashed border-border-soft flex items-center justify-center overflow-hidden group ${
-                canManageSpace ? 'hover:border-accent-primary cursor-pointer' : 'cursor-default'
-              } transition-colors`}
+              className={`relative w-full h-24 rounded-lg bg-surface-input border border-dashed border-border-soft flex items-center justify-center overflow-hidden group ${
+                canManageSpace ? 'hover:border-interactive-muted cursor-pointer' : 'cursor-default'
+              } transition-colors duration-100`}
             >
               {displayBannerSrc ? (
                 <>
@@ -421,10 +510,10 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
                 </>
               ) : (
                 <div className="flex flex-col items-center gap-1 text-txt-tertiary">
-                  <svg className="w-6 h-6 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
                   </svg>
-                  <span className="text-[11px]">{t('spaces:settings.overview.uploadBanner')}</span>
+                  <span className="text-meta">{t('spaces:settings.overview.uploadBanner')}</span>
                 </div>
               )}
               {uploadingBanner && (
@@ -447,7 +536,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
               <button
                 type="button"
                 onClick={handleRemoveBanner}
-                className="text-xs text-txt-tertiary hover:text-txt-danger transition-colors self-start"
+                className="btn-quiet btn-sm self-start hover:bg-accent-rose/10 hover:text-txt-danger"
               >
                 {t('spaces:settings.overview.removeBanner')}
               </button>
@@ -457,7 +546,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
 
         {/* Space Name */}
         <div>
-          <label className="block text-xs text-txt-secondary mb-1.5">
+          <label className="field-label">
             {t('spaces:settings.overview.nameLabel')}
           </label>
           <input
@@ -471,24 +560,58 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
           </div>
         </div>
 
+        {/* Default notifications: the level members start with until they choose their own */}
+        {canManageSpace && (
+          <div>
+            <div className="label-mono mb-1.5">{t('spaces:settings.overview.notifications.title')}</div>
+            <div className="surface-card rounded-lg p-4">
+              <div id={defaultLevelLabelId} className="text-ui font-medium text-txt-primary">
+                {t('spaces:settings.overview.notifications.label')}
+              </div>
+              <p className="mt-0.5 text-meta leading-snug text-txt-tertiary">{t('spaces:settings.overview.notifications.description')}</p>
+              <div className="mt-2.5">
+                <SegmentedControl<DefaultLevelChoice>
+                  labelledBy={defaultLevelLabelId}
+                  value={defaultLevel ?? 'builtIn'}
+                  options={[
+                    { id: 'all', label: t('spaces:notifications.level.all') },
+                    { id: 'mentions', label: t('spaces:notifications.level.mentions') },
+                    { id: 'builtIn', label: t('spaces:settings.overview.notifications.builtIn') },
+                  ]}
+                  onChange={(choice) => setDefaultLevel(choice === 'builtIn' ? null : choice)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Save / Discard */}
         {saveError && (
-          <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{saveError}</div>
+          <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{saveError}</div>
         )}
+        {/* Ownership: how the owner is listed, decided by the owner alone. */}
+        {isOwner && space && (
+          <OwnerListingSection spaceId={spaceId} ownerGroup={ownerHasOwnGroup(space)} />
+        )}
+
+        {/* Structure from Discord: the import adds, it never changes or removes. */}
+        {space && <DiscordImportEntry spaceId={spaceId} />}
+
         {/* Danger Zone */}
         {isOwner && (
           <div>
-            <div className="text-[11px] font-semibold text-txt-danger uppercase tracking-wider mb-1.5">{t('common:labels.dangerZone')}</div>
-            <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-4">
+            <div className="label-mono mb-1.5 text-txt-danger">{t('common:labels.dangerZone')}</div>
+            <div className="surface-card rounded-lg p-4 space-y-4">
               {/* Transfer Ownership */}
               <div>
-                <p className="text-xs text-txt-tertiary mb-3">{t('spaces:settings.overview.transfer.description')}</p>
                 {showTransfer ? (
-                  transferTargetId && transferTarget ? (
+                  <>
+                    <p className="mb-3 text-meta leading-snug text-txt-tertiary">{t('spaces:settings.overview.transfer.description')}</p>
+                    {transferTargetId && transferTarget ? (
                     /* Confirm step */
                     <div className="space-y-3">
-                      <div className="p-2.5 rounded-lg bg-accent-amber/10 border border-accent-amber/20">
-                        <p className="text-sm text-txt-secondary">
+                      <div className="rounded-md border border-accent-amber/30 bg-accent-amber/10 px-3 py-2">
+                        <p className="text-ui text-txt-secondary">
                           <Trans
                             t={t}
                             i18nKey="spaces:settings.overview.transfer.prompt"
@@ -499,16 +622,19 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
                       </div>
                       <div className="flex gap-2">
                         <button
+                          type="button"
                           onClick={() => setTransferTargetId(null)}
-                          className="px-3 py-1.5 text-sm text-txt-secondary hover:text-txt-primary transition-colors"
+                          className="btn-quiet"
                           disabled={transferring}
                         >
                           {t('common:actions.back')}
                         </button>
                         <button
+                          type="button"
                           onClick={handleTransfer}
                           disabled={transferring}
-                          className="px-3 py-1.5 bg-accent-amber hover:bg-accent-amber/80 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+                          aria-busy={transferring}
+                          className="btn-primary bg-accent-amber text-surface-base hover:bg-accent-amber/90 active:bg-accent-amber/80"
                         >
                           {transferring ? t('spaces:settings.overview.transfer.transferring') : t('spaces:settings.overview.transfer.confirm')}
                         </button>
@@ -525,73 +651,73 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
                         className="input-search w-full"
                         autoFocus
                       />
-                      <div className="max-h-[160px] overflow-y-auto space-y-0.5">
+                      <div className="max-h-[176px] overflow-y-auto scrollbar-thin space-y-0.5">
                         {transferCandidates.length === 0 ? (
-                          <p className="text-xs text-txt-tertiary text-center py-3">{t('common:labels.noMembersFound')}</p>
+                          <p className="py-3 text-center text-meta text-txt-tertiary">{t('common:labels.noMembersFound')}</p>
                         ) : (
-                          transferCandidates.map((member) => {
-                            const avatarUrl = member.user.avatar
-                              ? (member.user.avatar.startsWith('http') || member.user.avatar.startsWith('/') ? member.user.avatar : `/api/uploads/${member.user.avatar}`)
-                              : null;
-                            return (
-                              <button
-                                key={member.userId}
-                                onClick={() => setTransferTargetId(member.userId)}
-                                className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-white/[0.06] transition-colors"
-                              >
-                                <div className="w-7 h-7 rounded-full bg-surface-input flex-shrink-0 overflow-hidden flex items-center justify-center">
-                                  {avatarUrl ? (
-                                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                                  ) : (
-                                    <span className="text-[10px] font-bold text-txt-secondary">
-                                      {(member.user.displayName || member.user.username).charAt(0).toUpperCase()}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex flex-col items-start min-w-0">
-                                  <span className="text-sm text-txt-primary truncate max-w-full">
-                                    {member.user.displayName || member.user.username}
+                          transferCandidates.map((member) => (
+                            <button
+                              type="button"
+                              key={member.userId}
+                              onClick={() => setTransferTargetId(member.userId)}
+                              className="list-row w-full px-2 py-1.5 text-left"
+                            >
+                              <Avatar
+                                src={member.user.avatar}
+                                name={member.user.displayName || member.user.username}
+                                size={28}
+                                user={member.user}
+                              />
+                              <span className="flex min-w-0 flex-col items-start">
+                                <span className="max-w-full truncate text-ui font-medium text-txt-primary">
+                                  {member.user.displayName || member.user.username}
+                                </span>
+                                {member.user.displayName && (
+                                  <span className="max-w-full truncate text-label text-txt-tertiary">
+                                    {member.user.username}
                                   </span>
-                                  {member.user.displayName && (
-                                    <span className="text-[11px] text-txt-tertiary truncate max-w-full">
-                                      {member.user.username}
-                                    </span>
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })
+                                )}
+                              </span>
+                            </button>
+                          ))
                         )}
                       </div>
                       <button
+                        type="button"
                         onClick={() => { setShowTransfer(false); setTransferSearch(''); }}
-                        className="text-xs text-txt-tertiary hover:text-txt-secondary transition-colors"
+                        className="btn-quiet btn-sm"
                       >
                         {t('common:actions.cancel')}
                       </button>
                     </div>
-                  )
+                    )}
+                  </>
                 ) : (
-                  <button
-                    onClick={() => setShowTransfer(true)}
-                    className="px-4 py-2 bg-accent-amber hover:bg-accent-amber/80 text-white text-sm font-medium rounded transition-colors"
-                  >
-                    {t('spaces:settings.overview.transfer.button')}
-                  </button>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="min-w-0 flex-1 basis-60 text-meta leading-snug text-txt-tertiary">{t('spaces:settings.overview.transfer.description')}</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowTransfer(true)}
+                      className="btn-outline btn-sm"
+                    >
+                      {t('spaces:settings.overview.transfer.button')}
+                    </button>
+                  </div>
                 )}
               </div>
 
               {/* Divider */}
-              <div className="border-t border-white/[0.05]" />
+              <div className="border-t border-border-hard" />
 
               {/* Delete Space */}
-              <div>
-                <p className="text-xs text-txt-tertiary mb-3">{t('spaces:settings.overview.delete.description')}</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="min-w-0 flex-1 basis-60 text-meta leading-snug text-txt-tertiary">{t('spaces:settings.overview.delete.description')}</p>
                 <button
-                  onClick={handleDelete}
-                  className="px-4 py-2 bg-accent-rose hover:bg-accent-rose/80 text-white text-sm font-medium rounded transition-colors"
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="btn-danger btn-sm"
                 >
-                  {confirmDelete ? t('spaces:settings.overview.delete.confirmAgain') : t('spaces:settings.overview.delete.button')}
+                  {t('spaces:settings.overview.delete.button')}
                 </button>
               </div>
             </div>
@@ -601,17 +727,18 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
         {canManageSpace && hasChanges && (
           <div className="sticky bottom-0 z-10 pointer-events-none">
             <div className="flex justify-center pt-3 pb-1">
-              <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-2 animate-slide-up pointer-events-auto">
+              <div className="action-bar animate-slide-up pointer-events-auto">
                 <button
                   onClick={handleDiscard}
-                  className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                  className="btn-quiet"
                 >
                   {t('spaces:settings.discardChanges')}
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving || uploadingIcon || uploadingBanner || !spaceName.trim()}
-                  className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                  aria-busy={saving}
+                  className="btn-primary"
                 >
                   {saving ? t('common:states.saving') : t('common:actions.save')}
                 </button>
@@ -620,6 +747,17 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+        title={t('spaces:settings.overview.delete.button')}
+        description={t('spaces:settings.overview.delete.description')}
+        confirmLabel={t('spaces:settings.overview.delete.button')}
+        variant="danger"
+        loading={deleting}
+      />
 
       <ImageCropModal
         isOpen={cropSrc !== null}

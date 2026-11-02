@@ -224,6 +224,31 @@ export class AudioManager {
     return source;
   }
 
+  /** Turns the bytes of an audio file into something to play, or null when they are none. Takes the bytes away. */
+  async decodeClip(bytes: ArrayBuffer): Promise<AudioBuffer | null> {
+    if (!this.ctx) this.initContext();
+    try {
+      return await this.ctx!.decodeAudioData(bytes);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Plays a decoded clip once, at a volume from 0 to 1. */
+  async playClip(clip: AudioBuffer, volume: number): Promise<void> {
+    await this.resumeContext();
+    if (!this.ctx) return;
+    const source = this.ctx.createBufferSource();
+    source.buffer = clip;
+    const gain = this.ctx.createGain();
+    const now = this.ctx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(volume, now + 0.01);
+    source.connect(gain);
+    gain.connect(this.masterBoost!);
+    source.start(now);
+  }
+
   /**
    * Serialized input device switch.
    * Multiple callers (store, syncMic, UI) may trigger this concurrently.

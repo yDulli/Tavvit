@@ -1,17 +1,123 @@
+/* ── Typefaces ──
+ * Geist is the interface, Geist Mono the instrument labels (times, counts,
+ * section names). IBM Plex Sans, Inter and Space Grotesk are there for people
+ * who pick them (Settings, Appearance); Inter is also the fallback for the few
+ * glyphs Geist does not draw. Han comes from the platform (see :lang(zh) below). */
 @font-face {
-  font-family: 'DM Sans';
-  src: url('/fonts/DMSans-Variable.woff2') format('woff2');
-  font-weight: 100 1000;
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Latin.woff2') format('woff2');
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
-  font-family: 'DM Sans';
-  src: url('/fonts/DMSans-Variable-Italic.woff2') format('woff2');
-  font-weight: 100 1000;
+  font-family: 'Geist';
+  src: url('/fonts/Geist-LatinExt.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Cyrillic.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-CyrillicExt.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Latin-Italic.woff2') format('woff2');
+  font-weight: 100 900;
   font-style: italic;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-LatinExt.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Cyrillic.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-CyrillicExt.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('/fonts/IBMPlexSans-Latin.woff2') format('woff2');
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('/fonts/IBMPlexSans-LatinExt.woff2') format('woff2');
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('/fonts/IBMPlexSans-Cyrillic.woff2') format('woff2');
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('/fonts/IBMPlexSans-Latin-Italic.woff2') format('woff2');
+  font-weight: 100 700;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -32,9 +138,27 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0301, U+0304, U+0308, U+0329, U+0400-052F, U+1C80-1C8A, U+2000-206F, U+20AC, U+20B4, U+20BD, U+2116, U+2122, U+2191-2193, U+2212, U+2215, U+2713, U+2717, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F, U+FEFF, U+FFFD;
 }
 
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('/fonts/SpaceGrotesk-Variable.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* The colour of the light on a lit panel (`.lit`). Typed, so it can be faded from
+   one place's colour to the next, and not inherited, so that fade repaints the
+   panels and leaves the page under them alone. */
+@property --place-color {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: rgb(116 102 232);
+}
 
 @layer base {
   :root {
@@ -46,96 +170,253 @@
     --app-vh: calc(1vh / var(--interface-scale));
     --app-dvh: calc(1dvh / var(--interface-scale));
     --app-vw: calc(1vw / var(--interface-scale));
-    /* ── Matte Surfaces (RGB channels for Tailwind opacity support) ── */
-    --bg-base: 11 11 16;
-    --bg-channel: 26 26 35;
-    --bg-chat: 19 19 26;
-    --bg-members: 26 26 35;
-    --bg-elevated: 37 37 48;
-    --bg-input: 17 17 24;
-    --bg-overlay: rgba(0, 0, 0, 0.85);
 
-    /* ── Borders ── */
-    --border-hard: 34 34 44;
-    --border-soft: 42 42 54;
+    /* ═══ TAVVIT · GRAPHITE ══════════════════════════════════════════════
+     * A tool that feels expensive. Deep graphite surfaces, a little cool, told
+     * apart by a step in tone and a 1px hairline, with light falling on them
+     * from above: soft, ambient, in the colour of the place you are in, and
+     * never on the text itself. What floats has a lit top edge and a deep
+     * shadow. One signal colour, a quiet violet, marks what is selected or
+     * active, the one main action of a form and the count of what is unread.
+     * The logo is not part of the signal: it stays white, never violet. Labels,
+     * times and counts are set in Geist Mono, like the markings on an instrument.
+     *
+     * Everything that is a colour is an RGB channel triple so Tailwind can add
+     * opacity. The token names are the upstream design system's, so every
+     * component and the colour-token test keep working.
+     */
 
-    /* ── Pastel Accents ── */
-    --accent-mint: 134 239 172;
-    --accent-peach: 252 165 165;
-    --accent-lavender: 196 181 253;
-    --accent-sky: 125 211 252;
-    --accent-amber: 252 211 77;
-    --accent-rose: 253 164 175;
-    --accent-coral: 251 146 60;
+    /* ── Surfaces, five layers, each a step in tone from the one it touches:
+     * the app's frame, the navigation and sidebars, the main content, the
+     * secondary panels beside it (member list, side panels), and what floats. ── */
+    --bg-base: 13 14 17;
+    --bg-channel: 17 18 22;
+    --bg-chat: 21 22 27;
+    --bg-members: 18 19 23;
+    --bg-elevated: 30 31 37;
+    --bg-input: 12 13 16;
+    --bg-overlay: rgba(0, 0, 0, 0.62);
 
-    /* ── Primary Action (replaces blurple) ── */
-    --accent-primary: 124 108 246;
-    --accent-primary-hover: 107 92 224;
-    --accent-primary-active: 95 79 208;
+    /* ── Borders: hairlines (hard parts two surfaces, soft edges a control) ── */
+    --border-hard: 35 36 43;
+    --border-soft: 50 51 60;
 
-    /* ── Text Hierarchy ── */
-    --text-primary: 239 239 239;
-    --text-secondary: 160 160 170;
-    --text-tertiary: 92 92 104;
-    --text-category: 72 72 84;
-    --text-message: 216 216 222;
-    --text-link: 125 211 252;
-    --text-positive: 134 239 172;
-    --text-warning: 252 211 77;
-    --text-danger: 252 165 165;
+    /* ── Accent family: the colours of avatars, badges and folders ── */
+    --accent-mint: 92 196 145;
+    --accent-peach: 236 160 120;
+    --accent-lavender: 160 150 230;
+    --accent-sky: 96 165 230;
+    --accent-amber: 230 176 64;
+    --accent-rose: 232 110 140;
+    --accent-coral: 236 120 80;
 
-    /* ── Interactive ── */
-    --interactive-hover: rgba(255, 255, 255, 0.06);
-    --interactive-active: rgba(255, 255, 255, 0.12);
-    --interactive-selected: rgba(255, 255, 255, 0.16);
-    --interactive-muted: 58 58 68;
+    /* ── The signal: violet (#7466e8, the shared DEFAULT_ACCENT_COLOR). White
+     * text on it is 4.4:1; `soft` is the shade for violet text and icons on
+     * the panels (5.4:1 on --bg-elevated). The instance accent (Settings,
+     * Instance) and the person's own (Settings, Appearance) override these
+     * four at runtime. ── */
+    --accent-primary: 116 102 232;
+    --accent-primary-hover: 102 90 204;
+    --accent-primary-active: 88 78 176;
+    --accent-primary-soft: 150 140 245;
+
+    /* ── Text: a cool off-white down to a quiet grey (tertiary 4.8:1 on --bg-elevated,
+     * the small labels in --text-category over 6:1 on the sidebars) ── */
+    --text-primary: 237 238 242;
+    --text-secondary: 172 175 186;
+    --text-tertiary: 141 144 156;
+    --text-category: 150 153 166;
+    --text-message: 225 227 233;
+    --text-link: 158 148 255;
+    --text-positive: 92 196 128;
+    --text-warning: 232 176 64;
+    --text-danger: 240 98 84;
+
+    /* ── Interactive: hover is a veil, selected is a step lighter; the violet
+     * of a selected row is its edge (.nav-item), never its fill ── */
+    --interactive-hover: rgba(255, 255, 255, 0.05);
+    --interactive-active: rgba(255, 255, 255, 0.1);
+    --interactive-selected: rgba(255, 255, 255, 0.075);
+    --interactive-row: rgba(255, 255, 255, 0.025);
+    --interactive-muted: 78 80 92;
 
     /* ── Status ── */
-    --status-online: 134 239 172;
-    --status-idle: 252 211 77;
-    --status-dnd: 252 165 165;
-    --status-offline: 58 58 68;
+    --status-online: 76 186 112;
+    --status-idle: 230 167 58;
+    --status-dnd: 232 72 64;
+    --status-offline: 92 91 86;
 
-    /* ── Glass Material ── */
-    --glass-bg: rgba(20, 20, 26, 0.52);
-    --glass-modal-bg: rgba(20, 20, 26, 0.82);
-    --glass-border: rgba(255, 255, 255, 0.07);
-    --glass-highlight: rgba(255, 255, 255, 0.05);
+    /* ── Shape. Small radii, multiplied by `--radius-scale` (Settings,
+     * Appearance), so one number sharpens or softens the whole app. ── */
+    --radius-scale: 1;
+    --sidebar-width: 248px;
+    --topbar-height: 48px;
 
-    /* ── Notification ── */
-    --notification: 253 164 175;
+    /* ── Rhythm: how far apart messages sit, how round an avatar is ── */
+    --msg-gap: 0.875rem;
+    --msg-pad: 2px;
+    --avatar-roundness: 0.22;
+
+    /* ── Floating layers: an opaque surface with a little more light at its top,
+     * a hairline, a lit top edge and a deep shadow that lifts it off the page.
+     * Nothing that sits in the page casts one. ── */
+    --shadow-popover: 0 18px 44px -14px rgb(0 0 0 / 0.8), 0 4px 12px rgb(0 0 0 / 0.4);
+    --shadow-modal: 0 50px 110px -30px rgb(0 0 0 / 0.9), 0 10px 30px rgb(0 0 0 / 0.45);
+    --float-edge: inset 0 1px 0 rgb(255 255 255 / 0.07);
+    --float-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.035), rgb(255 255 255 / 0) 120px);
+    --glass-bg: rgb(var(--bg-elevated));
+    --glass-modal-bg: rgb(var(--bg-elevated));
+    --glass-border: rgb(var(--border-soft));
+    --glass-highlight: transparent;
+
+    /* ── Type ── */
+    --font-ui: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+
+    /* ── Notification counts carry the signal colour ── */
+    --notification: 116 102 232;
+
+    /* ── Motion: one curve that eases out long, one that springs past the end
+     * and settles, four lengths. `reduce` in the settings cuts them all down. ── */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dur-fast: 120ms;
+    --dur-base: 200ms;
+    --dur-slow: 320ms;
+    --dur-slower: 520ms;
+
+    /* ── Light: the colour of the place (AmbientLight sets it), and a fine grain
+     * that keeps dark gradients from banding. ── */
+    --place-target: rgb(var(--accent-primary));
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .03 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
+  /* A spring that really is one where the browser can draw it. */
+  @supports (transition-timing-function: linear(0, 1)) {
+    :root {
+      --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1.004 83.8%, 1);
+    }
+  }
+
+  /* The ways a person can change the look (Settings, Appearance). Each is a
+   * data attribute, set on <html> by AppearanceController; the previews in the
+   * settings set the same attributes on themselves, so the CSS is the one place
+   * that knows what a choice means. */
+  [data-font='geist'] {
+    --font-ui: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  [data-font='plexSans'] {
+    --font-ui: 'IBM Plex Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  [data-font='inter'] {
+    --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  [data-font='grotesk'] {
+    --font-ui: 'Space Grotesk', 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  [data-font='mono'] {
+    --font-ui: 'Geist Mono', 'Geist', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  }
+  [data-font='system'] {
+    --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  /* A surface theme puts its text colours on <html> as inline variables, which
+     beat any rule here. The text of high contrast has to win over them, or the
+     setting would only reach the borders on every theme but Carbon. */
+  html[data-contrast='high'] {
+    --text-secondary: 206 208 216 !important;
+    --text-tertiary: 182 185 196 !important;
+    --text-category: 188 191 202 !important;
+    --text-message: 243 244 247 !important;
+    --border-hard: 72 74 85;
+    --border-soft: 96 98 112;
+    --interactive-muted: 112 115 130;
+    --glass-border: rgb(118 121 136);
+  }
+
+  /* A status palette that does not rely on telling red from green. */
+  html[data-status-palette='accessible'] {
+    --status-online: 70 170 255;
+    --status-idle: 255 214 80;
+    --status-dnd: 255 140 40;
+    --status-offline: 120 119 112;
+  }
+
+  html[data-sidebar='narrow'] { --sidebar-width: 216px; }
+  html[data-sidebar='wide'] { --sidebar-width: 296px; }
+
+  html[data-density='compact'] { --msg-gap: 0.5rem; --msg-pad: 0px; }
+  html[data-density='spacious'] { --msg-gap: 1.5rem; --msg-pad: 5px; }
+
+  [data-avatar='circle'] { --avatar-roundness: 0.5; }
+  [data-avatar='square'] { --avatar-roundness: 0.06; }
+
+  /* Links that are told apart by more than their colour. */
+  html[data-links='underline'] a[href] {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Browsers draw a focus ring on any focused element and designers usually
+   * switch it off; the ring below comes back for the keyboard only
+   * (:focus-visible does not match a mouse click on a button or link), so it is
+   * invisible to a mouse user and always there for someone tabbing around. Text
+   * fields keep their own ring (`input-standard` and friends). */
   * {
     @apply border-0;
-    outline: none !important;
+  }
+
+  :where(a, button, summary, select, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [role='switch'], [role='checkbox'], [role='radio'], [tabindex]:not([tabindex='-1'])):focus-visible {
+    outline: 2px solid rgb(var(--accent-primary-soft));
+    outline-offset: 2px;
+  }
+
+  :where(input, textarea):focus-visible {
+    outline-offset: 0;
   }
 
   ::selection {
-    background: rgba(134, 239, 172, 0.25);
+    background: rgb(var(--accent-primary) / 0.4);
     color: rgb(var(--text-primary));
   }
 
   html, body, #root {
     @apply h-full w-full overflow-hidden bg-surface-base text-txt-message;
-    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    font-optical-sizing: auto;
+    font-family: var(--font-ui);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
 
-  :root:lang(ru) body,
-  :root:lang(ru) #root {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  /* The product page (landing/) is a document that scrolls as a whole, where the
+     app is a fixed frame that scrolls inside its panels. */
+  html[data-page='landing'],
+  html[data-page='landing'] body,
+  html[data-page='landing'] #root {
+    height: auto;
+    min-height: calc(100 * var(--app-vh));
+    overflow: visible;
+  }
+  html[data-page='landing'] {
+    scroll-padding-top: 72px;
+  }
+  html[data-page='landing'] body {
+    overflow-x: clip;
   }
 
-  /* Simplified Chinese takes the platform stack outright. Neither DM Sans
-     nor the bundled Inter subset has Han glyphs, and a CJK face is several
-     megabytes, so the fix is to stop naming a Latin webfont at all: each OS
-     Latin face is listed directly ahead of the CJK companion it ships with,
-     so Latin, digits and Han come from one designed pair instead of a
-     webfont for the first two and a fallback for the third. */
+  /* Numbers that change (times, counts, sizes) keep their width, so a clock
+     ticking over does not nudge the line it sits on. */
+  time, .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Simplified Chinese takes the platform stack outright. The bundled Latin
+     faces have no Han glyphs and a CJK face is several megabytes, so the fix is
+     to stop naming a Latin webfont at all: each OS Latin face is listed directly
+     ahead of the CJK companion it ships with, so Latin, digits and Han come from
+     one designed pair instead of a webfont for the first two and a fallback for
+     the third. */
   :root:lang(zh) body,
   :root:lang(zh) #root {
     font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Segoe UI', 'Microsoft YaHei', system-ui, 'Noto Sans CJK SC', 'Noto Sans SC', sans-serif;
@@ -153,7 +434,7 @@
     user-select: none;
   }
 
-  /* Thin scrollbar */
+  /* Scrollbars: a narrow bar that is only there when it is needed. */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -163,151 +444,1634 @@
     background: transparent;
   }
 
+  /* The thumb is a hairline-coloured bar inset by its transparent border; it
+     lightens to the muted control colour under the pointer. */
   ::-webkit-scrollbar-thumb {
-    background-color: rgb(var(--bg-input));
-    border-radius: 9999px;
+    background-color: rgb(var(--border-soft));
+    border-radius: 4px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(var(--bg-channel));
+    background-color: rgb(var(--interactive-muted));
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
   }
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
 
+  /* Check boxes and radio buttons, drawn in the app's own terms: a sunken box
+     edged like a field, violet while on. A size or margin utility beside them
+     still wins, these sit in the base layer. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    appearance: none;
+    display: inline-grid;
+    flex-shrink: 0;
+    place-content: center;
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgb(var(--border-soft));
+    background-color: rgb(var(--bg-input));
+    cursor: pointer;
+    transition: background-color 100ms ease, border-color 100ms ease;
+  }
+  input[type='checkbox'] {
+    border-radius: calc(3px * var(--radius-scale));
+  }
+  input[type='radio'] {
+    border-radius: 9999px;
+  }
+  input[type='checkbox']:hover:not(:disabled),
+  input[type='radio']:hover:not(:disabled) {
+    border-color: rgb(var(--interactive-muted));
+  }
+  input[type='checkbox']:checked,
+  input[type='radio']:checked {
+    border-color: rgb(var(--accent-primary));
+    background-color: rgb(var(--accent-primary));
+  }
+  input[type='checkbox']:checked::before {
+    content: '';
+    width: 9px;
+    height: 5px;
+    margin-top: -2px;
+    border-bottom: 1.5px solid #fff;
+    border-left: 1.5px solid #fff;
+    transform: rotate(-45deg);
+  }
+  input[type='radio']:checked::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background-color: #fff;
+  }
+  input[type='checkbox']:disabled,
+  input[type='radio']:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  input[type='checkbox']:focus-visible,
+  input[type='radio']:focus-visible {
+    outline: 2px solid rgb(var(--accent-primary-soft));
+    outline-offset: 2px;
+  }
+
   /* Dark theme auto-fill */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus {
-    -webkit-text-fill-color: #ffffff;
-    -webkit-box-shadow: 0 0 0px 1000px #111118 inset;
+    -webkit-text-fill-color: rgb(var(--text-primary));
+    -webkit-box-shadow: 0 0 0px 1000px rgb(var(--bg-input)) inset;
     transition: background-color 5000s ease-in-out 0s;
   }
 }
 
 @layer components {
-  /* ── Glass Material Tiers ──
-   * .glass        — Popovers, context menus, autocomplete (small, no backdrop)
-   * .glass-modal  — Center-screen dialogs (large, with backdrop, higher opacity for legibility)
-   * .glass-strip  — Space sidebar edge (moved to @layer utilities to win over bg-surface-* utilities)
-   * .glass-bubble — Persistent floating controls (voice bar, input pill)
-   * .glass-pill   — Inline decorations (reactions, tags, lighter blur)
-   *
-   * RULE: Every floating surface uses a glass tier. Never use bg-surface-elevated for overlays.
-   * See CLAUDE.md "Surface Material Tiers" for the full decision guide.
-   */
-
-  /* Standard glass — popovers, floating elements */
-  .glass {
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    backdrop-filter: blur(20px) saturate(120%);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.25),
-      0 8px 24px rgba(0, 0, 0, 0.15),
-      inset 0 1px 0 var(--glass-highlight);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  /* ── Type ──
+   * The small markings of the interface (a category, a section, a count, a time)
+   * are set in Geist Mono capitals, spaced out a little: they read as labels, not
+   * as content. Their own grey (--text-category) sits a step above the tertiary
+   * text, so an 11px label stays legible on every surface. */
+  /* Under a message a thread grew from: the way in. */
+  .thread-chip {
+    margin-top: 0.25rem;
+    display: flex;
+    width: fit-content;
+    max-width: min(100%, 440px);
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: calc(5px * var(--radius-scale));
+    border: 1px solid rgb(var(--border-hard));
+    background-color: rgb(var(--bg-input));
+    padding: 0.25rem 0.625rem;
+    font-size: 12px;
+    transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  }
+  .thread-chip:hover {
+    border-color: rgb(var(--border-soft));
+    background-color: var(--interactive-row);
   }
 
-  /* Floating bubble glass — bottom bar, input pill */
-  .glass-bubble {
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    backdrop-filter: blur(20px) saturate(120%);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.20),
-      0 8px 24px rgba(0, 0, 0, 0.12),
-      inset 0 1px 0 var(--glass-highlight);
-  }
-
-  /* Modal glass — center-screen dialogs with backdrop.
-     The blur and the tint sit on a layer behind the dialog's content
-     (::before), not on the dialog itself. An element with backdrop-filter
-     is the backdrop root for everything inside it, so a glass control
-     inside the dialog (a Save/Discard pill over scrolling rows) would blur
-     nothing. With the filter on the layer, nested glass works: see
-     design-system.md, "Nested glass". `position: relative` places the layer
-     and loses to a `fixed`/`absolute` utility on the dialog; `isolation`
-     keeps the layer behind the content without making the dialog a
-     backdrop root. */
-  .glass-modal {
+  /* One answer of a poll. The bar behind it is its share, once the count may be seen. */
+  .poll-option {
     position: relative;
-    isolation: isolate;
-    border: 1px solid var(--glass-border);
-    box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.30),
-      0 12px 40px rgba(0, 0, 0, 0.20),
-      inset 0 1px 0 var(--glass-highlight);
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    overflow: hidden;
+    border-radius: calc(5px * var(--radius-scale));
+    border: 1px solid rgb(var(--border-hard));
+    background-color: rgb(var(--bg-input));
+    padding: 0.4375rem 0.625rem;
+    transition: border-color var(--dur-fast) var(--ease-out);
   }
-  .glass-modal::before {
+  .poll-option::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--poll-share, 0%);
+    background-color: rgb(var(--interactive-muted) / 0.28);
+    transition: width var(--dur-slow) var(--ease-out);
+  }
+  .poll-option[data-mine='true']::before {
+    background-color: rgb(var(--accent-primary) / 0.25);
+  }
+  .poll-option:not(:disabled):hover {
+    border-color: rgb(var(--border-soft));
+  }
+  .poll-option[data-mine='true'] {
+    border-color: rgb(var(--accent-primary) / 0.6);
+  }
+
+  /* Picking messages to delete together: every row is one big box, and its links do nothing. */
+  .msg-row[data-selecting='true'] {
+    cursor: pointer;
+    padding-left: 2.25rem;
+  }
+  .msg-row[data-picked='true'],
+  .msg-row[data-picked='true']:hover {
+    background-color: rgb(var(--accent-primary) / 0.12);
+  }
+  .msg-pick {
+    position: absolute;
+    left: 0.625rem;
+    top: 0.5rem;
+    display: flex;
+    height: 1rem;
+    width: 1rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(3px * var(--radius-scale));
+    border: 1px solid rgb(var(--border-soft));
+    background-color: rgb(var(--bg-input));
+    color: rgb(255 255 255);
+  }
+  .msg-pick[data-picked='true'] {
+    border-color: rgb(var(--accent-primary));
+    background-color: rgb(var(--accent-primary));
+  }
+
+  /* A spoiler: covered until a reader asks. The cover is drawn by the reader's own client. */
+  .spoiler {
+    border-radius: calc(3px * var(--radius-scale));
+    padding: 0 2px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+  .spoiler:not([data-revealed]) {
+    cursor: pointer;
+    color: transparent;
+    background-color: rgb(var(--interactive-muted));
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .spoiler:not([data-revealed]) * {
+    visibility: hidden;
+  }
+  .spoiler:not([data-revealed]):hover {
+    background-color: rgb(var(--border-soft));
+  }
+  .spoiler:focus-visible {
+    outline: 2px solid rgb(var(--accent-primary));
+    outline-offset: 1px;
+  }
+  .spoiler[data-revealed] {
+    background-color: rgb(var(--interactive-muted) / 0.3);
+  }
+  .spoiler-cover {
+    position: relative;
+    display: block;
+    min-height: 96px;
+    min-width: 160px;
+    overflow: hidden;
+    border-radius: calc(8px * var(--radius-scale));
+    border: 1px solid rgb(var(--border-hard));
+    background-color: rgb(var(--bg-input));
+  }
+  .spoiler-cover img {
+    filter: blur(28px);
+    transform: scale(1.15);
+  }
+  .spoiler-cover-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: calc(4px * var(--radius-scale));
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgb(var(--text-primary));
+    background-color: rgb(var(--bg-base) / 0.8);
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+  .spoiler-cover:hover .spoiler-cover-label {
+    background-color: rgb(var(--bg-base));
+  }
+
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgb(var(--text-category));
+  }
+
+  /* The name of a form field, above it: sentence case, one size everywhere. */
+  .field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: rgb(var(--text-secondary));
+  }
+
+  /* A legal document's Markdown: headings, paragraphs and lists to read through. */
+  .legal-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgb(var(--text-secondary));
+    overflow-wrap: anywhere;
+  }
+  .legal-text h1 {
+    margin-bottom: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: rgb(var(--text-primary));
+  }
+  .legal-text h2 {
+    margin: 20px 0 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: rgb(var(--text-primary));
+  }
+  .legal-text p {
+    margin-bottom: 10px;
+  }
+  .legal-text ul,
+  .legal-text ol {
+    margin-bottom: 10px;
+    padding-left: 20px;
+    list-style: disc;
+  }
+  .legal-text li {
+    margin-bottom: 4px;
+  }
+
+  /* Large type carries a little light of its own: bright at the top, falling off
+     toward the surface below. It is drawn from the text colour and the surface, so
+     it holds on every theme, and where colours are the reader's it is plain text. */
+  .ink {
+    color: rgb(var(--text-primary));
+    background-image: linear-gradient(180deg, rgb(var(--text-primary)) 38%, color-mix(in srgb, rgb(var(--text-primary)) 72%, rgb(var(--bg-chat))) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  html[data-contrast='high'] .ink {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+  @media (forced-colors: active) {
+    .ink {
+      background-image: none;
+      -webkit-text-fill-color: currentColor;
+    }
+  }
+
+  /* The title of a page or a settings panel: one size everywhere. */
+  .page-title {
+    font-size: 20px;
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    padding-bottom: 0.05em;
+    color: rgb(var(--text-primary));
+    background-image: linear-gradient(180deg, rgb(var(--text-primary)) 38%, color-mix(in srgb, rgb(var(--text-primary)) 72%, rgb(var(--bg-chat))) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  html[data-contrast='high'] .page-title {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+  @media (forced-colors: active) {
+    .page-title {
+      background-image: none;
+      -webkit-text-fill-color: currentColor;
+    }
+  }
+
+  /* The large title that opens a page of its own (Home, Explore, the sign-in): the
+     product page's type, at the size of a window. */
+  .display-title {
+    font-size: clamp(2rem, calc(3.2 * var(--app-vw)), 3.25rem);
+    font-weight: 680;
+    line-height: 1.05;
+    letter-spacing: -0.045em;
+    padding-bottom: 0.08em;
+    text-wrap: balance;
+  }
+  /* The same, for a page with next to nothing else on it. */
+  .display-hero {
+    font-size: clamp(2.5rem, calc(5.6 * var(--app-vw)), 5.25rem);
+    line-height: 0.98;
+    letter-spacing: -0.05em;
+  }
+  :root:lang(zh) .display-title,
+  :root:lang(zh) .page-title {
+    letter-spacing: 0;
+    line-height: 1.15;
+  }
+
+  /* ── Light ──
+   * The panels of the frame share one field of light: it is anchored to the
+   * window, not to each panel, so it runs across them unbroken while each keeps its
+   * own tone, and it sits behind their content, so text is never tinted. A place
+   * has a colour (a space's, the person you are talking to, the accent at home) and
+   * the field fades over when you move. Off with higher contrast, for people who
+   * switch it off (Settings, Appearance), and where the reader sets the colours. */
+  .lit,
+  html[data-viewport='mobile'] .lit-phone {
+    --place-color: var(--place-target);
+    background-image:
+      var(--grain),
+      radial-gradient(62% 68% at 84% -10%, color-mix(in srgb, var(--place-color) 36%, transparent) 0%, color-mix(in srgb, var(--place-color) 13%, transparent) 46%, transparent 74%),
+      radial-gradient(38% 50% at 10% -8%, color-mix(in srgb, var(--place-color) 13%, transparent) 0%, transparent 74%);
+    background-size: 220px, auto, auto;
+    background-repeat: repeat, no-repeat, no-repeat;
+    background-attachment: fixed;
+    transition: --place-color var(--dur-slower) var(--ease-out);
+  }
+  /* The light of the pages outside the app (signing in, an invite, the download).
+     It is the ground of the whole page, and it is stronger, because
+     there is little on these pages for it to compete with. */
+  .stage-light {
+    background-image:
+      var(--grain),
+      radial-gradient(46% 42% at 88% 6%, rgb(var(--accent-primary) / 0.72) 0%, rgb(var(--accent-primary) / 0.26) 46%, transparent 74%),
+      radial-gradient(48% 36% at 64% 84%, rgb(var(--accent-primary) / 0.34) 0%, rgb(var(--accent-primary) / 0.1) 50%, transparent 76%),
+      radial-gradient(30% 36% at 100% 46%, rgb(var(--accent-primary-soft) / 0.28) 0%, transparent 70%),
+      radial-gradient(38% 30% at 6% 0%, rgb(255 255 255 / 0.05) 0%, transparent 72%);
+    background-size: 220px, auto, auto, auto, auto;
+    background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+    background-attachment: fixed;
+  }
+  /* A panel inside a dialog: the dialog is a room of its own, lit from its far corner. */
+  .panel-light {
+    background-image:
+      var(--grain),
+      radial-gradient(70% 320px at 84% 0%, rgb(var(--accent-primary) / 0.13), rgb(var(--accent-primary) / 0) 100%);
+    background-size: 220px, auto;
+    background-repeat: repeat, no-repeat;
+  }
+  html[data-light='off'] .lit,
+  html[data-contrast='high'] .lit,
+  html[data-light='off'] .lit-phone,
+  html[data-contrast='high'] .lit-phone,
+  html[data-light='off'] .stage-light,
+  html[data-contrast='high'] .stage-light,
+  html[data-light='off'] .panel-light,
+  html[data-contrast='high'] .panel-light {
+    background-image: none;
+  }
+  @media (forced-colors: active) {
+    .lit,
+    .lit-phone,
+    .stage-light,
+    .panel-light {
+      background-image: none;
+    }
+  }
+
+  /* Rings and the glow in them, behind the opening of a page of its own.
+     It goes first in what scrolls, which is `relative isolate`, so it
+     scrolls away with the opening and never makes the page wider. */
+  .hero-light {
+    position: absolute;
+    z-index: -1;
+    inset: 0 0 auto 0;
+    height: 640px;
+    overflow: hidden;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 45%, transparent 100%);
+  }
+  .hero-light::before {
+    content: '';
+    position: absolute;
+    top: -420px;
+    right: -220px;
+    width: 980px;
+    height: 980px;
+    border-radius: 9999px;
+    border: 1px solid rgb(255 255 255 / 0.075);
+  }
+  .hero-light::after {
+    content: '';
+    position: absolute;
+    top: -250px;
+    right: -50px;
+    width: 640px;
+    height: 640px;
+    border-radius: 9999px;
+    border: 1px solid rgb(255 255 255 / 0.055);
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--place-target) 42%, transparent) 0%, color-mix(in srgb, var(--place-target) 12%, transparent) 62%, transparent 100%);
+  }
+  html[data-light='off'] .hero-light,
+  html[data-contrast='high'] .hero-light {
+    display: none;
+  }
+  @media (forced-colors: active) {
+    .hero-light {
+      display: none;
+    }
+  }
+
+  /* A place as a tile or a banner: lit from a corner in its own colour (`--tile`). */
+  .tinted-card {
+    background-image:
+      radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--tile) 19%, transparent) 0%, transparent 62%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.022), rgb(255 255 255 / 0) 70%);
+  }
+  /* A banner painted by the app, not a picture: grain over it and a shade toward what
+     follows, so it has depth and the words under it stay clear of it. */
+  .banner-depth {
+    position: relative;
+  }
+  .banner-depth::after {
     content: '';
     position: absolute;
     inset: 0;
-    z-index: -1;
+    pointer-events: none;
+    background-image: var(--grain), linear-gradient(180deg, rgb(0 0 0 / 0) 35%, rgb(0 0 0 / 0.38) 100%);
+    background-size: 220px, auto;
+  }
+
+  /* The number of a stat tile: proportional figures, they read better large. */
+  .stat-value {
+    font-size: 28px;
+    font-weight: 620;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: rgb(var(--text-primary));
+  }
+
+  /* The marks of a chart (admin/DayChart.tsx): thin, rounded at their free end, with a ring
+     of the surface round a dot so it stays clear of the line it sits on. */
+  .chart-column {
+    width: 100%;
+    max-width: 24px;
+    border-radius: calc(4px * var(--radius-scale)) calc(4px * var(--radius-scale)) 0 0;
+    background-color: rgb(var(--accent-primary));
+    transition: filter var(--dur-fast) ease;
+  }
+  .chart-column-active {
+    filter: brightness(1.3);
+  }
+  .chart-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 9999px;
+    background-color: rgb(var(--accent-primary));
+    box-shadow: 0 0 0 2px rgb(var(--bg-chat));
+    pointer-events: none;
+  }
+  .chart-dot-small {
+    width: 6px;
+    height: 6px;
+    margin: -3px 0 0 -3px;
+  }
+
+  /* What the operator says to everyone (ui/AnnouncementBar.tsx). */
+  .announcement {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4375rem 0.75rem;
+    font-size: 13px;
+    line-height: 1.4;
+    color: rgb(var(--text-primary));
+    background-color: rgb(var(--bg-channel));
+    background-image: linear-gradient(90deg, rgb(var(--accent-primary) / 0.3), rgb(var(--accent-primary) / 0.1));
+  }
+  .announcement-warning {
+    background-image: linear-gradient(90deg, rgb(var(--accent-amber) / 0.3), rgb(var(--accent-amber) / 0.1));
+  }
+
+  /* The search that opens a page of its own, with the size of the button beside it. */
+  .jump-field {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    height: 2.5rem;
+    padding: 0 0.75rem;
+    border: 1px solid rgb(var(--border-soft));
+    border-radius: calc(5px * var(--radius-scale));
+    background-color: rgb(var(--bg-input));
+    font-size: 13px;
+    color: rgb(var(--text-tertiary));
+    text-align: left;
+    transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+  }
+  .jump-field:hover {
+    border-color: rgb(var(--interactive-muted));
+    color: rgb(var(--text-secondary));
+  }
+
+  /* ── Bars ──
+   * The header of a column (the channel's title, the space's name, a page's
+   * title): a fixed height and a hairline under it. */
+  .panel-bar {
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+    min-height: var(--topbar-height);
+    border-bottom: 1px solid rgb(var(--border-hard));
+  }
+
+  /* The top bar's strip of tabs scrolls sideways when they do not fit. Its last
+     few pixels fade out, so a tab cut off at the edge reads as more to scroll to
+     and not as a broken tab; the padding keeps the last one clear of the fade
+     once scrolled to the end, or when everything fits. */
+  .tab-strip {
+    padding-right: 16px;
+    mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+  }
+  /* Once scrolled, its start fades out the same way, so the tab leaving on that side does too. */
+  .tab-strip[data-scrolled='true'] {
+    mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+  }
+
+  /* A card: a step lighter than what it sits on, edged by a hairline. Its
+     corner comes from the caller (`rounded-lg`, 6px, for cards and tiles). */
+  .surface-card {
+    background-color: rgb(255 255 255 / 0.018);
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.022), rgb(255 255 255 / 0) 70%);
+    border: 1px solid rgb(var(--border-hard));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+  }
+
+  /* A card you can act on rises toward the pointer and casts a shadow, in its own
+     colour where it has one (`--tile`). */
+  .lift {
+    transition:
+      transform var(--dur-slow) var(--ease-out),
+      box-shadow var(--dur-slow) var(--ease-out),
+      border-color var(--dur-base) ease,
+      background-color var(--dur-base) ease;
+  }
+  .lift:hover:where(:not(:disabled)) {
+    transform: translateY(-2px);
+    border-color: rgb(var(--border-soft));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
+      0 22px 44px -22px rgb(0 0 0 / 0.9),
+      0 0 70px -26px color-mix(in srgb, var(--tile, rgb(var(--accent-primary))) 70%, transparent);
+  }
+  .lift:active:where(:not(:disabled)) {
+    transform: translateY(0) scale(0.995);
+    transition-duration: var(--dur-fast);
+  }
+  html[data-viewport='mobile'] .lift:hover {
+    transform: none;
+  }
+
+  /* A soft light that follows the pointer across a card (utils/pointerLight.ts). */
+  .spotlight {
+    position: relative;
+    isolation: isolate;
+  }
+  .spotlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
     border-radius: inherit;
     pointer-events: none;
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    backdrop-filter: blur(20px) saturate(120%);
-    background: var(--glass-modal-bg);
+    opacity: 0;
+    background: radial-gradient(280px circle at var(--pointer-x, 50%) var(--pointer-y, 0%), rgb(255 255 255 / 0.065), rgb(255 255 255 / 0) 72%);
+    transition: opacity var(--dur-slow) ease;
+  }
+  .spotlight:hover::before {
+    opacity: 1;
   }
 
-  /* Reaction pill glass — lighter blur for small inline elements */
+  /* ── Navigation rows ──
+   * One row of any navigation list: the sidebars, the home links, the
+   * settings navigation. Selected is a step lighter with a short violet bar on
+   * its left edge (`data-active="true"`, or `aria-current="page"` on a link);
+   * unread is the primary colour in a heavier weight (`data-unread="true"`).
+   * A row that needs more height (two lines, a larger picture) sets it with a
+   * utility, which wins over this layer. */
+  .nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: calc(5px * var(--radius-scale));
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.25;
+    text-align: left;
+    color: rgb(var(--text-secondary));
+    transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+  }
+  .nav-item:hover:where(:not(:disabled, [aria-disabled='true'])) {
+    background-color: var(--interactive-hover);
+    color: rgb(var(--text-primary));
+  }
+  .nav-item:active:where(:not(:disabled, [aria-disabled='true'])) {
+    background-color: var(--interactive-active);
+  }
+  .nav-item[data-unread='true'] {
+    color: rgb(var(--text-primary));
+    font-weight: 600;
+  }
+  .nav-item[data-active='true'],
+  .nav-item[aria-current='page'] {
+    background-color: var(--interactive-selected);
+    background-image: linear-gradient(90deg, rgb(var(--accent-primary) / 0.14), rgb(var(--accent-primary) / 0) 70%);
+    color: rgb(var(--text-primary));
+  }
+  .nav-item[data-active='true']::before,
+  .nav-item[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    height: 16px;
+    max-height: calc(100% - 8px);
+    width: 2px;
+    transform: translateY(-50%);
+    border-radius: 0 1px 1px 0;
+    background-color: rgb(var(--accent-primary));
+    box-shadow: 0 0 10px rgb(var(--accent-primary) / 0.9);
+  }
+
+  /* ── The mark that slides ──
+   * In a list with a `SlidingMark` the active row does not light up on its own: one
+   * mark moves from the row you left to the row you chose. `.sliding-list` is what
+   * the mark is placed in; `data-marked` is set once it has found its place, so a
+   * list whose mark has nothing to do looks as it always does. */
+  .sliding-list {
+    position: relative;
+  }
+  .sliding-list[data-marked='true'] .nav-item[data-active='true'],
+  .sliding-list[data-marked='true'] .nav-item[aria-current='page'] {
+    background-color: transparent;
+    background-image: none;
+  }
+  .sliding-list[data-marked='true'] .nav-item[data-active='true']::before,
+  .sliding-list[data-marked='true'] .nav-item[aria-current='page']::before {
+    display: none;
+  }
+  .sliding-list[data-marked='true'] .nav-item[data-active='true']:hover,
+  .sliding-list[data-marked='true'] .nav-item[aria-current='page']:hover {
+    background-color: rgb(255 255 255 / 0.02);
+  }
+  .sliding-list[data-marked='true'] [data-active-mark],
+  .sliding-list[data-marked='true'] [data-active-line] {
+    visibility: hidden;
+  }
+  .sliding-mark {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition:
+      transform var(--dur-slow) var(--ease-out),
+      width var(--dur-slow) var(--ease-out),
+      height var(--dur-slow) var(--ease-out),
+      opacity var(--dur-fast) ease;
+  }
+  .sliding-mark[data-placed='false'] {
+    transition: none;
+  }
+  .sliding-mark[data-on='true'] {
+    opacity: 1;
+  }
+  /* The line of a tab that has no mark to slide, or until it has. */
+  .active-line {
+    border-radius: 1px 1px 0 0;
+    background-color: rgb(var(--accent-primary));
+    box-shadow: 0 0 12px rgb(var(--accent-primary) / 0.85), 0 -6px 18px rgb(var(--accent-primary) / 0.28);
+  }
+  /* A lit row behind a list's active row, with its violet edge. */
+  .sliding-mark-row {
+    border-radius: calc(5px * var(--radius-scale));
+    background-color: var(--interactive-selected);
+    background-image: linear-gradient(90deg, rgb(var(--accent-primary) / 0.14), rgb(var(--accent-primary) / 0) 70%);
+  }
+  .sliding-mark-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    height: 16px;
+    max-height: calc(100% - 8px);
+    width: 2px;
+    transform: translateY(-50%);
+    border-radius: 0 1px 1px 0;
+    background-color: rgb(var(--accent-primary));
+    box-shadow: 0 0 10px rgb(var(--accent-primary) / 0.9);
+  }
+  /* A line under the tab you are on, and the light it throws upward. */
+  .sliding-mark-line {
+    border-radius: 1px 1px 0 0;
+    background-color: rgb(var(--accent-primary));
+    box-shadow: 0 0 12px rgb(var(--accent-primary) / 0.85), 0 -6px 18px rgb(var(--accent-primary) / 0.28);
+  }
+  /* The fill behind the chosen part of a control. */
+  .sliding-mark-pill {
+    border-radius: calc(4px * var(--radius-scale));
+    background-color: var(--interactive-selected);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 3px rgb(0 0 0 / 0.4);
+  }
+
+  /* ── Content rows ──
+   * An interactive row of a list in the page itself (Home, the inbox, a
+   * panel): a picture, a title over a secondary line, something at the end. */
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: calc(6px * var(--radius-scale));
+    text-align: left;
+    transition: background-color 100ms ease;
+  }
+  .list-row:hover:where(:not(:disabled, [aria-disabled='true'])) {
+    background-color: var(--interactive-hover);
+  }
+  .list-row:active:where(:not(:disabled, [aria-disabled='true'])) {
+    background-color: var(--interactive-active);
+  }
+  .list-row[data-active='true'] {
+    background-color: var(--interactive-selected);
+  }
+  /* A row sits in a scrolling column, which would cut a ring drawn outside it. */
+  .nav-item:focus-visible,
+  .list-row:focus-visible {
+    outline-offset: -2px;
+  }
+  .nav-item:disabled,
+  .nav-item[aria-disabled='true'],
+  .list-row:disabled,
+  .list-row[aria-disabled='true'] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* ── Icon buttons ──
+   * A square button that is only an icon: quiet until it is pointed at, a
+   * step lighter while what it toggles is on (`data-active="true"`). It
+   * carries its name in `aria-label` (and `title` for the pointer). */
+  .icon-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: calc(5px * var(--radius-scale));
+    color: rgb(var(--text-tertiary));
+    transition: background-color 100ms ease, color 100ms ease;
+  }
+  .icon-btn-lg {
+    width: 32px;
+    height: 32px;
+  }
+  .icon-btn:hover:where(:not(:disabled)) {
+    background-color: var(--interactive-hover);
+    color: rgb(var(--text-primary));
+  }
+  .icon-btn:active:where(:not(:disabled)) {
+    background-color: var(--interactive-active);
+  }
+  .icon-btn[data-active='true'] {
+    background-color: var(--interactive-selected);
+    color: rgb(var(--text-primary));
+  }
+  .icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* A badge by a name: quiet, a little larger under the pointer, and it answers a click. */
+  .badge-mark {
+    display: inline-flex;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: transform 160ms cubic-bezier(.34, 1.56, .64, 1), filter 160ms ease;
+  }
+  .badge-mark:hover,
+  .badge-mark[aria-expanded='true'] {
+    transform: scale(1.18);
+    filter: brightness(1.2);
+  }
+  .badge-mark:active {
+    transform: scale(.94);
+  }
+
+  /* One icon in the choice of a role's icons: a little larger under the pointer. */
+  .role-glyph-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    border-radius: calc(5px * var(--radius-scale));
+    color: rgb(var(--text-tertiary));
+    transition: background-color 100ms ease, color 100ms ease;
+  }
+  .role-glyph-option > svg {
+    transition: transform 160ms cubic-bezier(.34, 1.56, .64, 1);
+  }
+  .role-glyph-option:hover:where(:not(:disabled)) {
+    background-color: var(--interactive-hover);
+    color: rgb(var(--text-primary));
+  }
+  .role-glyph-option:hover:where(:not(:disabled)) > svg {
+    transform: scale(1.16);
+  }
+  .role-glyph-option:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* A switch: its thumb goes a little past where it stops, and comes back. */
+  .toggle-track {
+    transition: background-color var(--dur-base) ease;
+  }
+  .toggle-thumb {
+    transition: transform var(--dur-slow) var(--ease-spring);
+  }
+
+  /* ── Counts and keys ──
+   * An unread or mention count: a small square-cornered tag in the signal
+   * colour with white figures. `.count-badge-muted` is the neutral one, for
+   * a muted place; it works alone or added to `.count-badge`. */
+  .count-badge,
+  .count-badge-muted {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    height: 16px;
+    min-width: 16px;
+    padding: 0 4px;
+    border-radius: calc(4px * var(--radius-scale));
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .count-badge {
+    background-color: rgb(var(--accent-primary));
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0));
+    box-shadow: 0 0 12px -2px rgb(var(--accent-primary) / 0.7);
+    color: #fff;
+  }
+  .count-badge-muted {
+    background-color: rgb(255 255 255 / 0.1);
+    background-image: none;
+    box-shadow: none;
+    color: rgb(var(--text-secondary));
+  }
+
+  /* A key of a keyboard shortcut. */
+  .kbd {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    height: 18px;
+    padding: 0 5px;
+    border: 1px solid rgb(var(--border-soft));
+    border-radius: calc(3px * var(--radius-scale));
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1;
+    color: rgb(var(--text-tertiary));
+    white-space: nowrap;
+  }
+
+  /* ── Empty states ──
+   * What a list says when it has nothing in it: an outlined icon in the product
+   * page's rings, one line that names the situation and one that says what to do
+   * about it. */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 28px 16px;
+    text-align: center;
+  }
+  .empty-state-icon {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+    border: 1px solid rgb(var(--border-soft));
+    border-radius: 9999px;
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0));
+    color: rgb(var(--text-secondary));
+  }
+  .empty-state-icon::before,
+  .empty-state-icon::after {
+    content: '';
+    position: absolute;
+    border-radius: inherit;
+    border: 1px solid rgb(255 255 255 / 0.05);
+    pointer-events: none;
+  }
+  .empty-state-icon::before {
+    inset: -11px;
+  }
+  .empty-state-icon::after {
+    inset: -24px;
+    border-color: rgb(255 255 255 / 0.03);
+  }
+  .empty-state-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: rgb(var(--text-primary));
+  }
+  .empty-state-body {
+    max-width: 320px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgb(var(--text-secondary));
+  }
+
+  /* ── Floating layers ──
+   * .glass        — Popovers, context menus, autocomplete, tooltips
+   * .glass-modal  — Center-screen dialogs (with a scrim behind them)
+   * .glass-strip  — The phone's space strip (in @layer utilities to win over bg-surface-* utilities)
+   * .glass-bubble — Persistent controls that sit above the content (voice bar, composer)
+   * .glass-pill   — Inline decorations (reactions, tags)
+   *
+   * The names are the upstream design system's tiers and are kept so no
+   * component had to change; in Tavvit none of them is glass: each is the
+   * opaque elevated surface edged by a soft hairline, a little lighter at the
+   * top, with a lit top edge. RULE: anything that floats above the content
+   * plane uses one of them, never bg-surface-elevated directly, so the edge and
+   * the shadow stay consistent. Their corners are small (`rounded-lg` for menus,
+   * cards and dialogs, `rounded-md` for a tooltip).
+   */
+  .glass {
+    background-color: rgb(var(--bg-elevated));
+    background-image: var(--float-sheen);
+    border: 1px solid rgb(var(--border-soft));
+    box-shadow: var(--float-edge), var(--shadow-popover);
+  }
+
+  .glass-bubble {
+    background-color: rgb(var(--bg-elevated));
+    background-image: var(--float-sheen);
+    border: 1px solid rgb(var(--border-soft));
+    box-shadow: var(--float-edge), var(--shadow-popover);
+  }
+
+  /* The bar that carries a form's actions (Cancel / Save, Cancel / Create):
+     a flat elevated strip with a hairline, never a capsule. It sits at the
+     foot of a dialog or floats over a settings page when there are changes. */
+  .action-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.3125rem 0.3125rem 0.3125rem 0.5rem;
+    background-color: rgb(var(--bg-elevated));
+    background-image: var(--float-sheen);
+    border: 1px solid rgb(var(--border-soft));
+    border-radius: calc(6px * var(--radius-scale));
+    box-shadow: var(--float-edge), var(--shadow-popover);
+  }
+
+  /* Buttons. One geometry (32px tall, 13px medium text, a 5px corner, never a
+     capsule) in these weights: the accent fill for the one thing a form is for,
+     lit from above and glowing a little; a quiet text button beside it; an
+     outlined one for a secondary action that should still read as a button; the
+     danger fill for an action that destroys something; and white (`.btn-hero`)
+     for the one call to action on an opening page, as on the product page.
+     `.btn-sm` (28px) is the same button for a row or a toolbar. */
+  .btn-primary,
+  .btn-quiet,
+  .btn-outline,
+  .btn-danger,
+  .btn-hero {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    height: 2rem;
+    padding: 0 0.75rem;
+    border-radius: calc(5px * var(--radius-scale));
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-fast) ease,
+      color var(--dur-fast) ease,
+      border-color var(--dur-fast) ease,
+      box-shadow var(--dur-base) ease,
+      transform var(--dur-base) var(--ease-out);
+  }
+  .btn-primary:active:where(:not(:disabled)),
+  .btn-quiet:active:where(:not(:disabled)),
+  .btn-outline:active:where(:not(:disabled)),
+  .btn-danger:active:where(:not(:disabled)),
+  .btn-hero:active:where(:not(:disabled)) {
+    transform: scale(0.98);
+    transition-duration: var(--dur-fast);
+  }
+  .btn-primary {
+    --btn-glow: var(--accent-primary);
+    background-color: rgb(var(--accent-primary));
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 6px 18px -8px rgb(var(--btn-glow) / 0.8);
+    color: #fff;
+  }
+  .btn-primary:hover:where(:not(:disabled)) {
+    background-color: rgb(var(--accent-primary-hover));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.24), 0 10px 26px -8px rgb(var(--btn-glow));
+  }
+  .btn-primary:active:where(:not(:disabled)) {
+    background-color: rgb(var(--accent-primary-active));
+  }
+  .btn-hero {
+    background-color: #fff;
+    color: #101114;
+    font-weight: 600;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2), 0 10px 34px -8px rgb(var(--accent-primary) / 0.75);
+  }
+  .btn-hero:hover:where(:not(:disabled)) {
+    background-color: rgb(232 233 240);
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.28), 0 14px 40px -8px rgb(var(--accent-primary));
+  }
+  .btn-hero:active:where(:not(:disabled)) {
+    background-color: rgb(216 217 226);
+  }
+  .btn-hero:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .btn-hero:focus-visible {
+    outline: 2px solid rgb(var(--accent-primary-soft));
+    outline-offset: 2px;
+  }
+  .btn-hero[aria-busy='true'] {
+    cursor: progress;
+    pointer-events: none;
+  }
+  .btn-hero[aria-busy='true']::before {
+    content: '';
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 9999px;
+    animation: busyRing 0.7s linear infinite;
+  }
+  .btn-quiet {
+    color: rgb(var(--text-secondary));
+  }
+  .btn-quiet:hover:where(:not(:disabled)) {
+    background-color: var(--interactive-hover);
+    color: rgb(var(--text-primary));
+  }
+  .btn-quiet:active:where(:not(:disabled)) {
+    background-color: var(--interactive-active);
+  }
+  .btn-outline {
+    border: 1px solid rgb(var(--border-soft));
+    background-color: rgb(255 255 255 / 0.018);
+    color: rgb(var(--text-primary));
+  }
+  .btn-outline:hover:where(:not(:disabled)) {
+    background-color: var(--interactive-hover);
+    border-color: rgb(var(--interactive-muted));
+  }
+  .btn-outline:active:where(:not(:disabled)) {
+    background-color: var(--interactive-active);
+  }
+  /* A deeper rose than --accent-rose, so white text on it reads at 4.7:1. */
+  .btn-danger {
+    background-color: rgb(205 62 94);
+    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 6px 18px -8px rgb(205 62 94 / 0.8);
+    color: #fff;
+  }
+  .btn-danger:hover:where(:not(:disabled)) {
+    background-color: rgb(184 52 82);
+  }
+  .btn-danger:active:where(:not(:disabled)) {
+    background-color: rgb(163 45 72);
+  }
+  .btn-primary:disabled,
+  .btn-quiet:disabled,
+  .btn-outline:disabled,
+  .btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-primary:focus-visible,
+  .btn-quiet:focus-visible,
+  .btn-outline:focus-visible,
+  .btn-danger:focus-visible {
+    outline: 2px solid rgb(var(--accent-primary-soft));
+    outline-offset: 2px;
+  }
+  /* Working on it (`aria-busy="true"`): the label stays, a small ring turns
+     beside it, and the button stops answering until the work is done. */
+  .btn-primary[aria-busy='true'],
+  .btn-quiet[aria-busy='true'],
+  .btn-outline[aria-busy='true'],
+  .btn-danger[aria-busy='true'] {
+    cursor: progress;
+    pointer-events: none;
+  }
+  .btn-primary[aria-busy='true']::before,
+  .btn-quiet[aria-busy='true']::before,
+  .btn-outline[aria-busy='true']::before,
+  .btn-danger[aria-busy='true']::before {
+    content: '';
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 9999px;
+    animation: busyRing 0.7s linear infinite;
+  }
+  /* The large one, for the product page's calls to action. */
+  .btn-lg {
+    gap: 0.5rem;
+    height: 2.5rem;
+    padding: 0 1rem;
+    font-size: 14px;
+  }
+  .btn-sm {
+    gap: 0.3125rem;
+    height: 1.75rem;
+    padding: 0 0.625rem;
+    font-size: 12px;
+  }
+
+  /* A slider (`ui/RangeSlider.tsx`): a 4px track inside a 20px box, so it is
+     easy to catch; violet up to the thumb (`--range-fill`), unless the caller
+     paints the whole track (`--range-track`). */
+  .range-slider {
+    display: block;
+    width: 100%;
+    height: 20px;
+    appearance: none;
+    background: transparent;
+    border-radius: calc(5px * var(--radius-scale));
+    cursor: pointer;
+  }
+  .range-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--range-track, linear-gradient(to right, rgb(var(--accent-primary)) var(--range-fill, 0%), rgb(var(--interactive-muted)) var(--range-fill, 0%)));
+  }
+  .range-slider::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--range-track, linear-gradient(to right, rgb(var(--accent-primary)) var(--range-fill, 0%), rgb(var(--interactive-muted)) var(--range-fill, 0%)));
+  }
+  .range-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border-radius: 9999px;
+    background-color: #fff;
+    transition: box-shadow 100ms ease;
+  }
+  .range-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 0;
+    border-radius: 9999px;
+    background-color: #fff;
+    transition: box-shadow 100ms ease;
+  }
+  .range-slider:hover:where(:not(:disabled))::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px var(--interactive-selected);
+  }
+  .range-slider:hover:where(:not(:disabled))::-moz-range-thumb {
+    box-shadow: 0 0 0 4px var(--interactive-selected);
+  }
+  .range-slider:active:where(:not(:disabled))::-webkit-slider-thumb {
+    box-shadow: 0 0 0 5px var(--interactive-active);
+  }
+  .range-slider:active:where(:not(:disabled))::-moz-range-thumb {
+    box-shadow: 0 0 0 5px var(--interactive-active);
+  }
+  /* For the keyboard the thumb takes the ring: it is what the arrow keys move. */
+  .range-slider:focus-visible {
+    outline: none;
+  }
+  .range-slider:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 2px rgb(var(--bg-elevated)), 0 0 0 4px rgb(var(--accent-primary-soft));
+  }
+  .range-slider:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 2px rgb(var(--bg-elevated)), 0 0 0 4px rgb(var(--accent-primary-soft));
+  }
+  .range-slider:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Dialogs. `position: relative` loses to a `fixed`/`absolute` utility on the
+     dialog, which is what lets the same class serve both a centred modal and a
+     positioned card. The colour is opaque, so a card that paints its own image
+     on top (a person's profile theme) never lets the page show through. */
+  .glass-modal {
+    position: relative;
+    background-color: rgb(var(--bg-elevated));
+    background-image: var(--float-sheen);
+    border: 1px solid rgb(var(--border-soft));
+    box-shadow: var(--float-edge), var(--shadow-modal), 0 0 170px -34px rgb(var(--accent-primary) / 0.3);
+  }
+
+  /* What lies behind a dialog: dimmed and out of focus, so the dialog is the one
+     sharp thing on the screen. A phone keeps the dimming alone, the blur costs it
+     frames. */
+  .modal-scrim {
+    background-color: rgb(0 0 0 / 0.5);
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
+    backdrop-filter: blur(10px) saturate(1.1);
+    animation: fadeIn var(--dur-base) ease-out backwards;
+  }
+  html[data-viewport='mobile'] .modal-scrim {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
   .glass-pill {
-    -webkit-backdrop-filter: blur(12px) saturate(110%);
-    backdrop-filter: blur(12px) saturate(110%);
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    background-color: rgb(255 255 255 / 0.035);
+    border: 1px solid rgb(var(--border-soft));
+    transition: background-color 0.12s ease, border-color 0.12s ease;
   }
   .glass-pill:hover {
-    background: rgba(255, 255, 255, 0.10);
-    border-color: rgba(255, 255, 255, 0.14);
+    background-color: rgb(255 255 255 / 0.07);
+    border-color: rgb(var(--interactive-muted));
   }
+  /* The viewer's own reaction: the signal colour, not a second one. */
   .glass-pill-mine {
-    background: rgba(134, 239, 172, 0.10);
-    border-color: rgba(134, 239, 172, 0.25);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(134, 239, 172, 0.06);
+    background-color: rgb(var(--accent-primary) / 0.12);
+    border-color: rgb(var(--accent-primary) / 0.6);
   }
   .glass-pill-mine:hover {
-    background: rgba(134, 239, 172, 0.16);
+    background-color: rgb(var(--accent-primary) / 0.2);
   }
 
-  /* ── Input Tiers ── */
+  /* ── The composer ── */
+  .composer-capsule {
+    transition: border-color var(--dur-base) ease, box-shadow var(--dur-slow) var(--ease-out);
+  }
+  .composer-capsule:hover {
+    border-color: rgb(var(--interactive-muted));
+  }
+  .composer-capsule:focus-within {
+    border-color: rgb(var(--accent-primary) / 0.65);
+    box-shadow: var(--float-edge), 0 0 0 1px rgb(var(--accent-primary) / 0.22), 0 14px 46px -14px rgb(var(--accent-primary) / 0.55);
+  }
+  /* A long name in the placeholder runs off the field's edge: the field is one
+     line tall until there is a draft, and a second line of hint would be cut in half. */
+  .composer-capsule textarea::placeholder {
+    white-space: nowrap;
+  }
+
+  /* ── Messages ──
+   * Spacing comes from two variables the density setting changes. The look is
+   * one of three (Settings, Appearance, Messages), a data attribute on <html>;
+   * Message.tsx marks the parts: .msg-row (the message), .msg-avatar, .msg-body,
+   * .msg-reply, .msg-head (.msg-name, .msg-time), .msg-content, .msg-toolbar.
+   * `data-own`, `data-first` and `data-mentioned` are on the row. A message
+   * being edited swaps its .msg-content for one that is also .msg-edit.
+   *
+   *   rows     the default: an activity line (small picture, name, time),
+   *            the text under it at the same left edge as the picture
+   *   lines    no pictures; time, name and text on one line, like a log
+   *   bubbles  each message a card; mine on the right in the signal colour
+   *
+   * The time of a message that continues a group is in its hover toolbar; the
+   * log also shows it in its time column.
+   */
+  .msg-row {
+    padding-block: var(--msg-pad);
+  }
+  /* The preview's own padding hangs outside, so its arrow starts where the
+     picture and the text below it start. */
+  .msg-reply {
+    margin-left: -8px;
+    margin-bottom: 4px;
+  }
+  .msg-row:hover {
+    background-color: var(--interactive-row);
+  }
+  /* A message that reaches you carries the signal colour, the same one as the
+     count of mentions that led you to it. */
+  .msg-row[data-mentioned='true'] {
+    background-color: rgb(var(--accent-primary) / 0.07);
+    box-shadow: inset 2px 0 0 rgb(var(--accent-primary));
+  }
+  .msg-row[data-mentioned='true']:hover {
+    background-color: rgb(var(--accent-primary) / 0.11);
+  }
+  .msg-first {
+    margin-top: var(--msg-gap);
+  }
+  .msg-hover-time {
+    display: none;
+  }
+
+  html[data-message-style='rows'] .msg-row {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    grid-template-areas: "reply reply" "avatar head" "content content";
+    column-gap: 8px;
+    row-gap: 0;
+    align-items: center;
+  }
+  html[data-message-style='rows'] .msg-body {
+    display: contents;
+  }
+  html[data-message-style='rows'] .msg-reply { grid-area: reply; justify-self: start; margin-left: -8px; margin-bottom: 2px; }
+  html[data-message-style='rows'] .msg-avatar { grid-area: avatar; }
+  html[data-message-style='rows'] .msg-head { grid-area: head; margin-bottom: 0; }
+  html[data-message-style='rows'] .msg-content { grid-area: content; margin-top: 2px; }
+  html[data-message-style='rows'] .msg-row:not([data-first='true']) .msg-avatar,
+  html[data-message-style='rows'] .msg-reply-line,
+  html[data-message-style='lines'] .msg-reply-line {
+    display: none;
+  }
+  /* The line runs from a large picture to the message replied to. Rows have no
+     room for it and the log has no picture, so both mark the preview with an
+     arrow; a bubble carries the preview inside it and needs neither. */
+  html[data-message-style='bubbles'] .msg-reply-icon {
+    display: none;
+  }
+  html[data-message-style='rows'] .msg-row:not([data-first='true']) .msg-content {
+    margin-top: 0;
+  }
+
+  html[data-message-style='bubbles'] .msg-row,
+  html[data-message-style='bubbles'] .msg-row:hover,
+  html[data-message-style='bubbles'] .msg-row[data-mentioned='true'],
+  html[data-message-style='bubbles'] .msg-row[data-mentioned='true']:hover {
+    width: fit-content;
+    max-width: calc(100% - 1rem);
+    background-color: transparent;
+    box-shadow: none;
+  }
+  html[data-message-style='bubbles'] .msg-reply-line {
+    display: none;
+  }
+  html[data-message-style='bubbles'] .msg-avatar {
+    width: 28px;
+  }
+  html[data-message-style='bubbles'] .msg-body {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: min(44rem, 100%);
+    padding: 0.4rem 0.75rem 0.5rem;
+    border-radius: calc(8px * var(--radius-scale));
+    background-color: rgb(var(--bg-elevated));
+    border: 1px solid rgb(var(--border-hard));
+    transition: border-color 0.12s ease;
+  }
+  /* A bubble is as wide as its text, which a preview hanging out on the left
+     would count 8px short of its own width, and an edit box needs room to type. */
+  html[data-message-style='bubbles'] .msg-reply {
+    margin-left: 0;
+    padding-left: 0;
+  }
+  html[data-message-style='bubbles'] .msg-edit {
+    width: 28rem;
+    max-width: 100%;
+  }
+  html[data-message-style='bubbles'] .msg-row:hover .msg-body {
+    border-color: rgb(var(--border-soft));
+  }
+  html[data-message-style='bubbles'] .msg-row[data-first='true'] .msg-body {
+    border-top-left-radius: calc(2px * var(--radius-scale));
+  }
+  html[data-message-style='bubbles'] .msg-row[data-mentioned='true'] .msg-body {
+    border-color: rgb(var(--accent-primary) / 0.7);
+    background-color: rgb(var(--accent-primary) / 0.1);
+  }
+  /* Mine: on the right, in the signal colour, without my own picture and name. */
+  html[data-message-style='bubbles'] .msg-row[data-own='true'] {
+    margin-left: auto;
+    flex-direction: row-reverse;
+  }
+  html[data-message-style='bubbles'] .msg-row[data-own='true'] .msg-avatar,
+  html[data-message-style='bubbles'] .msg-row[data-own='true'] .msg-name {
+    display: none;
+  }
+  html[data-message-style='bubbles'] .msg-row[data-own='true'] .msg-body {
+    background-color: rgb(var(--accent-primary) / 0.1);
+    border-color: rgb(var(--accent-primary) / 0.32);
+    border-top-left-radius: calc(8px * var(--radius-scale));
+  }
+  html[data-message-style='bubbles'] .msg-row[data-own='true']:hover .msg-body {
+    border-color: rgb(var(--accent-primary) / 0.5);
+  }
+  html[data-message-style='bubbles'] .msg-row[data-own='true'][data-first='true'] .msg-body {
+    border-top-right-radius: calc(2px * var(--radius-scale));
+  }
+  /* The hover toolbar hangs from the edge the bubble hugs and opens toward the
+     middle of the conversation: from the left for theirs, from the right for
+     mine. A bubble is only as wide as its text, so a toolbar anchored on its
+     far side ran past the edge of the list on a short message, and the delete
+     button went with it. */
+  html[data-message-style='bubbles'] .msg-row .msg-toolbar {
+    right: auto;
+    left: 0.5rem;
+  }
+  html[data-message-style='bubbles'] .msg-row[data-own='true'] .msg-toolbar {
+    left: auto;
+    right: 0.5rem;
+  }
+
+  html[data-message-style='lines'] .msg-avatar {
+    width: 3.6rem;
+  }
+  html[data-message-style='lines'] .msg-hover-time {
+    display: block;
+  }
+  html[data-message-style='lines'] .msg-avatar [data-poke-user] {
+    display: none;
+  }
+  html[data-message-style='lines'] .msg-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.5rem;
+  }
+  html[data-message-style='lines'] .msg-body > .msg-reply {
+    flex: 0 0 100%;
+  }
+  /* The name and the time join the line directly, so all three share one
+     baseline. The time goes first and pulls back over the 3.6rem column beside
+     the body (and its 0.75rem gap), which is where a continuing message shows
+     its own on hover; its right margin and the line's 0.5rem gap cancel the rest. */
+  html[data-message-style='lines'] .msg-body > .msg-head {
+    display: contents;
+  }
+  /* The right margin is what keeps the pulled-back time off the preview's own
+     line: it makes up for the preview's -8px on the left, and one more. */
+  html[data-message-style='lines'] .msg-body > .msg-reply { order: -2; margin-right: 9px; }
+  html[data-message-style='lines'] .msg-time {
+    order: -1;
+    flex: 0 0 3.6rem;
+    margin: 0 0.25rem 0 -4.35rem;
+    text-align: right;
+  }
+  html[data-message-style='lines'] .msg-body > .msg-content {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  /* A phone has no width to hang the text beside the name: it goes under it. */
+  html[data-message-style='lines'] .msg-body > .msg-edit,
+  html[data-message-style='lines'][data-viewport='mobile'] .msg-body > .msg-content {
+    flex: 0 0 100%;
+  }
+
+  /* A message in the reader's language, under the original: set apart by a rule, so
+     nobody takes it for what the person wrote. */
+  .msg-translation {
+    padding-left: 10px;
+    border-left: 2px solid rgb(var(--border-soft));
+  }
+  .msg-translation-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.625rem;
+    font-size: 12px;
+    line-height: 1.4;
+    color: rgb(var(--text-tertiary));
+  }
+  .msg-translation-action {
+    border-radius: calc(3px * var(--radius-scale));
+    color: rgb(var(--text-secondary));
+    transition: color var(--dur-fast) ease;
+  }
+  .msg-translation-action:hover {
+    color: rgb(var(--text-primary));
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .msg-translation-spinner {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 9999px;
+    animation: busyRing 0.7s linear infinite;
+  }
+
+  /* ── Input Tiers ──
+   * A sunken field edged by a soft hairline, which lightens under the pointer
+   * and turns violet with a faint ring while the field has focus. The corner
+   * is the buttons' (5px), so a field and its button line up. */
   .input-standard {
-    @apply bg-surface-input rounded px-3 py-2 text-sm text-txt-primary
+    @apply bg-surface-input rounded-md px-3 py-2 text-sm text-txt-primary
            placeholder:text-txt-tertiary outline-none
-           border border-white/[0.06] shadow-input
-           focus:ring-2 focus:ring-accent-primary focus:border-accent-primary/30
-           transition-colors;
+           border border-border-soft
+           hover:border-interactive-muted
+           focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/40;
+    transition: border-color var(--dur-fast) ease, box-shadow var(--dur-base) var(--ease-out);
+  }
+  .input-standard:focus,
+  .input-search:focus {
+    box-shadow: 0 0 0 1px rgb(var(--accent-primary) / 0.4), 0 6px 24px -10px rgb(var(--accent-primary) / 0.5);
   }
   .input-search {
-    @apply bg-surface-input rounded px-3 py-1.5 text-sm text-txt-primary
+    @apply bg-surface-input rounded-md px-3 py-1.5 text-sm text-txt-primary
            placeholder:text-txt-tertiary outline-none
-           border border-white/[0.06] shadow-input
-           focus:ring-1 focus:ring-accent-primary focus:border-accent-primary/30
-           transition-colors;
+           border border-border-soft
+           hover:border-interactive-muted
+           focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/40;
+    transition: border-color var(--dur-fast) ease, box-shadow var(--dur-base) var(--ease-out);
+  }
+  .input-standard[aria-invalid='true'],
+  .input-search[aria-invalid='true'] {
+    border-color: rgb(var(--accent-rose));
+  }
+  .input-standard:disabled,
+  .input-search:disabled,
+  .input-danger:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  /* A dropdown: the field with the app's own arrow in place of the system's. */
+  select.input-standard,
+  select.input-search,
+  select.input-danger {
+    appearance: none;
+    padding-right: 1.75rem;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23989aa6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 14px 14px;
   }
   .input-embedded {
     @apply bg-transparent text-txt-primary
-           placeholder:text-txt-tertiary/60 outline-none;
+           placeholder:text-txt-tertiary outline-none;
   }
   .input-danger {
-    @apply bg-surface-input rounded px-3 py-2 text-sm text-txt-primary
+    @apply bg-surface-input rounded-md px-3 py-2 text-sm text-txt-primary
            placeholder:text-txt-tertiary outline-none
-           border border-white/[0.06] shadow-input
-           focus:ring-2 focus:ring-accent-rose focus:border-accent-rose/30
+           border border-border-soft
+           hover:border-interactive-muted
+           focus:border-accent-rose focus:ring-1 focus:ring-accent-rose/40
            transition-colors;
   }
 
   /* iOS Safari auto-zooms on input focus when computed font-size is below
      16px. Bumping every input tier (and bare <input>/<textarea>/<select>)
      to 16px on mobile prevents the zoom without changing desktop sizing.
-     `!important` is required because Tailwind utilities (e.g. `text-[15px]`
+     `!important` is required because Tailwind utilities (e.g. `text-lead`
      on the chat composer textarea, `text-sm` on form fields) are emitted in
      the @layer utilities block — which comes after @layer components in the
      cascade — so they would otherwise override these rules.
@@ -356,52 +2120,24 @@
   }
 }
 
-/* Accessibility: fall back to solid surfaces when transparency is reduced */
-@media (prefers-reduced-transparency: reduce) {
-  .glass {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background: rgb(var(--bg-channel));
-  }
-  .glass-strip {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background: rgb(var(--bg-channel));
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.20);
-  }
-  .glass-bubble {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background: rgb(var(--bg-elevated));
-  }
-  .glass-modal::before {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background: rgb(var(--bg-elevated));
-  }
-  .glass-pill {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background: rgb(var(--bg-elevated));
-  }
-}
-
 @layer utilities {
-  /* Space strip glass — in utilities layer so desktop:glass-strip wins over bg-surface-* */
+  /* The phone's space strip. In the utilities layer so it wins over
+     bg-surface-* utilities. */
   .glass-strip {
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    backdrop-filter: blur(20px) saturate(120%);
-    background: var(--glass-bg);
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.03),
-      2px 0 12px rgba(0, 0, 0, 0.20);
+    background-color: rgb(var(--bg-base));
+    border-right: 1px solid rgb(var(--border-hard));
   }
 
   .rounded-inherit {
     border-radius: inherit;
   }
-  
+
+  /* A hairline. */
+  .divider-fade {
+    height: 1px;
+    background-color: rgb(var(--border-hard));
+  }
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
   }
@@ -411,27 +2147,34 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.15);
-    border-radius: 100px;
+    background-color: rgb(var(--border-soft));
+    border-radius: 2px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--interactive-muted));
   }
 }
 
-/* ── Emoji Mart Overrides ── */
+/* ── Emoji Mart Overrides ──
+ * Its dark theme sets the `--em-*` names on its own root, so from out here only
+ * the `--rgb-*` and `--color-*` names it falls back on reach it. It reads them
+ * in legacy `rgba(a, b, c, alpha)`, which takes commas, so the surfaces, which
+ * a theme changes and which are written with spaces, are set inside its shadow
+ * root (`PICKER_SHADOW_CSS` in chat/EmojiPicker.tsx). */
 .emoji-picker-wrapper em-emoji-picker {
-  --em-rgb-background: 20, 20, 26;
-  --em-rgb-input: 17, 17, 24;
-  --em-rgb-color: 216, 216, 222;
-  --em-color-border: rgba(255, 255, 255, 0.07);
-  --em-color-border-over: rgba(255, 255, 255, 0.12);
+  --rgb-background: 30, 31, 37;
+  --rgb-input: 12, 13, 16;
+  --rgb-color: 225, 227, 233;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-over: rgba(255, 255, 255, 0.14);
   --rgb-accent: var(--accent-primary);
-  --font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-family: var(--font-ui);
+  --font-size: 13px;
+  --shadow: none;
   border: none !important;
   background: transparent !important;
   max-height: 400px;
-}
-
-:root:lang(ru) .emoji-picker-wrapper em-emoji-picker {
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 :root:lang(zh) .emoji-picker-wrapper em-emoji-picker {
@@ -451,6 +2194,22 @@
   width: 100%;
 }
 
+/* While the app's script loads: the mark, in its rings. It waits a moment, so a page
+   that is there at once never shows it, and React replaces it with the first render. */
+.boot-mark {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 600ms ease 400ms backwards;
+}
+.boot-mark img {
+  width: 44px;
+  height: 44px;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -458,16 +2217,130 @@
 }
 
 @keyframes slideUp {
-  from { transform: translateY(10px); opacity: 0; }
+  from { transform: translateY(6px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.15s ease-out;
+  animation: fadeIn var(--dur-base) ease-out backwards;
 }
 
+/* Small things that float settle into place: a short rise that eases out long. */
 .animate-slide-up {
-  animation: slideUp 0.15s ease-out;
+  animation: slideUp var(--dur-base) var(--ease-out) backwards;
+}
+
+/* A small card springing out of what opened it. */
+@keyframes pop {
+  from { transform: scale(.94) translateY(-4px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.animate-pop {
+  animation: pop var(--dur-slow) var(--ease-spring) backwards;
+}
+
+/* A toast comes up from the bottom edge with a small spring. */
+@keyframes toastIn {
+  from { transform: translateY(14px) scale(0.97); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.animate-toast {
+  animation: toastIn var(--dur-slow) var(--ease-spring) backwards;
+}
+
+/* A dialog comes up to meet you, and sinks back when it goes (`useExitGhost`: what
+   goes is a copy of it, so nothing has to stay mounted). */
+@keyframes modalIn {
+  from { transform: translateY(10px) scale(0.975); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes modalOut {
+  to { transform: translateY(6px) scale(0.985); opacity: 0; }
+}
+@keyframes sheetIn {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+@keyframes sheetOut {
+  to { transform: translateY(100%); }
+}
+@keyframes fadeOut {
+  to { opacity: 0; }
+}
+.modal-panel {
+  animation: modalIn var(--dur-slow) var(--ease-out) backwards;
+}
+.sheet-panel {
+  animation: sheetIn var(--dur-slow) var(--ease-out) backwards;
+}
+/* The scrim fades on its own: a parent's fading opacity would cut its blur off. */
+.modal-leaving {
+  pointer-events: none !important;
+}
+.modal-leaving .modal-scrim,
+.modal-leaving.modal-whole {
+  animation: fadeOut 150ms ease-in forwards;
+}
+.modal-leaving .modal-panel {
+  animation: modalOut 150ms ease-in forwards;
+}
+.modal-leaving .sheet-panel {
+  animation: sheetOut 180ms ease-in forwards;
+}
+
+/* What opens a page comes up one after the other. */
+@keyframes rise {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.rise-in {
+  animation: rise var(--dur-slower) var(--ease-out) backwards;
+}
+.stagger > * {
+  animation: rise var(--dur-slower) var(--ease-out) backwards;
+}
+.stagger > :nth-child(2) { animation-delay: 40ms; }
+.stagger > :nth-child(3) { animation-delay: 80ms; }
+.stagger > :nth-child(4) { animation-delay: 120ms; }
+.stagger > :nth-child(5) { animation-delay: 160ms; }
+.stagger > :nth-child(6) { animation-delay: 200ms; }
+.stagger > :nth-child(7) { animation-delay: 240ms; }
+.stagger > :nth-child(8) { animation-delay: 280ms; }
+.stagger > :nth-child(n + 9) { animation-delay: 320ms; }
+
+/* A number that just changed, or a reaction just added, gives a small jump. */
+@keyframes bump {
+  from { transform: scale(0.6); }
+  to { transform: none; }
+}
+.bump {
+  animation: bump var(--dur-slow) var(--ease-spring) backwards;
+}
+
+/* A new message comes up from the composer. Only its picture and text move, so the
+   list under it keeps its measure. */
+@keyframes messageIn {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.msg-new {
+  animation: messageIn var(--dur-slow) var(--ease-out) backwards;
+}
+
+/* A page's opening shrinks back as its content scrolls over it, where the browser
+   can tie an animation to scrolling. */
+@keyframes headAway {
+  to { opacity: 0.25; transform: translateY(-14px) scale(0.985); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .scroll-away {
+      transform-origin: 0 100%;
+      animation: headAway linear both;
+      animation-timeline: scroll(nearest block);
+      animation-range: 0 220px;
+    }
+  }
 }
 
 /* Slides into place from above — used for popovers that open upward */
@@ -486,6 +2359,19 @@
 }
 .animate-typing-in {
   animation: typingFadeIn 0.15s ease-out;
+}
+
+/* Three dots that brighten in turn while someone is typing. */
+@keyframes typingDot {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
+.typing-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background-color: rgb(var(--text-secondary));
+  animation: typingDot 1.2s ease-in-out infinite;
 }
 
 @keyframes gradientPulse {
@@ -515,8 +2401,8 @@
 }
 
 .skeleton-circle { border-radius: 50%; }
-.skeleton-bar    { height: 12px; border-radius: 6px; }
-.skeleton-block  { border-radius: 8px; }
+.skeleton-bar    { height: 12px; border-radius: calc(3px * var(--radius-scale)); }
+.skeleton-block  { border-radius: calc(6px * var(--radius-scale)); }
 
 /* Jump-to-message flash: the row a search result or a reply preview jumped to.
    MessageList adds the class and removes it on animationend. */
@@ -541,111 +2427,146 @@
   animation: stepBack 0.25s ease-out;
 }
 
-/* ── Incoming Call Animations ── */
-
-/* Liquid ripple: soft gradient orb that expands and dissolves */
-@keyframes callRippleLiquid {
-  0% {
-    scale: 0.3;
-    opacity: 0.45;
-  }
-  70% {
-    opacity: 0.12;
-  }
-  100% {
-    scale: 2.8;
-    opacity: 0;
-  }
+@keyframes busyRing {
+  to { transform: rotate(360deg); }
 }
 
-/* Soft multi-layered halo around avatar */
-@keyframes callGlowSoft {
-  0%, 100% {
-    box-shadow:
-      0 0 20px rgba(134, 239, 172, 0.06),
-      0 0 40px rgba(134, 239, 172, 0.04),
-      0 0 80px rgba(134, 239, 172, 0.02);
-  }
-  50% {
-    box-shadow:
-      0 0 24px rgba(134, 239, 172, 0.12),
-      0 0 48px rgba(134, 239, 172, 0.06),
-      0 0 96px rgba(134, 239, 172, 0.03);
-  }
+/* ── Incoming call: the ringing dot beside "Incoming call" ── */
+@keyframes callRing {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
 }
-
-/* Traveling light refraction across glass card surface */
-@keyframes callRefraction {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
-}
-
-/* Gentle breathing glow on accept button */
-@keyframes callButtonBreath {
-  0%, 100% {
-    box-shadow:
-      0 0 12px rgba(134, 239, 172, 0.08),
-      0 0 28px rgba(134, 239, 172, 0.04);
-  }
-  50% {
-    box-shadow:
-      0 0 18px rgba(134, 239, 172, 0.16),
-      0 0 36px rgba(134, 239, 172, 0.06);
-  }
-}
-
-.animate-call-ripple {
-  animation: callRippleLiquid 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
-}
-
-.animate-call-glow {
-  animation: callGlowSoft 4s ease-in-out infinite;
-}
-
-.animate-call-button-glow {
-  animation: callButtonBreath 3s ease-in-out infinite;
-}
-
-/* Light refraction shimmer overlay on the call card */
-.call-refraction::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    105deg,
-    transparent 0%,
-    transparent 35%,
-    rgba(134, 239, 172, 0.03) 42%,
-    rgba(134, 239, 172, 0.05) 50%,
-    rgba(134, 239, 172, 0.03) 58%,
-    transparent 65%,
-    transparent 100%
-  );
-  animation: callRefraction 6s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 1;
+.call-ring-dot {
+  animation: callRing 1.2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-call-ripple,
-  .animate-call-glow,
-  .animate-call-button-glow { animation: none !important; }
-  .call-refraction::after { animation: none !important; opacity: 0; }
+  .call-ring-dot { animation: none !important; }
+  [aria-busy='true']::before { animation-duration: 2.4s !important; }
+  .typing-dot { animation: none; opacity: 0.7; }
   .skeleton { animation: none; }
+  .modal-panel, .sheet-panel, .rise-in, .stagger > *, .bump, .msg-new, .animate-pop, .animate-slide-up, .animate-toast { animation: none; }
+  .lit, .lit-phone { transition: none; }
+  .lift:hover:where(:not(:disabled)), .btn-hero:hover:where(:not(:disabled)) { transform: none; }
 }
 
-/* ── MOBILE SCREEN TRANSITIONS ── */
+/* The chat text size (Settings, Appearance): message bodies are 15px at 100%. */
+.message-text {
+  font-size: calc(15px * var(--chat-text-scale, 1));
+}
+
+/* Markdown in a message. Sizes are relative to the message text, so a heading
+   stays larger than the text and code stays in step with it at every chat text
+   size. The first block of a message sits right under the name. */
+.md-p + .md-p,
+:is(.md-list, .md-quote, .md-code-block, .md-table) + .md-p {
+  margin-top: 0.5em;
+}
+.md-h1,
+.md-h2,
+.md-h3 {
+  margin-top: 0.75em;
+  margin-bottom: 0.25em;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  color: rgb(var(--text-primary));
+}
+.md-h1 {
+  font-size: 1.334em;
+  letter-spacing: -0.015em;
+}
+.md-h2 {
+  font-size: 1.2em;
+  letter-spacing: -0.01em;
+}
+.md-h3 {
+  font-size: 1.067em;
+}
+.md-list,
+.md-quote,
+.md-code-block,
+.md-table {
+  margin-block: 0.375em;
+}
+.md-list .md-list {
+  margin-block: 0.125em;
+}
+:is(.md-h1, .md-h2, .md-h3, .md-list, .md-quote, .md-code-block, .md-table):first-child {
+  margin-top: 0;
+}
+:is(.md-h1, .md-h2, .md-h3, .md-list, .md-quote, .md-code-block, .md-table):last-child {
+  margin-bottom: 0;
+}
+.md-code {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 1px 5px;
+  border: 1px solid rgb(var(--border-hard));
+  border-radius: calc(4px * var(--radius-scale));
+  background-color: rgb(var(--bg-input));
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  color: rgb(var(--text-primary));
+}
+.md-code-block {
+  overflow-x: auto;
+  padding: 8px 12px;
+  border: 1px solid rgb(var(--border-hard));
+  border-radius: calc(6px * var(--radius-scale));
+  background-color: rgb(var(--bg-input));
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  line-height: 1.5;
+  white-space: pre;
+}
+/* A message of nothing but a few emoji is drawn large. */
+.md-jumbo {
+  font-size: 2.5em;
+  line-height: 1.25;
+}
+/* "(edited)" continues the last line of the text when that line is a paragraph;
+   an inline paragraph takes no margin, so the one before it keeps the gap. */
+.message-text[data-edited='true'] > .md-root,
+.message-text[data-edited='true'] > .md-root > .md-p:last-child {
+  display: inline;
+}
+.message-text[data-edited='true'] > .md-root > .md-p:has(+ .md-p:last-child) {
+  margin-bottom: 0.5em;
+}
+
+/* The player of an audio file: a sunken strip like a field, not the browser's capsule. */
+audio::-webkit-media-controls-enclosure {
+  border-radius: calc(5px * var(--radius-scale));
+  background-color: rgb(var(--bg-input));
+}
+
+/* Reduce motion (Settings, Appearance) cuts animation down whatever the system asks for. */
+html[data-motion='reduce'] *,
+html[data-motion='reduce'] *::before,
+html[data-motion='reduce'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion='reduce'] .scroll-away {
+  animation: none;
+}
+
+/* ── MOBILE SCREEN TRANSITIONS ──
+   Their length is MobileScreenStack's timer; only the curve is the app's own. */
 .mobile-screen-enter {
   transform: translateX(100%);
 }
 .mobile-screen-enter-active {
   transform: translateX(0);
-  transition: transform 200ms ease-out;
+  transition: transform 200ms var(--ease-out);
 }
 .mobile-screen-exit-active {
   transform: translateX(100%);
-  transition: transform 200ms ease-out;
+  transition: transform 200ms var(--ease-out);
 }
 
 /* ── Electron window drag regions ── */

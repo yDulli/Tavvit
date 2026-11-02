@@ -54,7 +54,7 @@ function applyMigrations(db: Database.Database): void {
 function seedUser(id: string): void {
   testDb.insert(schema.users).values({
     id, username: id, displayName: null, passwordHash: 'x', status: 'offline',
-    isAdmin: 0, isDeleted: 0, discoverable: 1, homeInstance: null, homeUserId: null, createdAt: Date.now(),
+    isAdmin: 0, isDeleted: 0, homeInstance: null, homeUserId: null, createdAt: Date.now(),
   }).run();
 }
 

@@ -17,6 +17,17 @@ export const MOBILE_LAYOUT_BREAKPOINT = 768;
 /** Physically narrow viewports stay mobile at any scale. Phones are 390-430px. */
 export const NARROW_VIEWPORT_BREAKPOINT = 600;
 
+/**
+ * Below this many layout pixels the desktop shell is `compact`: a tablet or a
+ * small laptop window. The search shrinks to its icon and the people column
+ * floats over the conversation instead of taking width from it.
+ */
+export const COMPACT_LAYOUT_BREAKPOINT = 1200;
+
+export function isCompactViewport(): boolean {
+  return layoutPixels(window.innerWidth) < COMPACT_LAYOUT_BREAKPOINT;
+}
+
 export function isMobileViewport(): boolean {
   // Zooming out must not turn a physically narrow phone into the desktop shell.
   return window.innerWidth < NARROW_VIEWPORT_BREAKPOINT
@@ -35,6 +46,7 @@ export function layoutRect<T extends { top: number; right: number; bottom: numbe
 export function initializeInterfaceScale(): () => void {
   const updateViewport = () => {
     document.documentElement.dataset.viewport = isMobileViewport() ? 'mobile' : 'desktop';
+    document.documentElement.dataset.width = isCompactViewport() ? 'compact' : 'wide';
   };
   const apply = () => {
     const factor = useInterfaceScaleStore.getState().scale / 100;

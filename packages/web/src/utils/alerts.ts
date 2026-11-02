@@ -1,3 +1,5 @@
+import { useKeywordStore } from '../stores/keywordStore';
+import { followedThreadLevel } from '@backspace/shared/src/threads';
 import type { ChosenUserStatus } from '@backspace/shared';
 import { getMyUserIdForOrigin, isMe, selectMyChosenStatus, useAuthStore } from '../stores/authStore';
 import type { RealtimeMessageEvent } from '../stores/chatStore';
@@ -7,6 +9,8 @@ import { sendNotification, type NotificationOptions } from '../platform/notifica
 import { isAlertAllowed, isMessageAlert, type AlertKind } from './notificationFilters';
 import { getSfxVolume } from './sfx';
 import { getChannelNotificationPolicy } from '../hooks/useNotificationSettings';
+import { isBlockedUser } from '../stores/blockStore';
+import { useNotificationPrefsStore } from '../stores/notificationPrefsStore';
 
 /**
  * The only way the client raises an alert (see `AlertKind`). Both outputs, the
@@ -61,13 +65,23 @@ const DM_POLICY = { level: 'all', muted: false } as const;
  * sound passes it; it widens a channel on `mentions` and never one the user
  * set to `nothing` or muted.
  */
+/** A thread alerts by its channel's settings, every message unless they say nothing at all. */
+function policyOf(channelId: string) {
+  const parent = useSpaceStore.getState().spaceChannelIndex.get(channelId)?.parentChannelId;
+  return parent ? followedThreadLevel(getChannelNotificationPolicy(parent)) : getChannelNotificationPolicy(channelId);
+}
+
 export function messageAlertsUser(
   event: RealtimeMessageEvent,
   options: { everyMessage?: boolean } = {},
 ): boolean {
   if (!event.channelId) return false;
   const origin = getChannelOrigin(event.channelId);
+  // Someone the user blocked never raises a sound or a notification. Blocks are
+  // the home instance's, so only a home channel's author ids are compared.
+  if (origin === '' && isBlockedUser(event.message.userId)) return false;
   const isDm = isDmChannel(event.channelId);
+  if (isDm && !useNotificationPrefsStore.getState().directMessages) return false;
   return isMessageAlert({
     authoredBySelf: isMe(event.message.user ?? { id: event.message.userId }, origin),
     myId: getMyUserIdForOrigin(origin),
@@ -77,7 +91,8 @@ export function messageAlertsUser(
     mentionEveryone: event.message.mentionEveryone,
     mentionRoleIds: event.message.mentionRoleIds,
     allChannels: options.everyMessage === true,
-    notification: isDm ? DM_POLICY : getChannelNotificationPolicy(event.channelId),
+    keywords: useKeywordStore.getState().words,
+    notification: isDm ? DM_POLICY : policyOf(event.channelId),
   });
 }
 
@@ -91,6 +106,8 @@ export function playAlertSound(
   options: { loop?: boolean } = {},
 ): Promise<AudioBufferSourceNode | null> {
   if (!alertsAllowed(kind)) return Promise.resolve(null);
+  const prefs = useNotificationPrefsStore.getState();
+  if (!(kind === 'message' ? prefs.messageSound : prefs.callSound)) return Promise.resolve(null);
   return AudioManager.getInstance().playSound(ALERT_SOUNDS[kind], {
     loop: options.loop === true,
     volume: getSfxVolume(),

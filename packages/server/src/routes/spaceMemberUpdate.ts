@@ -1,17 +1,22 @@
-import type { MemberWithUser, UpdateMemberRequest } from '@backspace/shared';
+import path from 'path';
+import { PROFILE_LIMITS, type MemberWithUser, type UpdateMemberRequest, type UpdateSpaceProfileRequest } from '@backspace/shared';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { and, eq } from 'drizzle-orm';
+import { config } from '../config.js';
+import { deleteAttachmentByFilename, deleteUploadFile } from '../utils/fileCleanup.js';
+import { resizeProfileImage } from '../utils/thumbnail.js';
 import { MAX_MEMBER_NICKNAME_LENGTH, normalizeMemberNickname } from '@backspace/shared/src/constants.js';
 import { canActOnMember, canManageRoleAt, roleBitsChangeRefusal, stringToPermissions, type HeldBitsRefusal } from '@backspace/shared/src/permissions.js';
 import { getDb, schema } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
 import { hasPermission, computePermissions, PermissionBits } from '../utils/permissions.js';
-import { sanitizeUser } from '../utils/sanitize.js';
 import { getHierarchyStanding } from '../utils/roleHierarchy.js';
-import { memberRolesView } from '../utils/permissionDataView.js';
+import { loadMemberWire } from '../utils/spaceWire.js';
+import { recordMemberRoleAudit } from '../utils/auditLog.js';
 import { connectionManager } from '../ws/handler.js';
 import { checkVoicePermissions } from '../ws/events.js';
+import { ownProfileUploadOf, pictureFileReleasable } from '../utils/profileImageRefs.js';
 
 /**
  * Held-bits rule for handing out a role (permissions.md, "Held-bits rule"):
@@ -36,11 +41,14 @@ function validateRoleUpdate(context: MemberUpdateContext, roleIds: unknown): rol
     sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
     return false;
   }
-  if (targetId === actorId) {
+  // The owner's rights come from owning the space, so the owner may set their
+  // own roles; nobody else may set their own or the owner's.
+  const ownerActsOnSelf = targetId === actorId && actorId === ownerId;
+  if (targetId === actorId && !ownerActsOnSelf) {
     sendError(reply, 400, 'cannot_change_own_roles');
     return false;
   }
-  if (targetId === ownerId) {
+  if (targetId === ownerId && !ownerActsOnSelf) {
     sendError(reply, 403, 'space_owner_only');
     return false;
   }
@@ -65,7 +73,7 @@ function validateRoleUpdate(context: MemberUpdateContext, roleIds: unknown): rol
   // Role hierarchy: the member must rank below the actor, and every role
   // this request adds or removes must sit below the actor's top role.
   const actorStanding = getHierarchyStanding(spaceId, actorId);
-  if (!canActOnMember(actorStanding, getHierarchyStanding(spaceId, targetId))) {
+  if (!ownerActsOnSelf && !canActOnMember(actorStanding, getHierarchyStanding(spaceId, targetId))) {
     sendError(reply, 403, 'role_hierarchy');
     return false;
   }
@@ -178,6 +186,7 @@ function persistMemberUpdate(target: { spaceId: string; userId: string }, write:
 }
 
 export function updateSpaceMemberRoutes(app: FastifyInstance): void {
+  registerSpaceProfileRoute(app);
   app.patch<{ Params: { id: string; uid: string }; Body: UpdateMemberRequest }>('/api/spaces/:id/members/:uid', {
     preHandler: authenticate,
   }, async (request, reply) => {
@@ -199,9 +208,18 @@ export function updateSpaceMemberRoutes(app: FastifyInstance): void {
       .where(and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, uid))).get();
     if (!member) return sendError(reply, 404, 'member_not_found');
 
+    const rolesBefore = write.roleIds !== undefined ? currentRoleIds(id, uid) : null;
     persistMemberUpdate({ spaceId: id, userId: uid }, write);
 
-    if (write.roleIds !== undefined) {
+    if (write.roleIds !== undefined && rolesBefore !== null) {
+      const requested = new Set(write.roleIds);
+      recordMemberRoleAudit(
+        id,
+        request.userId,
+        uid,
+        write.roleIds.filter((roleId) => !rolesBefore.has(roleId)),
+        [...rolesBefore].filter((roleId) => !requested.has(roleId)),
+      );
       // Recompute the target's permissions in addition to refreshing everyone's member display.
       connectionManager.announceSpaceAccessChange(id, [uid]);
       checkVoicePermissions(id);
@@ -211,51 +229,97 @@ export function updateSpaceMemberRoutes(app: FastifyInstance): void {
   });
 }
 
-function publishUpdatedMember(id: string, uid: string, reply: FastifyReply) {
-  const db = getDb();
-  // Build response with populated roles
-  const updatedMember = db.select()
-    .from(schema.spaceMembers)
-    .where(and(
-      eq(schema.spaceMembers.spaceId, id),
-      eq(schema.spaceMembers.userId, uid),
-    ))
-    .get();
+type ProfileImageField = 'avatar' | 'banner';
 
-  if (!updatedMember) {
+/**
+ * PATCH /api/spaces/:id/members/@me/profile: the member's own picture, banner
+ * and about text for this space (spaces.md, "Space profiles"). Null shows the
+ * account's again. Only the member sets it; it is never read in another space.
+ */
+function registerSpaceProfileRoute(app: FastifyInstance): void {
+  app.patch<{ Params: { id: string }; Body: UpdateSpaceProfileRequest }>('/api/spaces/:id/members/@me/profile', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const body = request.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return sendError(reply, 400, 'validation_failed');
+    }
+    const db = getDb();
+    const member = db.select().from(schema.spaceMembers)
+      .where(and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, request.userId))).get();
+    if (!member) return sendError(reply, 404, 'not_space_member');
+
+    const updates: Partial<Pick<typeof schema.spaceMembers.$inferInsert, 'avatar' | 'banner' | 'bio'>> = {};
+    const replaced: string[] = [];
+    const placed: Array<{ name: string; kind: ProfileImageField }> = [];
+    for (const field of ['avatar', 'banner'] as const) {
+      const value: unknown = body[field];
+      if (value === undefined) continue;
+      const current = member[field] ?? null;
+      if (value === null || value === '') {
+        updates[field] = null;
+      } else {
+        const name = typeof value === 'string' ? ownProfileUploadOf(value, request.userId, current) : undefined;
+        if (!name) return sendError(reply, 400, field === 'avatar' ? 'avatar_url_invalid' : 'banner_url_invalid');
+        updates[field] = name;
+        if (name !== current) placed.push({ name, kind: field });
+      }
+      if (current && current !== updates[field]) replaced.push(current);
+    }
+    if (body.bio !== undefined) {
+      if (body.bio !== null && typeof body.bio !== 'string') return sendError(reply, 400, 'validation_failed');
+      const trimmed = typeof body.bio === 'string' ? body.bio.trim() : '';
+      if (trimmed.length > PROFILE_LIMITS.MAX_BIO_LENGTH) {
+        return sendError(reply, 400, 'bio_too_long', { max: PROFILE_LIMITS.MAX_BIO_LENGTH });
+      }
+      updates.bio = trimmed || null;
+    }
+    if (Object.keys(updates).length === 0) return sendError(reply, 400, 'no_fields_to_update');
+
+    db.update(schema.spaceMembers).set(updates)
+      .where(and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, request.userId))).run();
+
+    // The new images are the member row's now, not an upload waiting for a
+    // message; they are fitted to their slot like an account's.
+    for (const image of placed) {
+      deleteAttachmentByFilename(image.name);
+      await resizeProfileImage(path.join(config.uploadDir, path.basename(image.name)), image.kind);
+    }
+    // A replaced image goes once nothing else shows it and no message holds it.
+    for (const old of replaced) {
+      if (pictureFileReleasable(old)) deleteUploadFile(old);
+    }
+
+    return publishUpdatedMember(id, request.userId, reply);
+  });
+}
+
+/** The ids of the roles `userId` holds in `spaceId`. */
+function currentRoleIds(spaceId: string, userId: string): Set<string> {
+  return new Set(getDb().select({ roleId: schema.memberRoles.roleId }).from(schema.memberRoles)
+    .where(and(eq(schema.memberRoles.spaceId, spaceId), eq(schema.memberRoles.userId, userId)))
+    .all()
+    .map((row) => row.roleId));
+}
+
+/**
+ * Tell the space how a member is now: `member_updated` with the member as
+ * `loadMemberWire` builds it (roles by display fields only, the timeout while
+ * it runs). Answers that member, or null when there is no such member. The
+ * timeout routes (routes/spaceModeration.ts) send it through here too.
+ */
+export function broadcastMemberUpdate(spaceId: string, userId: string): MemberWithUser | null {
+  const member = loadMemberWire(spaceId, userId);
+  if (member) connectionManager.sendToSpace(spaceId, { type: 'member_updated', spaceId, member });
+  return member;
+}
+
+function publishUpdatedMember(id: string, uid: string, reply: FastifyReply): FastifyReply {
+  const result = broadcastMemberUpdate(id, uid);
+  if (!result) {
     return sendError(reply, 500, 'member_update_failed');
   }
-
-  const user = db.select().from(schema.users).where(eq(schema.users.id, uid)).get();
-  if (!user) {
-    return sendError(reply, 500, 'user_not_found');
-  }
-
-  const updatedRoleRows = db.select()
-    .from(schema.memberRoles)
-    .where(and(
-      eq(schema.memberRoles.spaceId, id),
-      eq(schema.memberRoles.userId, uid),
-    ))
-    .all();
-
-  const updatedRoleIds = updatedRoleRows.map(r => r.roleId);
-  const allRoles = db.select()
-    .from(schema.roles)
-    .where(eq(schema.roles.spaceId, id))
-    .orderBy(schema.roles.position)
-    .all();
-
-  const result: MemberWithUser = {
-    spaceId: updatedMember.spaceId,
-    userId: updatedMember.userId,
-    nickname: updatedMember.nickname,
-    joinedAt: updatedMember.joinedAt,
-    user: sanitizeUser(user),
-    roles: memberRolesView(allRoles, new Set(updatedRoleIds)),
-  };
-
-  connectionManager.sendToSpace(id, { type: 'member_updated', spaceId: id, member: result });
   return reply.code(200).send(result);
 }
 

@@ -3,38 +3,24 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import type { User, DmChannel } from '@backspace/shared';
+import type { User, DmChannel, UserSearchResult } from '@backspace/shared';
 import { Avatar } from '../ui/Avatar';
+import { AvatarStack } from '../ui/AvatarStack';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useSelfIdentity } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
 import { api } from '../../api/client';
 import { isMine, parseFederatedUsername, userKey } from '../../utils/identity';
 import { openDirectMessage } from '../../utils/openDirectMessage';
-import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { useCanonicalUserView, usernameQueryOf, useSearchResultView } from '../../utils/userViewLookup';
 import { useFloatingPosition } from '../../hooks/useFloatingPosition';
+import { Icon } from '../ui/Icon';
 
-/**
- * Single slot in the group-avatar stack for the DM search bar dropdown.
- * Extracted as a component so useCanonicalUserView is called per-slot (hooks
- * must not be called inside a variable-length .map()).
- */
-function DmSearchGroupAvatarSlot({ member, origin, index }: { member: User; origin: string; index: number }) {
-  const canonical = useCanonicalUserView(member, origin);
-  const displayName = canonical.displayName ?? parseFederatedUsername(canonical.username).baseName;
-  return (
-    <div
-      className="absolute rounded-full overflow-hidden border-[1.5px] border-surface-channel"
-      style={{
-        width: 18, height: 18,
-        left: index * 8,
-        top: index * 4,
-        zIndex: 2 - index,
-      }}
-    >
-      <Avatar src={canonical.avatar} name={displayName} size={18} userId={canonical.homeUserId ?? canonical.id} user={canonical} />
-    </div>
-  );
+/** A result row of the dropdown: the keyboard's current row is the selected one. */
+function resultRowClass(isSelected: boolean): string {
+  return `mx-1 flex h-8 cursor-pointer items-center gap-2.5 rounded-md px-2 transition-colors ${
+    isSelected ? 'bg-interactive-selected' : 'hover:bg-interactive-hover'
+  }`;
 }
 
 /**
@@ -43,35 +29,33 @@ function DmSearchGroupAvatarSlot({ member, origin, index }: { member: User; orig
  * of a stable component rather than inside a variable-length .map().
  */
 function DmSearchUserRow({ user, isSelected, selectedRef, onClick }: {
-  /** A search result from the page's own instance. */
-  user: User;
+  /** A username search result from the page's own instance. */
+  user: UserSearchResult;
   isSelected: boolean;
   selectedRef?: React.Ref<HTMLDivElement>;
   onClick: () => void;
 }) {
-  const canonical = useCanonicalUserView(user, '');
+  const canonical = useSearchResultView(user, '');
   const displayName = canonical.displayName ?? canonical.username;
   return (
     <div
       ref={isSelected ? selectedRef : undefined}
       onClick={onClick}
-      className={`flex items-center gap-2.5 px-2 py-1.5 mx-1 rounded cursor-pointer transition-colors ${
-        isSelected ? 'bg-interactive-selected' : 'hover:bg-interactive-hover'
-      }`}
+      className={resultRowClass(isSelected)}
     >
       <Avatar
         src={canonical.avatar}
         name={displayName}
         size={24}
-        status={canonical.status as 'online' | 'idle' | 'dnd' | 'offline' | undefined}
-        userId={canonical.homeUserId ?? canonical.id}
+        status={canonical.status}
+        userId={user.homeUserId ?? user.id}
       />
-      <div className="flex-1 min-w-0 flex items-center gap-1.5">
-        <span className="text-[14px] text-txt-primary truncate">
+      <div className="flex-1 min-w-0 flex items-baseline gap-1.5">
+        <span className="text-ui font-medium text-txt-primary truncate">
           {displayName}
         </span>
         {canonical.displayName && (
-          <span className="text-[12px] text-txt-tertiary truncate">
+          <span className="font-mono text-label text-txt-tertiary truncate">
             @{canonical.username}
           </span>
         )}
@@ -83,7 +67,7 @@ function DmSearchUserRow({ user, isSelected, selectedRef, onClick }: {
 /**
  * Full row for a DM conversation item in the DM search bar dropdown.
  * For 1-on-1 DMs, routes the partner through useCanonicalUserView.
- * For group DMs, delegates per-slot to DmSearchGroupAvatarSlot.
+ * For group DMs, the group's picture is the shared AvatarStack.
  */
 function DmSearchDmRow({ item, isSelected, selectedRef, onClick }: {
   item: DmItem;
@@ -92,7 +76,7 @@ function DmSearchDmRow({ item, isSelected, selectedRef, onClick }: {
   onClick: () => void;
 }) {
   // For 1-on-1 DMs: canonicalize the single partner. For groups: pass through
-  // unchanged (DmSearchGroupAvatarSlot handles per-slot canonicalization).
+  // unchanged (AvatarStack canonicalizes per slot).
   const rawPartner = !item.isGroup ? (item.otherMembers[0] ?? null) : null;
   // Call the hook unconditionally — pass a stable fallback (empty User shape)
   // for group DMs so hooks are always called the same number of times.
@@ -104,16 +88,10 @@ function DmSearchDmRow({ item, isSelected, selectedRef, onClick }: {
     <div
       ref={isSelected ? selectedRef : undefined}
       onClick={onClick}
-      className={`flex items-center gap-2.5 px-2 py-1.5 mx-1 rounded cursor-pointer transition-colors ${
-        isSelected ? 'bg-interactive-selected' : 'hover:bg-interactive-hover'
-      }`}
+      className={resultRowClass(isSelected)}
     >
       {item.isGroup ? (
-        <div className="relative w-6 h-6 flex-shrink-0">
-          {item.otherMembers.slice(0, 2).map((m, idx) => (
-            <DmSearchGroupAvatarSlot key={m.id} member={m} origin={item.origin} index={idx} />
-          ))}
-        </div>
+        <AvatarStack members={item.otherMembers} origin={item.origin} size={24} border="modal" iconUrl={item.dm.icon} />
       ) : (
         <Avatar
           src={partner?.avatar}
@@ -124,7 +102,7 @@ function DmSearchDmRow({ item, isSelected, selectedRef, onClick }: {
           user={partner ?? undefined}
         />
       )}
-      <span className="text-[14px] text-txt-primary truncate">{item.displayName}</span>
+      <span className="text-ui font-medium text-txt-primary truncate">{item.displayName}</span>
     </div>
   );
 }
@@ -144,7 +122,7 @@ interface DmItem {
 
 interface UserItem {
   type: 'user';
-  user: User;
+  user: UserSearchResult;
 }
 
 type ResultItem = DmItem | UserItem;
@@ -153,7 +131,7 @@ export function DmSearchBar() {
   const { t } = useTranslation(['dm', 'common']);
   const [active, setActive] = useState(false);
   const [query, setQuery] = useState('');
-  const [userResults, setUserResults] = useState<User[]>([]);
+  const [userResults, setUserResults] = useState<UserSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -237,8 +215,9 @@ export function DmSearchBar() {
   // Debounced user search
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
+    // People are found by username only (social.md, "Finding people").
+    const username = usernameQueryOf(query);
+    if (username === null) {
       setUserResults([]);
       setIsSearching(false);
       return;
@@ -246,7 +225,7 @@ export function DmSearchBar() {
     setIsSearching(true);
     searchTimer.current = setTimeout(async () => {
       try {
-        const users = await api.social.search(trimmed);
+        const users = await api.social.search(username);
         setUserResults(users);
       } catch {
         setUserResults([]);
@@ -350,13 +329,13 @@ export function DmSearchBar() {
       style={{ ...style, width: dropdownWidth > 0 ? dropdownWidth : undefined }}
       className="animate-fade-in"
     >
-      <div className="glass rounded-lg shadow-xl max-h-[360px] overflow-y-auto scrollbar-thin py-1">
+      <div className="glass rounded-lg max-h-[360px] overflow-y-auto scrollbar-thin py-1">
         {error && (
-          <div className="px-3 py-2 text-txt-danger text-[13px]">{error}</div>
+          <div className="px-3 py-2 text-txt-danger text-ui">{error}</div>
         )}
 
         {allItems.length === 0 && !isSearching && query.trim().length === 0 && dmItems.length === 0 && (
-          <div className="px-3 py-4 text-center text-txt-tertiary text-[13px]">
+          <div className="px-3 py-4 text-center text-txt-tertiary text-ui">
             {t('dm:search.emptyHint')}
           </div>
         )}
@@ -365,7 +344,7 @@ export function DmSearchBar() {
         {dmItems.length > 0 && (
           <>
             {query.trim().length >= 2 && (
-              <div className="px-3 pt-1.5 pb-1 text-[11px] font-bold text-txt-tertiary uppercase tracking-wider">
+              <div className="px-3 pt-1.5 pb-1 label-mono">
                 {t('dm:search.conversations')}
               </div>
             )}
@@ -388,11 +367,11 @@ export function DmSearchBar() {
         {/* Users section */}
         {(filteredUserResults.length > 0 || (isSearching && query.trim().length >= 2)) && (
           <>
-            <div className="px-3 pt-1.5 pb-1 text-[11px] font-bold text-txt-tertiary uppercase tracking-wider">
+            <div className="px-3 pt-1.5 pb-1 label-mono">
               {t('dm:search.users')}
             </div>
             {isSearching && filteredUserResults.length === 0 && (
-              <div className="px-3 py-2 text-center text-txt-tertiary text-[13px]">{t('dm:search.searching')}</div>
+              <div className="px-3 py-2 text-center text-txt-tertiary text-ui">{t('dm:search.searching')}</div>
             )}
             {filteredUserResults.map((item, i) => {
               const globalIndex = dmItems.length + i;
@@ -411,8 +390,8 @@ export function DmSearchBar() {
         )}
 
         {/* No results */}
-        {!isSearching && query.trim().length >= 2 && allItems.length === 0 && (
-          <div className="px-3 py-4 text-center text-txt-tertiary text-[13px]">{t('dm:search.noResults')}</div>
+        {!isSearching && usernameQueryOf(query) !== null && allItems.length === 0 && (
+          <div className="px-3 py-4 text-center text-txt-tertiary text-ui">{t('dm:search.noResults')}</div>
         )}
       </div>
       {/* i18n-check: allow-literal — what follows is the createPortal argument list, not JSX text */}
@@ -423,10 +402,8 @@ export function DmSearchBar() {
   return (
     <div ref={anchorRef} className="flex-1 min-w-0">
       {active ? (
-        <div className="flex-1 h-8 bg-surface-input rounded-[4px] flex items-center px-2 gap-1.5 border border-white/[0.06] shadow-input">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0">
-            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-          </svg>
+        <div className="flex h-8 flex-1 items-center gap-2 rounded-md border border-accent-primary bg-surface-input px-2.5 ring-1 ring-accent-primary/40">
+          <Icon name="search" size={14} className="flex-shrink-0 text-txt-tertiary" />
           <input
             ref={inputRef}
             type="text"
@@ -434,16 +411,19 @@ export function DmSearchBar() {
             onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
             onKeyDown={handleKeyDown}
             placeholder={t('dm:search.placeholder')}
-            className="input-embedded flex-1 min-w-0 text-[13px] font-medium py-[5px]"
+            aria-label={t('dm:search.trigger')}
+            className="input-embedded flex-1 min-w-0 text-ui py-[5px]"
           />
         </div>
       ) : (
         <button
+          type="button"
           onClick={open}
           title={t('dm:search.trigger')}
-          className="w-full h-8 bg-surface-input text-txt-tertiary text-[13px] font-medium px-2 rounded-[4px] text-left border border-white/[0.06] shadow-input hover:border-white/[0.1] transition-colors truncate"
+          className="flex h-8 w-full items-center gap-2 rounded-md border border-border-soft bg-surface-input px-2.5 text-left text-ui text-txt-tertiary transition-colors hover:border-interactive-muted hover:text-txt-secondary active:bg-interactive-hover"
         >
-          {t('dm:search.trigger')}
+          <Icon name="search" size={14} className="flex-shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{t('dm:search.trigger')}</span>
         </button>
       )}
       {dropdown}

@@ -10,32 +10,27 @@ Russian (`ru`), German (`de`), Brazilian Portuguese (`pt`), Simplified Chinese
 (`zh`). Adding a language is a catalog directory plus one entry in
 `supportedLanguages`; nothing else in the code should need to know the list.
 
-`zh` is the Simplified catalog and detection maps every `zh-*` tag onto it,
-Traditional included: a `zh-TW` browser gets a script its user can read
-rather than English, and the picker says 简体中文 so they know which variant
-they have. A Traditional catalog would be `zh-Hant`, and adding it means
-teaching `resolveSupportedLanguage` to look at the script subtag, which it
-does not today.
+`zh` is the Simplified catalog, and the picker says 简体中文 so a reader knows
+which variant they have. A Traditional catalog would be `zh-Hant`.
 
-`pt` is the Brazilian Portuguese catalog, and it follows the same rule.
-Portuguese has two written standards, Brazilian (`pt-BR`) and European
-(`pt-PT`), which differ in spelling, vocabulary and forms of address but are
-mutually readable. Detection maps every `pt-*` tag onto the one catalog: a
-`pt-PT` browser gets Portuguese its user can read rather than English, and the
-picker says Português do Brasil so they know which variant they have.
+`pt` is the Brazilian Portuguese catalog. Portuguese has two written standards,
+Brazilian (`pt-BR`) and European (`pt-PT`), which differ in spelling, vocabulary
+and forms of address but are mutually readable, and the picker says Português do
+Brasil so a reader knows which variant they have.
 
 Source files:
 - Runtime setup: `packages/web/src/i18n/index.ts` (`initI18n`, `setLanguage`,
-  `getLanguage`; detection, persistence, `<html lang>`/`dir` sync, desktop IPC)
+  `getLanguage`; the choice, persistence, `<html lang>`/`dir` sync, desktop IPC)
 - Language list: `packages/web/src/i18n/languages.ts` (`supportedLanguages`,
   `SupportedLanguage`, `resolveSupportedLanguage`, `pickLanguage`)
 - Lazy catalog loader: `packages/web/src/i18n/loader.ts` (`LazyCatalogBackend`)
 - Typed keys: `packages/web/src/i18n/resources.ts` and
   `packages/web/src/i18n/i18next.d.ts` (`CustomTypeOptions`)
-- Formatters: `packages/web/src/i18n/formatters.ts` (`createFormatters`,
-  `formatters`, `useFormatters`)
+- Formatters: `packages/web/src/i18n/createFormatters.ts` (`createFormatters`,
+  which needs nothing of the app, for the public pages) and
+  `packages/web/src/i18n/formatters.ts` (`formatters`, `useFormatters`)
 - Error mapping: `packages/web/src/i18n/errors.ts` (`describeError`)
-- Language picker: `packages/web/src/components/modals/settingsPanels/LanguageSection.tsx`
+- Language picker: `packages/web/src/components/ui/LanguageSelect.tsx` (in the settings through `settingsPanels/LanguageSection.tsx`, and on the sign-in pages in `AuthShell`)
 - Catalogs: `packages/web/src/locales/<lng>/<namespace>.json`
 - Shared error codes: `packages/shared/src/errors.ts` (`ERROR_CODES`,
   `ErrorCode`, `ApiErrorBody`, `isErrorCode`)
@@ -116,7 +111,8 @@ Rules:
 | `errors` | Localized messages for every `ErrorCode` in `packages/shared` |
 
 One JSON file per namespace per language. `common` is the default
-namespace; everything else is referenced with the `ns:` prefix.
+namespace; everything else is referenced with the `ns:` prefix. `landing` holds the
+product page's texts and is read only by `src/landing/`.
 
 ---
 
@@ -183,7 +179,7 @@ passes `count: 0` as usual.
 
 ## Dates, times and numbers
 
-All formatting goes through `packages/web/src/i18n/formatters.ts`. Nothing
+All formatting goes through `packages/web/src/i18n/createFormatters.ts`. Nothing
 else in the web package calls `toLocaleDateString`, `toLocaleTimeString`,
 `toLocaleString` or constructs an `Intl.*` formatter directly; the check
 script enforces this.
@@ -208,6 +204,7 @@ formatter reads `i18n.resolvedLanguage` at call time; components use the
 | `formatPercent(p)` | Sliders that show `150%` | `Intl.NumberFormat` `style: 'percent'` |
 | `formatBytes(n)` | Storage panel, transfer indicator | `Intl.NumberFormat` with `style: 'unit'` and the right byte unit |
 | `formatList(items)` | Reaction tooltip ("You, Mira, and 3 others"): an "and" list with the language's separators | `Intl.ListFormat` `{ style: 'long', type: 'conjunction' }` |
+| `formatInterval(seconds, unitDisplay?)` | Slow mode and timeout lengths, minimum ages ("30 seconds", "1 week"); `short`/`narrow` for the composer hint | `Intl.NumberFormat` `style: 'unit'` in the largest unit (week, day, hour, minute, second) that divides the span evenly |
 
 `formatDmTimestamp` in `dmFormatters.ts` keeps its today/yesterday/this-year
 branching but delegates every branch to these formatters, and the "Yesterday"
@@ -247,12 +244,16 @@ makes keys typed without maintaining a parallel type by hand.
 Detection order on startup:
 
 1. Stored choice under `localStorage['backspace-language']`.
-2. `navigator.languages`, first entry whose base language is supported.
-3. `en`.
+2. `en`.
+
+**English is the default everywhere.** The browser's and the system's languages
+are not asked: Tavvit is international, so everyone starts in English and picks
+another language themselves, in the settings or in the product page's footer.
+New defaults follow this (the admin's legal drafts open on English too).
 
 Each entry in `supportedLanguages` carries a `released` flag. Only released
-languages appear in the picker (`availableLanguages`) or can be chosen by
-detection; a stored choice for an unreleased language is ignored. English,
+languages appear in the picker (`availableLanguages`); a stored choice for an
+unreleased language is ignored. English,
 Russian, German, Brazilian Portuguese and Chinese are all released. The flag
 exists for the next language: it lands surface by surface with
 `released: false`, so a release cut in between stays free of that language
@@ -262,10 +263,11 @@ unreleased language with `setLanguage` or `initI18n({ releasedLanguages })`;
 people reach it with `?lang=<code>` on the URL, which works in development
 builds only and is never persisted.
 
-Detection alone never writes the stored choice. A user who has not picked a
-language keeps following their browser; only the picker persists.
-`initI18n` resolves after the detected language's catalogs are loaded, and
-`main.tsx` awaits it before the first render, so there is no English flash.
+Only the picker writes the stored choice.
+`initI18n` resolves after the chosen language's catalogs are loaded, and
+`appBoot.tsx` awaits it before the first render, so there is no English flash.
+The product page has its own small setup (`landing/i18n.ts`) with the same choice
+and only the `landing` namespace; see [landing.md](landing.md).
 
 The selector lives in the user settings modal, Account panel, section
 "Language". It lists `supportedLanguages`, showing each language by its
@@ -325,7 +327,11 @@ which returns the localized `errors:` string for the code, interpolating
 `details`, and falls back to the server's English `error` text when there is
 no code or the catalog has no entry. A `code` that is missing from the
 `errors` namespace is a check-script failure, so every code shipped by the
-server has words in every language.
+server has words in every language. A request that got no answer has no code:
+`fetch` rejects with a TypeError in the browser's own English ("Failed to fetch",
+"Load failed"), and the API client throws `RequestTimeoutError`. `describeError`
+turns both into `errors:network`. A surface with its own sentence for a failure
+uses `describeCodedError(err, sentence)` and never `err.message`.
 
 A surface whose own failure text says more than an uncoded failure would (a
 browser exception from a clipboard write, a server's bare English `error`)
@@ -475,8 +481,7 @@ renderer is unavailable.
 
 Language source, in order: the last `set-language` IPC message from the
 renderer, persisted as `language.json` next to `instance-url.json` in
-userData, then `app.getLocale()` mapped through the same base-language rule
-as the web, then `en`. `getDesktopLanguage()` resolves it; the pages receive
+userData, then `en`, the same rule as the web. `getDesktopLanguage()` resolves it; the pages receive
 it as `?lang=` on their `loadFile` URL. On `set-language`, main persists the
 choice and rebuilds every menu it owns.
 
@@ -502,7 +507,7 @@ It fails on:
    allowlist in `scripts/i18n-allowlist.json` (brand names, "OK", URLs, and
    the words German shares with English such as Link, Info, Token, Codec).
 6. A direct `toLocale*` or `Intl.*` call in the web package outside
-   `formatters.ts`.
+   `createFormatters.ts`.
 7. An `ErrorCode` with no entry in `errors.json`.
 8. A literal user-facing string in JSX or in an `addToast(...)` call (bare or
    through a store, `useUIStore.getState().addToast(...)`), in any
@@ -545,7 +550,7 @@ PR ships every language in `supportedLanguages` for its namespace; the parity
 rule fails the PR otherwise.
 
 The Russian translation comes from the community. st7105 translated the
-whole app in PR #45, and that PR also established the detection order, the
+whole app in PR #45, and that PR also established the stored choice, the
 `backspace-language` storage key and the idea of a parity check, all of
 which are kept here. The Russian values are carried over matched by English
 text, with `Co-authored-by` credit on every commit that carries them, and
@@ -658,3 +663,11 @@ does not oblige anyone to translate `site/`, and a `site/<lng>/` page can be
 added or dropped without touching a catalog. If a third one is ever added, that
 is the point to weigh generating the pages from a template against copying the
 markup a second time.
+
+## Mail
+
+Mail is the one thing the server writes in words, because no client is there when it is read. The five languages are in `packages/server/src/email/copy.ts`, typed, and `email/email.test.ts` fails when a kind or a placeholder is missing from one. `users.locale` says which: `MailLanguageController` keeps it in step with the client's language, and registering or adding an address sends it along. See email.md.
+
+## The `legal` namespace
+
+Holds the legal pages, the report form, the terms dialog, notices, the click-to-load placeholder and the admin area's Legal and Reports. The **documents themselves are not in the catalogs**: an admin publishes them per language in `legal_documents`, German and English, and other readers get English ([legal.md](legal.md)).

@@ -8,15 +8,12 @@
   "sections": {
     "online": "在线 — {{n}}",
     "all": "所有好友 — {{n}}",
-    "pending": "待处理 — {{n}}",
-    "active": "活跃 — {{n}}",
-    "offline": "离线 — {{n}}"
+    "pending": "待处理 — {{n}}"
   },
   "empty": {
     "online": "当前没有人在线。",
     "all": "暂无好友 — 快去添加好友吧！",
-    "pending": "没有待处理的申请 — Nori 正在小憩。",
-    "activity": "目前很安静… 当好友开始活动时，会显示在这里！"
+    "pending": "没有待处理的申请 — Nori 正在小憩。"
   },
   "friend": {
     "viaInstance": "来自 {{host}}",
@@ -44,13 +41,21 @@
   },
   "add": {
     "title": "寻找用户",
-    "hint": "按用户名搜索，或使用 <handle>用户@实例</handle> 直接添加好友。",
-    "placeholder": "搜索或通过用户名添加…",
+    "hint": "按用户名查找用户，或输入 <handle>用户@实例</handle> 查找其他实例上的用户。",
+    "placeholder": "用户名或 用户@实例",
     "direct": "向 <handle>{{handle}}</handle> 发送好友申请",
     "sendRequest": "发送申请",
-    "discover": "发现用户",
     "noSearchResults": "没有匹配您搜索的用户。",
-    "noDiscoverable": "暂无可发现的用户 — 快邀请大家加入吧！"
+    "intro": "输入用户名来查找用户。在您搜索之前，这里不会列出任何人，而且只能通过对方自己选择的用户名找到对方。",
+    "tooShort": "请至少输入用户名的 {{min}} 个字符。",
+    "invalidCharacters": "用户名由字母、数字和下划线组成。",
+    "federationOff": "由于本实例未开启联邦功能，无法添加其他实例上的用户。",
+    "resultsLabel": "用户",
+    "state": {
+      "friends": "已是好友",
+      "outgoing": "申请已发送",
+      "incoming": "想加您为好友"
+    }
   },
   "mutuals": {
     "friends_other": "{{count}} 位共同好友",
@@ -70,14 +75,30 @@
     "sendMessage": "发送消息",
     "editRoles": "编辑身份组",
     "viewFull": "查看完整个人资料",
-    "addFriend": "添加好友"
+    "addFriend": "添加好友",
+    "links": "链接",
+    "editProfile": "编辑个人资料",
+    "editSpaceProfile": "编辑空间资料",
+    "activity": "动态"
   },
   "activity": {
     "title": "当前活跃",
-    "quietTitle": "目前很安静…",
-    "quietDescription": "当好友开始活动时（例如玩游戏或进行语音通话），我们将在此处展示！",
-    "online": "在线 — {{n}}",
-    "offline": "离线 — {{n}}"
+    "onlineCount_other": "{{count}} 位好友在线",
+    "nobodyTitle": "现在没有人在线",
+    "nobodyBody": "好友上线后会显示在这里，还会显示他们正在做什么。",
+    "noFriendsBody": "添加好友，就能看到谁在线以及大家在做什么。",
+    "addFriends": "添加好友"
   },
-  "instanceNotConnected": "未连接到 {{host}}。请重新连接后再试。"
+  "instanceNotConnected": "未连接到 {{host}}。请重新连接后再试。",
+  "block": {
+    "action": "屏蔽",
+    "unblock": "取消屏蔽",
+    "confirmTitle": "屏蔽 {{name}}？",
+    "confirmBody": "{{name}} 将无法给你发消息或好友请求，你也无法给对方发消息。你们将不再是好友。对方在共同空间和群组中的消息会对你隐藏。对方不会收到通知。",
+    "confirmAction": "屏蔽",
+    "failed": "无法屏蔽 {{name}}：{{reason}}",
+    "unblockFailed": "无法取消屏蔽 {{name}}：{{reason}}",
+    "blocked": "已屏蔽 {{name}}。",
+    "unblocked": "已取消屏蔽 {{name}}。"
+  }
 }

@@ -1,13 +1,21 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, and, sql, inArray } from 'drizzle-orm';
+import { eq, and, sql, inArray, ne } from 'drizzle-orm';
 import { getDb, getRawDb, schema } from '../db/index.js';
+import { LISTED_IN_DISCOVERY_SQL } from '../utils/discoveryListing.js';
+import { spaceBadgesOf } from '../utils/badges.js';
+import { isSpaceCategory } from '@backspace/shared/src/platform.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { isMember, isBanned, isSpaceOwner, hasPermission, computePermissions, PermissionBits, permissionsToString } from '../utils/permissions.js';
 import { connectionManager } from '../ws/handler.js';
 import { sanitizeUser } from '../utils/sanitize.js';
+import { mediaOriginsFor, shownPicture } from '../utils/remoteMedia.js';
 import { sendError } from '../utils/httpErrors.js';
 import { memberRolesView, rolesForViewer } from '../utils/permissionDataView.js';
+import { channelToWire, memberStaffBadges, memberToWire, spaceToWire } from '../utils/spaceWire.js';
+import { restoreHeldTimeout } from '../utils/spaceModeration.js';
+import { auditUserLabel, recordAudit } from '../utils/auditLog.js';
+import { addPublicMember } from '../utils/spaceJoin.js';
 import type {
   ExploreSpace,
   JoinRequest,
@@ -67,7 +75,7 @@ function buildFullSpace(spaceId: string, forUserId: string): SpaceWithChannelsAn
 
   const channels = db.select()
     .from(schema.channels)
-    .where(eq(schema.channels.spaceId, spaceId))
+    .where(and(eq(schema.channels.spaceId, spaceId), ne(schema.channels.type, 'thread')))
     .all();
 
   const categories = db.select()
@@ -114,14 +122,7 @@ function buildFullSpace(spaceId: string, forUserId: string): SpaceWithChannelsAn
         .filter(mr => mr.userId === m.userId)
         .map(mr => mr.roleId));
 
-      return {
-        spaceId: m.spaceId,
-        userId: m.userId,
-        nickname: m.nickname,
-        joinedAt: m.joinedAt,
-        user: sanitizeUser(u),
-        roles: memberRolesView(roles, assignedRoleIds),
-      };
+      return memberToWire(m, u, memberRolesView(roles, assignedRoleIds), undefined, memberStaffBadges(roles, assignedRoleIds, m.spaceId));
     })
     .filter((m): m is MemberWithUser => m !== null);
 
@@ -133,32 +134,14 @@ function buildFullSpace(spaceId: string, forUserId: string): SpaceWithChannelsAn
     const hasView = (chPerms & PermissionBits.VIEW_CHANNEL) !== 0n || (chPerms & PermissionBits.ADMINISTRATOR) !== 0n;
     if (hasView) {
       visibleChannels.push({
-        id: ch.id,
-        spaceId: ch.spaceId,
-        name: ch.name,
-        type: ch.type as Channel['type'],
-        topic: ch.topic,
-        position: ch.position ?? 0,
-        categoryId: ch.categoryId ?? null,
-        createdAt: ch.createdAt,
+        ...channelToWire(ch),
         myPermissions: permissionsToString(chPerms),
       });
     }
   }
 
   return {
-    id: space.id,
-    name: space.name,
-    icon: space.icon,
-    banner: space.banner ?? null,
-    avatarColor: (space.avatarColor as SpaceWithChannelsAndMembers['avatarColor']) ?? null,
-    ownerId: space.ownerId,
-    ownerTitle: space.ownerTitle,
-    inviteCode: space.inviteCode,
-    visibility: (space.visibility ?? 'private') as SpaceWithChannelsAndMembers['visibility'],
-    directoryListed: space.directoryListed === 1,
-    description: space.description ?? null,
-    createdAt: space.createdAt,
+    ...spaceToWire(space),
     channels: visibleChannels,
     categories,
     members,
@@ -196,18 +179,22 @@ export async function exploreRoutes(app: FastifyInstance): Promise<void> {
     // which is more efficient to do with raw SQL
     const rawDb = getRawDb();
 
-    // Count ALL discoverable spaces (including ones the user has joined) for context
+    // Count ALL listed spaces (including ones the user has joined) for context.
+    // Listed means approved by an admin (utils/spaceReview.ts); an owner's
+    // visibility alone lists nothing.
     const totalAllRow = rawDb.prepare(
-      `SELECT COUNT(DISTINCT s.id) as total FROM spaces s WHERE s.visibility IN ('public', 'request')`
+      `SELECT COUNT(DISTINCT s.id) as total FROM spaces s WHERE ${LISTED_IN_DISCOVERY_SQL}`
     ).get() as { total: number };
 
-    let countSql = `SELECT COUNT(DISTINCT s.id) as total FROM spaces s WHERE s.visibility IN ('public', 'request')`;
+    let countSql = `SELECT COUNT(DISTINCT s.id) as total FROM spaces s WHERE ${LISTED_IN_DISCOVERY_SQL}`;
     let querySql = `
       SELECT s.id, s.name, s.icon, s.banner, s.avatar_color, s.description, s.visibility, s.created_at,
+             s.verification_status, s.badges, dr.category,
              COUNT(sm.user_id) as member_count
       FROM spaces s
       LEFT JOIN space_members sm ON sm.space_id = s.id
-      WHERE s.visibility IN ('public', 'request')
+      LEFT JOIN space_discovery_requests dr ON dr.space_id = s.id
+      WHERE ${LISTED_IN_DISCOVERY_SQL}
     `;
 
     const params: (string | number)[] = [];
@@ -231,20 +218,27 @@ export async function exploreRoutes(app: FastifyInstance): Promise<void> {
       description: string | null;
       visibility: string;
       created_at: number;
+      verification_status: string | null;
+      badges: string | null;
+      category: string | null;
       member_count: number;
     }[];
 
+    const pictureOrigins = mediaOriginsFor();
     const spaces: ExploreSpace[] = rows.map(r => ({
       id: r.id,
       name: r.name,
-      icon: r.icon,
-      banner: r.banner,
+      // Whoever browses fetches these by themselves: a file here, never an address elsewhere (utils/remoteMedia.ts).
+      icon: shownPicture(r.icon, pictureOrigins),
+      banner: shownPicture(r.banner, pictureOrigins),
       avatarColor: (r.avatar_color as ExploreSpace['avatarColor']) ?? null,
       description: r.description,
       visibility: r.visibility as ExploreSpace['visibility'],
       memberCount: r.member_count,
       createdAt: r.created_at,
       joined: mySpaceIds.has(r.id),
+      badges: spaceBadgesOf({ verificationStatus: r.verification_status, badges: r.badges }),
+      category: isSpaceCategory(r.category) ? r.category : null,
     }));
 
     return reply.code(200).send({ spaces, total: totalRow.total, totalAll: totalAllRow.total, discoveryEnabled: true });
@@ -274,33 +268,7 @@ export async function exploreRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 409, 'already_member');
     }
 
-    const now = Date.now();
-    db.insert(schema.spaceMembers).values({
-      spaceId: id,
-      userId: request.userId,
-      joinedAt: now,
-    }).run();
-
-    // Register in connectionManager for WS broadcasts
-    connectionManager.addUserSpace(request.userId, id);
-
-    // Broadcast member_joined to existing space members
-    const joiningUser = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
-    if (joiningUser) {
-      const memberPayload: MemberWithUser = {
-        spaceId: id,
-        userId: request.userId,
-        nickname: null,
-        joinedAt: now,
-        user: sanitizeUser(joiningUser),
-        roles: [],
-      };
-      connectionManager.sendToSpace(id, {
-        type: 'member_joined',
-        spaceId: id,
-        member: memberPayload,
-      });
-    }
+    addPublicMember(id, request.userId);
 
     // Return full space data
     const fullSpace = buildFullSpace(id, request.userId);
@@ -471,6 +439,13 @@ export async function exploreRoutes(app: FastifyInstance): Promise<void> {
           decidedAt: now,
         }).where(eq(schema.joinRequests.id, requestId)).run();
       });
+      // A timeout they left the space under comes back with them.
+      const timedOutUntil = restoreHeldTimeout(id, joinReq.userId, now);
+
+      recordAudit({
+        spaceId: id, actorId: request.userId, action: 'join_request_approve',
+        targetType: 'join_request', targetId: requestId, targetLabel: auditUserLabel(id, joinReq.userId),
+      });
 
       // Register in connectionManager
       connectionManager.addUserSpace(joinReq.userId, id);
@@ -478,14 +453,12 @@ export async function exploreRoutes(app: FastifyInstance): Promise<void> {
       // Broadcast member_joined to space
       const joiningUser = db.select().from(schema.users).where(eq(schema.users.id, joinReq.userId)).get();
       if (joiningUser) {
-        const memberPayload: MemberWithUser = {
-          spaceId: id,
-          userId: joinReq.userId,
-          nickname: null,
-          joinedAt: now,
-          user: sanitizeUser(joiningUser),
-          roles: [],
-        };
+        const memberPayload = memberToWire(
+          { spaceId: id, userId: joinReq.userId, nickname: null, joinedAt: now, timedOutUntil, avatar: null, banner: null, bio: null },
+          joiningUser,
+          [],
+          now,
+        );
         connectionManager.sendToSpace(id, {
           type: 'member_joined',
           spaceId: id,
@@ -519,6 +492,11 @@ export async function exploreRoutes(app: FastifyInstance): Promise<void> {
 
       const updatedRow = db.select().from(schema.joinRequests).where(eq(schema.joinRequests.id, requestId)).get()!;
       const updatedRequest = rowToJoinRequest(updatedRow);
+
+      recordAudit({
+        spaceId: id, actorId: request.userId, action: 'join_request_decline',
+        targetType: 'join_request', targetId: requestId, targetLabel: auditUserLabel(id, joinReq.userId),
+      });
 
       // Send join_request_declined to the requesting user
       connectionManager.sendToUser(joinReq.userId, {

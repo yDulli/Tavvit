@@ -342,7 +342,7 @@ describe('MobileVoiceFullScreen mute and deafen', () => {
 });
 
 describe('MobileVoiceFullScreen DM call title', () => {
-  const ORBIT = 'https://orbit.example';
+  const TAVVIT = 'https://orbit.example';
 
   function inDmCall(members: { id: string; username: string; displayName: string; homeInstance?: string; homeUserId?: string }[], origin: string) {
     // A DM call has no voice channel: the call is the client's activeDmCall.
@@ -358,11 +358,11 @@ describe('MobileVoiceFullScreen DM call title', () => {
 
   it('names the other members of a DM pinned to another instance, not the user', () => {
     // orbit knows the user as o-7; orbit's own Bob has the id the session row has.
-    useAuthStore.setState({ myRowIds: new Map([[ORBIT, 'o-7']]) });
+    useAuthStore.setState({ myRowIds: new Map([[TAVVIT, 'o-7']]) });
     inDmCall([
       { id: 'o-7', username: 'alice@nova.example', displayName: 'Alice', homeInstance: 'nova.example', homeUserId: '1' },
       { id: '1', username: 'bob', displayName: 'Bob' },
-    ], ORBIT);
+    ], TAVVIT);
     renderScreen();
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
@@ -371,7 +371,7 @@ describe('MobileVoiceFullScreen DM call title', () => {
   it('names a call by its conversation when the instance that rang it has no copy', () => {
     useVoiceStore.setState({
       currentVoiceChannelId: null,
-      activeDmCall: { dmChannelId: null, federatedCallId: 'key-1', callOrigin: ORBIT, livekit: null },
+      activeDmCall: { dmChannelId: null, federatedCallId: 'key-1', callOrigin: TAVVIT, livekit: null },
     });
     useSpaceStore.setState({
       dmChannels: [{ id: 'dm-copy', federatedId: 'key-1', ownerId: null, members: [

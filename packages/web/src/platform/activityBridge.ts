@@ -16,11 +16,11 @@ export function initActivityBridge(): void {
     }
   });
 
-  // Request current state (handles instance-switch: game was already running)
+  // Request current state (handles instance-switch: game was already running).
+  // No game is a state too: a game that ended while the page reloaded must
+  // not stay on the profile until the next change.
   window.backspace.getCurrentActivity?.().then((activity: unknown) => {
-    if (activity) {
-      useActivityStore.getState().pushActivities([activity as Activity]);
-    }
+    useActivityStore.getState().pushActivities(activity ? [activity as Activity] : []);
   }).catch(() => {});
 }
 

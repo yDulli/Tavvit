@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `accent_color_secondary` text;

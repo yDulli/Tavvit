@@ -4,6 +4,9 @@ import { Track } from 'livekit-client';
 import { useVoiceStore } from '../../../stores/voiceStore';
 import { getActiveRoom } from '../../../hooks/useLiveKit';
 import { isElectron, getElectronAPI } from '../../../platform/platform';
+import { Icon } from '../../ui/Icon';
+import { DevicePicker, DropdownItem } from './_shared/SettingsPickerPrimitives';
+import { SettingsField, SettingsSection } from './_shared/SettingsControls';
 
 /**
  * Permission state machine for the Video section.
@@ -435,64 +438,44 @@ export function VideoSection() {
 
   if (permState === 'unknown') {
     return (
-      <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          {t('voice.video.title')}
-        </div>
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 text-sm text-txt-tertiary">
-          {t('voice.video.checkingAccess')}
-        </div>
-      </div>
+      <SettingsSection title={t('voice.video.title')}>
+        <p className="text-ui text-txt-tertiary">{t('voice.video.checkingAccess')}</p>
+      </SettingsSection>
     );
   }
 
   if (permState === 'denied' || permState === 'hard-blocked') {
     return (
-      <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          {t('voice.video.title')}
-        </div>
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-2">
-          <div className="text-sm text-txt-primary">⚠ {t('voice.video.accessDenied.title')}</div>
-          <div className="text-xs text-txt-tertiary">
-            {permState === 'hard-blocked'
-              ? t(`voice.video.blocked.${getHardBlockedPlatform()}`)
-              : t('voice.video.accessDenied.description')}
+      <SettingsSection title={t('voice.video.title')}>
+        <div className="flex items-start gap-2.5">
+          <Icon name="alert" size={16} className="mt-px flex-shrink-0 text-txt-warning" />
+          <div className="min-w-0">
+            <p className="text-ui font-medium text-txt-primary">{t('voice.video.accessDenied.title')}</p>
+            <p className="mt-0.5 text-meta leading-snug text-txt-tertiary">
+              {permState === 'hard-blocked'
+                ? t(`voice.video.blocked.${getHardBlockedPlatform()}`)
+                : t('voice.video.accessDenied.description')}
+            </p>
+            <button type="button" onClick={startPreviewFromUser} className="btn-outline btn-sm mt-2.5">
+              {t('voice.video.accessDenied.retry')}
+            </button>
           </div>
-          <button
-            onClick={startPreviewFromUser}
-            className="text-xs px-3 py-1.5 rounded-md bg-surface-base hover:bg-interactive-hover text-txt-secondary transition-colors"
-          >
-            {t('voice.video.accessDenied.retry')}
-          </button>
         </div>
-      </div>
+      </SettingsSection>
     );
   }
 
   if (permState === 'prompt') {
     return (
-      <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          {t('voice.video.title')}
-        </div>
-        <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-3">
-          <div className="aspect-video w-full rounded-lg bg-surface-base overflow-hidden relative flex flex-col items-center justify-center text-center px-6">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary mb-2">
-              <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
-            </svg>
-            <div className="text-sm text-txt-secondary mb-1">
-              {t('voice.video.permissionPrompt.description')}
-            </div>
-          </div>
-          <button
-            onClick={startPreviewFromUser}
-            className="w-full text-[13px] px-3 py-2 rounded-md bg-accent-primary hover:bg-accent-primary-hover active:bg-accent-primary-active text-white font-medium transition-colors"
-          >
+      <SettingsSection title={t('voice.video.title')}>
+        <div>
+          <p className="text-meta leading-snug text-txt-tertiary">{t('voice.video.permissionPrompt.description')}</p>
+          <button type="button" onClick={startPreviewFromUser} className="btn-outline mt-2.5">
+            <Icon name="video" size={15} />
             {t('voice.video.permissionPrompt.enable')}
           </button>
         </div>
-      </div>
+      </SettingsSection>
     );
   }
 
@@ -515,18 +498,15 @@ export function VideoSection() {
   const isDormant = !previewActive && !inCallAttached;
 
   return (
-    <div>
-      <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-        {t('voice.video.title')}
-      </div>
-      <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5">
-        <div className="aspect-video w-full rounded-lg bg-surface-base overflow-hidden relative mb-3 group">
+    <SettingsSection title={t('voice.video.title')}>
+      <div className="flex flex-col gap-4 desktop:flex-row desktop:items-start">
+        <div className="group relative aspect-video w-full flex-shrink-0 overflow-hidden rounded-md border border-border-hard bg-surface-base desktop:w-64">
           <video
             ref={previewVideoRef}
             muted
             playsInline
             autoPlay
-            className={`w-full h-full object-cover ${isDormant ? 'invisible' : ''}`}
+            className={`h-full w-full object-cover ${isDormant ? 'invisible' : ''}`}
             style={{ transform: 'scaleX(-1)' }}
           />
           {isDormant && (
@@ -534,12 +514,10 @@ export function VideoSection() {
               type="button"
               onClick={startPreviewFromUser}
               aria-label={t('voice.video.preview.testAria')}
-              className="absolute inset-0 flex flex-col items-center justify-center text-txt-tertiary hover:text-txt-secondary hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-txt-tertiary transition-colors hover:bg-interactive-hover hover:text-txt-secondary active:bg-interactive-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-soft"
             >
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" className="mb-2">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-              <span className="text-xs">{t('voice.video.preview.testHint')}</span>
+              <Icon name="play" size={22} />
+              <span className="text-meta">{t('voice.video.preview.testHint')}</span>
             </button>
           )}
           {previewActive && !previewError && (
@@ -547,47 +525,25 @@ export function VideoSection() {
               type="button"
               onClick={stopPreviewFromUser}
               // Mobile: always visible (no hover state) and 44 px tap target
-              // per iOS HIG. Desktop: original hover-reveal compact pill.
-              className="absolute top-2 right-2 rounded-md bg-black/60 hover:bg-black/75 text-white/90 transition-colors focus-visible:opacity-100
-                         min-h-[44px] min-w-[44px] px-3 py-2 text-xs flex items-center justify-center
-                         desktop:min-h-0 desktop:min-w-0 desktop:text-[11px] desktop:px-2 desktop:py-1 desktop:opacity-0 desktop:group-hover:opacity-100"
+              // per iOS HIG. Desktop: hover-reveal compact button.
+              className="absolute right-2 top-2 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md bg-black/60 px-3 py-2 text-meta text-white/90 transition-colors hover:bg-black/75 focus-visible:opacity-100
+                         desktop:min-h-0 desktop:min-w-0 desktop:px-2 desktop:py-1 desktop:text-label desktop:opacity-0 desktop:group-hover:opacity-100"
             >
               {t('voice.video.preview.stop')}
             </button>
           )}
           {previewError && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-base/90 text-xs text-txt-tertiary text-center px-4 gap-2">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-base/90 px-4 text-center text-meta text-txt-secondary">
               <div>{t(`voice.video.previewError.${previewError}`)}</div>
-              <button
-                type="button"
-                onClick={startPreviewFromUser}
-                className="text-[11px] px-2 py-1 rounded-md bg-surface-base hover:bg-interactive-hover text-txt-secondary transition-colors"
-              >
+              <button type="button" onClick={startPreviewFromUser} className="btn-outline btn-sm">
                 {t('voice.video.preview.retry')}
               </button>
             </div>
           )}
         </div>
-        <div className="text-[13px] font-medium text-txt-primary mb-1.5">{t('voice.video.camera.label')}</div>
-        <div ref={dropdownRef}>
-          <button
-            type="button"
-            onClick={() => setListOpen((v) => !v)}
-            className="w-full px-3 py-2 flex items-center justify-between rounded-md bg-surface-base hover:bg-interactive-hover transition-colors"
-          >
-            <span className="text-[13px] text-txt-primary truncate text-left">{selectedLabel}</span>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className={`text-txt-tertiary flex-shrink-0 ml-2 transition-transform ${listOpen ? 'rotate-90' : ''}`}
-            >
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-            </svg>
-          </button>
-          {listOpen && (
-            <div className="mt-1 rounded-md bg-surface-base border border-border-hard py-1">
+        <div className="min-w-0 flex-1">
+          <SettingsField label={t('voice.video.camera.label')}>
+            <DevicePicker selectedLabel={selectedLabel} open={listOpen} onToggle={() => setListOpen((v) => !v)} pickerRef={dropdownRef}>
               <DropdownItem
                 label={autoLabel}
                 active={cameraDeviceId === null}
@@ -601,56 +557,25 @@ export function VideoSection() {
                   onClick={() => handleSelect(d.deviceId)}
                 />
               ))}
-            </div>
-          )}
+            </DevicePicker>
+            {cameraDeviceId === null &&
+              activeDeviceId &&
+              (previewActive || isCameraOn) &&
+              (() => {
+                const m = devices.find((d) => d.deviceId === activeDeviceId);
+                const detected = t('voice.video.camera.detectedFallback');
+                const label = m
+                  ? displayLabels.get(activeDeviceId) ?? (m.label || detected)
+                  : detected;
+                return <p className="mt-1.5 text-meta text-txt-tertiary">{t('voice.video.camera.currentlyUsing', { label })}</p>;
+              })()}
+            {devices.length === 0 && (
+              <p className="mt-1.5 text-meta text-txt-tertiary">{t('voice.video.camera.none')}</p>
+            )}
+          </SettingsField>
         </div>
-        {cameraDeviceId === null &&
-          activeDeviceId &&
-          (previewActive || isCameraOn) &&
-          (() => {
-            const m = devices.find((d) => d.deviceId === activeDeviceId);
-            const detected = t('voice.video.camera.detectedFallback');
-            const label = m
-              ? displayLabels.get(activeDeviceId) ?? (m.label || detected)
-              : detected;
-            return <div className="text-xs text-txt-tertiary mt-1">{t('voice.video.camera.currentlyUsing', { label })}</div>;
-          })()}
-        {devices.length === 0 && (
-          <div className="text-xs text-txt-tertiary mt-1">{t('voice.video.camera.none')}</div>
-        )}
       </div>
-    </div>
-  );
-}
-
-interface DropdownItemProps {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}
-
-function DropdownItem({ label, active, onClick }: DropdownItemProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full px-3 py-2 text-left text-[13px] hover:bg-interactive-hover transition-colors flex items-center gap-2 ${
-        active ? 'text-txt-primary' : 'text-txt-secondary'
-      }`}
-    >
-      {active && (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          className="text-accent-primary flex-shrink-0"
-        >
-          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-        </svg>
-      )}
-      <span className={`truncate ${active ? '' : 'pl-6'}`}>{label}</span>
-    </button>
+    </SettingsSection>
   );
 }
 

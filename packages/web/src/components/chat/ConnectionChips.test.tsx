@@ -165,7 +165,7 @@ describe('ConnectionChips', () => {
     seed(
       [
         registryEntry('https://zwiss.example', 'auth_expired', 'Zwiss'),
-        registryEntry('https://orbit.example', 'auth_expired', 'Orbit'),
+        registryEntry('https://orbit.example', 'auth_expired', 'Tavvit'),
       ],
       [liveInstance('https://zwiss.example', 'error')],
     );
@@ -183,7 +183,7 @@ describe('ConnectionChips', () => {
     });
 
     expect(screen.getByLabelText('Your home account password')).toBeInTheDocument();
-    expect(screen.queryByText('Orbit')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tavvit')).not.toBeInTheDocument();
   });
 
   it('an origin that stops being expired stops being exempt', async () => {
@@ -606,7 +606,7 @@ describe('RemoteLoginRequiredError', () => {
   // every surface showing the English message with nothing else failing.
   it('describes itself from the catalog rather than from its own message', () => {
     expect(describeError(new RemoteLoginRequiredError('jannis@home.example', 'credential-refused'))).toBe(
-      'Your account on that instance has a password of its own. Sign in with it to reconnect.',
+      'Your account on that instance has a password of its own. Log in with it to reconnect.',
     );
     expect(describeError(new RemoteLoginRequiredError('jannis@home.example', 'registration-closed'))).toBe(
       'This instance is not accepting accounts from other instances.',

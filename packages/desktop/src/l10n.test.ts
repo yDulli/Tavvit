@@ -10,31 +10,26 @@ import {
 // language is passed in, so the strings are testable in plain Node.
 
 describe('resolveDesktopLanguage', () => {
-  it('prefers the language the renderer reported', () => {
-    expect(resolveDesktopLanguage('ru', 'de-DE')).toBe('ru');
+  it('takes the language the renderer reported', () => {
+    expect(resolveDesktopLanguage('ru')).toBe('ru');
   });
 
-  it('falls back to the OS locale mapped to its base language', () => {
-    expect(resolveDesktopLanguage(null, 'de-AT')).toBe('de');
-    expect(resolveDesktopLanguage('nonsense', 'ru-RU')).toBe('ru');
-  });
-
-  it('falls back to English when neither is shipped', () => {
-    expect(resolveDesktopLanguage(null, 'fr-FR')).toBe('en');
-    expect(resolveDesktopLanguage(null, '')).toBe('en');
+  it('is English without one, or with one that is not shipped', () => {
+    expect(resolveDesktopLanguage(null)).toBe('en');
+    expect(resolveDesktopLanguage('nonsense')).toBe('en');
   });
 });
 
 describe('translateDesktop', () => {
   it('returns the string for the language', () => {
-    expect(translateDesktop('en', 'tray.show')).toBe('Show Backspace');
-    expect(translateDesktop('ru', 'tray.show')).toBe('Показать Backspace');
-    expect(translateDesktop('de', 'tray.show')).toBe('Backspace anzeigen');
+    expect(translateDesktop('en', 'tray.show')).toBe('Show Tavvit');
+    expect(translateDesktop('ru', 'tray.show')).toBe('Показать Tavvit');
+    expect(translateDesktop('de', 'tray.show')).toBe('Tavvit anzeigen');
   });
 
   it('interpolates a version into the download item', () => {
-    expect(translateDesktop('en', 'update.downloadVersion', { version: '1.2.3' })).toBe('Download Backspace 1.2.3…');
-    expect(translateDesktop('de', 'update.downloadVersion', { version: '1.2.3' })).toBe('Backspace 1.2.3 herunterladen…');
+    expect(translateDesktop('en', 'update.downloadVersion', { version: '1.2.3' })).toBe('Download Tavvit 1.2.3…');
+    expect(translateDesktop('de', 'update.downloadVersion', { version: '1.2.3' })).toBe('Tavvit 1.2.3 herunterladen…');
   });
 });
 

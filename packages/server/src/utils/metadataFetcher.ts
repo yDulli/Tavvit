@@ -21,7 +21,7 @@ export async function fetchUrlMetadata(url: string): Promise<UrlMetadata | null>
   try {
     const response = await safeFetch(url, {
       headers: {
-        'User-Agent': 'BackspaceBot/1.0',
+        'User-Agent': 'TavvitBot/1.0',
       },
       signal: controller.signal,
     });

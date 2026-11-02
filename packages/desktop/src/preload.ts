@@ -14,6 +14,23 @@ contextBridge.exposeInMainWorld('backspace', {
     ipcRenderer.send('close-window');
   },
 
+  // Right click in a text field (editMenu.ts): what Chromium knows there, and
+  // the commands of the menu the page draws for it.
+  onEditContextMenu: (callback: (params: import('./editMenu').EditMenuParams) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, params: import('./editMenu').EditMenuParams) => callback(params);
+    ipcRenderer.on('edit-context-menu', handler);
+    return () => { ipcRenderer.removeListener('edit-context-menu', handler); };
+  },
+  editCommand: (command: import('./editMenu').EditCommand) => {
+    ipcRenderer.send('edit-command', command);
+  },
+  replaceMisspelling: (word: string) => {
+    ipcRenderer.send('replace-misspelling', word);
+  },
+  addToDictionary: (word: string) => {
+    ipcRenderer.send('add-to-dictionary', word);
+  },
+
   // Notifications & badge
   showNotification: (title: string, body: string, options?: { channelId?: string; spaceId?: string; userId?: string }) => {
     ipcRenderer.send('show-notification', { title, body, options });
@@ -113,13 +130,11 @@ contextBridge.exposeInMainWorld('backspace', {
     ipcRenderer.send('screen-share-audio-preference', shareAudio);
   },
 
-  // Instance URL management
-  getInstanceUrl: () => ipcRenderer.invoke('get-instance-url'),
-  setInstanceUrl: (url: string) => ipcRenderer.invoke('set-instance-url', url),
-  clearInstanceUrl: () => ipcRenderer.invoke('clear-instance-url'),
-
   // Language: the renderer owns the choice; main relabels its tray and menus.
   setLanguage: (language: string) => ipcRenderer.send('set-language', language),
+
+  // The colour of the page's frame, which the window's own buttons sit on.
+  setFrameColor: (color: string) => ipcRenderer.send('set-frame-color', color),
 
   // Auto-launch settings
   getAutoLaunchSettings: () => ipcRenderer.invoke('get-auto-launch-settings'),
@@ -133,6 +148,12 @@ contextBridge.exposeInMainWorld('backspace', {
     return () => { ipcRenderer.removeListener('activity-detected', handler); };
   },
   getCurrentActivity: () => ipcRenderer.invoke('get-current-activity'),
+  // Whether a voice session is open, so an update never restarts the app mid-call.
+  setCallActive: (active: boolean) => ipcRenderer.send('set-call-active', active),
+  // Game detection settings (main.ts, "Game detection"): opt-in, with the person's own programs.
+  getGameDetection: () => ipcRenderer.invoke('game-detection-get'),
+  setGameDetectionEnabled: (enabled: boolean) => ipcRenderer.invoke('game-detection-set-enabled', enabled),
+  removeDetectedGame: (process: string) => ipcRenderer.invoke('game-detection-remove', process),
 
   // Keybind support
   getKeybindPortalStatus: () => ipcRenderer.invoke('keybind-portal-status'),

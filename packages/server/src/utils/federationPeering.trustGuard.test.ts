@@ -93,7 +93,7 @@ describe('ensurePeered — refuses when unresolved inbound approval-request exis
     testDb.insert(schema.peerApprovalRequests).values({
       id: 'approval-1',
       origin: 'https://orbit.test',
-      instanceName: 'Orbit',
+      instanceName: 'Tavvit',
       hmacSecret: 'a'.repeat(64),
       requestedAt: now,
       expiresAt: now + 30 * 24 * 60 * 60 * 1000,

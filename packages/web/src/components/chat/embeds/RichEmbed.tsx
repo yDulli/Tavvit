@@ -1,6 +1,9 @@
+import { ExternalImage } from '../../ui/ExternalMedia';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Embed } from '@backspace/shared';
+import { Icon } from '../../ui/Icon';
+import { providerLabel as labelOf } from './providerLabel';
 
 interface RichEmbedProps {
   embed: Embed;
@@ -24,14 +27,12 @@ export function RichEmbed({ embed }: RichEmbedProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const iframeHeight = getIframeHeight(embed);
 
-  const providerLabel = embed.provider
-    ? embed.provider.charAt(0).toUpperCase() + embed.provider.slice(1)
-    : null;
+  const providerLabel = labelOf(embed.provider);
 
   if (!embed.embedUrl) return null;
 
   return (
-    <div className="mt-2 max-w-[400px] rounded-lg overflow-hidden bg-surface-channel border border-white/[0.06]">
+    <div className="surface-card max-w-[400px] overflow-hidden rounded-lg">
       {isLoaded ? (
         <iframe
           src={embed.embedUrl}
@@ -47,40 +48,43 @@ export function RichEmbed({ embed }: RichEmbedProps) {
         <button
           type="button"
           onClick={() => setIsLoaded(true)}
-          className="w-full text-left focus:outline-none group"
+          className="group w-full text-left transition-colors -outline-offset-2 hover:bg-interactive-hover active:bg-interactive-active"
           aria-label={providerLabel ? t('embed.loadNamed', { name: providerLabel }) : t('embed.loadUnnamed')}
         >
-          <div className="flex items-start gap-3 p-3">
+          <div className="flex items-start gap-2.5 p-2.5">
             {embed.image && (
-              <div data-embed-thumbnail className="w-[80px] h-[80px] flex-shrink-0">
-                <img
+              <div data-embed-thumbnail className="h-20 w-20 flex-shrink-0">
+                <ExternalImage
+                  whileBlocked={(
+                    <span className="flex h-full w-full items-center justify-center rounded-md border border-border-hard bg-surface-input text-txt-tertiary">
+                      <Icon name="music" size={20} />
+                    </span>
+                  )}
                   src={embed.image}
                   alt=""
-                  className="w-full h-full object-cover rounded"
+                  className="h-full w-full rounded-md object-cover"
                   referrerPolicy="no-referrer"
                 />
               </div>
             )}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               {providerLabel && (
-                <div className="text-[12px] text-txt-tertiary font-medium mb-1">
+                <div className="mb-0.5 truncate font-mono text-label text-txt-tertiary">
                   {providerLabel}
                 </div>
               )}
               {embed.title && (
-                <div className="text-[14px] text-sky-400 font-semibold group-hover:underline line-clamp-2">
+                <div className="line-clamp-2 text-body font-medium leading-snug text-txt-primary group-hover:underline">
                   {embed.title}
                 </div>
               )}
               {embed.description && (
-                <div className="text-[13px] text-txt-secondary mt-1 line-clamp-2">
+                <div className="mt-1 line-clamp-2 text-ui leading-snug text-txt-secondary">
                   {embed.description}
                 </div>
               )}
-              <div className="text-[12px] text-txt-secondary group-hover:text-txt-primary transition-colors mt-2 flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
+              <div className="mt-1.5 flex items-center gap-1.5 text-meta text-txt-secondary transition-colors group-hover:text-txt-primary">
+                <Icon name="play" size={12} strokeWidth={2} />
                 {t('embed.loadAction')}
               </div>
             </div>

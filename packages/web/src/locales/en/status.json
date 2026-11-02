@@ -1,0 +1,35 @@
+{
+  "title": "Status",
+  "lead": "Whether everything here is running right now.",
+  "checking": "Checking…",
+  "unreachable": "The server does not answer. Try again in a moment.",
+  "allGood": "Everything is running.",
+  "someDown": "Something is not running.",
+  "services": {
+    "chat": "Messages and accounts",
+    "uploads": "Uploading files",
+    "voice": "Voice and video",
+    "mail": "Mail"
+  },
+  "states": {
+    "ok": "Running",
+    "down": "Not running",
+    "off": "Not set up here"
+  },
+  "notes": "From the people who run this server",
+  "noteOngoing": "Since {{date}}",
+  "noteEnded": "{{date}} to {{until}}",
+  "limit": "This page runs on the same server. If the whole server is gone, so is this page.",
+  "frame": {
+    "home": "Home",
+    "help": "Help",
+    "changelog": "What's new",
+    "status": "Status",
+    "terms": "Terms of use",
+    "privacy": "Privacy policy",
+    "imprint": "Legal notice",
+    "report": "Report content",
+    "developers": "Developers",
+    "roadmap": "Roadmap"
+  }
+}

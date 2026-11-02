@@ -199,7 +199,7 @@ function Popover() {
   return (
     <div className="w-[260px] glass rounded-lg overflow-hidden">
       <div className="px-3 py-2 border-b border-border-hard">
-        <div className="text-[14px] font-bold text-txt-primary">{i18n.t('voice:streamSettings.title')}</div>
+        <div className="text-body font-semibold text-txt-primary">{i18n.t('voice:streamSettings.title')}</div>
         <StreamHostSubtitle className="mt-0.5" />
       </div>
       <div className="px-3 py-3">
@@ -218,7 +218,7 @@ function Drawer() {
     <div className="w-[340px] glass border-l border-border-hard flex flex-col shadow-2xl rounded-r-lg">
       <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3 border-b border-border-hard">
         <div className="min-w-0">
-          <div className="text-[15px] font-bold text-txt-primary">{i18n.t('voice:streamSettings.title')}</div>
+          <div className="text-lead font-semibold text-txt-primary">{i18n.t('voice:streamSettings.title')}</div>
           <StreamHostSubtitle className="mt-0.5" />
         </div>
       </div>

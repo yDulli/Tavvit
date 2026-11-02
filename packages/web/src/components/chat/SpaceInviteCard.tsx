@@ -143,24 +143,24 @@ export function SpaceInviteCard({ payload, senderName }: Props) {
   };
 
   return (
-    <div className={`my-1.5 max-w-md rounded-lg border border-white/[0.06] bg-surface-channel overflow-hidden ${isRevoked ? 'opacity-50' : ''}`}>
-      <div className="px-3 py-1 text-[11px] text-txt-tertiary border-b border-white/[0.06]">
+    <div className={`surface-card my-1.5 max-w-[400px] rounded-lg overflow-hidden ${isRevoked ? 'opacity-50' : ''}`}>
+      <div className="px-3 py-1.5 text-label text-txt-tertiary border-b border-border-hard">
         {t('chat:invite.sentBy', { name: senderName })}
       </div>
-      <div className="flex items-center gap-3 p-3">
+      <div className="flex items-center gap-2.5 p-2.5">
         <Avatar
           src={payload.snapshot.icon}
           name={payload.snapshot.spaceName}
-          size={48}
+          size={40}
           userId={payload.spaceId}
           avatarColor={payload.snapshot.avatarColor}
           palette="space"
         />
         <div className="flex-1 min-w-0">
-          <div className="text-[14px] font-semibold text-txt-primary truncate">
+          <div className="text-ui font-medium text-txt-primary truncate">
             {payload.snapshot.spaceName}
           </div>
-          <div className="text-[12px] text-txt-tertiary truncate">
+          <div className="text-meta text-txt-tertiary truncate">
             {t('chat:invite.memberCount', { count: memberCount })}
             {payload.snapshot.instanceName ? ` · ${payload.snapshot.instanceName}` : ''}
             {live.kind === 'loading' && (
@@ -169,18 +169,19 @@ export function SpaceInviteCard({ payload, senderName }: Props) {
           </div>
         </div>
         {isRevoked ? (
-          <span className="glass-pill px-3 py-1 text-[12px] text-txt-tertiary">
+          <span className="glass-pill flex-shrink-0 rounded-md px-2 py-1 text-meta text-txt-tertiary">
             {t('chat:invite.revoked')}
           </span>
         ) : requestOutcome ? (
-          <span role="status" className="glass-pill px-3 py-1 text-[12px] text-accent-mint flex-shrink-0">
+          <span role="status" className="glass-pill flex-shrink-0 rounded-md px-2 py-1 text-meta text-txt-positive">
             {requestOutcome === 'sent' ? t('chat:invite.requestSent') : t('chat:invite.requestPending')}
           </span>
         ) : (
           <button
             onClick={onJoin}
             disabled={joining}
-            className="px-4 py-1.5 rounded-md text-[13px] font-medium bg-accent-mint text-surface-base hover:bg-accent-mint/90 disabled:opacity-50 flex-shrink-0"
+            aria-busy={joining}
+            className="btn-primary btn-sm"
           >
             {asksToJoin
               ? (joining ? t('chat:invite.sendingRequest') : t('chat:invite.askToJoin'))
@@ -189,12 +190,12 @@ export function SpaceInviteCard({ payload, senderName }: Props) {
         )}
       </div>
       {asksToJoin && !isRevoked && (
-        <div className="px-3 pb-2 text-[12px] text-txt-tertiary">
+        <div className="px-3 pb-2 text-meta text-txt-tertiary">
           {requestOutcome ? t('chat:invite.requestReview') : t('chat:invite.requestNotice')}
         </div>
       )}
       {joinError && (
-        <div className="px-3 pb-2 text-[12px] text-txt-danger">{joinError}</div>
+        <div className="px-3 pb-2 text-meta text-txt-danger">{joinError}</div>
       )}
     </div>
   );

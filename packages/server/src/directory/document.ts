@@ -1,5 +1,7 @@
 import type Database from 'better-sqlite3';
 import type { DirectoryDocument, DirectoryDocumentSpace } from '@backspace/shared';
+import { DEFAULT_INSTANCE_NAME } from '@backspace/shared/src/constants.js';
+import { LISTED_IN_DISCOVERY_SQL } from '../utils/discoveryListing.js';
 
 /** Section 5 of the spec: the document never carries more than this. */
 export const DIRECTORY_MAX_SPACES = 200;
@@ -63,11 +65,13 @@ function sameOrigin(value: string, origin: string): boolean {
   }
 }
 
-// Which spaces the document carries while the instance publishes at all. The
-// admin panel counts through the same predicate, so "N spaces listed" there
-// is the number of spaces the document would carry, before the cap.
+// Which spaces the document carries while the instance publishes at all:
+// listed in Discovery, which takes an admin's approval (utils/discoveryListing.ts),
+// and opted in to the directory by the owner. The admin panel counts through
+// the same predicate, so "N spaces listed" there is the number of spaces the
+// document would carry, before the cap.
 const LISTED_SPACES_WHERE = `
-  s.visibility IN ('public', 'request')
+  ${LISTED_IN_DISCOVERY_SQL}
     AND s.directory_listed = 1`;
 
 // The Explore query (routes/explore.ts) with the two extra predicates, so a
@@ -126,7 +130,7 @@ export function buildDirectoryDocument(sqlite: Database.Database, ctx: Directory
     schema: 1,
     origin: ctx.origin,
     instance: {
-      name: settings?.instance_name ?? 'Backspace',
+      name: settings?.instance_name ?? DEFAULT_INSTANCE_NAME,
       federatedRegistrationOpen: settings?.federated_registration_open === 1,
       version: ctx.version,
     },

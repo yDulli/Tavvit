@@ -102,6 +102,35 @@ export function addsMassMention(before: string | null | undefined, after: string
 }
 
 /**
+ * Whether content carries a mass mention its author needs MENTION_EVERYONE
+ * for: `@everyone` / `@here`, or a role that is not open to mentions.
+ * `openRoleIds` are the space's roles anyone may mention (`Role.mentionable`).
+ */
+export function hasGatedMassMention(content: string | null | undefined, openRoleIds: ReadonlySet<string>): boolean {
+  const parsed = parseMentions(content);
+  if (parsed.everyone) return true;
+  for (const roleId of parsed.roleIds) {
+    if (!openRoleIds.has(roleId)) return true;
+  }
+  return false;
+}
+
+/** `addsMassMention` with the roles anyone may mention left out, as `hasGatedMassMention` leaves them out. */
+export function addsGatedMassMention(
+  before: string | null | undefined,
+  after: string | null | undefined,
+  openRoleIds: ReadonlySet<string>,
+): boolean {
+  const old = parseMentions(before);
+  const next = parseMentions(after);
+  if (next.everyone && !old.everyone) return true;
+  for (const roleId of next.roleIds) {
+    if (!old.roleIds.has(roleId) && !openRoleIds.has(roleId)) return true;
+  }
+  return false;
+}
+
+/**
  * The mass mention fields the instance hosting a space puts on each of its
  * channel messages (`Message.mentionEveryone`, `Message.mentionRoleIds`). The
  * instance stores a new mass mention only from an author who holds

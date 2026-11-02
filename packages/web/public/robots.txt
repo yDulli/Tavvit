@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+Disallow: /channels/
+Disallow: /friends
+Disallow: /inbox
+Disallow: /explore
+Disallow: /about
+Disallow: /developers/bots

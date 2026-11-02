@@ -28,7 +28,7 @@ function channel(id: string, spaceId: string): Channel {
   return { id, spaceId, name: id, type: 'text', topic: null, position: 0, categoryId: null, createdAt: 0 };
 }
 
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const me = makeUser('me', 'alice', 'Alice');
 const meOnOrbit = makeUser('me-orbit', 'alice@home.example', 'Alice');
 const kai = makeUser('kai', 'kai', 'Kai');
@@ -64,12 +64,12 @@ describe('channelUser hooks and in-place lookup map updates', () => {
 
   it("follows a channel's origin set in place", () => {
     useAuthStore.setState({ user: me });
-    useAuthStore.getState().recordMyRow(ORBIT, meOnOrbit.id);
+    useAuthStore.getState().recordMyRow(TAVVIT, meOnOrbit.id);
     useSpaceStore.setState({ currentSpaceId: 'space-9' });
     const { result } = renderHook(() => useSelfIdInChannel('chan-orbit'));
     expect(result.current).toBe(me.id);
 
-    act(() => useSpaceStore.getState().upsertChannel(channel('chan-orbit', 'space-9'), 'space-9', ORBIT));
+    act(() => useSpaceStore.getState().upsertChannel(channel('chan-orbit', 'space-9'), 'space-9', TAVVIT));
 
     expect(result.current).toBe(meOnOrbit.id);
   });
@@ -97,10 +97,10 @@ describe('useChannelUserResolver', () => {
     const kaiOnOrbit = makeUser('kai-orbit', 'kai', 'Kai');
     const orbitDm = { id: 'dm-orbit', ownerId: null, createdAt: 1, members: [meOnOrbit, kaiOnOrbit], lastMessage: null } as unknown as DmChannel;
     useAuthStore.setState({ user: me });
-    useAuthStore.getState().recordMyRow(ORBIT, meOnOrbit.id);
-    useSpaceStore.setState({ dmChannels: [orbitDm], channelOriginMap: new Map([[orbitDm.id, ORBIT]]), members: [member('space-1', kai)] });
+    useAuthStore.getState().recordMyRow(TAVVIT, meOnOrbit.id);
+    useSpaceStore.setState({ dmChannels: [orbitDm], channelOriginMap: new Map([[orbitDm.id, TAVVIT]]), members: [member('space-1', kai)] });
     const { result } = renderHook(() => useChannelUserResolver(orbitDm.id));
-    expect(result.current(kaiOnOrbit.id)?.origin).toBe(ORBIT);
+    expect(result.current(kaiOnOrbit.id)?.origin).toBe(TAVVIT);
     expect(result.current(meOnOrbit.id)?.user.displayName).toBe('Alice');
     // A home id names nobody in a DM whose ids are orbit's.
     expect(result.current(me.id)).toBeNull();

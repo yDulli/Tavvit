@@ -48,7 +48,7 @@ function directoryEntry(id: string): DirectoryEntry {
     visibility: 'public',
     memberCount: 3,
     createdAt: 1,
-    instanceName: 'Orbit',
+    instanceName: 'Tavvit',
     federatedRegistrationOpen: true,
   };
 }

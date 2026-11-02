@@ -28,6 +28,7 @@ const nodeGlobals = {
   TextEncoder: 'readonly',
   TextDecoder: 'readonly',
   AbortController: 'readonly',
+  AbortSignal: 'readonly',
   fetch: 'readonly',
   crypto: 'readonly',
   WebSocket: 'readonly',
@@ -124,7 +125,7 @@ module.exports = tseslint.config(
     // and the two web config files. CommonJS by design, so the ES-module import
     // rule does not apply to them.
     files: ['**/*.js', '**/*.cjs'],
-    ignores: ['site/assets/**'],
+    ignores: ['site/assets/**', 'packages/web/developers/assets/**'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: commonjsGlobals,
@@ -142,6 +143,18 @@ module.exports = tseslint.config(
     languageOptions: {
       sourceType: 'module',
       globals: nodeGlobals,
+    },
+    rules: {
+      'no-undef': 'error',
+    },
+  },
+
+  {
+    // The developer docs' one script. Runs in the browser, no bundler.
+    files: ['packages/web/developers/assets/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: { ...browserGlobals, NodeFilter: 'readonly' },
     },
     rules: {
       'no-undef': 'error',

@@ -9,6 +9,7 @@ import { useComposerStore } from '../../stores/composerStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useTransferStore, type Transfer } from '../../stores/transferStore';
+import { useExternalMediaStore } from '../../stores/externalMediaStore';
 import { Message } from './Message';
 import { MessageInput } from './MessageInput';
 
@@ -187,6 +188,8 @@ it('sends a personal sticker without discarding the current text draft', async (
 });
 
 it('offers collection only in the sticker context menu and keeps existing message actions', async () => {
+  // chat.test is another server than this page's: the person has said yes to it.
+  useExternalMediaStore.setState({ alwaysAllow: false, allowedHosts: ['chat.test'] });
   const token = `sticker:https://chat.test/api/stickers/assets/${'a'.repeat(64)}.webp`;
   const collect = vi.spyOn(api.stickers, 'collect').mockResolvedValue({ id: 'a'.repeat(64), name: 'Happy', token });
   // DM wire messages carry dmChannelId, not a guild channelId.
@@ -205,6 +208,7 @@ it('offers collection only in the sticker context menu and keeps existing messag
 });
 
 it('draws a sticker once even when an older instance unfurled its asset URL', () => {
+  useExternalMediaStore.setState({ alwaysAllow: false, allowedHosts: ['chat.test'] });
   const token = `sticker:https://chat.test/api/stickers/assets/${'a'.repeat(64)}.webp`;
   const assetUrl = token.slice('sticker:'.length);
   const embed = {

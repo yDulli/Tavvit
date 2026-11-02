@@ -14,8 +14,6 @@ vi.mock('../audio/AudioManager', () => ({
     }),
   },
 }));
-vi.mock('../hooks/useMascotAnimation', () => ({ useMascotAnimation: vi.fn() }));
-
 /**
  * A socket the real handler talks to. The test plays each server by feeding
  * events through `onmessage`.
@@ -65,7 +63,7 @@ type TaggedSpace = import('../stores/spaceStore').TaggedSpace;
 // #340. The viewer's home is the page's instance. Bob is native on orbit
 // (id bob-home). The home keeps a replicated row for him (id stub-a), and that
 // row is the friend the home's friend list returns.
-const ORBIT = 'https://orbit.test';
+const TAVVIT = 'https://orbit.test';
 const NOVA = 'https://nova.test';
 const playing: Activity[] = [{ type: 'playing', name: 'Factorio' }];
 
@@ -128,7 +126,8 @@ function socketFor(origin: string): FakeWebSocket {
 }
 
 function panel(): HTMLElement {
-  return render(<ActivityPanel />).container;
+  // The panel's rows open the user menu, which navigates, so it sits in a router as in the app.
+  return render(<MemoryRouter><ActivityPanel /></MemoryRouter>).container;
 }
 
 beforeEach(() => {
@@ -160,11 +159,11 @@ describe("#340: a federated friend's activity in the friends views", () => {
     });
 
     expect(useSocialStore.getState().friends[0]!.status).toBe('online');
-    expect(within(view).getByText('Factorio')).toBeTruthy();
+    expect(within(view).getByText('Playing Factorio')).toBeTruthy();
   });
 
   it("shows the activity the friend's own home delivers under their native id", () => {
-    const orbit = socketFor(ORBIT);
+    const orbit = socketFor(TAVVIT);
     const view = panel();
     orbit.deliver({
       type: 'presence_update', userId: 'bob-home', status: 'online', activities: playing,
@@ -172,7 +171,7 @@ describe("#340: a federated friend's activity in the friends views", () => {
     });
 
     expect(useSocialStore.getState().friends[0]!.status).toBe('online');
-    expect(within(view).getByText('Factorio')).toBeTruthy();
+    expect(within(view).getByText('Playing Factorio')).toBeTruthy();
   });
 
   it('shows one delivery in the member list and the friends panel alike, and clears both', () => {
@@ -186,15 +185,15 @@ describe("#340: a federated friend's activity in the friends views", () => {
       type: 'presence_update', userId: 'stub-a', status: 'online', activities: playing,
       homeUserId: 'bob-home', homeInstance: 'orbit.test',
     });
-    expect(within(friendsView).getByText('Factorio')).toBeTruthy();
-    expect(within(membersView).getByText('Factorio')).toBeTruthy();
+    expect(within(friendsView).getByText('Playing Factorio')).toBeTruthy();
+    expect(within(membersView).getByText('Playing Factorio')).toBeTruthy();
 
     home.deliver({
       type: 'presence_update', userId: 'stub-a', status: 'online', activities: [],
       homeUserId: 'bob-home', homeInstance: 'orbit.test',
     });
-    expect(within(friendsView).queryByText('Factorio')).toBeNull();
-    expect(within(membersView).queryByText('Factorio')).toBeNull();
+    expect(within(friendsView).queryByText('Playing Factorio')).toBeNull();
+    expect(within(membersView).queryByText('Playing Factorio')).toBeNull();
   });
 
   it("keeps a home native's activity apart from a same-id user native elsewhere", () => {
@@ -209,8 +208,8 @@ describe("#340: a federated friend's activity in the friends views", () => {
       type: 'presence_update', userId: 'carol', status: 'online', activities: playing,
       homeUserId: null, homeInstance: null,
     });
-    expect(within(membersView).queryByText('Factorio')).toBeNull();
-    expect(within(friendsView).queryByText('Factorio')).toBeNull();
+    expect(within(membersView).queryByText('Playing Factorio')).toBeNull();
+    expect(within(friendsView).queryByText('Playing Factorio')).toBeNull();
     expect(useSocialStore.getState().friends[0]!.status).toBe('idle');
   });
 
@@ -223,7 +222,7 @@ describe("#340: a federated friend's activity in the friends views", () => {
       userActivityIdentities: { 'stub-a': { homeUserId: 'bob-home', homeInstance: 'orbit.test' } },
     }));
 
-    expect(within(view).getByText('Factorio')).toBeTruthy();
+    expect(within(view).getByText('Playing Factorio')).toBeTruthy();
   });
 
   it('shows the activity in the mobile friends page activity tab', async () => {
@@ -236,7 +235,7 @@ describe("#340: a federated friend's activity in the friends views", () => {
     });
     await userEvent.click(screen.getByRole('button', { name: /activity/i }));
 
-    expect(screen.getByText('Factorio')).toBeTruthy();
+    expect(screen.getByText('Playing Factorio')).toBeTruthy();
   });
 });
 
@@ -252,17 +251,17 @@ describe('#340: a server that predates the identity fields', () => {
 
     nova.deliver({ type: 'presence_update', userId: 'bob-on-nova', status: 'online', activities: playing });
 
-    expect(within(friendsView).getByText('Factorio')).toBeTruthy();
-    expect(within(membersView).getByText('Factorio')).toBeTruthy();
+    expect(within(friendsView).getByText('Playing Factorio')).toBeTruthy();
+    expect(within(membersView).getByText('Playing Factorio')).toBeTruthy();
   });
 
   it('keys an unknown user as native to the delivering instance', () => {
-    const orbit = socketFor(ORBIT);
+    const orbit = socketFor(TAVVIT);
     const view = panel();
     orbit.deliver({ type: 'presence_update', userId: 'bob-home', status: 'online', activities: playing });
 
     expect(useSocialStore.getState().friends[0]!.status).toBe('online');
-    expect(within(view).getByText('Factorio')).toBeTruthy();
+    expect(within(view).getByText('Playing Factorio')).toBeTruthy();
   });
 
   it('keys ready activities by the members the same ready payload carries', () => {
@@ -275,6 +274,6 @@ describe('#340: a server that predates the identity fields', () => {
       userActivities: { 'bob-on-nova': playing },
     }));
 
-    expect(within(view).getByText('Factorio')).toBeTruthy();
+    expect(within(view).getByText('Playing Factorio')).toBeTruthy();
   });
 });

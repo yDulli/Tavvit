@@ -54,7 +54,7 @@ function readScene(search: string): Scene {
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
 const NOW = Date.UTC(2026, 8, 27, 12, 0);
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const VAULT = 'https://vault.example';
 const LONG_HOST = 'https://backspace.community-instance-with-a-long-name.example.org';
 
@@ -62,18 +62,18 @@ const APPROVAL_REQUESTS: ApprovalRequest[] = [
   {
     id: 'req-orbit',
     direction: 'outbound',
-    origin: ORBIT,
+    origin: TAVVIT,
     instanceName: null,
     requestedAt: NOW - 25 * 60_000,
     expiresAt: NOW + 30 * 86_400_000,
     subscribers: [
       { userId: 'u-erin', username: 'erin', triggerReason: 'friend_add', triggerTarget: 'bob@orbit.example' },
-      { userId: 'u-frank', username: 'frank', triggerReason: 'instance_connect', triggerTarget: ORBIT },
+      { userId: 'u-frank', username: 'frank', triggerReason: 'instance_connect', triggerTarget: TAVVIT },
       {
         userId: 'u-max',
         username: 'maximilian_schwarzenberger',
         triggerReason: 'instance_connect',
-        triggerTarget: ORBIT,
+        triggerTarget: TAVVIT,
       },
     ],
   },
@@ -102,10 +102,10 @@ const SUBSCRIPTIONS: PeeringSubscription[] = [
   {
     id: 'sub-orbit',
     requestId: 'req-orbit',
-    peerOrigin: ORBIT,
-    peerInstanceName: 'Orbit',
+    peerOrigin: TAVVIT,
+    peerInstanceName: 'Tavvit',
     triggerReason: 'instance_connect',
-    triggerTarget: ORBIT,
+    triggerTarget: TAVVIT,
     createdAt: NOW - 25 * 60_000,
   },
   {
@@ -132,9 +132,9 @@ const NOTIFICATIONS: PeeringNotification[] = [
   {
     id: 'n-orbit',
     kind: 'approved',
-    peerOrigin: ORBIT,
+    peerOrigin: TAVVIT,
     triggerReason: 'instance_connect',
-    triggerTarget: ORBIT,
+    triggerTarget: TAVVIT,
     createdAt: NOW - 5 * 60_000,
     readAt: null,
   },
@@ -161,10 +161,13 @@ const NOTIFICATIONS: PeeringNotification[] = [
 const ADMIN_SETTINGS: InstanceAdminSettings = {
   instanceName: 'Workbench',
   registrationOpen: true,
+  emojiPolicy: 'everyone',
   federatedRegistrationOpen: true,
   discoveryEnabled: true,
   gifEnabled: false,
   maxUploadSizeMb: 100,
+  storagePerAccountGb: 5,
+  spacesPerAccount: 25,
   federationRelayEnabled: true,
   federationRelayTtlDays: 30,
   defaultAutoRotateIntervalDays: 90,
@@ -174,7 +177,7 @@ const ADMIN_SETTINGS: InstanceAdminSettings = {
   directoryLastPingAt: null,
   directoryLastError: null,
   directoryListedSpaceCount: 0,
-  supportCardEnabled: true,
+  accentColor: null,
 };
 
 const HOME_USER: User = {
@@ -244,7 +247,7 @@ function seedStores(scene: Scene): void {
         {
           id: 'toast-refused',
           type: 'warning',
-          message: i18n.t('federation:connections.peering.unavailable', { name: 'Orbit' }),
+          message: i18n.t('federation:connections.peering.unavailable', { name: 'Tavvit' }),
         },
         {
           id: 'toast-pending',

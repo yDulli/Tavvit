@@ -47,13 +47,13 @@ export function CreateCategoryModal() {
     <Modal isOpen={isOpen} onClose={closeModal} title={t('spaces:category.create.title')} mobileStyle="sheet">
       <form onSubmit={handleSubmit}>
         {error && (
-          <div className="mb-3 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
+          <div className="mb-3 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">
             {error}
           </div>
         )}
 
         <div className="mb-4">
-          <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+          <label className="field-label">
             {t('spaces:category.create.nameLabel')}
           </label>
           <input
@@ -67,19 +67,20 @@ export function CreateCategoryModal() {
         </div>
 
         <div className="sticky bottom-0 z-10 pointer-events-none">
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="glass-bubble rounded-full px-3 py-2 flex items-center gap-3 pointer-events-auto">
+          <div className="flex justify-end pt-3 pb-1">
+            <div className="action-bar pointer-events-auto">
               <button
                 type="button"
                 onClick={closeModal}
-                className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                className="btn-quiet"
               >
                 {t('common:actions.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                aria-busy={isLoading}
+                className="btn-primary"
               >
                 {isLoading ? t('spaces:category.create.submitting') : t('spaces:category.create.submit')}
               </button>

@@ -25,7 +25,7 @@ vi.mock('../stores/authStore', () => ({
   ),
 }));
 
-const ORBIT = 'https://orbit.test';
+const TAVVIT = 'https://orbit.test';
 
 const { clients, mockGetApiForOrigin, connected } = vi.hoisted(() => {
   const make = () => ({
@@ -84,15 +84,15 @@ beforeEach(() => {
 
 describe('owner on another instance, the home copy shown', () => {
   beforeEach(() => {
-    connected.set('orbit.test', ORBIT);
+    connected.set('orbit.test', TAVVIT);
     // The home copy is pinned; orbit holds its own copy under its own id.
-    useSpaceStore.getState().populateFromReady('', [], [], [copy('dm-home', ORBIT, [bobOnHome, carolOnHome])]);
-    useSpaceStore.getState().populateFromReady(ORBIT, [], [], [copy('dm-orbit', ORBIT, [])]);
+    useSpaceStore.getState().populateFromReady('', [], [], [copy('dm-home', TAVVIT, [bobOnHome, carolOnHome])]);
+    useSpaceStore.getState().populateFromReady(TAVVIT, [], [], [copy('dm-orbit', TAVVIT, [])]);
   });
 
   it('a rename names orbit\'s copy', async () => {
     await updateGroupDmMetadata('dm-home', { name: 'Crew' });
-    expect(mockGetApiForOrigin).toHaveBeenCalledWith(ORBIT);
+    expect(mockGetApiForOrigin).toHaveBeenCalledWith(TAVVIT);
     expect(clients.orbit.dm.updateMetadata).toHaveBeenCalledWith('dm-orbit', { name: 'Crew' });
     expect(clients.home.dm.updateMetadata).not.toHaveBeenCalled();
   });
@@ -127,15 +127,15 @@ describe('owner on the shown copy\'s instance', () => {
 
 describe('owner instance the client cannot reach', () => {
   it('not connected: refuses without sending anything anywhere', async () => {
-    useSpaceStore.getState().populateFromReady('', [], [], [copy('dm-home', ORBIT, [bobOnHome])]);
+    useSpaceStore.getState().populateFromReady('', [], [], [copy('dm-home', TAVVIT, [bobOnHome])]);
     await expect(updateGroupDmMetadata('dm-home', { name: 'x' })).rejects.toBeInstanceOf(OwnerInstanceUnavailableError);
     expect(clients.home.dm.updateMetadata).not.toHaveBeenCalled();
     expect(clients.orbit.dm.updateMetadata).not.toHaveBeenCalled();
   });
 
   it('connected, but it lists no copy of the conversation: refuses', async () => {
-    connected.set('orbit.test', ORBIT);
-    useSpaceStore.getState().populateFromReady('', [], [], [copy('dm-home', ORBIT, [bobOnHome])]);
+    connected.set('orbit.test', TAVVIT);
+    useSpaceStore.getState().populateFromReady('', [], [], [copy('dm-home', TAVVIT, [bobOnHome])]);
     await expect(kickFromGroupDm('dm-home', bobOnHome)).rejects.toBeInstanceOf(OwnerInstanceUnavailableError);
     expect(clients.orbit.dm.kickMember).not.toHaveBeenCalled();
   });

@@ -21,9 +21,10 @@ vi.setConfig({ testTimeout: 30_000 });
  * `POST /api/auth/register` is public and unauthenticated, and the
  * `homeInstance` / `homeUserId` it receives are caller-supplied with no proof of
  * control. It used to look for a federation-replicated stub matching those
- * values and write the submitted credentials onto that row. The route is now
- * create-only on every path: one username uniqueness check, then a fresh insert,
- * always 201.
+ * values and write the submitted credentials onto that row. The route is
+ * create-only on every path, and since 1.31.0 it refuses `homeInstance` outright
+ * unless the home vouches for a proof (`src/routes/auth.homeProof.test.ts`): none
+ * of these gets as far as a row at all.
  *
  * The stub here is not hand-inserted. It is produced the way stubs actually come
  * into being: instance A relays a real, HMAC-signed DM `create` over HTTP and
@@ -152,7 +153,7 @@ describe('federation e2e — federated registration never claims a replicated st
     expect(stub!.home_user_id).toBe(STUB_HOME_USER_ID);
   });
 
-  it('a registration carrying the stub\'s exact homeUserId + homeInstance creates a NEW user', async () => {
+  it('a registration carrying the stub\'s exact homeUserId + homeInstance is refused', async () => {
     const before = snapshotUser(B, stubId);
 
     const res = await register({
@@ -163,13 +164,12 @@ describe('federation e2e — federated registration never claims a replicated st
       homeUserId: STUB_HOME_USER_ID,
     });
 
-    expect(res.status).toBe(201);
-    expect(res.userId).toBeTruthy();
-    expect(res.userId).not.toBe(stubId);
+    expect(res.status).toBe(403);
+    expect(res.userId).toBeNull();
     expect(snapshotUser(B, stubId)).toEqual(before);
   });
 
-  it('a registration naming a DIFFERENT home instance with the same homeUserId creates a NEW user', async () => {
+  it('a registration naming a DIFFERENT home instance with the same homeUserId is refused', async () => {
     const before = snapshotUser(B, stubId);
 
     const res = await register({
@@ -180,13 +180,12 @@ describe('federation e2e — federated registration never claims a replicated st
       homeUserId: STUB_HOME_USER_ID,
     });
 
-    expect(res.status).toBe(201);
-    expect(res.userId).toBeTruthy();
-    expect(res.userId).not.toBe(stubId);
+    expect(res.status).toBe(403);
+    expect(res.userId).toBeNull();
     expect(snapshotUser(B, stubId)).toEqual(before);
   });
 
-  it('a registration matching only by username hint creates a NEW user', async () => {
+  it('a registration matching only by username hint is refused', async () => {
     const before = snapshotUser(B, stubId);
 
     // The stub's username is `stubtarget@home.test.local`. Tier-2 lookup used to
@@ -199,9 +198,8 @@ describe('federation e2e — federated registration never claims a replicated st
       homeUserId: '900000000000000399',
     });
 
-    expect(res.status).toBe(201);
-    expect(res.userId).toBeTruthy();
-    expect(res.userId).not.toBe(stubId);
+    expect(res.status).toBe(403);
+    expect(res.userId).toBeNull();
     expect(snapshotUser(B, stubId)).toEqual(before);
   });
 

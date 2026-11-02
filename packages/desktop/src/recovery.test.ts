@@ -163,13 +163,14 @@ function defaultState(overrides?: Partial<RecoveryState>): RecoveryState {
 }
 
 describe('buildTrayMenuTemplate', () => {
-  it('includes Show/Hide/Change Instance/Quit base items', () => {
+  it('includes Show/Hide/Reload/Quit base items, and no server switcher', () => {
     const items = buildTrayMenuTemplate(defaultState());
     const labels = items.map((i) => i.label);
-    expect(labels).toContain('Show Backspace');
+    expect(labels).toContain('Show Tavvit');
     expect(labels).toContain('Hide');
-    expect(labels).toContain('Change Instance');
+    expect(labels).toContain('Reload');
     expect(labels).toContain('Quit');
+    expect(labels).not.toContain('Change Instance');
   });
 
   it('includes Check for Updates with idle label when updateState=idle', () => {
@@ -231,26 +232,26 @@ describe('buildTrayMenuTemplate', () => {
 
 describe('buildAppMenuTemplate', () => {
   it('returns top-level menu with App, Edit, Window submenus', () => {
-    const template = buildAppMenuTemplate('Backspace', defaultState());
+    const template = buildAppMenuTemplate('Tavvit', defaultState());
     const [appMenu, editMenu, windowMenu] = template;
     expect(template.length).toBeGreaterThanOrEqual(3);
-    expect(appMenu!.label).toBe('Backspace');
+    expect(appMenu!.label).toBe('Tavvit');
     expect(editMenu!.label).toBe('Edit');
     expect(windowMenu!.label).toBe('Window');
   });
 
-  it('App submenu includes About and Change Instance', () => {
-    const template = buildAppMenuTemplate('Backspace', defaultState());
+  it('App submenu includes About and Reload', () => {
+    const template = buildAppMenuTemplate('Tavvit', defaultState());
     const [appMenu] = template;
     const appSub = appMenu!.submenu as MenuItemConstructorOptions[];
     const labels = appSub.map((i) => i.label).filter(Boolean);
     expect(appSub.find((i) => i.role === 'about')).toBeDefined();
-    expect(labels).toContain('Change Instance');
+    expect(labels).toContain('Reload');
     expect(appSub.find((i) => i.role === 'quit')).toBeDefined();
   });
 
   it('App submenu includes Check for Updates with state-correct label', () => {
-    const template = buildAppMenuTemplate('Backspace', defaultState({ updateState: 'idle' }));
+    const template = buildAppMenuTemplate('Tavvit', defaultState({ updateState: 'idle' }));
     const [appMenu] = template;
     const appSub = appMenu!.submenu as MenuItemConstructorOptions[];
     const item = appSub.find((i) => i.id === 'check-for-updates');
@@ -259,11 +260,11 @@ describe('buildAppMenuTemplate', () => {
   });
 
   it('App submenu inserts Restart to Install Update only when downloaded', () => {
-    const [idleAppMenu] = buildAppMenuTemplate('Backspace', defaultState({ updateState: 'idle' }));
+    const [idleAppMenu] = buildAppMenuTemplate('Tavvit', defaultState({ updateState: 'idle' }));
     const idleSub = idleAppMenu!.submenu as MenuItemConstructorOptions[];
     expect(idleSub.find((i) => i.id === 'restart-to-install')).toBeUndefined();
 
-    const [dlAppMenu] = buildAppMenuTemplate('Backspace', defaultState({ updateState: 'downloaded' }));
+    const [dlAppMenu] = buildAppMenuTemplate('Tavvit', defaultState({ updateState: 'downloaded' }));
     const dlSub = dlAppMenu!.submenu as MenuItemConstructorOptions[];
     const restartItem = dlSub.find((i) => i.id === 'restart-to-install');
     expect(restartItem).toBeDefined();
@@ -271,7 +272,7 @@ describe('buildAppMenuTemplate', () => {
   });
 
   it('App submenu omits updater actions when updates are managed externally', () => {
-    const [appMenu] = buildAppMenuTemplate('Backspace', defaultState({ updateState: 'external' }));
+    const [appMenu] = buildAppMenuTemplate('Tavvit', defaultState({ updateState: 'external' }));
     const appSub = appMenu!.submenu as MenuItemConstructorOptions[];
     expect(appSub.find((i) => i.id === 'check-for-updates')).toBeUndefined();
     expect(appSub.find((i) => i.id === 'restart-to-install')).toBeUndefined();
@@ -368,7 +369,7 @@ describe('manual-download update state in the menus', () => {
     expect(ids).toContain('download-update');
     expect(ids).not.toContain('restart-to-install');
     expect(items.find((i) => i.id === 'download-update')!.label)
-      .toBe('Download Backspace 1.0.4…');
+      .toBe('Download Tavvit 1.0.4…');
   });
 
   it('falls back to an unversioned label when no version is known', () => {

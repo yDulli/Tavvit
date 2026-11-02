@@ -34,6 +34,14 @@
         "voice": {
           "name": "Sprachkanal",
           "description": "Mit Sprache und Video zusammen abhängen"
+        },
+        "announcement": {
+          "name": "Ankündigungen",
+          "description": "Nur wen du erlaubst, darf schreiben, und andere Spaces können folgen"
+        },
+        "forum": {
+          "name": "Forum",
+          "description": "Jeder Beitrag ist ein eigenes Gespräch, mit Titel und Tags"
         }
       },
       "nameLabel": "Kanalname",
@@ -67,7 +75,66 @@
         "note": "Dieser Kanal ist für Mitglieder ohne ausdrücklichen Zugriff verborgen. Wer die Administrator-Berechtigung hat oder den Space besitzt, sieht immer alle Kanäle.",
         "unhideOnSave": "Beim Speichern wird dieser Kanal für alle Mitglieder sichtbar."
       },
-      "deleteButton": "Kanal löschen"
+      "deleteButton": "Kanal löschen",
+      "slowmode": {
+        "label": "Langsamer Modus",
+        "off": "Aus",
+        "hint": "So lange warten Mitglieder zwischen zwei Nachrichten. Wer Nachrichten oder diesen Kanal verwalten darf, ist ausgenommen."
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Eine Adresse, über die ein anderes Programm in diesen Kanal schreiben kann. Wer sie kennt, kann hier schreiben. Behandle sie also wie ein Passwort.",
+        "nameLabel": "Name",
+        "create": "Anlegen",
+        "empty": "In diesem Kanal gibt es noch keine Webhooks.",
+        "onlyOnce": "Die Adresse von {{name}}. Kopiere sie jetzt: Sie wird nicht noch einmal angezeigt.",
+        "addressLabel": "Adresse des Webhooks",
+        "copied": "Kopiert",
+        "howTo": "Sende JSON mit einem Feld „content“ dorthin, zum Beispiel:",
+        "rename": "Webhook umbenennen",
+        "neverUsed": "Noch nie benutzt",
+        "lastUsed": "Zuletzt benutzt: {{time}}",
+        "rotate": "Neue Adresse",
+        "rotateTitle": "Neue Adresse vergeben?",
+        "rotateBody": "Die alte Adresse von {{name}} funktioniert sofort nicht mehr. Das ist für den Fall gedacht, dass sie bekannt geworden ist.",
+        "remove": "Webhook löschen",
+        "removeTitle": "Diesen Webhook löschen?",
+        "removeBody": "Die Adresse von {{name}} funktioniert nicht mehr. Was darüber geschrieben wurde, bleibt."
+      },
+      "announcement": {
+        "label": "Ankündigungskanal",
+        "hint": "Nur wen du unter Berechtigungen erlaubst, darf schreiben, und andere Spaces können folgen."
+      },
+      "tags": {
+        "title": "Tags",
+        "intro": "Beiträge können diese Tags tragen, und die Liste lässt sich danach filtern. Bis zu {{max}}.",
+        "empty": "Noch keine Tags.",
+        "nameLabel": "Name des Tags",
+        "colorLabel": "Farbe des Tags",
+        "noColor": "Keine Farbe",
+        "add": "Tag hinzufügen",
+        "remove": "Tag entfernen"
+      },
+      "follows": {
+        "followersTitle": "Kanäle, die diesem folgen",
+        "followersEmpty": "Noch folgt diesem Kanal keiner.",
+        "followingTitle": "Kanäle, denen dieser folgt",
+        "place": "#{{channel}} in {{space}}",
+        "remove": "Folgen beenden",
+        "removeTitle": "Folgen beenden?",
+        "removeBody": "Neue Beiträge kommen dort nicht mehr an. Was schon angekommen ist, bleibt."
+      },
+      "icon": {
+        "label": "Icon",
+        "hint": "Ersetzt das Symbol des Kanaltyps überall, wo der Kanal steht. Ohne eigenes bleibt das Symbol des Typs.",
+        "default": "Symbol des Kanaltyps",
+        "emoji": "Emoji",
+        "useDefault": "Typ-Symbol nutzen",
+        "tabs": {
+          "icons": "Icons",
+          "emoji": "Emoji"
+        }
+      }
     },
     "delete": {
       "title": "#{{name}} löschen?",
@@ -176,19 +243,17 @@
     "title": "Entdecken",
     "searchPlaceholder": "Spaces suchen…",
     "discoveryOff": {
-      "member": "Deine Instanzverwaltung hat das Entdecken von Spaces ausgeschaltet. Spaces hier sind nur über Einladungslinks erreichbar.",
       "admin": "Das Entdecken von Spaces ist auf dieser Instanz ausgeschaltet. Spaces hier sind nur über Einladungslinks erreichbar.",
       "enable": "Entdecken von Spaces einschalten",
       "failed": "Die Einstellung konnte nicht geändert werden."
     },
     "browseOff": {
-      "member": "Spaces von anderen Instanzen werden hier nicht angezeigt, weil deine Instanzverwaltung das ausgeschaltet hat.",
       "admin": "Spaces von anderen Instanzen werden hier nicht angezeigt.",
       "action": "Globale Spaces in „Entdecken“ anzeigen",
       "confirm": {
         "title": "Spaces von anderen Instanzen hier anzeigen?",
         "exposure": "Diese Instanzen sehen die IP-Adresse jedes Browsers, der etwas davon lädt, und die Verwaltung dieser Instanz hat keine Kontrolle über sie.",
-        "off": "Zum späteren Beenden: Einstellungen, Instanz, Allgemein, der Schalter für globale Spaces in „Entdecken“.",
+        "off": "Zum späteren Beenden: Admin-Konsole, Allgemein, der Schalter für globale Spaces in „Entdecken“.",
         "action": "Globale Spaces anzeigen"
       }
     },
@@ -197,13 +262,13 @@
       "action": "Eintragen",
       "confirm": {
         "title": "Spaces dieser Instanz öffentlich eintragen?",
-        "optIn": "Übertragen werden nur Spaces, deren Besitzer den Eintrag selbst einschalten; dieser Schalter trägt von sich aus keinen Space ein.",
-        "off": "Zum späteren Beenden: Einstellungen, Instanz, Allgemein, die Auswahl zum Entdecken von Spaces.",
+        "optIn": "Gesendet werden nur Spaces, deren Eintrag die Admins freigegeben haben und deren Owner sie für das Verzeichnis angemeldet haben; dieser Schalter allein listet also keinen Space.",
+        "off": "Zum späteren Beenden: Admin-Konsole, Allgemein, die Auswahl zum Entdecken von Spaces.",
         "action": "Spaces eintragen"
       }
     },
     "noMatches": "Keine Spaces passen zu deiner Suche.",
-    "empty": "Noch keine Spaces zum Entdecken.",
+    "empty": "Noch keine gelisteten Spaces.",
     "joinedSection": "Beigetreten",
     "notConnected": "Keine Verbindung zu {{host}}",
     "inner": {
@@ -215,8 +280,8 @@
     },
     "outer": {
       "title": "Äußerer Space",
-      "subtitle": "Communities in ganz Backspace",
-      "empty": "Da draußen ist noch nichts. Spaces, die sich ins Verzeichnis eintragen, erscheinen hier.",
+      "subtitle": "Communities in ganz Tavvit",
+      "empty": "Hier draußen ist noch nichts. Freigegebene Spaces, deren Owner sie für das Verzeichnis anmelden, erscheinen hier.",
       "noMatches": "Im Äußeren Space passt nichts zu deiner Suche.",
       "showMore": "Mehr anzeigen",
       "connectAndJoin": "Verbinden und beitreten",
@@ -259,7 +324,8 @@
       "pending": "Ausstehend",
       "request": "Anfragen",
       "sending": "Wird gesendet…"
-    }
+    },
+    "lead": "Spaces, denen du beitreten kannst: offen für alle oder auf Anfrage."
   },
   "settings": {
     "title": "Space-Einstellungen",
@@ -269,9 +335,17 @@
       "management": "Verwaltung",
       "tabs": {
         "overview": "Übersicht",
+        "welcome": "Willkommen und Regeln",
+        "sounds": "Soundboard",
         "discovery": "Entdecken",
         "roles": "Rollen",
-        "bans": "Sperren"
+        "bans": "Sperren",
+        "moderation": "Moderation",
+        "audit": "Protokoll",
+        "verification": "Verifizierung",
+        "you": "Deine Einstellungen",
+        "access": "Zugang",
+        "invites": "Einladungen"
       }
     },
     "discardChanges": "Verwerfen",
@@ -303,14 +377,20 @@
         "button": "Space löschen",
         "confirmAgain": "Noch einmal klicken, um das Löschen zu bestätigen",
         "failed": "Space konnte nicht gelöscht werden"
+      },
+      "notifications": {
+        "title": "Benachrichtigungen",
+        "label": "Standard-Benachrichtigungen",
+        "description": "Mitglieder starten mit dieser Stufe, bis sie selbst eine wählen. Der Standard von Tavvit ist „Nur @Erwähnungen“.",
+        "builtIn": "Tavvit-Standard"
       }
     },
     "discovery": {
       "title": "Entdecken",
-      "disabledNotice": "Das Entdecken von Spaces wurde von der Instanzverwaltung ausgeschaltet. Eine geänderte Sichtbarkeit wirkt sich erst aus, wenn es wieder eingeschaltet ist.",
+      "disabledNotice": "Die Space-Suche ist von den Admins der Instanz ausgeschaltet. Ein freigegebener Eintrag erscheint unter „Entdecken“, sobald sie wieder eingeschaltet ist.",
       "visibility": {
         "label": "Sichtbarkeit",
-        "hint": "Lege fest, wer diesen Space finden und ihm beitreten kann.",
+        "hint": "Wie man diesem Space beitreten kann. Ein Eintrag unter „Entdecken“ wird extra beantragt und von den Admins freigegeben.",
         "options": {
           "private": {
             "label": "Privat",
@@ -318,19 +398,18 @@
           },
           "request": {
             "label": "Beitritt auf Anfrage",
-            "description": "Unter „Entdecken“ sichtbar; Beitritt kann angefragt werden"
+            "description": "Beitritt kann angefragt werden; nach Freigabe unter „Entdecken“ listbar"
           },
           "public": {
             "label": "Öffentlich",
-            "description": "Unter „Entdecken“ sichtbar; alle können sofort beitreten"
+            "description": "Alle können sofort beitreten; nach Freigabe unter „Entdecken“ listbar"
           }
         }
       },
       "directory": {
-        "label": "Ins globale Backspace-Verzeichnis eintragen",
-        "hint": "Zeigt diesen Space auf jeder Backspace-Instanz im Äußeren Space.",
+        "label": "Ins globale Tavvit-Verzeichnis eintragen",
+        "hint": "Zeigt diesen Space im äußeren Space jeder Tavvit-Instanz, sobald sein Eintrag freigegeben ist.",
         "notConfigured": "Diese Instanz ist nicht so eingerichtet, dass sie ein Verzeichnis erreicht; dieser Space kann also nirgends eingetragen werden.",
-        "adminOff": "Die Instanzverwaltung muss erst das globale Eintragen erlauben.",
         "adminOffSelf": "Globales Eintragen ist auf dieser Instanz nicht erlaubt.",
         "adminOffSelfAction": "Einschalten",
         "adminOffSelfIntro": "Damit wird globales Eintragen für die ganze Instanz erlaubt: Spaces hier lassen sich in „Entdecken“ finden, und die Instanz meldet sich beim öffentlichen Verzeichnis an.",
@@ -366,7 +445,341 @@
       "kickFailed": "Mitglied konnte nicht entfernt werden",
       "banFailed": "Mitglied konnte nicht gesperrt werden",
       "rolesAboveYou": "Rollen auf oder über deiner höchsten Rolle sind gesperrt.",
-      "rolesUnheld": "Rollen mit Berechtigungen, die du nicht hast, kannst du nicht vergeben."
+      "rolesUnheld": "Rollen mit Berechtigungen, die du nicht hast, kannst du nicht vergeben.",
+      "listHeadingFiltered": "Mitglieder ({{shown}} von {{total}})",
+      "searchPlaceholder": "Mitglieder suchen",
+      "filterRole": "Nach Rolle filtern",
+      "filterAll": "Alle Rollen",
+      "noMatch": "Kein Mitglied passt zum Filter.",
+      "reason": {
+        "label": "Grund (optional)",
+        "hint": "Moderatoren sehen ihn im Audit-Log. Die Person erfährt ihn nicht."
+      },
+      "deleteMessages": {
+        "label": "Auch ihre Nachrichten löschen",
+        "none": "Behalten",
+        "hour": "Aus der letzten Stunde",
+        "day": "Aus den letzten 24 Stunden",
+        "week": "Aus den letzten 7 Tagen"
+      }
+    },
+    "moderation": {
+      "title": "Moderation",
+      "intro": "Regeln, die dieser Space bei jeder Nachricht von selbst anwendet. Eine Nachricht, die gegen eine verstößt, wird nicht gesendet, und ihr Absender erfährt, warum.",
+      "off": "Aus",
+      "filter": {
+        "title": "Nachrichtenfilter",
+        "description": "Wird geprüft, wenn eine Nachricht in einem Textkanal gesendet oder bearbeitet wird."
+      },
+      "words": {
+        "label": "Gesperrte Wörter",
+        "empty": "Noch keine gesperrten Wörter.",
+        "inputLabel": "Zu sperrendes Wort oder zu sperrender Ausdruck",
+        "placeholder": "Wort oder Ausdruck hinzufügen",
+        "fullPlaceholder": "Die Liste ist voll",
+        "remove": "{{word}} entfernen",
+        "full": "Die Liste fasst höchstens {{max}} Einträge.",
+        "duplicate": "„{{word}}“ steht schon auf der Liste.",
+        "hint": "Passt auf ganze Wörter, egal ob groß oder klein geschrieben. Ein * am Anfang oder Ende passt auch innerhalb längerer Wörter, etwa *spam*.",
+        "counter": "{{used}}/{{max}}",
+        "invalid": "Das lässt sich nicht sperren. Verwende sichtbare Zeichen in einer Zeile."
+      },
+      "links": {
+        "label": "Links sperren",
+        "description": "Nachrichten mit einem Weblink ablehnen."
+      },
+      "invites": {
+        "label": "Einladungen sperren",
+        "description": "Nachrichten mit einem Einladungslink zu einem Space ablehnen."
+      },
+      "mentions": {
+        "label": "Maximale Erwähnungen",
+        "description": "So viele Personen und Rollen darf eine Nachricht höchstens erwähnen."
+      },
+      "posting": {
+        "title": "Wer schreiben darf",
+        "description": "Hält ganz neue Konten und Neuankömmlinge vom Schreiben ab, bis sie eine Weile dabei sind."
+      },
+      "accountAge": {
+        "label": "Mindestalter des Kontos",
+        "description": "So alt muss ein Konto sein, bevor es hier schreiben kann."
+      },
+      "memberAge": {
+        "label": "Mindestdauer der Mitgliedschaft",
+        "description": "So lange muss jemand Mitglied sein, bevor die Person schreiben kann."
+      },
+      "exempt": "Für Besitzer, Administratoren und Mitglieder, die Nachrichten oder den Space verwalten dürfen, gelten diese Regeln nicht.",
+      "slowmodeNote": "Den langsamen Modus legst du für jeden Kanal in seinen eigenen Einstellungen fest."
+    },
+    "audit": {
+      "title": "Protokoll",
+      "intro": "Wer was in diesem Space geändert hat, das Neueste zuerst.",
+      "filters": {
+        "action": "Aktion",
+        "allActions": "Alle Aktionen",
+        "actor": "Person",
+        "anyone": "Alle"
+      },
+      "loadOlder": "Ältere Einträge laden",
+      "empty": {
+        "title": "Noch nichts aufgezeichnet",
+        "body": "Änderungen am Space, an seinen Kanälen, Rollen und Mitgliedern erscheinen hier."
+      },
+      "emptyFiltered": {
+        "title": "Keine passenden Einträge",
+        "body": "Probier eine andere Aktion oder Person."
+      },
+      "reason": "Grund: {{reason}}",
+      "showChanges_one": "{{count}} Änderung anzeigen",
+      "showChanges_other": "{{count}} Änderungen anzeigen",
+      "hideChanges": "Änderungen ausblenden",
+      "unknownTarget": "(unbekannt)",
+      "actions": {
+        "spaceUpdate": "Space geändert",
+        "moderationUpdate": "Moderationsregeln geändert",
+        "inviteRegenerate": "Einladungslink erstellt",
+        "channelCreate": "Kanal erstellt",
+        "channelUpdate": "Kanal geändert",
+        "channelDelete": "Kanal gelöscht",
+        "categoryCreate": "Kategorie erstellt",
+        "categoryUpdate": "Kategorie geändert",
+        "categoryDelete": "Kategorie gelöscht",
+        "overrideUpdate": "Überschreibung geändert",
+        "overrideDelete": "Überschreibung entfernt",
+        "roleCreate": "Rolle erstellt",
+        "roleUpdate": "Rolle geändert",
+        "roleDelete": "Rolle gelöscht",
+        "roleReorder": "Rollen umsortiert",
+        "memberRolesUpdate": "Rollen eines Mitglieds geändert",
+        "memberKick": "Mitglied entfernt",
+        "memberBan": "Mitglied gesperrt",
+        "memberUnban": "Sperre aufgehoben",
+        "memberTimeout": "Auszeit gegeben",
+        "memberTimeoutRemove": "Auszeit beendet",
+        "messageDelete": "Nachricht gelöscht",
+        "threadCreate": "Thread gestartet",
+        "threadUpdate": "Thread umbenannt",
+        "threadDelete": "Thread gelöscht",
+        "welcomeUpdate": "Willkommen und Regeln geändert",
+        "webhookDelete": "Webhook gelöscht",
+        "soundDelete": "Clip entfernt",
+        "botAdd": "Bot hinzugefügt",
+        "soundUpdate": "Clip geändert",
+        "soundCreate": "Clip hinzugefügt",
+        "webhookUpdate": "Webhook geändert",
+        "webhookCreate": "Webhook angelegt",
+        "eventDelete": "Termin abgesagt",
+        "eventUpdate": "Termin geändert",
+        "eventCreate": "Termin angekündigt",
+        "messagePin": "Nachricht angepinnt",
+        "messageUnpin": "Pin entfernt",
+        "joinRequestApprove": "Beitrittsanfrage angenommen",
+        "joinRequestDecline": "Beitrittsanfrage abgelehnt",
+        "ownershipTransfer": "Besitz übertragen",
+        "templateImport": "Discord-Vorlage importiert",
+        "inviteCreate": "Einladungslink erstellt",
+        "inviteRevoke": "Einladungslink widerrufen",
+        "messagesBulkDelete": "Nachrichten mit einem Bann entfernt",
+        "channelMessagesDelete": "Nachrichten aufgeräumt",
+        "forumTagsUpdate": "Forum-Tags geändert",
+        "channelFollowCreate": "Folgen begonnen",
+        "channelFollowDelete": "Folgen beendet",
+        "vanityUpdate": "Eigene Adresse geändert"
+      },
+      "sentences": {
+        "spaceUpdate": "{{actor}} hat die Einstellungen des Space geändert",
+        "moderationUpdate": "{{actor}} hat die Moderationsregeln geändert",
+        "inviteRegenerate": "{{actor}} hat den Einladungslink erstellt",
+        "channelCreate": "{{actor}} hat {{target}} erstellt",
+        "channelUpdate": "{{actor}} hat {{target}} geändert",
+        "channelDelete": "{{actor}} hat {{target}} gelöscht",
+        "categoryCreate": "{{actor}} hat die Kategorie {{target}} erstellt",
+        "categoryUpdate": "{{actor}} hat die Kategorie {{target}} geändert",
+        "categoryDelete": "{{actor}} hat die Kategorie {{target}} gelöscht",
+        "overrideUpdate": "{{actor}} hat die Berechtigungen in {{target}} geändert",
+        "overrideDelete": "{{actor}} hat eine Überschreibung in {{target}} entfernt",
+        "roleCreate": "{{actor}} hat die Rolle {{target}} erstellt",
+        "roleUpdate": "{{actor}} hat die Rolle {{target}} geändert",
+        "roleDelete": "{{actor}} hat die Rolle {{target}} gelöscht",
+        "roleReorder": "{{actor}} hat die Rollen umsortiert",
+        "memberRolesUpdate": "{{actor}} hat die Rollen von {{target}} geändert",
+        "memberKick": "{{actor}} hat {{target}} entfernt",
+        "memberBan": "{{actor}} hat {{target}} gesperrt",
+        "memberUnban": "{{actor}} hat die Sperre von {{target}} aufgehoben",
+        "memberTimeout": "{{actor}} hat {{target}} eine Auszeit gegeben",
+        "memberTimeoutRemove": "{{actor}} hat die Auszeit von {{target}} beendet",
+        "messageDelete": "{{actor}} hat eine Nachricht von {{target}} gelöscht",
+        "threadCreate": "{{actor}} hat den Thread {{target}} gestartet",
+        "threadUpdate": "{{actor}} hat den Thread {{target}} umbenannt",
+        "threadDelete": "{{actor}} hat den Thread {{target}} gelöscht",
+        "welcomeUpdate": "{{actor}} hat Willkommen und Regeln geändert",
+        "webhookDelete": "{{actor}} hat den Webhook {{target}} gelöscht",
+        "soundDelete": "{{actor}} hat den Clip {{target}} entfernt",
+        "botAdd": "{{actor}} hat den Bot {{target}} hinzugefügt",
+        "soundUpdate": "{{actor}} hat den Clip {{target}} geändert",
+        "soundCreate": "{{actor}} hat den Clip {{target}} hinzugefügt",
+        "webhookUpdate": "{{actor}} hat den Webhook {{target}} geändert",
+        "webhookCreate": "{{actor}} hat den Webhook {{target}} angelegt",
+        "eventDelete": "{{actor}} hat den Termin {{target}} abgesagt",
+        "eventUpdate": "{{actor}} hat den Termin {{target}} geändert",
+        "eventCreate": "{{actor}} hat den Termin {{target}} angekündigt",
+        "messagePin": "{{actor}} hat eine Nachricht von {{target}} angepinnt",
+        "messageUnpin": "{{actor}} hat den Pin einer Nachricht von {{target}} entfernt",
+        "joinRequestApprove": "{{actor}} hat die Beitrittsanfrage von {{target}} angenommen",
+        "joinRequestDecline": "{{actor}} hat die Beitrittsanfrage von {{target}} abgelehnt",
+        "ownershipTransfer": "{{actor}} hat den Besitz an {{target}} übertragen",
+        "templateImport": "{{actor}} hat die Discord-Vorlage {{target}} importiert",
+        "unknown": "{{actor}} hat etwas geändert, das diese Version noch nicht kennt ({{action}})",
+        "inviteCreate": "{{actor}} hat einen Einladungslink erstellt",
+        "inviteRevoke": "{{actor}} hat einen Einladungslink widerrufen",
+        "messagesBulkDelete": "{{actor}} hat die letzten Nachrichten von {{target}} entfernt",
+        "channelMessagesDelete": "{{actor}} hat mehrere Nachrichten in {{target}} gelöscht",
+        "forumTagsUpdate": "{{actor}} hat die Tags von {{target}} geändert",
+        "channelFollowCreate": "{{actor}} hat {{target}} mit einem Kanal eines anderen Space verbunden",
+        "channelFollowDelete": "{{actor}} hat die Verbindung von {{target}} mit einem Kanal eines anderen Space beendet",
+        "vanityUpdate": "{{actor}} hat die eigene Adresse des Space geändert"
+      },
+      "fields": {
+        "name": "Name",
+        "topic": "Thema",
+        "slowmodeSeconds": "Langsamer Modus",
+        "permissions": "Berechtigungen",
+        "allow": "Erlaubt",
+        "deny": "Verweigert",
+        "color": "Farbe",
+        "visibility": "Sichtbarkeit",
+        "roleAdded": "Rolle hinzugefügt",
+        "roleRemoved": "Rolle entfernt",
+        "durationSeconds": "Dauer",
+        "icon": "Symbol",
+        "banner": "Banner",
+        "avatarColor": "Symbolfarbe",
+        "description": "Beschreibung",
+        "directoryListed": "Im Verzeichnis gelistet",
+        "defaultNotificationLevel": "Standard-Benachrichtigungen",
+        "ownerTitle": "Besitzertitel",
+        "position": "Reihenfolge",
+        "category": "Kategorie",
+        "blockLinks": "Links sperren",
+        "blockInvites": "Einladungen sperren",
+        "maxMentions": "Maximale Erwähnungen",
+        "minAccountAgeMinutes": "Mindestalter des Kontos",
+        "minMemberAgeMinutes": "Mindestdauer der Mitgliedschaft",
+        "type": "Typ",
+        "channel": "Kanal",
+        "target": "Gilt für",
+        "owner": "Besitzer",
+        "inviteCode": "Einladungscode",
+        "blockedWordAdded": "Wort gesperrt",
+        "blockedWordRemoved": "Wort freigegeben",
+        "colorSecondary": "Zweite Farbe",
+        "hoist": "Separat angezeigt",
+        "mentionable": "Von allen erwähnbar",
+        "ownerGroup": "Besitzer in eigener Gruppe",
+        "template": "Vorlage",
+        "roles": "Rollen",
+        "categories": "Kategorien",
+        "channels": "Kanäle",
+        "messages": "Nachrichten",
+        "tags": "Tags",
+        "vanityCode": "Adresse"
+      }
+    },
+    "you": {
+      "notifications": "Benachrichtigungen",
+      "profile": {
+        "title": "Dein Profil hier",
+        "description": "Dein Spitzname, Bild und Text in diesem Space. Dein Konto bleibt, wie es ist.",
+        "action": "Space-Profil bearbeiten"
+      },
+      "leave": {
+        "title": "Verlassen",
+        "description": "Du verlierst den Zugang zu den Kanälen. Mit einer Einladung kannst du zurückkommen."
+      }
+    },
+    "invites": {
+      "intro": "Die Links, die in diesen Space führen. Ein widerrufener Link hört sofort auf zu funktionieren; wer damit gekommen ist, bleibt.",
+      "new": {
+        "title": "Neuer Link",
+        "expiry": {
+          "label": "Endet",
+          "never": "Nie",
+          "minutes30": "Nach 30 Minuten",
+          "hour1": "Nach 1 Stunde",
+          "hours6": "Nach 6 Stunden",
+          "day1": "Nach 1 Tag",
+          "days7": "Nach 7 Tagen",
+          "days30": "Nach 30 Tagen"
+        },
+        "uses": {
+          "label": "Lässt herein",
+          "noLimit": "Beliebig viele Leute",
+          "people_one": "{{count}} Person",
+          "people_other": "{{count}} Personen"
+        },
+        "create": "Link erstellen"
+      },
+      "list": {
+        "title": "Aktive Links",
+        "standing": "Hauptlink",
+        "uses_one": "{{count}}-mal benutzt",
+        "uses_other": "{{count}}-mal benutzt",
+        "usesOf": "{{uses}} von {{max}} benutzt",
+        "noEnd": "Endet nicht",
+        "ends": "Endet {{date}}",
+        "by": "Von {{name}}",
+        "revoke": "Widerrufen",
+        "copied": "Einladungslink kopiert",
+        "copyFailed": "Der Link konnte nicht kopiert werden",
+        "empty": "Keine aktiven Links. Wer beitreten möchte, braucht einen neuen."
+      },
+      "revokeConfirm": {
+        "title": "Diesen Link widerrufen?",
+        "description": "Er hört sofort auf zu funktionieren, wo auch immer er geteilt wurde.",
+        "standing": "Er hört sofort auf zu funktionieren, wo auch immer er geteilt wurde. Beim nächsten Öffnen des Einladen-Dialogs bekommt dieser Space einen neuen Hauptlink."
+      },
+      "vanity": {
+        "title": "Eigene Adresse",
+        "intro": "Ein Link aus Wörtern, der wie jeder andere hereinlässt und nie abläuft.",
+        "label": "Adresse",
+        "hint": "{{min}} bis {{max}} Kleinbuchstaben, Ziffern oder Bindestriche.",
+        "copy": "Link kopieren",
+        "copied": "Kopiert",
+        "remove": "Aufgeben"
+      }
+    },
+    "welcome": {
+      "title": "Willkommen und Regeln",
+      "description": "Was jemand Neues sieht, wenn die Person zum ersten Mal in diesen Space kommt.",
+      "messageTitle": "Willkommensnachricht",
+      "messageDescription": "Ein paar Worte dazu, was dieser Ort ist. Formatierung geht wie in einer Nachricht.",
+      "rulesTitle": "Regeln",
+      "rulesDescription": "Stehen unter der Willkommensnachricht.",
+      "requiredLabel": "Mitglieder müssen zustimmen",
+      "requiredDescription": "Wer ab jetzt beitritt, kann bis zur Zustimmung nur lesen. Wer schon da ist und wer den Space verwalten darf, wird nicht gefragt.",
+      "rulesMissing": "Schreib zuerst die Regeln.",
+      "channelsTitle": "Kanäle zum Einstieg",
+      "channelsDescription": "Bis zu {{max}}, angeboten unter der Willkommensnachricht.",
+      "saved": "Gespeichert."
+    },
+    "sounds": {
+      "title": "Soundboard",
+      "description": "Kurze Clips, die jeder in einem Anruf hier abspielen kann. Je bis zu {{seconds}} Sekunden und {{size}}. Jeder kann sie für sich leiser oder ganz ausstellen.",
+      "add": "Clip hinzufügen",
+      "count": "{{used}} von {{max}}",
+      "emptyTitle": "Noch keine Clips",
+      "emptyBody": "Tavvit bringt keine mit. Füge eigene hinzu, und nur solche, die du teilen darfst.",
+      "tooLarge": "Diese Datei ist größer als {{max}}.",
+      "tooLong": "Dieser Clip ist länger als {{max}} Sekunden.",
+      "notAudio": "Das ist keine Audiodatei, die dieser Browser lesen kann.",
+      "untitled": "Clip",
+      "preview": "{{name}} anhören",
+      "rename": "Clip umbenennen",
+      "nameLabel": "Name des Clips",
+      "seconds": "{{seconds}} s",
+      "remove": "{{name}} entfernen",
+      "removeTitle": "Diesen Clip entfernen?",
+      "removeBody": "{{name}} ist dann für alle in diesem Space weg."
     }
   },
   "bans": {
@@ -407,9 +820,15 @@
     "nameEmpty": "Der Rollenname darf nicht leer sein",
     "nameDuplicate": "Eine Rolle mit diesem Namen gibt es bereits",
     "groups": {
-      "general": "Allgemein",
-      "text": "Textkanäle",
-      "voice": "Sprachkanäle"
+      "voice": "Sprachkanäle",
+      "space": "Space",
+      "roles": "Rollen",
+      "members": "Mitglieder",
+      "moderation": "Moderation",
+      "channels": "Kanäle und Kategorien",
+      "invites": "Einladungen",
+      "messages": "Nachrichten und Dateien",
+      "advanced": "Erweitert"
     },
     "saved": "Rolle gespeichert",
     "copy": "Rolle kopieren",
@@ -456,7 +875,15 @@
       "moveMembers": "Mitglieder verschieben",
       "stream": "Streamen",
       "disconnectMembers": "Mitglieder trennen",
-      "mentionEveryone": "@everyone, @here und Rollen erwähnen"
+      "mentionEveryone": "@everyone, @here und Rollen erwähnen",
+      "pinMessages": "Nachrichten anpinnen",
+      "createThreads": "Threads erstellen",
+      "manageEvents": "Termine verwalten",
+      "manageWebhooks": "Webhooks verwalten",
+      "useSoundboard": "Soundboard benutzen",
+      "manageSounds": "Soundboard verwalten",
+      "moderateMembers": "Mitgliedern Auszeiten geben",
+      "viewAuditLog": "Protokoll ansehen"
     },
     "tristate": {
       "deny": "Verbieten",
@@ -485,7 +912,11 @@
     "removeUnheldShort": "Nur wer diese Berechtigungen hat, kann diese Überschreibung entfernen",
     "aboveYouRole": "Diese Rolle steht auf oder über deiner höchsten Rolle. Du kannst ihre Überschreibung ansehen, aber nicht ändern oder entfernen.",
     "aboveYouMember": "Dieses Mitglied steht auf deiner Stufe oder darüber. Du kannst die Überschreibung ansehen, aber nicht ändern oder entfernen.",
-    "aboveYouShort": "Steht auf oder über deiner höchsten Rolle"
+    "aboveYouShort": "Steht auf oder über deiner höchsten Rolle",
+    "descriptions": {
+      "moderateMembers": "Mitglieder für eine Weile vom Schreiben, Reagieren und von Sprachkanälen ausschließen. Wirkt nur bei Mitgliedern unter deinem Rang.",
+      "viewAuditLog": "Sehen, wer was an den Einstellungen, Rollen, Kanälen und Mitgliedern dieses Space geändert hat."
+    }
   },
   "sidebar": {
     "directMessages": "Direktnachrichten",
@@ -602,7 +1033,10 @@
     "menu": {
       "profile": "Profil anzeigen",
       "nickname": "Space-Spitznamen ändern…",
-      "roles": "Rollen"
+      "roles": "Rollen",
+      "timeout": "Auszeit geben…",
+      "removeTimeout": "Auszeit beenden",
+      "spaceProfile": "Space-Profil bearbeiten"
     },
     "nickname": {
       "title": "Space-Spitznamen ändern",
@@ -611,7 +1045,21 @@
       "descriptionOther": "Gilt nur in diesem Space. Der Kontoname von {{name}} bleibt gleich. Leer lassen, um den Kontonamen zu zeigen.",
       "reset": "Auf Kontonamen zurücksetzen",
       "shownAs": "Spitzname in diesem Space: {{nickname}}"
-    }
+    },
+    "timeout": {
+      "title": "{{name}} eine Auszeit geben",
+      "description": "Während der Auszeit kann die Person weiter mitlesen, aber in diesem Space nicht schreiben, nicht reagieren und keinem Sprachkanal beitreten.",
+      "duration": "Dauer",
+      "ends": "Endet: {{time}}",
+      "reason": "Grund (optional)",
+      "reasonPlaceholder": "Was ist passiert?",
+      "reasonHint": "Wird im Protokoll gespeichert.",
+      "reasonCounter": "{{length}}/{{max}}",
+      "confirm": "Auszeit geben",
+      "done": "{{name}} hat eine Auszeit bis {{time}}",
+      "removed": "Auszeit von {{name}} beendet"
+    },
+    "timedOutUntil": "Auszeit bis {{time}}"
   },
   "mobile": {
     "addSheet": {
@@ -693,6 +1141,390 @@
     "suppressEveryone": "@everyone und @here unterdrücken",
     "suppressRoles": "Rollenerwähnungen unterdrücken",
     "massHeading": "Gruppenerwähnungen",
-    "massNote": "@here erreicht dieselben Mitglieder wie @everyone. Erwähnungen von dir mit Namen benachrichtigen dich immer."
+    "massNote": "@here erreicht dieselben Mitglieder wie @everyone. Erwähnungen von dir mit Namen benachrichtigen dich immer.",
+    "spaceDefaultNote": "Diese Stufe haben die Moderatoren dieses Space als Standard gewählt. Wähl eine andere, um sie für dich festzulegen."
+  },
+  "roleDisplay": {
+    "gradient": "Farbverlauf",
+    "secondColor": "Zweite Farbe",
+    "preview": "So sieht es aus:",
+    "icon": "Icon",
+    "removeIcon": "Icon entfernen",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Wofür diese Rolle da ist",
+    "hoist": "Mitglieder separat anzeigen",
+    "hoistHint": "Wer diese Rolle als höchste angezeigte Rolle hat, bekommt in der Mitgliederliste eine eigene Gruppe.",
+    "mentionable": "Alle dürfen diese Rolle erwähnen",
+    "mentionableHint": "Sonst können nur Mitglieder, die @everyone erwähnen dürfen, die Rolle per @ erwähnen.",
+    "membersTitle_one": "{{count}} Mitglied",
+    "membersTitle_other": "{{count}} Mitglieder",
+    "membersEmpty": "Noch hat niemand diese Rolle.",
+    "removeMember": "{{name}} die Rolle wegnehmen",
+    "addMember": "Hinzufügen",
+    "addMemberPlaceholder": "Rolle vergeben an …"
+  },
+  "ownerDisplay": {
+    "title": "Besitz",
+    "ownGroup": "Besitzer in eigener Gruppe zeigen",
+    "ownGroupHint": "Aus: Du stehst unter deinen eigenen Rollen und trägst eine Krone. Deine Rechte kommen vom Besitz des Spaces, nie von einer Rolle."
+  },
+  "import": {
+    "title": "Aus Discord importieren",
+    "titleInto": "In {{space}} importieren",
+    "intro": "Starte einen Space aus einer Discord-Servervorlage: Rollen und Rechte, Kategorien, Kanäle und Kanalrechte.",
+    "introInto": "Füge diesem Space die Rollen, Kategorien und Kanäle einer Discord-Vorlage hinzu. Was schon da ist, bleibt unverändert.",
+    "source": {
+      "linkLabel": "Vorlagenlink oder Code",
+      "linkPlaceholder": "discord.new/… oder discord.com/template/…",
+      "linkInvalid": "Das ist kein Vorlagenlink und kein Code.",
+      "howTo": "In Discord: Servereinstellungen → Servervorlage → Link kopieren.",
+      "load": "Laden",
+      "loading": "Lädt …",
+      "or": "oder",
+      "file": "Vorlagendatei importieren",
+      "fileHint": "Eine .json-Datei mit der Vorlage, zum Beispiel gespeichert von discord.com/api/v10/guilds/templates/CODE.",
+      "fileInvalid": "Diese Datei ist keine Vorlage.",
+      "fileTooLarge": "Die Datei ist größer als 2 MB."
+    },
+    "notTransferred": {
+      "title": "Was eine Vorlage nicht enthält",
+      "body": "Eine Vorlage ist ein Abbild der Struktur, kein Backup. Nachrichten, Mitglieder, Bots, Webhooks, Emojis, Sticker, das Server-Icon, Events, Threads und Integrationen bleiben bei Discord."
+    },
+    "preview": {
+      "by": "von {{name}}",
+      "uses_one": "{{count}}-mal genutzt",
+      "uses_other": "{{count}}-mal genutzt",
+      "spaceName": "Name des Spaces",
+      "counts": {
+        "roles": "Rollen",
+        "categories": "Kategorien",
+        "channels": "Kanäle",
+        "overrides": "Kanalrechte",
+        "skipped": "Übersprungen"
+      },
+      "rolesTitle": "Rollen",
+      "rolesHint": "Höchste zuerst. Rechte, die Tavvit nicht hat oder die du hier nicht vergeben darfst, werden genannt.",
+      "channelsTitle": "Kategorien und Kanäle",
+      "noCategory": "Ohne Kategorie",
+      "action": {
+        "create": "neu",
+        "reuse": "vorhanden",
+        "updateEveryone": "@everyone",
+        "keepEveryone": "unverändert",
+        "skip": "übersprungen"
+      },
+      "converted": "umgewandelt",
+      "unsupported_one": "{{count}} Recht, das Tavvit nicht hat",
+      "unsupported_other": "{{count}} Rechte, die Tavvit nicht hat",
+      "withheld_one": "{{count}} Recht, das du nicht vergeben darfst",
+      "withheld_other": "{{count}} Rechte, die du nicht vergeben darfst",
+      "hoist": "separat angezeigt",
+      "mentionable": "erwähnbar",
+      "notesTitle": "Gut zu wissen",
+      "import": "Importieren"
+    },
+    "notes": {
+      "channel_converted": "#{{subject}} war bei Discord {{detail}} und wird hier ein normaler Kanal.",
+      "channel_unsupported": "{{subject}} wird ausgelassen: Tavvit hat keinen Kanal wie Discord-Typ {{detail}}.",
+      "channel_exists": "#{{subject}} gibt es hier schon und wird übersprungen.",
+      "category_reused": "Die Kategorie {{subject}} gibt es schon; ihre Kanäle kommen dort hinein.",
+      "role_reused": "Die Rolle {{subject}} gibt es schon und wird unverändert genutzt.",
+      "role_renamed": "Eine zweite Rolle namens {{detail}} heißt jetzt {{subject}}.",
+      "role_icon_dropped": "Das Icon von {{subject}} kann nicht übernommen werden; ein Emoji lässt sich später setzen.",
+      "everyone_kept": "@everyone behält die Rechte dieses Spaces.",
+      "roles_below_existing": "Neue Rollen kommen unter die Rollen, die dieser Space schon hat.",
+      "permissions_per_channel": "Die Kanäle in {{subject}} behalten ihre eigenen Rechte, wie bei Discord.",
+      "member_overwrite_dropped": "Rechte für einzelne Mitglieder in {{subject}} können nicht übernommen werden.",
+      "reference_missing": "{{subject}} verweist auf eine Rolle oder Kategorie, die die Vorlage nicht enthält.",
+      "slowmode_adjusted": "Der langsame Modus in #{{subject}} wird {{detail}}, die nächste Stufe, die Tavvit hat.",
+      "topic_shortened": "Das Thema von #{{subject}} wurde gekürzt.",
+      "name_changed": "{{detail}} heißt hier #{{subject}}.",
+      "nsfw_dropped": "#{{subject}} hatte bei Discord eine Altersbeschränkung; Tavvit hat diese Einstellung nicht.",
+      "slowmode_off": "Der langsame Modus in #{{subject}} ist aus: So kurz ist keine Stufe in Tavvit.",
+      "override_withheld": "In {{subject}} kannst du {{detail}} nicht setzen, weil du diese Rechte selbst nicht hast. Sie werden ausgelassen.",
+      "override_hierarchy": "Die Rechte für {{detail}} in {{subject}} werden ausgelassen: Diese Rollen stehen nicht unter deiner höchsten Rolle."
+    },
+    "importing": "Importiere …",
+    "done": {
+      "title": "Importiert",
+      "adjustedTitle": "Angepasste Rechte",
+      "followUpTitle": "Wie es weitergeht",
+      "followUp": {
+        "invite": "Lade deine Mitglieder ein: Niemand zieht von selbst um.",
+        "permissions": "Sieh dir die Rollen an, die Rechte verloren haben, die Tavvit nicht kennt.",
+        "bots": "Bots, Webhooks und Integrationen müssen neu eingerichtet werden."
+      },
+      "open": "Space öffnen"
+    },
+    "entry": {
+      "title": "Aus Discord importieren",
+      "action": "Vorlage importieren",
+      "hint": "Füge die Rollen, Kategorien und Kanäle einer Discord-Servervorlage hinzu. Was schon da ist, bleibt unverändert.",
+      "createSpace": "Aus Discord importieren",
+      "createSpaceHint": "Mit einer Discord-Servervorlage starten"
+    },
+    "discordTypes": {
+      "stage": "ein Stage-Kanal",
+      "media": "ein Medienkanal"
+    }
+  },
+  "spaceProfile": {
+    "title": "Dein Profil in {{space}}",
+    "titlePlain": "Dein Space-Profil",
+    "intro": "Nur in diesem Space sichtbar. Was du leer lässt, kommt aus deinem Kontoprofil.",
+    "notLoaded": "Öffne zuerst den Space, um dein Profil dort zu bearbeiten.",
+    "avatar": "Bild",
+    "banner": "Banner",
+    "bio": "Über mich",
+    "bioPlaceholder": "Was die Leute in diesem Space wissen sollten",
+    "bioCounter": "{{used}}/{{max}}",
+    "fromAccount": "aus deinem Konto",
+    "uploadAvatar": "Bild hochladen",
+    "uploadBanner": "Banner hochladen",
+    "useAccountAvatar": "Kontobild verwenden",
+    "useAccountBanner": "Kontobanner verwenden",
+    "useAccountBio": "Kontotext verwenden",
+    "uploading": "Lädt hoch …",
+    "uploadFailed": "Das Bild konnte nicht hochgeladen werden.",
+    "saved": "Space-Profil gespeichert",
+    "cropAvatar": "Bild zuschneiden",
+    "cropBanner": "Banner zuschneiden"
+  },
+  "verification": {
+    "title": "Verifizierung",
+    "ownerOnly": "Nur der Owner dieses Space kann eine Verifizierung beantragen.",
+    "intro": "Eine Verifizierung zeigt unter „Entdecken“ und im Profil des Space ein Häkchen neben dem Namen. Sie bedeutet, dass die Admins dieser Instanz geprüft haben, wer den Space betreibt. Gib öffentliche, überprüfbare Angaben an; schicke niemals Ausweise oder andere persönliche Dokumente.",
+    "statusLabel": "Status",
+    "adminNote": "Hinweis der Prüfenden",
+    "sentAt": "Antrag gesendet am {{date}}",
+    "withdraw": "Antrag zurückziehen",
+    "sent": "Verifizierungsantrag gesendet",
+    "status": {
+      "none": "Dieser Space ist nicht verifiziert, und es ist kein Antrag offen.",
+      "pending": "Dein Antrag wartet auf die Admins. Du wirst benachrichtigt, sobald entschieden ist.",
+      "needs_info": "Die Prüfenden brauchen mehr Angaben. Lies ihren Hinweis und sende den Antrag dann erneut.",
+      "verified": "Dieser Space ist verifiziert. Das Häkchen erscheint überall, wo der Space gezeigt wird.",
+      "rejected": "Der Antrag wurde nicht angenommen. Du kannst einen neuen mit besseren Angaben senden.",
+      "revoked": "Die Verifizierung wurde entzogen. Du kannst einen neuen Antrag senden."
+    },
+    "form": {
+      "title": "Antrag",
+      "privacy": "Was du hier sendest, lesen nur die Admins dieser Instanz.",
+      "identity": "Name und Beschreibung",
+      "noDescription": "Noch keine Beschreibung.",
+      "identityHint": "So, wie der Space gerade ist. Ändere sie vor dem Senden unter „Übersicht“ oder „Entdecken“.",
+      "category": "Kategorie",
+      "website": "Webseite (optional)",
+      "profiles": "Öffentliche Profile (optional, bis zu {{max}})",
+      "profileAria": "Öffentliches Profil {{index}}",
+      "addProfile": "Profil hinzufügen",
+      "reason": "Warum soll dieser Space verifiziert werden?",
+      "reasonPlaceholder": "Wer den Space betreibt, für wen er gedacht ist und warum ein Häkchen den Leuten hilft.",
+      "counter": "{{length}} von {{min}}–{{max}} Zeichen",
+      "proof": "Wie können die Prüfenden das nachvollziehen?",
+      "proofPlaceholder": "Zum Beispiel eine Seite oder ein öffentlicher Beitrag der offiziellen Website oder des offiziellen Kontos, der diesen Space nennt.",
+      "send": "Antrag senden",
+      "sendAgain": "Erneut senden",
+      "urlPlaceholder": "https://…"
+    },
+    "withdrawDialog": {
+      "title": "Verifizierungsantrag zurückziehen?",
+      "description": "Der Antrag verlässt die Prüfwarteschlange. Du kannst später einen neuen senden."
+    }
+  },
+  "listing": {
+    "title": "Eintrag unter „Entdecken“",
+    "ownerOnly": "Den Eintrag unter „Entdecken“ beantragt der Owner dieses Space; die Admins dieser Instanz geben ihn frei.",
+    "intro": "Die Sichtbarkeit legt nur fest, wie man beitritt. Unter „Entdecken“ erscheint ein Space erst, wenn die Admins dieser Instanz den Eintrag freigeben. Änderst du Name, Beschreibung, Icon oder Banner eines gelisteten Space, geht er erneut in die Prüfung.",
+    "statusLabel": "Status",
+    "adminNote": "Hinweis der Prüfenden",
+    "sentAt": "Antrag gesendet am {{date}}",
+    "preview": "So wird der Eintrag aussehen",
+    "criteria": {
+      "title": "Worauf die Prüfenden achten",
+      "visibility": "Der Space ist öffentlich oder für Beitrittsanfragen offen",
+      "description": "Er hat eine Beschreibung",
+      "icon": "Er hat ein Icon (empfohlen)",
+      "honest": "Name und Beschreibung sagen ehrlich, worum es geht",
+      "rules": "Er hält sich an die Regeln dieser Instanz"
+    },
+    "category": "Kategorie",
+    "needsVisibility": "Mache den Space zuerst öffentlich oder erlaube Beitrittsanfragen.",
+    "needsDescription": "Gib dem Space zuerst eine Beschreibung.",
+    "send": "Eintrag beantragen",
+    "sendAgain": "Erneut senden",
+    "unlist": "Aus „Entdecken“ nehmen",
+    "withdraw": "Antrag zurückziehen",
+    "sent": "Antrag auf einen Eintrag gesendet",
+    "status": {
+      "none": "Dieser Space ist unter „Entdecken“ nicht gelistet.",
+      "pending": "Dein Antrag wartet auf die Admins. Bis zur Freigabe bleibt der Space verborgen.",
+      "changes_requested": "Die Prüfenden haben um Änderungen gebeten. Nimm sie vor und sende den Antrag dann erneut.",
+      "approved": "Dieser Space ist unter „Entdecken“ gelistet.",
+      "rejected": "Der Eintrag wurde nicht freigegeben. Du kannst einen neuen Antrag senden.",
+      "withdrawn": "Der Eintrag wurde zurückgezogen. Du kannst einen neuen Antrag senden."
+    },
+    "withdrawDialog": {
+      "title": "Eintrag zurückziehen?",
+      "description": "Der Space verschwindet aus „Entdecken“, oder der Antrag verlässt die Prüfwarteschlange. Ein neuer Antrag wird wieder geprüft."
+    },
+    "resubmitDialog": {
+      "title": "Eintrag erneut senden?",
+      "description": "Der Space verschwindet aus „Entdecken“, bis die Admins die neue Kategorie freigeben."
+    }
+  },
+  "roleIcons": {
+    "none": "Kein Icon",
+    "fromBefore": "Ein Emoji von früher",
+    "groups": {
+      "rank": "Rang",
+      "power": "Stärke",
+      "play": "Spielen und Gestalten",
+      "make": "Bauen",
+      "nature": "Natur",
+      "life": "Leben"
+    },
+    "names": {
+      "crown": "Krone",
+      "crownb": "Schlichte Krone",
+      "shield": "Schild",
+      "shieldstar": "Schild mit Stern",
+      "shieldok": "Schild mit Haken",
+      "trophy": "Pokal",
+      "medal": "Medaille",
+      "star": "Stern",
+      "star4": "Vierzackiger Stern",
+      "sparkle": "Funkeln",
+      "diamond": "Diamant",
+      "key": "Schlüssel",
+      "flag": "Flagge",
+      "banner": "Banner",
+      "sword": "Schwert",
+      "bolt": "Blitz",
+      "fire": "Feuer",
+      "skull": "Schädel",
+      "wand": "Zauberstab",
+      "target": "Zielscheibe",
+      "hammer": "Hammer",
+      "ghost": "Geist",
+      "alien": "Außerirdischer",
+      "robot": "Roboter",
+      "mask": "Maske",
+      "eye": "Auge",
+      "gamepad": "Controller",
+      "joystick": "Steuerknüppel",
+      "dice": "Würfel",
+      "puzzle": "Puzzleteil",
+      "music": "Musik",
+      "headset": "Kopfhörer",
+      "mic": "Mikrofon",
+      "guitar": "Gitarre",
+      "film": "Filmklappe",
+      "camera": "Kamera",
+      "brush": "Pinsel",
+      "palette": "Farbpalette",
+      "pen": "Füller",
+      "book": "Buch",
+      "gradcap": "Doktorhut",
+      "code": "Quellcode",
+      "terminal": "Konsole",
+      "bug": "Käfer",
+      "chip": "Prozessor",
+      "flask": "Kolben",
+      "atom": "Atommodell",
+      "rocket": "Rakete",
+      "planet": "Himmelskörper",
+      "compass": "Kompass",
+      "wrench": "Schraubenschlüssel",
+      "megaphone": "Megafon",
+      "handshake": "Handschlag",
+      "leaf": "Blatt",
+      "tree": "Baum",
+      "lotus": "Lotosblüte",
+      "moon": "Mond",
+      "sun": "Sonne",
+      "snow": "Schneeflocke",
+      "waves": "Wellen",
+      "mountain": "Berge",
+      "storm": "Gewitter",
+      "paw": "Pfote",
+      "bird": "Vogel",
+      "cat": "Katze",
+      "butterfly": "Schmetterling",
+      "feather": "Feder",
+      "fish": "Fisch",
+      "heart": "Herz",
+      "coffee": "Kaffee",
+      "pizza": "Pizzastück",
+      "cake": "Kuchen",
+      "gift": "Geschenk",
+      "beer": "Bier",
+      "handheart": "Helfende Hand",
+      "anchor": "Anker",
+      "globe": "Globus",
+      "infinity": "Unendlich",
+      "hourglass": "Sanduhr",
+      "bell": "Glocke"
+    }
+  },
+  "events": {
+    "title": "Termine",
+    "intro": "Was in diesem Space ansteht.",
+    "create": "Neuer Termin",
+    "emptyTitle": "Noch nichts geplant",
+    "emptyBody": "Wenn hier etwas geplant ist, findest du es auf dieser Seite.",
+    "emptyManage": "Kündige einen Spieleabend, ein Treffen oder etwas anderes an, zu dem man kommen kann.",
+    "pastHeading": "Gerade vorbei",
+    "ended": "Vorbei",
+    "range": "{{start}} bis {{end}}",
+    "going": "Du bist dabei",
+    "iAmGoing": "Ich bin dabei",
+    "nobodyYet": "Noch niemand.",
+    "joinVoice": "{{channel}} beitreten",
+    "openChannel": "{{channel}} öffnen",
+    "addToCalendar": "Zum Kalender",
+    "remove": "Absagen",
+    "removeTitle": "Diesen Termin absagen?",
+    "removeBody": "{{title}} verschwindet für alle, samt den Zusagen.",
+    "reminder": "{{title}} beginnt gleich",
+    "startsSoon": "Beginnt gleich",
+    "form": {
+      "title": "Neuer Termin",
+      "editTitle": "Termin ändern",
+      "name": "Name",
+      "start": "Beginn",
+      "end": "Ende (optional)",
+      "startPast": "Ein Termin muss in der Zukunft beginnen.",
+      "endBeforeStart": "Das Ende muss nach dem Beginn liegen.",
+      "channel": "Kanal",
+      "noChannel": "Keiner",
+      "location": "Ort (optional)",
+      "description": "Worum es geht (optional)",
+      "create": "Ankündigen"
+    },
+    "goingCount_one": "{{formatted}} Zusage",
+    "goingCount_other": "{{formatted}} Zusagen",
+    "upcomingCount_one": "{{formatted}} anstehender Termin",
+    "upcomingCount_other": "{{formatted}} anstehende Termine"
+  },
+  "welcome": {
+    "title": "Willkommen bei {{space}}",
+    "rules": "Regeln",
+    "startHere": "Fang hier an",
+    "mustAccept": "Du kannst mitlesen, aber zum Schreiben, Reagieren und für Anrufe musst du diesen Regeln zustimmen.",
+    "later": "Später",
+    "agree": "Ich stimme zu",
+    "gotIt": "Verstanden"
+  },
+  "botInvite": {
+    "title": "Bot hinzufügen",
+    "runBy": "Betrieben von {{name}}",
+    "warning": "Ein Bot ist ein Programm, das sein Besitzer betreibt, nicht diese Instanz. Er sieht, was seine Rolle ihm erlaubt, und kann es weitergeben. Füge nur solche hinzu, denen du vertraust.",
+    "spaceLabel": "Space",
+    "spacePick": "Space wählen",
+    "noSpaces": "Du verwaltest auf dieser Instanz keinen Space.",
+    "permissionsLabel": "Was er anfragt",
+    "noPermissions": "Nichts über das hinaus, was jedes Mitglied darf.",
+    "add": "Zum Space hinzufügen"
   }
 }

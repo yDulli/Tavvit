@@ -1,12 +1,12 @@
 /**
- * System audio for a screen share without Backspace's own playback (#358).
+ * System audio for a screen share without Tavvit's own playback (#358).
  *
  * Chromium can leave the app out of a loopback capture only on Windows 11 and
  * macOS 14.2+ (docs/systems/voice.md, "System Audio Loopback"). On Linux the
- * capture is the monitor of the whole mix, so the voices Backspace plays come
+ * capture is the monitor of the whole mix, so the voices Tavvit plays come
  * back to the viewers. Here the capture is built from the other side: PipeWire
  * is asked (through `@vencord/venmic`, the module Vesktop uses) to route every
- * playback stream except Backspace's own into a virtual source, and the web
+ * playback stream except Tavvit's own into a virtual source, and the web
  * client opens that source like a microphone.
  *
  * This file only decides what to exclude and drives the link; the PipeWire
@@ -148,7 +148,7 @@ export function createSystemAudioController(deps: SystemAudioDeps): SystemAudioC
 /**
  * `ownAudioInSystemAudio()` describes what Chromium's loopback does. A web
  * client that opens the source this module builds says so when it asks
- * (`clientUsesSource`), and for it Backspace's own playback is left out
+ * (`clientUsesSource`), and for it Tavvit's own playback is left out
  * whatever the OS table says. A web client from before the source never opens
  * it and keeps the loopback, so it gets the OS verdict, and the module is not
  * loaded for it. Only `true` counts: the argument comes from the renderer.

@@ -38,7 +38,7 @@ afterEach(() => {
 describe.each([['desktop', false], ['mobile sheet', true]])('the %s context menu', (_name, isMobile) => {
   it('exposes actions and the submenu trigger as menu items, the separator as a separator, a custom row as a group', () => {
     const menu = open(isMobile);
-    expect(within(menu).getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Reply', 'Roles›', 'Delete']);
+    expect(within(menu).getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Reply', 'Roles', 'Delete']);
     expect(within(menu).getByRole('menuitem', { name: /Roles/ })).toHaveAttribute('aria-haspopup', 'menu');
     expect(within(menu).getByRole('separator')).toBeInTheDocument();
     expect(within(within(menu).getByRole('group')).getByRole('button', { name: 'Thumbs up' })).toBeInTheDocument();

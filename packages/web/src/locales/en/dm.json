@@ -88,7 +88,14 @@
     "hoursShort_other": "{{count}}h",
     "daysShort_one": "{{count}}d",
     "daysShort_other": "{{count}}d",
-    "close": "Close DM"
+    "close": "Close DM",
+    "filterLabel": "Show conversations",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "emptyUnread": "No unread conversations.",
+    "emptyBody": "Start one with a friend, or with a group of friends.",
+    "peerRejected": "Cannot relay messages: their server denied peering. Contact their admin.",
+    "peerAwaiting": "Messages will be delivered once their admin approves the peering request."
   },
   "newDm": {
     "title": "New Direct Message",

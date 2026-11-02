@@ -39,7 +39,7 @@ function HeartIcon({ className = 'w-4 h-4' }: { className?: string }) {
 function TabBar({ activeTab, availableTabs, onTabChange }: SharedTabProps) {
   if (availableTabs.length <= 1) return null;
   return (
-    <div className="flex items-center gap-0.5 px-2 pt-2 pb-1">
+    <div className="flex items-center gap-0.5 border-b border-border-hard p-1.5">
       {availableTabs.map((t) => {
         const isSticker = t.key === 'sticker';
         return (
@@ -49,12 +49,12 @@ function TabBar({ activeTab, availableTabs, onTabChange }: SharedTabProps) {
             onClick={() => onTabChange(t.key)}
             title={t.label}
             aria-label={t.label}
-            className={`flex items-center justify-center rounded-md font-medium transition-colors ${
-              isSticker ? 'px-2.5 py-1' : 'px-3 py-1 text-[13px]'
+            className={`flex h-7 items-center justify-center rounded-md font-medium transition-colors ${
+              isSticker ? 'w-8' : 'px-2.5 text-ui'
             } ${
               activeTab === t.key
                 ? 'bg-interactive-selected text-txt-primary'
-                : 'text-txt-tertiary hover:text-txt-secondary hover:bg-interactive-hover'
+                : 'text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover active:bg-interactive-active'
             }`}
           >
             {isSticker ? <HeartIcon className="w-4 h-4" /> : t.label}
@@ -145,7 +145,7 @@ function DesktopPopover({
       className="fixed z-[300] animate-slide-up"
       style={{ top: -9999, left: -9999 }}
     >
-      <div className={`glass rounded-xl overflow-hidden flex flex-col w-fit ${activeTab === 'sticker' ? 'max-h-[min(500px,calc(100*var(--app-dvh)-24px))]' : 'max-h-[435px]'}`}>
+      <div className={`glass rounded-lg overflow-hidden flex flex-col w-fit ${activeTab === 'sticker' ? 'max-h-[min(500px,calc(100*var(--app-dvh)-24px))]' : 'max-h-[435px]'}`}>
         <TabBar activeTab={activeTab} availableTabs={availableTabs} onTabChange={onTabChange} />
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">

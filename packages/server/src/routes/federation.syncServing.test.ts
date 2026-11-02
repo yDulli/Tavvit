@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * #255, serving side of `POST /api/federation/sync`: HOME serves its mutation
- * log to ORBIT.
+ * log to TAVVIT.
  * - Keyset pagination: rows sharing a millisecond across a page boundary are
  *   each served exactly once (before, the next page asked for `> checkpoint`
  *   and skipped the rest of that millisecond).

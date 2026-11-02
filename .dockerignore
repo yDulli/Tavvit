@@ -7,6 +7,8 @@ data
 dist
 dist-electron
 *.md
+# The developer docs are made from these while the client is built (docs/systems/developers.md).
+!packages/web/developers/content/*.md
 *.log
 .DS_Store
 .idea

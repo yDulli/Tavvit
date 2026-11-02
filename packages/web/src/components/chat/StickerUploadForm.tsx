@@ -6,6 +6,7 @@ import { uploadSticker } from './stickerUpload';
 import { describeError } from '../../i18n/errors';
 import { HttpError } from '../../api/client';
 import { usePickerEscapeClaim } from './pickerEscape';
+import { Icon } from '../ui/Icon';
 
 interface StickerUploadFormProps {
   /**
@@ -203,8 +204,8 @@ export function StickerUploadForm({ onAdded, onCancel, capacity }: StickerUpload
         choose(Array.from(event.clipboardData.files), items.length === 1 ? 'replace' : 'append');
       }}
     >
-      <div className="flex items-center justify-between border-b border-border-soft px-4 py-3">
-        <h3 className="text-sm font-semibold">{t('stickers.upload')}</h3>
+      <div className="flex items-center justify-between border-b border-border-hard py-2 pl-4 pr-2">
+        <h3 className="text-ui font-semibold">{t('stickers.upload')}</h3>
         <button
           type="button"
           disabled={busy}
@@ -212,9 +213,7 @@ export function StickerUploadForm({ onAdded, onCancel, capacity }: StickerUpload
           className="sticker-icon-button"
           aria-label={t('stickers.cancel')}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-            <path d="m6 6 12 12M6 18 18 6" />
-          </svg>
+          <Icon name="x" size={16} />
         </button>
       </div>
 
@@ -241,17 +240,17 @@ export function StickerUploadForm({ onAdded, onCancel, capacity }: StickerUpload
         />
 
         {items.length === 0 && (
-          <p className="text-center text-[11px] text-txt-tertiary">{t('stickers.limits')}</p>
+          <p className="text-center text-label text-txt-tertiary">{t('stickers.limits')}</p>
         )}
 
         {error && (
-          <p role="alert" className="rounded-lg bg-accent-rose/10 px-3 py-2 text-xs text-txt-danger">
+          <p role="alert" className="rounded-md border border-accent-rose/25 bg-accent-rose/10 px-3 py-2 text-meta text-txt-danger">
             {error}
           </p>
         )}
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border-soft px-4 py-3">
+      <div className="flex shrink-0 items-center justify-end gap-1.5 border-t border-border-hard px-3 py-2">
         <button type="button" disabled={busy} onClick={onCancel} className="sticker-secondary-button">
           {t('stickers.cancel')}
         </button>

@@ -94,6 +94,7 @@ When a user adds a remote instance via the Connections settings:
    - Password: **the issued secret**
    - `homeInstance`: `nova.ddns.net` (bare domain)
    - `homeUserId`: user's Snowflake ID on home instance
+   - `attachProof`: what the home just gave this session for the remote (`POST /api/auth/attach-proof`), after being asked to peer with it (`ensurePeered`). The remote asks the home about it, and refuses with 403 `home_instance_unproven` when it cannot (auth.md). A 403 falls through to the login below, as for a closed instance
 7. **If registration is refused** because the username is taken or because the instance is closed to new accounts, log in with the issued secret. A migrated account on a closed instance still gets in this way. There is deliberately **no** retry with the entered password. If that login fails, `connectToRemote` throws `RemoteLoginRequiredError` and the caller offers the explicit per-instance login form, where the user chooses what to send. The error's `reason` records which refusal came first, and it is the only thing that decides what the form's notice may claim:
 
    | Registration answered | `reason` | Code (`describeError`) | What the notice says |

@@ -5,11 +5,13 @@ import { useVoiceStore } from '../stores/voiceStore';
 import { useAuthStore } from '../stores/authStore';
 import { isElectron } from '../platform/platform';
 import { onNotificationClick, updateBadgeCount } from '../platform/notifications';
+import { useNotificationPrefsStore } from '../stores/notificationPrefsStore';
 import { messageAlertsUser, showAlertNotification } from '../utils/alerts';
 import i18n from '../i18n';
 import { useSpaceStore } from '../stores/spaceStore';
 import { useUIStore } from '../stores/uiStore';
 import { replaceEmojiShortcodesInMarkdownSource } from '../utils/emojiShortcodes';
+import { emojiTokensToText } from '@backspace/shared/src/customEmoji';
 import { isStickerMessage } from '../utils/stickerMessages';
 
 /**
@@ -91,10 +93,12 @@ export function NotificationController() {
           // i18n.t, not a hook: read at notification time, in the language
           // selected now rather than when this subscription was made.
           const displayName = message.user?.displayName || message.user?.username || i18n.t('chat:notification.unknownSender');
-          const body = isStickerMessage(message.content)
+          const body = !useNotificationPrefsStore.getState().showMessageText
+            ? i18n.t('chat:notification.hiddenBody')
+            : isStickerMessage(message.content)
             ? i18n.t('chat:stickers.sticker')
             : message.content
-              ? replaceEmojiShortcodesInMarkdownSource(message.content).replace(/[*_~`>#\-\[\]]/g, '').slice(0, 100)
+              ? replaceEmojiShortcodesInMarkdownSource(emojiTokensToText(message.content)).replace(/[*_~`>#\-\[\]]/g, '').slice(0, 100)
               : i18n.t('chat:notification.attachmentOnly');
           // The event's channel id is the one the message was filed under; a
           // DM message has no `channelId` of its own (it has `dmChannelId`).
@@ -116,7 +120,7 @@ export function NotificationController() {
   // Badge count (Electron only)
   useEffect(() => {
     const unsubscribe = useChatStore.subscribe((state) => {
-      updateBadgeCount(state.unreadChannels.size);
+      updateBadgeCount(useNotificationPrefsStore.getState().appBadge ? state.unreadChannels.size : 0);
     });
     return unsubscribe;
   }, []);

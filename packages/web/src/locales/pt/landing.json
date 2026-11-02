@@ -1,0 +1,392 @@
+{
+  "meta": {
+    "title": "Tavvit: chat em grupo com canais, voz e compartilhamento de tela",
+    "description": "O Tavvit é a casa dos seus amigos e comunidades: canais, mensagens diretas, voz e compartilhamento de tela em um app rápido e tranquilo. Sem anúncios, sem rastreadores."
+  },
+  "nav": {
+    "label": "Navegação principal",
+    "features": "Recursos",
+    "download": "Baixar",
+    "login": "Entrar",
+    "register": "Começar",
+    "developers": "Desenvolvedores",
+    "help": "Ajuda"
+  },
+  "hero": {
+    "title": "Puxa uma cadeira.",
+    "lead": "Chat em grupo para seus amigos e comunidades: canais, mensagens diretas, voz e compartilhamento de tela. Sem anúncios, sem rastreadores.",
+    "explore": "Ver os recursos",
+    "alt": "O app Tavvit: os canais de um espaço à esquerda, uma conversa no meio e os membros à direita."
+  },
+  "news": {
+    "label": "Novo"
+  },
+  "eyebrow": {
+    "demo": "experimente um lugar",
+    "messages": "à mesa",
+    "spaces": "uma sala só sua",
+    "crowds": "a lista de convidados",
+    "voice": "a sala dos fundos",
+    "conversations": "o seu lugar de sempre",
+    "around": "o quadro de avisos",
+    "people": "os de sempre",
+    "themes": "pinte as paredes",
+    "community": "a rua inteira",
+    "moving": "as chaves",
+    "developers": "atrás do balcão",
+    "privacy": "regras da casa",
+    "anywhere": "para viagem",
+    "features": "tudo isso",
+    "questions": "pergunte no balcão",
+    "cta": "a porta está aberta"
+  },
+  "statement": "Tudo o que o seu grupo precisa em um só lugar, e nada seguindo você por aí. Rápido de abrir, tranquilo de usar e do seu jeito.",
+  "demo": {
+    "label": "Um canal de demonstração",
+    "title": "Vai,\ndiz alguma coisa.",
+    "body": "É assim que um canal funciona. Escreva uma mensagem e veja quem responde.",
+    "note": "É uma demonstração: as pessoas são inventadas e nada do que você digita sai desta página.",
+    "topic": "Diga oi. Ninguém morde.",
+    "placeholder": "Mensagem em #general",
+    "send": "Enviar",
+    "you": "Você",
+    "typing": "{{name}} está digitando…",
+    "online": "On-line",
+    "channels": "Canais",
+    "cta": "Fique com o lugar",
+    "seed": {
+      "sam": "Quem ainda está acordado?",
+      "lena": "Sempre. Acho que alguém novo acabou de chegar.",
+      "noor": "Oi, chegou agora? Puxa uma cadeira e diz oi!"
+    },
+    "replies": {
+      "lena": "Que bom ter você aqui! Puxa uma cadeira, ninguém morde.",
+      "sam": "Chegou na hora certa. Falta uma pessoa para hoje à noite.",
+      "noor": "Gostei dessa pessoa. Podemos ficar com ela?",
+      "theo": "É por isso que eu sempre fico por último?",
+      "yuki": "Anotado. Vou colocar você na planilha.",
+      "end": "Você pegou o jeito. No app de verdade tem canais de voz, tópicos e muito mais."
+    }
+  },
+  "messages": {
+    "title": "Conversas que\ncontinuam legíveis.",
+    "body": "As respostas mostram o que estão respondendo. As reações ficam pequenas. Código, links e arquivos ficam no lugar certo, e uma mensagem que menciona você é fácil de notar.",
+    "alt": "Uma conversa com respostas, um bloco de código, menções e reações."
+  },
+  "spaces": {
+    "title": "Um espaço para cada grupo.",
+    "body": "O time da raid, o clube do livro, as pessoas com quem você constrói coisas. Cada grupo tem o próprio espaço, com canais organizados em categorias e uma lista de membros que mostra quem faz o quê.",
+    "alt": "A lista de canais de um espaço ao lado da lista de membros, agrupada por cargos coloridos.",
+    "layers": {
+      "channels": "Canais",
+      "conversation": "Conversa",
+      "members": "Membros e cargos"
+    }
+  },
+  "crowds": {
+    "title": "Quem senta à sua mesa?",
+    "raid": "O time da raid",
+    "photo": "O clube de fotografia",
+    "dev": "O time de devs",
+    "books": "O clube do livro",
+    "alts": {
+      "raid": "O espaço de um grupo de jogos: uma conversa sobre mais uma rodada, com um bloco de código e reações.",
+      "photo": "O espaço de um clube de fotografia: um canal onde as pessoas comentam um rolo de filme.",
+      "dev": "O espaço de um grupo de desenvolvedores: um canal de revisão de código com uma mensagem de um bot de build.",
+      "books": "O espaço de um clube do livro: uma conversa sobre o livro do mês."
+    }
+  },
+  "conversations": {
+    "title": "De volta de onde\nvocê parou.",
+    "body": "Os canais não lidos se destacam, a caixa de entrada reúne o que está esperando por você, e Ctrl+K leva você a qualquer canal ou conversa em poucas teclas.",
+    "alt": "O seletor rápido sobre o app: a busca por um canal e o resultado."
+  },
+  "around": {
+    "title": "Tudo em volta da conversa.",
+    "body": "Um grupo faz mais do que conversar. Conversas paralelas, planos, votações e regras da casa ficam bem ao lado do chat.",
+    "thread": {
+      "title": "Tópicos",
+      "body": "Tire uma conversa paralela do canal. Acompanhe os que interessam, e o resto não atrapalha.",
+      "alt": "Um canal com um tópico aberto ao lado."
+    },
+    "poll": {
+      "title": "Enquetes",
+      "body": "Pergunte ao grupo. O resultado fica oculto até você votar, para os primeiros votos não influenciarem os outros.",
+      "alt": "Uma enquete com três respostas e a parcela de votos de cada uma."
+    },
+    "welcome": {
+      "title": "Boas-vindas e regras",
+      "body": "Receba quem chega, mostre os canais certos e, se quiser, peça que aceitem as regras primeiro.",
+      "alt": "As boas-vindas de um espaço, com as regras e os canais para começar."
+    },
+    "event": {
+      "title": "Eventos",
+      "body": "Planeje a raid ou o clube do livro, veja quem vai, receba um lembrete e adicione à sua agenda.",
+      "alt": "Um evento com a data, quem vai e um botão para entrar no canal de voz."
+    },
+    "points": {
+      "voice": {
+        "title": "Mensagens de voz e soundboard",
+        "body": "Fale em vez de digitar, e toque um som para todo o canal de voz quando o momento pedir."
+      },
+      "saved": {
+        "title": "Mensagens salvas e lembretes",
+        "body": "Guarde o que importa em uma lista e receba um lembrete de uma mensagem mais tarde."
+      },
+      "alerts": {
+        "title": "Palavras-chave e notificações push",
+        "body": "Escolha as palavras que devem chegar até você e receba uma notificação mesmo com o app fechado."
+      }
+    }
+  },
+  "profiles": {
+    "body": "Um banner, uma bio, pronomes, links e as cores que você quiser e, se preferir, uma foto e uma bio diferentes para cada espaço.",
+    "alt": "Um cartão de perfil com banner, bio e cargo."
+  },
+  "friends": {
+    "title": "Sua turma a um\nclique de distância.",
+    "body": "Adicione amigos pelo nome de usuário, veja quem está on-line e o que cada um está fazendo, e comece uma mensagem direta ou um grupo de até dez pessoas.",
+    "alt": "A página de amigos, com quem está on-line e o que está fazendo."
+  },
+  "voice": {
+    "title": "Fale quando digitar\nfor lento demais.",
+    "body": "Entre em um canal de voz, ligue a câmera, compartilhe a tela ou ligue direto para um amigo. A supressão de ruído filtra o seu teclado, e o aperte para falar está a uma configuração de distância.",
+    "alt": "Um canal de voz com várias pessoas e os controles da chamada embaixo."
+  },
+  "features": {
+    "title": "O cardápio.",
+    "groups": {
+      "messages": "Mensagens",
+      "voice": "Voz e vídeo",
+      "spaces": "Espaços",
+      "moderation": "Moderação",
+      "yours": "Do seu jeito",
+      "everywhere": "Onde funciona",
+      "community": "Comunidade",
+      "account": "Conta e segurança",
+      "developers": "Bots e webhooks"
+    },
+    "items": {
+      "replies": "Respostas, menções, reações",
+      "emoji": "Emojis personalizados e figurinhas",
+      "files": "Envio de arquivos com prévia",
+      "links": "Prévias de links",
+      "search": "Busca de texto completo com filtros",
+      "unread": "Estado de leitura e caixa de entrada",
+      "voiceChannels": "Canais de voz",
+      "video": "Vídeo",
+      "screen": "Compartilhamento de tela",
+      "calls": "Chamadas em mensagens diretas",
+      "noise": "Supressão de ruído",
+      "ptt": "Aperte para falar",
+      "categories": "Canais e categorias",
+      "roles": "Cargos e permissões",
+      "overrides": "Exceções por categoria e canal",
+      "invites": "Convites e pedidos para entrar",
+      "listing": "Listagem pública",
+      "spaceProfiles": "Um perfil diferente por espaço",
+      "bans": "Banimentos e suspensões temporárias",
+      "automod": "Moderação automática",
+      "slow": "Modo lento",
+      "audit": "Registro de auditoria",
+      "voiceMod": "Moderação de voz",
+      "reports": "Formulário de denúncia para todos",
+      "themes": "Sete temas ou as suas próprias cores",
+      "styles": "Três estilos de mensagem",
+      "density": "Densidade, tamanho do texto e cantos",
+      "contrast": "Alto contraste e formas claras de status",
+      "languages": "Inglês, alemão, português, russo, chinês",
+      "browser": "No navegador",
+      "windows": "App para Windows com atualizações automáticas",
+      "games": "Detecção de jogos no Windows",
+      "phone": "No celular, pela tela inicial",
+      "voiceMessages": "Mensagens de voz",
+      "pins": "Mensagens fixadas",
+      "forward": "Encaminhamento e spoilers",
+      "saved": "Mensagens salvas e lembretes",
+      "keywords": "Alertas de palavras-chave",
+      "soundboard": "Soundboard",
+      "threads": "Tópicos",
+      "events": "Eventos com lembretes",
+      "polls": "Enquetes",
+      "welcome": "Boas-vindas e regras",
+      "template": "Começar de um modelo de servidor do Discord",
+      "twoFactor": "Autenticação em duas etapas com códigos de recuperação",
+      "devices": "Lista de dispositivos, sair de todos",
+      "export": "Baixar os seus dados",
+      "deleteAccount": "Excluir a própria conta",
+      "contactRules": "Escolher quem pode falar com você",
+      "blocking": "Bloqueio",
+      "botApi": "API REST e socket para bots",
+      "commands": "Comandos de barra com opções",
+      "cards": "Cartões nas mensagens",
+      "webhooks": "Webhooks de entrada",
+      "portal": "Portal do desenvolvedor",
+      "docs": "Documentação pública para desenvolvedores",
+      "push": "Notificações com o app fechado"
+    }
+  },
+  "community": {
+    "title": "Encontre um espaço\nou abra o seu.",
+    "body": "Navegue pelos espaços públicos em Explorar e entre com um clique ou um pedido. O selo de verificado significa que a equipe da plataforma analisou o espaço, e nenhum espaço pode se listar sem essa análise.",
+    "alt": "A página Explorar com cartões de espaços públicos.",
+    "points": {
+      "explore": {
+        "title": "Listado depois da análise",
+        "body": "Um espaço só aparece em Explorar depois que a equipe da plataforma o aprova."
+      },
+      "moderation": {
+        "title": "Ferramentas para moderadores",
+        "body": "Suspensões temporárias, modo lento, moderação automática e um registro de auditoria de quem fez o quê."
+      },
+      "reports": {
+        "title": "Denúncias com resposta",
+        "body": "Qualquer pessoa pode denunciar uma mensagem ou um espaço, e quem é afetado fica sabendo a decisão e o motivo."
+      },
+      "rights": {
+        "title": "Permissões até o canal",
+        "body": "Cargos com cores e permissões próprias, e exceções para qualquer categoria ou canal."
+      },
+      "invites": {
+        "title": "Convites do seu jeito",
+        "body": "Links com data final e limite, ou pedidos para entrar que você aprova um a um."
+      },
+      "template": {
+        "title": "Comece de um modelo",
+        "body": "Cole um modelo de servidor do Discord e receba os cargos, categorias, canais e permissões. Mensagens e membros ficam onde estão."
+      }
+    }
+  },
+  "moving": {
+    "title": "A mudança leva três passos.",
+    "one": {
+      "title": "Arrume o seu lugar",
+      "body": "Comece um espaço novo ou cole um modelo de servidor do Discord e receba os cargos, categorias e canais."
+    },
+    "two": {
+      "title": "Envie um link",
+      "body": "Todo mundo entra com o mesmo link de convite. Dê a ele uma data final ou um limite, se quiser."
+    },
+    "three": {
+      "title": "Puxa uma cadeira",
+      "body": "Seu grupo já chegou. Canais e voz funcionam na hora, e o resto fica do seu jeito."
+    }
+  },
+  "developers": {
+    "title": "Construa em cima dele.",
+    "body": "Bots publicam, reagem, moderam e respondem a comandos de barra por uma API documentada. Webhooks recebem mensagens de qualquer programa com um único endereço.",
+    "link": "Ler a documentação",
+    "alt": "Uma mensagem de um bot, marcada como tal, com um cartão mostrando o resultado de um build.",
+    "points": {
+      "api": {
+        "title": "Uma API documentada",
+        "body": "REST e um socket ao vivo, com um guia rápido que faz o primeiro bot falar em minutos."
+      },
+      "commands": {
+        "title": "Comandos de barra",
+        "body": "Com texto, números, pessoas, canais e opções fixas, e respostas que só quem perguntou vê."
+      },
+      "rights": {
+        "title": "Bots pedem, você decide",
+        "body": "Um bot só recebe as permissões que o espaço lhe dá, e a marca dele não pode ser desligada."
+      }
+    }
+  },
+  "privacy": {
+    "title": "Sem anúncios.\nSem rastreadores.",
+    "body": "Fotos e vídeos de outros sites só carregam depois que você clica, então esses sites não ficam sabendo nada sobre você até você decidir.",
+    "points": {
+      "twoFactor": {
+        "title": "Autenticação em duas etapas",
+        "body": "Um app autenticador e códigos de recuperação protegem a sua conta."
+      },
+      "devices": {
+        "title": "Seus dispositivos à vista",
+        "body": "Veja onde você está conectado e saia de um dispositivo ou de todos."
+      },
+      "data": {
+        "title": "Leve com você ou exclua",
+        "body": "Baixe os seus dados em um único arquivo ou exclua a conta você mesmo."
+      },
+      "contact": {
+        "title": "Você decide quem fala com você",
+        "body": "Escolha quem pode enviar pedidos de amizade ou começar uma conversa, e bloqueie quem quiser."
+      }
+    }
+  },
+  "themes": {
+    "title": "Suas cores,\nsua densidade.",
+    "body": "Sete temas ou as suas próprias cores, três estilos de mensagem, cantos retos ou arredondados e o tamanho de texto que você lê melhor. O Tavvit não atrapalha, seja qual for o visual.",
+    "alt": "A mesma conversa em sete temas de cores diferentes."
+  },
+  "anywhere": {
+    "title": "No computador.\nNo celular.",
+    "desktop": {
+      "body": "Um app para Windows com atalhos globais, atualizações automáticas e detecção de jogos, para os amigos verem o que você está jogando.",
+      "link": "Baixar para Windows"
+    },
+    "phone": {
+      "body": "Abra o Tavvit no navegador do celular e adicione à tela inicial. Espaços, mensagens e voz vão junto, e as notificações chegam mesmo com o app fechado.",
+      "alt": "O Tavvit em um celular, mostrando uma conversa."
+    },
+    "qr": "Escaneie para abrir o Tavvit no celular"
+  },
+  "questions": {
+    "title": "Boas perguntas.",
+    "more": "Mais na página de ajuda",
+    "items": {
+      "join": {
+        "q": "Como entro em um espaço?",
+        "a": "Abra um link de convite de alguém que já está lá ou navegue pelos espaços públicos em Explorar. Alguns espaços deixam você entrar na hora, outros pedem uma solicitação antes."
+      },
+      "phone": {
+        "q": "Existe um app para celular?",
+        "a": "O Tavvit funciona no navegador do celular. Adicione à tela inicial e ele abre como um app, com notificações. Ele não está nas lojas de aplicativos."
+      },
+      "computers": {
+        "q": "Em quais computadores funciona?",
+        "a": "Em qualquer um com um navegador atual. Para Windows também há um app para desktop com atalhos globais, atualizações automáticas e detecção de jogos."
+      },
+      "moving": {
+        "q": "Posso trazer o meu servidor do Discord?",
+        "a": "A estrutura, sim. Cole o link de um modelo de servidor e o Tavvit cria os cargos, categorias, canais e permissões. Mensagens e membros não vêm junto, então convide a sua turma com um link."
+      },
+      "bots": {
+        "q": "Posso usar bots?",
+        "a": "Sim. Qualquer pessoa pode escrever um com a API pública, e quem cuida de um espaço decide quais bots entram e o que podem fazer. Comece pela documentação para desenvolvedores."
+      },
+      "trouble": {
+        "q": "E se alguém se comportar mal?",
+        "a": "Os moderadores têm suspensões temporárias, banimentos, filtros automáticos e um registro de auditoria. Qualquer pessoa pode denunciar uma mensagem ou um espaço, e quem é afetado fica sabendo a decisão e o motivo."
+      }
+    }
+  },
+  "cta": {
+    "title": "Tem lugar para você.",
+    "body": "Crie uma conta em um minuto e comece o seu primeiro espaço, ou entre em um para o qual você foi convidado.",
+    "closed": "Este servidor não está aceitando novas contas no momento. Se você já tem uma, bem-vindo de volta.",
+    "register": "Criar uma conta",
+    "login": "Entrar"
+  },
+  "closer": "Essa foi a página inteira. Sua cadeira continua livre.",
+  "footer": {
+    "product": "Produto",
+    "legal": "Jurídico",
+    "imprint": "Informações legais",
+    "privacy": "Política de privacidade",
+    "terms": "Termos de uso",
+    "report": "Denunciar conteúdo",
+    "developers": "Desenvolvedores",
+    "help": "Ajuda",
+    "changelog": "Novidades",
+    "status": "Status",
+    "source": "Código-fonte",
+    "language": "Idioma",
+    "roadmap": "Roteiro"
+  },
+  "life": {
+    "ok": "Tudo funcionando",
+    "down": "Algo está fora do ar agora",
+    "version": "Versão {{version}}"
+  }
+}

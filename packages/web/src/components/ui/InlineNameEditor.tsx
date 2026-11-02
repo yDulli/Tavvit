@@ -143,12 +143,12 @@ export function InlineNameEditor({
             autoFocus
             aria-label={fieldLabel}
             maxLength={maxLength}
-            className="input-standard min-w-0 flex-1 py-1.5 px-2 text-sm"
+            className="input-standard h-7 min-w-0 flex-1 px-2 py-0 text-sm"
           />
           <button
             type="submit"
             disabled={isSaving}
-            className="flex-shrink-0 px-2.5 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+            className="btn-primary btn-sm"
           >
             {isSaving ? t('states.saving') : t('actions.save')}
           </button>
@@ -156,7 +156,7 @@ export function InlineNameEditor({
             type="button"
             onClick={cancelEditing}
             disabled={isSaving}
-            className="flex-shrink-0 px-2 py-1.5 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors disabled:opacity-50"
+            className="btn-quiet btn-sm"
           >
             {t('actions.cancel')}
           </button>

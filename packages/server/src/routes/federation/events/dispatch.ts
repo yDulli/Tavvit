@@ -4,7 +4,7 @@ import { hasAppliedEvent, recordAppliedEvent, relayEventKey } from '../../../uti
 import { and } from 'drizzle-orm';
 import type { FederationRelayEvent } from '@backspace/shared';
 import { processDmCallAcceptEvent, processDmCallEndEvent, processDmCallRejectEvent, processDmCallStartEvent, processDmTypingStartEvent, processDmTypingStopEvent } from './calls.js';
-import { processCreateEvent, processDeleteEvent, processReactionAddEvent, processReactionRemoveEvent, processUpdateEvent } from './dmMessages.js';
+import { processCreateEvent, processDeleteEvent, processPinSetEvent, processReactionAddEvent, processReactionRemoveEvent, processUpdateEvent } from './dmMessages.js';
 import { processDmCloseEvent, processDmReopenEvent, processFileRejectedEvent, processPresenceUpdateEvent, processReadStateUpdateEvent } from './dmState.js';
 import { processFriendAddEvent, processFriendRemoveEvent, processFriendRequestCancelEvent, processFriendRequestCreateEvent, processFriendRequestUpdateEvent } from './friends.js';
 import { processGroupMetadataUpdateEvent, processMemberAddEvent, processMemberRemoveEvent, processOwnershipTransferEvent } from './membership.js';
@@ -97,6 +97,9 @@ export async function processRelayEvents(
           break;
         case 'reaction_remove':
           processReactionRemoveEvent(event, sourceInstance, db, accepted, rejected);
+          break;
+        case 'pin_set':
+          processPinSetEvent(event, sourceInstance, db, accepted, rejected);
           break;
         case 'member_add':
           await processMemberAddEvent(event, sourceInstance, db, accepted, rejected);

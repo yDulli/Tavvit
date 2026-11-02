@@ -5,11 +5,15 @@ import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { describeError } from '../../i18n/errors';
 import { CHANNEL_TOPIC_MAX_LENGTH, normalizeChannelTopic } from '@backspace/shared/src/constants';
+import { channelIconName } from '../../utils/channelKinds';
+import { Icon } from '../ui/Icon';
+
+const KINDS = ['text', 'voice', 'announcement', 'forum'] as const;
 
 export function CreateChannelModal() {
   const { t } = useTranslation(['spaces', 'common']);
   const [name, setName] = useState('');
-  const [type, setType] = useState<'text' | 'voice'>('text');
+  const [type, setType] = useState<(typeof KINDS)[number]>('text');
   const [topic, setTopic] = useState('');
   const [categoryId, setCategoryId] = useState<string | ''>('');
   const [error, setError] = useState('');
@@ -63,23 +67,23 @@ export function CreateChannelModal() {
     <Modal isOpen={isOpen} onClose={closeModal} title={t('spaces:channel.create.title')} mobileStyle="sheet">
       <form onSubmit={handleSubmit}>
         {error && (
-          <div className="mb-3 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
+          <div className="mb-3 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">
             {error}
           </div>
         )}
 
         <div className="mb-4">
-          <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+          <label className="field-label">
             {t('spaces:channel.create.typeLabel')}
           </label>
           <div className="space-y-2">
-            {(['text', 'voice'] as const).map((kind) => (
+            {KINDS.map((kind) => (
               <label
                 key={kind}
-                className={`flex items-center gap-3 p-3 rounded cursor-pointer border ${
+                className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors duration-100 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-soft ${
                   type === kind
-                    ? 'border-accent-primary bg-interactive-hover'
-                    : 'border-border-soft bg-surface-channel hover:bg-interactive-hover'
+                    ? 'border-accent-primary bg-accent-primary/[0.06]'
+                    : 'border-border-hard hover:border-interactive-muted hover:bg-interactive-hover'
                 }`}
               >
                 <input
@@ -88,22 +92,15 @@ export function CreateChannelModal() {
                   value={kind}
                   checked={type === kind}
                   onChange={() => setType(kind)}
-                  className="hidden"
+                  className="sr-only"
                 />
-                <div className="w-5 h-5 text-txt-tertiary">
-                  {kind === 'text' && (
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41001 9L8.35001 15H14.35L15.41 9H9.41001Z" /></svg>
-                  )}
-                  {kind === 'voice' && (
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 5L6 9H2V15H6L11 19V5ZM15.54 8.46C16.48 9.4 17 10.67 17 12S16.48 14.6 15.54 15.54L14.12 14.12C14.69 13.55 15 12.79 15 12S14.69 10.45 14.12 9.88L15.54 8.46Z" /></svg>
-                  )}
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-txt-primary">
-                    {kind === 'text' ? t('spaces:channel.create.types.text.name') : t('spaces:channel.create.types.voice.name')}
+                <Icon name={channelIconName(kind)} size={20} className="flex-shrink-0 text-txt-tertiary" />
+                <div className="min-w-0">
+                  <div className="text-ui font-medium text-txt-primary">
+                    {t(`spaces:channel.create.types.${kind}.name`)}
                   </div>
-                  <div className="text-xs text-txt-tertiary">
-                    {kind === 'text' ? t('spaces:channel.create.types.text.description') : t('spaces:channel.create.types.voice.description')}
+                  <div className="mt-0.5 text-meta leading-snug text-txt-tertiary">
+                    {t(`spaces:channel.create.types.${kind}.description`)}
                   </div>
                 </div>
               </label>
@@ -112,7 +109,7 @@ export function CreateChannelModal() {
         </div>
 
         <div className="mb-4">
-          <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+          <label className="field-label">
             {t('spaces:channel.create.nameLabel')}
           </label>
           <input
@@ -125,9 +122,9 @@ export function CreateChannelModal() {
           />
         </div>
 
-        {type === 'text' && (
+        {type !== 'voice' && (
           <div className="mb-4">
-            <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+            <label className="field-label">
               {t('spaces:channel.create.topicLabel')}
             </label>
             <input
@@ -143,7 +140,7 @@ export function CreateChannelModal() {
 
         {categories.length > 0 && (
           <div className="mb-4">
-            <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+            <label className="field-label">
               {t('spaces:channel.create.categoryLabel')}
             </label>
             <select
@@ -160,19 +157,20 @@ export function CreateChannelModal() {
         )}
 
         <div className="sticky bottom-0 z-10 pointer-events-none">
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="glass-bubble rounded-full px-3 py-2 flex items-center gap-3 pointer-events-auto">
+          <div className="flex justify-end pt-3 pb-1">
+            <div className="action-bar pointer-events-auto">
               <button
                 type="button"
                 onClick={closeModal}
-                className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                className="btn-quiet"
               >
                 {t('common:actions.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                aria-busy={isLoading}
+                className="btn-primary"
               >
                 {isLoading ? t('spaces:channel.create.submitting') : t('spaces:channel.create.submit')}
               </button>

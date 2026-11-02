@@ -1,5 +1,5 @@
 {
-  "appName": "Backspace",
+  "appName": "Tavvit",
   "actions": {
     "save": "保存",
     "cancel": "取消",
@@ -82,7 +82,8 @@
     "searchMembers": "搜索成员…",
     "noMembersFound": "未找到成员",
     "or": "或",
-    "nameAZ": "按名称 (A-Z)"
+    "nameAZ": "按名称 (A-Z)",
+    "adminConsole": "管理控制台"
   },
   "time": {
     "today": "今天 {{time}}",
@@ -111,7 +112,12 @@
   },
   "language": {
     "label": "语言",
-    "description": "菜单、按钮和系统消息将以该语言显示。其他人发送的消息将保持原样。"
+    "description": "菜单、按钮和系统消息将以该语言显示。其他人发送的消息将保持原样。",
+    "translate": {
+      "label": "将消息翻译为",
+      "same": "应用语言",
+      "hint": "右键点击消息（手机上长按），然后选择“翻译”。"
+    }
   },
   "crash": {
     "title": "出了点问题",
@@ -119,19 +125,184 @@
     "details": "错误详情"
   },
   "app": {
-    "loading": "正在加载 Backspace"
+    "loading": "正在加载 Tavvit"
   },
   "chrome": {
     "toggleMemberList": "切换成员列表显示",
     "closeSettings": "关闭设置"
   },
-  "sourceCode": {
-    "label": "源代码 (AGPL)",
-    "labelWithBuild": "源代码 (AGPL) · {{build}}",
-    "title": "查看此实例运行版本的源代码 (AGPL-3.0)"
-  },
   "devices": {
     "newAudioInput": "检测到 {{label}}。可在语音设置中选择切换。",
     "unnamedAudioInput": "新的音频设备"
+  },
+  "connection": {
+    "lost": "连接已断开，正在重新连接…"
+  },
+  "switcher": {
+    "title": "快速切换",
+    "placeholder": "跳转到对话、好友、空间或频道…",
+    "noResults": "没有与“{{query}}”匹配的内容。",
+    "hint": "↑ ↓ 选择，Enter 打开，Esc 关闭",
+    "kind": {
+      "dm": "对话",
+      "friend": "好友",
+      "space": "空间",
+      "channel": "频道",
+      "page": "页面"
+    }
+  },
+  "activity": {
+    "line": {
+      "playing": "正在玩 {{name}}",
+      "listening": "正在听 {{name}}",
+      "watching": "正在观看 {{name}}",
+      "streaming": "正在直播 {{name}}"
+    }
+  },
+  "contextMenu": {
+    "cut": "剪切",
+    "paste": "粘贴",
+    "selectAll": "全选",
+    "noSuggestions": "没有拼写建议",
+    "addToDictionary": "添加到词典",
+    "pasteBlocked": "浏览器不允许 Tavvit 读取剪贴板。请用 {{shortcut}} 粘贴。",
+    "clipboardFailed": "无法复制到剪贴板。",
+    "copyUsername": "复制用户名",
+    "usernameCopied": "已复制用户名",
+    "editChannel": "编辑频道",
+    "markRead": "标记为已读",
+    "markReadFailed": "无法标记为已读，请重试。",
+    "jumpToMessage": "跳转到消息",
+    "copyMessageLink": "复制消息链接"
+  },
+  "badges": {
+    "staff": {
+      "name": "管理团队",
+      "description": "作为管理员之一运营此实例"
+    },
+    "bot": {
+      "name": "机器人",
+      "description": "由人运行的程序"
+    },
+    "server_owner": {
+      "name": "空间拥有者",
+      "description": "拥有此空间"
+    },
+    "administrator": {
+      "name": "管理员",
+      "description": "在此空间拥有“管理员”权限"
+    },
+    "moderator": {
+      "name": "版主",
+      "description": "可以在此空间管理成员和消息"
+    },
+    "helper": {
+      "name": "帮手",
+      "description": "帮助大家熟悉此实例"
+    },
+    "founder": {
+      "name": "创始成员",
+      "description": "在此实例创立之初就已加入"
+    },
+    "early_supporter": {
+      "name": "早期支持者",
+      "description": "很早就开始支持此实例"
+    },
+    "bug_hunter": {
+      "name": "捉虫达人",
+      "description": "发现并报告了一个错误"
+    },
+    "developer": {
+      "name": "开发者",
+      "description": "参与 Tavvit 或此实例的开发"
+    },
+    "creator": {
+      "name": "创作者",
+      "description": "创作社区喜爱的内容"
+    },
+    "event_participant": {
+      "name": "活动参与者",
+      "description": "参加过此实例的活动"
+    },
+    "community_contributor": {
+      "name": "社区贡献者",
+      "description": "帮助社区成长"
+    },
+    "beta_tester": {
+      "name": "内测用户",
+      "description": "比其他人更早试用新功能"
+    },
+    "verified": {
+      "name": "已认证",
+      "description": "本实例的管理员已核实此空间的运营者"
+    },
+    "partner": {
+      "name": "合作伙伴",
+      "description": "与此实例合作的社区"
+    }
+  },
+  "review": {
+    "verification": {
+      "none": "未申请",
+      "pending": "审核中",
+      "needs_info": "需补充信息",
+      "verified": "已认证",
+      "rejected": "已拒绝",
+      "revoked": "已撤销"
+    },
+    "discovery": {
+      "none": "未提交",
+      "pending": "审核中",
+      "changes_requested": "需修改",
+      "approved": "已收录",
+      "rejected": "已拒绝",
+      "withdrawn": "已撤回"
+    },
+    "categories": {
+      "gaming": "游戏",
+      "music": "音乐",
+      "art": "艺术与设计",
+      "technology": "科技",
+      "education": "教育",
+      "science": "科学",
+      "entertainment": "娱乐",
+      "sports": "体育",
+      "community": "社区",
+      "other": "其他"
+    },
+    "actions": {
+      "submit": "申请已发送",
+      "withdraw": "申请已撤回",
+      "approve": "已批准",
+      "reject": "已拒绝",
+      "request_info": "已要求补充信息",
+      "request_changes": "已要求修改",
+      "revoke": "认证已撤销",
+      "admin_withdraw": "收录已撤下",
+      "changed": "修改后重新进入审核",
+      "migrated": "已转入审核"
+    },
+    "toast": {
+      "verification": "{{space}} 的认证状态：{{status}}",
+      "discovery": "{{space}} 的“探索”收录状态：{{status}}"
+    },
+    "history": "历史记录",
+    "noHistory": "暂无记录。",
+    "unknownActor": "已注销的账号",
+    "noDescription": "暂无描述。",
+    "members_other": "{{count}} 名成员"
+  },
+  "notFound": {
+    "title": "这里什么都没有",
+    "body": "这个地址没有对应的页面。链接可能已过期或输入有误。",
+    "toApp": "返回应用",
+    "toHome": "返回首页"
+  },
+  "emailPrompt": {
+    "unconfirmed": "你的地址 {{address}} 尚未确认。请查找我们的邮件,或在设置中检查。",
+    "missing": "添加一个邮箱地址,这样忘记密码时可以找回账户。",
+    "required": "确认你的邮箱地址后,才能创建空间,并与非好友开始对话。",
+    "open": "打开设置",
+    "dismiss": "以后再说"
   }
 }

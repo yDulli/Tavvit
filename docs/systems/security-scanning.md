@@ -94,6 +94,8 @@ line, so clearing these is the Fastify 5 migration and its plugin ecosystem, not
 version bump. That is a code change with a real blast radius and it belongs in its
 own pass.
 
+**Cleared in 1.32.5:** the server moved to Fastify 5.12 with `@fastify/cors` 11, `helmet` 13, `multipart` 10, `rate-limit` 11, `static` 10 and `websocket` 11, so the cluster above is gone. Two things changed underneath it: Fastify 5 treats a bare hop count in `trustProxy` as "trust nobody" (see web-security.md, "The client address", for the function that replaced it), `@fastify/static` hands `setHeaders` the reply instead of the raw response, and Fastify 5 refuses a request whose content type says JSON with an empty body, which programs send on a DELETE: `utils/jsonBody.ts` reads such a body as none again, and everything else through Fastify's own parser with its prototype-poisoning guard. In the same release `nodemailer` went from 8 to 10 (9 validates TLS when fetching remote content, which Tavvit does not use; 10 needs Node 20) and the overrides `undici@^7` and `fast-uri@^3` were raised to their fixed versions, which took `pnpm audit --prod` from 45 findings (14 high) to 2 moderate. Those two are `minimatch` and `glob` under `@fastify/static`: one needs attacker-chosen glob patterns, the other an `AbortSignal`, and the plugin only globs its own root with fixed patterns at startup, so neither is reachable; forcing the next majors under the plugin would risk the file serving the whole client depends on.
+
 So the job stays report-only for now. Making it blocking today would fail every
 release publish until the Fastify migration lands, and holding security fixes
 behind a scanner backlog is the exact inversion this project already decided
@@ -597,7 +599,6 @@ Currently deferred, with the condition that releases each one:
 | react / react-dom / `@types/*` 18 | `RefObject<T \| null>` variance and `useState` arity break across the chat components | the UI pass landing; then one PR moving all four together |
 | tailwindcss 3 | v4 moves the PostCSS plugin to `@tailwindcss/postcss` and replaces the config model the design system is built on | a dedicated port of the theme, surface/input tiers and `globals.css` |
 | typescript 5 | v7 removes the `baseUrl` compiler option (TS5102) that the workspace tsconfigs rely on | migrating every tsconfig off `baseUrl` first |
-| fastify 4 + all `@fastify/*` | the 11.x plugin lines target Fastify 5; on Fastify 4 the server stops booting | one PR taking core and every plugin across together |
 | `@tus/file-store` + `@tus/server` 1.x | matched pair; bumping either alone splits it | one PR moving both, upload pipeline exercised end to end |
 | `@types/node` 22 (24 for the script packages) | types describing a newer Node than the runtime let code typecheck clean and fail in production | whenever a runtime moves, in that same PR |
 | jsdom 28 | jsdom 30 pulls undici 8 against the `undici@^7` override, so every vitest worker dies with `webidl.util.markAsUncloneable is not a function` and the web suite does not run; it also changes SVG attribute-selector matching | extending the undici override to 8, then re-testing both |
@@ -696,8 +697,8 @@ GitHub, and the only one whose tests do not run in Node. What guards it:
   pull requests from forks.
 - **The job creates nothing.** The D1 database, the `EXPORT_TOKEN` Worker secret
   and the custom domain are provisioned by hand once. The job applies migrations
-  that are already in the repository and publishes the Worker. See
-  [telemetry.md](telemetry.md) section 8.
+  that are already in the repository and publishes the Worker. (Upstream
+  infrastructure: the Tavvit server no longer sends to this receiver.)
 - **The tests run inside Cloudflare's workerd**, started by
   `@cloudflare/vitest-pool-workers`, not in Node. That is a second runtime,
   pulled from npm as part of the install and executing the Worker for real

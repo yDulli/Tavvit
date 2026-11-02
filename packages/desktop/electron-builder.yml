@@ -1,20 +1,16 @@
-appId: com.backspace.desktop
-productName: Backspace
-# Every release asset names its platform, so the GitHub asset list (which is
-# sorted by name and nothing else) groups by platform and reads on its own:
-# Backspace-1.4.0-win-x64.exe, -mac-arm64.dmg, -linux-x86_64.AppImage. The
-# architecture keeps electron-builder's per-format spelling: builder-util maps
-# x64 to `x86_64` for AppImage and `amd64` for deb, which are what those
-# formats' users expect, and leaves it `x64` elsewhere. Three other places
-# spell these names out by hand and have to move with this pattern: the
-# Downloads table that .github/workflows/release.yml writes into the release
-# notes, the build list in packages/web/src/platform/desktopDownload.ts, and
-# the download table in README.md.
+appId: de.hashhive.orbit
+productName: Tavvit
+# Every installer names its platform and architecture:
+# Tavvit-1.11.0-win-x64.exe. The server reads the file name from latest.yml
+# (scripts/package-desktop.mjs, packages/server/src/routes/desktopDownloads.ts),
+# so nothing else spells this pattern out.
 artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 directories:
   output: dist-electron
 files:
   - dist/**/*
+  # The unit tests compile into dist beside the app; they are not shipped.
+  - "!dist/**/*.test.js"
   - resources/**/*
   # Exclude host-compiled native module artifacts from the asar.
   # electron-rebuild (postinstall) compiles uiohook-napi for the build machine,
@@ -24,6 +20,12 @@ files:
   - "!**/node_modules/uiohook-napi/build/**"
   - "!**/node_modules/uiohook-napi/build.bak/**"
   - "!**/node_modules/uiohook-napi/bin/**"
+# The licence and the notices travel with the installed app (AGPL-3.0 section 4).
+extraResources:
+  - from: ../../LICENSE
+    to: LICENSE.txt
+  - from: ../../NOTICE
+    to: NOTICE.txt
 asarUnpack:
   - "**/*.node"
 npmRebuild: false
@@ -35,19 +37,25 @@ npmRebuild: false
 # is a release-pipeline change that has to be checked on all six shipped artifacts.
 # See scripts/afterPack.js and docs/systems/desktop-security.md.
 afterPack: ./scripts/afterPack.js
+# The update feed is the production server itself: the installers and
+# latest.yml are uploaded into data/downloads/desktop and served at
+# /downloads/desktop/ (docs/systems/desktop.md, "Releases"). electron-updater
+# writes this address into app-update.yml, so every installed build checks the
+# same server it opens.
 publish:
-  - provider: github
-    owner: TheZwiss
-    repo: backspace
+  - provider: generic
+    url: https://tavvit.com/downloads/desktop
 protocols:
-  - name: Backspace
+  - name: Tavvit
     schemes:
-      - backspace
+      - tavvit
+      # Invite links from before the rename are still in people's chats.
+      - orbit
 mac:
   category: public.app-category.social-networking
   minimumSystemVersion: "12.0"
   extendInfo:
-    NSAudioCaptureUsageDescription: "Backspace needs access to system audio to share sound during screen sharing."
+    NSAudioCaptureUsageDescription: "Tavvit needs access to system audio to share sound during screen sharing."
   # dmg only. The zip target exists for Squirrel.Mac auto-update, and these
   # builds are ad-hoc signed, which the updater classifies as `manual`
   # (src/updateCapability.ts): nothing on a Mac ever downloads the zip, so it
@@ -71,7 +79,7 @@ linux:
   # `@backspacedesktop`. Setting this key is therefore a rename, not a restoration.
   # Keep the fuse-verification paths in .github/workflows/release.yml in step with
   # it; nothing else couples them.
-  executableName: Backspace
+  executableName: Tavvit
   icon: build/icons/
   target:
     - AppImage

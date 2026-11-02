@@ -34,6 +34,14 @@
         "voice": {
           "name": "Voice",
           "description": "Hang out with voice and video"
+        },
+        "announcement": {
+          "name": "Announcement",
+          "description": "Only those you allow can post, and other spaces can follow it"
+        },
+        "forum": {
+          "name": "Forum",
+          "description": "Every post is its own conversation, with a title and tags"
         }
       },
       "nameLabel": "Channel Name",
@@ -67,7 +75,66 @@
         "note": "This channel is hidden from members without explicit access. Users with the Administrator permission or space owners can always see all channels.",
         "unhideOnSave": "Saving makes this channel visible to every member."
       },
-      "deleteButton": "Delete Channel"
+      "deleteButton": "Delete Channel",
+      "slowmode": {
+        "label": "Slow mode",
+        "off": "Off",
+        "hint": "How long members wait between two messages. People who can manage messages or this channel are exempt."
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "An address that lets another program post into this channel. Whoever knows it can write here, so treat it like a password.",
+        "nameLabel": "Name",
+        "create": "Create",
+        "empty": "No webhooks in this channel yet.",
+        "onlyOnce": "The address of {{name}}. Copy it now: it is not shown again.",
+        "addressLabel": "Webhook address",
+        "copied": "Copied",
+        "howTo": "Send JSON with a \"content\" field to it, for example:",
+        "rename": "Rename webhook",
+        "neverUsed": "Never used",
+        "lastUsed": "Last used {{time}}",
+        "rotate": "New address",
+        "rotateTitle": "Give it a new address?",
+        "rotateBody": "The old address of {{name}} stops working at once. Use this when it got out.",
+        "remove": "Delete webhook",
+        "removeTitle": "Delete this webhook?",
+        "removeBody": "The address of {{name}} stops working. What it posted stays."
+      },
+      "announcement": {
+        "label": "Announcement channel",
+        "hint": "Only those you allow under Permissions can post, and other spaces can follow it."
+      },
+      "tags": {
+        "title": "Tags",
+        "intro": "Posts can carry these tags, and the list can be filtered by them. Up to {{max}}.",
+        "empty": "No tags yet.",
+        "nameLabel": "Name of the tag",
+        "colorLabel": "Colour of the tag",
+        "noColor": "No colour",
+        "add": "Add a tag",
+        "remove": "Remove tag"
+      },
+      "follows": {
+        "followersTitle": "Channels following this one",
+        "followersEmpty": "No channel follows this one yet.",
+        "followingTitle": "Channels this one follows",
+        "place": "#{{channel}} in {{space}}",
+        "remove": "End this follow",
+        "removeTitle": "End this follow?",
+        "removeBody": "New posts stop arriving there. What has arrived so far stays."
+      },
+      "icon": {
+        "label": "Icon",
+        "hint": "Takes the place of the channel type icon wherever the channel is listed. Without one, the type icon stays.",
+        "default": "Channel type icon",
+        "emoji": "Emoji",
+        "useDefault": "Use the type icon",
+        "tabs": {
+          "icons": "Icons",
+          "emoji": "Emoji"
+        }
+      }
     },
     "delete": {
       "title": "Delete #{{name}}?",
@@ -176,19 +243,17 @@
     "title": "Explore",
     "searchPlaceholder": "Search spaces...",
     "discoveryOff": {
-      "member": "Your instance administrator has turned off space discovery. Spaces here are joinable by invite link only.",
       "admin": "Space discovery is off on this instance. Spaces here are joinable by invite link only.",
       "enable": "Turn on space discovery",
       "failed": "Could not change the setting."
     },
     "browseOff": {
-      "member": "Spaces from other instances are not shown here because your instance administrator turned that off.",
       "admin": "Spaces from other instances are not shown here.",
       "action": "Show global spaces in Explore",
       "confirm": {
         "title": "Show spaces from other instances here?",
         "exposure": "Those instances see the IP address of every browser that loads one, and this instance's administrator does not control them.",
-        "off": "To stop showing them later: Settings, Instance, General, the switch for global spaces in Explore.",
+        "off": "To stop showing them later: Admin console, General, the switch for global spaces in Explore.",
         "action": "Show global spaces"
       }
     },
@@ -197,13 +262,13 @@
       "action": "List them",
       "confirm": {
         "title": "List spaces from this instance publicly?",
-        "optIn": "Only spaces whose owners turn listing on are sent, so this switch lists no space on its own.",
-        "off": "To stop listing later: Settings, Instance, General, the space discovery choice.",
+        "optIn": "Only spaces whose listing the administrators approved and whose owners opt in to the directory are sent, so this switch lists no space on its own.",
+        "off": "To stop listing later: Admin console, General, the space discovery choice.",
         "action": "List spaces"
       }
     },
     "noMatches": "No spaces match your search.",
-    "empty": "No discoverable spaces yet.",
+    "empty": "No listed spaces yet.",
     "joinedSection": "Joined",
     "notConnected": "Not connected to {{host}}",
     "inner": {
@@ -215,8 +280,8 @@
     },
     "outer": {
       "title": "Outer Space",
-      "subtitle": "Communities across Backspace",
-      "empty": "Nothing out there yet. Spaces that opt in to the directory appear here.",
+      "subtitle": "Communities across Tavvit",
+      "empty": "Nothing out there yet. Approved spaces whose owners opt in to the directory appear here.",
       "noMatches": "Nothing in Outer Space matches your search.",
       "showMore": "Show more",
       "connectAndJoin": "Connect and join",
@@ -259,7 +324,8 @@
       "pending": "Pending",
       "request": "Request",
       "sending": "Sending…"
-    }
+    },
+    "lead": "Spaces you can join, open to everyone or by request."
   },
   "settings": {
     "title": "Space Settings",
@@ -269,9 +335,17 @@
       "management": "Management",
       "tabs": {
         "overview": "Overview",
+        "welcome": "Welcome and rules",
+        "sounds": "Soundboard",
         "discovery": "Discovery",
         "roles": "Roles",
-        "bans": "Bans"
+        "bans": "Bans",
+        "moderation": "Moderation",
+        "audit": "Audit log",
+        "verification": "Verification",
+        "you": "Your settings",
+        "access": "Access",
+        "invites": "Invites"
       }
     },
     "discardChanges": "Discard",
@@ -303,14 +377,20 @@
         "button": "Delete Space",
         "confirmAgain": "Click again to confirm deletion",
         "failed": "Failed to delete space"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "label": "Default notifications",
+        "description": "Members start with this level until they choose their own. Tavvit's own default is only @mentions.",
+        "builtIn": "Tavvit default"
       }
     },
     "discovery": {
       "title": "Discovery",
-      "disabledNotice": "Space discovery is disabled by the instance administrator. Changing visibility will have no effect until discovery is re-enabled.",
+      "disabledNotice": "Space discovery is turned off by the instance administrator. An approved listing appears in Explore once it is turned back on.",
       "visibility": {
         "label": "Visibility",
-        "hint": "Control who can discover and join this space.",
+        "hint": "How people can join this space. Being listed in Explore is requested separately and approved by the administrators.",
         "options": {
           "private": {
             "label": "Private",
@@ -318,19 +398,18 @@
           },
           "request": {
             "label": "Request to Join",
-            "description": "Visible in Explore; people can request to join"
+            "description": "People can ask to join; it can be listed in Explore once approved"
           },
           "public": {
             "label": "Public",
-            "description": "Visible in Explore; anyone can join instantly"
+            "description": "Anyone can join instantly; it can be listed in Explore once approved"
           }
         }
       },
       "directory": {
-        "label": "List in the global Backspace directory",
-        "hint": "Show this space in Outer Space on every Backspace instance.",
+        "label": "List in the global Tavvit directory",
+        "hint": "Show this space in Outer Space on every Tavvit instance, once its listing is approved.",
         "notConfigured": "This instance is not configured to reach a directory, so listing this space would reach none.",
-        "adminOff": "Your instance administrator has to allow global listing.",
         "adminOffSelf": "Global listing is not allowed on this instance.",
         "adminOffSelfAction": "Turn it on",
         "adminOffSelfIntro": "This allows global listing for the whole instance: spaces here become discoverable in Explore, and the instance starts reporting itself to the public directory.",
@@ -366,7 +445,341 @@
       "kickFailed": "Failed to kick member",
       "banFailed": "Failed to ban member",
       "rolesAboveYou": "Roles at or above your highest role are locked.",
-      "rolesUnheld": "Roles with permissions you do not have cannot be given."
+      "rolesUnheld": "Roles with permissions you do not have cannot be given.",
+      "listHeadingFiltered": "Members ({{shown}} of {{total}})",
+      "searchPlaceholder": "Search members",
+      "filterRole": "Filter by role",
+      "filterAll": "All roles",
+      "noMatch": "No member matches the filter.",
+      "reason": {
+        "label": "Reason (optional)",
+        "hint": "Moderators see this in the audit log. The person is not told."
+      },
+      "deleteMessages": {
+        "label": "Also delete their messages",
+        "none": "Keep them",
+        "hour": "From the last hour",
+        "day": "From the last 24 hours",
+        "week": "From the last 7 days"
+      }
+    },
+    "moderation": {
+      "title": "Moderation",
+      "intro": "Rules this space applies to every message by itself. A message that breaks one is not posted, and its author is told why.",
+      "off": "Off",
+      "filter": {
+        "title": "Message filter",
+        "description": "Checked whenever a message is posted or edited in a text channel."
+      },
+      "words": {
+        "label": "Blocked words",
+        "empty": "No blocked words yet.",
+        "inputLabel": "Word or phrase to block",
+        "placeholder": "Add a word or phrase",
+        "fullPlaceholder": "The list is full",
+        "remove": "Remove {{word}}",
+        "full": "The list holds up to {{max}} entries.",
+        "duplicate": "“{{word}}” is already on the list.",
+        "hint": "Matched as whole words, ignoring case. A * at the start or end also matches inside longer words, as in *spam*.",
+        "counter": "{{used}}/{{max}}",
+        "invalid": "This cannot be blocked. Use visible characters on a single line."
+      },
+      "links": {
+        "label": "Block links",
+        "description": "Refuse messages that contain a web link."
+      },
+      "invites": {
+        "label": "Block invites",
+        "description": "Refuse messages that contain an invite link to a space."
+      },
+      "mentions": {
+        "label": "Maximum mentions",
+        "description": "The most people and roles one message may mention."
+      },
+      "posting": {
+        "title": "Who can post",
+        "description": "Keeps brand-new accounts and newcomers from posting until they have been around for a while."
+      },
+      "accountAge": {
+        "label": "Minimum account age",
+        "description": "How old an account must be before it can post here."
+      },
+      "memberAge": {
+        "label": "Minimum membership",
+        "description": "How long someone must have been a member before they can post."
+      },
+      "exempt": "The owner, administrators and members who can manage messages or the space are exempt from all of these rules.",
+      "slowmodeNote": "Slow mode is set for each channel in its own settings."
+    },
+    "audit": {
+      "title": "Audit log",
+      "intro": "Who changed what in this space, newest first.",
+      "filters": {
+        "action": "Action",
+        "allActions": "All actions",
+        "actor": "Done by",
+        "anyone": "Anyone"
+      },
+      "loadOlder": "Load older entries",
+      "empty": {
+        "title": "Nothing recorded yet",
+        "body": "Changes to the space, its channels, roles and members will be listed here."
+      },
+      "emptyFiltered": {
+        "title": "No matching entries",
+        "body": "Try another action or person."
+      },
+      "reason": "Reason: {{reason}}",
+      "showChanges_one": "Show {{count}} change",
+      "showChanges_other": "Show {{count}} changes",
+      "hideChanges": "Hide changes",
+      "unknownTarget": "(unknown)",
+      "actions": {
+        "spaceUpdate": "Space changed",
+        "moderationUpdate": "Moderation rules changed",
+        "inviteRegenerate": "Invite link created",
+        "channelCreate": "Channel created",
+        "channelUpdate": "Channel changed",
+        "channelDelete": "Channel deleted",
+        "categoryCreate": "Category created",
+        "categoryUpdate": "Category changed",
+        "categoryDelete": "Category deleted",
+        "overrideUpdate": "Permission override changed",
+        "overrideDelete": "Permission override removed",
+        "roleCreate": "Role created",
+        "roleUpdate": "Role changed",
+        "roleDelete": "Role deleted",
+        "roleReorder": "Roles reordered",
+        "memberRolesUpdate": "Member roles changed",
+        "memberKick": "Member kicked",
+        "memberBan": "Member banned",
+        "memberUnban": "Ban lifted",
+        "memberTimeout": "Member timed out",
+        "memberTimeoutRemove": "Timeout removed",
+        "messageDelete": "Message deleted",
+        "threadCreate": "Thread started",
+        "threadUpdate": "Thread renamed",
+        "threadDelete": "Thread deleted",
+        "welcomeUpdate": "Welcome and rules changed",
+        "webhookDelete": "Webhook deleted",
+        "soundDelete": "Clip removed",
+        "botAdd": "Bot added",
+        "soundUpdate": "Clip changed",
+        "soundCreate": "Clip added",
+        "webhookUpdate": "Webhook changed",
+        "webhookCreate": "Webhook made",
+        "eventDelete": "Event called off",
+        "eventUpdate": "Event changed",
+        "eventCreate": "Event announced",
+        "messagePin": "Message pinned",
+        "messageUnpin": "Message unpinned",
+        "joinRequestApprove": "Join request approved",
+        "joinRequestDecline": "Join request declined",
+        "ownershipTransfer": "Ownership transferred",
+        "templateImport": "Discord template imported",
+        "inviteCreate": "Invite link created",
+        "inviteRevoke": "Invite link revoked",
+        "messagesBulkDelete": "Messages removed with a ban",
+        "channelMessagesDelete": "Messages cleared",
+        "forumTagsUpdate": "Forum tags changed",
+        "channelFollowCreate": "Follow started",
+        "channelFollowDelete": "Follow ended",
+        "vanityUpdate": "Own address changed"
+      },
+      "sentences": {
+        "spaceUpdate": "{{actor}} changed the space settings",
+        "moderationUpdate": "{{actor}} changed the moderation rules",
+        "inviteRegenerate": "{{actor}} created the invite link",
+        "channelCreate": "{{actor}} created {{target}}",
+        "channelUpdate": "{{actor}} changed {{target}}",
+        "channelDelete": "{{actor}} deleted {{target}}",
+        "categoryCreate": "{{actor}} created the category {{target}}",
+        "categoryUpdate": "{{actor}} changed the category {{target}}",
+        "categoryDelete": "{{actor}} deleted the category {{target}}",
+        "overrideUpdate": "{{actor}} changed the permissions in {{target}}",
+        "overrideDelete": "{{actor}} removed a permission override in {{target}}",
+        "roleCreate": "{{actor}} created the role {{target}}",
+        "roleUpdate": "{{actor}} changed the role {{target}}",
+        "roleDelete": "{{actor}} deleted the role {{target}}",
+        "roleReorder": "{{actor}} reordered the roles",
+        "memberRolesUpdate": "{{actor}} changed the roles of {{target}}",
+        "memberKick": "{{actor}} kicked {{target}}",
+        "memberBan": "{{actor}} banned {{target}}",
+        "memberUnban": "{{actor}} lifted the ban on {{target}}",
+        "memberTimeout": "{{actor}} timed out {{target}}",
+        "memberTimeoutRemove": "{{actor}} removed the timeout of {{target}}",
+        "messageDelete": "{{actor}} deleted a message by {{target}}",
+        "threadCreate": "{{actor}} started the thread {{target}}",
+        "threadUpdate": "{{actor}} renamed the thread {{target}}",
+        "threadDelete": "{{actor}} deleted the thread {{target}}",
+        "welcomeUpdate": "{{actor}} changed the welcome and rules",
+        "webhookDelete": "{{actor}} deleted the webhook {{target}}",
+        "soundDelete": "{{actor}} removed the clip {{target}}",
+        "botAdd": "{{actor}} added the bot {{target}}",
+        "soundUpdate": "{{actor}} changed the clip {{target}}",
+        "soundCreate": "{{actor}} added the clip {{target}}",
+        "webhookUpdate": "{{actor}} changed the webhook {{target}}",
+        "webhookCreate": "{{actor}} made the webhook {{target}}",
+        "eventDelete": "{{actor}} called off the event {{target}}",
+        "eventUpdate": "{{actor}} changed the event {{target}}",
+        "eventCreate": "{{actor}} announced the event {{target}}",
+        "messagePin": "{{actor}} pinned a message by {{target}}",
+        "messageUnpin": "{{actor}} unpinned a message by {{target}}",
+        "joinRequestApprove": "{{actor}} approved the join request of {{target}}",
+        "joinRequestDecline": "{{actor}} declined the join request of {{target}}",
+        "ownershipTransfer": "{{actor}} transferred ownership to {{target}}",
+        "templateImport": "{{actor}} imported the Discord template {{target}}",
+        "unknown": "{{actor}} made a change this version doesn't know yet ({{action}})",
+        "inviteCreate": "{{actor}} created an invite link",
+        "inviteRevoke": "{{actor}} revoked an invite link",
+        "messagesBulkDelete": "{{actor}} removed {{target}}'s recent messages",
+        "channelMessagesDelete": "{{actor}} deleted several messages in {{target}}",
+        "forumTagsUpdate": "{{actor}} changed the tags of {{target}}",
+        "channelFollowCreate": "{{actor}} connected {{target}} with a channel of another space",
+        "channelFollowDelete": "{{actor}} ended the connection of {{target}} with a channel of another space",
+        "vanityUpdate": "{{actor}} changed the space's own address"
+      },
+      "fields": {
+        "name": "Name",
+        "topic": "Topic",
+        "slowmodeSeconds": "Slow mode",
+        "permissions": "Permissions",
+        "allow": "Allowed",
+        "deny": "Denied",
+        "color": "Color",
+        "visibility": "Visibility",
+        "roleAdded": "Role added",
+        "roleRemoved": "Role removed",
+        "durationSeconds": "Duration",
+        "icon": "Icon",
+        "banner": "Banner",
+        "avatarColor": "Icon color",
+        "description": "Description",
+        "directoryListed": "Listed in the directory",
+        "defaultNotificationLevel": "Default notifications",
+        "ownerTitle": "Owner title",
+        "position": "Position",
+        "category": "Category",
+        "blockLinks": "Block links",
+        "blockInvites": "Block invites",
+        "maxMentions": "Maximum mentions",
+        "minAccountAgeMinutes": "Minimum account age",
+        "minMemberAgeMinutes": "Minimum membership",
+        "type": "Type",
+        "channel": "Channel",
+        "target": "Applies to",
+        "owner": "Owner",
+        "inviteCode": "Invite code",
+        "blockedWordAdded": "Word blocked",
+        "blockedWordRemoved": "Word unblocked",
+        "colorSecondary": "Second color",
+        "hoist": "Shown separately",
+        "mentionable": "Mentionable by everyone",
+        "ownerGroup": "Owner in own group",
+        "template": "Template",
+        "roles": "Roles",
+        "categories": "Categories",
+        "channels": "Channels",
+        "messages": "Messages",
+        "tags": "Tags",
+        "vanityCode": "Address"
+      }
+    },
+    "you": {
+      "notifications": "Notifications",
+      "profile": {
+        "title": "Your profile here",
+        "description": "Your nickname, picture and bio in this space. Your account stays as it is.",
+        "action": "Edit space profile"
+      },
+      "leave": {
+        "title": "Leave",
+        "description": "You lose access to its channels. With an invite you can come back."
+      }
+    },
+    "invites": {
+      "intro": "The links that lead into this space. Revoking one stops it at once; people who came in with it stay.",
+      "new": {
+        "title": "New link",
+        "expiry": {
+          "label": "Ends",
+          "never": "Never",
+          "minutes30": "After 30 minutes",
+          "hour1": "After 1 hour",
+          "hours6": "After 6 hours",
+          "day1": "After 1 day",
+          "days7": "After 7 days",
+          "days30": "After 30 days"
+        },
+        "uses": {
+          "label": "Lets in",
+          "noLimit": "Any number of people",
+          "people_one": "{{count}} person",
+          "people_other": "{{count}} people"
+        },
+        "create": "Create link"
+      },
+      "list": {
+        "title": "Active links",
+        "standing": "Main link",
+        "uses_one": "Used {{count}} time",
+        "uses_other": "Used {{count}} times",
+        "usesOf": "{{uses}} of {{max}} used",
+        "noEnd": "Does not end",
+        "ends": "Ends {{date}}",
+        "by": "By {{name}}",
+        "revoke": "Revoke",
+        "copied": "Invite link copied",
+        "copyFailed": "The link could not be copied",
+        "empty": "No active links. Everyone who wants in needs a new one."
+      },
+      "revokeConfirm": {
+        "title": "Revoke this link?",
+        "description": "It stops working at once, wherever it was shared.",
+        "standing": "It stops working at once, wherever it was shared. The next time someone opens the Invite dialog, this space gets a new main link."
+      },
+      "vanity": {
+        "title": "Own address",
+        "intro": "A link in words that lets people in like any other and never runs out.",
+        "label": "Address",
+        "hint": "{{min}} to {{max}} small letters, digits or hyphens.",
+        "copy": "Copy link",
+        "copied": "Copied",
+        "remove": "Give it up"
+      }
+    },
+    "welcome": {
+      "title": "Welcome and rules",
+      "description": "What someone new sees when they first come to this space.",
+      "messageTitle": "Welcome message",
+      "messageDescription": "A few words on what this place is. Formatting works as in a message.",
+      "rulesTitle": "Rules",
+      "rulesDescription": "Shown under the welcome.",
+      "requiredLabel": "Members must agree",
+      "requiredDescription": "Whoever joins from now on can only read until they agree. Members already here and anyone who may manage the space are not asked.",
+      "rulesMissing": "Write the rules first.",
+      "channelsTitle": "Channels to start in",
+      "channelsDescription": "Up to {{max}}, offered under the welcome.",
+      "saved": "Saved."
+    },
+    "sounds": {
+      "title": "Soundboard",
+      "description": "Short clips anyone in a call here can play. Up to {{seconds}} seconds and {{size}} each. Everyone can turn them down or off for themselves.",
+      "add": "Add a clip",
+      "count": "{{used}} of {{max}}",
+      "emptyTitle": "No clips yet",
+      "emptyBody": "None come with Tavvit. Add your own, and only what you may share.",
+      "tooLarge": "That file is larger than {{max}}.",
+      "tooLong": "That clip is longer than {{max}} seconds.",
+      "notAudio": "That is not an audio file this browser can read.",
+      "untitled": "Clip",
+      "preview": "Listen to {{name}}",
+      "rename": "Rename clip",
+      "nameLabel": "Clip name",
+      "seconds": "{{seconds}} s",
+      "remove": "Remove {{name}}",
+      "removeTitle": "Remove this clip?",
+      "removeBody": "{{name}} is gone for everyone in this space."
     }
   },
   "bans": {
@@ -407,9 +820,15 @@
     "nameEmpty": "Role name cannot be empty",
     "nameDuplicate": "A role with this name already exists",
     "groups": {
-      "general": "General",
-      "text": "Text",
-      "voice": "Voice"
+      "voice": "Voice",
+      "space": "Space",
+      "roles": "Roles",
+      "members": "Members",
+      "moderation": "Moderation",
+      "channels": "Channels and categories",
+      "invites": "Invites",
+      "messages": "Messages and files",
+      "advanced": "Advanced"
     },
     "saved": "Role saved",
     "copy": "Copy Role",
@@ -456,7 +875,15 @@
       "moveMembers": "Move Members",
       "stream": "Stream",
       "disconnectMembers": "Disconnect Members",
-      "mentionEveryone": "Mention @everyone, @here and Roles"
+      "mentionEveryone": "Mention @everyone, @here and Roles",
+      "pinMessages": "Pin Messages",
+      "createThreads": "Create Threads",
+      "manageEvents": "Manage Events",
+      "manageWebhooks": "Manage Webhooks",
+      "useSoundboard": "Use Soundboard",
+      "manageSounds": "Manage Soundboard",
+      "moderateMembers": "Time Out Members",
+      "viewAuditLog": "View Audit Log"
     },
     "tristate": {
       "deny": "Deny",
@@ -485,7 +912,11 @@
     "removeUnheldShort": "Only someone with these permissions can remove it",
     "aboveYouRole": "This role ranks at or above your highest role. You can view its override but not change or remove it.",
     "aboveYouMember": "This member ranks at or above you. You can view their override but not change or remove it.",
-    "aboveYouShort": "Ranks at or above your highest role"
+    "aboveYouShort": "Ranks at or above your highest role",
+    "descriptions": {
+      "moderateMembers": "Stop members from posting, reacting and joining voice for a while. Only works on members ranked below you.",
+      "viewAuditLog": "See who changed what in this space's settings, roles, channels and members."
+    }
   },
   "sidebar": {
     "directMessages": "Direct Messages",
@@ -600,9 +1031,12 @@
       "reset": "Reset to default"
     },
     "menu": {
-      "profile": "View profile",
-      "nickname": "Change space nickname…",
-      "roles": "Roles"
+      "profile": "View Profile",
+      "nickname": "Change Space Nickname…",
+      "roles": "Roles",
+      "timeout": "Time Out…",
+      "removeTimeout": "Remove Timeout",
+      "spaceProfile": "Edit Space Profile"
     },
     "nickname": {
       "title": "Change space nickname",
@@ -611,7 +1045,21 @@
       "descriptionOther": "Only applies in this space. The account name of {{name}} stays the same. Leave it empty to show the account name.",
       "reset": "Reset to account name",
       "shownAs": "Nickname in this space: {{nickname}}"
-    }
+    },
+    "timeout": {
+      "title": "Time out {{name}}",
+      "description": "While timed out they can still read along, but cannot post, react or join voice in this space.",
+      "duration": "Duration",
+      "ends": "Ends: {{time}}",
+      "reason": "Reason (optional)",
+      "reasonPlaceholder": "What happened?",
+      "reasonHint": "Kept in the audit log.",
+      "reasonCounter": "{{length}}/{{max}}",
+      "confirm": "Time out",
+      "done": "{{name}} is timed out until {{time}}",
+      "removed": "Timeout removed for {{name}}"
+    },
+    "timedOutUntil": "Timed out until {{time}}"
   },
   "mobile": {
     "addSheet": {
@@ -666,7 +1114,7 @@
     "failed": "Failed to transfer ownership"
   },
   "notifications": {
-    "open": "Notification settings",
+    "open": "Notification Settings",
     "channelTitle": "Notifications for #{{channel}}",
     "spaceTitle": "Notifications for {{space}}",
     "levelHeading": "Notify me about",
@@ -693,6 +1141,390 @@
     "suppressEveryone": "Suppress @everyone and @here",
     "suppressRoles": "Suppress role mentions",
     "massHeading": "Group mentions",
-    "massNote": "@here reaches the same members as @everyone. Mentions of you by name always notify you."
+    "massNote": "@here reaches the same members as @everyone. Mentions of you by name always notify you.",
+    "spaceDefaultNote": "This is the default the moderators of this space chose. Pick another level to make it your own."
+  },
+  "roleDisplay": {
+    "gradient": "Gradient",
+    "secondColor": "Second colour",
+    "preview": "Looks like:",
+    "icon": "Icon",
+    "removeIcon": "Remove icon",
+    "description": "Description",
+    "descriptionPlaceholder": "What this role is for",
+    "hoist": "Show members separately",
+    "hoistHint": "Members whose top shown role this is get their own group in the member list.",
+    "mentionable": "Anyone can mention this role",
+    "mentionableHint": "Without it, only members who may mention @everyone can @mention the role.",
+    "membersTitle_one": "{{count}} member",
+    "membersTitle_other": "{{count}} members",
+    "membersEmpty": "Nobody has this role yet.",
+    "removeMember": "Take the role from {{name}}",
+    "addMember": "Add",
+    "addMemberPlaceholder": "Give the role to…"
+  },
+  "ownerDisplay": {
+    "title": "Ownership",
+    "ownGroup": "List the owner in a group of their own",
+    "ownGroupHint": "Off, you are listed under your own roles with a crown. Your rights come from owning the space, never from a role."
+  },
+  "import": {
+    "title": "Import from Discord",
+    "titleInto": "Import into {{space}}",
+    "intro": "Start a space from a Discord server template: its roles and permissions, categories, channels and channel permissions.",
+    "introInto": "Add a Discord template's roles, categories and channels to this space. Nothing that is already here is changed or removed.",
+    "source": {
+      "linkLabel": "Template link or code",
+      "linkPlaceholder": "discord.new/… or discord.com/template/…",
+      "linkInvalid": "That is not a template link or code.",
+      "howTo": "In Discord: Server Settings → Server Template → copy the link.",
+      "load": "Load",
+      "loading": "Loading…",
+      "or": "or",
+      "file": "Import a template file",
+      "fileHint": "A .json file with the template, for example saved from discord.com/api/v10/guilds/templates/CODE.",
+      "fileInvalid": "That file is not a template.",
+      "fileTooLarge": "The file is larger than 2 MB."
+    },
+    "notTransferred": {
+      "title": "What a template does not hold",
+      "body": "A template is a snapshot of the structure, not a backup. Messages, members, bots, webhooks, emoji, stickers, the server icon, events, threads and integrations stay on Discord."
+    },
+    "preview": {
+      "by": "by {{name}}",
+      "uses_one": "used {{count}} time",
+      "uses_other": "used {{count}} times",
+      "spaceName": "Space name",
+      "counts": {
+        "roles": "Roles",
+        "categories": "Categories",
+        "channels": "Channels",
+        "overrides": "Overrides",
+        "skipped": "Skipped"
+      },
+      "rolesTitle": "Roles",
+      "rolesHint": "Highest first. Permissions Tavvit doesn't have, or that you can't grant here, are named.",
+      "channelsTitle": "Categories and channels",
+      "noCategory": "No category",
+      "action": {
+        "create": "new",
+        "reuse": "existing",
+        "updateEveryone": "@everyone",
+        "keepEveryone": "unchanged",
+        "skip": "skipped"
+      },
+      "converted": "converted",
+      "unsupported_one": "{{count}} permission Tavvit doesn't have",
+      "unsupported_other": "{{count}} permissions Tavvit doesn't have",
+      "withheld_one": "{{count}} permission you can't grant",
+      "withheld_other": "{{count}} permissions you can't grant",
+      "hoist": "shown separately",
+      "mentionable": "mentionable",
+      "notesTitle": "Good to know",
+      "import": "Import"
+    },
+    "notes": {
+      "channel_converted": "#{{subject}} was {{detail}} on Discord and comes over as a plain channel.",
+      "channel_unsupported": "{{subject}} is left out: Tavvit has no channel like Discord type {{detail}}.",
+      "channel_exists": "#{{subject}} already exists here and is skipped.",
+      "category_reused": "The category {{subject}} already exists; its channels go into it.",
+      "role_reused": "The role {{subject}} already exists and is used as it is.",
+      "role_renamed": "A second role named {{detail}} becomes {{subject}}.",
+      "role_icon_dropped": "The icon of {{subject}} can't come over; an emoji can be set later.",
+      "everyone_kept": "@everyone keeps this space's permissions.",
+      "roles_below_existing": "New roles are placed below the roles this space already has.",
+      "permissions_per_channel": "The channels in {{subject}} keep their own permissions, as on Discord.",
+      "member_overwrite_dropped": "Permissions for single members in {{subject}} can't come over.",
+      "reference_missing": "{{subject}} refers to a role or category the template doesn't contain.",
+      "slowmode_adjusted": "Slow mode in #{{subject}} becomes {{detail}}, the nearest step Tavvit has.",
+      "topic_shortened": "The topic of #{{subject}} was shortened.",
+      "name_changed": "{{detail}} is called #{{subject}} here.",
+      "nsfw_dropped": "#{{subject}} was age-restricted on Discord; Tavvit has no such setting.",
+      "slowmode_off": "Slow mode in #{{subject}} is off: Tavvit has no step that short.",
+      "override_withheld": "On {{subject}} you can't set {{detail}}: you don't hold these permissions yourself, so they are left out.",
+      "override_hierarchy": "The permissions for {{detail}} on {{subject}} are left out: those roles are not below your highest role."
+    },
+    "importing": "Importing…",
+    "done": {
+      "title": "Imported",
+      "adjustedTitle": "Permissions that were adjusted",
+      "followUpTitle": "What to do next",
+      "followUp": {
+        "invite": "Invite your members: nobody moves over by themselves.",
+        "permissions": "Look over the roles that lost permissions Tavvit doesn't have.",
+        "bots": "Bots, webhooks and integrations have to be set up again."
+      },
+      "open": "Open space"
+    },
+    "entry": {
+      "title": "Import from Discord",
+      "action": "Import template",
+      "hint": "Add the roles, categories and channels of a Discord server template. Nothing already here is changed or removed.",
+      "createSpace": "Import from Discord",
+      "createSpaceHint": "Start from a Discord server template"
+    },
+    "discordTypes": {
+      "stage": "a stage channel",
+      "media": "a media channel"
+    }
+  },
+  "spaceProfile": {
+    "title": "Your profile in {{space}}",
+    "titlePlain": "Your space profile",
+    "intro": "Shown only in this space. Anything you leave empty shows your account's profile.",
+    "notLoaded": "Open the space first to edit your profile there.",
+    "avatar": "Picture",
+    "banner": "Banner",
+    "bio": "About me",
+    "bioPlaceholder": "What people in this space should know",
+    "bioCounter": "{{used}}/{{max}}",
+    "fromAccount": "from your account",
+    "uploadAvatar": "Upload picture",
+    "uploadBanner": "Upload banner",
+    "useAccountAvatar": "Use account picture",
+    "useAccountBanner": "Use account banner",
+    "useAccountBio": "Use account text",
+    "uploading": "Uploading…",
+    "uploadFailed": "The image could not be uploaded.",
+    "saved": "Space profile saved",
+    "cropAvatar": "Crop picture",
+    "cropBanner": "Crop banner"
+  },
+  "verification": {
+    "title": "Verification",
+    "ownerOnly": "Only the owner of this space can ask for verification.",
+    "intro": "Verification shows a check mark next to the space's name in Explore and on its profile. It says that the administrators of this instance checked who runs it. Give public, checkable information; never send ID documents or other personal papers.",
+    "statusLabel": "Status",
+    "adminNote": "Note from the reviewers",
+    "sentAt": "Request sent {{date}}",
+    "withdraw": "Withdraw request",
+    "sent": "Verification request sent",
+    "status": {
+      "none": "This space is not verified and no request is open.",
+      "pending": "Your request waits for the administrators. You will be told when it is decided.",
+      "needs_info": "The reviewers need more information. Read their note, then send the request again.",
+      "verified": "This space is verified. The check mark shows wherever the space is shown.",
+      "rejected": "The request was not approved. You can send a new one with better information.",
+      "revoked": "The verification was revoked. You can send a new request."
+    },
+    "form": {
+      "title": "Request",
+      "privacy": "Only the administrators of this instance read what you send here.",
+      "identity": "Name and description",
+      "noDescription": "No description yet.",
+      "identityHint": "Taken from the space as it is now. Change them under Overview or Discovery before sending.",
+      "category": "Category",
+      "website": "Website (optional)",
+      "profiles": "Public profiles (optional, up to {{max}})",
+      "profileAria": "Public profile {{index}}",
+      "addProfile": "Add a profile",
+      "reason": "Why should this space be verified?",
+      "reasonPlaceholder": "Who runs the space, who it is for, and why a check mark helps people.",
+      "counter": "{{length}} of {{min}}–{{max}} characters",
+      "proof": "How can the reviewers check it?",
+      "proofPlaceholder": "For example a page or a public post of the official website or account that names this space.",
+      "send": "Send request",
+      "sendAgain": "Send again",
+      "urlPlaceholder": "https://…"
+    },
+    "withdrawDialog": {
+      "title": "Withdraw the verification request?",
+      "description": "The request leaves the review queue. You can send a new one later."
+    }
+  },
+  "listing": {
+    "title": "Listing in Explore",
+    "ownerOnly": "The owner of this space asks for a listing in Explore; the administrators of this instance approve it.",
+    "intro": "Visibility only decides how people join. A space appears in Explore once the administrators of this instance approve its listing. Changing the name, description, icon or banner of a listed space sends it back to review.",
+    "statusLabel": "Status",
+    "adminNote": "Note from the reviewers",
+    "sentAt": "Request sent {{date}}",
+    "preview": "How the listing will look",
+    "criteria": {
+      "title": "What the reviewers look for",
+      "visibility": "The space is public or open to join requests",
+      "description": "It has a description",
+      "icon": "It has an icon (recommended)",
+      "honest": "Its name and description say honestly what it is about",
+      "rules": "It follows the rules of this instance"
+    },
+    "category": "Category",
+    "needsVisibility": "Make the space public or open it to join requests first.",
+    "needsDescription": "Give the space a description first.",
+    "send": "Request a listing",
+    "sendAgain": "Send again",
+    "unlist": "Take off Explore",
+    "withdraw": "Withdraw request",
+    "sent": "Listing request sent",
+    "status": {
+      "none": "This space is not listed in Explore.",
+      "pending": "Your request waits for the administrators. The space stays hidden until it is approved.",
+      "changes_requested": "The reviewers asked for changes. Make them, then send the request again.",
+      "approved": "This space is listed in Explore.",
+      "rejected": "The listing was not approved. You can send a new request.",
+      "withdrawn": "The listing was withdrawn. You can send a new request."
+    },
+    "withdrawDialog": {
+      "title": "Withdraw the listing?",
+      "description": "The space leaves Explore, or the request leaves the review queue. A new request goes through review again."
+    },
+    "resubmitDialog": {
+      "title": "Send the listing again?",
+      "description": "The space leaves Explore until the administrators approve the new category."
+    }
+  },
+  "roleIcons": {
+    "none": "No icon",
+    "fromBefore": "An emoji from before",
+    "groups": {
+      "rank": "Rank",
+      "power": "Power",
+      "play": "Play and create",
+      "make": "Build",
+      "nature": "Nature",
+      "life": "Life"
+    },
+    "names": {
+      "crown": "Crown",
+      "crownb": "Simple crown",
+      "shield": "Shield",
+      "shieldstar": "Shield with a star",
+      "shieldok": "Shield with a check",
+      "trophy": "Trophy",
+      "medal": "Medal",
+      "star": "Star",
+      "star4": "Four-point star",
+      "sparkle": "Sparkle",
+      "diamond": "Diamond",
+      "key": "Key",
+      "flag": "Flag",
+      "banner": "Banner",
+      "sword": "Sword",
+      "bolt": "Lightning",
+      "fire": "Fire",
+      "skull": "Skull",
+      "wand": "Magic wand",
+      "target": "Target",
+      "hammer": "Hammer",
+      "ghost": "Ghost",
+      "alien": "Alien",
+      "robot": "Robot",
+      "mask": "Mask",
+      "eye": "Eye",
+      "gamepad": "Game controller",
+      "joystick": "Joystick",
+      "dice": "Dice",
+      "puzzle": "Puzzle piece",
+      "music": "Music",
+      "headset": "Headphones",
+      "mic": "Microphone",
+      "guitar": "Guitar",
+      "film": "Film",
+      "camera": "Camera",
+      "brush": "Brush",
+      "palette": "Palette",
+      "pen": "Pen",
+      "book": "Book",
+      "gradcap": "Graduation cap",
+      "code": "Code",
+      "terminal": "Terminal",
+      "bug": "Bug",
+      "chip": "Chip",
+      "flask": "Flask",
+      "atom": "Atom",
+      "rocket": "Rocket",
+      "planet": "Planet",
+      "compass": "Compass",
+      "wrench": "Wrench",
+      "megaphone": "Megaphone",
+      "handshake": "Handshake",
+      "leaf": "Leaf",
+      "tree": "Tree",
+      "lotus": "Lotus",
+      "moon": "Moon",
+      "sun": "Sun",
+      "snow": "Snowflake",
+      "waves": "Waves",
+      "mountain": "Mountains",
+      "storm": "Storm",
+      "paw": "Paw",
+      "bird": "Bird",
+      "cat": "Cat",
+      "butterfly": "Butterfly",
+      "feather": "Feather",
+      "fish": "Fish",
+      "heart": "Heart",
+      "coffee": "Coffee",
+      "pizza": "Pizza",
+      "cake": "Cake",
+      "gift": "Gift",
+      "beer": "Beer",
+      "handheart": "Caring hand",
+      "anchor": "Anchor",
+      "globe": "Globe",
+      "infinity": "Infinity",
+      "hourglass": "Hourglass",
+      "bell": "Bell"
+    }
+  },
+  "events": {
+    "title": "Events",
+    "intro": "What is coming up in this space.",
+    "create": "New event",
+    "emptyTitle": "Nothing planned yet",
+    "emptyBody": "When something is planned here, you will find it on this page.",
+    "emptyManage": "Announce a game night, a meeting or anything else people can come to.",
+    "pastHeading": "Just ended",
+    "ended": "Ended",
+    "range": "{{start}} to {{end}}",
+    "going": "Going",
+    "iAmGoing": "I am going",
+    "nobodyYet": "Nobody yet.",
+    "joinVoice": "Join {{channel}}",
+    "openChannel": "Open {{channel}}",
+    "addToCalendar": "Add to calendar",
+    "remove": "Call off",
+    "removeTitle": "Call off this event?",
+    "removeBody": "{{title}} disappears for everyone, along with who was going.",
+    "reminder": "{{title}} starts soon",
+    "startsSoon": "Starts soon",
+    "form": {
+      "title": "New event",
+      "editTitle": "Change event",
+      "name": "Name",
+      "start": "Starts",
+      "end": "Ends (optional)",
+      "startPast": "An event has to start in the future.",
+      "endBeforeStart": "The end has to come after the start.",
+      "channel": "Channel",
+      "noChannel": "None",
+      "location": "Place (optional)",
+      "description": "What it is about (optional)",
+      "create": "Announce"
+    },
+    "goingCount_one": "{{formatted}} going",
+    "goingCount_other": "{{formatted}} going",
+    "upcomingCount_one": "{{formatted}} upcoming event",
+    "upcomingCount_other": "{{formatted}} upcoming events"
+  },
+  "welcome": {
+    "title": "Welcome to {{space}}",
+    "rules": "Rules",
+    "startHere": "Start here",
+    "mustAccept": "You can read along, but to write, react or join a call you have to agree to these rules.",
+    "later": "Later",
+    "agree": "I agree",
+    "gotIt": "Got it"
+  },
+  "botInvite": {
+    "title": "Add a bot",
+    "runBy": "Run by {{name}}",
+    "warning": "A bot is a program run by its owner, not by this instance. It sees what its role lets it see and can pass that on. Add only those you trust.",
+    "spaceLabel": "Space",
+    "spacePick": "Choose a space",
+    "noSpaces": "You do not manage a space on this instance.",
+    "permissionsLabel": "What it asks for",
+    "noPermissions": "Nothing beyond what every member can do.",
+    "add": "Add to space"
   }
 }

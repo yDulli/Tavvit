@@ -6,7 +6,11 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
-import { Avatar } from '../ui/Avatar';
+import { Avatar, avatarRadius } from '../ui/Avatar';
+import { ChannelIcon } from '../ui/ChannelIcon';
+import { Icon } from '../ui/Icon';
+import { LiveBadge } from './LiveBadge';
+import { VoiceIcon } from './voiceIcons';
 import type { ParticipantInfo } from '../../hooks/useLiveKit';
 import { useVoiceParticipantMeta } from '../../hooks/useVoiceParticipantMeta';
 import { useActiveDmCall } from '../../hooks/useActiveDmCall';
@@ -28,7 +32,7 @@ const DRAG_THRESHOLD = 5;
 
 /**
  * Computes PiP boundary box by measuring actual DOM obstacles.
- * Obstacle elements declare themselves with data-pip-obstacle="left"|"bottom".
+ * Obstacle elements declare themselves with data-pip-obstacle="top"|"left"|"bottom".
  * PiP queries them at boundary-check time — no hardcoded layout values.
  *
  * On mobile (<768px) there are no fixed side/bottom UI obstacles.
@@ -43,7 +47,7 @@ function getPipBounds(pipX: number): {
   const vh = layoutPixels(window.innerHeight);
   let minX = PIP_MARGIN;
   const maxX = vw - PIP_WIDTH - PIP_MARGIN;
-  const minY = PIP_MARGIN;
+  let minY = PIP_MARGIN;
   let maxY = vh - PIP_HEIGHT - PIP_MARGIN;
 
   if (vw < MOBILE_LAYOUT_BREAKPOINT) return { minX, maxX, minY, maxY };
@@ -54,7 +58,9 @@ function getPipBounds(pipX: number): {
     if (rect.width === 0 || rect.height === 0) continue;
 
     const direction = el.dataset.pipObstacle;
-    if (direction === 'left') {
+    if (direction === 'top') {
+      minY = Math.max(minY, rect.bottom + PIP_MARGIN);
+    } else if (direction === 'left') {
       minX = Math.max(minX, rect.right + PIP_MARGIN);
     } else if (direction === 'bottom') {
       const pipRight = pipX + PIP_WIDTH;
@@ -119,7 +125,7 @@ function selectPipStream(
 }
 
 export function PictureInPicture() {
-  const { t } = useTranslation('voice');
+  const { t } = useTranslation(['voice', 'common']);
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -242,10 +248,15 @@ export function PictureInPicture() {
   const channelName = useMemo(() => {
     if (currentVoiceChannelId) {
       const ch = channels.find(c => c.id === currentVoiceChannelId);
-      return ch?.name ?? 'Voice';
+      return ch?.name ?? t('voice:status.voiceChannel');
     }
-    return 'Call';
-  }, [currentVoiceChannelId, channels]);
+    return t('voice:status.dmCall');
+  }, [currentVoiceChannelId, channels, t]);
+  // A DM call has none, and shows the speaker.
+  const channelIcon = useMemo(
+    () => (currentVoiceChannelId ? channels.find(c => c.id === currentVoiceChannelId)?.icon ?? null : null),
+    [currentVoiceChannelId, channels],
+  );
 
   // Derive the LiveKit Track from the selected stream's participant
   const lkTrack = selectedStream
@@ -394,7 +405,7 @@ export function PictureInPicture() {
   if (!shouldShow) return null;
 
   const displayName = displayParticipant
-    ? (displayParticipant.isLocal ? `${resolvedName} (You)` : resolvedName)
+    ? (displayParticipant.isLocal ? `${resolvedName} ${t('voice:badges.you')}` : resolvedName)
     : channelName;
   const hasVideo = selectedStream !== null;
   const isScreen = selectedStream?.type === 'screen';
@@ -402,7 +413,7 @@ export function PictureInPicture() {
   return (
     <div
       ref={containerRef}
-      className={`fixed z-[40] overflow-hidden rounded-lg shadow-2xl ring-1 ring-white/10 bg-surface-base select-none ${
+      className={`glass fixed z-[40] overflow-hidden rounded-lg select-none ${
         isDragging ? 'cursor-grabbing' : 'cursor-grab'
       }`}
       style={{
@@ -439,54 +450,48 @@ export function PictureInPicture() {
                 user={resolvedUser ?? undefined}
               />
               {speakingParticipantIds.has(displayParticipant.identity) && (
-                <div className="absolute -inset-1 rounded-full ring-2 ring-status-online animate-pulse" />
+                <div
+                  className="absolute inset-0 ring-2 ring-status-online"
+                  style={{ borderRadius: avatarRadius(64) }}
+                />
               )}
             </div>
           ) : (
             <div className="flex items-center gap-2 text-txt-tertiary">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11 5L6 9H2V15H6L11 19V5ZM15.54 8.46C16.48 9.4 17 10.67 17 12S16.48 14.6 15.54 15.54L14.12 14.12C14.69 13.55 15 12.79 15 12S14.69 10.45 14.12 9.88L15.54 8.46Z" />
-              </svg>
-              <span className="text-sm font-medium">{channelName}</span>
+              <ChannelIcon type="voice" icon={channelIcon} size={20} />
+              <span className="text-body font-medium">{channelName}</span>
             </div>
           )}
         </div>
       )}
 
       {/* LIVE badge */}
-      {isScreen && (
-        <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-accent-rose rounded text-[11px] font-bold text-white uppercase tracking-wide">
-          {t('badges.live')}
-        </div>
-      )}
+      {isScreen && <LiveBadge className="absolute top-2 left-2 h-5" />}
 
       {/* Close button */}
       <button
         data-pip-action="close"
         onClick={handleClose}
-        className="absolute top-2 right-2 w-6 h-6 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white/80 hover:text-white transition-colors"
+        aria-label={t('common:actions.close')}
+        className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white/80 transition-colors duration-100 hover:bg-black/80 hover:text-white active:bg-black/90"
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-        </svg>
+        <Icon name="x" size={14} />
       </button>
 
-      {/* Bottom overlay with name */}
-      <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/70 to-transparent">
+      {/* Bottom overlay with name; the scrim is there for the picture */}
+      <div className={`absolute bottom-0 left-0 right-0 pl-3 pr-8 py-2 ${hasVideo ? 'bg-gradient-to-t from-black/70 to-transparent' : ''}`}>
         <div className="flex items-center gap-1.5">
-          <span className="text-white text-xs font-semibold truncate">{displayName}</span>
+          <span className="text-white text-meta font-medium truncate">{displayName}</span>
           {displayParticipant && speakingParticipantIds.has(displayParticipant.identity) && (
-            <div className="w-2 h-2 rounded-full bg-status-online flex-shrink-0 animate-pulse" />
+            <div className="w-1.5 h-1.5 rounded-full bg-status-online flex-shrink-0" />
           )}
         </div>
-        <div className="text-white/50 text-[10px] truncate">{channelName}</div>
+        <div className="text-white/60 text-label truncate">{channelName}</div>
       </div>
 
       {/* Expand icon hint (bottom-right) */}
-      <div className="absolute bottom-2 right-2 w-5 h-5 flex items-center justify-center text-white/40">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M21 11V3h-8l3.29 3.29-10 10L3 13v8h8l-3.29-3.29 10-10z" />
-        </svg>
+      <div className="absolute bottom-2 right-2 flex h-5 w-5 items-center justify-center text-white/50">
+        <VoiceIcon name="expand" size={14} />
       </div>
     </div>
   );
