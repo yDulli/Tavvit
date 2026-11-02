@@ -85,7 +85,7 @@ function Page() {
           {lines.map((line, i) => (
             <div key={i} className="flex items-center gap-3">
               <span className="w-8 h-8 rounded-full flex-shrink-0" style={{ background: ['#c4b5fd', '#a5f3c4', '#ffc9a9', '#93c5fd', '#fda4af'][i] }} />
-              <span className="text-[15px] text-txt-primary">{line}</span>
+              <span className="text-lead text-txt-primary">{line}</span>
             </div>
           ))}
         </div>

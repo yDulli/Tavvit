@@ -94,7 +94,6 @@ function seedUser(id: string, homeUserId: string | null = null, homeInstance: st
     status: 'offline',
     isAdmin: 0,
     isDeleted: 0,
-    discoverable: 1,
     homeInstance,
     homeUserId,
     createdAt: NOW,

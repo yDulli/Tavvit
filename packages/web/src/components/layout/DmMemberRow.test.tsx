@@ -182,7 +182,8 @@ describe('DmMemberRow — visual markers', () => {
   it('shows a display name that contains "@" in full, without a globe', () => {
     const { container } = renderRow({ member: makeUser({ displayName: 'kai@work' }) });
     expect(container.textContent).toContain('kai@work');
-    expect(container.querySelector('svg')).toBeNull();
+    // The presence dot is an svg too; only the globe would mark a federated member.
+    expect(container.querySelector('[data-federation-globe]')).toBeNull();
   });
 
   it('does NOT render the globe for native members', () => {

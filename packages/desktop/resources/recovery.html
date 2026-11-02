@@ -2,28 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Backspace — Recovery</title>
+  <title>Tavvit — Recovery</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
-      --primary: #7c6cf6;
-      --primary-hover: #6b5ce0;
+      --primary: #7466e8;
+      --primary-hover: #665acc;
     }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: #13131a;
-      color: #efefef;
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #121316;
+      color: #edeef2;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     }
     body { display: flex; flex-direction: column; }
 
     .titlebar {
       height: 32px;
       min-height: 32px;
-      background: #0b0b10;
+      background: #121316;
+      border-bottom: 1px solid #2c2d34;
       -webkit-app-region: drag;
       position: relative;
       z-index: 100;
@@ -44,21 +45,22 @@
     }
 
     .card {
-      background: #1a1a23;
-      border-radius: 8px;
+      background: #17181c;
+      border: 1px solid #2c2d34;
+      border-radius: 6px;
       padding: 2rem;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
     }
 
     h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
+      font-size: 1.125rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
       margin: 0 0 0.5rem 0;
     }
 
     .hint {
       font-size: 0.875rem;
-      color: #a0a0aa;
+      color: #acafba;
       margin: 0 0 1.5rem 0;
       line-height: 1.5;
     }
@@ -76,38 +78,39 @@
     button.action {
       width: 100%;
       padding: 0.625rem 1rem;
-      background: #2a2a33;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 6px;
-      color: #efefef;
+      background: #24252b;
+      border: 1px solid #3a3b44;
+      border-radius: 5px;
+      color: #edeef2;
       font-family: inherit;
       font-size: 0.875rem;
       cursor: pointer;
       transition: background 0.15s ease;
     }
-    button.action:hover:not(:disabled) { background: #34343f; }
+    button.action:hover:not(:disabled) { background: #2c2d34; border-color: #525460; }
     button.action:disabled { opacity: 0.5; cursor: default; }
     button.action.primary { background: var(--primary); border-color: transparent; }
-    button.action.primary:hover { background: var(--primary-hover); }
+    button.action.primary:hover:not(:disabled) { background: var(--primary-hover); border-color: transparent; }
+    button.action:focus-visible { outline: 2px solid #968cf5; outline-offset: 2px; }
     button.action.subtle {
       background: transparent;
-      color: #a0a0aa;
+      color: #acafba;
       border: none;
       padding-top: 0.375rem;
       padding-bottom: 0.375rem;
       font-size: 0.8125rem;
     }
-    button.action.subtle:hover { color: #efefef; background: transparent; }
+    button.action.subtle:hover { color: #edeef2; background: transparent; }
 
     .divider {
       height: 1px;
-      background: rgba(255, 255, 255, 0.06);
+      background: #2c2d34;
       margin: 1.25rem 0;
     }
 
     details {
       font-size: 0.8125rem;
-      color: #a0a0aa;
+      color: #acafba;
     }
     details summary {
       cursor: pointer;
@@ -117,8 +120,9 @@
     details pre {
       margin: 0.5rem 0 0 0;
       padding: 0.75rem;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
+      background: #141519;
+      border: 1px solid #2c2d34;
+      border-radius: 5px;
       font-size: 0.75rem;
       white-space: pre-wrap;
       word-break: break-word;
@@ -132,7 +136,7 @@
   <div class="content">
     <div class="container">
       <div class="card">
-        <h1 data-i18n="title">Backspace couldn't load.</h1>
+        <h1 data-i18n="title">Tavvit couldn't load.</h1>
         <p class="hint" id="hint" data-i18n="loading">Loading…</p>
 
         <div class="actions">
@@ -140,8 +144,7 @@
           <button class="action" id="btn-restart" style="display:none" data-i18n="restartToInstall">Restart to Install Update</button>
           <button class="action" id="btn-check" data-i18n="checkForUpdates">Check for Updates</button>
           <p class="check-result" id="check-result"></p>
-          <button class="action" id="btn-change" data-i18n="changeInstance">Change Instance</button>
-          <button class="action" id="btn-releases" style="display:none" data-i18n="openReleases">Open Releases Page</button>
+          <button class="action" id="btn-releases" style="display:none" data-i18n="openReleases">Open Download Page</button>
         </div>
 
         <div class="divider"></div>
@@ -151,7 +154,7 @@
           <pre id="diagnostic">loading…</pre>
         </details>
 
-        <button class="action subtle" id="btn-quit" data-i18n="quit">Quit Backspace</button>
+        <button class="action subtle" id="btn-quit" data-i18n="quit">Quit Tavvit</button>
       </div>
     </div>
   </div>
@@ -167,7 +170,7 @@
     // step with packages/desktop/src/l10n.ts and the web `desktop` namespace.
     const STRINGS = {
       en: {
-        title: "Backspace couldn't load.",
+        title: "Tavvit couldn't load.",
         loading: 'Loading…',
         reload: 'Reload',
         restartToInstall: 'Restart to Install Update',
@@ -177,15 +180,14 @@
         updateReady: 'Update Ready',
         updateAvailable: 'Update Available',
         updatesExternal: 'Updates Managed by Flatpak',
-        changeInstance: 'Change Instance',
-        openReleases: 'Open Releases Page',
-        downloadVersion: 'Download Backspace {version}',
+        openReleases: 'Open Download Page',
+        downloadVersion: 'Download Tavvit {version}',
         downloadUpdate: 'Download the Update',
         diagnostics: 'Diagnostic info',
-        quit: 'Quit Backspace',
+        quit: 'Quit Tavvit',
         upToDate: "You're up to date",
         checkFailed: 'Update check failed',
-        bridgeUnavailable: 'Recovery bridge unavailable. Please quit and reinstall Backspace.',
+        bridgeUnavailable: 'Recovery bridge unavailable. Please quit and reinstall Tavvit.',
         stateLoadFailed: 'Failed to load recovery state: {message}',
         hintExternal: 'Try reloading the app or changing the connected instance. Updates are managed by Flatpak.',
         hintLoadFailed: "Couldn't reach your instance. Check your connection or try a different instance.",
@@ -200,7 +202,7 @@
         hintGeneric: 'Something went wrong. Try reloading.',
       },
       ru: {
-        title: 'Backspace не удалось загрузить.',
+        title: 'Tavvit не удалось загрузить.',
         loading: 'Загрузка…',
         reload: 'Перезагрузить',
         restartToInstall: 'Перезапустить для установки',
@@ -210,15 +212,14 @@
         updateReady: 'Обновление готово',
         updateAvailable: 'Доступно обновление',
         updatesExternal: 'Обновлениями управляет Flatpak',
-        changeInstance: 'Сменить сервер',
-        openReleases: 'Открыть страницу релизов',
-        downloadVersion: 'Скачать Backspace {version}',
+        openReleases: 'Открыть страницу загрузки',
+        downloadVersion: 'Скачать Tavvit {version}',
         downloadUpdate: 'Скачать обновление',
         diagnostics: 'Диагностика',
-        quit: 'Выйти из Backspace',
+        quit: 'Выйти из Tavvit',
         upToDate: 'У вас последняя версия',
         checkFailed: 'Не удалось проверить обновления',
-        bridgeUnavailable: 'Режим восстановления недоступен. Закройте Backspace и переустановите приложение.',
+        bridgeUnavailable: 'Режим восстановления недоступен. Закройте Tavvit и переустановите приложение.',
         stateLoadFailed: 'Не удалось загрузить состояние восстановления: {message}',
         hintExternal: 'Попробуйте перезагрузить приложение или сменить сервер. Обновлениями управляет Flatpak.',
         hintLoadFailed: 'Не удалось связаться с сервером. Проверьте подключение или попробуйте другой сервер.',
@@ -233,7 +234,7 @@
         hintGeneric: 'Что-то пошло не так. Попробуйте перезагрузить.',
       },
       de: {
-        title: 'Backspace konnte nicht geladen werden.',
+        title: 'Tavvit konnte nicht geladen werden.',
         loading: 'Wird geladen…',
         reload: 'Neu laden',
         restartToInstall: 'Neu starten und Update installieren',
@@ -243,15 +244,14 @@
         updateReady: 'Update bereit',
         updateAvailable: 'Update verfügbar',
         updatesExternal: 'Updates werden von Flatpak verwaltet',
-        changeInstance: 'Instanz wechseln',
-        openReleases: 'Release-Seite öffnen',
-        downloadVersion: 'Backspace {version} herunterladen',
+        openReleases: 'Download-Seite öffnen',
+        downloadVersion: 'Tavvit {version} herunterladen',
         downloadUpdate: 'Update herunterladen',
         diagnostics: 'Diagnose',
-        quit: 'Backspace beenden',
+        quit: 'Tavvit beenden',
         upToDate: 'Du bist auf dem neuesten Stand',
         checkFailed: 'Update-Prüfung fehlgeschlagen',
-        bridgeUnavailable: 'Der Wiederherstellungsmodus ist nicht verfügbar. Beende Backspace und installiere es neu.',
+        bridgeUnavailable: 'Der Wiederherstellungsmodus ist nicht verfügbar. Beende Tavvit und installiere es neu.',
         stateLoadFailed: 'Wiederherstellungsstatus konnte nicht geladen werden: {message}',
         hintExternal: 'Lade die App neu oder wechsle die Instanz. Updates werden von Flatpak verwaltet.',
         hintLoadFailed: 'Deine Instanz war nicht erreichbar. Prüfe deine Verbindung oder versuche eine andere Instanz.',
@@ -266,7 +266,7 @@
         hintGeneric: 'Etwas ist schiefgelaufen. Lade neu.',
       },
       pt: {
-        title: 'Não foi possível carregar o Backspace.',
+        title: 'Não foi possível carregar o Tavvit.',
         loading: 'Carregando…',
         reload: 'Recarregar',
         restartToInstall: 'Reiniciar para instalar a atualização',
@@ -276,15 +276,14 @@
         updateReady: 'Atualização pronta',
         updateAvailable: 'Atualização disponível',
         updatesExternal: 'Atualizações gerenciadas pelo Flatpak',
-        changeInstance: 'Mudar instância',
-        openReleases: 'Abrir página de versões',
-        downloadVersion: 'Baixar Backspace {version}',
+        openReleases: 'Abrir página de download',
+        downloadVersion: 'Baixar Tavvit {version}',
         downloadUpdate: 'Baixar a atualização',
         diagnostics: 'Informações de diagnóstico',
-        quit: 'Sair do Backspace',
+        quit: 'Sair do Tavvit',
         upToDate: 'Você está na versão mais recente',
         checkFailed: 'Falha ao verificar atualizações',
-        bridgeUnavailable: 'A ponte de recuperação não está disponível. Feche e reinstale o Backspace.',
+        bridgeUnavailable: 'A ponte de recuperação não está disponível. Feche e reinstale o Tavvit.',
         stateLoadFailed: 'Não foi possível carregar o estado de recuperação: {message}',
         hintExternal: 'Tente recarregar o aplicativo ou mudar a instância conectada. As atualizações são gerenciadas pelo Flatpak.',
         hintLoadFailed: 'Não foi possível acessar sua instância. Verifique sua conexão ou tente outra instância.',
@@ -299,7 +298,7 @@
         hintGeneric: 'Algo deu errado. Tente recarregar.',
       },
       zh: {
-        title: 'Backspace 无法加载。',
+        title: 'Tavvit 无法加载。',
         loading: '正在加载…',
         reload: '重新加载',
         restartToInstall: '重启以安装更新',
@@ -309,15 +308,14 @@
         updateReady: '更新已就绪',
         updateAvailable: '有可用更新',
         updatesExternal: '更新由 Flatpak 管理',
-        changeInstance: '切换实例',
-        openReleases: '打开发布页面',
-        downloadVersion: '下载 Backspace {version}',
+        openReleases: '打开下载页面',
+        downloadVersion: '下载 Tavvit {version}',
         downloadUpdate: '下载更新',
         diagnostics: '诊断信息',
-        quit: '退出 Backspace',
+        quit: '退出 Tavvit',
         upToDate: '已是最新版本',
         checkFailed: '检查更新失败',
-        bridgeUnavailable: '恢复桥接不可用。请退出并重新安装 Backspace。',
+        bridgeUnavailable: '恢复桥接不可用。请退出并重新安装 Tavvit。',
         stateLoadFailed: '加载恢复状态失败：{message}',
         hintExternal: '请尝试重新加载应用或切换连接的实例。更新由 Flatpak 管理。',
         hintLoadFailed: '无法连接到您的实例。请检查网络连接或尝试其他实例。',
@@ -447,7 +445,6 @@
     $('btn-reload').onclick = () => dispatch('reload');
     $('btn-restart').onclick = () => dispatch('install-update');
     $('btn-check').onclick = () => dispatch('check-update');
-    $('btn-change').onclick = () => dispatch('change-instance');
     $('btn-releases').onclick = () => dispatch('open-releases');
     $('btn-quit').onclick = () => dispatch('quit');
 

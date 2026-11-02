@@ -6,6 +6,7 @@ import type { Attachment } from '@backspace/shared';
 import { useAuthStore } from './authStore';
 import { getTokenForOrigin } from '../utils/crossStoreResolvers';
 import { getHandle, putHandle, ensurePermission, queryHandlePermission } from '../utils/idbHandles';
+import i18n from '../i18n';
 
 export type TransferType = 'upload' | 'download';
 export type TransferState =
@@ -14,6 +15,43 @@ export type TransferState =
 export interface TransferError {
   message: string;
   permanent: boolean;
+}
+
+/** The code in a refusal the server worded like the rest of its API. Most upload refusals are plain text. */
+function refusalCode(body: string | undefined): string | null {
+  if (!body) return null;
+  try {
+    const parsed: unknown = JSON.parse(body);
+    const code = typeof parsed === 'object' && parsed !== null ? (parsed as { code?: unknown }).code : null;
+    return typeof code === 'string' ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What a person is told about a failed upload. tus-js-client's own message is
+ * for developers (the request, its address, the raw response), and the error
+ * reaches the toast, the tile and the transfer list as it is, so that message
+ * goes to the console instead.
+ */
+function uploadFailure(err: Error): TransferError {
+  const technical = err.message ?? 'Upload error';
+  console.warn('[transferStore] upload failed:', technical);
+  const response = (err as Error & { originalResponse?: { getStatus(): number; getBody(): string } | null }).originalResponse;
+  const status = response?.getStatus();
+  const code = refusalCode(response?.getBody());
+  const message = code === 'storage_limit_reached'
+    ? i18n.t('errors:storage_limit_reached')
+    : code === 'disk_full'
+      ? i18n.t('errors:disk_full')
+      : status === 413
+        ? i18n.t('chat:composer.uploadTooLarge')
+        : status === 429
+          ? i18n.t('errors:rate_limited')
+          : i18n.t('errors:generic');
+  // Treat 4xx as permanent (no retry past tus's own retry chain).
+  return { message, permanent: /\b4\d\d\b/.test(technical) };
 }
 
 export interface Transfer {
@@ -28,6 +66,8 @@ export interface Transfer {
   origin?: string;
 
   // Upload-specific
+  /** The sender marked it as a spoiler in the composer. */
+  spoiler?: boolean;
   tusUploadUrl?: string;
   tusExpiresAt?: number;
   fileHandleId?: string;
@@ -66,13 +106,14 @@ interface TransferStoreState {
 interface TransferStoreActions {
   createTransfer: (input: CreateTransferInput) => string;
   setState_: (id: string, state: TransferState) => void;
+  setSpoiler: (id: string, spoiler: boolean) => void;
   updateProgress: (id: string, loaded: number) => void;
   setError: (id: string, error: TransferError) => void;
   setTusUrl: (id: string, url: string, expiresAt: number) => void;
   setAttachmentRef: (id: string, attachmentId: string, filename: string) => void;
   remove: (id: string) => void;
 
-  startUpload: (file: Blob, opts: { channelId?: string; tray?: boolean; origin?: string; fileHandleId?: string }) => Promise<string>;
+  startUpload: (file: Blob, opts: { channelId?: string; tray?: boolean; origin?: string; fileHandleId?: string; voice?: { bars: readonly number[]; durationSeconds: number } }) => Promise<string>;
   abortUpload: (id: string) => void;
   pauseUpload: (id: string) => void;
   resumeUpload: (id: string) => Promise<void>;
@@ -180,6 +221,14 @@ export const useTransferStore = create<TransferStore>()(
         return id;
       },
 
+      setSpoiler: (id, spoiler) => set((s) => {
+        const transfer = s.transfers.get(id);
+        if (!transfer) return s;
+        const next = new Map(s.transfers);
+        next.set(id, { ...transfer, spoiler });
+        return { transfers: next };
+      }),
+
       setState_: (id, state) => set((s) => {
         const t = s.transfers.get(id);
         if (!t) return s;
@@ -258,6 +307,7 @@ export const useTransferStore = create<TransferStore>()(
           metadata: {
             filename: fileLike.name,
             filetype: fileLike.mimetype,
+            ...(opts.voice ? { voiceWaveform: opts.voice.bars.join(','), voiceDuration: opts.voice.durationSeconds.toFixed(1) } : {}),
           },
           chunkSize: 5 * 1024 * 1024,
           headers: { Authorization: `Bearer ${token}` },
@@ -292,10 +342,7 @@ export const useTransferStore = create<TransferStore>()(
             }
           },
           onError: (err: Error) => {
-            const msg = err.message ?? 'Upload error';
-            // Treat 4xx as permanent (no retry past tus's own retry chain).
-            const permanent = /\b4\d\d\b/.test(msg);
-            get().setError(id, { message: msg, permanent });
+            get().setError(id, uploadFailure(err));
             liveUploads.delete(id);
           },
         };
@@ -458,9 +505,7 @@ export const useTransferStore = create<TransferStore>()(
             }
           },
           onError: (err: Error) => {
-            const msg = err.message ?? 'Upload error';
-            const permanent = /\b4\d\d\b/.test(msg);
-            get().setError(id, { message: msg, permanent });
+            get().setError(id, uploadFailure(err));
             liveUploads.delete(id);
           },
         };

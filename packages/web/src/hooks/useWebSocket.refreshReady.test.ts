@@ -119,7 +119,7 @@ const loadSpaceDetail = vi.fn(() => Promise.resolve());
 /** The remote space the user has open, as its instance lists it in `ready`. */
 const remoteSpace = {
   id: REMOTE_SPACE,
-  name: 'Orbit',
+  name: 'Tavvit',
   icon: null,
   banner: null,
   ownerId: 'u-owner',

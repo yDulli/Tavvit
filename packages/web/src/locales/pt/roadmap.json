@@ -1,0 +1,82 @@
+{
+  "title": "Roteiro",
+  "lead": "O que vem a seguir e o que temos em mente depois disso. Não há datas, e os planos podem mudar.",
+  "sections": {
+    "next": {
+      "title": "A seguir",
+      "items": {
+        "history": {
+          "title": "Histórico de edições",
+          "text": "Veja o que uma mensagem dizia antes de ser editada, se você a escreveu ou cuida do canal."
+        },
+        "scheduled": {
+          "title": "Mensagens agendadas",
+          "text": "Escreva agora e deixe para enviar depois."
+        },
+        "notes": {
+          "title": "Notas privadas sobre pessoas",
+          "text": "Uma nota no perfil de alguém que só você vê."
+        },
+        "altText": {
+          "title": "Descrições de imagens",
+          "text": "Descreva uma imagem para quem não pode vê-la."
+        },
+        "ageRestricted": {
+          "title": "Canais com restrição de idade",
+          "text": "Um canal em que você entra depois de dizer que tem idade suficiente, sem nada dele na busca ou nas notificações."
+        },
+        "accounts": {
+          "title": "Várias contas em um dispositivo",
+          "text": "Alterne entre até cinco contas sem sair."
+        },
+        "passkeys": {
+          "title": "Chaves de acesso",
+          "text": "Entre com sua digital, seu rosto ou uma chave de segurança em vez de uma senha."
+        }
+      }
+    },
+    "after": {
+      "title": "Depois disso",
+      "items": {
+        "publicExplore": {
+          "title": "Explorar sem uma conta",
+          "text": "Veja quais espaços existem antes de se cadastrar."
+        },
+        "spacePages": {
+          "title": "Uma página para cada espaço público",
+          "text": "Um endereço para compartilhar que mostra do que se trata um espaço, com uma forma de entrar."
+        },
+        "statistics": {
+          "title": "Estatísticas para donos de espaços",
+          "text": "Quantas pessoas entram, saem e escrevem, em números que não identificam ninguém."
+        }
+      }
+    },
+    "later": {
+      "title": "Mais adiante",
+      "note": "O que gostaríamos de fazer. Nada aqui é uma promessa ainda.",
+      "items": {
+        "signIn": {
+          "title": "Entrar com o Tavvit",
+          "text": "Use sua conta para entrar em outros sites e aplicativos."
+        },
+        "botButtons": {
+          "title": "Botões e menus em mensagens",
+          "text": "Bots podem oferecer opções para clicar em vez de comandos para digitar."
+        },
+        "blur": {
+          "title": "Fundo desfocado em chamadas de vídeo",
+          "text": "Mantenha seu ambiente só para você diante da câmera."
+        },
+        "signedApp": {
+          "title": "Um aplicativo de desktop assinado",
+          "text": "Sem mais aviso do Windows ao instalar o aplicativo."
+        }
+      }
+    }
+  },
+  "recent": {
+    "title": "Acabou de ficar pronto",
+    "all": "Tudo o que há de novo"
+  }
+}

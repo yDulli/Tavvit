@@ -1,6 +1,7 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useId, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { useExitGhost } from '../../hooks/useExitGhost';
 import { usePortalContainer } from '../../hooks/usePortalContainer';
 
 interface ConfirmDialogProps {
@@ -13,10 +14,17 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   variant?: 'danger' | 'warning';
   loading?: boolean;
+  /** The dialog asks for something first (a password, a reason) that is not there yet. */
+  confirmDisabled?: boolean;
 }
 
-export function ConfirmDialog({
-  isOpen,
+export function ConfirmDialog(props: ConfirmDialogProps) {
+  const portalContainer = usePortalContainer();
+  if (!props.isOpen) return null;
+  return ReactDOM.createPortal(<ConfirmSurface {...props} />, portalContainer);
+}
+
+function ConfirmSurface({
   onClose,
   onConfirm,
   title,
@@ -25,60 +33,68 @@ export function ConfirmDialog({
   cancelLabel,
   variant = 'danger',
   loading = false,
+  confirmDisabled = false,
 }: ConfirmDialogProps) {
   const { t } = useTranslation(['common']);
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape' && !loading) {
-      e.stopPropagation();
-      onClose();
-    }
+    if (e.key !== 'Escape') return;
+    // Always kept from the dialog behind this one, also while the action runs: closing that
+    // would hide how it turned out.
+    e.stopPropagation();
+    if (!loading) onClose();
   }, [onClose, loading]);
 
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown, true);
-      return () => document.removeEventListener('keydown', handleKeyDown, true);
-    }
-  }, [isOpen, handleKeyDown]);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [handleKeyDown]);
 
-  const portalContainer = usePortalContainer();
+  const titleId = useId();
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  useExitGhost(surfaceRef);
 
-  if (!isOpen) return null;
+  // Danger destroys something (the rose fill, white text); a warning asks for
+  // care (amber, with dark text, since white on amber does not read).
+  const confirmClass = variant === 'danger'
+    ? 'btn-danger'
+    : 'btn-primary bg-accent-amber text-surface-base [--btn-glow:var(--accent-amber)] hover:bg-accent-amber/90 active:bg-accent-amber/80';
 
-  const isDanger = variant === 'danger';
-  const confirmBg = isDanger
-    ? 'bg-accent-rose hover:bg-accent-rose/80'
-    : 'bg-accent-amber hover:bg-accent-amber/80';
-
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center animate-fade-in">
+  return (
+    <div ref={surfaceRef} className="fixed inset-0 z-[10000] flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="modal-scrim absolute inset-0"
         onClick={() => { if (!loading) onClose(); }}
       />
-      <div className="relative max-w-[440px] w-full mx-4 glass-modal rounded-xl animate-slide-up">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="modal-panel relative max-w-[440px] w-full mx-4 glass-modal rounded-lg"
+      >
         <div className="p-5">
-          <h3 className="text-lg font-semibold text-txt-primary mb-2">{title}</h3>
-          <div className="text-sm text-txt-secondary mb-5 leading-relaxed">{description}</div>
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              disabled={loading}
-              className="flex-1 py-2.5 text-sm font-medium text-txt-secondary bg-interactive-hover hover:bg-interactive-selected rounded-lg transition-colors disabled:opacity-50"
-            >
-              {cancelLabel ?? t('common:actions.cancel')}
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={loading}
-              className={`flex-1 py-2.5 ${confirmBg} text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50`}
-            >
-              {loading ? t('common:states.pleaseWait') : (confirmLabel ?? t('common:actions.confirm'))}
-            </button>
-          </div>
+          <h3 id={titleId} className="mb-1.5 text-lead font-semibold tracking-[-0.01em] text-txt-primary">{title}</h3>
+          <div className="text-ui leading-relaxed text-txt-secondary">{description}</div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-border-hard px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="btn-quiet"
+          >
+            {cancelLabel ?? t('common:actions.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading || confirmDisabled}
+            aria-busy={loading}
+            className={confirmClass}
+          >
+            {confirmLabel ?? t('common:actions.confirm')}
+          </button>
         </div>
       </div>
-    </div>,
-    portalContainer,
+    </div>
   );
 }

@@ -14,8 +14,28 @@ const EXT_MIMETYPES: Record<string, string> = {
   '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
   '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav',
   '.flac': 'audio/flac', '.aac': 'audio/aac', '.opus': 'audio/opus',
+  '.weba': 'audio/webm', '.m4a': 'audio/mp4',
   '.pdf': 'application/pdf',
 };
+
+/**
+ * The one range of bytes a `Range` header asks for, clamped to the file (RFC 9110 §14.1.2):
+ * `start-end`, `start-` or the last `-n` bytes. Null when the header is not a single byte range,
+ * which is answered with the whole file; `unsatisfiable` when the range starts past its end.
+ */
+export function byteRange(header: string, size: number): { start: number; end: number } | 'unsatisfiable' | null {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!match || (match[1] === '' && match[2] === '')) return null;
+  if (match[1] === '') {
+    const last = Number(match[2]);
+    if (last === 0 || size === 0) return 'unsatisfiable';
+    return { start: Math.max(0, size - last), end: size - 1 };
+  }
+  const start = Number(match[1]);
+  const end = match[2] === '' ? size - 1 : Math.min(Number(match[2]), size - 1);
+  if (start >= size) return 'unsatisfiable';
+  return start <= end ? { start, end } : null;
+}
 
 export async function uploadRoutes(app: FastifyInstance): Promise<void> {
   // Ensure upload directory exists
@@ -61,15 +81,16 @@ export async function uploadRoutes(app: FastifyInstance): Promise<void> {
     const fileSize = stat.size;
     const rangeHeader = request.headers.range;
 
-    if (rangeHeader) {
-      const parts = rangeHeader.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0] ?? '0', 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunkSize = end - start + 1;
-
+    const range = rangeHeader ? byteRange(rangeHeader, fileSize) : null;
+    if (range === 'unsatisfiable') {
+      reply.header('Content-Range', `bytes */${fileSize}`);
+      return reply.code(416).send();
+    }
+    if (range) {
+      const { start, end } = range;
       reply.header('Content-Range', `bytes ${start}-${end}/${fileSize}`);
       reply.header('Accept-Ranges', 'bytes');
-      reply.header('Content-Length', chunkSize);
+      reply.header('Content-Length', end - start + 1);
       reply.code(206);
 
       const stream = fs.createReadStream(filepath, { start, end });

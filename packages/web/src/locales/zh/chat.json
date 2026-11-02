@@ -6,6 +6,8 @@
     "edited": "(已编辑)",
     "rowLabel": "{{author}}，{{time}}",
     "gifAlt": "GIF 动图",
+    "webhookTag": "Webhook",
+    "botTag": "机器人",
     "upload": {
       "failed": "上传失败",
       "discard": "舍弃"
@@ -26,7 +28,8 @@
       "bySelf": "您做出了反应",
       "byOne": "{{name}} 做出了反应",
       "byMany": "{{names}} 做出了反应"
-    }
+    },
+    "followTag": "已关注"
   },
   "list": {
     "noHistoryPermission": "您没有权限查看此频道的历史消息",
@@ -86,10 +89,19 @@
     "sendMessage": "发送消息",
     "uploadFailed": "上传 {{file}} 失败：{{reason}}",
     "uploadFailedReason": "上传失败",
+    "uploadTooLarge": "文件太大，此服务器无法接收。",
     "typing": {
       "named_other": "{{names}} 正在输入",
       "several": "多人正在输入"
-    }
+    },
+    "timedOut": "你在此空间被禁言至 {{time}}。",
+    "slowmode": {
+      "label": "慢速模式",
+      "active": "慢速模式：每条消息间隔 {{interval}}",
+      "wait": "慢速模式：{{time}} 后可再次发送"
+    },
+    "rulesRequired": "请同意此空间的规则后在此发言。",
+    "readRules": "阅读规则"
   },
   "menu": {
     "saveImage": "保存图片",
@@ -102,10 +114,28 @@
     "copySelectedText": "复制所选文本",
     "copyText": "复制文本",
     "markUnread": "标记为未读",
+    "pinMessage": "置顶消息",
+    "unpinMessage": "取消置顶",
+    "forwardMessage": "转发",
+    "startThread": "创建子区",
+    "openThread": "打开子区",
     "editMessage": "编辑消息",
     "deleteMessage": "删除消息",
+    "selectMessages": "选择消息",
     "linkCopied": "已复制链接",
-    "linkCopyFailed": "复制链接失败"
+    "linkCopyFailed": "复制链接失败",
+    "saveMessage": "保存消息",
+    "unsaveMessage": "从已保存中移除",
+    "remindMe": "提醒我",
+    "remind": {
+      "hour": "一小时后",
+      "threeHours": "三小时后",
+      "tomorrow": "明天早上",
+      "nextWeek": "一周后"
+    },
+    "remindSet": "将于 {{time}} 提醒你。",
+    "translate": "翻译",
+    "hideTranslation": "隐藏翻译"
   },
   "attachment": {
     "progress": {
@@ -155,7 +185,8 @@
   },
   "notification": {
     "unknownSender": "有人",
-    "attachmentOnly": "发送了一个附件"
+    "attachmentOnly": "发送了一个附件",
+    "hiddenBody": "新消息"
   },
   "embed": {
     "loadAction": "点击加载",
@@ -213,5 +244,168 @@
     "action": "戳一戳",
     "received": "{{actor}} 戳了戳 {{target}}",
     "disconnected": "连接已断开，戳一戳未发送"
+  },
+  "blocked": {
+    "run_other": "{{count}} 条已屏蔽的消息",
+    "show": "显示",
+    "hide": "隐藏"
+  },
+  "emoji": {
+    "category": "共享表情"
+  },
+  "pins": {
+    "title": "置顶消息",
+    "emptyTitle": "还没有置顶消息",
+    "emptyBody": "通过消息菜单置顶消息，便可在此随时查看。",
+    "unpin": "取消置顶",
+    "pinned": "已置顶",
+    "line": "{{actor}} 置顶了一条消息",
+    "lineJump": "查看"
+  },
+  "spoiler": {
+    "reveal": "显示剧透",
+    "revealAttachment": "显示剧透：{{name}}",
+    "hidden": "[剧透]",
+    "label": "剧透",
+    "mark": "作为剧透发送"
+  },
+  "forward": {
+    "title": "转发消息",
+    "search": "搜索频道或会话",
+    "noPlaces": "没有可转发的目标。",
+    "hint": "它将以你的消息形式送达，并标记为转发，不会显示原作者和出处。",
+    "done": "已转发到 {{place}}",
+    "mark": "已转发"
+  },
+  "selection": {
+    "pick": "选择此消息",
+    "delete": "删除",
+    "confirmBody": "此操作无法撤销。审计日志会记录数量，但不记录内容。",
+    "count_other": "已选择 {{count}} 条",
+    "confirmTitle_other": "删除 {{count}} 条消息？"
+  },
+  "poll": {
+    "ended": "已结束",
+    "endsIn": "还剩 {{time}}",
+    "multiple": "可多选。",
+    "publicVotes": "此频道中的所有人都能看到谁选择了什么。",
+    "noVoters": "还没有人。",
+    "end": "结束投票",
+    "endTitle": "现在结束此投票？",
+    "endBody": "之后将无法再投票，所有人都能看到结果。",
+    "create": {
+      "open": "创建投票",
+      "title": "新建投票",
+      "question": "问题",
+      "options": "选项",
+      "optionLabel": "选项 {{number}}",
+      "removeOption": "移除选项 {{number}}",
+      "addOption": "添加选项",
+      "repeated": "每个选项只能出现一次。",
+      "duration": "持续时间",
+      "noEnd": "直到有人结束",
+      "allowMultiple": "允许多选",
+      "submit": "发布投票"
+    },
+    "voteCount_other": "{{value}} 票",
+    "voters_other": "{{value}} 人已投票"
+  },
+  "thread": {
+    "panel": "子区",
+    "listTitle": "子区",
+    "showArchived": "已归档",
+    "showActive": "活跃",
+    "emptyTitle": "还没有子区",
+    "emptyBody": "可通过消息菜单创建子区，避免旁支讨论占满整个频道。",
+    "emptyArchived": "归档为空",
+    "noReplies": "还没有回复",
+    "noStarter": "此子区的起始消息已被删除。",
+    "gone": "此子区已被删除。",
+    "close": "关闭子区",
+    "follow": "关注此子区",
+    "unfollow": "取消关注",
+    "rename": "重命名子区",
+    "delete": "删除子区",
+    "deleteTitle": "删除此子区？",
+    "deleteBody": "其中的所有内容都会被删除。起始消息会保留在频道中。",
+    "replies_other": "{{value}} 条回复",
+    "composer": "在此子区回复"
+  },
+  "voiceMessage": {
+    "record": "录制语音消息",
+    "holdToRecord": "按住录制语音消息",
+    "recording": "正在录制语音消息",
+    "release": "松开结束",
+    "stop": "停止",
+    "discard": "丢弃",
+    "preview": "你的语音消息，尚未发送",
+    "send": "发送语音消息",
+    "play": "播放",
+    "pause": "暂停",
+    "position": "语音消息中的位置",
+    "speed": "播放速度：{{speed}} 倍",
+    "speedShort": "{{speed}}x",
+    "denied": "请在浏览器中允许使用麦克风以录制语音消息。",
+    "unsupported": "此浏览器无法录制语音消息。"
+  },
+  "commands": {
+    "title": "命令",
+    "onlyYou": "只有你能看到。重新加载后会消失。",
+    "dismiss": "关闭",
+    "required": "（必填）",
+    "pick": "请选择",
+    "send": "发送"
+  },
+  "forum": {
+    "newPost": "发帖",
+    "allTags": "全部",
+    "filterLabel": "按标签筛选",
+    "loading": "正在加载帖子",
+    "loadMore": "显示更多",
+    "unknownAuthor": "某人",
+    "empty": {
+      "title": "还没有帖子",
+      "body": "来发第一帖吧：每个帖子都有自己的讨论。"
+    },
+    "emptyFiltered": {
+      "title": "没有带此标签的帖子",
+      "body": "换一个标签，或查看全部帖子。"
+    },
+    "compose": {
+      "title": "发帖",
+      "titleLabel": "标题",
+      "contentLabel": "内容是什么？",
+      "filesHint": "帖子发布后即可在其中添加文件。",
+      "tagsLabel": "标签（最多 {{max}} 个）",
+      "submit": "发布",
+      "submitting": "正在发布…"
+    },
+    "tags": {
+      "edit": "修改标签",
+      "editTitle": "此帖的标签",
+      "none": "此论坛还没有标签。有管理权限的人可以在设置中添加。"
+    },
+    "messages_other": "{{count}} 条消息"
+  },
+  "follow": {
+    "button": "关注",
+    "title": "关注 #{{channel}}",
+    "intro": "此频道的新帖会以副本形式发送到你选择的频道。副本不会提醒任何人，之后的修改或删除也不会同步。",
+    "none": "要关注此频道，你需要在其他空间的文字频道中拥有管理 Webhook 的权限。",
+    "targetLabel": "发布到",
+    "submit": "关注",
+    "done": "{{space}} 的 #{{channel}} 现在会收到这些帖子。"
+  },
+  "translation": {
+    "working": "正在翻译…",
+    "downloading": "正在下载语言，首次大约需要一分钟…",
+    "from": "译自{{language}}",
+    "fromUnknown": "已翻译",
+    "same": "这条消息已经是{{language}}。",
+    "nothing": "这里没有可翻译的内容。",
+    "none": "这里未设置翻译。",
+    "google": "在 Google 翻译中打开",
+    "googleHint": "这会把消息内容发送给 Google。",
+    "hide": "隐藏"
   }
 }

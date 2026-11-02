@@ -152,11 +152,13 @@ export function SoundController() {
       const reconnecting = inRoom && !state.isLiveKitConnected;
 
       // -------- Effective mute / deafen --------
-      // Only play on transitions where BOTH prev and current samples were taken
-      // in the room. On the connect/disconnect boundary we snapshot the
-      // current effective state without firing.
+      // Play on transitions where both samples were taken on the same side of
+      // the room: in it (the effective state, a moderator's mute included), or
+      // outside every room, where the state is the user's own toggles from the
+      // top bar and is what the next join starts with. On the connect/disconnect
+      // boundary we snapshot the current effective state without firing.
       const eff = computeEffectiveSelfState(state);
-      if (inRoom && prev.current.inRoom) {
+      if (inRoom === prev.current.inRoom) {
         // Deafen toggles mute as an atomic side effect (see
         // selectVoiceStateSound) — pick the single correct cue so deafening
         // doesn't play the mute sound on top of the deafen sound.

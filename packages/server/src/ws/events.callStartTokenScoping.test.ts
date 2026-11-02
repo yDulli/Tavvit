@@ -171,7 +171,7 @@ describe('sendFederatedCallStart — LiveKit token scoping', () => {
     seedDmChannel('dm-local', 'fed-local-only', null);
     seedDmMember('dm-local', 'alice');
     seedDmMember('dm-local', 'dave');
-    seedActivePeer('https://orbit.example', 'Orbit');
+    seedActivePeer('https://orbit.example', 'Tavvit');
     seedActivePeer('https://nova.example', 'Nova');
 
     const cm = await importManager();
@@ -195,7 +195,7 @@ describe('sendFederatedCallStart — LiveKit token scoping', () => {
     seedDmMember('dm-group', 'dave');
     seedDmMember('dm-group', 'bob-stub');
     seedDmMember('dm-group', 'carol-stub');
-    seedActivePeer('https://orbit.example', 'Orbit');
+    seedActivePeer('https://orbit.example', 'Tavvit');
     seedActivePeer('https://nova.example', 'Nova');
     seedActivePeer('https://ghost.example', 'Ghost');
 
@@ -248,7 +248,7 @@ describe('sendFederatedCallStart — LiveKit token scoping', () => {
     seedDmMember('dm-same-peer', 'alice');
     seedDmMember('dm-same-peer', 'bob-stub');
     seedDmMember('dm-same-peer', 'erin-stub');
-    seedActivePeer('https://orbit.example', 'Orbit');
+    seedActivePeer('https://orbit.example', 'Tavvit');
 
     const cm = await importManager();
     cm.createDmRoom('dm-same-peer', 'alice');
@@ -269,7 +269,7 @@ describe('sendFederatedCallStart — LiveKit token scoping', () => {
     seedDmChannel('dm-ids', 'fed-ids', 'alice');
     seedDmMember('dm-ids', 'alice');
     seedDmMember('dm-ids', 'bob-stub');
-    seedActivePeer('https://orbit.example', 'Orbit');
+    seedActivePeer('https://orbit.example', 'Tavvit');
 
     const cm = await importManager();
     cm.createDmRoom('dm-ids', 'alice');
@@ -316,7 +316,7 @@ describe('sendFederatedCallStart — the conversation key', () => {
     seedDmChannel('dm-unkeyed', null, ownerId);
     seedDmMember('dm-unkeyed', 'alice');
     seedDmMember('dm-unkeyed', 'bob-stub');
-    seedActivePeer('https://orbit.example', 'Orbit');
+    seedActivePeer('https://orbit.example', 'Tavvit');
 
     const cm = await importManager();
     cm.createDmRoom('dm-unkeyed', 'alice');
@@ -357,7 +357,7 @@ describe('sendFederatedCallStart: group call rules', () => {
     seedDmChannel('dm-rules', key, ownerId);
     seedDmMember('dm-rules', 'alice');
     seedDmMember('dm-rules', 'bob-stub');
-    seedActivePeer('https://orbit.example', 'Orbit');
+    seedActivePeer('https://orbit.example', 'Tavvit');
 
     const cm = await importManager();
     cm.createDmRoom('dm-rules', 'alice');
@@ -374,7 +374,7 @@ describe('sendFederatedCallStart: the name it gives the caller', () => {
   // A call start names its caller the way every call relay names its actor
   // (`callRelayActor`): by their own identity, to a peer that accepts it from
   // here, which is one where the caller is homed here or on that peer.
-  const ORBIT = 'https://orbit.example';
+  const TAVVIT = 'https://orbit.example';
   const NOVA = 'https://nova.example';
 
   beforeEach(async () => {
@@ -385,12 +385,12 @@ describe('sendFederatedCallStart: the name it gives the caller', () => {
     for (const [fedId] of cm.getAllFederatedCalls()) cm.clearFederatedCall(fedId);
     sendCallRelayMock.mockReset();
     sendCallRelayMock.mockResolvedValue({ ok: true, undeliverable: [] });
-    seedActivePeer(ORBIT, 'Orbit');
+    seedActivePeer(TAVVIT, 'Tavvit');
     seedActivePeer(NOVA, 'Nova');
     seedLocalUser('alice', { homeUserId: null, homeInstance: null });
     // grace is a federated account here; her home is orbit.
-    seedLocalUser('grace', { homeUserId: 'grace-home', homeInstance: ORBIT });
-    seedLocalUser('frank-stub', { homeUserId: 'frank-home', homeInstance: ORBIT });
+    seedLocalUser('grace', { homeUserId: 'grace-home', homeInstance: TAVVIT });
+    seedLocalUser('frank-stub', { homeUserId: 'frank-home', homeInstance: TAVVIT });
     seedLocalUser('heidi-stub', { homeUserId: 'heidi-home', homeInstance: NOVA });
   });
 
@@ -427,9 +427,9 @@ describe('sendFederatedCallStart: the name it gives the caller', () => {
 
     // orbit is her home: it accepts her coming home, and is given a token for
     // frank only, never one for the caller.
-    expect(relayedOrigins()).toEqual([ORBIT]);
-    const toOrbit = relayTo(ORBIT)!;
-    expect(toOrbit.call?.caller).toEqual({ homeUserId: 'grace-home', homeInstance: ORBIT, displayName: 'Grace' });
+    expect(relayedOrigins()).toEqual([TAVVIT]);
+    const toOrbit = relayTo(TAVVIT)!;
+    expect(toOrbit.call?.caller).toEqual({ homeUserId: 'grace-home', homeInstance: TAVVIT, displayName: 'Grace' });
     expect(toOrbit.call?.memberTokens?.map(t => t.homeUserId)).toEqual(['frank-home']);
     // nova accepts from here neither this instance's address for her nor her
     // own identity, so nothing goes there and she is told why.

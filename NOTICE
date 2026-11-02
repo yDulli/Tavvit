@@ -1,3 +1,30 @@
+Tavvit
+This program is Tavvit, a modified version of Backspace.
+
+Tavvit is derived from, and contains substantial unmodified code of, Backspace:
+  Backspace, Copyright (c) 2026 Jannis Braun
+  https://github.com/TheZwiss/backspace
+
+Tavvit's own changes (listed in docs/tavvit/MODIFICATIONS.md, with the upstream
+version they start from) are distributed under the same license as the code
+they modify: the GNU Affero General Public License v3.0 (AGPL-3.0-only); see the
+LICENSE file. Tavvit is not the work of the Backspace author and is not endorsed
+by him. Anyone who runs a modified version of this program as a network service
+must offer its users the source of that version (AGPL section 13); see
+docs/tavvit/LICENSING.md.
+
+The separate commercial license that the Backspace maintainer offers (see
+LICENSE-COMMERCIAL.md) is an offer about the upstream code and says nothing
+about Tavvit's changes.
+
+================================================================================
+Notice carried over from Backspace
+================================================================================
+
+What follows is Backspace's NOTICE, with two adjustments for Tavvit: the font list
+names the typefaces Tavvit ships (not DM Sans) and the brand section says which
+marks Tavvit uses. The copyright and license statements are as upstream wrote them.
+
 Backspace
 Copyright (c) 2026 Jannis Braun
 
@@ -12,14 +39,21 @@ below. Each remains under its own license.
 Fonts
 ================================================================================
 
-DM Sans
-  Files:    packages/web/public/fonts/DMSans-Variable.woff2
-            packages/web/public/fonts/DMSans-Variable-Italic.woff2
+Geist and Geist Mono
+  Files:    packages/web/public/fonts/Geist-Latin.woff2
+            packages/web/public/fonts/Geist-LatinExt.woff2
+            packages/web/public/fonts/Geist-Cyrillic.woff2
+            packages/web/public/fonts/Geist-CyrillicExt.woff2
+            packages/web/public/fonts/Geist-Latin-Italic.woff2
+            packages/web/public/fonts/GeistMono-Latin.woff2
+            packages/web/public/fonts/GeistMono-LatinExt.woff2
+            packages/web/public/fonts/GeistMono-Cyrillic.woff2
+            packages/web/public/fonts/GeistMono-CyrillicExt.woff2
   License:  SIL Open Font License, Version 1.1
-  Notice:   Copyright 2014 The DM Sans Project Authors
-            (https://github.com/googlefonts/dm-fonts)
+  Notice:   Copyright 2024 The Geist Project Authors
+            (https://github.com/vercel/geist-font)
   The full license text is shipped alongside the font files at
-  packages/web/public/fonts/OFL.txt.
+  packages/web/public/fonts/Geist-OFL.txt.
 
 Inter
   Files:    packages/web/public/fonts/InterVariable.woff2
@@ -29,6 +63,24 @@ Inter
             (https://github.com/rsms/inter)
   The full license text is shipped alongside the font files at
   packages/web/public/fonts/Inter-OFL.txt.
+
+IBM Plex Sans
+  Files:    packages/web/public/fonts/IBMPlexSans-Latin.woff2
+            packages/web/public/fonts/IBMPlexSans-LatinExt.woff2
+            packages/web/public/fonts/IBMPlexSans-Cyrillic.woff2
+            packages/web/public/fonts/IBMPlexSans-Latin-Italic.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2017, 2019 IBM Corp. (https://github.com/IBM/plex)
+  The full license text is shipped alongside the font files at
+  packages/web/public/fonts/IBMPlex-OFL.txt.
+
+Space Grotesk
+  Files:    packages/web/public/fonts/SpaceGrotesk-Variable.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2020 The Space Grotesk Project Authors
+            (https://github.com/floriankarsten/space-grotesk)
+  The full license text is shipped alongside the font file at
+  packages/web/public/fonts/SpaceGrotesk-OFL.txt.
 
 ================================================================================
 Sound effects
@@ -41,11 +93,21 @@ authored for the Backspace project and are covered by the project license.
 Icons and brand assets
 ================================================================================
 
-The Backspace name, logo, and app icons (assets/brand/,
-packages/web/public/icons/, packages/desktop build resources) are original
-works and trademarks of the project. Neither the AGPL nor the commercial license
-grants any right to use these trademarks; trademark use is governed separately by
-applicable law.
+The Backspace name, logo, and app icons are original works and trademarks of the
+Backspace project. Neither the AGPL nor the commercial license grants any right to
+use these trademarks; trademark use is governed separately by applicable law.
+Tavvit does not use them: its name, logo and icons are its own, as described next.
+
+The Tavvit logo (assets/brand/logo-source.png, and the vector masters, icons
+and favicons derived from it in assets/brand/, packages/web/public/icons/ and the
+packages/desktop build resources) was supplied by the owner of this Tavvit
+instance. It is distributed with the source on the same terms as Tavvit's other
+changes (AGPL-3.0-only) unless its owner states otherwise.
+
+The name "Tavvit" and the Tavvit logo identify this project and are reserved by
+its owner. Neither the AGPL nor anything else in this repository grants any right
+to use them as the name or logo of another product or service (AGPL section 7(e)):
+a modified version that is passed on must carry a name of its own.
 
 In-application UI icons are hand-authored inline SVGs and are covered by the
 project license.
@@ -78,5 +140,8 @@ Emoji
 ================================================================================
 
 Emoji selection is provided by @emoji-mart/data and @emoji-mart/react (MIT).
+
+The role icons (packages/web/src/roles/roleGlyphPaths.ts) are drawings from Phosphor
+Icons, Copyright (c) 2023 Phosphor Icons, under the MIT license.
 No emoji glyph images are bundled; glyphs render using the host operating
 system's emoji font.

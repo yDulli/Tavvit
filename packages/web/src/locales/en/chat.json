@@ -6,6 +6,8 @@
     "edited": "(edited)",
     "rowLabel": "{{author}}, {{time}}",
     "gifAlt": "GIF",
+    "webhookTag": "Webhook",
+    "botTag": "Bot",
     "upload": {
       "failed": "Upload failed",
       "discard": "Discard"
@@ -27,7 +29,8 @@
       "bySelf": "You reacted",
       "byOne": "{{name}} reacted",
       "byMany": "{{names}} reacted"
-    }
+    },
+    "followTag": "Followed"
   },
   "list": {
     "noHistoryPermission": "You do not have permission to view message history in this channel",
@@ -88,11 +91,20 @@
     "sendMessage": "Send message",
     "uploadFailed": "Failed to upload {{file}}: {{reason}}",
     "uploadFailedReason": "Upload failed",
+    "uploadTooLarge": "The file is too large for this server.",
     "typing": {
       "named_one": "{{names}} is typing",
       "named_other": "{{names}} are typing",
       "several": "Several people are typing"
-    }
+    },
+    "timedOut": "You are timed out in this space until {{time}}.",
+    "slowmode": {
+      "label": "Slow mode",
+      "active": "Slow mode: {{interval}} between messages",
+      "wait": "Slow mode: you can send again in {{time}}"
+    },
+    "rulesRequired": "Agree to the rules of this space to write here.",
+    "readRules": "Read the rules"
   },
   "menu": {
     "saveImage": "Save Image",
@@ -105,10 +117,28 @@
     "copySelectedText": "Copy Selected Text",
     "copyText": "Copy Text",
     "markUnread": "Mark Unread",
+    "pinMessage": "Pin Message",
+    "unpinMessage": "Unpin Message",
+    "forwardMessage": "Forward",
+    "startThread": "Start Thread",
+    "openThread": "Open Thread",
     "editMessage": "Edit Message",
     "deleteMessage": "Delete Message",
+    "selectMessages": "Select Messages",
     "linkCopied": "Copied link",
-    "linkCopyFailed": "Failed to copy link"
+    "linkCopyFailed": "Failed to copy link",
+    "saveMessage": "Save Message",
+    "unsaveMessage": "Remove from Saved",
+    "remindMe": "Remind Me",
+    "remind": {
+      "hour": "In an hour",
+      "threeHours": "In three hours",
+      "tomorrow": "Tomorrow morning",
+      "nextWeek": "In a week"
+    },
+    "remindSet": "You will be reminded on {{time}}.",
+    "translate": "Translate",
+    "hideTranslation": "Hide translation"
   },
   "attachment": {
     "progress": {
@@ -159,7 +189,8 @@
   },
   "notification": {
     "unknownSender": "Someone",
-    "attachmentOnly": "Sent an attachment"
+    "attachmentOnly": "Sent an attachment",
+    "hiddenBody": "New message"
   },
   "embed": {
     "loadAction": "Click to load",
@@ -221,5 +252,175 @@
     "action": "Poke",
     "received": "{{actor}} poked {{target}}",
     "disconnected": "Disconnected. Poke was not sent."
+  },
+  "blocked": {
+    "run_one": "Blocked message",
+    "run_other": "{{count}} blocked messages",
+    "show": "Show",
+    "hide": "Hide"
+  },
+  "emoji": {
+    "category": "Shared emoji"
+  },
+  "pins": {
+    "title": "Pinned messages",
+    "emptyTitle": "Nothing pinned yet",
+    "emptyBody": "Pin a message from its menu to keep it within reach here.",
+    "unpin": "Unpin",
+    "pinned": "Pinned",
+    "line": "{{actor}} pinned a message",
+    "lineJump": "See it"
+  },
+  "spoiler": {
+    "reveal": "Show spoiler",
+    "revealAttachment": "Show spoiler: {{name}}",
+    "hidden": "[spoiler]",
+    "label": "Spoiler",
+    "mark": "Send as a spoiler"
+  },
+  "forward": {
+    "title": "Forward message",
+    "search": "Search a channel or conversation",
+    "noPlaces": "Nowhere to forward it to.",
+    "hint": "It arrives as your message, marked as forwarded. It does not say who wrote it or where.",
+    "done": "Forwarded to {{place}}",
+    "mark": "Forwarded"
+  },
+  "selection": {
+    "pick": "Select this message",
+    "delete": "Delete",
+    "confirmBody": "This cannot be undone. The audit log records how many went, not what they said.",
+    "count_one": "{{count}} selected",
+    "count_other": "{{count}} selected",
+    "confirmTitle_one": "Delete {{count}} message?",
+    "confirmTitle_other": "Delete {{count}} messages?"
+  },
+  "poll": {
+    "ended": "Ended",
+    "endsIn": "{{time}} left",
+    "multiple": "You can choose several.",
+    "publicVotes": "Everyone in this channel can see who chose what.",
+    "noVoters": "Nobody yet.",
+    "end": "End poll",
+    "endTitle": "End this poll now?",
+    "endBody": "Nobody can vote after that, and everyone sees the result.",
+    "create": {
+      "open": "Create a poll",
+      "title": "New poll",
+      "question": "Question",
+      "options": "Answers",
+      "optionLabel": "Answer {{number}}",
+      "removeOption": "Remove answer {{number}}",
+      "addOption": "Add an answer",
+      "repeated": "Each answer can only appear once.",
+      "duration": "Runs for",
+      "noEnd": "Until someone ends it",
+      "allowMultiple": "Allow several answers",
+      "submit": "Post poll"
+    },
+    "voteCount_one": "{{value}} vote",
+    "voteCount_other": "{{value}} votes",
+    "voters_one": "{{value}} person voted",
+    "voters_other": "{{value}} people voted"
+  },
+  "thread": {
+    "panel": "Thread",
+    "listTitle": "Threads",
+    "showArchived": "Archived",
+    "showActive": "Active",
+    "emptyTitle": "No threads here yet",
+    "emptyBody": "Start one from the menu of a message, so a side conversation does not run through the channel.",
+    "emptyArchived": "Nothing in the archive",
+    "noReplies": "No replies yet",
+    "noStarter": "The message this thread grew from is gone.",
+    "gone": "This thread was deleted.",
+    "close": "Close thread",
+    "follow": "Follow this thread",
+    "unfollow": "Stop following",
+    "rename": "Rename thread",
+    "delete": "Delete thread",
+    "deleteTitle": "Delete this thread?",
+    "deleteBody": "Everything said in it goes with it. The message it grew from stays in the channel.",
+    "replies_one": "{{value}} reply",
+    "replies_other": "{{value}} replies",
+    "composer": "Reply in this thread"
+  },
+  "voiceMessage": {
+    "record": "Record a voice message",
+    "holdToRecord": "Hold to record a voice message",
+    "recording": "Recording a voice message",
+    "release": "Let go to stop",
+    "stop": "Stop",
+    "discard": "Throw away",
+    "preview": "Your voice message, not sent yet",
+    "send": "Send voice message",
+    "play": "Play",
+    "pause": "Pause",
+    "position": "Position in the voice message",
+    "speed": "Playback speed: {{speed}} times",
+    "speedShort": "{{speed}}x",
+    "denied": "Allow the microphone in your browser to record a voice message.",
+    "unsupported": "This browser cannot record a voice message."
+  },
+  "commands": {
+    "title": "Commands",
+    "onlyYou": "Only you can see this. It is gone when you reload.",
+    "dismiss": "Dismiss",
+    "required": "(required)",
+    "pick": "Choose",
+    "send": "Send"
+  },
+  "forum": {
+    "newPost": "New post",
+    "allTags": "All",
+    "filterLabel": "Filter by tag",
+    "loading": "Loading posts",
+    "loadMore": "Show more",
+    "unknownAuthor": "Someone",
+    "empty": {
+      "title": "No posts yet",
+      "body": "Start the first one: every post gets its own conversation."
+    },
+    "emptyFiltered": {
+      "title": "No posts with this tag",
+      "body": "Choose another tag, or look at all posts."
+    },
+    "compose": {
+      "title": "New post",
+      "titleLabel": "Title",
+      "contentLabel": "What's it about?",
+      "filesHint": "You can add files in the post as soon as it is up.",
+      "tagsLabel": "Tags (up to {{max}})",
+      "submit": "Post",
+      "submitting": "Posting…"
+    },
+    "tags": {
+      "edit": "Change tags",
+      "editTitle": "Tags of this post",
+      "none": "This forum has no tags yet. Those who may manage it can add them in its settings."
+    },
+    "messages_one": "{{count}} message",
+    "messages_other": "{{count}} messages"
+  },
+  "follow": {
+    "button": "Follow",
+    "title": "Follow #{{channel}}",
+    "intro": "New posts from this channel arrive as a copy in the channel you choose. They ping nobody, and later edits or deletions are not passed on.",
+    "none": "You need the right to manage webhooks in a text channel of another space to follow this one.",
+    "targetLabel": "Post them in",
+    "submit": "Follow",
+    "done": "#{{channel}} in {{space}} now gets these posts."
+  },
+  "translation": {
+    "working": "Translating…",
+    "downloading": "Getting this language, which takes a minute the first time…",
+    "from": "Translated from {{language}}",
+    "fromUnknown": "Translated",
+    "same": "This is already in {{language}}.",
+    "nothing": "There is nothing to translate here.",
+    "none": "Translation is not set up here.",
+    "google": "Open in Google Translate",
+    "googleHint": "This sends the message's words to Google.",
+    "hide": "Hide"
   }
 }

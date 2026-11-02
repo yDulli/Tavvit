@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DirectoryEntry } from '@backspace/shared';
 import type { TaggedExploreSpace } from '../../stores/exploreStore';
-import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { getSpaceGradient } from '../../utils/gradients';
+import { bannerFill, lightFromColor } from '../../utils/placeLight';
 import { extractDominantColors, colorsToGradient } from '../../utils/colorExtractor';
 import { useSpaceJoin } from '../../hooks/useSpaceJoin';
+import { BadgeList } from '../../badges/BadgeList';
+import { Icon } from '../ui/Icon';
 
 /** Length cap of the optional message on a join request; the modal and the card share it. */
 export const REQUEST_MESSAGE_MAX_LENGTH = 200;
@@ -56,7 +58,9 @@ export function SpaceCard({
 
   const [iconGradient, setIconGradient] = useState<string | null>(null);
 
-  const fallbackGradient = getSpaceGradient(space.id, space.name, space.avatarColor).gradient;
+  const spaceTone = getSpaceGradient(space.id, space.name, space.avatarColor);
+  const fallbackGradient = spaceTone.gradient;
+  const light = lightFromColor(spaceTone.from);
   const originLabel = space._instanceOrigin
     ? (() => { try { return new URL(space._instanceOrigin).host; } catch { return space._instanceOrigin; } })()
     : null;
@@ -92,33 +96,21 @@ export function SpaceCard({
   const closedToNewAccounts = outer !== undefined && outer.entry.federatedRegistrationOpen === false;
 
   return (
-    <div className={`bg-surface-channel rounded-lg border overflow-hidden flex flex-col transition-colors ${
-      isJoined
-        ? 'border-accent-mint/20 hover:border-accent-mint/40'
-        : 'border-border-soft hover:border-border-hard'
-    }`}>
+    <div style={{ '--tile': light } as React.CSSProperties} className="surface-card lift spotlight rounded-lg overflow-hidden flex flex-col">
       {/* Banner area */}
-      <div className="h-32 relative overflow-hidden">
+      <div className={`h-24 relative overflow-hidden ${bannerUrl ? '' : 'banner-depth'}`}>
         {/* Background layer */}
         {bannerUrl ? (
           <img src={bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <div className="absolute inset-0" style={{ background: iconGradient ?? fallbackGradient }} />
+          <div className="absolute inset-0" style={{ background: iconGradient ?? bannerFill(spaceTone.from) }} />
         )}
-
-        {/* Frosted bottom fade, Aether Drift glass */}
-        <div
-          className="absolute bottom-0 inset-x-0 h-16"
-          style={{ background: 'linear-gradient(to top, rgba(20,20,26,0.9), transparent)' }}
-        />
 
         {/* Joined badge (top-left) */}
         {isJoined && (
           <div className="absolute top-2 left-2 z-[2]">
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-accent-mint/25 text-accent-mint backdrop-blur-sm">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              </svg>
+            <span className="flex items-center gap-1 rounded-sm bg-black/65 px-1.5 py-0.5 font-mono text-2xs uppercase tracking-[0.04em] text-txt-primary">
+              <Icon name="check" size={10} />
               {t('spaces:explore.badges.joined')}
             </span>
           </div>
@@ -127,10 +119,8 @@ export function SpaceCard({
         {/* Closed-registration badge (top-left, Outer cards only; an Outer card is never joined) */}
         {closedToNewAccounts && (
           <div className="absolute top-2 left-2 z-[2]">
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-accent-rose/20 text-accent-rose backdrop-blur-sm">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
-              </svg>
+            <span className="flex items-center gap-1 rounded-sm bg-black/65 px-1.5 py-0.5 font-mono text-2xs uppercase tracking-[0.04em] text-txt-danger">
+              <Icon name="lock" size={10} />
               {t('spaces:explore.outer.closedBadge')}
             </span>
           </div>
@@ -138,11 +128,7 @@ export function SpaceCard({
 
         {/* Visibility badge */}
         <div className="absolute top-2 right-2 z-[2]">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider backdrop-blur-sm ${
-            isPublic
-              ? 'bg-accent-mint/20 text-accent-mint'
-              : 'bg-accent-amber/20 text-accent-amber'
-          }`}>
+          <span className={`flex items-center gap-1 rounded-sm bg-black/65 px-1.5 py-0.5 font-mono text-2xs uppercase tracking-[0.04em] ${isPublic ? 'text-txt-secondary' : 'text-txt-warning'}`}>
             {isPublic ? t('spaces:explore.badges.public') : t('spaces:explore.badges.request')}
           </span>
         </div>
@@ -150,16 +136,16 @@ export function SpaceCard({
       </div>
 
       {/* Overlapping icon */}
-      <div className="relative px-4 -mt-8 z-10">
+      <div className="relative px-4 -mt-6 z-10">
         {iconUrl ? (
           <img
             src={iconUrl}
             alt={space.name}
-            className="w-14 h-14 rounded-xl object-cover ring-[3px] ring-surface-channel shadow-lg"
+            className="w-12 h-12 rounded-lg object-cover ring-[3px] ring-surface-chat"
           />
         ) : (
           <div
-            className="w-14 h-14 rounded-xl ring-[3px] ring-surface-channel shadow-lg flex items-center justify-center text-xl font-bold text-white/90"
+            className="w-12 h-12 rounded-lg ring-[3px] ring-surface-chat flex items-center justify-center text-title font-semibold text-white/90"
             style={{ background: fallbackGradient }}
           >
             {space.name.charAt(0).toUpperCase()}
@@ -168,81 +154,71 @@ export function SpaceCard({
       </div>
 
       {/* Content */}
-      <div className="px-4 pt-2 pb-4 flex flex-col flex-1">
-        <h3 className="text-[15px] font-bold text-txt-primary truncate mb-1">{space.name}</h3>
+      <div className="px-4 pt-2.5 pb-4 flex flex-col flex-1">
+        <div className="mb-1 flex min-w-0 items-center gap-1.5">
+          <h3 className="min-w-0 truncate text-lead font-semibold text-txt-primary">{space.name}</h3>
+          <BadgeList badges={space.badges ?? []} size="md" />
+        </div>
 
         {space.description ? (
-          <p className="text-[13px] text-txt-secondary line-clamp-2 mb-3 flex-1">
+          <p className="text-ui leading-[1.45] text-txt-secondary line-clamp-2 mb-3 flex-1">
             {space.description}
           </p>
         ) : (
-          <p className="text-[13px] text-txt-tertiary italic mb-3 flex-1">{t('spaces:explore.noDescription')}</p>
+          <p className="text-ui text-txt-tertiary mb-3 flex-1">{t('spaces:explore.noDescription')}</p>
         )}
 
-        <div className="flex items-center gap-3 text-[12px] text-txt-tertiary mb-3">
-          <span className="flex items-center gap-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="opacity-60">
-              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-            </svg>
+        <div className="flex min-w-0 items-center gap-3 text-meta text-txt-tertiary mb-3">
+          <span className="flex flex-shrink-0 items-center gap-1.5">
+            <Icon name="users" size={13} />
             {t('spaces:explore.memberCount', { count: space.memberCount })}
           </span>
           {originLabel && (
-            <span className="flex items-center gap-1 text-txt-tertiary/70">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="opacity-50">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-              </svg>
-              {originLabel}
+            <span className="flex min-w-0 items-center gap-1.5">
+              <Icon name="globe" size={12} className="flex-shrink-0" />
+              <span className="truncate">{originLabel}</span>
             </span>
           )}
         </div>
 
         {/* Action area */}
         {joinError && !outer && (
-          <div className="text-[12px] text-txt-danger mb-2">{joinError}</div>
+          <div role="alert" className="text-meta text-txt-danger mb-2">{joinError}</div>
         )}
 
+        {/* A grid of cards has no one main action, so the signal colour stays
+            off them: every card's action is the same outlined button. */}
         {outer ? (
-          isPublic ? (
-            <button
-              onClick={() => outer.onConnect(outer.entry)}
-              className="w-full py-2 bg-accent-primary hover:bg-accent-primary-hover text-white text-sm font-medium rounded transition-colors"
-            >
-              {t('spaces:explore.outer.connectAndJoin')}
-            </button>
-          ) : (
-            <button
-              onClick={() => outer.onConnect(outer.entry)}
-              className="w-full py-2 bg-accent-amber/20 hover:bg-accent-amber/30 text-accent-amber text-sm font-medium rounded transition-colors"
-            >
-              {t('spaces:explore.outer.connectAndRequest')}
-            </button>
-          )
+          <button
+            type="button"
+            onClick={() => outer.onConnect(outer.entry)}
+            className="btn-outline w-full"
+          >
+            {isPublic ? t('spaces:explore.outer.connectAndJoin') : t('spaces:explore.outer.connectAndRequest')}
+          </button>
         ) : isJoined ? (
           <button
+            type="button"
             onClick={handleViewSpace}
-            className="w-full py-2 bg-accent-mint/15 hover:bg-accent-mint/25 text-accent-mint text-sm font-medium rounded transition-colors"
+            className="btn-quiet w-full"
           >
             {t('spaces:explore.viewSpace')}
           </button>
         ) : isPublic ? (
           <button
+            type="button"
             onClick={handlePublicJoin}
             disabled={joining}
-            className="w-full py-2 bg-accent-primary hover:bg-accent-primary-hover text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+            aria-busy={joining}
+            className="btn-outline w-full"
           >
-            {joining ? (
-              <span className="flex items-center justify-center gap-2">
-                <LoadingSpinner />
-                {t('spaces:explore.joining')}
-              </span>
-            ) : (
-              t('spaces:explore.join')
-            )}
+            {joining ? t('spaces:explore.joining') : t('spaces:explore.join')}
           </button>
         ) : isPending ? (
           <button
+            type="button"
             disabled
-            className="w-full py-2 bg-interactive-muted text-txt-tertiary text-sm font-medium rounded cursor-default"
+            className="btn-outline w-full"
           >
             {t('spaces:explore.requestPending')}
           </button>
@@ -257,15 +233,18 @@ export function SpaceCard({
             />
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={sendRequest}
                 disabled={joining}
-                className="flex-1 py-1.5 bg-accent-amber hover:bg-accent-amber/80 text-[#13131a] text-sm font-medium rounded transition-colors disabled:opacity-50"
+                aria-busy={joining}
+                className="btn-primary flex-1"
               >
                 {joining ? t('spaces:explore.sendingRequest') : t('spaces:explore.sendRequest')}
               </button>
               <button
+                type="button"
                 onClick={cancelRequestForm}
-                className="px-3 py-1.5 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                className="btn-quiet"
               >
                 {t('common:actions.cancel')}
               </button>
@@ -273,8 +252,9 @@ export function SpaceCard({
           </div>
         ) : (
           <button
+            type="button"
             onClick={openRequestForm}
-            className="w-full py-2 bg-accent-amber/20 hover:bg-accent-amber/30 text-accent-amber text-sm font-medium rounded transition-colors"
+            className="btn-outline w-full"
           >
             {t('spaces:explore.requestToJoin')}
           </button>

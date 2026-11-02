@@ -1,0 +1,115 @@
+{
+  "title": "Neuigkeiten",
+  "lead": "Was sich bei Tavvit geändert hat, das Neueste zuerst.",
+  "note": "Neu in {{version}}: {{title}}",
+  "noteClose": "Schließen",
+  "versions": {
+    "1.32.5": {
+      "title": "Mehr Arbeit an der Sicherheit",
+      "items": {
+        "files": "Auch Dateien von vor dem letzten Update bekommen in den nächsten Tagen Adressen, die niemand erraten kann.",
+        "shortcuts": "Tastenkürzel in der Desktop-App brauchen für Buchstaben, Ziffern und die Leertaste Strg, Alt oder die Systemtaste, damit die App nie mithört, was du in anderen Programmen tippst.",
+        "server": "Unter der Haube läuft der Server auf einem neueren Framework und prüft genauer, woher eine Anfrage kommt."
+      }
+    },
+    "1.32.4": {
+      "title": "Sicherere Bilder und private Sprachkanäle",
+      "items": {
+        "media": "Sticker, Profilbilder und Icons kommen nur noch von diesem Server oder von dem Server, auf dem eine Person zu Hause ist. Ein Sticker von anderswo wartet, bis du ihn laden möchtest.",
+        "voice": "Ein privater Sprachkanal bleibt privat: Wer ihn nicht sehen kann, kann ihm nicht beitreten und nicht sehen, wer darin ist.",
+        "files": "Hochgeladene Dateien bekommen Adressen, die niemand erraten kann."
+      }
+    },
+    "1.32.3": {
+      "title": "Kanal-Icons",
+      "items": {
+        "icons": "Ein Space kann jedem Kanal ein eigenes Icon geben, eines aus der Auswahl oder ein Emoji, anstelle des Symbols für den Kanaltyp."
+      }
+    },
+    "1.32.2": {
+      "title": "Benutzernamen ändern",
+      "items": {
+        "username": "Du kannst deinen Benutzernamen jetzt in den Kontoeinstellungen ändern, einmal in 30 Tagen.",
+        "roadmap": "Die Roadmap zeigt, was als Nächstes kommt."
+      }
+    },
+    "1.32.1": {
+      "title": "Nachrichten übersetzen",
+      "items": {
+        "translate": "Rechtsklick auf eine Nachricht, am Handy gedrückt halten, dann Übersetzen wählen. Die Übersetzung steht unter dem Original, die Sprache wählst du in den Einstellungen."
+      }
+    },
+    "1.32.0": {
+      "title": "Foren, Ankündigungen und eine eigene Adresse",
+      "items": {
+        "forums": "Ein Forum-Kanal hält Fragen und Themen als Beiträge auseinander: Jeder hat einen Titel, Tags und ein eigenes Gespräch, und die Liste folgt dem, was gerade los ist.",
+        "announcements": "Ein Ankündigungskanal wird von wenigen geschrieben und von allen gelesen. Andere Spaces können ihm folgen, dann kommt jeder Beitrag auch in ihrem Kanal an.",
+        "address": "Ein Space kann eine Einladungsadresse in Worten haben, etwa /join/night-shift, die nie abläuft."
+      }
+    },
+    "1.31.0": {
+      "title": "Viel schneller, wenn viele hier sind",
+      "items": {
+        "speed": "Nachrichten kommen auch mit tausend Leuten online schnell an, und der Start der App braucht viel weniger Daten.",
+        "pages": "Diese Seite ist neu, dazu eine Hilfeseite und eine Statusseite.",
+        "safety": "Ein abgemeldetes oder gesperrtes Konto fliegt sofort aus einem Sprachanruf."
+      }
+    },
+    "1.30.0": {
+      "title": "Dokumentation für Entwickler",
+      "items": {
+        "docs": "Alles über Bots und Webhooks, mit Schnellstart, unter /developers."
+      }
+    },
+    "1.29.0": {
+      "title": "Viel mehr für Bots",
+      "items": {
+        "cards": "Bots können Karten mit Titeln, Feldern und Bildern zeigen.",
+        "commands": "Slash-Befehle können nach etwas fragen und nur dir antworten.",
+        "portal": "Eine eigene Seite für deine Bots: Bild, Token, Einladungsadresse."
+      }
+    },
+    "1.28.0": {
+      "title": "Faire Grenzen",
+      "items": {
+        "storage": "Unter Einstellungen, Konto siehst du, wie viel Platz deine Dateien belegen."
+      }
+    },
+    "1.27.0": {
+      "title": "Spieleerkennung, die funktioniert",
+      "items": {
+        "games": "Die Desktop-App fragt Steam, Epic und GOG direkt, welches Spiel du spielst."
+      }
+    },
+    "1.26.0": {
+      "title": "Bots",
+      "items": {
+        "bots": "Bots können Spaces beitreten, mit Slash-Befehlen und den Rechten, die ihnen ein Space gibt."
+      }
+    },
+    "1.25.0": {
+      "title": "Sprachnachrichten und mehr",
+      "items": {
+        "voice": "Nimm direkt im Chat eine Sprachnachricht auf.",
+        "saved": "Speichere Nachrichten und lass dich an sie erinnern.",
+        "alerts": "Lass dich benachrichtigen, wenn jemand ein Wort deiner Wahl schreibt.",
+        "soundboard": "Spiele im Anruf Clips für alle ab, mit dem Soundboard."
+      }
+    },
+    "1.24.0": {
+      "title": "Threads und Events",
+      "items": {
+        "threads": "Folge einem Nebengespräch in einem eigenen Thread.",
+        "events": "Plane Events in einem Space, mit Erinnerungen.",
+        "welcome": "Spaces können neue Mitglieder begrüßen und sie bitten, die Regeln anzunehmen."
+      }
+    },
+    "1.23.0": {
+      "title": "Mehr, was du mit einer Nachricht tun kannst",
+      "items": {
+        "pins": "Nachrichten anpinnen, Spoiler verbergen, weiterleiten und Umfragen machen.",
+        "push": "Benachrichtigungen, auch wenn die App zu ist."
+      }
+    }
+  }
+}

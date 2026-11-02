@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { eq, or, and, inArray, isNotNull } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { forgetReplicaProjection } from '../ws/replicaPresence.js';
+import { attachmentHeldByMessage, profileImageFilenames, uploadNameOf } from './profileImageRefs.js';
 
 export interface DeletionBroadcastTargets {
   /** Space IDs the user is a member of (for member_left broadcasts) */
@@ -34,7 +35,20 @@ export function collectProfileBroadcastTargetIds(uid: string): Set<string> {
     for (const m of coMembers) targetUserIds.add(m.userId);
   }
 
-  // 2. All DM co-members
+  // 2 and 3. DM co-members and friends
+  for (const contactId of directContactIds(uid)) targetUserIds.add(contactId);
+
+  // Remove the target user themselves — callers decide whether to include self
+  targetUserIds.delete(uid);
+
+  return targetUserIds;
+}
+
+/** The people someone knows other than through a space: who they have direct messages with, and their friends. May hold themselves. */
+export function directContactIds(uid: string): Set<string> {
+  const db = getDb();
+  const contacts = new Set<string>();
+
   const dmMemberships = db.select({ dmChannelId: schema.dmMembers.dmChannelId })
     .from(schema.dmMembers)
     .where(eq(schema.dmMembers.userId, uid))
@@ -45,21 +59,17 @@ export function collectProfileBroadcastTargetIds(uid: string): Set<string> {
       .from(schema.dmMembers)
       .where(inArray(schema.dmMembers.dmChannelId, dmChannelIds))
       .all();
-    for (const m of dmCoMembers) targetUserIds.add(m.userId);
+    for (const m of dmCoMembers) contacts.add(m.userId);
   }
 
-  // 3. All friends
   const friendRows = db.select().from(schema.friends)
     .where(or(eq(schema.friends.userId, uid), eq(schema.friends.friendId, uid)))
     .all();
   for (const fr of friendRows) {
-    targetUserIds.add(fr.userId === uid ? fr.friendId : fr.userId);
+    contacts.add(fr.userId === uid ? fr.friendId : fr.userId);
   }
 
-  // Remove the target user themselves — callers decide whether to include self
-  targetUserIds.delete(uid);
-
-  return targetUserIds;
+  return contacts;
 }
 
 /**
@@ -105,9 +115,31 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
   const user = db.select().from(schema.users).where(eq(schema.users.id, uid)).get();
   if (!user) return [];
 
+  // Their bots stop with them: a program must not outlive the person who answers for it. Open
+  // sockets go at the next check (`revalidateSockets`), which finds no bot any more.
+  for (const bot of db.select({ id: schema.bots.id }).from(schema.bots).where(eq(schema.bots.ownerId, uid)).all()) {
+    db.delete(schema.roles).where(eq(schema.roles.botId, bot.id)).run();
+    db.delete(schema.bots).where(eq(schema.bots.id, bot.id)).run();
+    tombstoneUser(bot.id, { purgeContent: false });
+  }
+
+  // Message and DM attachments, by their stored names.
   const filesToDelete: string[] = [];
-  if (user.avatar) filesToDelete.push(user.avatar);
-  if (user.banner) filesToDelete.push(user.banner);
+  // The account's pictures and those of its space profiles, which go with the
+  // memberships below. Only a file of this instance is one: an address
+  // elsewhere names no file here, whatever its last segment says.
+  const pictures: string[] = [];
+  const addPicture = (value: string | null) => {
+    const name = uploadNameOf(value);
+    if (name) pictures.push(name);
+  };
+  addPicture(user.avatar);
+  addPicture(user.banner);
+  for (const row of db.select({ avatar: schema.spaceMembers.avatar, banner: schema.spaceMembers.banner })
+    .from(schema.spaceMembers).where(eq(schema.spaceMembers.userId, uid)).all()) {
+    addPicture(row.avatar);
+    addPicture(row.banner);
+  }
 
   const purge = options?.purgeContent !== false; // default true
 
@@ -119,6 +151,10 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
 
   db.transaction((tx) => {
     // Remove from spaces, roles, friends, DMs, read states, reactions, folders
+    // Notices go with the account; a report it made stays, unsigned.
+    tx.delete(schema.userNotices).where(eq(schema.userNotices.userId, uid)).run();
+    tx.delete(schema.adminNotes).where(eq(schema.adminNotes.userId, uid)).run();
+    tx.update(schema.contentReports).set({ reporterUserId: null }).where(eq(schema.contentReports.reporterUserId, uid)).run();
     tx.delete(schema.spaceMembers).where(eq(schema.spaceMembers.userId, uid)).run();
     tx.delete(schema.memberRoles).where(eq(schema.memberRoles.userId, uid)).run();
     tx.delete(schema.friends).where(or(eq(schema.friends.userId, uid), eq(schema.friends.friendId, uid))).run();
@@ -149,6 +185,43 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
       tx.delete(schema.dmReactions).where(eq(schema.dmReactions.userId, uid)).run();
     }
     tx.delete(schema.spaceFolders).where(eq(schema.spaceFolders.userId, uid)).run();
+
+    // A tombstone keeps the users row, so no cascade fires for these.
+    tx.delete(schema.sessions).where(eq(schema.sessions.userId, uid)).run();
+    tx.delete(schema.dataExports).where(eq(schema.dataExports.userId, uid)).run();
+    tx.delete(schema.emailTokens).where(eq(schema.emailTokens.userId, uid)).run();
+    tx.delete(schema.emailOutbox).where(eq(schema.emailOutbox.userId, uid)).run();
+    tx.delete(schema.twoFactorSecrets).where(eq(schema.twoFactorSecrets.userId, uid)).run();
+    tx.delete(schema.twoFactorRecoveryCodes).where(eq(schema.twoFactorRecoveryCodes.userId, uid)).run();
+    tx.delete(schema.mfaTickets).where(eq(schema.mfaTickets.userId, uid)).run();
+    tx.delete(schema.securityEvents).where(eq(schema.securityEvents.userId, uid)).run();
+    tx.delete(schema.retiredUsernames).where(eq(schema.retiredUsernames.userId, uid)).run();
+    tx.delete(schema.knownDevices).where(eq(schema.knownDevices.userId, uid)).run();
+    tx.delete(schema.userFederationRegistry).where(eq(schema.userFederationRegistry.userId, uid)).run();
+    tx.delete(schema.userBlocks).where(or(eq(schema.userBlocks.blockerId, uid), eq(schema.userBlocks.blockedId, uid))).run();
+    tx.delete(schema.notificationSettings).where(eq(schema.notificationSettings.userId, uid)).run();
+    tx.delete(schema.userSpaceLayout).where(eq(schema.userSpaceLayout.userId, uid)).run();
+    tx.delete(schema.personalStickers).where(eq(schema.personalStickers.userId, uid)).run();
+    tx.delete(schema.pollVotes).where(eq(schema.pollVotes.userId, uid)).run();
+    tx.delete(schema.threadMembers).where(eq(schema.threadMembers.userId, uid)).run();
+    tx.delete(schema.spaceEventRsvps).where(eq(schema.spaceEventRsvps.userId, uid)).run();
+    tx.delete(schema.savedMessages).where(eq(schema.savedMessages.userId, uid)).run();
+    tx.delete(schema.notificationKeywords).where(eq(schema.notificationKeywords.userId, uid)).run();
+    tx.update(schema.spaceEvents).set({ createdBy: null }).where(eq(schema.spaceEvents.createdBy, uid)).run();
+    tx.update(schema.webhooks).set({ createdBy: null }).where(eq(schema.webhooks.createdBy, uid)).run();
+    tx.update(schema.channelFollows).set({ createdBy: null }).where(eq(schema.channelFollows.createdBy, uid)).run();
+    tx.update(schema.spaceSounds).set({ createdBy: null }).where(eq(schema.spaceSounds.createdBy, uid)).run();
+    tx.update(schema.channels).set({ threadCreatedBy: null }).where(eq(schema.channels.threadCreatedBy, uid)).run();
+    tx.delete(schema.pushSubscriptions).where(eq(schema.pushSubscriptions.userId, uid)).run();
+    tx.delete(schema.peerApprovalSubscribers).where(eq(schema.peerApprovalSubscribers.userId, uid)).run();
+    tx.delete(schema.peerApprovalNotifications).where(eq(schema.peerApprovalNotifications.userId, uid)).run();
+    tx.delete(schema.channelSlowmodePosts).where(eq(schema.channelSlowmodePosts.userId, uid)).run();
+    tx.delete(schema.spaceDepartedTimeouts).where(eq(schema.spaceDepartedTimeouts.userId, uid)).run();
+    tx.delete(schema.categoryOverrides).where(
+      and(eq(schema.categoryOverrides.targetType, 'member'), eq(schema.categoryOverrides.targetId, uid))
+    ).run();
+    // An invite's record of who used it stays, without the name.
+    tx.update(schema.inviteRedemptions).set({ registrantUsername: 'Deleted User' }).where(eq(schema.inviteRedemptions.userId, uid)).run();
 
     // The per-remote federation credentials are live secrets for accounts on
     // OTHER instances. A tombstone keeps the users row, so the ON DELETE CASCADE
@@ -266,12 +339,25 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
     tx.update(schema.users).set({
       username: `!deleted:${uid}`,
       passwordHash: crypto.randomBytes(32).toString('hex'),
+      email: null,
+      emailVerifiedAt: null,
+      pendingEmail: null,
+      locale: null,
+      twoFactorEnabledAt: null,
+      suspendedAt: null,
+      suspendedUntil: null,
+      suspensionReason: null,
+      badges: null,
       displayName: null,
       avatar: null,
       banner: null,
       bio: null,
+      pronouns: null,
+      profileLinks: null,
+      profileLayout: null,
       customStatus: null,
       accentColor: null,
+      accentColorSecondary: null,
       avatarColor: null,
       replicatedInstances: '[]',
       isDeleted: 1,
@@ -283,5 +369,12 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
   // The tombstone shows 'offline' for good; a replicated row's projection goes with it.
   forgetReplicaProjection(uid);
 
-  return filesToDelete;
+  // A file something else still shows (the same upload as a space's icon,
+  // say) stays; every other file goes. The fields still showing files are
+  // read once, now that this account's own are cleared.
+  const shown = profileImageFilenames();
+  // A picture that names a file a message still holds (a field written
+  // before the ownership rule) stays with that message.
+  const releasablePictures = pictures.filter((filename) => !attachmentHeldByMessage(filename));
+  return [...new Set([...releasablePictures, ...filesToDelete])].filter((filename) => !shown.has(filename));
 }

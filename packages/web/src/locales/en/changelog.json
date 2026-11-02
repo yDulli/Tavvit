@@ -1,0 +1,115 @@
+{
+  "title": "What's new",
+  "lead": "What changed in Tavvit, newest first.",
+  "note": "New in {{version}}: {{title}}",
+  "noteClose": "Close",
+  "versions": {
+    "1.32.5": {
+      "title": "More security work",
+      "items": {
+        "files": "Files sent before the last update also get addresses nobody can guess, over the next days.",
+        "shortcuts": "Shortcuts in the desktop app need Ctrl, Alt or the system key for letters, digits and Space, so the app never hears what you type in other programs.",
+        "server": "Under the hood, the server runs on a newer framework, with stricter checks on where a request comes from."
+      }
+    },
+    "1.32.4": {
+      "title": "Safer pictures and private voice",
+      "items": {
+        "media": "Stickers, profile pictures and icons only come from this server or from the server a person lives on. A sticker from anywhere else waits until you choose to load it.",
+        "voice": "A private voice channel stays private: nobody who cannot see it can join it or see who is in it.",
+        "files": "Uploaded files get addresses nobody can guess."
+      }
+    },
+    "1.32.3": {
+      "title": "Channel icons",
+      "items": {
+        "icons": "A space can give each channel its own icon, one of the set or an emoji, in place of the channel type icon."
+      }
+    },
+    "1.32.2": {
+      "title": "Change your username",
+      "items": {
+        "username": "You can now change your username in your account settings, once in 30 days.",
+        "roadmap": "The roadmap shows what comes next."
+      }
+    },
+    "1.32.1": {
+      "title": "Translate a message",
+      "items": {
+        "translate": "Right-click a message, or hold it on a phone, and choose Translate. The translation stands under the original, and you choose the language in your settings."
+      }
+    },
+    "1.32.0": {
+      "title": "Forums, announcements and an address of your own",
+      "items": {
+        "forums": "A forum channel keeps questions and topics apart as posts: each has a title, tags and its own conversation, and the list follows what is going on.",
+        "announcements": "An announcement channel is written by a few and read by everyone. Other spaces can follow it, and each post then also arrives in their channel.",
+        "address": "A space can have an invite address in words, such as /join/night-shift, that never runs out."
+      }
+    },
+    "1.31.0": {
+      "title": "Much faster when many people are here",
+      "items": {
+        "speed": "Messages arrive quickly even with a thousand people online, and starting the app takes far less data.",
+        "pages": "This page is new, and so are a help page and a status page.",
+        "safety": "A signed-out or suspended account is put out of a voice call at once."
+      }
+    },
+    "1.30.0": {
+      "title": "Documentation for developers",
+      "items": {
+        "docs": "Everything about bots and webhooks, with a quickstart, at /developers."
+      }
+    },
+    "1.29.0": {
+      "title": "Much more for bots",
+      "items": {
+        "cards": "Bots can show cards with titles, fields and pictures.",
+        "commands": "Slash commands can ask for things, and answer you alone.",
+        "portal": "A page of your own for your bots: picture, token, invite address."
+      }
+    },
+    "1.28.0": {
+      "title": "Fair limits",
+      "items": {
+        "storage": "See how much room your files take up under Settings, Account."
+      }
+    },
+    "1.27.0": {
+      "title": "Game detection that works",
+      "items": {
+        "games": "The desktop app asks Steam, Epic and GOG directly which game you are playing."
+      }
+    },
+    "1.26.0": {
+      "title": "Bots",
+      "items": {
+        "bots": "Bots can join spaces, with slash commands, under the rights a space gives them."
+      }
+    },
+    "1.25.0": {
+      "title": "Voice messages and more",
+      "items": {
+        "voice": "Record a voice message right in the chat.",
+        "saved": "Save messages, and be reminded of them.",
+        "alerts": "Get alerted when someone writes a word you choose.",
+        "soundboard": "Play clips to everyone in a call with the soundboard."
+      }
+    },
+    "1.24.0": {
+      "title": "Threads and events",
+      "items": {
+        "threads": "Follow a side conversation in a thread of its own.",
+        "events": "Plan events in a space, with reminders.",
+        "welcome": "Spaces can welcome new members and ask them to accept the rules."
+      }
+    },
+    "1.23.0": {
+      "title": "More you can do with a message",
+      "items": {
+        "pins": "Pin messages, hide spoilers, forward, and hold polls.",
+        "push": "Get notifications while the app is closed."
+      }
+    }
+  }
+}

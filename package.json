@@ -1,8 +1,8 @@
 {
   "name": "backspace",
-  "version": "1.11.0",
+  "version": "1.32.5",
   "private": true,
-  "description": "Open, self-hosted communication platform \u2014 text, voice, video, and federation",
+  "description": "A home for your friends and communities — channels, direct messages, voice and screen sharing",
   "license": "AGPL-3.0-only",
   "author": "Jannis Braun",
   "homepage": "https://github.com/TheZwiss/backspace",
@@ -44,9 +44,9 @@
       "dbus-next>usocket": "-",
       "@vencord/venmic>cmake-js": "-",
       "undici@^6": "^6.28.1",
-      "undici@^7": "^7.29.1",
+      "undici@^7": "^7.30.1",
       "fast-uri@^2": "^2.4.7",
-      "fast-uri@^3": "^3.1.8",
+      "fast-uri@^3": "^3.1.9",
       "minimatch@^9": "^9.0.7",
       "brace-expansion@^1": "^1.1.21",
       "brace-expansion@^2": "^2.1.7",
@@ -79,7 +79,7 @@
   },
   "packageManager": "pnpm@10.34.3",
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=24.7.0",
     "pnpm": ">=10.0.0"
   }
 }

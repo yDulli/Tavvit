@@ -1,8 +1,10 @@
+import { StatusPicker } from './StatusPicker';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '../../i18n/formatters';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '@backspace/shared';
+import { normalizePronouns } from '@backspace/shared/src/profileFields';
 import { Avatar } from '../ui/Avatar';
 import { Username } from '../ui/Username';
 import { ProfileBio } from './ProfileBio';
@@ -12,17 +14,24 @@ import { useSelfIdentity } from '../../stores/authStore';
 import { openDirectMessage } from '../../utils/openDirectMessage';
 import { describeError } from '../../i18n/errors';
 import { useUIStore, type ProfileMemberContext } from '../../stores/uiStore';
-import { getAvatarGradient, adjustColor, mutedGradient } from '../../utils/gradients';
+import { getAvatarGradient } from '../../utils/gradients';
+import { bannerFill } from '../../utils/placeLight';
+import { bannerBackground, cardEdge, cardTint, profileThemeOf } from '../../utils/profileTheme';
 import { isMine, parseFederatedUsername } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { loadFederatedMutuals } from '../../utils/mutuals';
 import { replaceEmojiShortcodes, useEmojiShortcodeNames } from '../../utils/emojiShortcodes';
 import { computeFloatingPosition, type AnchorRect, type Placement } from '../../hooks/useFloatingPosition';
-import { useProfileMemberRoles } from '../../hooks/useProfileMember';
+import { useProfileBadges, useProfileMemberRoles, useProfileNameStyle, useSpaceProfile } from '../../hooks/useProfileMember';
+import { BadgeList } from '../../badges/BadgeList';
+import { ProfileActivity } from './ProfileActivity';
+import { profileHeaderLook, profileLayoutOf } from '../../utils/profileLayout';
 import { useShownStatus } from '../../hooks/useShownStatus';
 import { viewerCanEditMemberRoles } from '../../utils/roleHierarchy';
 import { ProfileRoles } from './ProfileRoles';
 import { ProfileSpaceNickname } from './ProfileSpaceNickname';
+import { BlockUserButton } from '../social/BlockUserButton';
+import { ProfileLinks } from './ProfileLinks';
 
 /** Gap between the card and the element it was opened from. */
 const ANCHOR_OFFSET = 8;
@@ -50,13 +59,23 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
   // copy from another instance; the cache surfaces their home's view. The
   // row's identity fields and `origin` stay what every request below uses.
   const user = useCanonicalUserView(propUser, origin);
-  const { baseName, domain } = parseFederatedUsername(user.username);
+  const { baseName } = parseFederatedUsername(user.username);
   const displayName = user.displayName ?? baseName;
   const shownStatus = useShownStatus(user, origin, user.status);
   const self = useSelfIdentity();
   const isYou = isMine(user, origin, self);
 
   const roles = useProfileMemberRoles(member);
+  // Opened in a space, the name wears the member's top role colour or
+  // gradient, as in the member list.
+  const nameStyle = useProfileNameStyle(member);
+  const { badges, ownerTitle } = useProfileBadges(user, member);
+  // What the person set for the space the card was opened in stands in for
+  // their account's picture, banner and bio.
+  const spaceProfile = useSpaceProfile(member);
+  const look = profileHeaderLook(profileLayoutOf(user), 'card');
+  const pronouns = normalizePronouns(user.pronouns) ?? null;
+  const bio = spaceProfile.bio ?? user.bio;
   const isMobile = useUIStore((s) => s.isMobile);
   // Edit Roles opens the member role editor, which is desktop-only. It is
   // offered by the rule the editor gates with (permissions.md, "Role
@@ -132,6 +151,17 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
     openModal('memberRoles', { spaceId: member.spaceId, userId: member.userId });
   };
 
+  const handleEditProfile = () => {
+    onClose();
+    openModal('userSettings', { tab: 'account' });
+  };
+
+  const handleEditSpaceProfile = () => {
+    if (!member) return;
+    onClose();
+    openModal('spaceProfile', { spaceId: member.spaceId });
+  };
+
   const handleAvatarClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     handleViewFullProfile();
@@ -139,103 +169,131 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
 
   // Banner display. Another instance's assets arrive as absolute URLs
   // (`normalizeUserAssets`); a bare filename is the page's own instance's.
-  const bannerSrc = user.banner
-    ? (user.banner.startsWith('http') || user.banner.startsWith('/') ? user.banner : api.uploads.url(user.banner))
+  const bannerFile = spaceProfile.banner ?? user.banner;
+  const bannerSrc = bannerFile
+    ? (bannerFile.startsWith('http') || bannerFile.startsWith('/') ? bannerFile : api.uploads.url(bannerFile))
     : null;
-  const bannerFallback = user.accentColor
-    ? mutedGradient(user.accentColor, adjustColor(user.accentColor, -40))
+  const theme = profileThemeOf(user);
+  const bannerFallback = theme
+    ? bannerBackground(theme)
     : (() => {
         const g = getAvatarGradient(user.homeUserId ?? user.id, displayName, user.avatarColor);
-        return mutedGradient(g.from, g.to);
+        return bannerFill(g.from);
       })();
+  // A profile theme lifts the top of the card to about the tone of the plain
+  // hairline, which would vanish there; on a tinted card the lines take the
+  // control edge's tone instead.
+  const divider = theme ? 'my-3.5 h-px bg-border-soft' : 'divider-fade my-3.5';
 
   // Parked off-screen for the one layout pass before the card knows how tall it
   // is; `useLayoutEffect` places it before the browser paints, so it never
   // renders visibly in the wrong spot.
-  const cardStyle = placed ?? { top: -9999, left: -9999 };
+  const cardStyle = {
+    ...(placed ?? { top: -9999, left: -9999 }),
+    // The person's profile theme: a faint tint down the card and an edge in their first colour.
+    ...(theme ? { backgroundImage: cardTint(theme), borderColor: cardEdge(theme) } : {}),
+  };
 
   return (
     <div
       ref={cardRef}
       data-user-profile-popout
-      className="fixed z-[200] w-[340px] rounded-[12px] overflow-hidden animate-fade-in select-none glass-modal"
+      className="fixed z-[200] w-[340px] rounded-lg overflow-hidden animate-pop select-none glass-modal"
       style={cardStyle}
     >
-      {/* Banner */}
-      <div
-        className="h-[80px] rounded-t-[12px]"
-        style={bannerSrc
-          ? { backgroundImage: `url(${bannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-          : { background: bannerFallback }
-        }
-      />
+      {/* Banner; the compact layout has none */}
+      {look.banner && (
+        <div
+          className={`${look.banner}${bannerSrc ? '' : ' banner-depth'}`}
+          style={bannerSrc
+            ? { backgroundImage: `url(${bannerSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+            : { background: bannerFallback }
+          }
+        />
+      )}
 
       {/* Body */}
       <div className="px-4 pb-4 relative">
-        {/* Avatar */}
-        {/* The picture escalates to the full profile — the card is a preview, and
-            clicking the face is the obvious way to ask for the whole thing. It
-            deliberately does NOT reopen the card (see issue #37). */}
-        <Avatar
-          src={user.avatar}
-          name={displayName}
-          size={80}
-          status={shownStatus}
-          userId={user.homeUserId ?? user.id}
-          user={user}
-          onClick={handleAvatarClick}
-          ring={{ width: 4, color: 'rgba(20,20,26,0.85)' }}
-          className="mt-[-44px] mb-3"
-        />
 
-        {/* Name & info */}
-        <div>
-          <ProfileSpaceNickname member={member} />
-          <span className="text-[16px] font-semibold leading-tight">{displayName}</span>
-          <div className="text-[13px] text-txt-tertiary">
-            <Username username={user.username} showAt className="text-[13px] text-txt-tertiary" />
-          </div>
-          {user.customStatus && (
-            <div className="text-[13px] text-txt-secondary italic mt-1">
-              {replaceEmojiShortcodes(user.customStatus)}
+        <div className={look.header}>
+          {/* Avatar */}
+          {/* The picture escalates to the full profile — the card is a preview, and
+              clicking the face is the obvious way to ask for the whole thing. It
+              deliberately does NOT reopen the card (see issue #37). */}
+          <Avatar
+            src={spaceProfile.avatar ?? user.avatar}
+            name={displayName}
+            size={look.avatarSize}
+            status={shownStatus}
+            userId={user.homeUserId ?? user.id}
+            user={user}
+            onClick={handleAvatarClick}
+            ring={{ width: 5, color: 'rgb(var(--bg-elevated))' }}
+            className={look.avatar}
+          />
+
+          {/* Name & info */}
+          <div className="min-w-0">
+            <ProfileSpaceNickname member={member} />
+            <span className="text-title font-semibold tracking-[-0.02em] leading-tight" style={nameStyle}>{displayName}</span>
+            {/* The badges sit beside the handle, in its line (badges.md). */}
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-ui text-txt-tertiary">
+              <Username username={user.username} showAt className="text-ui text-txt-tertiary" />
+              {badges.length > 0 && (
+                <BadgeList badges={badges} size="sm" notes={ownerTitle ? { server_owner: ownerTitle } : undefined} />
+              )}
+              {pronouns && <span>· {pronouns}</span>}
             </div>
-          )}
+            {user.customStatus && (
+              <div className="text-ui text-txt-secondary italic mt-1">
+                {replaceEmojiShortcodes(user.customStatus)}
+              </div>
+            )}
+            <ProfileActivity subject={user} origin={origin} isSelf={isYou} />
+          </div>
         </div>
 
         {/* Bio */}
-        {user.bio && (
+        {bio && (
           <>
-            <div className="border-t border-white/[0.06] my-3" />
+            <div className={divider} />
             <div>
-              <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
+              <span className="label-mono">
                 {t('social:profile.aboutMe')}
               </span>
-              <ProfileBio bio={user.bio} />
+              <ProfileBio bio={bio} />
             </div>
+          </>
+        )}
+
+        {(user.profileLinks?.length ?? 0) > 0 && (
+          <>
+            <div className={divider} />
+            <ProfileLinks links={user.profileLinks} variant="chips" />
           </>
         )}
 
         {roles.length > 0 && (
           <>
-            <div className="border-t border-white/[0.06] my-3" />
+            <div className={divider} />
             <ProfileRoles roles={roles} />
           </>
         )}
 
-        <div className="border-t border-white/[0.06] my-3" />
+        <div className={divider} />
 
         {/* Member since + Mutuals */}
         <div className="space-y-1.5">
           <div>
-            <span className="text-[11px] uppercase tracking-wide font-semibold text-txt-tertiary">
+            <span className="label-mono">
               {t('social:profile.memberSince')}
             </span>
-            <span className="text-[12px] text-txt-secondary ml-2">
+            <span className="text-meta text-txt-secondary ml-2">
               {f.formatMediumDate(user.createdAt)}
             </span>
           </div>
           {mutualCounts && (mutualCounts.friends > 0 || mutualCounts.spaces > 0) && (
-            <div className="text-[12px] text-txt-tertiary">
+            <div className="text-meta text-txt-tertiary">
               {mutualCounts.friends > 0 && (
                 <span>{t('social:mutuals.friends', { count: mutualCounts.friends })}</span>
               )}
@@ -249,29 +307,52 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
           )}
         </div>
 
-        {/* Actions. Nobody sends themselves a message. */}
-        {!isYou && (
-          <button
-            onClick={handleSendMessage}
-            className="w-full mt-3 py-2 rounded-lg text-[13px] font-medium text-txt-primary bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.08] transition-colors"
-          >
-            {t('social:profile.sendMessage')}
-          </button>
-        )}
-        {canEditRoles && (
-          <button
-            onClick={handleEditRoles}
-            className="w-full mt-1.5 py-2 rounded-lg text-[13px] font-medium text-txt-secondary hover:text-txt-primary bg-transparent hover:bg-white/[0.04] transition-colors"
-          >
-            {t('social:profile.editRoles')}
-          </button>
-        )}
+        {isYou && <StatusPicker className="mt-3.5" />}
+
+        {/* Actions. Nobody sends themselves a message; on their own card a
+            person edits their profile, and in a space their profile there.
+            One outlined button for what the card is mostly for, the quieter
+            ones in a line under it so a full card still fits a small window. */}
         <button
-          onClick={handleViewFullProfile}
-          className="w-full mt-1.5 py-2 rounded-lg text-[13px] font-medium text-txt-tertiary hover:text-txt-secondary bg-transparent hover:bg-white/[0.04] transition-colors"
+          type="button"
+          onClick={isYou ? handleEditProfile : handleSendMessage}
+          className="btn-outline mt-3.5 w-full"
         >
-          {t('social:profile.viewFull')}
+          {isYou ? t('social:profile.editProfile') : t('social:profile.sendMessage')}
         </button>
+        <div className="mt-1 flex flex-wrap items-center gap-x-1">
+          {isYou && member && (
+            <button
+              type="button"
+              onClick={handleEditSpaceProfile}
+              className="btn-quiet btn-sm flex-auto"
+            >
+              {t('social:profile.editSpaceProfile')}
+            </button>
+          )}
+          {canEditRoles && (
+            <button
+              type="button"
+              onClick={handleEditRoles}
+              className="btn-quiet btn-sm flex-auto"
+            >
+              {t('social:profile.editRoles')}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleViewFullProfile}
+            className="btn-quiet btn-sm flex-auto"
+          >
+            {t('social:profile.viewFull')}
+          </button>
+          <BlockUserButton
+            user={user}
+            origin={origin}
+            onDone={onClose}
+            className="btn-quiet btn-sm flex-auto text-txt-tertiary hover:text-txt-danger"
+          />
+        </div>
       </div>
     </div>
   );

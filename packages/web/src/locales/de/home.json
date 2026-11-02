@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "home": "Start",
+    "about": "Info",
+    "inbox": "Posteingang",
+    "requestsLabel_one": "{{count}} Freundschaftsanfrage wartet",
+    "requestsLabel_other": "{{count}} Freundschaftsanfragen warten"
+  },
+  "greeting": {
+    "morning": "Guten Morgen, {{name}}",
+    "afternoon": "Guten Tag, {{name}}",
+    "evening": "Guten Abend, {{name}}",
+    "night": "Noch wach, {{name}}?"
+  },
+  "subtitle": {
+    "online": "{{instance}} · Freunde online: {{n}}",
+    "quiet": "{{instance}} · Gerade ist kein Freund online"
+  },
+  "empty": {
+    "title": "Hier erscheinen deine Leute",
+    "body": "Füge Freunde per Benutzernamen hinzu oder lade sie mit einem Einladungslink in einen Space ein. Wer online ist, wer im Sprachchat sitzt und was alle gerade machen, siehst du dann auf dieser Seite.",
+    "addFriend": "Freund hinzufügen"
+  },
+  "voice": {
+    "title": "Im Sprachchat",
+    "join": "Beitreten",
+    "joinLabel": "Sprachchat in {{space}} beitreten",
+    "inSpace": "im Space {{space}}",
+    "status": "Im Sprachchat · {{space}}"
+  },
+  "messages": {
+    "caughtUp": "Du bist auf dem neuesten Stand."
+  },
+  "requests": {
+    "title": "Freundschaftsanfragen",
+    "waiting": "Warten auf deine Antwort: {{n}}",
+    "review": "Ansehen"
+  },
+  "spaces": {
+    "title": "Deine Spaces",
+    "empty": "Du bist noch in keinem Space. Erstelle einen für deine Gruppe oder tritt mit einem Einladungslink bei.",
+    "create": "Space erstellen",
+    "join": "Mit Einladung beitreten",
+    "inVoice_one": "{{count}} Freund im Sprachchat",
+    "inVoice_other": "{{count}} Freunde im Sprachchat",
+    "mentions_one": "{{count}} ungelesene Erwähnung",
+    "mentions_other": "{{count}} ungelesene Erwähnungen"
+  },
+  "about": {
+    "title": "Über Tavvit",
+    "tagline": "Ein Ort für deine Leute.",
+    "server": {
+      "title": "Dieser Server",
+      "address": "Adresse",
+      "version": "Version",
+      "sourceMissing": "Für diesen Server ist kein Quellcode-Link konfiguriert."
+    },
+    "developers": {
+      "title": "Entwickler",
+      "body": "Bots, Befehle und Webhooks, mit Dokumentation und API-Referenz.",
+      "link": "Zur Dokumentation"
+    },
+    "help": {
+      "title": "Hilfe",
+      "help": "Hilfe",
+      "changelog": "Neuigkeiten",
+      "status": "Status"
+    }
+  },
+  "inbox": {
+    "title": "Posteingang",
+    "tabs": {
+      "unread": "Ungelesen",
+      "mentions": "Erwähnungen",
+      "saved": "Gespeichert",
+      "keywords": "Stichwörter"
+    },
+    "markRead": "Als gelesen markieren",
+    "markChannelRead": "Kanal als gelesen markieren",
+    "markAll": "Alles als gelesen markieren",
+    "markingAll": "Wird markiert…",
+    "markFailed": "Konnte nicht als gelesen markiert werden. Versuch es noch einmal.",
+    "sections": {
+      "dms": "Direktnachrichten",
+      "spaces": "Spaces"
+    },
+    "caughtUp": {
+      "title": "Du bist auf dem neuesten Stand",
+      "body": "Neue Nachrichten und Erwähnungen erscheinen hier.",
+      "muted_one": "Nichts Neues, außer in {{count}} stummgeschalteten Kanal.",
+      "muted_other": "Nichts Neues, außer in {{count}} stummgeschalteten Kanälen."
+    },
+    "via": {
+      "role": "deine Rolle",
+      "everyone": "alle",
+      "keyword": "ein Stichwort von dir"
+    },
+    "noMentions": {
+      "title": "Noch keine Erwähnungen",
+      "body": "Wenn dich jemand erwähnt, deine Rolle oder alle in einem Space, erscheint es hier."
+    },
+    "mentionsFailed": "Einige Erwähnungen konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "older": "Ältere anzeigen",
+    "mutedHidden_one": "{{count}} stummgeschalteter Kanal mit ungelesenen Nachrichten wird nicht angezeigt.",
+    "mutedHidden_other": "{{count}} stummgeschaltete Kanäle mit ungelesenen Nachrichten werden nicht angezeigt.",
+    "navLabel_one": "{{count}} Eintrag braucht Aufmerksamkeit",
+    "navLabel_other": "{{count}} Einträge brauchen Aufmerksamkeit"
+  },
+  "actions": {
+    "newMessage": "Neue Nachricht",
+    "addFriend": "Freund hinzufügen",
+    "createSpace": "Space erstellen",
+    "joinSpace": "Space beitreten"
+  },
+  "attention": {
+    "title": "Braucht deine Aufmerksamkeit",
+    "openInbox_one": "Posteingang öffnen ({{count}})",
+    "openInbox_other": "Posteingang öffnen ({{count}})"
+  },
+  "recent": {
+    "title": "Letzte Unterhaltungen",
+    "empty": "Unterhaltungen, die du öffnest, erscheinen hier."
+  },
+  "online": {
+    "title": "Gerade online",
+    "inVoice": "Im Sprachkanal",
+    "message": "{{name}} schreiben",
+    "noFriends": "Füge Freunde hinzu, um zu sehen, wer da ist.",
+    "nobody_one": "{{count}} Freund ist gerade offline.",
+    "nobody_other": "{{count}} Freunde sind gerade offline.",
+    "viewAll": "Alle anzeigen",
+    "nobodyTitle": "Gerade ist niemand online",
+    "noFriendsTitle": "Noch keine Freunde"
+  },
+  "jump": {
+    "label": "Zu einer Unterhaltung springen…"
+  },
+  "onboarding": {
+    "friends": {
+      "title": "Füge deine Freunde hinzu",
+      "body": "Finde Leute über ihren Benutzernamen."
+    },
+    "space": {
+      "title": "Starte einen Space",
+      "body": "Ein Zuhause für deine Gruppe, mit Text- und Sprachkanälen und den Rollen, die du festlegst."
+    },
+    "invite": {
+      "title": "Eine Einladung bekommen?",
+      "body": "Füge den Einladungslink ein, den dir jemand geschickt hat, und tritt seinem Space bei."
+    }
+  },
+  "unread": {
+    "dot": "Ungelesen"
+  },
+  "saved": {
+    "emptyTitle": "Noch nichts gespeichert",
+    "emptyBody": "Speichere eine Nachricht über ihr Menü, um sie hier wiederzufinden. Nur du siehst diese Liste.",
+    "failed": "Die gespeicherten Nachrichten konnten nicht geladen werden.",
+    "remove": "Aus Gespeichert entfernen",
+    "remindsAt": "Erinnert dich am {{time}}",
+    "directMessage": "Direktnachricht",
+    "reminderTitle": "Erinnerung",
+    "reminderToast": "Erinnerung: {{preview}}",
+    "noPreview": "Eine Nachricht"
+  },
+  "keywordMatches": {
+    "emptyTitle": "Noch keine Treffer",
+    "emptyBody": "Nachrichten mit deinen Stichwörtern erscheinen hier.",
+    "failed": "Die Treffer konnten nicht geladen werden."
+  }
+}

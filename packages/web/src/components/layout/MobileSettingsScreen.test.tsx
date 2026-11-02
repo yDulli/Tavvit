@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { InstanceInfoResponse, User } from '@backspace/shared';
+import { __resetHomeInstanceInfoForTests } from '../../hooks/useHomeInstanceInfo';
 
 // The screen reads three stores through selectors, and the panel it opens reads
 // a fourth. Each is mocked with the selector-aware callable idiom used across
@@ -131,6 +132,8 @@ function openDesktopPanel(): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  __resetHomeInstanceInfoForTests();
+  Reflect.deleteProperty(mocks.instanceInfo, 'federationEnabled');
 });
 
 afterEach(() => {
@@ -139,23 +142,17 @@ afterEach(() => {
 });
 
 describe('MobileSettingsScreen Desktop entry', () => {
-  it('opens the download offer in the browser', async () => {
+  it('lists neither Desktop nor Keybinds in a browser', async () => {
     render(<MobileSettingsScreen />);
 
-    // Desktop is listed outside Electron; Keybinds still is not.
-    expect(screen.getByRole('button', { name: 'Desktop' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Desktop' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Keybinds' })).not.toBeInTheDocument();
+  });
 
-    openDesktopPanel();
-
-    expect(await screen.findByRole('link', { name: 'All releases on GitHub' })).toBeInTheDocument();
-    // The version reaches the panel, so the links name release assets.
-    expect(await screen.findByRole('link', { name: 'Download for Windows' })).toHaveAttribute(
-      'href',
-      'https://github.com/TheZwiss/backspace/releases/download/v1.2.1/Backspace-1.2.1-win-x64.exe',
-    );
-    // The Electron-only panel stays out of the browser.
-    expect(screen.queryByRole('button', { name: 'Change Instance' })).not.toBeInTheDocument();
+  it('opens nothing for the desktop panel in a browser', () => {
+    const { container } = render(<MobileSettingsScreen initialPanel="desktop" />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('opens the desktop app settings inside Electron', async () => {
@@ -166,9 +163,31 @@ describe('MobileSettingsScreen Desktop entry', () => {
 
     openDesktopPanel();
 
-    // Both panels carry the same "Desktop" header, so the instance control is
-    // what tells them apart.
-    expect(await screen.findByRole('button', { name: 'Change Instance' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'All releases on GitHub' })).not.toBeInTheDocument();
+    expect(await screen.findByText(/^Tavvit Desktop|^Version /)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change Instance' })).toBeNull();
+  });
+});
+
+describe('MobileSettingsScreen Connections entry', () => {
+  it('is listed where the instance federates', async () => {
+    mocks.instanceInfo.federationEnabled = true;
+    render(<MobileSettingsScreen />);
+    expect(await screen.findByRole('button', { name: 'Connections' })).toBeInTheDocument();
+  });
+
+  it('is not listed on a private server', async () => {
+    mocks.instanceInfo.federationEnabled = false;
+    render(<MobileSettingsScreen />);
+    // Wait for the answer to land, then check the entry never appeared.
+    await screen.findByRole('button', { name: 'Account' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByRole('button', { name: 'Connections' })).not.toBeInTheDocument();
+  });
+
+  it('opens nothing for the connections panel on a private server', async () => {
+    mocks.instanceInfo.federationEnabled = false;
+    const { container } = render(<MobileSettingsScreen initialPanel="connections" />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(container).toBeEmptyDOMElement();
   });
 });

@@ -10,25 +10,28 @@ import {
   screen,
   session,
   desktopCapturer,
+  powerMonitor,
 } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { pathToFileURL } from 'url';
-import { startActivityDetection, stopActivityDetection, getCurrentActivity } from './activityDetector';
+import { startActivityDetection, stopActivityDetection, getCurrentActivity, setUserGames } from './activityDetector';
+import { loadSettings as loadGameDetection, saveSettings as saveGameDetection, withoutUserGame, type GameDetectionSettings } from './gameDetectionSettings';
 import { KeybindManager } from './keybindManager';
 import { deriveStartMinimizedFromArgs, parseExecPathFromDesktopFile, shouldReapplyAppImage } from './autoLaunch';
-import {
-  loadInstanceUrl,
-  saveInstanceUrl,
-  clearInstanceUrl,
-  getPickerPath,
-} from './instanceUrl';
+import { DEV_URL_ENV, resolveAppUrl, removeLegacyInstanceFile } from './appUrl';
 import { getUpdateCapability, isSandboxed } from './updateCapability';
 import { ownAudioInSystemAudio } from './systemAudioCapability';
 import { createSystemAudioController, withSystemAudioSource, type PatchBayModule } from './systemAudio';
 import { loadDismissedVersion, setDismissedVersion } from './updateDismissal';
 import { purgeUpdaterCache } from './updaterCache';
+import {
+  INSTALL_CHECK_INTERVAL_MS,
+  consumeRestartHidden,
+  createUpdaterLogger,
+  markRestartHidden,
+  shouldInstallNow,
+} from './updateInstall';
 import {
   UpdateStatusStore,
   RELEASES_URL,
@@ -42,6 +45,7 @@ import {
   extractErrorCode,
   setAutoUpdater,
   setMainWindow,
+  setOnInstallRequested,
   setOnQuitRequested,
   handleRendererReady,
   handleRecoveryAction,
@@ -50,8 +54,8 @@ import {
   buildAppMenuTemplate,
   type RecoveryState,
 } from './recovery';
-import { migrateUserData } from './userDataMigration';
 import { isNavigationAllowed } from './navigationPolicy';
+import { editMenuParams, isEditCommand, isSpellingWord } from './editMenu';
 import { NotificationRetainer } from './notificationRetention';
 import {
   screenSharePickerMode,
@@ -63,26 +67,23 @@ import {
 import { getDesktopLanguage, isDesktopLanguage, saveStoredLanguage, translateDesktop } from './l10n';
 
 // Override Electron's package.json-derived app name so userData lives at
-// "<appData>/Backspace" instead of leaking the monorepo's "@backspace/desktop"
+// "<appData>/Tavvit" instead of leaking the monorepo's "@backspace/desktop"
 // package name. Must run before any app.getPath('userData') consumer.
-app.setName('Backspace');
+app.setName('Tavvit');
 
-// One-time migration from the historical scoped path. After the move the old
-// folder is gone, so subsequent launches hit the old-missing no-op branch.
-{
-  const appDataDir = app.getPath('appData');
-  const oldParent = path.join(appDataDir, '@backspace');
-  const result = migrateUserData({
-    oldDir: path.join(oldParent, 'desktop'),
-    newDir: path.join(appDataDir, 'Backspace'),
-    oldParent,
-  });
-  if (result.kind === 'migrated') {
-    console.log(`[userData] migrated ${result.from} → ${result.to}`);
-  } else if (result.kind === 'failed') {
-    console.error('[userData] migration failed:', result.error);
-  }
-}
+// The product was called Orbit until 1.13.0, and so was this folder. An install
+// from then keeps using it: the sign-in, settings and window state are in there,
+// and renaming a profile Chromium may still hold open is not worth the risk.
+const legacyUserData = path.join(app.getPath('appData'), 'Orbit');
+if (fs.existsSync(legacyUserData)) app.setPath('userData', legacyUserData);
+
+// A server address saved by an older build must never stand between the app
+// and the server it opens (appUrl.ts).
+removeLegacyInstanceFile(app.getPath('userData'));
+
+/** The one address the main window opens: the production server in every installed build. */
+const APP_URL = resolveAppUrl({ isPackaged: app.isPackaged, devUrl: process.env[DEV_URL_ENV] });
+const APP_ORIGIN = new URL(APP_URL).origin;
 
 let mainWindow: BrowserWindow | null = null;
 const keybindManager = new KeybindManager();
@@ -91,45 +92,6 @@ let isQuitting = false;
 let pendingDeepLink: string | null = null;
 
 const knownInstanceOrigins = new Set<string>();
-
-// ─── AGPL-3.0 § 13 source offer ─────────────────────────────────────────────
-// Upstream fallback for the "Source code" menu items and the About panel.
-// Used when the connected instance can't be reached or advertises no source URL.
-const UPSTREAM_SOURCE_URL = 'https://github.com/TheZwiss/backspace';
-
-/**
- * Resolve the Corresponding Source URL for the instance the desktop app is
- * pointed at, honouring an operator's modified fork via GET /api/instance/info.
- * Falls back to the upstream repo when no instance is loaded or the probe fails.
- */
-async function resolveSourceUrl(): Promise<string> {
-  let base: string | null = process.env.BACKSPACE_URL ?? loadInstanceUrl();
-  if (!base && mainWindow && !mainWindow.isDestroyed()) {
-    const current = mainWindow.webContents.getURL();
-    if (current.startsWith('http://') || current.startsWith('https://')) base = current;
-  }
-  if (!base) return UPSTREAM_SOURCE_URL;
-
-  try {
-    const origin = new URL(base).origin;
-    const res = await fetch(`${origin}/api/instance/info`, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return UPSTREAM_SOURCE_URL;
-    const info = (await res.json()) as { sourceCodeUrl?: unknown };
-    if (typeof info.sourceCodeUrl === 'string' && /^https?:\/\//i.test(info.sourceCodeUrl)) {
-      return info.sourceCodeUrl;
-    }
-  } catch {
-    // Unreachable / malformed — fall back to upstream.
-  }
-  return UPSTREAM_SOURCE_URL;
-}
-
-/** Open the resolved source URL externally; upstream fallback on any failure. */
-function openSourceCode(): void {
-  resolveSourceUrl()
-    .then((url) => shell.openExternal(url))
-    .catch(() => { void shell.openExternal(UPSTREAM_SOURCE_URL); });
-}
 
 // ─── Window State Persistence ───────────────────────────────────────────────
 
@@ -240,6 +202,22 @@ function saveAutoLaunchSettings(settings: AutoLaunchSettings): void {
   fs.writeFileSync(getAutoLaunchSettingsPath(), JSON.stringify(settings));
 }
 
+/**
+ * Windows: the autostart entry of an install from before 1.13.0 is named "Orbit"
+ * and starts Orbit.exe, which the update replaced with Tavvit.exe. Swap it for
+ * the current one, keeping the person's choice of starting hidden. Finds nothing
+ * from then on, because the old entry is gone.
+ */
+function migrateLegacyLoginItem(): void {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  const legacyPath = path.join(path.dirname(process.execPath), 'Orbit.exe');
+  const legacy = app.getLoginItemSettings({ path: legacyPath }).launchItems?.find((item) => item.name === 'Orbit');
+  if (!legacy) return;
+  app.setLoginItemSettings({ openAtLogin: false, enabled: false, path: legacyPath, name: 'Orbit' });
+  // Switched off in the Task Manager: that choice is the person's and carries over.
+  if (legacy.enabled !== false) applyLoginItemSettings(true, deriveStartMinimizedFromArgs(legacy.args));
+}
+
 function applyLoginItemSettings(openAtLogin: boolean, startMinimized: boolean): void {
   if (process.platform === 'darwin') {
     // macOS: pass `args` in addition to `openAsHidden` so the renderer/main can
@@ -264,11 +242,11 @@ function applyLoginItemSettings(openAtLogin: boolean, startMinimized: boolean): 
       enabled: openAtLogin,
       path: process.execPath,
       args: startMinimized ? ['--hidden'] : [],
-      name: 'Backspace',
+      name: 'Tavvit',
     });
   } else {
     // Linux: setLoginItemSettings creates ~/.config/autostart/<name>.desktop.
-    // - We pass an explicit `name: 'backspace'` so the filename is deterministic
+    // - We pass an explicit `name: 'tavvit'` so the filename is deterministic
     //   across deb/AppImage installs and Electron versions.
     // - For AppImage, $APPIMAGE points to the (possibly newly-updated) AppImage
     //   path; pass it as `path` so the autostart entry tracks updates.
@@ -276,7 +254,7 @@ function applyLoginItemSettings(openAtLogin: boolean, startMinimized: boolean): 
     //   but the runtime accepts them.
     const opts: Record<string, unknown> = {
       openAtLogin,
-      name: 'backspace',
+      name: 'tavvit',
     };
     if (process.env.APPIMAGE) {
       opts.path = process.env.APPIMAGE;
@@ -302,9 +280,9 @@ function generateFallbackTrayIcon(): Electron.NativeImage {
       const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
       if (dist <= r) {
         // NativeImage raw buffer uses BGRA on most platforms
-        canvas[idx] = 0xf6;     // B (#7c6cf6)
-        canvas[idx + 1] = 0x6c; // G
-        canvas[idx + 2] = 0x7c; // R
+        canvas[idx] = 0xff;     // B: white, like the mark
+        canvas[idx + 1] = 0xff; // G
+        canvas[idx + 2] = 0xff; // R
         canvas[idx + 3] = 0xff; // A
       } else {
         canvas[idx] = 0;
@@ -364,17 +342,17 @@ function createWindow(): void {
       : {}),
     minWidth: 940,
     minHeight: 500,
-    title: 'Backspace',
+    title: 'Tavvit',
     icon: path.join(__dirname, '..', 'build', 'icon.png'),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     ...(process.platform !== 'darwin' ? {
       titleBarOverlay: {
-        color: '#0b0b10',
-        symbolColor: '#d8d8de',
+        color: '#0d0e11',
+        symbolColor: '#edeef2',
         height: 32,
       },
     } : {}),
-    backgroundColor: '#313338',
+    backgroundColor: '#0d0e11',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -392,21 +370,9 @@ function createWindow(): void {
     mainWindow.maximize();
   }
 
-  // URL resolution priority:
-  // 1. BACKSPACE_URL env var (managed deployments)
-  // 2. Saved instance URL from picker
-  // 3. No URL → show instance picker
-  const envUrl = process.env.BACKSPACE_URL;
-  if (envUrl) {
-    mainWindow.loadURL(envUrl);
-  } else {
-    const savedUrl = loadInstanceUrl();
-    if (savedUrl) {
-      mainWindow.loadURL(savedUrl);
-    } else {
-      mainWindow.loadFile(getPickerPath(), { query: { lang: getDesktopLanguage() } });
-    }
-  }
+  // Straight to the server: no picker, no saved address (appUrl.ts). A load
+  // that fails lands on the recovery page, which offers Reload.
+  mainWindow.loadURL(APP_URL);
 
   mainWindow.once('ready-to-show', () => {
     // Hidden-launch detection. We pass `args: ['--hidden']` on all three platforms
@@ -414,8 +380,10 @@ function createWindow(): void {
     // macOS we also honour `wasOpenedAsHidden` as a fallback for the legacy
     // openAsHidden path on macOS < 13.
     const launchedHidden =
+      restartedHidden ||
       process.argv.includes('--hidden') ||
       (process.platform === 'darwin' && app.getLoginItemSettings().wasOpenedAsHidden);
+    restartedHidden = false;
 
     if (!launchedHidden) {
       mainWindow?.show();
@@ -460,14 +428,29 @@ function createWindow(): void {
   // download, and the page that keeps running may be sharing. `did-navigate` fires for a
   // committed cross-document main-frame load; `did-fail-load` for the main frame is the error
   // page that replaced it (-3, ERR_ABORTED, is a cancelled navigation that replaced nothing).
-  mainWindow.webContents.on('render-process-gone', () => systemAudio.stop());
-  mainWindow.webContents.on('did-navigate', () => systemAudio.stop());
+  // The same three moments end the page's voice session as far as the update
+  // timer knows: a page still in a call reports it again when it mounts.
+  mainWindow.webContents.on('render-process-gone', () => { systemAudio.stop(); callActive = false; });
+  mainWindow.webContents.on('did-navigate', () => { systemAudio.stop(); callActive = false; });
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, _description, _url, isMainFrame) => {
-    if (isMainFrame && errorCode !== -3) systemAudio.stop();
+    if (isMainFrame && errorCode !== -3) {
+      systemAudio.stop();
+      callActive = false;
+    }
+  });
+
+  // Right click: the page draws every menu itself and this process none. For a
+  // text field the page needs the spelling suggestions only Chromium has here,
+  // so they are handed over (editMenu.ts); the page cancels every other right
+  // click before it gets this far.
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    const edit = editMenuParams(params);
+    if (edit && mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('edit-context-menu', edit);
   });
 
   mainWindow.on('closed', () => {
     systemAudio.stop();
+    callActive = false;
     setMainWindow(null);
     mainWindow = null;
     // Clear recovery state so macOS dock-activate (which calls createWindow again)
@@ -492,34 +475,38 @@ function createWindow(): void {
       const u = new URL(url);
       if (
         (u.protocol === 'http:' || u.protocol === 'https:') &&
-        knownInstanceOrigins.has(u.origin) &&
+        (u.origin === APP_ORIGIN || knownInstanceOrigins.has(u.origin)) &&
         u.pathname.startsWith('/join/')
       ) {
         mainWindow?.webContents.send('open-internal-route', u.pathname + u.search);
         return { action: 'deny' };
       }
     } catch { /* malformed URL — fall through to external */ }
-    if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
       shell.openExternal(url);
     }
     return { action: 'deny' };
   });
 
   // Deny foreign top-level navigations. See navigationPolicy.ts for the
-  // mechanism note on why this is safe for the initial instance load, the
-  // file:// picker, and cross-instance switching (none of them are
-  // `will-navigate` events). setWindowOpenHandler above is unaffected — this
-  // only covers same-window top-level navigation, not new-window/tab opens.
+  // mechanism note on why this is safe for the initial load (a loadURL call,
+  // not a `will-navigate` event). setWindowOpenHandler above is unaffected —
+  // this only covers same-window top-level navigation, not new-window/tab opens.
   mainWindow.webContents.on('will-navigate', (event, url) => {
     const allowed = isNavigationAllowed({
       targetUrl: url,
       currentUrl: mainWindow?.webContents.getURL() ?? null,
-      pickerFileUrl: pathToFileURL(getPickerPath()).href,
+      appOrigin: APP_ORIGIN,
       knownInstanceOrigins,
     });
     if (!allowed) {
-      console.warn(`[main] Blocked will-navigate to disallowed target: ${url}`);
       event.preventDefault();
+      // An email address, as on the legal notice page, belongs to the mail program.
+      if (url.startsWith('mailto:')) {
+        void shell.openExternal(url);
+        return;
+      }
+      console.warn(`[main] Blocked will-navigate to disallowed target: ${url}`);
     }
   });
 }
@@ -528,7 +515,7 @@ function createTray(): void {
   const icon = loadTrayIcon();
   tray = new Tray(icon);
 
-  tray.setToolTip('Backspace');
+  tray.setToolTip('Tavvit');
   // Context menu is set by the recoveryStore subscriber in app.whenReady,
   // which keeps the menu in sync with update/recovery state.
 
@@ -583,7 +570,7 @@ let pendingScreenSelection: PendingScreenSelection | null = null;
 /** Loopback preference for system-picker captures (no preselection carries it there). */
 let lastSystemPickerShareAudio: boolean | null = null;
 
-// Linux: a system-audio capture built from PipeWire without Backspace's own
+// Linux: a system-audio capture built from PipeWire without Tavvit's own
 // streams (systemAudio.ts). The module is optional and Linux-only, so it is
 // loaded on first use; where it is unavailable the Chromium loopback stays.
 const systemAudio = createSystemAudioController({
@@ -672,6 +659,21 @@ function registerIpcHandlers(): void {
     mainWindow?.close();
   });
 
+  // The page's text field menu (editMenu.ts): the commands its items stand for,
+  // run in the field the page put the focus back into.
+  ipcMain.on('edit-command', (event, command: unknown) => {
+    if (event.sender !== mainWindow?.webContents || !isEditCommand(command)) return;
+    event.sender[command]();
+  });
+  ipcMain.on('replace-misspelling', (event, word: unknown) => {
+    if (event.sender !== mainWindow?.webContents || !isSpellingWord(word)) return;
+    event.sender.replaceMisspelling(word);
+  });
+  ipcMain.on('add-to-dictionary', (event, word: unknown) => {
+    if (event.sender !== mainWindow?.webContents || !isSpellingWord(word)) return;
+    event.sender.session.addWordToSpellCheckerDictionary(word);
+  });
+
   // Connected-origins sync — renderer pushes the current set of instance origins
   // so setWindowOpenHandler can route /join/* URLs in-app synchronously.
   ipcMain.on('set-connected-origins', (_evt, origins: unknown) => {
@@ -679,39 +681,6 @@ function registerIpcHandlers(): void {
     knownInstanceOrigins.clear();
     for (const o of origins) {
       if (typeof o === 'string' && o.length > 0) knownInstanceOrigins.add(o);
-    }
-  });
-
-  // Instance URL management
-  ipcMain.handle('get-instance-url', () => loadInstanceUrl());
-
-  ipcMain.handle('set-instance-url', (_event, url: string) => {
-    saveInstanceUrl(url);
-    if (mainWindow) {
-      mainWindow.loadURL(url);
-      // Force Electron to re-evaluate drag regions after navigation
-      mainWindow.webContents.once('did-finish-load', () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          const bounds = mainWindow.getBounds();
-          mainWindow.setSize(bounds.width + 1, bounds.height);
-          mainWindow.setSize(bounds.width, bounds.height);
-        }
-      });
-    }
-  });
-
-  ipcMain.handle('clear-instance-url', () => {
-    clearInstanceUrl();
-    if (mainWindow) {
-      mainWindow.loadFile(getPickerPath(), { query: { lang: getDesktopLanguage() } });
-      // Force Electron to re-evaluate drag regions after navigation
-      mainWindow.webContents.once('did-finish-load', () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          const bounds = mainWindow.getBounds();
-          mainWindow.setSize(bounds.width + 1, bounds.height);
-          mainWindow.setSize(bounds.width, bounds.height);
-        }
-      });
     }
   });
 
@@ -731,7 +700,7 @@ function registerIpcHandlers(): void {
 
     try {
       const { autoUpdater } = require('electron-updater');
-      autoUpdater.quitAndInstall();
+      installUpdateNow(autoUpdater);
     } catch {
       store.setStatus({
         phase: 'failed',
@@ -753,6 +722,12 @@ function registerIpcHandlers(): void {
         message: 'Restarting to install the update did not start.',
       });
     }, INSTALL_WATCHDOG_MS);
+  });
+
+  // The renderer reports whether a voice session is open, so an update never
+  // restarts the app in the middle of a call (updateInstall.ts).
+  ipcMain.on('set-call-active', (_event, active: unknown) => {
+    callActive = active === true;
   });
 
   ipcMain.on('check-for-updates', () => {
@@ -816,7 +791,7 @@ function registerIpcHandlers(): void {
     if (event.sender !== mainWindow?.webContents) return 'app';
     return currentPickerMode();
   });
-  // Whether System Audio on this OS build carries Backspace's own playback
+  // Whether System Audio on this OS build carries Tavvit's own playback
   // (the call) to viewers; the stream settings say so before it is turned on.
   ipcMain.handle('get-system-audio-capability', (event, clientUsesSource: unknown) => {
     if (event.sender !== mainWindow?.webContents) return 'unknown';
@@ -866,7 +841,7 @@ function registerIpcHandlers(): void {
       // executableWillLaunchAtLogin to honour Task Manager's StartupApproved state.
       const osState = app.getLoginItemSettings({ path: process.execPath });
       const ownEntry = osState.launchItems?.find(
-        (item) => item.name === 'Backspace' || item.path?.toLowerCase() === process.execPath.toLowerCase(),
+        (item) => item.name === 'Tavvit' || item.path?.toLowerCase() === process.execPath.toLowerCase(),
       );
       // When the Run entry exists, its args are the source of truth for startMinimized.
       // When the entry is absent (autostart is off), there is no OS state to read, so we
@@ -905,7 +880,7 @@ function registerIpcHandlers(): void {
     if (process.platform === 'win32') {
       const osState = app.getLoginItemSettings({ path: process.execPath });
       const ownEntry = osState.launchItems?.find(
-        (item) => item.name === 'Backspace' || item.path?.toLowerCase() === process.execPath.toLowerCase(),
+        (item) => item.name === 'Tavvit' || item.path?.toLowerCase() === process.execPath.toLowerCase(),
       );
       currentOpenAtLogin = osState.executableWillLaunchAtLogin ?? false;
       // See `get-auto-launch-settings`: when the entry is absent, fall back to disk
@@ -986,6 +961,54 @@ const INSTALL_WATCHDOG_MS = 4_000;
 let updateStore: UpdateStatusStore | null = null;
 
 /**
+ * Whether the renderer has a voice session open (a channel, a DM call, one
+ * ringing or connecting). Only the renderer knows; it tells main through
+ * `set-call-active`. An update never installs while it is true.
+ */
+let callActive = false;
+
+/** This start follows an update installed while the window was in the tray (updateInstall.ts). */
+let restartedHidden = false;
+
+/** The timer that waits for a moment to install a downloaded update. */
+let autoInstallTimer: NodeJS.Timeout | null = null;
+
+/** The updater initAutoUpdater started, for the install paths outside it (the tray, the recovery page). */
+let installableUpdater: { quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => void } | null = null;
+
+/**
+ * Installs the downloaded update now: silently, then the app starts again.
+ * A window that was in the tray goes back there after the restart.
+ */
+function installUpdateNow(updater: { quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => void }): void {
+  if (autoInstallTimer) {
+    clearInterval(autoInstallTimer);
+    autoInstallTimer = null;
+  }
+  if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) {
+    markRestartHidden(app.getPath('userData'), app.getVersion());
+  }
+  updater.quitAndInstall(true, true);
+}
+
+/**
+ * Waits for a moment that interrupts nobody, then installs (updateInstall.ts,
+ * `shouldInstallNow`): never during a call, at once while the window is away,
+ * otherwise once nobody has used the computer for a few minutes.
+ */
+function scheduleAutoInstall(updater: { quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => void }): void {
+  if (autoInstallTimer) return;
+  const attempt = () => {
+    const windowVisible = !!mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized();
+    if (shouldInstallNow({ inCall: callActive, windowVisible, systemIdleSeconds: powerMonitor.getSystemIdleTime() })) {
+      installUpdateNow(updater);
+    }
+  };
+  autoInstallTimer = setInterval(attempt, INSTALL_CHECK_INTERVAL_MS);
+  attempt();
+}
+
+/**
  * The update status store, built on first use.
  *
  * Construction needs `app.getPath('userData')` and the signature probe, so it
@@ -1015,7 +1038,7 @@ function getUpdateStore(): UpdateStatusStore {
  */
 function notifyAboutUpdate(
   snapshot: UpdateSnapshot,
-  updater: { quitAndInstall: () => void },
+  updater: { quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => void },
 ): void {
   if (!shouldPromptForUpdate(snapshot)) return;
   // A focused user can see the in-app toast. Notifying as well is noise.
@@ -1026,15 +1049,15 @@ function notifyAboutUpdate(
 
   if (snapshot.status.phase === 'ready' && snapshot.capability === 'auto') {
     showNotification(
-      'Backspace update ready',
+      'Tavvit update ready',
       `Click to restart and install version ${version}.`,
-      () => updater.quitAndInstall(),
+      () => installUpdateNow(updater),
     );
     return;
   }
 
   showNotification(
-    `Backspace ${version} is available`,
+    `Tavvit ${version} is available`,
     'Click to open the download page.',
     () => { void shell.openExternal(RELEASES_URL); },
   );
@@ -1064,6 +1087,13 @@ function initAutoUpdater(): void {
     // the wasted disk, and the spurious install error all at once.
     autoUpdater.autoDownload = capability === 'auto';
     autoUpdater.autoInstallOnAppQuit = capability === 'auto';
+    // What the updater did goes to {userData}/logs/updater.log: on a packaged
+    // Windows build nothing reads the console.
+    autoUpdater.logger = createUpdaterLogger(app.getPath('userData'));
+    // The update server answers one byte range per request, so a differential
+    // download could only fail and start over; each update downloads whole.
+    autoUpdater.disableDifferentialDownload = true;
+    autoUpdater.disableWebInstaller = true;
 
     if (capability === 'manual') {
       // Reclaim whatever earlier versions of this app already stranded.
@@ -1071,6 +1101,7 @@ function initAutoUpdater(): void {
     }
 
     setAutoUpdater(autoUpdater);
+    installableUpdater = autoUpdater;
 
     let updateConfirmed = false;
     // The version the current check cycle is about. `download-progress` and the
@@ -1146,6 +1177,9 @@ function initAutoUpdater(): void {
       store.setStatus({ phase: 'ready', version });
       mainWindow?.webContents.send('update-downloaded', { version });
       notifyAboutUpdate(store.get(), autoUpdater);
+      // The update installs by itself at the next quiet moment; the toast's
+      // "Restart now" only makes that moment now.
+      if (capability === 'auto') scheduleAutoInstall(autoUpdater);
     });
 
     autoUpdater.on('error', (err: unknown) => {
@@ -1178,28 +1212,34 @@ function initAutoUpdater(): void {
       store.setStatus({ phase: 'failed', version: null, message });
     });
 
-    // Initial check with 10s delay (existing behavior)
-    setTimeout(() => {
+    // A check 10 s after start, then every 30 minutes, so a new version is
+    // picked up within the half hour. A downloaded update that waits for its
+    // moment is not checked for again.
+    const check = () => {
+      if (store.get().status.phase === 'ready') return;
       updateConfirmed = false;
-      autoUpdater.checkForUpdates().catch(() => {});
-    }, 10_000);
-
-    // Periodic check every 4 hours (existing behavior)
-    setInterval(() => {
-      updateConfirmed = false;
-      autoUpdater.checkForUpdates().catch(() => {});
-    }, 4 * 60 * 60 * 1000);
-  } catch {
+      autoUpdater.checkForUpdates().catch((err: unknown) => {
+        console.warn('[update] check failed:', err instanceof Error ? err.message : err);
+      });
+    };
+    setTimeout(check, 10_000);
+    setInterval(check, 30 * 60 * 1000);
+  } catch (err) {
     // Auto-updater unavailable — recovery surface still functions, just
     // without update affordances. autoUpdaterRef stays null; recovery action
     // handlers no-op on update-related actions.
+    console.error('[update] electron-updater could not start:', err);
   }
 }
 
 // ─── Deep Linking ───────────────────────────────────────────────────────────
 
+function isDeepLink(url: string): boolean {
+  return url.startsWith('tavvit://') || url.startsWith('orbit://');
+}
+
 function handleDeepLink(url: string): void {
-  if (!url.startsWith('backspace://')) return;
+  if (!isDeepLink(url)) return;
 
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('deep-link', url);
@@ -1223,10 +1263,11 @@ if (process.platform === 'linux') {
   app.commandLine.appendSwitch('enable-features', 'PulseaudioLoopbackForScreenShare');
 }
 
-// Windows: AppUserModelId so toast notifications attribute correctly to Backspace
+// Windows: AppUserModelId so toast notifications attribute correctly to Tavvit
 // (without this, recovery / update notifications appear under "electron.exe").
+// It matches `appId` in electron-builder.yml.
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.backspace.desktop');
+  app.setAppUserModelId('de.hashhive.orbit');
 }
 
 /**
@@ -1241,7 +1282,9 @@ export function requestQuit(): void {
 }
 
 // Set as default protocol handler
-app.setAsDefaultProtocolClient('backspace');
+app.setAsDefaultProtocolClient('tavvit');
+// Invite links from before the rename are still in people's chats.
+app.setAsDefaultProtocolClient('orbit');
 
 // macOS: open-url event
 app.on('open-url', (event, url) => {
@@ -1257,7 +1300,7 @@ if (!gotTheLock) {
 } else {
   app.on('second-instance', (_event, commandLine) => {
     // Find the deep link URL in the command line args
-    const deepLinkArg = commandLine.find((arg) => arg.startsWith('backspace://'));
+    const deepLinkArg = commandLine.find(isDeepLink);
     if (deepLinkArg) {
       handleDeepLink(deepLinkArg);
     }
@@ -1384,12 +1427,12 @@ if (!gotTheLock) {
 
         // Provide the selected source — Electron creates the MediaStream.
         // System audio loopback support varies:
-        //   - Windows: WASAPI loopback. Backspace's own
+        //   - Windows: WASAPI loopback. Tavvit's own
         //     playback is left out only on Windows 11, where Chromium honours
         //     the renderer's restrictOwnAudio (see systemAudioCapability.ts);
         //     on Windows 10 the whole mix, this call included, is captured.
         //   - macOS 13+: ScreenCaptureKit, or CoreAudio Tap from 14.2, which
-        //     also leaves Backspace out; requires NSAudioCaptureUsageDescription
+        //     also leaves Tavvit out; requires NSAudioCaptureUsageDescription
         //     in Info.plist (electron-builder injects it via mac.extendInfo).
         //   - Linux: PulseAudio loopback, gated behind the
         //     `PulseaudioLoopbackForScreenShare` feature flag we enable above.
@@ -1416,15 +1459,19 @@ if (!gotTheLock) {
     // createWindow so a synchronous did-fail-load on first load finds a wired
     // Quit handler. requestQuit is a function declaration and is hoisted.
     setOnQuitRequested(() => requestQuit());
+    setOnInstallRequested(() => {
+      if (installableUpdater) installUpdateNow(installableUpdater);
+    });
+    // An update that installed while the window was in the tray starts the
+    // app hidden again (updateInstall.ts).
+    restartedHidden = consumeRestartHidden(app.getPath('userData'), app.getVersion());
     createWindow();
     createTray();
 
-    // AGPL-3.0 § 13: native About panel advertises the version + source repo.
     app.setAboutPanelOptions({
-      applicationName: 'Backspace',
+      applicationName: 'Tavvit',
       applicationVersion: app.getVersion(),
-      copyright: `AGPL-3.0-only · Source: ${UPSTREAM_SOURCE_URL}`,
-      website: UPSTREAM_SOURCE_URL,
+      website: APP_URL,
     });
 
     // Tray + macOS app-menu actions. Defined once so the subscriber and the
@@ -1434,12 +1481,11 @@ if (!gotTheLock) {
       onHide: () => mainWindow?.hide(),
       // Delegate to handleRecoveryAction so both the tray and the recovery
       // surface share one implementation path (avoids drift and ensures
-      // recovery state is always cleared on a Change Instance action).
-      onChangeInstance: () => handleRecoveryAction('change-instance'),
+      // recovery state is always cleared on a Reload).
+      onReload: () => handleRecoveryAction('reload'),
       onCheckForUpdates: () => handleRecoveryAction('check-update'),
       onRestartToInstall: () => handleRecoveryAction('install-update'),
       onOpenReleases: () => handleRecoveryAction('open-releases'),
-      onOpenSource: () => openSourceCode(),
       onQuit: () => requestQuit(),
     };
 
@@ -1474,14 +1520,59 @@ if (!gotTheLock) {
       applyMenusForState(recoveryStore.get());
     });
 
-    initAutoUpdater();
-
-    // ─── Activity Detection ────────────────────────────────────────────────
-    startActivityDetection((activity) => {
-      mainWindow?.webContents.send('activity-detected', activity);
+    // The window's own buttons sit on the page's frame, whose colour the page's theme
+    // decides. Only a plain colour gets through: this is a value from the renderer.
+    ipcMain.on('set-frame-color', (_event, color: unknown) => {
+      if (process.platform === 'darwin' || typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color)) return;
+      mainWindow?.setTitleBarOverlay({ color });
     });
 
-    ipcMain.handle('get-current-activity', () => getCurrentActivity());
+    initAutoUpdater();
+
+    // ─── Game detection ────────────────────────────────────────────────────
+    // On unless the person turned it off in Settings → Games. Sharing what is
+    // detected is the separate Privacy switch, checked by the instance.
+    let gameDetection: GameDetectionSettings = loadGameDetection(app.getPath('userData'));
+    const sendActivity = (activity: unknown) => {
+      mainWindow?.webContents.send('activity-detected', activity);
+    };
+    const gameDetectionState = () => ({
+      enabled: gameDetection.enabled,
+      userGames: gameDetection.userGames,
+      current: gameDetection.enabled ? getCurrentActivity() : null,
+    });
+    const storeGameDetection = (next: GameDetectionSettings) => {
+      gameDetection = next;
+      try {
+        saveGameDetection(app.getPath('userData'), next);
+      } catch (err) {
+        console.warn('[gameDetection] could not save settings:', err);
+      }
+    };
+    setUserGames(gameDetection.userGames);
+    if (gameDetection.enabled) startActivityDetection(sendActivity);
+
+    ipcMain.handle('get-current-activity', () => (gameDetection.enabled ? getCurrentActivity() : null));
+    ipcMain.handle('game-detection-get', () => gameDetectionState());
+    ipcMain.handle('game-detection-set-enabled', (_event, enabled: unknown) => {
+      if (typeof enabled !== 'boolean' || enabled === gameDetection.enabled) return gameDetectionState();
+      storeGameDetection({ ...gameDetection, enabled });
+      if (enabled) {
+        startActivityDetection(sendActivity);
+      } else {
+        stopActivityDetection();
+        sendActivity(null);
+      }
+      return gameDetectionState();
+    });
+    ipcMain.handle('game-detection-remove', (_event, process: unknown) => {
+      if (typeof process !== 'string') return gameDetectionState();
+      storeGameDetection({ ...gameDetection, userGames: withoutUserGame(gameDetection.userGames, process) });
+      setUserGames(gameDetection.userGames);
+      return gameDetectionState();
+    });
+
+    migrateLegacyLoginItem();
 
     // Linux/AppImage path-refresh ONLY. On Windows and macOS the OS is the source
     // of truth for openAtLogin (Task 4) and we must not override user changes made
@@ -1496,7 +1587,7 @@ if (!gotTheLock) {
           os.homedir(),
           '.config',
           'autostart',
-          'backspace.desktop',
+          'tavvit.desktop',
         );
         let recordedExecPath: string | null = null;
         try {
@@ -1517,7 +1608,7 @@ if (!gotTheLock) {
     }
 
     // Check if the app was launched with a deep link (Windows/Linux)
-    const launchArg = process.argv.find((arg) => arg.startsWith('backspace://'));
+    const launchArg = process.argv.find(isDeepLink);
     if (launchArg) {
       pendingDeepLink = launchArg;
     }

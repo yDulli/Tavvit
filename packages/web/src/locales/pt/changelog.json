@@ -1,0 +1,115 @@
+{
+  "title": "Novidades",
+  "lead": "O que mudou no Tavvit, do mais novo ao mais antigo.",
+  "note": "Novo na {{version}}: {{title}}",
+  "noteClose": "Fechar",
+  "versions": {
+    "1.32.5": {
+      "title": "Mais trabalho de segurança",
+      "items": {
+        "files": "Os arquivos enviados antes da última atualização também recebem, nos próximos dias, endereços que ninguém consegue adivinhar.",
+        "shortcuts": "Atalhos no app para desktop precisam de Ctrl, Alt ou da tecla do sistema para letras, números e Espaço, para que o app nunca ouça o que você digita em outros programas.",
+        "server": "Por dentro, o servidor roda num framework mais novo e verifica com mais rigor de onde vem cada pedido."
+      }
+    },
+    "1.32.4": {
+      "title": "Imagens mais seguras e voz privada",
+      "items": {
+        "media": "Figurinhas, fotos de perfil e ícones só vêm deste servidor ou do servidor onde a pessoa tem a conta. Uma figurinha de outro lugar espera até você escolher carregá-la.",
+        "voice": "Um canal de voz privado continua privado: quem não pode vê-lo não pode entrar nem ver quem está nele.",
+        "files": "Os arquivos enviados recebem endereços que ninguém consegue adivinhar."
+      }
+    },
+    "1.32.3": {
+      "title": "Ícones de canal",
+      "items": {
+        "icons": "Um espaço pode dar a cada canal um ícone próprio, um do conjunto ou um emoji, no lugar do ícone do tipo de canal."
+      }
+    },
+    "1.32.2": {
+      "title": "Altere seu nome de usuário",
+      "items": {
+        "username": "Agora você pode alterar seu nome de usuário nas configurações da conta, uma vez a cada 30 dias.",
+        "roadmap": "O roteiro mostra o que vem a seguir."
+      }
+    },
+    "1.32.1": {
+      "title": "Traduzir uma mensagem",
+      "items": {
+        "translate": "Clique com o botão direito em uma mensagem, ou segure no celular, e escolha Traduzir. A tradução aparece abaixo do original, e você escolhe o idioma nas configurações."
+      }
+    },
+    "1.32.0": {
+      "title": "Fóruns, anúncios e um endereço próprio",
+      "items": {
+        "forums": "Um canal de fórum separa perguntas e temas em publicações: cada uma tem título, tags e sua própria conversa, e a lista acompanha o que está acontecendo.",
+        "announcements": "Um canal de anúncios é escrito por poucos e lido por todos. Outros espaços podem segui-lo, e cada publicação chega também ao canal deles.",
+        "address": "Um espaço pode ter um endereço de convite com palavras, como /join/night-shift, que nunca expira."
+      }
+    },
+    "1.31.0": {
+      "title": "Muito mais rápido com muita gente aqui",
+      "items": {
+        "speed": "As mensagens chegam rápido mesmo com mil pessoas online, e abrir o app usa bem menos dados.",
+        "pages": "Esta página é nova, assim como uma página de ajuda e uma de status.",
+        "safety": "Uma conta desconectada ou suspensa sai de uma chamada de voz na hora."
+      }
+    },
+    "1.30.0": {
+      "title": "Documentação para desenvolvedores",
+      "items": {
+        "docs": "Tudo sobre bots e webhooks, com um guia rápido, em /developers."
+      }
+    },
+    "1.29.0": {
+      "title": "Muito mais para bots",
+      "items": {
+        "cards": "Bots podem mostrar cartões com títulos, campos e imagens.",
+        "commands": "Comandos de barra podem pedir coisas e responder só para você.",
+        "portal": "Uma página própria para seus bots: imagem, token, endereço de convite."
+      }
+    },
+    "1.28.0": {
+      "title": "Limites justos",
+      "items": {
+        "storage": "Veja quanto espaço seus arquivos ocupam em Configurações, Conta."
+      }
+    },
+    "1.27.0": {
+      "title": "Detecção de jogos que funciona",
+      "items": {
+        "games": "O app para desktop pergunta diretamente à Steam, Epic e GOG qual jogo você está jogando."
+      }
+    },
+    "1.26.0": {
+      "title": "Bots",
+      "items": {
+        "bots": "Bots podem entrar em espaços, com comandos de barra, sob as permissões que o espaço lhes dá."
+      }
+    },
+    "1.25.0": {
+      "title": "Mensagens de voz e mais",
+      "items": {
+        "voice": "Grave uma mensagem de voz direto no chat.",
+        "saved": "Salve mensagens e receba lembretes delas.",
+        "alerts": "Seja avisado quando alguém escrever uma palavra que você escolher.",
+        "soundboard": "Toque clipes para todos em uma chamada com a mesa de sons."
+      }
+    },
+    "1.24.0": {
+      "title": "Tópicos e eventos",
+      "items": {
+        "threads": "Acompanhe uma conversa paralela em um tópico próprio.",
+        "events": "Planeje eventos em um espaço, com lembretes.",
+        "welcome": "Espaços podem receber novos membros e pedir que aceitem as regras."
+      }
+    },
+    "1.23.0": {
+      "title": "Mais o que fazer com uma mensagem",
+      "items": {
+        "pins": "Fixe mensagens, esconda spoilers, encaminhe e faça enquetes.",
+        "push": "Receba notificações com o app fechado."
+      }
+    }
+  }
+}

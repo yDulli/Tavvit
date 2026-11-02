@@ -1,22 +1,55 @@
 {
   "update": {
-    "laterHint": "Du kannst das Update später in den Einstellungen unter Desktop installieren",
+    "laterHint": "Es installiert sich selbst, sobald Tavvit im Infobereich liegt oder du nicht da bist.",
+    "laterHintSettings": "Du kannst das Update später in den Einstellungen unter Desktop installieren",
     "dismiss": "Dieses Update ausblenden",
     "failed": {
       "title": "Update konnte nicht installiert werden",
-      "body": "Backspace {{version}} wurde heruntergeladen, aber die Installation ist fehlgeschlagen. Du kannst es stattdessen von Hand installieren."
+      "body": "Tavvit {{version}} wurde heruntergeladen, aber die Installation ist fehlgeschlagen. Du kannst es stattdessen von Hand installieren."
     },
     "ready": {
       "title": "Update bereit",
-      "body": "Backspace {{version}} ist heruntergeladen und bereit zur Installation."
+      "body": "Tavvit {{version}} ist heruntergeladen. Es installiert sich selbst, wenn du nicht da bist, nie während eines Anrufs, oder jetzt mit einem Neustart."
     },
     "available": {
-      "title": "Backspace {{version}} ist verfügbar",
+      "title": "Tavvit {{version}} ist verfügbar",
       "body": "Dieser Build kann sich nicht selbst aktualisieren. Lade die neue Version herunter, um darauf umzusteigen.",
       "bodyWithCurrent": "Du verwendest {{currentVersion}}. Dieser Build kann sich nicht selbst aktualisieren. Lade die neue Version herunter, um darauf umzusteigen."
     },
     "restartNow": "Jetzt neu starten",
     "download": "Herunterladen",
     "later": "Später"
+  },
+  "download": {
+    "kicker": "Desktop",
+    "title": "Tavvit für Windows",
+    "description": "Dasselbe Tavvit in einem eigenen Fenster. Es kann mit deinem Computer starten, hält dich angemeldet, und Push-to-Talk funktioniert auch, während eine andere App im Vordergrund ist.",
+    "button": "Für Windows herunterladen",
+    "short": "Herunterladen",
+    "meta": "v{{version}} · {{size}}",
+    "detected": "Erkannt: {{system}}",
+    "unsupported": "Für {{system}} gibt es noch keine Desktop-App. Der Download ist der Windows-Installer; auf diesem Gerät läuft Tavvit im Browser.",
+    "otherVersions": "Alle Installer",
+    "arch": {
+      "x64": "Windows, 64-Bit (x64)",
+      "arm64": "Windows auf ARM (arm64)"
+    },
+    "system": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS",
+      "other": "dieses System"
+    },
+    "none": "Auf diesem Server wurde noch keine Desktop-Version veröffentlicht. Bis dahin funktioniert Tavvit vollständig im Browser.",
+    "failed": "Die Liste der Downloads konnte nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "releasedOn": "Veröffentlicht am {{date}}",
+    "checksum": "SHA-512",
+    "browserNote": "Tavvit funktioniert auch ohne Installation:",
+    "openInBrowser": "im Browser öffnen",
+    "backToApp": "Zurück zu Tavvit",
+    "signIn": "Anmelden"
   }
 }

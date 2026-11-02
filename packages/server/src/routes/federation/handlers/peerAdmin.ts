@@ -3,6 +3,7 @@ import { getDb, schema } from '../../../db/index.js';
 import { authenticate, requireAdmin } from '../../../utils/auth.js';
 import { buildFederationHeaders, generateHmacSecret } from '../../../utils/federationAuth.js';
 import { recordPeerAttempt, removePeer, transitionPeer } from '../../../utils/federationPeerState.js';
+import { recordPeerTrust } from '../../../utils/platformAudit.js';
 import { probePeerReachable, recoverOrDetectReset } from '../../../utils/federationRecovery.js';
 import { federationFetch } from '../../../utils/federationFetch.js';
 import { detachedHomeInstanceMatch } from '../../../utils/federationReset.js';
@@ -149,6 +150,7 @@ export function registerPeerAdminRoutes(app: FastifyInstance): void {
         to: 'revoked',
         cause: 'admin_revoked',
       });
+      recordPeerTrust(request.userId, peer, 'revoked');
 
       return reply.code(200).send({ success: true });
     },
@@ -186,6 +188,7 @@ export function registerPeerAdminRoutes(app: FastifyInstance): void {
       if (!removePeer(id, { from: ['needs_attention'] })) {
         return reply.code(409).send({ error: 'The peer changed; reload and try again', statusCode: 409 });
       }
+      recordPeerTrust(request.userId, peer, 'reset');
 
       return reply.code(200).send({ success: true });
     },
@@ -322,6 +325,8 @@ export function registerPeerAdminRoutes(app: FastifyInstance): void {
 
       removePeer(id, { from: ['revoked', 'rejected'] });
 
+      recordPeerTrust(request.userId, peer, 'removed');
+
       return reply.code(200).send({ success: true });
     },
   );
@@ -399,6 +404,7 @@ export function registerPeerAdminRoutes(app: FastifyInstance): void {
           .run();
 
         console.log(`[federation] Secret rotation initiated with peer ${peer.origin}`);
+        recordPeerTrust(request.userId, peer, 'rotated');
 
         return reply.code(200).send({ success: true, gracePeriodMs: 900_000 });
       } catch (err: unknown) {

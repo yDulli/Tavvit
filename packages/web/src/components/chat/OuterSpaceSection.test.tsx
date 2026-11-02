@@ -56,10 +56,6 @@ vi.mock('../../hooks/useSpaceJoin', () => ({
   }),
 }));
 
-vi.mock('../../hooks/useMascotAnimation', () => ({
-  useMascotAnimation: vi.fn(),
-}));
-
 function entry(id: string, origin = 'https://orbit.example'): DirectoryEntry {
   return {
     id,
@@ -125,7 +121,7 @@ describe('OuterSpaceSection', () => {
   it('renders the header and fetches the query on mount', () => {
     renderSection('nebula');
     expect(screen.getByText('Outer Space')).toBeInTheDocument();
-    expect(screen.getByText('Communities across Backspace')).toBeInTheDocument();
+    expect(screen.getByText('Communities across Tavvit')).toBeInTheDocument();
     expect(fetchDirectory).toHaveBeenCalledTimes(1);
     expect(fetchDirectory).toHaveBeenCalledWith('nebula');
   });
@@ -197,13 +193,15 @@ describe('OuterSpaceSection', () => {
     expect(screen.getByText('Nothing in Outer Space matches your search.')).toBeInTheDocument();
   });
 
-  it('ok, zero entries, no query: the early-days copy with the mascot', () => {
+  it('ok, zero entries, no query: the early-days copy with the empty-state icon', () => {
     setDirectory({ status: 'ok' });
     renderSection('');
     expect(
-      screen.getByText('Nothing out there yet. Spaces that opt in to the directory appear here.'),
+      screen.getByText('Nothing out there yet. Approved spaces whose owners opt in to the directory appear here.'),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('outer-space-mascot')).toBeInTheDocument();
+    const icon = screen.getByTestId('outer-space-mascot');
+    expect(icon).toBeInTheDocument();
+    expect(icon.className).toContain('empty-state-icon');
   });
 
   it('ok with entries: a grid of outer cards wired to onConnect', () => {

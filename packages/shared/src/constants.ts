@@ -1,3 +1,17 @@
+// ─── Product identity ────────────────────────────────────────────────────────
+
+/** The product name. The per-instance display name is configurable; this is the software. */
+export const PRODUCT_NAME = 'Tavvit';
+
+/**
+ * What an instance is called until its admin names it. Used wherever the stored
+ * name is null, and written into a fresh database by `ensureDefaults`.
+ */
+export const DEFAULT_INSTANCE_NAME = 'Tavvit';
+
+/** The instance accent colour when the admin has not chosen one (`#rrggbb`). */
+export const DEFAULT_ACCENT_COLOR = '#7466e8';
+
 // ─── Streaming Constants ─────────────────────────────────────────────────────
 
 export const STANDARD_RESOLUTIONS = [540, 720, 1080, 1440, 2160] as const;
@@ -96,6 +110,8 @@ export const GROUP_DM_ICON_MIME_PREFIX = 'image/';
  * and the server's never disagree.
  */
 export const PASSWORD_MIN_LENGTH = 8;
+/** Long enough for any passphrase, short enough that hashing it costs nothing extra. */
+export const PASSWORD_MAX_LENGTH = 256;
 
 // ─── Space Nickname and Owner Title Constants ────────────────────────────────
 

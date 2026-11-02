@@ -38,7 +38,7 @@ import { selfIdentityOf, userKey } from '../utils/identity';
 // The account is native to the page's instance (nova, origin ''); orbit
 // knows the same person as row o-7, and orbit's own user o-1 shares the id
 // the session row has on nova.
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const CHANNEL = 'orbit-chan';
 const DM = 'orbit-dm';
 
@@ -58,10 +58,10 @@ function serverMessage(id: string, user: User, createdAt: number): MessageWithUs
 }
 
 beforeEach(() => {
-  useAuthStore.setState({ user: me, myRowIds: new Map([[ORBIT, 'o-7']]) });
+  useAuthStore.setState({ user: me, myRowIds: new Map([[TAVVIT, 'o-7']]) });
   useSpaceStore.setState({
     spaceChannelIndex: new Map([[CHANNEL, 'orbit-space']]),
-    channelOriginMap: new Map([[CHANNEL, ORBIT], [DM, ORBIT]]),
+    channelOriginMap: new Map([[CHANNEL, TAVVIT], [DM, TAVVIT]]),
     dmChannels: [],
   });
   useChatStore.setState({ messages: new Map(), replyTargets: new Map(), detachedChannels: new Map() });
@@ -81,21 +81,21 @@ describe('sendMessage optimistic rows on another instance', () => {
     expect(temp!.id.startsWith('temp_')).toBe(true);
     expect(temp!.userId).toBe('o-7');
     expect(temp!.user.id).toBe('o-7');
-    expect(isMe(temp!.user, ORBIT)).toBe(true);
-    expect(userKey(temp!.user, ORBIT)).toBe(userKey(me, ''));
+    expect(isMe(temp!.user, TAVVIT)).toBe(true);
+    expect(userKey(temp!.user, TAVVIT)).toBe(userKey(me, ''));
   });
 
   it('keeps Up arrow from opening an older message while the newest is unsent', () => {
     useChatStore.setState({ messages: new Map([[CHANNEL, [serverMessage('1', orbitMe, 1)]]]) });
     void useChatStore.getState().sendMessage(CHANNEL, 'just sent');
     const self = selfIdentityOf(me, useAuthStore.getState().myRowIds);
-    expect(findLastOwnEditableMessage(cached(CHANNEL), ORBIT, self)).toBeNull();
+    expect(findLastOwnEditableMessage(cached(CHANNEL), TAVVIT, self)).toBeNull();
   });
 
   it("does not make the user out to be orbit's own user who shares the session row's id", () => {
     void useChatStore.getState().sendMessage(CHANNEL, 'hello');
     const [temp] = cached(CHANNEL);
-    expect(userKey(temp!.user, ORBIT)).not.toBe(userKey(orbitMira, ORBIT));
+    expect(userKey(temp!.user, TAVVIT)).not.toBe(userKey(orbitMira, TAVVIT));
   });
 
   it("previews the unsent group DM message as the user's", () => {
@@ -111,7 +111,7 @@ describe('sendMessage optimistic rows on another instance', () => {
     });
     void useChatStore.getState().sendMessage(DM, 'hi all');
     expect(patched!.lastMessage!.userId).toBe('o-7');
-    const viewer = { self: selfIdentityOf(me, useAuthStore.getState().myRowIds), origin: ORBIT };
+    const viewer = { self: selfIdentityOf(me, useAuthStore.getState().myRowIds), origin: TAVVIT };
     expect(formatDmSidebarPreview(patched!, viewer)).toBe('hi all');
   });
 

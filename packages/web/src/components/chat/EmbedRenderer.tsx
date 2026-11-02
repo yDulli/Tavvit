@@ -4,6 +4,7 @@ import { GenericEmbed } from './embeds/GenericEmbed';
 import { VideoEmbed } from './embeds/VideoEmbed';
 import { ImageEmbed } from './embeds/ImageEmbed';
 import { RichEmbed } from './embeds/RichEmbed';
+import { ExternalGate } from '../ui/ExternalMedia';
 
 interface EmbedRendererProps {
   embed: Embed;
@@ -21,23 +22,25 @@ export function EmbedRenderer({ embed }: EmbedRendererProps) {
 
     case 'audio':
       return (
-        <div className="mt-2 max-w-[400px] bg-surface-channel rounded-[4px] border-l-4 border-border-hard p-3">
+        <div className="surface-card max-w-[400px] rounded-lg p-2.5">
           {embed.title && (
             <a
               href={embed.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[14px] text-sky-400 font-semibold hover:underline block mb-2 truncate"
+              className="mb-2 block truncate text-body font-medium text-txt-primary hover:underline"
             >
               {embed.title}
             </a>
           )}
-          <audio
-            src={embed.url}
-            controls
-            preload="metadata"
-            className="w-full"
-          />
+          <ExternalGate url={embed.url}>
+            <audio
+              src={embed.url}
+              controls
+              preload="metadata"
+              className="h-8 w-full"
+            />
+          </ExternalGate>
         </div>
       );
 

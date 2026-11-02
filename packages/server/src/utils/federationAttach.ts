@@ -1,3 +1,5 @@
+import { getDb, schema } from '../db/index.js';
+import { extractDomain } from '../routes/federation/identity.js';
 import { buildFederationHeaders, verifySignature, getOurOrigin } from './federationAuth.js';
 import { federationFetch } from './federationFetch.js';
 
@@ -59,4 +61,21 @@ export async function verifyAttachProofWithPeer(
     // fall through
   }
   return { valid: false };
+}
+
+/**
+ * Whether someone registering as a person from another instance is that person: their home says so
+ * for the proof they brought, which only a session of theirs there could ask for. Only an instance
+ * this one already trusts is asked, so that a stranger cannot make this server call any address.
+ */
+export async function homeIdentityProven(homeInstance: string, homeUserId: string, username: string, proof: string): Promise<boolean> {
+  if (!/^[0-9a-f]{64}$/i.test(proof)) return false;
+  const homeDomain = homeInstance.toLowerCase();
+  const peer = getDb().select().from(schema.federationPeers).all()
+    .find((row) => extractDomain(row.origin).toLowerCase() === homeDomain && row.status === 'active');
+  if (!peer) return false;
+  const verified = await verifyAttachProofWithPeer(peer, proof);
+  if (!verified.valid || verified.homeUserId !== homeUserId) return false;
+  const [localPart, domainPart] = username.split('@');
+  return localPart === verified.username.toLowerCase() && domainPart === homeDomain;
 }

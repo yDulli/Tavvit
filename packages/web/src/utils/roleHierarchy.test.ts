@@ -106,6 +106,12 @@ describe('viewerCanEditMemberRoles', () => {
     expect(viewerCanEditMemberRoles(SPACE, members, roles, MANAGE, byId(members, 'peer'))).toBe(false);
   });
 
+  it('offers the owner their own roles: ownership, not a role, carries their rights', () => {
+    const { members, roles } = fixture();
+    useAuthStore.setState({ user: user('owner') });
+    expect(viewerCanEditMemberRoles(SPACE, members, roles, permissionsToString(ALL_PERMISSIONS), byId(members, 'owner'))).toBe(true);
+  });
+
   it('needs MANAGE_ROLES, known or not', () => {
     const { members, roles } = fixture();
     const helper = byId(members, 'helper');

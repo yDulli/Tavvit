@@ -18,8 +18,13 @@ type ModalType =
   | 'addDmMember'
   | 'groupDmSettings'
   | 'userProfile'
+  | 'report'
+  | 'forwardMessage'
+  | 'createPoll'
   | 'connectAndJoin'
   | 'memberRoles'
+  | 'discordImport'
+  | 'spaceProfile'
   | null;
 
 /**
@@ -50,9 +55,17 @@ interface Toast {
   action?: ToastAction;
 }
 
-interface UIState {
+export interface UIState {
   sidebarOpen: boolean;
+  /** The people column's persisted state in a wide window. */
   memberListOpen: boolean;
+  /** The window is compact (platform/interfaceScale.ts): the people column floats. */
+  isCompact: boolean;
+  /** The floating people column's state. Not persisted: a compact window
+   *  always opens on the conversation, never with it covered. */
+  compactPanelOpen: boolean;
+  setIsCompact: (isCompact: boolean) => void;
+  closeCompactPanel: () => void;
   activeModal: ModalType;
   modalData: Record<string, unknown>;
   isMobile: boolean;
@@ -104,12 +117,6 @@ interface UIState {
   setMobileTab: (tab: 'spaces' | 'dms' | 'you') => void;
   pushMobileScreen: (screen: string, params?: Record<string, string>) => void;
   popMobileScreen: () => void;
-
-  // Federation approval-count badge (surfaced by MobileInstancePanel; kept fresh
-  // by the FederationPanel via `onApprovalCountChange` whenever an admin
-  // approves/denies a request from inside the panel)
-  federationApprovalCount: number;
-  setFederationApprovalCount: (count: number) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -117,6 +124,8 @@ export const useUIStore = create<UIState>()(
     (set, get) => ({
       sidebarOpen: true,
       memberListOpen: true,
+      isCompact: false,
+      compactPanelOpen: false,
       activeModal: null,
       modalData: {},
       isMobile: false,
@@ -132,7 +141,14 @@ export const useUIStore = create<UIState>()(
       toasts: [],
 
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      toggleMemberList: () => set((state) => ({ memberListOpen: !state.memberListOpen })),
+      toggleMemberList: () => set((state) => (
+        state.isCompact ? { compactPanelOpen: !state.compactPanelOpen } : { memberListOpen: !state.memberListOpen }
+      )),
+      setIsCompact: (isCompact) => {
+        if (get().isCompact === isCompact) return;
+        set({ isCompact, compactPanelOpen: false });
+      },
+      closeCompactPanel: () => set({ compactPanelOpen: false }),
 
       openModal: (modal, data = {}) => set({ activeModal: modal, modalData: data }),
       closeModal: () => set({ activeModal: null, modalData: {} }),
@@ -225,8 +241,6 @@ export const useUIStore = create<UIState>()(
         // The MobileShell popstate handler manages this — see Task 5.
       },
 
-      federationApprovalCount: 0,
-      setFederationApprovalCount: (count) => set({ federationApprovalCount: count }),
     }),
     {
       name: 'backspace-ui-settings',

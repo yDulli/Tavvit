@@ -1,0 +1,35 @@
+{
+  "title": "Status",
+  "lead": "Se tudo aqui está funcionando agora.",
+  "checking": "Verificando…",
+  "unreachable": "O servidor não responde. Tente de novo em instantes.",
+  "allGood": "Tudo está funcionando.",
+  "someDown": "Algo não está funcionando.",
+  "services": {
+    "chat": "Mensagens e contas",
+    "uploads": "Envio de arquivos",
+    "voice": "Voz e vídeo",
+    "mail": "E-mail"
+  },
+  "states": {
+    "ok": "Funcionando",
+    "down": "Fora do ar",
+    "off": "Não configurado aqui"
+  },
+  "notes": "De quem administra este servidor",
+  "noteOngoing": "Desde {{date}}",
+  "noteEnded": "De {{date}} a {{until}}",
+  "limit": "Esta página roda no mesmo servidor. Se o servidor inteiro cair, ela também cai.",
+  "frame": {
+    "home": "Início",
+    "help": "Ajuda",
+    "changelog": "Novidades",
+    "status": "Status",
+    "terms": "Termos de uso",
+    "privacy": "Privacidade",
+    "imprint": "Aviso legal",
+    "report": "Denunciar conteúdo",
+    "developers": "Desenvolvedores",
+    "roadmap": "Roteiro"
+  }
+}

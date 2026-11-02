@@ -59,14 +59,14 @@ The server speaks the [tus resumable upload protocol](https://tus.io/protocols/r
 | Path | Owner | Contents |
 |------|-------|----------|
 | `${uploadDir}/.tus/` | tus | In-progress uploads + per-upload `<id>.json` metadata sidecar. |
-| `${uploadDir}/` | server | Final files renamed on `POST_FINISH` to `${snowflakeId}${ext}`. |
+| `${uploadDir}/` | server | Final files renamed on `POST_FINISH` to `${snowflakeId}-${32 hex}${ext}` (`storedUploadName`, see Security). |
 
 ### POST_FINISH Hook
 
 When the final PATCH completes, the hook:
 
 1. Verifies `metadata.userId === req.user.id` (defense in depth -- ownership was already enforced on PATCH).
-2. Renames `${uploadDir}/.tus/<uploadId>` to `${uploadDir}/${snowflakeId}${ext}`, where `ext = path.extname(metadata.originalName).toLowerCase()`.
+2. Renames `${uploadDir}/.tus/<uploadId>` to `${uploadDir}/${snowflakeId}-${32 hex}${ext}`, where `ext = path.extname(metadata.originalName).toLowerCase()`.
 3. Runs media processing (sharp for images, ffmpeg/ffprobe for video/audio) -- same code path as the legacy multipart endpoint used to.
 4. Inserts an `attachments` row with `messageId = NULL` (linked to a message later when the user sends).
 5. Returns the new `Attachment` JSON in the final-PATCH response body, so the client can stage the attachment ID without an extra round trip.
@@ -84,6 +84,24 @@ When the final PATCH completes, the hook:
 
 Stats: `getStorageStats()` exposes `staleTusSessions` + `staleTusSize` for the admin Storage Overview, computed via `getStaleTusInfo(60 * 60 * 1000)` — entries with mtime older than 1 h. The display threshold is fixed (matches the cleanup default); the admin route's `maxAgeHours` is what's actually configurable.
 
+### Limits per account
+
+So that no single account can fill the disk (`utils/accountLimits.ts`, `shared/src/accountLimits.ts`). The operator sets them under Admin console → Storage; 0 means no limit, and instance admins have none. The size of one file is its own limit (`maxUploadSizeBytes`), checked first.
+
+| Limit | Default | Where | Refusal |
+|-------|---------|-------|---------|
+| Files one account keeps | 5 GB, `instance_settings.storage_per_account_bytes`, or its own `users.storage_limit_bytes` (0: none; null: the instance's) | `onUploadCreate`, again in `onUploadFinish` | 413 `storage_limit_reached` |
+| Spaces one account owns | 25, `instance_settings.spaces_per_account` | `POST /api/spaces`, the Discord import into a new space. Handing a space over is not limited. | 409 `space_limit_reached` |
+| Room on the disk | Keeps the smaller of 2 GB and 5% free, whoever uploads | `onUploadCreate` (`fs.statfsSync`). A disk that cannot be asked is no reason to refuse. | 507 `disk_full` |
+
+**What counts** is `storageUsedByAccount`: the sizes in `attachments` under `uploader_id`, the account's own and those of the bots it runs, one per `filename`, without `source_url` (a copy fetched from another instance). So a file held through several messages counts once, a forwarded copy counts for the person who forwarded it, and five bots do not make five times the room. It has to: if only the original counted, forwarding a file to yourself and deleting the original would free the room while the file stays. Thumbnails do not count. Pictures of profiles, emoji, stickers and clips have limits of their own and leave `attachments`, or never enter it. Lowering a limit takes nothing away; only new uploads are refused.
+
+**Uploads under way** (`reserveUpload`) count from the moment they start. Their bytes are in `.tus/` and in no table yet: without this, uploads started side by side would all pass, and uploads never finished would take room nothing counts. The check and the reservation run with nothing awaited between them. What is held goes when the upload finishes, is cancelled (`POST_TERMINATE`) or expires (`tusExpirationMs`), and is forgotten on a restart, which is why `onUploadFinish` checks once more and removes the staged file when it no longer fits.
+
+**An upload has to say how long it is.** `Upload-Defer-Length` answers 400: a length given later would pass every limit unchecked.
+
+The refusals are JSON in a tus body (`refusedUpload`), which `uploadFailure` in `stores/transferStore.ts` reads for the code. A person sees their figure under Settings → Account (`StorageSection`, `GET /api/users/@me/storage`).
+
 ### Security
 
 - JWT verified on every tus request (PRE_CREATE, PRE_PATCH, finalize, HEAD, DELETE).
@@ -92,7 +110,8 @@ Stats: `getStorageStats()` exposes `staleTusSessions` + `staleTusSize` for the a
 - **`Location` is relative (`relativeLocation: true`).** An absolute Location would have to be assembled from `Host` / `X-Forwarded-Host`, which is whatever the fronting proxy chose to send; nginx's `$host` drops the port, so an instance on a custom public port handed out a Location pointing at a port the client never used (#44). tus-js-client resolves a relative Location against the endpoint it uploaded to, and `transferStore` stores the resolved absolute URL (`utils/tusUrl.ts`: `tusEndpoint(origin)` gives the absolute endpoint, `resolveTusUrl(location, origin)` resolves the Location; home origin when `origin` is empty) so resume and cancel work for federated uploads too.
 - PRE_PATCH ownership check: `metadata.userId === req.user.id`. Required to prevent in-flight upload hijack between session creation and finalize.
 - Size validated against `instance_settings.maxUploadSizeBytes` at PRE_CREATE; tus's own `maxSize` is set as defense-in-depth.
-- Original filename round-trips through tus metadata (base64-encoded per spec); the on-disk filename uses snowflake + sanitized extension only.
+- Original filename round-trips through tus metadata (base64-encoded per spec); the on-disk filename uses snowflake + random part + sanitized extension only.
+- **The name is the key.** `GET /api/uploads/<name>` answers anyone, without a session, because a picture in a page is fetched without one: a file in a DM or a private channel is protected by its name alone. A snowflake is a reading of the clock (worker id and sequence are visible in any id anyone sees), so a name of the snowflake alone could be counted through. Every stored name is `storedUploadName(id, ext)` (`utils/uploadNames.ts`): the snowflake, a hyphen and 128 random bits. Uploads, files replicated from a peer (`federationWorker.ts`) and profile pictures downloaded from a home (`federation/profile.ts`) all use it. Files of messages and DM messages stored before 1.32.4 are renamed by the hourly storage janitor (`utils/legacyUploadNames.ts`), at most 500 a run and only once they are a day old, so a file still on its way to a peer is not pulled from under it. The new name is derived from the old one with a key of this server (HKDF from `JWT_SECRET`), so a run cut off half way finds the same name again: a hard link first, then the rows (`attachments.filename`, `thumbnail_filename`) in one transaction, then the old name goes, with nothing in between. A file a picture field also shows is left alone: it is public anyway. An address to an old name that someone pasted into a message stops working; that was the guessable key.
 
 ---
 
@@ -211,17 +230,24 @@ Profile images (avatars, banners, space icons) use the general upload pipeline b
 
 ### Profile Upload Lifecycle
 
-When a user sets an avatar/banner or a space sets an icon/banner:
+When a user sets an avatar/banner, a space sets an icon/banner, or a member sets a space profile picture/banner:
 
 1. Client uploads file via `POST /api/uploads` (creates attachment record)
-2. Client sends `PATCH /users/@me` or `PATCH /spaces/:id` with the filename
-3. Server strips `/api/uploads/` prefix if present
-4. Old file deleted from disk (`deleteUploadFile`)
-5. Old attachment record cleaned up (`deleteAttachmentByFilename`)
-6. New attachment record cleaned up (reference now lives in `users`/`spaces` table)
-7. File resized in-place via `resizeProfileImage`
+2. Client sends `PATCH /users/@me`, `PATCH /spaces/:id` (or `POST /spaces`) or `PATCH /spaces/:id/members/@me/profile` with the filename
+3. Server strips `/api/uploads/` prefix if present and checks the file is the caller's own (see "Profile pictures" below)
+4. The replaced file is deleted from disk (`deleteUploadFile`), with its attachment record, once nothing else shows it
+5. New attachment record cleaned up (reference now lives in the `users`/`spaces`/`space_members` row)
+6. File resized in-place via `resizeProfileImage`
 
-The attachment record for profile images is intentionally deleted -- the authoritative reference moves to the `users.avatar`/`users.banner` or `spaces.icon`/`spaces.banner` column.
+The attachment record for profile images is intentionally deleted -- the authoritative reference moves to the `users.avatar`/`users.banner`, `spaces.icon`/`spaces.banner` or `space_members.avatar`/`space_members.banner` column.
+
+### Profile pictures
+
+`utils/profileImageRefs.ts` holds the rules every picture field shares:
+
+- **Which files are pictures** (`profileImageFilenames`): account pictures and banners, space profile pictures and banners, space icons and banners, the icons of group DMs that are not soft-deleted. The storage janitor's orphan sweep and its unlinked-attachment phase both read this list, so a picture is never swept as an orphan, however its upload's attachment row went.
+- **Whether a file is still shown** (`profileImageInUse`): asked before a replaced picture is deleted (account, space, space profile, space deletion) and by `tombstoneUser`, which hands back only files nothing else shows.
+- **What a field may be set to** (`ownProfileUploadOf`): a file on this instance must be an upload of the caller's own that no message holds (an `attachments` row with their `uploader_id` and neither `message_id` nor `dm_message_id`), or the picture the field already shows. Anything else is `400 avatar_url_invalid` / `banner_url_invalid` / `icon_url_invalid`. Without this rule, naming someone else's file would resize it in place and replacing it later would delete it. An address on another site (`http(s)://`) is kept as it always was for accounts and spaces; a space profile takes none.
 
 ### Mobile Transfer-Chrome Surfaces
 
@@ -229,7 +255,7 @@ In-flight transfers (chat attachments, profile/banner uploads) are surfaced via 
 
 - **Chat header (desktop):** every `MainContent.tsx` header variant — DM, group DM, space text channel, voice.
 - **Chat header (mobile):** `MobileChatScreen.tsx` mounts `<TransferIndicator />` in its custom header.
-- **Settings/Instance screens (mobile):** mounted via `MobileScreenHeader.tsx`'s `rightActions` slot on every settings screen — `MobileSettingsScreen` (hub + each direct panel), `MobileInstancePanel`, and the six `settings-instance-*` sub-panel wrappers in `MobileShell.tsx`. This guarantees that a profile-picture or banner upload triggered from settings has visible progress chrome and an abort affordance regardless of the user's current screen.
+- **Settings/Instance screens (mobile):** mounted via `MobileScreenHeader.tsx`'s `rightActions` slot on every settings screen — `MobileSettingsScreen` (hub + each direct panel). This guarantees that a profile-picture or banner upload triggered from settings has visible progress chrome and an abort affordance regardless of the user's current screen.
 
 The component is lightweight when idle — the underlying `transferStore` Map subscription is a single `useMemo` over `Array.from(...).filter(t => t.tray)`, and the rendered button is a small icon (no badge) until at least one transfer is active. Safe to mount on every settings screen without performance impact.
 
@@ -243,8 +269,8 @@ The dropdown panel uses `touchstart` + `mousedown` listeners for click-outside d
 
 ```
 thumbnail.ts:thumbFilename(original)
-  input:  "1234567890123456.png"
-  output: "1234567890123456_thumb.webp"
+  input:  "1234567890123456-0f3a…c9.png"
+  output: "1234567890123456-0f3a…c9_thumb.webp"
 ```
 
 Strips the original extension, appends `_thumb.webp`.
@@ -287,7 +313,7 @@ Strips the original extension, appends `_thumb.webp`.
 
 | Header | Value | Purpose |
 |--------|-------|---------|
-| `Cache-Control` | `public, max-age=31536000, immutable` | 1-year cache, immutable (filenames are snowflake-based, never reused) |
+| `Cache-Control` | `public, max-age=31536000, immutable` | 1-year cache, immutable (filenames are a snowflake and a random part, never reused) |
 | `Content-Type` | Resolved MIME type | |
 | `X-Content-Type-Options` | `nosniff` | Prevents MIME sniffing |
 | `Content-Security-Policy` | `default-src 'none'; style-src 'unsafe-inline'; img-src 'self'` | Prevents script execution in uploaded files |
@@ -317,7 +343,7 @@ Filename is URI-encoded: `attachment; filename="${encodeURIComponent(originalNam
 ### Range Requests (A/V Seeking)
 
 When `Range` header is present:
-1. Parse `bytes=start-end` (end defaults to `fileSize - 1` if omitted)
+1. Parse one `bytes=start-end`, `bytes=start-` or `bytes=-suffix` (`byteRange` in `routes/uploads.ts`), the end clamped to the file. Anything else (several ranges, a reversed or malformed one) is ignored and the whole file sent; a range starting past the end answers `416` with `Content-Range: bytes */size`.
 2. Set `Content-Range: bytes start-end/totalSize`
 3. Set `Content-Length` to chunk size
 4. Return `206 Partial Content` with `fs.createReadStream({ start, end })`
@@ -546,7 +572,7 @@ On store rehydrate (`onRehydrateStorage` in `transferStore.ts` -> `normalizeRehy
 
 Idempotent: re-running is harmless (already-resumed transfers move to `'active'`, no-op for completed/failed).
 
-The paused state is visually distinct in `AttachmentProgress.tsx`: desaturated grey conic-gradient ring with a centered pause-icon disk (instead of the mint ring + percentage text used while active), so the user can immediately tell "nothing is happening" from "in progress".
+The paused state is visually distinct in `AttachmentProgress.tsx`: a grey conic-gradient ring with a centered pause-icon disk (instead of the bright ring + percentage text used while active), so the user can immediately tell "nothing is happening" from "in progress".
 
 ### Attachment Rendering (`AttachmentRenderer.tsx`)
 
@@ -556,10 +582,10 @@ URL resolution for attachment/thumbnail:
 
 | MIME category | Rendering |
 |---------------|-----------|
-| `image/*` | `<img>` with click-to-preview, lazy loading, aspect ratio from width/height, max 400x300px, uses thumbnail if available |
+| `image/*` | A button holding the `<img>`: click-to-preview, lazy loading, its box from width/height (`mediaBox`), max 400x300px, uses thumbnail if available. A run of two or more pictures is a gallery (`AttachmentList`): 400px wide, cells cut to fit, rows of two (4:3) before rows of three (square), so it never ends on a lone picture |
 | `video/*` | `VideoAttachment` sub-component. Playable (`playable !== false`): `<video src>` with native controls, poster from thumbnail, preload `none` (with dimensions) or `metadata` (without), max 400px wide / 300px tall, with an `onError` handler that falls back to the download card. Unplayable (`playable === false`, e.g. HEVC .mov): renders the download card directly — poster (if any) under a "Can't play here — download" overlay, plus filename, duration, size and a one-tap download. **Browser-aware:** the `playable === false` verdict is computed Chromium-first, so the client only pre-fails when *this* browser also can't decode the format. WebKit (Safari/iOS) decodes HEVC via the OS, so a Safari user still gets inline playback (gated on `BROWSER_SUPPORTS_HEVC`, a one-time `canPlayType` probe for `hvc1`/`hev1`); the `onError` handler remains the safety net. Never a silently broken player. |
-| `audio/*` | Audio card with icon, filename, size, `<audio>` with native controls, preload `metadata`, max 420px wide |
-| Other | Download link card with file icon, filename (link-styled), size |
+| `audio/*` | Audio card with icon, filename, size, `<audio>` with native controls, preload `metadata`, max 400px wide |
+| Other | Download card with file icon, filename, size and a download mark; the whole card is the button |
 
 #### Federation Status Badges
 
@@ -574,7 +600,7 @@ The `federationMeta` JSON is parsed for display details (source username, reject
 
 ### Image Preview (`ImagePreview.tsx`)
 
-Full-screen overlay (`z-[200]`) with `bg-surface-overlay` backdrop.
+Full-screen overlay (`z-[200]`) with a `bg-black/80` backdrop.
 
 - Opens via `useUIStore.openImagePreview(url)` (triggered by clicking an image in `AttachmentRenderer`)
 - Shows full-resolution image (not thumbnail) -- max 90vw x 90vh, `object-contain`
@@ -773,3 +799,23 @@ This spec covers **local** file storage and serving. The boundary:
 | `attachments` record creation | `sourceUrl`, `federationStatus`, `federationMeta` fields |
 
 The `attachments` table contains federation-specific columns (`sourceUrl`, `federationStatus`, `federationMeta`) that are populated by the federation file download worker, not by the upload pipeline.
+
+## Spoilers and forwards
+
+`attachments.spoiler` is set when the message is sent, from `spoilerAttachments`, and only for files the message carries. `AttachmentRenderer` covers a picture or video until a reader asks; the file itself is served as ever, so this protects from seeing by accident and no more.
+
+Forwarding copies a message's files under new names (`routes/forward.ts`, with `COPYFILE_FICLONE` where the disk can). The copy is an attachment like any other, so deleting either message leaves the other whole and the janitor sees both as referenced.
+
+## Voice messages
+
+A voice message is an ordinary audio attachment that carries its waveform: `attachments.voice_waveform`, up to 64 bar heights from 0 to 100 as `12,40,7` (`shared/src/voiceMessages.ts`). It needs no rights of its own: SEND_MESSAGES and ATTACH_FILES, as any file.
+
+**Recording** (`utils/voiceRecorder.ts`, `VoiceRecorderBar`) happens in the browser with `MediaRecorder`, in the first format it offers: Opus in WebM, or `audio/mp4` on an iPhone. Nothing leaves the device until the person sends it from the preview. On a window it is click and stop; on a phone, hold and let go. A recording stops by itself after five minutes, and one shorter than half a second is thrown away as a slip of the finger. An analyser samples the loudness ten times a second, and `barsFromLevels` makes the bars when it ends.
+
+**The file name decides what it is:** the server takes the type from the extension, not from the client. A recording is named `.weba` (`audio/webm`) or `.m4a` (`audio/mp4`), which both file routes know, because `.webm` reads as a video.
+
+**Upload** runs through the usual tus pipeline. Two metadata fields come along, `voiceWaveform` and `voiceDuration`, and `onUploadFinish` takes them only for audio and only if the waveform parses (`parseWaveform`). ffprobe gives the length when it can; a recording in the browser's own format often states none, and then the length measured while recording is used, capped at the limit. It is only ever shown.
+
+The message goes out as a pending bubble, as with any file, so it survives a slow upload. The waveform travels with the attachment: REST, socket, the DM relay (`FederationRelayAttachment.voiceWaveform`, checked again on arrival), and a forward copies it.
+
+**Playing** (`VoiceMessagePlayer`): play and pause, the bars to jump around in (a slider, with arrow keys for five seconds), the time, and 1, 1.5 or 2 times the speed. An audio attachment with no waveform keeps the normal player.

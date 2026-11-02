@@ -203,11 +203,11 @@ The client always sends `limit: 25` (hardcoded in SearchPopover).
 ### UI Layout
 
 - **Container:** 420px wide, max 500px tall, `glass` material, positioned via `useFloatingPosition` (bottom placement, 8px offset)
-- **Search input:** `input-embedded` tier with search icon and clear button
+- **Search input:** `input-search` tier with search icon and clear button
 - **Filter toggle:** Collapsed by default, shows active-filter indicator dot when any filter is set
 - **Filter panel:** 2-column grid — `From` (text), `Has` (select), `Before` (date), `After` (date) — all `input-search` tier
 - **Results list:** Scrollable area with result count header
-- **Result items:** Avatar + display name + timestamp + content snippet (2-line clamp) + attachment count
+- **Result items:** `.list-row`: avatar + display name + timestamp (`font-mono`) + content snippet (2-line clamp) + attachment count
 - **Query highlighting:** `highlightMatch()` (`components/chat/searchHighlight.tsx`) wraps matches in `<mark>` tags with `bg-accent-primary/30` styling. Shortcodes in the snippet show as emoji; the query is matched against the stored text, and an emoji is marked whole when the match touches its shortcode
 - **Load more:** Shows remaining count, disabled while loading
 

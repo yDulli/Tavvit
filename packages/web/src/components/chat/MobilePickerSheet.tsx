@@ -44,7 +44,7 @@ export function MobilePickerSheet({ onClose, header, label, children }: MobilePi
       <div
         role={label ? 'dialog' : undefined}
         aria-label={label}
-        className={`fixed left-0 right-0 z-[301] rounded-t-2xl glass-modal flex flex-col ${
+        className={`fixed left-0 right-0 z-[301] rounded-t-lg glass-modal flex flex-col ${
           hasInteracted ? '' : 'animate-slide-up-sheet'
         }`}
         style={{
@@ -68,7 +68,7 @@ export function MobilePickerSheet({ onClose, header, label, children }: MobilePi
             receive their own clicks because clicks aren't blocked, only
             vertical drag past the dead-zone is. */}
         <div {...handleProps} className="shrink-0 touch-none">
-          <div className="w-10 h-1 bg-txt-tertiary/30 rounded-full mx-auto mt-2 mb-1" />
+          <div className="w-10 h-1 bg-txt-tertiary/30 rounded-sm mx-auto mt-2 mb-1" />
           {header}
         </div>
 

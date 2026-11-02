@@ -60,7 +60,7 @@ beforeEach(async () => {
   testDb.insert(schema.users).values({
     id: 'gone-1',
     username: 'gone',
-    passwordHash: await hashPassword('password123'),
+    passwordHash: await hashPassword('tests-only-passphrase'),
     isAdmin: 0,
     isDeleted: 1,
     createdAt: Date.now(),
@@ -71,12 +71,81 @@ beforeEach(async () => {
 // Every user-visible rejection carries a stable code next to the English text
 // so the client can say it in the user's language. These tests pin the codes
 // (and their details) for the sites the register page and login page show.
+describe('the sign-up rules of the admin console', () => {
+  const addRule = (kind: string, value: string) => testDb.insert(schema.signupRules).values({ kind, value, createdBy: 'admin', createdAt: 1 }).run();
+  const register = (payload: Record<string, unknown>) => app.inject({ method: 'POST', url: '/api/auth/register', payload: { password: 'tests-only-passphrase', ...payload } });
+
+  beforeEach(async () => {
+    testDb.insert(schema.users).values({
+      id: 'alice-1',
+      username: 'alice',
+      passwordHash: await hashPassword('tests-only-passphrase'),
+      isAdmin: 0,
+      createdAt: Date.now(),
+    }).run();
+  });
+
+  it('refuses a reserved name, whatever its case would be, and takes any other', async () => {
+    addRule('username', 'support');
+    const refused = await register({ username: 'support' });
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().code).toBe('username_reserved');
+    expect(testDb.select().from(schema.users).where(eq(schema.users.username, 'support')).get()).toBeUndefined();
+    expect((await register({ username: 'supporter' })).statusCode).toBe(201);
+  });
+
+  it('touches no account that has the name already', async () => {
+    addRule('username', 'alice');
+    const login = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { username: 'alice', password: 'tests-only-passphrase' } });
+    expect(login.statusCode).toBe(200);
+  });
+
+  it('does not read its lists out to someone a closed instance would turn away anyway', async () => {
+    addRule('username', 'support');
+    testDb.update(schema.instanceSettings).set({ registrationOpen: 0 }).where(eq(schema.instanceSettings.id, 1)).run();
+    const refused = await register({ username: 'support' });
+    expect(refused.json().code).toBe('invite_required');
+  });
+
+  it('says a reserved name is taken before the form is sent', async () => {
+    addRule('username', 'support');
+    const res = await app.inject({ method: 'GET', url: '/api/auth/check-username?username=support' });
+    expect(res.json()).toMatchObject({ available: false, code: 'username_reserved' });
+  });
+
+  it('holds a display name to the limit of changing it later', async () => {
+    const long = await register({ username: 'long_name', displayName: 'x'.repeat(33) });
+    expect(long.statusCode).toBe(400);
+    expect(long.json().code).toBe('display_name_too_long');
+    expect((await register({ username: 'odd_name', displayName: 42 })).statusCode).toBe(400);
+    expect((await register({ username: 'fine_name', displayName: 'x'.repeat(32) })).statusCode).toBe(201);
+  });
+
+  it('starts a new account in the starter spaces, and only a new account of this instance', async () => {
+    testDb.insert(schema.spaces).values({ id: 'starter-1', name: 'Lobby', ownerId: 'alice-1', visibility: 'public', createdAt: 1 }).run();
+    testDb.insert(schema.starterSpaces).values({ spaceId: 'starter-1', addedBy: 'alice-1', addedAt: 1 }).run();
+    const res = await register({ username: 'newcomer' });
+    expect(res.statusCode).toBe(201);
+    const userId = res.json().user.id as string;
+    const memberships = testDb.select().from(schema.spaceMembers).where(eq(schema.spaceMembers.userId, userId)).all();
+    expect(memberships.map((row) => row.spaceId)).toEqual(['starter-1']);
+  });
+
+  it('lets the sign-up through when a starter space cannot be joined', async () => {
+    testDb.insert(schema.spaces).values({ id: 'starter-2', name: 'Closed since', ownerId: 'alice-1', visibility: 'private', createdAt: 1 }).run();
+    testDb.insert(schema.starterSpaces).values({ spaceId: 'starter-2', addedBy: 'alice-1', addedAt: 1 }).run();
+    const res = await register({ username: 'newcomer_two' });
+    expect(res.statusCode).toBe(201);
+    expect(testDb.select().from(schema.spaceMembers).where(eq(schema.spaceMembers.userId, res.json().user.id as string)).all()).toEqual([]);
+  });
+});
+
 describe('auth routes send error codes', () => {
   it('register: a username outside 3-32 characters is username_length_invalid with the limits', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'ab', password: 'password123' },
+      payload: { username: 'ab', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({
@@ -90,7 +159,7 @@ describe('auth routes send error codes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'Al ice', password: 'password123' },
+      payload: { username: 'Al ice', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().code).toBe('username_characters_invalid');
@@ -120,7 +189,7 @@ describe('auth routes send error codes', () => {
     const atMinimum = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'alice', password: 'a'.repeat(PASSWORD_MIN_LENGTH) },
+      payload: { username: 'alice', password: 'xkqzjvwb-mnr'.slice(0, PASSWORD_MIN_LENGTH) },
     });
     expect(atMinimum.statusCode).toBe(201);
   });
@@ -133,7 +202,7 @@ describe('auth routes send error codes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'alice', password: 'password123' },
+      payload: { username: 'alice', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(403);
     expect(res.json().code).toBe('invite_required');
@@ -143,7 +212,7 @@ describe('auth routes send error codes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'gone', password: 'password123' },
+      payload: { username: 'gone', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(409);
     expect(res.json().code).toBe('username_taken');
@@ -153,7 +222,7 @@ describe('auth routes send error codes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
-      payload: { username: 'alice', password: 'password123', homeInstance: 'orbit.test' },
+      payload: { username: 'alice', password: 'tests-only-passphrase', homeInstance: 'orbit.test' },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().code).toBe('replicated_username_format_required');
@@ -163,7 +232,7 @@ describe('auth routes send error codes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { username: 'gone', password: 'password123' },
+      payload: { username: 'gone', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(401);
     expect(res.json().code).toBe('account_deleted');
@@ -173,7 +242,7 @@ describe('auth routes send error codes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { username: 'nobody', password: 'password123' },
+      payload: { username: 'nobody', password: 'tests-only-passphrase' },
     });
     expect(res.statusCode).toBe(401);
     expect(res.json().code).toBe('invalid_credentials');

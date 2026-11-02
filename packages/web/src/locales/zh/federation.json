@@ -1,7 +1,7 @@
 {
   "connections": {
     "title": "已连接实例",
-    "description": "跨联邦 Backspace 实例关联账号。",
+    "description": "跨联邦 Tavvit 实例关联账号。",
     "empty": "未连接任何远端实例。添加一个实例即可开始联邦互动。",
     "addButton": "+ 添加实例",
     "home": {

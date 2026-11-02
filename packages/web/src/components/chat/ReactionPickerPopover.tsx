@@ -116,9 +116,9 @@ export function ReactionPickerPopover({
         maxHeight: `calc(100 * var(--app-dvh) - ${VIEWPORT_MARGIN * 2}px)`,
       }}
     >
-      <div className="glass rounded-xl overflow-hidden max-h-[calc(100*var(--app-dvh)-16px)] flex flex-col">
+      <div className="glass rounded-lg overflow-hidden max-h-[calc(100*var(--app-dvh)-16px)] flex flex-col">
         <PickerEscapeScope onClose={onClose}>
-          <EmojiPicker onEmojiSelect={onEmojiSelect} />
+          <EmojiPicker onEmojiSelect={onEmojiSelect} customAs="reaction" />
         </PickerEscapeScope>
       </div>
     </div>,

@@ -22,7 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * local actions that reacted to it; and the outbox may send a delete for a
  * create whose delivery it could not confirm.
  *
- * One receiver, ORBIT, holds a 1-on-1 between its native bob and alice, a
+ * One receiver, TAVVIT, holds a 1-on-1 between its native bob and alice, a
  * replicated user homed on HOME. Events are fed to the real `processRelayEvents`
  * as HOME, the way `/relay` and the pull both do.
  */

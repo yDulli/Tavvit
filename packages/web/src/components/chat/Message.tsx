@@ -1,8 +1,16 @@
+import { cardImageIds, cardsSummary } from '@backspace/shared/src/cards';
+import { MessageCards } from './MessageCards';
+import { matchesKeyword } from '@backspace/shared/src/notificationRules';
+import { useKeywordStore } from '../../stores/keywordStore';
+import { savedKey, useSavedStore } from '../../stores/savedStore';
+import { useTranslationStore } from '../../stores/translationStore';
+import { MessageTranslation } from './MessageTranslation';
+import { reminderMoment, type ReminderPreset } from '../../utils/reminderTimes';
 import { isStickerMessage } from '../../utils/stickerMessages';
 import { StickerMessage } from './StickerMessage';
 import { useAuthorMenu } from './useAuthorMenu';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { formatters, useFormatters } from '../../i18n/formatters';
 import type { MessageWithUser, Embed, Reaction, User } from '@backspace/shared';
@@ -10,18 +18,27 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { InlineMessageText } from './InlineMessageText';
 import { Avatar } from '../ui/Avatar';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
+import { useAppearanceStore } from '../../stores/appearanceStore';
 import { menuPositionFor, useContextMenuStore } from '../../stores/contextMenuStore';
 import { buildMessageMenuItems } from './messageMenuItems';
+import { ExternalImage } from '../ui/ExternalMedia';
 import { useAuthStore, useSelfIdentity } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
-import { selectMyRoleIdsInChannel, useSpaceStore } from '../../stores/spaceStore';
+import { useMessageSelection } from '../../stores/messageSelectionStore';
+import { getApiForOrigin, selectMyRoleIdsInChannel, useSpaceStore } from '../../stores/spaceStore';
+import { describeError } from '../../i18n/errors';
 import { useUIStore } from '../../stores/uiStore';
-import { AttachmentRenderer, attUrlOf } from './AttachmentRenderer';
+import { AttachmentList, AttachmentRenderer, attUrlOf } from './AttachmentRenderer';
 import { AttachmentProgress } from './AttachmentProgress';
 import { EmbedRenderer } from './EmbedRenderer';
 import { FederationGlobeIcon } from '../ui/Username';
 import { Tooltip } from '../ui/Tooltip';
 import { EmojiPicker } from './EmojiPicker';
+import { toWireText } from '../../utils/emojiWire';
+import { MessageEditBox } from './MessageEditBox';
+import { ThreadChip } from './ThreadChip';
+import { openThreadView } from '../../utils/openThread';
+import { PollCard } from './PollCard';
 import { MobilePickerSheet } from './MobilePickerSheet';
 import { ReactionPickerPopover } from './ReactionPickerPopover';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
@@ -39,7 +56,10 @@ import {
 import { useTransferStore } from '../../stores/transferStore';
 import { useMessageJump } from './messageJumpContext';
 import { ReactionPill } from './ReactionPill';
-import { memberNameColor } from '../../utils/memberGroups';
+import { memberNameStyle } from '../../utils/memberGroups';
+import { resolveAssetUrl } from '../../utils/assetUrls';
+import { Icon } from '../ui/Icon';
+import { channelTakesThreads } from '../../utils/channelKinds';
 
 interface MessageProps {
   message: MessageWithUser | PendingMessageView;
@@ -58,10 +78,10 @@ function PendingAttachmentTile({ transferId }: PendingAttachmentTileProps) {
   const resumeUpload = useTransferStore((s) => s.resumeUpload);
   const abortUpload = useTransferStore((s) => s.abortUpload);
   if (!transfer) {
-    return <div className="w-[140px] h-[96px] rounded-lg bg-surface-channel" />;
+    return <div className="surface-card h-[104px] w-[168px] rounded-lg" />;
   }
   return (
-    <div className="relative w-[140px] h-[96px] rounded-lg overflow-hidden bg-surface-channel">
+    <div className="surface-card relative h-[104px] w-[168px] overflow-hidden rounded-lg">
       <AttachmentProgress
         loaded={transfer.progress.loaded}
         total={transfer.progress.total}
@@ -90,8 +110,8 @@ function PersonName({ name, person, className, style }: {
   style?: React.CSSProperties;
 }) {
   return (
-    <span className={`inline-flex items-center gap-0.5 ${className}`} style={style}>
-      {name}
+    <span className={`inline-flex min-w-0 items-center gap-0.5 ${className}`} style={style}>
+      <span className="min-w-0 truncate">{name}</span>
       {isFederationGlobeApplicable(person) && (
         <Tooltip content={person.username} position="top">
           <FederationGlobeIcon />
@@ -145,11 +165,22 @@ function getImageEmbedSourceUrl(content: string | null, embeds: Embed[]): string
   return hasMatchingImageEmbed ? trimmed : null;
 }
 
+/** How far the hover bar rises above its row (`-top-4`), and a little to spare. */
+const TOOLBAR_OVERHANG_PX = 20;
+
+/** A row mounting this soon after its message's time has just arrived. */
+const JUST_ARRIVED_MS = 4000;
+
+/** The name of someone with no role colour (and of everyone in a DM). */
+const AUTHOR_DEFAULT_COLOR: React.CSSProperties = { color: 'rgb(var(--text-primary))' };
+
 export function Message({ message, isCompact, isFirstInGroup, previousMessageId }: MessageProps) {
   const { t } = useTranslation(['chat', 'common']);
   const fmt = useFormatters();
-  const [editContent, setEditContent] = useState(message.content ?? '');
   const [isHovered, setIsHovered] = useState(false);
+  // The hover bar hangs over the row above; a row at the very top of the list
+  // has nothing above it to hang over, and the bar would be cut in half.
+  const [toolbarInside, setToolbarInside] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // The reaction picker, and what opened it: the "+" of the hover bar, or the
   // message menu ('row'). On desktop it hangs off that button or the message
@@ -157,7 +188,6 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const [reactionPicker, setReactionPicker] = useState<'button' | 'row' | null>(null);
   const showReactionPicker = reactionPicker !== null;
   const confirmDeleteTimeout = useRef<ReturnType<typeof setTimeout>>();
-  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const reactionPickerBtnRef = useRef<HTMLButtonElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const currentUser = useAuthStore((s) => s.user);
@@ -171,21 +201,13 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const jumpToMessage = useMessageJump();
 
   const pending = isPendingMessage(message) ? message.__pending : null;
+  // Decided once, on the first render: a row that mounts this close to its message's
+  // time has just arrived, not come into view. What is there when the row mounts is
+  // not new either, so only a reaction added later gives its small jump.
+  const [justArrived] = useState(() => Date.now() - message.createdAt < JUST_ARRIVED_MS);
+  const [reactionsAtStart] = useState(() => new Set((message.reactions ?? []).map((reaction) => reaction.emoji)));
   const showInteractions = !pending;
   const isEditing = !pending && editingMessageId === message.id;
-
-  useEffect(() => {
-    if (!isEditing) return;
-    const content = message.content ?? '';
-    setEditContent(content);
-    const frame = requestAnimationFrame(() => {
-      const textarea = editTextareaRef.current;
-      if (!textarea) return;
-      textarea.focus();
-      textarea.setSelectionRange(content.length, content.length);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [isEditing, message.content]);
 
   const transfersForRow = useTransferStore((s) => s.transfers);
   const inMemoryFiles = useTransferStore((s) => s.hasInMemoryFile);
@@ -215,13 +237,12 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   // The channel whose origin issued this message's ids; mentions resolve there.
   const mentionChannelId = channelKey || null;
   const selfIdHere = useSelfIdInChannel(mentionChannelId);
+  const messageStyle = useAppearanceStore((s) => s.messageStyle);
   const myRoleIdsHere = useSpaceStore((s) => (mentionChannelId ? selectMyRoleIdsInChannel(s, mentionChannelId) : undefined));
   const startEditing = () => {
-    setEditContent(message.content ?? '');
     setEditingMessage(message.id);
   };
   const stopEditing = () => {
-    setEditContent(message.content ?? '');
     setEditingMessage(null);
   };
   const channelPermissions = useSpaceStore((s) => s.channelPermissions);
@@ -242,7 +263,36 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   })();
   const canManageMessages = hasPermissionBit(myChPerms, PermissionBits.MANAGE_MESSAGES);
   const canSendMessages = isDmMessage || hasPermissionBit(myChPerms, PermissionBits.SEND_MESSAGES);
+  // A webhook or a followed channel writes here: there is no person behind the name to open.
+  const writesForChannel = message.user?.accountKind === 'webhook' || message.user?.accountKind === 'follow';
   const canDelete = isAuthor || canManageMessages;
+  const channelType = useSpaceStore((s) => s.spaceChannelIndex.get(channelKey)?.type);
+  const canThread = !isPendingMessage(message) && !isDmMessage && channelTakesThreads(channelType)
+    && (message.thread !== undefined || hasPermissionBit(myChPerms, PermissionBits.CREATE_THREADS));
+  const openOrStartThread = async () => {
+    if (isPendingMessage(message)) return;
+    try {
+      const id = message.thread?.id ?? (await getApiForOrigin(messageOrigin).threads.start(message.id)).id;
+      openThreadView(id, message.channelId);
+    } catch (err) {
+      useUIStore.getState().addToast(describeError(err), 'warning');
+    }
+  };
+  const selecting = useMessageSelection((s) => s.channelId !== null && s.channelId === channelKey);
+  const selected = useMessageSelection((s) => s.channelId === channelKey && s.ids.has(message.id));
+  const canPin = isDmMessage
+    ? !isDeadDmThread
+    : canManageMessages || hasPermissionBit(myChPerms, PermissionBits.PIN_MESSAGES);
+  const togglePin = async () => {
+    const client = getApiForOrigin(messageOrigin);
+    const pinned = message.pinnedAt != null;
+    try {
+      if (isDmMessage) await (pinned ? client.dm.unpinMessage(message.id) : client.dm.pinMessage(message.id));
+      else await (pinned ? client.messages.unpin(message.id) : client.messages.pin(message.id));
+    } catch (err) {
+      useUIStore.getState().addToast(describeError(err), 'warning');
+    }
+  };
   const canAddReactions = (isDmMessage || hasPermissionBit(myChPerms, PermissionBits.ADD_REACTIONS)) && !isDeadDmThread;
 
   const addReaction = useChatStore((s) => s.addReaction);
@@ -305,6 +355,12 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   // A sticker draws its own image: no edit (its content is a token, not
   // text), and no embed (an older instance unfurls the asset URL into one).
   const isSticker = isStickerMessage(message.content);
+  // What a bot or a webhook showed besides text. When it wrote none, the content only stands for them
+  // where words are all that fit (shared/src/cards.ts), and here it would say the same thing twice.
+  const cards = (message as MessageWithUser).cards;
+  const showsOnlyCards = cards !== undefined && message.content === cardsSummary(cards);
+  const imagesInCards = cardImageIds(cards);
+  const persistedAttachments = (message as MessageWithUser).attachments ?? [];
   const canEdit = isAuthor && !isSticker;
   const imageEmbedSourceUrl = isGifOnly ? null : getImageEmbedSourceUrl(message.content, message.embeds || []);
   // sourceUrl: the original URL for context menu Copy/Open Link actions
@@ -325,6 +381,9 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       e.stopPropagation();
       return;
     }
+    // A right click in the edit box is about its text: the app-wide menu
+    // (globalContextMenu.ts) offers cut, copy and paste there.
+    if ((e.target as HTMLElement).closest('textarea, input, [contenteditable="true"]')) return;
     e.preventDefault();
     e.stopPropagation();
     const selectedText = window.getSelection()?.toString() ?? '';
@@ -381,6 +440,26 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       canManageMessages,
       onReply: startReply,
       onEdit: startEditing,
+      onTogglePin: canPin && !isPendingMessage(message) ? () => void togglePin() : undefined,
+      onThread: canThread ? () => void openOrStartThread() : undefined,
+      isSaved: useSavedStore.getState().ids.has(savedKey(messageOrigin, message.id)),
+      onToggleSaved: isPendingMessage(message) || message.type === 'system' ? undefined : () => void toggleSaved(),
+      onRemind: isPendingMessage(message) || message.type === 'system' ? undefined : (preset) => void remindAbout(preset),
+      isTranslated: useTranslationStore.getState().entries[message.id] !== undefined,
+      onTranslate: isPendingMessage(message) || message.poll || message.type === 'system' || showsOnlyCards ? undefined : () => {
+        const translations = useTranslationStore.getState();
+        if (translations.entries[message.id]) translations.hide(message.id);
+        else void translations.translate(message.id, message.content ?? '', channelKey);
+      },
+      onForward: isPendingMessage(message) || message.poll ? undefined : () => useUIStore.getState().openModal('forwardMessage', {
+        target: { messageId: message.id, isDm: isDmMessage, origin: messageOrigin },
+      }),
+      onSelect: canManageMessages && !isDmMessage && !isPendingMessage(message)
+        ? () => useMessageSelection.getState().start(channelKey, message.id)
+        : undefined,
+      onReport: isAuthor || isPendingMessage(message) ? undefined : () => useUIStore.getState().openModal('report', {
+        target: { type: isDmMessage ? 'dm_message' : 'message', id: message.id, origin: messageOrigin, label: message.content?.slice(0, 200) ?? null },
+      }),
       onDelete: () => deleteMessage(message.id, channelKey),
       onReaction: (emoji: string) => toggleReaction(emoji),
       onOpenEmojiPicker: () => {
@@ -395,17 +474,9 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
     useContextMenuStore.getState().open(menuPositionFor(e), items);
   };
 
-  const handleEditSubmit = async (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (editContent.trim()) {
-        await editMessage(message.id, editContent.trim(), channelKey);
-        setEditingMessage(null);
-      }
-    }
-    if (e.key === 'Escape') {
-      stopEditing();
-    }
+  const saveEdit = async (draft: string) => {
+    await editMessage(message.id, toWireText(draft, channelKey), channelKey);
+    setEditingMessage(null);
   };
 
   // Display identity: the user's own messages, from any instance, show their
@@ -418,18 +489,25 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
 
   const spaces = useSpaceStore((s) => s.spaces);
   const currentSpaceId = useSpaceStore((s) => s.currentSpaceId);
-  const ownerId = spaces.find(s => s.id === currentSpaceId)?.ownerId;
+  const currentSpace = spaces.find(s => s.id === currentSpaceId);
+  const ownerId = currentSpace?.ownerId;
 
   // The author's row in the space's roster: it gives the name colour and the
   // nickname. message.userId is the id on the space's instance, the id the
   // loaded member list carries. A DM has no roster.
   const spaceMemberOf = (userId: string) => (isDmMessage ? undefined : members.find(m => m.userId === userId));
   const displayName = spaceMemberName(spaceMemberOf(message.userId), displayIdentity);
+  // The picture a member set for this space stands in for their account's;
+  // it is a file on the space's instance.
+  const spaceAvatarOf = (userId: string): string | null => {
+    const avatar = spaceMemberOf(userId)?.avatar;
+    return avatar ? resolveAssetUrl(avatar, currentSpace?._instanceOrigin ?? '') ?? null : null;
+  };
 
-  const getMemberDisplayColor = (userId: string) => {
-    if (isDmMessage) return { color: '#d8d8de' };
+  const getMemberDisplayColor = (userId: string): React.CSSProperties => {
+    if (isDmMessage) return AUTHOR_DEFAULT_COLOR;
     const member = spaceMemberOf(userId);
-    return { color: memberNameColor(member ?? { userId, roles: [] }, ownerId) ?? '#d8d8de' };
+    return memberNameStyle(member ?? { userId, roles: [] }, ownerId) ?? AUTHOR_DEFAULT_COLOR;
   };
 
   const roleColor = getMemberDisplayColor(message.userId);
@@ -441,17 +519,38 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
     ? { spaceId: currentSpaceId, userId: message.userId }
     : undefined;
 
+  const savedKind = isDmMessage ? 'dm' : 'channel';
+  const toggleSaved = async () => {
+    const saved = useSavedStore.getState();
+    try {
+      if (saved.ids.has(savedKey(messageOrigin, message.id))) await saved.remove(messageOrigin, savedKind, message.id);
+      else await saved.save(messageOrigin, savedKind, message.id);
+    } catch (err) {
+      useUIStore.getState().addToast(describeError(err), 'warning');
+    }
+  };
+  const remindAbout = async (preset: ReminderPreset) => {
+    const at = reminderMoment(preset);
+    try {
+      await useSavedStore.getState().save(messageOrigin, savedKind, message.id, at);
+      useUIStore.getState().addToast(t('chat:menu.remindSet', { time: fmt.formatDateTime(at) }), 'success');
+    } catch (err) {
+      useUIStore.getState().addToast(describeError(err), 'warning');
+    }
+  };
+
   const handleAuthorMenu = useAuthorMenu({
     channelId: channelKey,
     authorId: message.userId,
     origin: messageOrigin,
     isDm: isDmMessage,
-    canSend: canSendMessages && !isDeadDmThread && !pending,
+    canSend: canSendMessages && !isDeadDmThread && !pending && !writesForChannel,
     isAuthor,
   });
 
   const handleUsernameClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-    if (!message.user) return;
+    // An account that is not a person has no profile to show.
+    if (!message.user || writesForChannel) return;
     e.stopPropagation();
     openUserProfile(message.user, messageOrigin, e.currentTarget.getBoundingClientRect(), undefined, authorMember);
   };
@@ -478,7 +577,12 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   // (`@everyone`, `@here`, a role I hold there). Tokens inside code are not
   // mentions (the shared scan in utils/mentionTokens.ts). A pending message
   // has no stamps yet.
+  const isOwnMessage = !!selfIdHere && message.userId === selfIdHere;
+  // Rows put a small picture on the name's line; bubbles and the log keep a column for it.
+  const avatarSize = messageStyle === 'rows' ? 20 : 28;
   const stamped = isPendingMessage(message) ? undefined : message;
+  const keywords = useKeywordStore((s) => s.words);
+  const isKeywordHit = useMemo(() => !isAuthor && matchesKeyword(message.content, keywords), [isAuthor, message.content, keywords]);
   const isMentioned = mentionsReader({
     myId: selfIdHere,
     myRoleIds: myRoleIdsHere,
@@ -493,12 +597,23 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       id={`msg-${message.id}`}
       role="article"
       aria-label={t('chat:message.rowLabel', { author: displayName, time: formatMessageTimestamp(t, fmt, message.createdAt) })}
-      className={`group relative flex gap-4 px-5 py-[3px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-primary/60 ${isFirstInGroup || message.replyTo ? 'mt-[1.0625rem]' : ''} ${
-        isMentioned
-          ? 'bg-accent-amber/10 border-l-2 border-l-accent-amber hover:bg-accent-amber/15'
-          : 'hover:bg-[rgba(255,255,255,0.025)]'
-      }`}
-      onMouseEnter={() => setIsHovered(true)}
+      data-own={isOwnMessage ? 'true' : 'false'}
+      data-first={isFirstInGroup || message.replyTo ? 'true' : 'false'}
+      data-mentioned={isMentioned || isKeywordHit ? 'true' : 'false'}
+      data-selecting={selecting ? 'true' : undefined}
+      data-picked={selected ? 'true' : undefined}
+      onClickCapture={selecting ? (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        useMessageSelection.getState().toggle(message.id);
+      } : undefined}
+      // Mine came up when I sent it; the row the server's copy replaces it with stays put.
+      className={`msg-row ${justArrived && (pending || !isOwnMessage) ? 'msg-new ' : ''}group relative flex gap-3 mx-2 px-3 rounded-md transition-colors duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-primary/60 ${isFirstInGroup || message.replyTo ? 'msg-first' : ''}`}
+      onMouseEnter={(e) => {
+        const list = e.currentTarget.closest('.overflow-y-auto');
+        setToolbarInside(!!list && e.currentTarget.getBoundingClientRect().top - list.getBoundingClientRect().top < TOOLBAR_OVERHANG_PX);
+        setIsHovered(true);
+      }}
       onMouseLeave={() => {
         setIsHovered(false);
         if (confirmingDelete) {
@@ -507,34 +622,52 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
         }
       }}
     >
+      {message.pinnedAt != null && (
+        <span className="pointer-events-none absolute right-3 top-1.5 text-txt-tertiary" title={t('chat:pins.pinned')}>
+          <Icon name="pin" size={13} />
+        </span>
+      )}
+
+      {selecting && (
+        <span
+          role="checkbox"
+          aria-checked={selected}
+          aria-label={t('chat:selection.pick')}
+          className="msg-pick"
+          data-picked={selected ? 'true' : undefined}
+        >
+          {selected && <Icon name="check" size={12} />}
+        </span>
+      )}
+
       {/* Reply Line */}
       {message.replyTo && (
-        <div className="absolute left-[40px] top-[-14px] w-[30px] h-[22px] border-l-2 border-t-2 border-interactive-muted rounded-tl-[6px] opacity-60" />
+        <div className="msg-reply-line absolute left-[27px] top-[-12px] w-[26px] h-[20px] border-l-2 border-t-2 border-interactive-muted rounded-tl-md opacity-60" />
       )}
 
       {/* Avatar or timestamp column */}
-      <div className="w-10 flex-shrink-0 flex items-start justify-start">
+      <div className="msg-avatar flex-shrink-0 flex items-start justify-start">
         {isFirstInGroup || message.replyTo ? (
-          <div className="mt-0.5 relative" data-poke-user={message.userId} onContextMenu={handleAuthorMenu}>
+          <div className="relative" data-poke-user={message.userId} onContextMenu={handleAuthorMenu}>
             <ProfileAvatar
-              src={displayIdentity.avatar}
+              src={spaceAvatarOf(message.userId) ?? displayIdentity.avatar}
               name={displayName}
-              size={40}
+              size={avatarSize}
               user={displayIdentity}
               origin={displayOrigin}
               member={authorMember}
-              className="hover:drop-shadow-md transition-all active:translate-y-[1px]"
+              className="transition-transform active:translate-y-[1px]"
             />
           </div>
         ) : (
-          <span className={`text-[11px] text-txt-tertiary opacity-0 group-hover:opacity-100 select-none w-full text-right whitespace-nowrap leading-[1.375rem]`}>
+          <span className="msg-hover-time tabular font-mono text-label text-txt-tertiary opacity-0 group-hover:opacity-100 select-none w-full text-right whitespace-nowrap leading-[1.45rem]">
             {formatHoverTime(message.createdAt)}
           </span>
         )}
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <div className="msg-body flex-1 min-w-0">
         {message.replyTo && (() => {
           const replyTo = message.replyTo;
           const replyIdentity = isMine(replyTo.user, messageOrigin, self) && currentUser
@@ -543,27 +676,28 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
           const replyDisplayName = spaceMemberName(spaceMemberOf(replyTo.userId), replyIdentity);
           const preview = (
             <>
-              <Avatar src={replyIdentity.avatar} name={replyDisplayName} size={16} user={replyIdentity} />
+              <Icon name="reply" size={12} className="msg-reply-icon flex-shrink-0 text-txt-tertiary" />
+              <Avatar src={spaceAvatarOf(replyTo.userId) ?? replyIdentity.avatar} name={replyDisplayName} size={14} user={replyIdentity} />
               <PersonName
                 name={replyDisplayName}
                 person={replyIdentity}
-                className="text-[14px] font-bold text-txt-primary"
+                className="max-w-[60%] flex-shrink-0 text-meta font-medium text-txt-primary"
                 style={replyRoleColor(replyTo)}
               />
-              <span className="text-[14px] text-txt-message truncate max-w-[400px] group-hover/reply:text-txt-primary transition-colors">
+              <span className="text-meta text-txt-tertiary truncate max-w-[480px] group-hover/reply:text-txt-secondary transition-colors">
                 {replyTo.content ? <InlineMessageText content={replyTo.content} channelId={mentionChannelId} /> : ''}
               </span>
             </>
           );
           // Outside a message list (no jump handle) the preview stays inert.
           if (!jumpToMessage) {
-            return <div className="flex items-center gap-1 mb-1 ml-[-4px] opacity-80 min-w-0">{preview}</div>;
+            return <div className="msg-reply flex items-center gap-1.5 min-w-0 pl-1.5">{preview}</div>;
           }
           return (
             <button
               type="button"
               onClick={() => jumpToMessage(replyTo.id)}
-              className="group/reply flex items-center gap-1 max-w-full min-w-0 mb-1 ml-[-8px] pl-1 pr-1.5 rounded-md text-left opacity-80 hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent-primary/60 transition-opacity cursor-pointer"
+              className="msg-reply group/reply flex items-center gap-1.5 max-w-full min-w-0 pl-1.5 pr-2 py-0.5 rounded-md text-left hover:bg-interactive-hover active:bg-interactive-active transition-colors duration-100 cursor-pointer"
             >
               <span className="sr-only">{t('chat:message.reply.jump')}</span>
               {preview}
@@ -572,65 +706,45 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
         })()}
 
         {(isFirstInGroup || message.replyTo) && (
-          <div className="flex items-baseline gap-2 mb-0.5">
+          <div className="msg-head flex items-baseline gap-2 mb-0.5">
             <span
-              role="button"
-              tabIndex={0}
+              role={writesForChannel ? undefined : 'button'}
+              tabIndex={writesForChannel ? undefined : 0}
+              className="msg-name flex min-w-0 rounded-sm"
               onClick={handleUsernameClick}
               onContextMenu={handleAuthorMenu}
               onKeyDown={handleUsernameKeyDown}
-              className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60"
             >
               <PersonName
                 name={displayName}
                 person={displayIdentity}
-                className="font-semibold cursor-pointer hover:underline text-[15px] leading-tight"
+                className={`font-medium text-body leading-tight ${writesForChannel ? '' : 'cursor-pointer hover:underline'}`}
                 style={roleColor}
               />
             </span>
-            <span className="text-[11px] text-txt-tertiary leading-tight hover:cursor-default">
-              {formatMessageTimestamp(t, fmt, message.createdAt)}
-            </span>
+            {message.user?.accountKind && (
+              <span className="label-mono flex-shrink-0 self-center rounded-sm border border-border-soft px-1 leading-none">
+                {message.user.accountKind === 'webhook' ? t('chat:message.webhookTag') : message.user.accountKind === 'follow' ? t('chat:message.followTag') : t('chat:message.botTag')}
+              </span>
+            )}
+            {/* The day is in the divider above; the line carries the time, the whole date is its tooltip. */}
+            <time
+              className="msg-time tabular flex-shrink-0 whitespace-nowrap font-mono text-label text-txt-tertiary leading-tight hover:cursor-default"
+              dateTime={new Date(message.createdAt).toISOString()}
+              title={formatMessageTimestamp(t, fmt, message.createdAt)}
+            >
+              {fmt.formatTime(message.createdAt)}
+            </time>
           </div>
         )}
 
         {isEditing ? (
-          <div className="mt-1 w-full">
-            <textarea
-              ref={editTextareaRef}
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              onKeyDown={handleEditSubmit}
-              className="input-standard w-full p-3 rounded-lg resize-none text-[15px] leading-[1.5] shadow-inner"
-              rows={2}
-              autoFocus
-            />
-            <p className="text-[12px] text-txt-tertiary mt-1.5 ml-1">
-              <Trans
-                t={t}
-                i18nKey="chat:message.edit.hint"
-                components={{ // i18n-check: allow-literal (the next line is an object key after a JSX element, not text)
-                  cancel: <button onClick={stopEditing} className="text-txt-link hover:underline" />,
-                  save: (
-                    <button
-                      onClick={() => {
-                        if (editContent.trim()) {
-                          editMessage(message.id, editContent.trim(), channelKey);
-                          setEditingMessage(null);
-                        }
-                      }}
-                      className="text-txt-link hover:underline"
-                    />
-                  ),
-                }}
-              />
-            </p>
-          </div>
+          <MessageEditBox channelId={channelKey} content={message.content ?? ''} onSave={saveEdit} onCancel={stopEditing} />
         ) : (
-          <div className="flex flex-col gap-1">
+          <div className="msg-content flex flex-col gap-1.5">
             {isGifOnly ? (
-              <div className="mt-1 max-w-[400px]">
-                <img
+              <div className="max-w-[400px]">
+                <ExternalImage
                   src={message.content!.trim()}
                   alt={t('chat:message.gifAlt')}
                   className="max-w-full max-h-[300px] rounded-lg"
@@ -641,32 +755,43 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
               <>
                 {/* URL text suppressed — embeds render the image */}
                 {message.embeds && message.embeds.length > 0 && (
-                  <div className="flex flex-col gap-2 mt-1">
+                  <div className="flex flex-col gap-1.5">
                     {message.embeds.map((embed) => (
                       <EmbedRenderer key={embed.id} embed={embed} />
                     ))}
                   </div>
                 )}
                 {message.editedAt && (
-                  <span className="text-[10px] text-txt-tertiary select-none font-medium">{t('chat:message.edited')}</span>
+                  <span className="text-label text-txt-tertiary select-none">{t('chat:message.edited')}</span>
                 )}
               </>
             ) : (
               <>
-                {message.content && (
-                  <div className="text-txt-message text-[15px] leading-[1.5] break-words whitespace-pre-wrap selection:bg-accent-primary/30">
+                {message.forwarded && (
+                  <span className="mb-0.5 flex items-center gap-1 text-label text-txt-tertiary select-none">
+                    <Icon name="forward" size={12} />
+                    {t('chat:forward.mark')}
+                  </span>
+                )}
+                {!isPendingMessage(message) && message.poll && <PollCard message={message} canEnd={isAuthor || canManageMessages} />}
+                {message.content && !showsOnlyCards && !('poll' in message && message.poll) && (
+                  <div
+                    data-edited={message.editedAt ? 'true' : undefined}
+                    className="message-text text-txt-message leading-[1.5] break-words whitespace-pre-wrap selection:bg-accent-primary/30"
+                  >
                     {isSticker
                       ? <StickerMessage token={message.content} />
                       : <MarkdownRenderer content={message.content} channelId={mentionChannelId} />}
                     {message.editedAt && (
-                      <span className="text-[10px] text-txt-tertiary ml-1 select-none font-medium">{t('chat:message.edited')}</span>
+                      <span className="text-label text-txt-tertiary ml-1.5 select-none">{t('chat:message.edited')}</span>
                     )}
                   </div>
                 )}
+                {message.content && !isSticker && <MessageTranslation messageId={message.id} content={message.content} channelId={mentionChannelId} />}
 
                 {/* Embeds */}
                 {!isEditing && !isSticker && message.embeds && message.embeds.length > 0 && (
-                  <div className="flex flex-col gap-2 mt-1">
+                  <div className="flex flex-col gap-1.5">
                     {message.embeds.map((embed) => (
                       <EmbedRenderer key={embed.id} embed={embed} />
                     ))}
@@ -675,29 +800,30 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
               </>
             )}
 
+            {cards && cards.length > 0 && <MessageCards cards={cards} attachments={persistedAttachments} channelId={mentionChannelId} />}
+
             {/* Attachments */}
-            {message.attachments && message.attachments.length > 0 && (
-              <div className="mt-1 grid gap-2">
-                {message.attachments.map((att) => {
-                  const pendingAtt = att as PendingAttachmentView;
-                  if (pending && pendingAtt.__transferId) {
-                    return <PendingAttachmentTile key={att.id} transferId={pendingAtt.__transferId} />;
-                  }
-                  return <AttachmentRenderer key={att.id} attachment={att} />;
-                })}
-              </div>
+            {message.attachments && message.attachments.length > 0 && (pending
+              ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {message.attachments.map((att) => {
+                    const transferId = (att as PendingAttachmentView).__transferId;
+                    return transferId
+                      ? <PendingAttachmentTile key={att.id} transferId={transferId} />
+                      : <AttachmentRenderer key={att.id} attachment={att} />;
+                  })}
+                </div>
+              )
+              : <AttachmentList attachments={imagesInCards.size > 0 ? message.attachments.filter((attachment) => !imagesInCards.has(attachment.id)) : message.attachments} />
             )}
 
             {/* Failed-state retry/discard row */}
             {showRetryDiscardRow && pending && (
-              <div className="mt-2 inline-flex items-center self-start gap-2 px-2.5 py-1.5 rounded-lg bg-accent-rose/10 border border-accent-rose/25 shadow-sm">
-                <span className="flex items-center gap-1.5 text-[11.5px] font-medium text-accent-rose">
-                  <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 4a.875.875 0 01.875.875v4a.875.875 0 11-1.75 0v-4A.875.875 0 0110 6zm0 8.25a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                  </svg>
+              <div className="inline-flex items-center self-start gap-1.5 rounded-lg border border-accent-rose/25 bg-accent-rose/10 py-1 pl-2.5 pr-1">
+                <span className="flex items-center gap-1.5 pr-1 text-meta font-medium text-txt-danger">
+                  <Icon name="alert" size={14} />
                   {t('chat:message.upload.failed')}
                 </span>
-                <span className="w-px h-3.5 bg-accent-rose/25" aria-hidden="true" />
                 {canRetry && (
                   <button
                     onClick={async () => {
@@ -713,7 +839,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                         await useTransferStore.getState().resumeUpload(tid);
                       }
                     }}
-                    className="px-2 py-0.5 rounded-md text-[11.5px] font-medium text-accent-mint bg-accent-mint/10 hover:bg-accent-mint/20 transition-colors"
+                    className="btn-outline btn-sm h-6"
                   >
                     {t('common:actions.retry')}
                   </button>
@@ -738,13 +864,16 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                       usePendingMessageStore.getState().removeByClientId(channelKey, pending.clientId);
                     }
                   }}
-                  className="px-2 py-0.5 rounded-md text-[11.5px] font-medium text-txt-secondary bg-surface-channel/50 hover:bg-accent-rose/15 hover:text-accent-rose transition-colors"
+                  className="btn-quiet btn-sm h-6"
                 >
                   {t('chat:message.upload.discard')}
                 </button>
               </div>
             )}
 
+            {!isPendingMessage(message) && message.thread && (
+              <ThreadChip thread={message.thread} parentChannelId={message.channelId} />
+            )}
             {/* Reactions */}
             {showInteractions && reactionGroups.size > 0 && (
               <div className="flex flex-wrap gap-1">
@@ -754,6 +883,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                     emoji={emoji}
                     reactions={reactions}
                     origin={messageOrigin}
+                    added={!reactionsAtStart.has(emoji)}
                     onToggle={() => toggleReaction(emoji)}
                   />
                 ))}
@@ -766,7 +896,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       {/* Reactions retain the upstream mobile sheet and row/button anchor semantics. */}
       {showInteractions && reactionPicker && canAddReactions && isMobile && (
         <MobilePickerSheet onClose={closeReactionPicker} label={t('common:actions.addReaction')}>
-          <EmojiPicker onEmojiSelect={handleReactionEmojiSelect} mobile />
+          <EmojiPicker onEmojiSelect={handleReactionEmojiSelect} customAs="reaction" mobile />
         </MobilePickerSheet>
       )}
       {showInteractions && reactionPicker && canAddReactions && !isMobile && (
@@ -778,15 +908,18 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       )}
 
       {/* Action buttons on hover */}
-      {showInteractions && (isHovered || reactionPicker === 'button' || confirmingDelete) && !isEditing && (
-        <div className="absolute -top-[18px] right-4 flex items-center glass rounded-[10px] overflow-hidden z-10 h-8">
+      {showInteractions && !selecting && (isHovered || reactionPicker === 'button' || confirmingDelete) && !isEditing && (
+        <div className={`msg-toolbar absolute right-3 z-10 flex h-8 w-max items-center gap-px rounded-md p-0.5 glass ${toolbarInside ? 'top-1' : '-top-4'}`}>
+          <time className="tabular px-1.5 font-mono text-label text-txt-tertiary" dateTime={new Date(message.createdAt).toISOString()}>
+            {formatHoverTime(message.createdAt)}
+          </time>
           {canAddReactions && (
-            <div className="flex items-center px-1 border-r border-white/[0.06] h-full">
+            <div className="flex h-full items-center gap-px border-r border-border-soft pr-0.5 mr-0.5">
               {['👍', '❤️', '😂', '😮'].map(emoji => (
                 <button
                   key={emoji}
                   onClick={() => toggleReaction(emoji)}
-                  className="p-1 hover:bg-interactive-hover rounded transition-colors text-[16px] leading-none"
+                  className="h-7 w-7 rounded-md text-lead leading-none transition-colors duration-100 hover:bg-interactive-hover active:bg-interactive-active"
                 >
                   {emoji}
                 </button>
@@ -794,35 +927,39 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
               <button
                 ref={reactionPickerBtnRef}
                 onClick={() => setReactionPicker((v) => (v ? null : 'button'))}
-                className={`p-1 hover:bg-interactive-hover rounded transition-colors text-[14px] leading-none ${
-                  showReactionPicker ? 'text-accent-primary' : 'text-txt-tertiary hover:text-txt-secondary'
-                }`}
+                data-active={showReactionPicker ? 'true' : undefined}
+                className="icon-btn"
                 title={t('common:actions.addReaction')}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v4H7v2h4v4h2v-4h4v-2h-4V7z" />
-                </svg>
+                <Icon name="smile" size={16} />
               </button>
             </div>
           )}
           <button
             onClick={startReply}
-            className="px-2 h-full text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-all flex items-center justify-center"
+            className="icon-btn"
             title={t('common:actions.reply')}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M10 9V5L3 12L10 19V14.9C15 14.9 18.5 16.5 21 20C20 15 17 10 10 9Z" />
-            </svg>
+            <Icon name="reply" size={16} />
           </button>
+          {canThread && (
+            <button
+              type="button"
+              onClick={() => void openOrStartThread()}
+              className="icon-btn"
+              title={!isPendingMessage(message) && message.thread ? t('chat:menu.openThread') : t('chat:menu.startThread')}
+              aria-label={!isPendingMessage(message) && message.thread ? t('chat:menu.openThread') : t('chat:menu.startThread')}
+            >
+              <Icon name="thread" size={16} />
+            </button>
+          )}
           {canEdit && (
             <button
               onClick={startEditing}
-              className="px-2 h-full text-txt-tertiary hover:text-txt-primary hover:bg-interactive-hover transition-all flex items-center justify-center"
+              className="icon-btn"
               title={t('common:actions.edit')}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-              </svg>
+              <Icon name="edit" size={16} />
             </button>
           )}
           {canDelete && (
@@ -835,31 +972,23 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                   startDeleteConfirm();
                 }
               }}
-              className={`px-2 h-full transition-all duration-150 flex items-center justify-center relative w-9 ${
+              className={`relative flex h-7 w-7 items-center justify-center rounded-md transition-colors duration-100 ${
                 confirmingDelete
-                  ? 'bg-green-500/20 text-green-400'
-                  : 'text-txt-tertiary hover:text-txt-danger hover:bg-interactive-hover'
+                  ? 'bg-accent-rose/20 text-txt-danger'
+                  : 'text-txt-tertiary hover:text-txt-danger hover:bg-interactive-hover active:bg-interactive-active'
               }`}
               title={confirmingDelete ? t('chat:message.actions.confirmDelete') : t('common:actions.delete')}
             >
-              {/* Trash icon */}
-              <svg
-                width="20" height="20" viewBox="0 0 24 24" fill="currentColor"
-                className={`absolute transition-all duration-150 ${
-                  confirmingDelete ? 'scale-0 opacity-0' : 'scale-100 opacity-100'
-                }`}
-              >
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-              </svg>
-              {/* Checkmark icon */}
-              <svg
-                width="20" height="20" viewBox="0 0 24 24" fill="currentColor"
-                className={`absolute transition-all duration-150 ${
-                  confirmingDelete ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
-                }`}
-              >
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-              </svg>
+              <Icon
+                name="trash"
+                size={16}
+                className={`absolute transition-all duration-150 ${confirmingDelete ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+              />
+              <Icon
+                name="check"
+                size={16}
+                className={`absolute transition-all duration-150 ${confirmingDelete ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+              />
             </button>
           )}
         </div>

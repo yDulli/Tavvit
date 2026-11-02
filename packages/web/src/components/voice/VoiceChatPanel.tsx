@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MessageList } from '../chat/MessageList';
 import { MessageInput } from '../chat/MessageInput';
 import { useUIStore } from '../../stores/uiStore';
+import { Icon } from '../ui/Icon';
 
 interface VoiceChatPanelProps {
   channelId: string;
@@ -16,19 +17,18 @@ export function VoiceChatPanel({ channelId, channelName }: VoiceChatPanelProps) 
   return (
     <div
       data-testid="voice-chat-panel"
-      className="relative w-[340px] min-w-[280px] max-w-[42%] min-h-0 flex-shrink-0 overflow-hidden bg-surface-chat flex flex-col border-l border-border-soft"
+      className="relative w-[340px] min-w-[280px] max-w-[42%] min-h-0 flex-shrink-0 overflow-hidden bg-surface-chat flex flex-col border-l border-border-hard"
     >
       {/* Chat header */}
-      <div className="h-12 px-4 flex items-center justify-between shadow-header flex-shrink-0">
-        <span className="font-bold text-txt-primary text-[16px]">{t('voice:chatPanel.title')}</span>
+      <div className="panel-bar pl-4 pr-3 flex items-center justify-between flex-shrink-0">
+        <span className="font-semibold text-txt-primary text-lead tracking-[-0.01em]">{t('voice:chatPanel.title')}</span>
         <button
           onClick={toggleVoiceChat}
-          className="w-7 h-7 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded"
+          className="icon-btn"
           title={t('voice:chatPanel.close')}
+          aria-label={t('voice:chatPanel.close')}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.4 4L12 10.4L5.6 4L4 5.6L10.4 12L4 18.4L5.6 20L12 13.6L18.4 20L20 18.4L13.6 12L20 5.6L18.4 4Z" />
-          </svg>
+          <Icon name="x" size={16} />
         </button>
       </div>
 

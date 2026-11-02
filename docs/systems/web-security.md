@@ -140,6 +140,14 @@ The rule for any future route: if you set an enforcing
 `Content-Security-Policy` on a response, you own that response's policy
 completely. The app policy will not be merged in.
 
+The developer docs are the second such route (`utils/developerDocs.ts`,
+[developers.md](developers.md)). Their pages run one script of this server's
+and load nothing from elsewhere, so they answer under `default-src 'none'`
+with `'self'` for scripts, styles, pictures, fonts and `connect-src`, and
+neither `'unsafe-inline'` nor a report endpoint. `build.test.ts` holds what
+that policy needs of the pages: no inline script or style attribute, and
+nothing from another server. `utils/developerDocs.test.ts` holds the header.
+
 ## 5. Header ownership
 
 | Header | Owner | Value | Note |
@@ -150,6 +158,7 @@ completely. The app policy will not be merged in.
 | `Cross-Origin-Opener-Policy` | app (helmet) | `same-origin` | |
 | `Cross-Origin-Embedder-Policy` | app (helmet) | not sent | Disabled. It would require CORP headers on every third-party image an embed pulls in, which this app does not control. |
 | `Referrer-Policy` | app (helmet) | `strict-origin-when-cross-origin` | |
+| `Permissions-Policy` | app (`onSend` hook) | `camera=(self), microphone=(self), display-capture=(self), geolocation=(), payment=(), usb=(), serial=(), hid=(), midi=(), browsing-topics=()` | Since 1.32.5. Calls need the first three for the page itself. Fullscreen, autoplay, picture-in-picture and encrypted media are deliberately not named: naming them would stop an embedded player's `allow` from passing them on. A route that sets its own wins. |
 | `X-Content-Type-Options` | app (helmet) | `nosniff` | |
 | `X-Frame-Options` | app (helmet) | `DENY` | Belt and braces with `frame-ancestors 'none'`. |
 | `Origin-Agent-Cluster`, `X-DNS-Prefetch-Control`, `X-Download-Options`, `X-Permitted-Cross-Domain-Policies`, `X-XSS-Protection` | app (helmet) | helmet 11 defaults, unchanged | |
@@ -659,8 +668,12 @@ server renders different HTML.
 
 `request.ip` is what every rate limit in the app is billed to, so where that
 address comes from is a security property, not a detail. The app runs Fastify
-with `trustProxy: config.trustedProxyHops`, a **count of trusted hops** that
-defaults to 1 and is set with the `TRUSTED_PROXY_HOPS` environment variable
+with `trustProxy: trustProxyFor(config.trustedProxyHops)` (`utils/trustProxy.ts`):
+a **count of trusted hops**, plus the rule that the connecting address must be
+private before any forwarded hop is believed. Fastify 5 treats a bare number as
+"trust nobody", because a count alone cannot tell a proxy from a client that
+connected directly and wrote the header itself; the function keeps the count and
+adds that check. The count defaults to 1 and is set with the `TRUSTED_PROXY_HOPS` environment variable
 (read and validated in `packages/server/src/config.ts`, documented there and in
 `.env.example`). One hop means: trust the proxy directly in front of the app
 and nothing further out. `request.ip` is then the entry that proxy appended,
@@ -776,11 +789,10 @@ proxy-awareness".
 
 ## Dependency note
 
-`@fastify/helmet` is pinned to `^11.1.1` and must stay on the 11.x line. The
-12.x line depends on `fastify-plugin@^5` and 13.x on `^6`, and both target
-Fastify 5. This repo is on Fastify 4 and every other plugin is pinned to its
-Fastify 4 major (`@fastify/cors@^9`, `rate-limit@^9`, `static@^7`,
-`websocket@^10`). A helmet bump is a Fastify 5 migration, not a version bump.
+The server is on Fastify 5 (since 1.32.5) and every plugin on its Fastify 5
+line (`@fastify/cors@^11`, `helmet@^13`, `multipart@^10`, `rate-limit@^11`,
+`static@^10`, `websocket@^11`), all on `fastify-plugin@^6`. They move together:
+a plugin from another major line refuses to register.
 
 `livekit-client` is the dependency the meta policy's two script directives are
 measured against, because it is the only one in the voice path that could start

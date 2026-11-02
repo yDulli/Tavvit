@@ -45,7 +45,7 @@ const REMOTE = 'https://orbit.example';
 function makeInstance(overrides: Partial<ConnectedInstance> = {}): ConnectedInstance {
   return {
     origin: REMOTE,
-    label: 'Orbit',
+    label: 'Tavvit',
     token: 'old-token',
     username: 'erin@nova.example',
     status: 'connected',
@@ -74,7 +74,7 @@ function settleReconnect(live: ConnectedInstance['status'], registryStatus: Fede
 
 function registryEntry(status: FederationRegistryEntry['status']): FederationRegistryEntry {
   return {
-    origin: REMOTE, label: 'Orbit', username: 'erin@nova.example', remoteUserId: 'remote-1',
+    origin: REMOTE, label: 'Tavvit', username: 'erin@nova.example', remoteUserId: 'remote-1',
     status, addedAt: 1, lastConnectedAt: 1, disconnectedAt: 2, errorMessage: null,
   };
 }

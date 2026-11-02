@@ -20,7 +20,7 @@ describe('DM unread message badge', () => {
     useUnreadCountStore.getState().hydrate('', { a: 3, b: 999, mirror: 3 });
     useUnreadCountStore.getState().hydrate('remote', { b: 5, a: 999 });
     render(<DmUnreadBadge />);
-    expect(screen.getByText('8')).toHaveClass('bg-notification');
+    expect(screen.getByText('8')).toHaveClass('count-badge');
     expect(screen.getByText('8 unread direct messages')).toBeInTheDocument();
   });
 

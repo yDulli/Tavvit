@@ -33,8 +33,8 @@ vi.mock('../stores/authStore', () => ({
 
 import { useSpaceStore } from '../stores/spaceStore';
 import { renderHook } from '@testing-library/react';
-import { getCanonicalUserView, useCanonicalUserView } from './userViewLookup';
-import type { User } from '@backspace/shared';
+import { getCanonicalUserView, useCanonicalUserView, useSearchResultView, usernameQueryOf } from './userViewLookup';
+import type { User, UserSearchResult } from '@backspace/shared';
 
 function makeUser(extras: Partial<User> & Pick<User, 'id' | 'username'>): User {
   return {
@@ -49,7 +49,6 @@ function makeUser(extras: Partial<User> & Pick<User, 'id' | 'username'>): User {
     banner: null,
     isAdmin: false,
     isDeleted: false,
-    discoverable: true,
     showActivity: true,
     createdAt: 0,
     ...extras,
@@ -183,5 +182,68 @@ describe('the same view for the same inputs', () => {
     const forOther = getCanonicalUserView(otherStub, 'https://sky.ddns.net');
     expect(forOther).not.toBe(forStub);
     expect(forOther.id).toBe('sky-frank-stub');
+  });
+});
+
+describe('usernameQueryOf', () => {
+  it.each([
+    ['bob', 'bob'],
+    ['  Bob  ', 'bob'],
+    ['@bob_99', 'bob_99'],
+    ['a'.repeat(32), 'a'.repeat(32)],
+  ])('reads %j as the username %j', (value, name) => {
+    expect(usernameQueryOf(value)).toBe(name);
+  });
+
+  it.each(['', 'bo', '@bo', 'bob!', 'bob smith', 'bob@orbit.ddns.net', 'a'.repeat(33)])('reads %j as no username to search for', (value) => {
+    expect(usernameQueryOf(value)).toBeNull();
+  });
+});
+
+describe('useSearchResultView', () => {
+  // Frank as orbit's username search returns him: a replicated row naming his home, nova.
+  const found: UserSearchResult = {
+    id: 'orbit-frank-stub',
+    username: 'frank@nova.ddns.net',
+    displayName: null,
+    avatar: null,
+    avatarColor: null,
+    homeUserId: 'nova-frank-id',
+    homeInstance: 'nova.ddns.net',
+  };
+
+  it('shows the result as it came while the client holds no view of the person', () => {
+    const { result } = renderHook(() => useSearchResultView(found, 'https://orbit.ddns.net'));
+    expect(result.current).toEqual({
+      username: 'frank@nova.ddns.net',
+      displayName: null,
+      avatar: null,
+      avatarColor: null,
+      status: undefined,
+    });
+  });
+
+  it('shows the view the client holds of the same person, and leaves the cache as it was', () => {
+    const frankHome = makeUser({
+      id: 'nova-frank-id',
+      username: 'frank',
+      displayName: 'Frank',
+      avatar: '/uploads/frank.png',
+      avatarColor: 'teal',
+      status: 'idle',
+    });
+    useSpaceStore.getState().upsertUserView(frankHome, '');
+    const views = useSpaceStore.getState().userViews;
+
+    const { result } = renderHook(() => useSearchResultView(found, 'https://orbit.ddns.net'));
+
+    expect(result.current).toEqual({
+      username: 'frank',
+      displayName: 'Frank',
+      avatar: '/uploads/frank.png',
+      avatarColor: 'teal',
+      status: 'idle',
+    });
+    expect(useSpaceStore.getState().userViews).toBe(views);
   });
 });

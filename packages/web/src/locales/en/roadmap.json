@@ -1,0 +1,82 @@
+{
+  "title": "Roadmap",
+  "lead": "What comes next, and what we have in mind after that. There are no dates, and plans can change.",
+  "sections": {
+    "next": {
+      "title": "Next",
+      "items": {
+        "history": {
+          "title": "Edit history",
+          "text": "See what a message said before it was edited, if you wrote it or look after the channel."
+        },
+        "scheduled": {
+          "title": "Scheduled messages",
+          "text": "Write something now and have it sent later."
+        },
+        "notes": {
+          "title": "Private notes on people",
+          "text": "A note on someone's profile that only you can see."
+        },
+        "altText": {
+          "title": "Descriptions for pictures",
+          "text": "Describe a picture for people who cannot see it."
+        },
+        "ageRestricted": {
+          "title": "Age-restricted channels",
+          "text": "A channel you enter after saying you are old enough, with nothing of it in search or notifications."
+        },
+        "accounts": {
+          "title": "Several accounts on one device",
+          "text": "Switch between up to five accounts without signing out."
+        },
+        "passkeys": {
+          "title": "Passkeys",
+          "text": "Sign in with your fingerprint, your face or a security key instead of a password."
+        }
+      }
+    },
+    "after": {
+      "title": "After that",
+      "items": {
+        "publicExplore": {
+          "title": "Explore without an account",
+          "text": "See what spaces there are before you sign up."
+        },
+        "spacePages": {
+          "title": "A page for each public space",
+          "text": "An address to share that shows what a space is about, with a way to join."
+        },
+        "statistics": {
+          "title": "Statistics for space owners",
+          "text": "How many people join, leave and write, as numbers that name nobody."
+        }
+      }
+    },
+    "later": {
+      "title": "Later",
+      "note": "What we would like to do. Nothing here is promised yet.",
+      "items": {
+        "signIn": {
+          "title": "Sign in with Tavvit",
+          "text": "Use your account to sign in to other websites and apps."
+        },
+        "botButtons": {
+          "title": "Buttons and menus in messages",
+          "text": "Bots can offer choices to click on instead of commands to type."
+        },
+        "blur": {
+          "title": "Background blur in video calls",
+          "text": "Keep your room to yourself on camera."
+        },
+        "signedApp": {
+          "title": "A signed desktop app",
+          "text": "No more warning from Windows when you install the app."
+        }
+      }
+    }
+  },
+  "recent": {
+    "title": "Just finished",
+    "all": "Everything that is new"
+  }
+}

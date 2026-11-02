@@ -6,7 +6,13 @@ Source files:
 - `packages/server/src/utils/inviteService.ts` -- Invite token generation, status derivation, atomic `redeemInvite()` transaction
 - `packages/server/src/routes/users.ts` -- Password change, account deletion endpoints (lines 58-156)
 - `packages/server/src/routes/admin.ts` -- Admin password reset endpoint (lines 232-265)
-- `packages/server/src/utils/auth.ts` -- Password hashing, JWT sign/verify, `authenticate` preHandler, `requireAdmin`
+- `packages/server/src/utils/auth.ts` -- JWT sign/verify, `verifyAccessToken`, `authenticate` preHandler, `requireAdmin`
+- `packages/server/src/utils/passwordHash.ts` -- Argon2id, reading old bcrypt hashes
+- `packages/server/src/utils/sessions.ts` -- The session rows
+- `packages/server/src/utils/loginThrottle.ts` -- The sign-in delay
+- `packages/server/src/utils/apiErrorHandler.ts` -- What a client hears when a route throws
+- `packages/server/src/utils/suspension.ts` -- `activeSuspension`, `suspendedNow`, `suspensionDetails`: the one test for a standing suspension (§13)
+- `packages/server/src/routes/platformAdmin.ts` -- Suspend and unsuspend endpoints, among the platform admin routes (§13)
 - `packages/server/src/utils/userDeletion.ts` -- `tombstoneUser()` transactional account erasure
 - `packages/server/src/utils/sanitize.ts` -- `sanitizeUser()` strips internal fields, anonymizes deleted users
 - `packages/server/src/ws/handler.ts` -- WebSocket auth handshake (lines 1282-1374)
@@ -24,72 +30,73 @@ DB tables: `users`, `instanceSettings`, `userFederationCredentials`. See `databa
 
 ## 1. Password Hashing
 
-**Library:** `bcryptjs`
-**Salt rounds:** 12 (`config.passwordHashCost` in `config.ts`). Under the test suite (`NODE_ENV=test`) it is 4, bcrypt's minimum, so cases that hash several times stay fast under load (#326). It is deliberately not an environment variable, so no deployment can lower it. `bcrypt.compare` reads the cost from the stored hash, so hashes of either cost verify.
+**Argon2id**, through Node's own `crypto.argon2` (Node 24.7 and up, which is why `engines` asks for it), written and read as a PHC string in `users.password_hash` (`utils/passwordHash.ts`). No native package.
 
-```
-hashPassword(password: string): Promise<string>   -- bcrypt.hash(password, config.passwordHashCost)
-verifyPassword(password: string, hash: string): Promise<boolean>  -- bcrypt.compare
-```
+| | |
+|---|---|
+| Memory, passes, lanes | 64 MiB, 3, 1 (RFC 9106's second recommended setting). `config.passwordArgon2`; under the test suite the smallest there is |
+| Salt, tag | 16 and 32 random bytes |
+| Length | At least `PASSWORD_MIN_LENGTH` (8), at most `PASSWORD_MAX_LENGTH` (256). Sign-in refuses a longer one as a wrong password, without hashing it |
+| What it may not be | The account's name, one character repeated, or on the short list of the first things anyone tries (`utils/passwordPolicy.ts`, `password_too_common`). No rules about digits or capitals, which do little and make passwords worse. Asked when a password is set, never at sign-in, so nobody is locked out |
 
-**Federation stub marker:** Replicated user stubs have `passwordHash = '!federation-replicated'`. Since bcrypt never produces this value, login is impossible for stubs. See `federation.md` for identity resolution.
+**Accounts from before** keep their bcrypt hash until their next login: `verifyPassword` reads both, `passwordNeedsRehash` says when one should go, and the login route replaces it now that the password is at hand. That is not a password change: nothing is stamped and no session ends. It also applies when the settings change, since each hash carries its own. bcrypt stops at 72 bytes; Argon2id does not.
+
+**Anything else opens nothing.** `verifyPassword` returns false for the marker `'!federation-replicated'` on a relay stub, for a deleted account's random bytes, and for a hash asking for more than 1 GiB or 16 passes, so a damaged row cannot exhaust the server.
 
 ---
 
-## 2. JWT Management
+## 2. Tokens and sessions
 
-### Signing
+A token is a bearer JWT (HS256, `{ userId, username, sid, iat, exp }`, `JWT_SECRET`, 30 days by `JWT_EXPIRES_IN`). Cookies stay out on purpose: the multi-instance client holds a token per instance in script, the CORS posture rests on there being no ambient credential (`web-security.md`), and so CSRF does not arise. What remains is that script on the page could read a token; that limit is stated openly.
 
-```typescript
-interface JwtPayload {
-  userId: string;
-  username: string;
-  iat?: number;       // Auto-set by jsonwebtoken library (seconds since epoch)
-}
-```
+### Sessions
 
-- **Algorithm:** HS256 (enforced on verify via `{ algorithms: ['HS256'] }`)
-- **Secret:** `config.jwtSecret` (env `JWT_SECRET`, minimum 32 characters -- startup crash if shorter)
-- **Expiry:** `config.jwtExpiresIn` (env `JWT_EXPIRES_IN`, default `'30d'`)
-- **Library:** `jsonwebtoken`
+Each signed-in device has a row in `sessions` (`utils/sessions.ts`), named by the token's `sid`. **Deleting the row is what ending a session means.**
 
-`signJwt(payload)` creates a token with `{ expiresIn }` option. The `iat` field is auto-injected by the library.
+| What ends it | Route or path | This device's token | Sockets |
+|---|---|---|---|
+| Log out | `POST /auth/logout` | dead | closed at once |
+| Sign a device out | `DELETE /auth/sessions/:id` | dead | closed at once |
+| Sign out everywhere else | `POST /auth/sessions/end-others` | goes on | others closed at once |
+| Change password | `POST /users/@me/change-password` | dead, a new session and token replace it | others closed at once; this device reconnects on the answer |
+| Admin reset | `POST /admin/users/:id/reset-password` | dead | all closed (`forceDisconnectUser`) |
+| `tavvit-admin reset-password` | separate process, deletes the rows | dead | closed within 30 s (`revalidateSockets`) |
+| Deleting the account | `tombstoneUser` | dead | all closed |
+| Time | `expires_at`; swept hourly | dead | closed within 30 s |
 
-### Validation (`authenticate` preHandler)
+Each password change ends this device's session as well, because whoever copied its token is exactly who it is meant to shut out. A person's list shows only their own sessions and every query carries the user id the token proved, so nobody else's can be named.
 
-Applied as `preHandler` on all authenticated routes. Flow:
+**What a row holds:** the device's browser and system (`describeClient`, "Chrome · Windows"), the address cut short (`maskAddress`: the last part of IPv4, all but three groups of IPv6), when it started, when it was last active (written at most every 5 minutes), when it runs out. No location: that would take GeoIP or a third party. The privacy draft says so.
 
-1. Extract `Bearer <token>` from `Authorization` header
-2. `verifyJwt(token)` -- checks signature (HS256) and expiry
-3. DB lookup: fetch `id`, `isDeleted`, `passwordChangedAt` from `users` table
-4. Reject if user not found or `isDeleted === 1`
-5. **Token revocation check:** if `passwordChangedAt` is set and `payload.iat` exists, reject if `iat < Math.floor(passwordChangedAt / 1000)` (JWT `iat` is seconds, `passwordChangedAt` is milliseconds)
-6. Attach `userId` and `username` to `request` object
+### One check, for REST and for the socket
 
-### Token Revocation
+`verifyAccessToken` (`utils/auth.ts`) is the only place that decides: signed by this server and in date; the account there and not deleted; the session live for this account; not suspended. `authenticate`, tus and the socket's first message all go through it, so they cannot disagree. It throws `AuthError` with a code: `unauthorized`, `account_deleted`, `session_ended`, `account_suspended`.
 
-There is **no token blocklist**. The only revocation mechanism is the `passwordChangedAt` timestamp:
+**A token from before sessions** has no `sid`, and since 1.31.0 it opens nothing: `verifyAccessToken` answers `session_ended`, because nothing could sign it out. Whoever still holds one signs in once more. Nothing has issued one for a long time, and those in use were traded in for one with a session while `POST /auth/upgrade-session` existed. (`sessionlessInTests` is what lets the test suite sign tokens without opening a session for each. Only `test/setup-env.ts` sets it: it is neither an environment variable nor anything a request can reach.)
 
-- When a user changes their password (or an admin resets it), `passwordChangedAt` is set to `Date.now()`
-- All tokens issued before that timestamp (`iat < passwordChangedAt/1000`) are rejected
-- A fresh token is issued after password change
+### Sockets
 
-**Exception:** Federation password self-healing (see section 4) does NOT set `passwordChangedAt` -- it is a state correction, not a password change, so existing valid JWTs remain valid.
+Authentication on `/ws` is its first message: `{ type: 'auth', token, client? }`, within 10 seconds. A refusal is the same check's code, sent as `{ type: 'error', code, message, details? }`, then close 4001. The client signs out on those instead of knocking again (`useWebSocket.ts`); its backoff only starts over after `ready`, so a refused socket cannot retry at full speed. If this browser holds a newer token (a password changed in another tab), it reconnects with that one instead.
 
-### WebSocket Auth
+`ConnectionManager` remembers what each socket came in on (`SocketAccess`):
+- `closeSessionSockets` closes those of ended sessions and no others, so a call on another device goes on.
+- `revalidateSockets` runs with the 30 s heartbeat and checks every open socket again, for what happens outside the routes.
 
-`ws/handler.ts:registerWebSocket()` -- WS connection at `/ws`:
+**Limit:** the server has no LiveKit room client, so a signed-out device already in a call stays in the audio until its LiveKit token runs out; its socket and its place in the room's state are gone at once.
 
-1. Client connects, 10-second auth timeout starts
-2. First message must be `{ type: 'auth', token: '<jwt>' }`
-3. `verifyJwt(token)` validates signature and expiry
-4. DB check: reject if user deleted or token revoked (same `passwordChangedAt` logic as REST)
-5. On success: clears timeout, sets status to `'online'`, registers connection, sends `ready` payload, broadcasts presence
-6. On failure: sends error message and closes socket
+### Sign-in delay
+
+`utils/loginThrottle.ts` slows guessing without ever refusing the right password. The first three failures cost nothing. After that the next attempt waits before its password is looked at, doubling up to 30 s for the same name from the same address, and up to 5 s for the name from anywhere, so the worst a griefer can do to an owner is that short wait. At most 4 attempts on a name run at once; a flood past that gets `429 login_throttled`. Failures on unknown names count the same. The route's own limit is 15 per 2 minutes per address. State is in memory: a restart forgives everyone.
+
+### Errors
+
+`setErrorHandler` (`utils/apiErrorHandler.ts`) answers in the contract and never with an error's own message: the JSON parser's quotes the body it could not read, passwords included. 4xx is not logged at all; 5xx is logged by name, code and stack, without the message.
 
 ---
 
 ## 3. Registration Flow
+
+With mail on (email.md), a local account may give an address, or must while the admin requires it. The confirmation link goes after the account exists; if the mail fails, the account is still there and can ask again.
 
 **Endpoint:** `POST /api/auth/register`
 **Rate limit:** 10 requests / 2 minutes per IP
@@ -104,7 +111,8 @@ There is **no token blocklist**. The only revocation mechanism is the `passwordC
 | `displayName` | Optional. Trimmed or null. |
 | `avatarColor` | Optional. Must be in `AVATAR_COLORS` array, else random. |
 | `homeInstance` | Optional (federation only). Max 253 chars, alphanumeric + `.` `-` `_`. |
-| `homeUserId` | Optional (federation only). Stored if `homeInstance` is present. |
+| `homeUserId` | Required with `homeInstance`. |
+| `attachProof` | Required with `homeInstance`: what their home gave them for this instance. See below. |
 
 **Password minimum, one source:** `PASSWORD_MIN_LENGTH` in `packages/shared/src/constants.ts` is the only definition. The register route (`routes/auth.ts`), the change-password route (`routes/users.ts`), the registration page (`RegisterPage.tsx`, step 1) and the Account settings panel (`AccountPanel.tsx`, check and placeholder) all import it, so the client can never accept a password at one step that the server then refuses (#397). Admin-issued temporary passwords (16 chars) and federation credential secrets are generated well above it.
 
@@ -134,7 +142,7 @@ DB value overrides env when explicitly set by admin. When closed, a valid `invit
 
 **Federated identity replication** (request body has `homeInstance`):
 
-- Gated solely by `instanceSettings.federatedRegistrationOpen` (NOT NULL DEFAULT 1).
+- Gated by `instanceSettings.federatedRegistrationOpen`, and by the home vouching for the person (below).
 - `inviteToken` is **ignored entirely** on this path -- tokens never unlock federated creation, even when supplied.
 - Closed → 403 `"Federated registration is closed on this instance"`.
 
@@ -201,14 +209,9 @@ If any step throws (concurrent revoke, last-slot race, username collision agains
 
 The `/api/auth/check-invite` debounced UX endpoint pre-validates a token from the register page; the in-txn re-derive inside `redeemInvite()` is the authoritative enforcement point.
 
-### First-User Admin Promotion
+### Nobody becomes an administrator by registering
 
-```
-const userCount = db.select().from(schema.users).all().length;
-const isFirstUser = userCount === 0 && !homeInstance;
-```
-
-The very first user registered on the instance (and only if local, not replicated) gets `isAdmin = 1`.
+Not even the first, on an instance with open registration and no accounts: that would be whoever came first. `tavvit-admin create <name> --admin` on the server is the only way (docs/tavvit/FIRST-ADMIN.md), and the startup summary says so while there is no administrator. `ensureDefaults` no longer promotes anyone at a start either.
 
 ### Avatar Color Assignment
 
@@ -225,22 +228,41 @@ If `requestedAvatarColor` is provided and is in `AVATAR_COLORS`, use it. Otherwi
 3. **Branch by request shape** (spec §1.2):
    - If `homeInstance` set → reject with 403 unless `federatedRegistrationOpen === true`. `inviteToken` ignored on this path.
    - Else (local) → if `registrationOpen` is false, require a valid `inviteToken`; otherwise reject with 403. Pre-flight token check rejects obvious-invalid tokens before bcrypt.
-4. Hash password (bcrypt, 12 rounds)
+4. Hash password (Argon2id, section 1)
 5. Check username uniqueness (exact match on lowercased username)
 6. Generate Snowflake ID
-7. Insert user row (status defaults to `'offline'` at the schema level; it is set to `'online'` only when the client establishes a WebSocket via the WS auth path in `ws/handler.ts`). Admin flag set if first user. **When the local-closed-with-token path is in play**, the insert runs inside `redeemInvite()`'s transaction so the user row, the `usedCount` bump, and the `invite_redemptions` row commit atomically (or all roll back).
-8. Sign JWT with `{ userId, username }`
+7. Insert user row (status defaults to `'offline'` at the schema level; it is set to `'online'` only when the client establishes a WebSocket via the WS auth path in `ws/handler.ts`). **When the local-closed-with-token path is in play**, the insert runs inside `redeemInvite()`'s transaction so the user row, the `usedCount` bump, and the `invite_redemptions` row commit atomically (or all roll back).
+8. Open a session and sign its token (section 2)
 9. Return `201 { token, user }` (user sanitized via `sanitizeUser(user, true)`)
 
-### Federated Registration Never Claims an Existing Row
+### Federated Registration Needs Its Home's Word, and Never Claims an Existing Row
 
-`/api/auth/register` is public and unauthenticated. `homeInstance` and `homeUserId` are caller-supplied strings carrying **no proof** that the caller controls the identity they name, and `homeUserId` is only unique *within* an instance — two different instances may legitimately hand out the same id. The route therefore performs no identity lookup at all: a federated registration is a plain INSERT, exactly like a local one, and always returns `201` with a freshly generated Snowflake.
+`/api/auth/register` is public and unauthenticated, so `homeInstance` and `homeUserId` prove nothing by themselves. Since 1.31.0 a registration naming a home is refused with 403 `home_instance_unproven` unless the home vouches for it (`homeIdentityProven`, `utils/federationAttach.ts`):
 
-In particular, a registration is **never** merged into a relay-created stub (`passwordHash = '!federation-replicated'`), regardless of matching `homeUserId`, matching `homeInstance`, or a matching username base. The only gate on the path is `federatedRegistrationOpen`, and the only rejection is the ordinary `409 Username already taken` from the uniqueness check.
+1. The client asks its home to peer with this instance, and for a one-time proof for it (`POST /api/auth/attach-proof`, one minute, single use, only for a person native there).
+2. It registers here with `attachProof`.
+3. This instance looks for an **active peer** under that domain. None is a refusal with no outbound request, so that a stranger cannot make this server call an address they name.
+4. It asks that peer over the signed channel (`verifyAttachProofWithPeer`), and takes the answer only if the signature holds.
+5. The answer must name exactly this `homeUserId`, and this account's name must be that person's name at home under that domain.
+
+The proof is spent by asking, so this comes after the check for a name already taken. Where the two have not finished peering, which on instances with auto-accept off takes an administrator, the registration is refused and the client falls back to its login form (client-federation.md).
+
+Even then a registration is **never** merged into a relay-created stub (`passwordHash = '!federation-replicated'`): it only ever makes a new row, and a name already taken is the ordinary `409`. `homeUserId` is unique only *within* an instance. See `src/routes/auth.homeProof.test.ts`.
 
 **Merging a stub into a real account is exclusively the job of `POST /api/users/@me/reattach`** (`routes/federation/handlers/attach.ts`; see `federation.md` "Peer-Side Re-Attach"). That flow requires two independent proofs — a JWT session that already *is* the account, plus a one-time attach-proof token minted by the home instance via `POST /api/auth/attach-proof` and verified with the home peer over signed S2S — and it is the only place `'!federation-replicated'` rows are ever absorbed.
 
 **Consequence:** a person who already has a relay-created stub here and then registers federated ends up with a second row sharing that `homeUserId` until they re-attach. The stub keeps the DM history; the new row is a fresh account. Wiring fresh federated registration to the proof-gated reattach primitive for history continuity is a separate, unimplemented enhancement.
+
+### Changing a username
+
+`POST /api/users/@me/username` with `{ username, password, twoFactorCode? }`, in Settings under the account (`UsernameSection`). It is what someone signs in with, so it takes what changing the password takes: the password, the second factor where it is on, and 5 tries in 15 minutes. Bots may not.
+
+- **The rules of a new name** are registration's (`usernameShapeRefusal`, `usernameReserved`), and it must be free.
+- **Once in 30 days** (`USERNAME_LIMITS`, `users.username_changed_at`): 429 `username_change_too_soon`. The account sees the date (`User.usernameChangedAt`, its own view only).
+- **The old name stays out of reach for 30 days** (`retired_usernames`, `usernameHeld`), for sign-up and for anyone changing theirs, so nobody can pose as who had it. Taken and held answer the same: `username_taken`. After that it is free, and the row goes with the next change.
+- **Sessions go on.** A token's `username` is what it said when it was made, so `authenticate` reads the name from the row. Signing in takes the new name from then on.
+- **Told:** `user_updated` to whoever can see the account, `username_changed` in the security activity and a mail to a confirmed address, with a way out if it was not them.
+- **Federation:** an account homed elsewhere, or a detached one, answers 403 `username_change_home_only`, as the name is its home's. One with accounts on other instances (`replicated_instances`, `user_federation_registry`) answers 409 `username_change_connected`: those accounts sign in as `<handle>@<home>`, and the client would look for them under the new name. Copies of this person on other instances that are only replicas follow through `profile_update` ([federation.md](federation.md), "Account names").
 
 ### Username Availability Check
 
@@ -254,6 +276,8 @@ Validates format (same rules as local registration: 3-32 chars, `/^[a-z0-9_]+$/`
 
 ## 4. Login Flow
 
+The name typed is a username, and on an instance that sends mail also a confirmed address (`accountNamed`). The sign-in delay counts for the account, however it was named.
+
 **Endpoint:** `POST /api/auth/login`
 **Rate limit:** 15 requests / 2 minutes per IP
 **Auth:** None
@@ -264,15 +288,16 @@ Validates format (same rules as local registration: 3-32 chars, `/^[a-z0-9_]+$/`
 2. Look up user by `username` (trimmed, lowercased)
 3. Reject if not found (generic "Invalid username or password")
 4. Reject if `isDeleted === 1` ("This account has been deleted")
-5. Verify password via bcrypt. **`federationHomeOrphaned === 1` no longer short-circuits here.** A federated account whose home instance was reset (a new incarnation stood up on the same domain) is now treated as **detached** — a sovereign LOCAL account whose local password hash is the sole authority (detach design §4.1). Local-hash verification proceeds normally: the correct local password logs in. The flag's only login effect is to permanently disable the self-heal path (step 7). *(Historical note: this check was previously a pre-verification freeze that blocked the local-password path too; the detach re-interpretation removed it so the real owner keeps their account instead of being locked out.)*
+5. Verify password (section 1). **`federationHomeOrphaned === 1` no longer short-circuits here.** A federated account whose home instance was reset (a new incarnation stood up on the same domain) is now treated as **detached** — a sovereign LOCAL account whose local password hash is the sole authority (detach design §4.1). Local-hash verification proceeds normally: the correct local password logs in. The flag's only login effect is to permanently disable the self-heal path (step 7). *(Historical note: this check was previously a pre-verification freeze that blocked the local-password path too; the detach re-interpretation removed it so the real owner keeps their account instead of being locked out.)*
 6. *(merged into step 5)*
 7. **If password invalid AND user is federated:** if `federationHomeOrphaned === 1` (detached), reject immediately with the generic "Invalid username or password" — **no outbound request to the home domain**: there is no trusted home to consult, and re-hashing on the new incarnation's say-so would hand the account to a stranger. Otherwise attempt self-healing (see below).
 8. **If password invalid AND user is local:** reject
-9. Sign JWT, return `{ token, user }`. **Note:** Login does NOT mutate `users.status`. A successful login does not by itself imply a live connection (the client may never establish a WebSocket due to network failure, mobile background, error path); writing `'online'` here would produce a permanently stuck-online row that no disconnect timer cleans up. The WebSocket auth path (`ws/handler.ts`) is the single source of truth for `status = 'online'`. See `docs/systems/activity-presence.md` "Boot Reset" for the mitigation that runs on server start.
+9. **If the account is suspended** (`activeSuspension`): answer `403 account_suspended` with `details: { reason, until? }` and sign no token (§13). This runs only here, after the password proved right against the local hash or through a self-heal, so a wrong password on a suspended account is rejected in steps 7-8 like any other and learns nothing of the suspension
+10. Sign JWT, return `{ token, user }`. **Note:** Login does NOT mutate `users.status`. A successful login does not by itself imply a live connection (the client may never establish a WebSocket due to network failure, mobile background, error path); writing `'online'` here would produce a permanently stuck-online row that no disconnect timer cleans up. The WebSocket auth path (`ws/handler.ts`) is the single source of truth for `status = 'online'`. See `docs/systems/activity-presence.md` "Boot Reset" for the mitigation that runs on server start.
 
 ### Federation Password Self-Healing
 
-When local bcrypt verification fails for a user with `homeInstance` set:
+When local verification fails for a user with `homeInstance` set:
 
 1. Extract base username (strip `@domain` if present)
 2. POST to `https://{homeInstance}/api/auth/login` with base username and provided password
@@ -318,7 +343,7 @@ Detach is sovereign but not permanent: the legitimate owner who re-created their
 
 | User type | `currentPassword` | Behavior |
 |-----------|-------------------|----------|
-| Local (`homeInstance` is null) | Required | Verified via bcrypt against stored hash |
+| Local (`homeInstance` is null) | Required | Verified against the stored hash |
 | Federated (`homeInstance` set, `federationHomeOrphaned !== 1`) | Not required | JWT auth is sufficient (home instance already verified the change) |
 | Detached (`federationHomeOrphaned === 1`; homed here since #310, so `homeInstance` is null) | Required | Follows the **local** rule — the home is gone, so nothing external verified the change; the local hash is the sole authority (detach design §4.4) |
 
@@ -328,7 +353,7 @@ Detach is sovereign but not permanent: the legitimate owner who re-created their
 3. If local **or detached** (`!homeInstance || federationHomeOrphaned === 1`): require and verify `currentPassword`
 4. Hash new password
 5. Update `passwordHash` AND `passwordChangedAt = Date.now()` -- this invalidates all prior tokens
-6. Sign fresh JWT, return `{ token }`
+6. End every session, this one too; open a new one and return its `{ token }` (section 2)
 
 ### Admin Password Reset
 
@@ -343,8 +368,79 @@ Detach is sovereign but not permanent: the legitimate owner who re-created their
 **Steps:**
 1. Generate temporary password: `crypto.randomBytes(12).toString('base64url')` (16 chars)
 2. Hash it and update `passwordHash` + `passwordChangedAt = Date.now()`
-3. `connectionManager.forceDisconnectUser(targetId)` -- closes all WS connections, forcing re-auth
-4. Return `{ temporaryPassword }` -- admin must relay this to the user out-of-band
+3. `connectionManager.forceDisconnectUser(targetId, { reason: 'Password reset', endPresence: true })` -- closes all WS connections (code 4001, reason `Password reset`) and ends the account's presence, forcing re-auth; the reconnect's old token is refused as revoked (websocket.md, "Forced disconnects")
+4. Record `user_password_reset` in the platform audit log (api.md, "Platform administration")
+5. Return `{ temporaryPassword }` -- admin must relay this to the user out-of-band
+
+---
+
+## 5c. Two-factor authentication
+
+TOTP (RFC 6238: SHA-1, six digits, 30 seconds), in `security/totp.ts` on Node's own HMAC and held to the RFCs' test vectors; `security/twoFactor.ts` around it; `routes/twoFactor.ts`. No dependency on the server. `qrcode-generator` draws the QR code in the browser (loaded only in the security tab), so the secret goes to no image service.
+
+**The key.** `TOTP_ENCRYPTION_KEY`, 32 bytes, in `.env`. Not in the database, and not derived from `JWT_SECRET`, whose rotation must not lock anyone out. `install.sh` generates it. `update.sh` never writes `.env`, so an update does not depend on it: without it the server starts, 2FA cannot be turned on (`/instance/info` says `twoFactor: false`, and `doctor.sh` warns), and an account that has 2FA cannot sign in. **That failure is closed on purpose:** a missing or different key answers `503 two_factor_unavailable`, and never skips the step. Mistyped, the server refuses to start.
+
+**Turning it on.** Password, then a new secret (shown once, as a QR code and as text), then a code made from it. Only that turns it on; before that a sign-in does not ask. Ten recovery codes come back with the answer, once. Other sessions end, because they got in without it. An account whose home is elsewhere does this at home: a replicated row cannot enroll.
+
+**Signing in.**
+
+1. `POST /auth/login` with a right password answers **`401 mfa_required`** with a `ticket`, not a token. A JWT with a user id is a login to everything here, so nothing resembling one exists until the second step. A wrong password gets the usual answer, so nothing about 2FA is said to someone without the password. A client that does not know about this sees a refusal.
+2. `POST /auth/login/2fa` takes the ticket and a code. Only it reads tickets: they are random, kept as hashes, last 5 minutes, take 5 attempts and go when used or when the password changed.
+
+The throttle's success, the suspension notice and the session all come after the second step.
+
+**What cannot be got around.**
+
+| | |
+|---|---|
+| A code twice | `last_used_step`: an accepted step, and any before it, does not count again. One step of drift either way |
+| Guessing | Per account, not per ticket, and in the database: after 5 wrong codes each next one waits 1, 2, 4 minutes up to an hour, even the right one. Only someone with the password gets here, so a stranger cannot use this against the owner. The route has its own limit too |
+| A recovery code twice | Spent in the same statement that finds it |
+| A mailbox | Resetting a password or changing an address leaves 2FA on. **No mail ever turns it off** |
+| An admin session | The admin area cannot turn it off, and neither its password reset nor `tavvit-admin reset-password` does |
+| The database alone | The secret does not decrypt, also not copied onto another row. Recovery hashes are keyed |
+
+**A lost phone.** A recovery code gets in, and can turn 2FA off or make new codes. Without one, `./tavvit-admin.sh reset-2fa <username>`, from the server's shell, after proving who is asking: it is the one way past the factor, so it ends every session, goes on the activity list, and tells the confirmed address.
+
+**Sensitive changes** take the code as well as the password while 2FA is on (`refuseWithoutSecondFactor`, the field is `twoFactorCode`): changing the password, changing or removing the address, asking for all data, deleting the account, turning 2FA off, new recovery codes. Accounts without 2FA, replicated ones among them, are asked for nothing new, which keeps `ensureRemoteCredential` and `deleteAccountOnRemotes` working.
+
+**Other instances.** `connectToRemote` and `loginToRemote` go through `loginWithSecondFactor` (`instanceStore.ts`): one dialog, `MfaPromptDialog`, so that none of the callers has to know. The self-heal check on a home instance gets a refusal from a home with 2FA, and fails closed.
+
+---
+
+## 5d. Security activity and notifications
+
+`security/events.ts`, `security/notices.ts`, `GET /auth/security`. What the tab lists, and what is said by mail:
+
+| Happened | On the list | Mail |
+|---|---|---|
+| Signed in | `login` | |
+| From a device not seen before | `login_new_device` | `new_device` |
+| Wrong password | `login_failed` | `suspicious_login`, after 5 within 15 minutes, at most once a day |
+| Right password, wrong code | `mfa_failed` | `mfa_failures`, after 3, at most every 6 hours: someone has the password |
+| Password changed, reset | `password_changed`, `password_reset` | `password_changed` |
+| Address confirmed, changed, removed | `email_added`, `email_changed`, `email_removed` | email.md |
+| 2FA on, off, reset by the operator | `two_factor_on`, `two_factor_off`, `two_factor_reset` | each |
+| Recovery codes made, one used | `recovery_regenerated`, `recovery_used` | each |
+| A device signed out, or many | `session_revoked`, `sessions_ended` | |
+
+Mail goes to a confirmed address only. No mail or list has a password, a code, a secret or a token in it, and `twoFactor.test.ts` checks that.
+
+**Failures** from one place within 15 minutes are one row with a count, and each account keeps 200 rows and 90 days, so that strangers failing to sign in cannot fill it. Failures on names that do not exist have no account to go on; the throttle counts those.
+
+**Devices.** The browser keeps a random id (`utils/deviceId.ts`) and sends it when signing in; the server keeps a hash of it with the account's id. The first device on record says nothing, as with everyone after the update. A sign-in with no id counts as new, or leaving it out would hide one.
+
+**No location.** It would take GeoIP or a third party, for something that is often wrong. The address is cut short as on a session (section 2).
+
+Recording never gets in the way: a failure to write one (`quietly`) does not refuse a sign-in.
+
+---
+
+## 5a. Forgetting a password
+
+With mail on (email.md), `POST /auth/password/forgot` answers the same for any address and does its work after answering. A link goes only to a confirmed address of a local account. `POST /auth/password/reset` takes the link and a new password: it checks the length first (a refused password does not use the link up), checks the link is live before hashing (nobody gets the hash's work for a made-up token), then in one transaction uses the link, re-checks that this address still speaks for the account, sets the hash and `password_changed_at`, ends every session and queues the confirmation. Sockets close at once. Nobody is signed in by it.
+
+Without mail, a forgotten password is an administrator's to reset: the admin route, or `tavvit-admin reset-password`.
 
 ---
 
@@ -466,7 +562,7 @@ isAdmin:      0
 
 **Post-transaction (in route handler):**
 - Delete files from disk via `deleteUploadFile()`
-- `connectionManager.forceDisconnectUser()` -- closes all WS connections, leaves voice rooms, broadcasts presence
+- `connectionManager.forceDisconnectUser()` -- closes all WS connections (code 4001, reason `Account deleted`) and leaves voice rooms. Called without `endPresence`, it sends no presence of its own: the anonymized `user_updated` broadcast just before it (`status: 'offline'`) is what the others receive (websocket.md, "Forced disconnects")
 
 ### `tombstoneUser()` Options
 
@@ -573,8 +669,10 @@ is what stops a reply for the old session landing in the new one.
 
 Two paths end a session without going through this function, and both are
 safe because they replace the whole JS context: `handleUnauthorized` in
-`api/client.ts`, which drops the token on a 401 and navigates to `/login`
-with `window.location.href`, and the post-deletion redirect in
+`api/client.ts`, which drops the token on a 401 from the home instance (a
+suspension's `401 account_suspended` included) and navigates to `/login`
+with `window.location.href`, and which `useWebSocket` also calls when the
+home socket is refused with `account_suspended` (§13); and the post-deletion redirect in
 `DeleteAccountModal`, which does the same three seconds after the flow
 completes (`authStore.deleteAccount` has already reset by then).
 
@@ -602,6 +700,7 @@ completes (`authStore.deleteAccount` has already reset by then).
 - Fields: username, password
 - Redirect support: reads `?redirect` param, navigates there on success (validated: must start with `/`, not `//`)
 - Rate limit handling: catches `RateLimitError`, shows countdown timer
+- Suspension: an `HttpError` with code `account_suspended` (only ever answered to the right password, §13) shows a notice instead of the error line: "until lifted", or the end as a date and time in the user's language, and the reason when there is one
 - Links to register page (preserves redirect param)
 
 ### Registration Page (Two-Step)
@@ -674,5 +773,69 @@ All keyed by `request.ip`.
 
 `auth.ts:requireAdmin()` -- used as preHandler alongside `authenticate`:
 1. Loads full user from DB by `request.userId`
-2. Rejects with 403 if user not found or `isAdmin !== 1`
-3. Used by admin routes (user management, password reset, federation peer management)
+2. Rejects with `403 forbidden` if user not found or `isAdmin !== 1`
+3. Used by admin routes (user management, password reset, federation peer management, invites, instance settings) and by every platform admin route in `routes/platformAdmin.ts` (overview, suspensions, badges, spaces, reviews, audit log)
+
+`users.is_admin` on this instance is the only thing that passes it. A space role, owning a space or a permission bit never does: platform matters, suspensions among them (§13), are an instance admin's alone.
+
+
+## 12. Profile fields
+
+Besides the name, pictures, colours and bio, a profile has three fields of its own, set with `PATCH /api/users/@me` (api.md, "Profile card fields") and shown on the profile card and the full profile:
+
+- **Pronouns** (`users.pronouns`): up to 40 characters, shown after the username.
+- **Links** (`users.profile_links`, JSON): up to 5, each a plain `http`/`https` address (no user name or password in it, at most 200 characters) with an optional label of up to 32 characters; the card shows the label or the address's host.
+- **Layout** (`users.profile_layout`): `standard` (the banner across the top, the picture over its edge), `centered` (picture and name centred under the banner) or `compact` (no banner area; picture and name side by side). `profileHeaderLook` (web/src/utils/profileLayout.ts) holds what each layout means for the card, the full profile and the editor's preview.
+
+The rules live in packages/shared/src/profileFields.ts and are applied three times: by the instance that stores them, by the editor before it saves (Settings, My Account, with a live preview and save or discard), and by every profile surface before it shows them. That last check matters for profiles from other instances, which carry whatever their instance sent: a link that is not a plain web address is not shown as a link, and pronouns or labels with control or bidirectional characters are not shown. Links open in a new tab with `rel="noopener noreferrer nofollow"`.
+
+Only the account itself writes these fields (`PATCH /users/@me` acts on the caller's own row). Like `accentColorSecondary` they are not relayed to federation peers: another instance shows them for its own users only. Deleting the account (`tombstoneUser`) clears all of them, the second accent colour included, and hands the pictures of the person's space profiles to the caller for deletion with the rest.
+
+
+## 13. Suspensions
+
+An instance admin can suspend an account on this instance, for a time or until lifted, with a reason the account's owner reads (`POST /api/admin/users/:id/suspend` and `/unsuspend` in `routes/platformAdmin.ts`; api.md, "Platform administration"). Nothing of the account is deleted: its spaces, messages, friends and DMs stay as they are, and only its access stops. Deciding is the instance admin's alone (§11): no space role or ownership can suspend anyone. An admin cannot suspend their own account or another admin (`cannot_suspend_self`, `cannot_suspend_admin`: the role is removed first), so an admin team cannot lock itself out. Nothing is relayed to peers: suspending a replicated row keeps that person off this instance only, and their home instance does not know.
+
+### State
+
+Three columns on `users` (database.md): `suspended_at`, `suspended_until` (NULL until lifted) and `suspension_reason`. `activeSuspension(row, now)` in `utils/suspension.ts` is the one test: an account is suspended while `suspended_at` is set and `suspended_until` is NULL or later than now. A time-limited suspension therefore ends by itself, and nothing runs when it does: every check compares the end with the clock. The columns stay set until an admin lifts the suspension (`/unsuspend` clears all three, and records whether it had already ended); meanwhile an ended suspension reads as none everywhere. `suspendedNow(now)` is the same condition in SQL, used by the admin user list's `status=suspended` and by people search (`GET /api/social/search`), which leaves suspended accounts out. `suspensionDetails` builds what a refusal tells the account: `{ reason }`, plus `until` when the suspension has an end.
+
+### Enforcement
+
+Three points refuse a standing suspension, each with the code `account_suspended` and those details:
+
+| Where | When | Answer |
+|-------|------|--------|
+| `verifyJwtAndUser` (`utils/auth.ts`), behind `authenticate` and the tus upload hooks | every authenticated request, after the deleted-account and revoked-token checks (§2) | `401` with code and details; the tus hooks answer the 401 with the message only. A 401 is what makes the web client drop the token (`handleUnauthorized`), so a session ends at its next request |
+| `POST /api/auth/login` (`routes/auth.ts`) | after the password check, a federated self-heal included, before a token is signed (§4, step 9) | `403` with code and details; no token |
+| WebSocket auth (`ws/handler.ts`) | after the deleted-account and revoked-token checks (§2, "WebSocket Auth") | an `error` event with code and details, then close code 4001, reason `Account suspended`; nothing published, no `ready` |
+
+**The sign-in disclosure rule.** The login says that an account is suspended, and why and until when, only to someone who gave its right password. A wrong password, or a username nobody has, answers `401 invalid_credentials` exactly as for any account, so knowing a username tells nobody whether, why or until when its account is suspended: the reason is for the account's owner. This is why the suspension check sits after the password check in the login, unlike the deleted-account check, and why the token is never signed for a suspended account. The other two points answer only a valid token of the account, which nobody holds without having signed in as it.
+
+**Ending sessions.** A suspension deletes the account's session rows (`endOtherSessions`), so a token taken before it does not work again when it ends, and closes the account's sockets on this instance at once with `connectionManager.forceDisconnectUser(id, { reason: 'Account suspended', endPresence: true })`: voice is left, every socket closes with code 4001, and the account's presence ends as at a last disconnect (websocket.md, "Forced disconnects"). The client's reconnect is then refused at WebSocket auth and its next REST call with the 401. The JWT itself is not revoked (`passwordChangedAt` does not move): a token kept somewhere is accepted again once the suspension is lifted or its end has passed.
+
+### Client
+
+`LoginPage` shows an `account_suspended` answer as a notice in place of the error line: "until lifted" or the end as a date and time in the user's language (`formatDateTime`), and the reason. When the home instance refuses the socket with `account_suspended`, `useWebSocket` calls `handleUnauthorized` instead of reconnecting: the token goes and `/login` opens, where the person learns why once they sign in with their password. A refusal from another instance shows as the coded error's toast, and that connection keeps retrying (websocket.md, "Platform administration", "Known limits").
+
+## An administrator and these
+
+From the admin console an administrator can see an account's sessions and security activity and end its sessions; that records `sessions_ended_by_admin` in the person's own activity, without the admin's device or address. A second factor cannot be turned off from there, only with `tavvit-admin reset-2fa` on the server's shell ([admin.md](admin.md), "The console").
+
+Deleting an account also removes what would otherwise stay behind a tombstone, because a tombstone keeps the users row and so no cascade fires: `user_federation_registry`, `user_blocks` in both directions, `notification_settings`, `user_space_layout`, `personal_stickers`, `peer_approval_subscribers`, `peer_approval_notifications`, `channel_slowmode_posts`, `space_departed_timeouts`, `admin_notes`, member rows of `category_overrides`, the suspension columns and `users.badges`. `invite_redemptions` keeps the record of the use, under `Deleted User`.
+
+The last administrator who can act cannot delete their own account (`last_admin_cannot_leave`). At start, an instance without a live admin promotes the earliest account of this instance that is not deleted or suspended; with none, nobody.
+
+## Automatic sign-ups
+
+Before an account is created, the browser solves a small task: find a nonce so that SHA-256 of `salt:nonce` starts with a number of zero bits (`shared/src/signupChallenge.ts`). `normal` is 16 bits, about half a second on a computer and a few seconds on a phone; `high` is 18. `api.auth.register` does it, on a worker, on whichever instance the client is for, so every way to an account goes through it. An instance from before this answers 404 to the question, which counts as asking nothing.
+
+`POST /api/auth/register` checks it first (`acceptSignupChallenge`): a task this server signed, not older than 10 minutes, at least as hard as the level in force, solved, and not used before. A task is spent by being answered. Nothing is stored for a task until then, and spent ones are held in memory until they would have expired, so a restart forgets them for those few minutes.
+
+**What it is for.** It stops a script that does not run a browser and costs a person a moment, with nothing sent to anyone else: no captcha service, no cookie, no data. Someone who sets out to pay the price still can, on their own hardware far faster than a phone. Rate limits, sign-up rules and confirmed addresses are for them. `crypto.subtle` needs https, so a page on plain http cannot answer and the server says `signup_challenge_failed`; turn the check off there.
+
+The level is set in the admin console, under sign-up rules (`signup_challenge_update` in the audit log). `DISABLE_RATE_LIMITS` turns it off with the rate limits, for test harnesses.
+
+## Accounts that are not people
+
+`users.account_kind` says what an account is. Only a `person` signs in: `accountNamed` looks only among people, and `verifyAccessToken` refuses a token that names any other kind. Such an account exists because a message needs an author ([webhooks.md](webhooks.md)).

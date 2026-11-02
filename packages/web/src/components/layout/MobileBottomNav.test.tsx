@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { HubUpdateState } from '../../stores/projectHubStore';
 
 // Stub AudioManager to avoid AudioWorkletNode reference error in jsdom.
 // Reached transitively via chatStore -> useWebSocket -> voiceStore.
@@ -10,15 +9,6 @@ vi.mock('../../audio/AudioManager', () => ({
       setVolume: vi.fn(),
     }),
   },
-}));
-
-// Both dot sources have their own tests; here only how the tab combines them.
-const sources = vi.hoisted(() => ({ hub: 'current' as HubUpdateState, instanceUpdate: false }));
-vi.mock('../../hooks/useHubUpdateState', () => ({
-  useHubUpdateState: () => ({ state: sources.hub, version: '1.2.0' }),
-}));
-vi.mock('../../hooks/useInstanceUpdateBadge', () => ({
-  useInstanceUpdateBadge: () => sources.instanceUpdate,
 }));
 
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -40,12 +30,10 @@ function renderNav() {
 
 /** The You tab's dot, or null when the tab shows none. */
 function youDot(): Element | null {
-  return screen.getByRole('button', { name: 'You' }).querySelector('.bg-notification');
+  return screen.getByRole('button', { name: 'You' }).querySelector('.bg-txt-primary');
 }
 
 beforeEach(() => {
-  sources.hub = 'current';
-  sources.instanceUpdate = false;
   useUIStore.setState({ mobileScreen: 'spaces', mobileStack: [] });
   useSocialStore.setState({ requests: [] });
   useAuthStore.setState({ user: null });
@@ -58,33 +46,15 @@ afterEach(async () => {
 });
 
 describe('MobileBottomNav: You tab dot', () => {
-  it('lights on a hub update alone', () => {
-    sources.hub = 'updated';
-
-    renderNav();
-
-    expect(youDot()).not.toBeNull();
-  });
-
-  it.each<HubUpdateState>(['unknown', 'first-run', 'current'])('stays dark when the hub state is %s and nothing else is pending', (state) => {
-    sources.hub = state;
-
+  it('stays dark when nothing is pending', () => {
     renderNav();
 
     expect(youDot()).toBeNull();
   });
-
-  it('still lights on an instance update with the hub current', () => {
-    sources.instanceUpdate = true;
-
-    renderNav();
-
-    expect(youDot()).not.toBeNull();
-  });
 });
 
 describe('MobileBottomNav: You tab dot for friend requests', () => {
-  const ORBIT = 'https://orbit.example';
+  const TAVVIT = 'https://orbit.example';
   const me = { id: 'n-1', username: 'jannis', displayName: null, homeInstance: null, homeUserId: null } as unknown as User;
 
   function request(fromId: string, toId: string, other: User, origin: string): TaggedFriendRequest {
@@ -95,7 +65,7 @@ describe('MobileBottomNav: You tab dot for friend requests', () => {
     // orbit knows the user as o-7 and lists their request to orbit's Bob.
     useAuthStore.setState({ user: me });
     const bob = { id: 'o-2', username: 'bob', displayName: null } as unknown as User;
-    useSocialStore.setState({ requests: [request('o-7', 'o-2', bob, ORBIT)] });
+    useSocialStore.setState({ requests: [request('o-7', 'o-2', bob, TAVVIT)] });
 
     renderNav();
 
@@ -105,7 +75,7 @@ describe('MobileBottomNav: You tab dot for friend requests', () => {
   it("lights for a request sent to the user on another instance by someone who has the session row's id there", () => {
     useAuthStore.setState({ user: me });
     const cleo = { id: 'n-1', username: 'cleo', displayName: null } as unknown as User;
-    useSocialStore.setState({ requests: [request('n-1', 'o-7', cleo, ORBIT)] });
+    useSocialStore.setState({ requests: [request('n-1', 'o-7', cleo, TAVVIT)] });
 
     renderNav();
 

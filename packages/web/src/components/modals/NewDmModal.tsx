@@ -5,20 +5,20 @@ import { Modal } from '../ui/Modal';
 import { Avatar } from '../ui/Avatar';
 import { useUIStore } from '../../stores/uiStore';
 import { api } from '../../api/client';
-import type { User } from '@backspace/shared';
+import type { UserSearchResult } from '@backspace/shared';
 import { parseFederatedUsername } from '../../utils/identity';
 import { openDirectMessage } from '../../utils/openDirectMessage';
-import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { usernameQueryOf, useSearchResultView } from '../../utils/userViewLookup';
 
 function NewDmUserRow({
   user,
   onSelect,
 }: {
-  user: User;
-  onSelect: (user: User) => void;
+  user: UserSearchResult;
+  onSelect: (user: UserSearchResult) => void;
 }) {
   // Search results come from the page's own instance.
-  const canonical = useCanonicalUserView(user, '');
+  const canonical = useSearchResultView(user, '');
   const { baseName } = parseFederatedUsername(canonical.username);
   const displayName = canonical.displayName ?? baseName;
   return (
@@ -26,12 +26,12 @@ function NewDmUserRow({
       onClick={() => onSelect(user)}
       className="w-full flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-interactive-hover transition-colors text-left"
     >
-      <Avatar src={canonical.avatar} name={displayName} size={36} status={canonical.status as any} userId={canonical.homeUserId ?? canonical.id} avatarColor={canonical.avatarColor} />
+      <Avatar src={canonical.avatar} name={displayName} size={36} status={canonical.status} userId={user.homeUserId ?? user.id} avatarColor={canonical.avatarColor} />
       <div className="flex-1 min-w-0">
-        <div className="text-[14px] font-medium text-txt-primary truncate">
+        <div className="text-body font-medium text-txt-primary truncate">
           {displayName}
         </div>
-        <div className="text-[12px] text-txt-tertiary truncate">@{canonical.username}</div>
+        <div className="text-meta text-txt-tertiary truncate">@{canonical.username}</div>
       </div>
     </button>
   );
@@ -40,7 +40,7 @@ function NewDmUserRow({
 export function NewDmModal() {
   const { t } = useTranslation(['dm', 'common']);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<User[]>([]);
+  const [results, setResults] = useState<UserSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
   const activeModal = useUIStore((s) => s.activeModal);
@@ -68,7 +68,9 @@ export function NewDmModal() {
       clearTimeout(searchTimer.current);
     }
 
-    if (value.trim().length < 2) {
+    // People are found by username only (social.md, "Finding people").
+    const username = usernameQueryOf(value);
+    if (username === null) {
       setResults([]);
       return;
     }
@@ -76,7 +78,7 @@ export function NewDmModal() {
     searchTimer.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const users = await api.social.search(value.trim());
+        const users = await api.social.search(username);
         setResults(users);
       } catch {
         setResults([]);
@@ -86,7 +88,7 @@ export function NewDmModal() {
     }, 300);
   };
 
-  const handleSelectUser = async (user: User) => {
+  const handleSelectUser = async (user: UserSearchResult) => {
     setError('');
     try {
       const rowId = await openDirectMessage(user, '');
@@ -107,20 +109,20 @@ export function NewDmModal() {
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
           placeholder={t('dm:newDm.searchPlaceholder')}
-          className="input-search w-full py-2 text-[14px]"
+          className="input-search w-full py-2 text-body"
         />
 
         {error && (
-          <p className="text-txt-danger text-[13px]">{error}</p>
+          <p className="text-txt-danger text-ui">{error}</p>
         )}
 
         <div className="max-h-[300px] overflow-y-auto space-y-[2px]">
           {isSearching && (
-            <div className="py-4 text-center text-txt-tertiary text-[14px]">{t('dm:search.searching')}</div>
+            <div className="py-4 text-center text-txt-tertiary text-body">{t('dm:search.searching')}</div>
           )}
 
-          {!isSearching && query.trim().length >= 2 && results.length === 0 && (
-            <div className="py-4 text-center text-txt-tertiary text-[14px]">{t('dm:newDm.noUsers')}</div>
+          {!isSearching && usernameQueryOf(query) !== null && results.length === 0 && (
+            <div className="py-4 text-center text-txt-tertiary text-body">{t('dm:newDm.noUsers')}</div>
           )}
 
           {results.map((user) => (

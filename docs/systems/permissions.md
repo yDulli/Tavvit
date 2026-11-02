@@ -55,12 +55,20 @@ and after the pass.
 | 5 | CREATE_INVITE | Generate invite codes |
 | 6 | KICK_MEMBERS | Remove members |
 | 7 | BAN_MEMBERS | Ban members |
+| 8 | MODERATE_MEMBERS | Time members out and end a timeout early (spaces.md, "Moderation"); follows the role hierarchy like kick and ban |
+| 9 | VIEW_AUDIT_LOG | Read the space's audit log |
 | 10 | SEND_MESSAGES | Post in text channels |
 | 11 | MANAGE_MESSAGES | Delete others' messages |
 | 12 | ATTACH_FILES | Upload files |
 | 13 | READ_MESSAGE_HISTORY | View message history |
 | 14 | ADD_REACTIONS | Add emoji reactions |
 | 15 | MENTION_EVERYONE | Send `@everyone`, `@here` and role mentions (see "Mass mentions") |
+| 16 | PIN_MESSAGES | Pin and unpin a channel's messages. MANAGE_MESSAGES includes it. Not in the default for @everyone. A conversation has no permissions: any member may. |
+| 17 | CREATE_THREADS | Start a thread from a message, or a post in a forum. In the default for @everyone; migration 0056 gave it to the existing @everyone roles. Sending in a thread takes SEND_MESSAGES of its parent. |
+| 18 | MANAGE_EVENTS | Announce, change and call off a space's events. Who announced one may change it while a member. Not in the default. |
+| 19 | MANAGE_WEBHOOKS | Make, rename and delete a channel's webhooks, and give them a new token; have an announcement channel's posts arrive in a channel, and see or end that ([forums.md](forums.md)). With VIEW_CHANNEL, in the channel with its overrides. Not in the default. |
+| 27 | USE_SOUNDBOARD | Play a clip in a call you are in. In the default for @everyone; migration 0061 gave it to the existing @everyone roles. Can be denied per voice channel. |
+| 28 | MANAGE_SOUNDS | Add, rename and remove a space's clips. Not in the default. |
 | 20 | CONNECT | Join voice channels |
 | 21 | SPEAK | Transmit audio |
 | 22 | MUTE_MEMBERS | Space-mute others |
@@ -69,7 +77,9 @@ and after the pass.
 | 25 | STREAM | Screen share |
 | 26 | DISCONNECT_MEMBERS | Disconnect from voice |
 
-**Default @everyone:** VIEW_CHANNEL, SEND_MESSAGES, CREATE_INVITE, CONNECT, SPEAK, ATTACH_FILES, READ_MESSAGE_HISTORY, ADD_REACTIONS, STREAM. MENTION_EVERYONE is not a default: it is granted per role.
+**Default @everyone:** VIEW_CHANNEL, SEND_MESSAGES, CREATE_INVITE, CONNECT, SPEAK, ATTACH_FILES, READ_MESSAGE_HISTORY, ADD_REACTIONS, STREAM. MENTION_EVERYONE is not a default: it is granted per role. Neither are MODERATE_MEMBERS and VIEW_AUDIT_LOG. Bits 8 and 9 had no meaning before them; a role that carried one anyway (only the owner, an instance admin or an ADMINISTRATOR holder could set a bit no permission defined, see "Held-bits rule") holds the permission now.
+
+**Moderation exemptions** (spaces.md, "Moderation", "Exemptions"): the space's minimum account and membership ages and its automatic message rules do not apply to a member who holds MANAGE_MESSAGES in the channel or MANAGE_SPACE (the owner, instance admins and ADMINISTRATOR hold both); slow mode does not apply to MANAGE_MESSAGES or MANAGE_CHANNELS in the channel. A timeout has no exemption.
 
 ---
 
@@ -161,9 +171,9 @@ Moderating another member needs a strictly higher rank than theirs:
 
 | Rule | Where |
 |---|---|
-| Nobody acts on the space owner | kick, ban, role changes, voice moderation |
+| Nobody acts on the space owner | kick, ban, timeouts, role changes, voice moderation |
 | The owner and instance admins (`isAdmin`) are exempt | everything below |
-| Actor's rank > target's rank | kick (`DELETE /members/:uid`, not leaving), ban, `PATCH /members/:uid` (roles, and another member's nickname), `POST`/`DELETE /members/:uid/roles`, WS `voice_space_mute`, `voice_space_deafen`, `voice_move`, `voice_disconnect` |
+| Actor's rank > target's rank | kick (`DELETE /members/:uid`, not leaving), ban, a timeout and its early end (`PUT`/`DELETE /members/:uid/timeout`), `PATCH /members/:uid` (roles, and another member's nickname), `POST`/`DELETE /members/:uid/roles`, WS `voice_space_mute`, `voice_space_deafen`, `voice_move`, `voice_disconnect` |
 | Role position < actor's rank | assigning or removing that role (each role a `PATCH /members/:uid` adds or removes), editing or deleting it, moving it or moving another role to that position, creating a role (new roles start at 1), writing or deleting a channel or category override on that role (`PUT`/`DELETE /channels/:id/overrides`, `/categories/:id/overrides`; @everyone is position 0) |
 | Actor's rank > target's rank | writing or deleting a channel or category override on another member (an override on oneself is not moderation) |
 
@@ -450,6 +460,28 @@ again.") come from `describeError` and the `errors` catalogs
 
 ---
 
+## Role display
+
+Besides its bits and position a role carries how it looks and how it is listed (`roles` columns from migration 0040; spaces.md, "Role Management"):
+
+| Field | Effect |
+|---|---|
+| `color`, `colorSecondary` | A name in the role's colours is drawn in `color`, or as a gradient from `color` to `colorSecondary` (`roleTextStyle`, web/src/utils/roleStyle.ts; the dot beside a role is split between the two, `roleDotStyle`). The member list, messages, the role editor and a profile opened in the space (its name, `useProfileNameStyle`, and each role chip, `ProfileRoles`) read the same helper. |
+| `icon` | Shown after the name of members whose top role with an icon this is (`memberIconRole`), and on profile chips. One of Tavvit's own (`glyph:<id>`, `shared/src/roleGlyphs.ts`), drawn in the role's colour or across its gradient (`roles/RoleIcon.tsx`). The editor offers only these (`RoleIconPicker`). A stored emoji stays valid, for roles from before and for Discord templates; one that has an icon meaning the same is drawn with it (`roleIconGlyph`), and the rest show as they are. |
+| `description` | What the role is for; shown in the role editor and as the chip's tooltip on profiles. |
+| `hoist` | Whether members whose top shown role this is get their own group in the member list (`memberTopShownRole`); a role that is not hoisted still colours names. |
+| `mentionable` | Whether anyone may mention the role without MENTION_EVERYONE ("Mass mentions"). |
+
+None of them grants anything. They are display fields: every member receives them, as with the name and colour ("Who receives role and override data").
+
+**Names and icons** follow one rule wherever a role is made (packages/shared/src/roleDisplay.ts): a name is trimmed with its runs of space collapsed, at most 100 characters, and holds no control, bidirectional or zero-width character (`role_name_invalid`; the joiners and variation selectors emoji are made of are allowed, so a name may start with an emoji sequence). An icon is an emoji, a flag (subdivision flags included) or a short sequence of them, at most 16 UTF-16 code units, with no letters or spaces. The role routes refuse anything else; the Discord template import fits a template's roles to the same rule.
+
+**The permission editor** groups the bits by purpose (`PERMISSION_GROUPS` and `usePermissionGroupTitles`, web/src/utils/permissionGroups.ts): channels and categories, messages and files, voice, invites, moderation, members, roles, the space, and Administrator on its own. The role editor and the member role editor use the same groups. The groups are a view; the bits and their resolution are unchanged.
+
+## Invite links
+
+CREATE_INVITE makes a link, in the Invite dialog or with an end date and a limit. Listing and revoking need MANAGE_SPACE: who may hand out a link and who may see all of them are different questions. A member without CREATE_INVITE does not get the code either, since `spaceToWire` leaves it out (spaces.md, "Invite links").
+
 ## Helper Functions
 
 | Function | Purpose |
@@ -689,6 +721,8 @@ messages alert"). Messages stored before this version are stamped from their
 text too; that matters only for the highlight, since only `message_created`
 alerts.
 
+**Mentionable roles.** A role marked `mentionable` may be mentioned by anyone who can send in the channel: its `<@&roleId>` token needs no MENTION_EVERYONE. `@everyone`, `@here` and every other role still do. The server gate reads `hasGatedMassMention(content, mentionableRoleIds(spaceId))` for a new message and `addsGatedMassMention` for an edit (packages/shared/src/mentions.ts, server/src/utils/mentionableRoles.ts), in both the REST routes and the WebSocket events. The stamp is unchanged: a mentionable role's mention reaches its holders like any role mention.
+
 **Federation.** A space lives on one instance, and a member from another
 instance reads its channels from that instance directly with their
 replicated id there (client-federation.md). The permission is resolved there
@@ -763,3 +797,11 @@ membership is binary so the two candidate predicates coincide.
 
 Covered by `packages/server/src/routes/messages.replyAuthorization.test.ts` and
 `packages/server/src/routes/dm.replyAuthorization.test.ts`.
+
+## Held back in a space
+
+`memberActionRefusal` (`utils/spaceModeration.ts`) is the one gate for taking part: a running timeout, or required rules not yet agreed to (`rules_not_accepted`). Messages (through `spaceMessageRefusal`), reactions, votes, pins, threads, pokes, joining voice and a voice token all pass it, and so does making a webhook.
+
+## Seeing and writing
+
+Writing in a channel takes VIEW_CHANNEL as well as SEND_MESSAGES, on the REST route and on the socket: an override can hide a channel without taking SEND_MESSAGES away, and nobody posts into a room they cannot see. The same holds for every check of a channel: joining voice (socket and `/api/livekit/token`) takes VIEW_CHANNEL with CONNECT, voice moderation VIEW_CHANNEL with its own bit (a move on both channels, and the person moved must see and be able to enter the target), deleting someone else's message, ending their poll, renaming a thread or tagging a post VIEW_CHANNEL with MANAGE_MESSAGES. A new check of a channel names VIEW_CHANNEL itself. A bot's rights are a role like any other, adding to what `@everyone` holds ([bots.md](bots.md)).

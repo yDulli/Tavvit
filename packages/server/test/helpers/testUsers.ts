@@ -1,4 +1,8 @@
+import { hasLeadingZeroBits, type SignupChallengeResponse, type SignupChallengeSolution } from '@backspace/shared/src/signupChallenge.js';
+import Database from 'better-sqlite3';
+import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
+import { hashPassword } from '../../src/utils/passwordHash.js';
 import type { SpawnedInstance } from './twoInstanceHarness.js';
 
 export interface TestUser {
@@ -21,6 +25,17 @@ const nano = () => crypto.randomBytes(4).toString('hex');
  *  - Request body: { username, password, displayName?, avatarColor?, homeInstance?, homeUserId? }
  *  - Response 201: { token, user: { id, ... } }
  */
+/** What a browser does before it asks for an account (utils/signupChallenge.ts). Nothing when the instance asks nothing. */
+async function answerSignupTask(instance: SpawnedInstance): Promise<SignupChallengeSolution | undefined> {
+  const task = await (await fetch(`${instance.origin}/api/auth/challenge`)).json() as SignupChallengeResponse;
+  if (task.level === 'off') return undefined;
+  for (let nonce = 0; ; nonce += 1) {
+    if (hasLeadingZeroBits(crypto.createHash('sha256').update(`${task.salt}:${nonce}`).digest(), task.bits)) {
+      return { salt: task.salt, bits: task.bits, signature: task.signature, nonce: String(nonce) };
+    }
+  }
+}
+
 export async function registerLocal(instance: SpawnedInstance, baseName = 't'): Promise<TestUser> {
   // Username validator (auth.ts): /^[a-z0-9_]+$/, length 3-32. Lowercase the
   // baseName and use underscore separator so callers can pass readable names
@@ -31,19 +46,70 @@ export async function registerLocal(instance: SpawnedInstance, baseName = 't'): 
   const res = await fetch(`${instance.origin}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, displayName: username }),
+    body: JSON.stringify({ username, password, displayName: username, challenge: await answerSignupTask(instance) }),
   });
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`registerLocal failed (${instance.origin}): ${res.status} ${txt}`);
   }
   const data = await res.json() as { user: { id: string }; token: string };
+  // The harness's people talk to each other freely: these suites are about the
+  // relay, and utils/contactPolicy.ts has tests of its own.
+  const open = await fetch(`${instance.origin}/api/users/@me`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.token}` },
+    body: JSON.stringify({ dmPolicy: 'anyone' }),
+  });
+  if (!open.ok) throw new Error(`registerLocal could not open DMs (${instance.origin}): ${open.status}`);
   return {
     id: data.user.id,
     username,
     password,
     token: data.token,
     origin: instance.origin,
+  };
+}
+
+/** An administrator, which registering never makes: on a real instance `tavvit-admin` writes this. */
+export function makeAdmin(instance: SpawnedInstance, userId: string): void {
+  const db = new Database(instance.dbPath);
+  try {
+    db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(userId);
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Someone from `home`'s account on `remote`, as a registration with a proof leaves it. It is
+ * written to the database because a proof takes the two instances to already trust each other
+ * under names a test cannot resolve, and these suites are about what comes after.
+ * `src/routes/auth.homeProof.test.ts` tests the registration itself.
+ */
+export async function insertFederatedAccount(remote: SpawnedInstance, home: SpawnedInstance, homeUser: TestUser): Promise<TestUser> {
+  const username = `${homeUser.username}@${home.domain}`;
+  const id = String((BigInt(Date.now()) << 22n) | BigInt(crypto.randomInt(1 << 22)));
+  const sessionId = crypto.randomBytes(16).toString('hex');
+  const token = jwt.sign({ userId: id, username, sid: sessionId }, remote.jwtSecret, { expiresIn: '30d' });
+  const now = Date.now();
+  const passwordHash = await hashPassword(homeUser.password);
+  const db = new Database(remote.dbPath);
+  try {
+    db.prepare(`INSERT INTO users (id, username, display_name, password_hash, home_instance, home_user_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(id, username, homeUser.username, passwordHash, home.domain, homeUser.id, now);
+    db.prepare(`INSERT INTO sessions (id, user_id, created_at, last_active_at, expires_at, client_label, address_hint)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(sessionId, id, now, now, now + 30 * 24 * 60 * 60 * 1000, 'Test', '127.0.0.x');
+  } finally {
+    db.close();
+  }
+  return {
+    id,
+    username,
+    password: homeUser.password,
+    token,
+    origin: remote.origin,
+    homeUserId: homeUser.id,
+    homeInstance: home.domain,
   };
 }
 
@@ -71,34 +137,7 @@ export async function createFederatedUser(
   baseName = 't',
 ): Promise<{ homeUser: TestUser; remoteUser: TestUser }> {
   const homeUser = await registerLocal(home, baseName);
-  const federatedUsername = `${homeUser.username}@${home.domain}`;
-
-  const res = await fetch(`${remote.origin}/api/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      username: federatedUsername,
-      password: homeUser.password,
-      displayName: homeUser.username,
-      homeInstance: home.domain,
-      homeUserId: homeUser.id,
-    }),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`createFederatedUser remote register failed: ${res.status} ${txt}`);
-  }
-  const data = await res.json() as { user: { id: string }; token: string };
-
-  const remoteUser: TestUser = {
-    id: data.user.id,
-    username: federatedUsername,
-    password: homeUser.password,
-    token: data.token,
-    origin: remote.origin,
-    homeUserId: homeUser.id,
-    homeInstance: home.domain,
-  };
+  const remoteUser = await insertFederatedAccount(remote, home, homeUser);
 
   // Seed the home user's federation registry. Body shape matches the route's
   // declared Body<{ registry, updatedAt }> — see users.ts L591-L594.
@@ -115,7 +154,7 @@ export async function createFederatedUser(
         {
           origin: remote.origin,
           label: remote.domain,
-          username: federatedUsername,
+          username: remoteUser.username,
           remoteUserId: remoteUser.id,
           status: 'connected',
           addedAt: registryUpdatedAt,

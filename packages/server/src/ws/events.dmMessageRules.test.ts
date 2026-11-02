@@ -119,7 +119,6 @@ function seedUser(id: string, opts: SeedUserOpts = {}): void {
     status: 'offline',
     isAdmin: 0,
     isDeleted: opts.deleted ? 1 : 0,
-    discoverable: 1,
     homeInstance: opts.homeInstance ?? null,
     homeUserId: opts.homeUserId ?? null,
     createdAt: Date.now(),

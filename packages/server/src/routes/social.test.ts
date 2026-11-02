@@ -76,9 +76,10 @@ interface UserSeed {
   username: string;
   displayName?: string | null;
   isDeleted?: 0 | 1;
-  discoverable?: 0 | 1;
   homeInstance?: string | null;
   homeUserId?: string | null;
+  suspendedAt?: number | null;
+  suspendedUntil?: number | null;
 }
 
 function seedUser(u: UserSeed): void {
@@ -90,22 +91,25 @@ function seedUser(u: UserSeed): void {
     status: 'offline',
     isAdmin: 0,
     isDeleted: u.isDeleted ?? 0,
-    discoverable: u.discoverable ?? 1,
     homeInstance: u.homeInstance ?? null,
     homeUserId: u.homeUserId ?? null,
+    suspendedAt: u.suspendedAt ?? null,
+    suspendedUntil: u.suspendedUntil ?? null,
+    suspensionReason: u.suspendedAt ? 'test' : null,
     createdAt: Date.now(),
   }).run();
 }
 
 async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
-  const { socialRoutes } = await import('./social.js');
+  const { socialRoutes, _resetUserSearchLimit } = await import('./social.js');
+  _resetUserSearchLimit();
   await app.register(socialRoutes);
   await app.ready();
   return app;
 }
 
-describe('GET /api/social/search — filter hygiene', () => {
+describe('GET /api/social/search — finding people by username', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
@@ -123,10 +127,41 @@ describe('GET /api/social/search — filter hygiene', () => {
     return JSON.parse(res.body) as Array<{ id: string; username: string }>;
   }
 
-  it('returns native, non-deleted, discoverable users that match the substring', async () => {
+  it('finds accounts by the start of their username, the exact name first', async () => {
     seedUser({ id: 'u1', username: 'alice', displayName: 'Alice' });
+    seedUser({ id: 'u2', username: 'alicia' });
+    seedUser({ id: 'u3', username: 'ali' });
+    seedUser({ id: 'u4', username: 'malice' });
     const out = await search('ali');
-    expect(out.map(u => u.id)).toContain('u1');
+    expect(out.map(u => u.id)).toEqual(['u3', 'u1', 'u2']);
+  });
+
+  it('answers with what a row needs and nothing about the person', async () => {
+    seedUser({ id: 'u1', username: 'alice', displayName: 'Alice' });
+    const [row] = await search('@Alice');
+    expect(row).toEqual({
+      id: 'u1', username: 'alice', displayName: 'Alice', avatar: null, avatarColor: null, homeInstance: null, homeUserId: null,
+    });
+  });
+
+  it('refuses a query that cannot be a username', async () => {
+    for (const q of ['al', 'a b c', 'ali%']) {
+      const res = await app.inject({ method: 'GET', url: `/api/social/search?q=${encodeURIComponent(q)}` });
+      expect(res.statusCode).toBe(400);
+      expect(JSON.parse(res.body).code).toBe('user_search_query_invalid');
+    }
+  });
+
+  it('takes an underscore literally', async () => {
+    seedUser({ id: 'u1', username: 'a_bc' });
+    seedUser({ id: 'u2', username: 'axbc' });
+    const out = await search('a_b');
+    expect(out.map(u => u.id)).toEqual(['u1']);
+  });
+
+  it('does not match display names', async () => {
+    seedUser({ id: 'u1', username: 'a1b2c3', displayName: 'Wonderland' });
+    expect(await search('wonder')).toEqual([]);
   });
 
   it('hides tombstoned users (isDeleted=1)', async () => {
@@ -144,14 +179,27 @@ describe('GET /api/social/search — filter hygiene', () => {
       homeInstance: 'nova.ddns.net',
       homeUserId: 'remote-id',
     });
-    const out = await search('nova');
+    const out = await search('remote');
     expect(out.map(u => u.id)).not.toContain('stub1');
   });
 
-  it('hides users with discoverable=0', async () => {
-    seedUser({ id: 'u1', username: 'alice', discoverable: 0 });
+  it('hides a suspended account, and finds it again once the suspension ended', async () => {
+    seedUser({ id: 'u1', username: 'alice', suspendedAt: Date.now() - 1000, suspendedUntil: null });
+    seedUser({ id: 'u2', username: 'alicia', suspendedAt: Date.now() - 2000, suspendedUntil: Date.now() - 1000 });
     const out = await search('ali');
-    expect(out.map(u => u.id)).not.toContain('u1');
+    expect(out.map(u => u.id)).toEqual(['u2']);
+  });
+
+  it('hides people in a block with the caller, in either direction', async () => {
+    seedUser({ id: 'u1', username: 'alice' });
+    seedUser({ id: 'u2', username: 'alicia' });
+    seedUser({ id: 'u3', username: 'alina' });
+    testDb.insert(schema.userBlocks).values([
+      { blockerId: CALLER_ID, blockedId: 'u1', createdAt: Date.now() },
+      { blockerId: 'u2', blockedId: CALLER_ID, createdAt: Date.now() },
+    ]).run();
+    const out = await search('ali');
+    expect(out.map(u => u.id)).toEqual(['u3']);
   });
 
   it('excludes the caller from results', async () => {
@@ -160,10 +208,50 @@ describe('GET /api/social/search — filter hygiene', () => {
     expect(out.map(u => u.id)).not.toContain(CALLER_ID);
   });
 
-  it('matches displayName as well as username', async () => {
-    seedUser({ id: 'u1', username: 'a1b2c3', displayName: 'Wonderland' });
-    const out = await search('wonder');
-    expect(out.map(u => u.id)).toContain('u1');
+  it('answers at most eight names: the exact one, then the rest in name order', async () => {
+    for (let i = 0; i < 10; i += 1) seedUser({ id: `p${i}`, username: `pilot${i}` });
+    seedUser({ id: 'exact', username: 'pilot' });
+    const out = await search('pilot');
+    expect(out.map(u => u.username)).toEqual(['pilot', 'pilot0', 'pilot1', 'pilot2', 'pilot3', 'pilot4', 'pilot5', 'pilot6']);
+  });
+
+  it('reads the query trimmed and lowercased, without one leading @, up to a whole username', async () => {
+    seedUser({ id: 'u1', username: 'alice' });
+    expect((await search('  @ALICE  ')).map(u => u.id)).toEqual(['u1']);
+    expect(await search('a'.repeat(32))).toEqual([]);
+  });
+
+  it('names the bounds when it refuses a query: too short, too long, missing, or a second @', async () => {
+    for (const url of [
+      '/api/social/search?q=al',
+      `/api/social/search?q=${'a'.repeat(33)}`,
+      '/api/social/search',
+      `/api/social/search?q=${encodeURIComponent('@@ali')}`,
+    ]) {
+      const res = await app.inject({ method: 'GET', url });
+      expect(res.statusCode).toBe(400);
+      expect(JSON.parse(res.body)).toMatchObject({
+        code: 'user_search_query_invalid',
+        statusCode: 400,
+        details: { min: 3, max: 32 },
+      });
+    }
+  });
+
+  it('lets one account search 20 times a minute, then answers 429 rate_limited', async () => {
+    // The budget is per account, on top of the per-address limiter; a shell
+    // that switched limits off must not switch this case off with them.
+    vi.stubEnv('DISABLE_RATE_LIMITS', '');
+    try {
+      for (let i = 0; i < 20; i += 1) {
+        expect((await app.inject({ method: 'GET', url: '/api/social/search?q=alice' })).statusCode).toBe(200);
+      }
+      const refused = await app.inject({ method: 'GET', url: '/api/social/search?q=alice' });
+      expect(refused.statusCode).toBe(429);
+      expect(JSON.parse(refused.body).code).toBe('rate_limited');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 
@@ -293,6 +381,21 @@ describe('social routes — error codes', () => {
     const deleted = await app.inject({ method: 'DELETE', url: '/api/social/requests/missing' });
     expect(deleted.statusCode).toBe(404);
     expect(JSON.parse(deleted.body).code).toBe('friend_request_not_found');
+  });
+
+  it('answers a request once: deciding one already accepted or declined is friend_request_not_found', async () => {
+    testDb.insert(schema.friendRequests).values([
+      { id: 'req-declined', fromId: 'u-bob', toId: CALLER_ID, status: 'declined', createdAt: Date.now() },
+      { id: 'req-accepted', fromId: 'u-bob', toId: CALLER_ID, status: 'accepted', createdAt: Date.now() },
+    ]).run();
+    for (const [id, status] of [['req-declined', 'accepted'], ['req-accepted', 'declined']] as const) {
+      const res = await app.inject({ method: 'PATCH', url: `/api/social/requests/${id}`, payload: { status } });
+      expect(res.statusCode).toBe(404);
+      expect(JSON.parse(res.body).code).toBe('friend_request_not_found');
+    }
+    expect(testDb.select().from(schema.friends).all()).toEqual([]);
+    const stored = testDb.select().from(schema.friendRequests).all();
+    expect(Object.fromEntries(stored.map(r => [r.id, r.status]))).toEqual({ 'req-declined': 'declined', 'req-accepted': 'accepted' });
   });
 
   it('sends friend_request_not_recipient when someone else tries to decide a request', async () => {

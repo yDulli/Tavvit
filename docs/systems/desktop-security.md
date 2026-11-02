@@ -67,19 +67,24 @@ Why:
 
 `main.ts` attaches a `will-navigate` listener to the main window's `webContents` (see `createWindow()`, right after the existing `setWindowOpenHandler`). Its decision logic lives in `navigationPolicy.ts`'s `isNavigationAllowed()`, which is unit-tested independently of Electron.
 
-**Mechanism:** Electron's `will-navigate` event fires only for page/user-initiated top-level navigation — a clicked link, a `window.location` assignment from renderer JS, a meta-refresh. It does **not** fire for main-process-initiated `webContents.loadURL()` / `loadFile()` / `back()` / `forward()` calls. This app's three legitimate top-level navigation paths are all main-process calls:
-- The initial instance load (`BACKSPACE_URL` env var or a saved instance URL) — `loadURL()`.
-- The `file://` instance picker (no saved/env instance) — `loadFile()`.
-- Cross-instance switching (`set-instance-url` IPC handler) and disconnecting back to the picker (`clear-instance-url` IPC handler) — both `loadURL()`/`loadFile()`.
+**Mechanism:** Electron's `will-navigate` event fires only for page/user-initiated top-level navigation — a clicked link, a `window.location` assignment from renderer JS, a meta-refresh. It does **not** fire for main-process-initiated `webContents.loadURL()` / `loadFile()` / `back()` / `forward()` calls. This app's legitimate top-level navigation paths are all main-process calls:
+- The initial load of the production server (`APP_URL`, `appUrl.ts`; there is no instance picker and no saved address) — `loadURL()`.
+- The recovery page and its Reload back to `APP_URL` — `loadFile()` / `loadURL()`.
 
 None of these ever reach the `will-navigate` handler, so the deny handler adds no risk to any of them. It exists as defense-in-depth: if a compromised or malicious renderer (e.g. via a federated instance serving hostile content, or a supply-chain-compromised dependency in the web bundle) tries to hijack the top-level frame with `window.location = 'https://attacker.example/'`, the handler blocks it. The allowlist is:
 1. Same-origin as the window's current URL (normal in-app navigation).
-2. The bundled instance-picker `file://` URL exactly (not `file://` generally — an attacker-controlled `file://` navigation to an arbitrary local path is still blocked).
+2. The app server's own origin (`APP_ORIGIN`), from anywhere, the recovery page included.
 3. A known federation-peer/own-instance origin (the same `knownInstanceOrigins` set `setWindowOpenHandler` already uses, kept in sync by the renderer via the `set-connected-origins` IPC message).
+
+No `file://` URL is ever an allowed target.
 
 Anything else is denied (`event.preventDefault()`) and logged as a warning in the main process's console.
 
 `setWindowOpenHandler` (`main.ts:454-470`) is unrelated and unchanged by this — it governs `window.open()`/new-window requests (used for `/join/*` deep-link interception and external-link handling), not same-window top-level navigation.
+
+## Global shortcuts
+
+The keybind hook (uiohook) hears every key pressed anywhere on the computer, and the page that registers shortcuts (`keybinds-sync`) is the instance's web client: remote code. So the main process takes only what the settings can produce (`keybindPolicy.ts`, `acceptedKeybinds`): the six actions of `web/src/stores/keybindStore.ts`, one shortcut each, at most four known keys, an extra mouse button or none, and **never a shortcut that types text on its own** (letters, digits, number-pad digits, Space, Enter, Tab, Backspace, alone or with Shift). Without that rule a page could register one shortcut per letter and hear everything typed in other programs, passwords included. Function keys, lock keys, punctuation and mouse buttons still work alone, and any key works with Ctrl, Alt or the system key. The settings page refuses such a shortcut in the desktop app and says why (`utils/keybindKeys.ts`, the same list). Takes effect with a desktop build that contains it.
 
 ## Screen-source enumeration
 

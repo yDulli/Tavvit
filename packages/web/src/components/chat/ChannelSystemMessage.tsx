@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { spaceMemberName } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { useMessageJump } from './messageJumpContext';
 
 interface ChannelSystemMessageProps {
   message: MessageWithUser;
@@ -29,9 +30,25 @@ export function ChannelSystemMessage({ message }: ChannelSystemMessageProps) {
   // message.userId and targetUserId are ids on the space's instance, the ids
   // its roster carries.
   const actorMember = members.find((m) => m.userId === message.userId);
-  const targetMember = event ? members.find((m) => m.userId === event.targetUserId) : undefined;
+  const targetMember = event?.event === 'channel_poke' ? members.find((m) => m.userId === event.targetUserId) : undefined;
   const actorUser = useCanonicalUserView(message.user, origin);
   const targetUser = useCanonicalUserView(targetMember?.user ?? NO_USER, origin);
+  const jump = useMessageJump();
+
+  if (event?.event === 'message_pinned') {
+    return (
+      <div className="flex items-center justify-center gap-1.5 py-1 px-5 select-none">
+        <span className="text-meta text-txt-tertiary text-center">
+          {t('chat:pins.line', { actor: spaceMemberName(actorMember, actorUser) })}
+        </span>
+        {jump && (
+          <button type="button" onClick={() => jump(event.messageId)} className="text-meta text-txt-link hover:underline">
+            {t('chat:pins.lineJump')}
+          </button>
+        )}
+      </div>
+    );
+  }
 
   let text: string;
   if (event?.event === 'channel_poke') {
@@ -44,8 +61,8 @@ export function ChannelSystemMessage({ message }: ChannelSystemMessageProps) {
   }
 
   return (
-    <div className="flex items-center justify-center py-1 px-4 select-none">
-      <span className="text-xs text-txt-tertiary">{text}</span>
+    <div className="flex items-center justify-center py-1 px-5 select-none">
+      <span className="text-meta text-txt-tertiary text-center">{text}</span>
     </div>
   );
 }

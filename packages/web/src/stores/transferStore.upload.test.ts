@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import 'fake-indexeddb/auto';
 
 // We mock tus-js-client to drive lifecycle synchronously without real network.
@@ -68,6 +68,7 @@ vi.mock('./authStore', () => ({
 }));
 
 import { useTransferStore } from './transferStore';
+import i18n, { initI18n } from '../i18n';
 import { setTokenForOriginResolver } from '../utils/crossStoreResolvers';
 import { useAuthStore as authStoreMod } from './authStore';
 
@@ -191,6 +192,56 @@ describe('transferStore.resumeUpload', () => {
     startMock.mockClear();
     abortMock.mockClear();
     installDefaultTokenResolver();
+  });
+
+  describe('what a failed upload says', () => {
+    const tusError = (status: number | null, body = 'File too large') => Object.assign(
+      new Error(`tus: unexpected response while creating upload, originated from request (method: POST, url: http://x/api/files/, response code: ${status ?? 'n/a'}, response text: boom, request id: n/a)`),
+      { originalResponse: status === null ? null : { getStatus: () => status, getBody: () => body } },
+    );
+
+    beforeAll(async () => {
+      await initI18n();
+    });
+
+    async function failWith(error: Error) {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const id = await useTransferStore.getState().startUpload(new File(['x'], 'a.png', { type: 'image/png' }), { tray: true });
+      lastUploadOpts().onError(error);
+      warn.mockRestore();
+      return useTransferStore.getState().get(id)!;
+    }
+
+    it('never shows the protocol message to a person', async () => {
+      const transfer = await failWith(tusError(500));
+      expect(transfer.state).toBe('failed');
+      expect(transfer.error?.message).toBe(i18n.t('errors:generic'));
+      expect(transfer.error?.message).not.toMatch(/tus|http/);
+    });
+
+    it('says when the file is too large, and treats it as permanent', async () => {
+      const transfer = await failWith(tusError(413));
+      expect(transfer.error?.message).toBe(i18n.t('chat:composer.uploadTooLarge'));
+      expect(transfer.error?.permanent).toBe(true);
+    });
+
+    it('names a full account apart from a large file, and treats it as permanent', async () => {
+      const transfer = await failWith(tusError(413, JSON.stringify({ error: 'Your files…', code: 'storage_limit_reached', statusCode: 413 })));
+      expect(transfer.error?.message).toBe(i18n.t('errors:storage_limit_reached'));
+      expect(transfer.error?.permanent).toBe(true);
+    });
+
+    it('says when the server has no room, and leaves it open to try again', async () => {
+      const transfer = await failWith(tusError(507, JSON.stringify({ error: 'No room', code: 'disk_full', statusCode: 507 })));
+      expect(transfer.error?.message).toBe(i18n.t('errors:disk_full'));
+      expect(transfer.error?.permanent).toBe(false);
+    });
+
+    it('keeps a dropped connection retryable', async () => {
+      const transfer = await failWith(tusError(null));
+      expect(transfer.error?.message).toBe(i18n.t('errors:generic'));
+      expect(transfer.error?.permanent).toBe(false);
+    });
   });
 
   it('marks failed when transfer has no available blob to resume from', async () => {

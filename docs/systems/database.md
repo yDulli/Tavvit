@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 Source of truth: `packages/server/src/db/schema.ts` (Drizzle ORM)
-Migrations: drizzle-kit generates SQL from `schema.ts` (`pnpm db:generate` from `packages/server/`). On startup, `initDatabase()` runs `drizzle.migrate()` against `packages/server/drizzle/`, then `ensureDefaults()` (settings row, Snowflake worker ID, instance epoch, `installedAt` backfill, first-admin promotion), `backfillOneOnOneDmMembership()` and `backfillOneOnOneKeys()` (every 1-on-1 `dm_channels` row gets the key of its two members; see dm-system.md "Federated ID Algorithm"). Migration history was squashed to a single baseline on 2026-04-24 (backlog #31 Phase 2). Databases created before the squash keep the tables the old hand-written statements made, which differ from what the baseline creates (inline `UNIQUE` constraints instead of named unique indexes, text primary keys without `NOT NULL`, extra columns), so a migration must not assume an index or column only the baseline creates. `packages/server/test/fixtures/pre-squash-schema.sql` holds that shape, and `src/db/preSquashUpgrade.test.ts` boots it, a squashed install and an empty database through `initDatabase()` and checks the outbox ends identical on all three, and that the reaction tables end with their unique indexes and without repeated rows.
+Migrations: drizzle-kit generates SQL from `schema.ts` (`pnpm db:generate` from `packages/server/`). On startup, `initDatabase()` runs `drizzle.migrate()` against `packages/server/drizzle/`, then `ensureDefaults()` (settings row, Snowflake worker ID, instance epoch, `installedAt` backfill), `backfillOneOnOneDmMembership()` and `backfillOneOnOneKeys()` (every 1-on-1 `dm_channels` row gets the key of its two members; see dm-system.md "Federated ID Algorithm"). Migration history was squashed to a single baseline on 2026-04-24 (backlog #31 Phase 2). Databases created before the squash keep the tables the old hand-written statements made, which differ from what the baseline creates (inline `UNIQUE` constraints instead of named unique indexes, text primary keys without `NOT NULL`, extra columns), so a migration must not assume an index or column only the baseline creates. `packages/server/test/fixtures/pre-squash-schema.sql` holds that shape, and `src/db/preSquashUpgrade.test.ts` boots it, a squashed install and an empty database through `initDatabase()` and checks the outbox ends identical on all three, and that the reaction tables end with their unique indexes and without repeated rows.
 Engine: SQLite via `better-sqlite3`
 IDs: Snowflake text, permissions: bigint decimal strings
 
@@ -20,7 +20,8 @@ IDs: Snowflake text, permissions: bigint decimal strings
 | status | text | `'offline'` | Live presence: online/idle/dnd/offline. On a row that owns its choice, the user's `chosenStatus` while they have a connection and `'offline'` without one (written at socket auth, by a status change while connected, by `finalizeDisconnect` and by the boot reset). On a replicated row, the home instance's S2S projection, plus this instance's own connect/disconnect writes. See activity-presence.md "DB Persistence" |
 | chosenStatus | text NOT NULL | `'online'` | The status the user picked: online/idle/dnd, never offline. Written by `PATCH /api/users/@me` and the WS `presence_update` client event (`ws/presence.ts:applyChosenStatus`); read at socket auth (`utils/presenceStatus.ts:statusOnConnect`) and published as `status`, so idle and dnd survive disconnects, restarts and the boot reset. Meaningful only on rows that own their choice, native or detached (`ownsChosenStatus` in `@backspace/shared`: `home_instance IS NULL OR federation_home_orphaned = 1`); a replicated row's copy is never written or read. Migration `0019_chosen_status`, which also copies `status` into it, under the same rule, for accounts that are idle or dnd at upgrade time |
 | customStatus | text | | |
-| isAdmin | integer | 0 | First registered user = 1 |
+| customStatusExpiresAt | integer | | When the custom status clears itself (epoch ms), or NULL to keep it until changed. Set by `PATCH /api/users/@me` from `customStatusExpiresInMinutes` (1 to 10080, counted from the save). `utils/customStatusExpiry.ts` clears it every minute and tells the owner and the profile audience (`user_updated`). Sent only to the owner. Migration `0033_orbit_status_expiry_and_blocks` |
+| isAdmin | integer | 0 | Only `tavvit-admin` and other administrators set it |
 | homeInstance | text | | Federation origin URL (null = local) |
 | homeUserId | text | | Canonical ID on home instance |
 | replicatedInstances | text | `'[]'` | JSON array of instance URLs |
@@ -28,8 +29,14 @@ IDs: Snowflake text, permissions: bigint decimal strings
 | accentColor | text | | Hex color |
 | avatarColor | text | | Hex color |
 | bio | text | | |
+| pronouns | text | | Shown after the username on the profile card; stored as `normalizePronouns` returns it. Migration `0040_orbit_roles_profiles` |
+| profileLinks | text | | JSON list of up to 5 `{ url, label }` (`normalizeProfileLinks`); NULL for none. Read back with `parseStoredProfileLinks`, which drops anything unreadable. Migration 0040 |
+| profileLayout | text | | `centered` or `compact`; NULL is the standard layout. Migration 0040. See auth.md, "Profile fields" |
+| badges | text | | JSON array of the badges an instance admin granted the person (`GrantedUserBadgeId`, the registry in `packages/shared/src/badges.ts`), in the registry's order, each once; NULL for none. Written only by `PUT /api/admin/users/:id/badges`. Read through `grantedUserBadgesOf` (`utils/badges.ts`), which drops anything the registry does not know as a granted user badge, so a hand-edited row cannot hand out `staff`; staff is not stored but derived from `isAdmin` (`userBadgesOf`). Migration `0041_orbit_platform_admin` |
+| suspendedAt | integer | | When an instance admin suspended the account (epoch ms); NULL when no suspension is recorded. The account is suspended while this is set and `suspendedUntil` is NULL or later than now (`activeSuspension`, `utils/suspension.ts`; `suspendedNow` is the same condition in SQL): it cannot sign in, call an authenticated route or hold a socket (auth.md, "Suspensions"). Migration 0041 |
+| suspendedUntil | integer | | When the suspension ends by itself (epoch ms); NULL until an admin lifts it. Nothing runs when it passes: every check compares it with the clock, and the three columns stay set until `/unsuspend` clears them |
+| suspensionReason | text | | The admin's reason, 3-500 characters; the account's owner reads it when the sign-in refuses them. Set with the other two by `POST /api/admin/users/:id/suspend`, cleared with them by `POST /api/admin/users/:id/unsuspend`; the history is in `platform_audit_log`. Migration 0041 |
 | isDeleted | integer | 0 | Soft-delete flag |
-| discoverable | integer | 1 | Visible in user directory |
 | profileUpdatedAt | integer | | Epoch ms |
 | passwordChangedAt | integer | | Token revocation: tokens before this rejected |
 | showActivity | integer NOT NULL | 1 | Rich presence visibility |
@@ -38,13 +45,13 @@ IDs: Snowflake text, permissions: bigint decimal strings
 | federationHomeOrphaned | integer | 0 | Instance-epoch self-healing: **1 = DETACHED / sovereign local account** (its home instance was reset/lost), not "frozen." **Set** to 1 by `quarantineOrphanedAccounts` on every real account from a reset home incarnation (flag-only detach — no rename, no login block). **Read** by: the login flow (self-heal path permanently disabled for detached rows; local-password login still works — `auth.md` §4), `users.ts` (unlocks local profile edit + local change-password), the S2S binding guards (`findFederatedUser` tier-2, `profile_update`, identity-delete all exclude detached rows — `federation.md`), and the `GET /api/federation/reset-events` admin surface. Cleared by `tombstoneUser` (deletion) and by re-attach. Detach spec §3/§4. Since #310 a detached row is homed here: `home_instance`/`home_user_id` are NULL and its former identity is in the two columns below |
 | detachedHomeInstance | text | | The home instance a detached account was federated from (`federation.md`, "Detached accounts are homed here"). Detaching (`rehomeDetachedAccount`) moves `home_instance` here and clears it, so the account presents itself to peers as one of this instance's users. Read by `resolveRelayActor` (a reference to the former identity resolves to the row), `resolveOrCreateReplicatedUser`'s deleted-identity check, the sync page's friend relevance, re-attach (the home it re-attaches to), the reset-cleanup listing (`detachedHomeInstanceMatch`) and the self-view (`User.detachedHomeInstance`). Cleared by re-attach; kept on a tombstone. Migration `0025_detached_identity` |
 | detachedHomeUserId | text | | The account's id on its former home, moved from `home_user_id` with `detachedHomeInstance`. Same readers. |
-| lastActiveDay | text | | UTC day (`YYYY-MM-DD`) of the last authenticated WebSocket activity; written at most once per day. Used by telemetry to count active accounts. |
-| lastClient | text | | `'web'`, `'desktop'` or `'mobile'`, taken from the client's WebSocket auth message. |
 | createdAt | integer NOT NULL | | Epoch ms |
 
 **Index:** `idx_users_home_user_id` on `(home_user_id)` (migration `0020_users_home_user_id_index`). Every federated identity lookup (`resolveRelayActor`, `resolveLocalUser`, the relay's participant, author and mention resolution) filters on `home_user_id` first. It is a single-column index on purpose: a home user id matches about one row, and most pair lookups compare `home_instance` normalized (scheme stripped, lowercased) or in code, where a `(home_user_id, home_instance)` composite's second column cannot be used.
 
 **Index:** `idx_users_detached_home_user_id` on `(detached_home_user_id)` (migration `0025_detached_identity`). `resolveRelayActor` matches a detached account's former identity in the same query as `home_user_id`.
+
+**Dropped:** `discoverable` (integer, default 1, "visible in the user directory") was removed by migration `0042_orbit_drop_discoverable` (`ALTER TABLE users DROP COLUMN discoverable`), with the Discover People list that read it. People are found by their exact username or its start only (`GET /api/social/search`, api.md "Social"), and there is no flag to opt out of that.
 
 #### Detached identity (0025)
 Adds `detached_home_instance`, `detached_home_user_id` and their index. The data rewrite for accounts detached before it is not in the SQL: it needs this instance's origin (group DM owner identity) and the 1-on-1 key re-derivation, so `initDatabase` runs `rehomeDetachedAccountsOnBoot` after the migrations (idempotent; a pre-change snapshot is taken only when a row qualifies).
@@ -60,9 +67,14 @@ Adds `detached_home_instance`, `detached_home_user_id` and their index. The data
 | ownerId | text NOT NULL | | FK → users.id |
 | ownerTitle | text | | The owner title: the heading over the owner's group in the member list, set by the owner alone (migration `0030_space_owner_title`). Null shows the translated default ("Owner"). Stored as `normalizeOwnerTitle` returns it. Cleared when ownership is transferred. See [spaces.md](spaces.md), "Owner title". |
 | inviteCode | text UNIQUE | | |
-| visibility | text | `'private'` | public/request/private |
+| visibility | text | `'private'` | public/request/private. Public or request alone no longer lists a space in Discovery: that takes `discoveryStatus = 'approved'` as well |
 | description | text | | |
-| directoryListed | integer NOT NULL | 0 | The owner asked for this space to be listed in the space directory. Refused on a private space (`400 directory_private_space`) and cleared in the same write when a listed space goes private. Served on `GET /api/directory/spaces` only while `instance_settings.directoryEnabled` and `discoveryEnabled` are both 1. See [directory.md](directory.md). |
+| directoryListed | integer NOT NULL | 0 | The owner asked for this space to be listed in the space directory. Refused on a private space (`400 directory_private_space`) and cleared in the same write when a listed space goes private. Served on `GET /api/directory/spaces` only while the space is listed in Discovery (`discoveryStatus = 'approved'`, public or request) and `instance_settings.directoryEnabled` and `discoveryEnabled` are both 1. See [directory.md](directory.md). |
+| badges | text | | JSON array of the badges an instance admin granted the space (`GrantedSpaceBadgeId`), in the registry's order, each once; NULL for none. Written only by `PUT /api/admin/spaces/:id/badges`, read through `grantedSpaceBadgesOf`. `verified` is not stored here: it is derived from `verificationStatus` (`spaceBadgesOf`). Migration `0041_orbit_platform_admin` |
+| verificationStatus | text | | The platform's verification of the space: NULL while never requested (and after the owner withdrew a request), else `pending`, `needs_info`, `verified`, `rejected` or `revoked` (`VERIFICATION_STATUSES`, `packages/shared/src/platform.ts`). Only `verified` gives the space the verified badge. The one status field: the request is in `space_verification_requests`, every step in `space_review_events`. Written by `utils/spaceReview.ts`, and by `PATCH /api/spaces/:id` and `PATCH /api/spaces/:id/transfer-ownership`, which set `pending` when a verified space is renamed or changes owner (`reviewsAfterEdit`, `reviewsAfterTransfer`). Migration 0041 |
+| discoveryStatus | text | | An instance admin's approval of the space's Discovery listing: NULL while never submitted, else `pending`, `changes_requested`, `approved`, `rejected` or `withdrawn` (`DISCOVERY_STATUSES`). A space is listed (Explore, the directory document, the admin overview) only while this is `approved` and `visibility` is public or request (`LISTED_IN_DISCOVERY_SQL`, `utils/discoveryListing.ts`); nothing the owner sets alone lists it. Written by `utils/spaceReview.ts`, and by `PATCH /api/spaces/:id` in the same update as an edit: `pending` when an approved space's name, description, icon or banner changes, `withdrawn` when an approved or open one is made private (`reviewsAfterEdit`); an open request's `requested_at` moves to the time of such an edit. Migration 0041, which set `pending` on every public or request space (see "Platform administration (0041)") |
+| defaultNotificationLevel | text | | The notification level members start with until they choose their own: `all` or `mentions`; NULL keeps the built-in default (`mentions`). Set with `PATCH /api/spaces/:id`, read by the clients only. Migration `0039_orbit_space_moderation`. See [spaces.md](spaces.md), "Moderation" |
+| ownerGroup | integer NOT NULL | 0 | 1 lists the owner in a group of their own at the top of the member list, 0 under their own roles with a crown. Set by the owner alone. Migration `0040_orbit_roles_profiles`, which sets 1 on every space whose `ownerTitle` was set. See [spaces.md](spaces.md), "Ownership and roles" |
 | createdAt | integer NOT NULL | | |
 
 ### space_members
@@ -72,7 +84,11 @@ PK: (spaceId, userId)
 | spaceId | text NOT NULL | FK → spaces.id CASCADE |
 | userId | text NOT NULL | FK → users.id CASCADE |
 | nickname | text | Per-space display name |
-| joinedAt | integer NOT NULL | |
+| avatar | text | The member's picture for this space (upload filename on this instance); NULL shows the account's. Migration 0040. See [spaces.md](spaces.md), "Space profiles" |
+| banner | text | The member's banner for this space; NULL shows the account's. Migration 0040 |
+| bio | text | The member's about text for this space, at most 190 characters; NULL shows the account's. Migration 0040 |
+| joinedAt | integer NOT NULL | Also the start of the membership age the space's minimum (`minMemberAgeMinutes`) is measured from |
+| timedOutUntil | integer | While in the future (epoch ms, the server's clock) the member is timed out; NULL or a past time otherwise. Set and cleared by `PUT`/`DELETE /api/spaces/:id/members/:uid/timeout`, cleared for the new owner by an ownership transfer, put back from `space_departed_timeouts` when a member who left timed out joins again. Migration `0039_orbit_space_moderation` |
 
 ### channel_categories
 | Column | Type | Default | Notes |
@@ -93,7 +109,19 @@ PK: (spaceId, userId)
 | topic | text | | |
 | position | integer | 0 | |
 | categoryId | text | | Soft FK → channel_categories |
+| slowmodeSeconds | integer NOT NULL | 0 | Slow mode: seconds a member waits between two messages here, one of `SLOWMODE_SECONDS`; 0 is off. Migration `0039_orbit_space_moderation`; see `channel_slowmode_posts` |
+| icon | text | | Its own icon in place of its type's: `glyph:<id>` or one emoji (`normalizeChannelIcon`); null for the type's. Migration `0068_tavvit_channel_icons`; see [spaces.md](spaces.md), "Channel icons" |
 | createdAt | integer NOT NULL | | |
+
+### channel_slowmode_posts
+PK: (channelId, userId). Migration `0039_orbit_space_moderation`.
+| Column | Type | Notes |
+|--------|------|-------|
+| channelId | text NOT NULL | FK → channels.id CASCADE |
+| userId | text NOT NULL | FK → users.id CASCADE |
+| postedAt | integer NOT NULL | When the member last posted here while slow mode was on (epoch ms) |
+
+Written in the transaction that stores each accepted message while the channel's `slowmodeSeconds` is above 0 (`recordSlowmodePost` in `utils/spaceModeration.ts`), read by the slow mode check, and emptied for a channel whose slow mode is switched off. A table rather than an index on `messages (channel_id, user_id, created_at)`: the wait survives the member deleting their message and a restart, and the messages table carries no extra index on every write. See [spaces.md](spaces.md), "Moderation", "Slow mode".
 
 ### messages
 | Column | Type | Notes |
@@ -250,6 +278,14 @@ PK: (userId, friendId)
 | friendId | text NOT NULL | FK → users.id CASCADE |
 | createdAt | integer NOT NULL | |
 
+### user_blocks
+PK: (blockerId, blockedId). Migration `0033_orbit_status_expiry_and_blocks`. See `utils/blocks.ts` for what a block does.
+| Column | Type | Notes |
+|--------|------|-------|
+| blockerId | text NOT NULL | FK → users.id CASCADE; the person who blocked |
+| blockedId | text NOT NULL | FK → users.id CASCADE; index `idx_user_blocks_blocked_id` |
+| createdAt | integer NOT NULL | |
+
 ### friend_requests
 | Column | Type | Default | Notes |
 |--------|------|---------|-------|
@@ -260,6 +296,10 @@ PK: (userId, friendId)
 | createdAt | integer NOT NULL | | |
 
 ---
+
+## Badge Tables (removed)
+
+Migration `0034_orbit_badges` added `badges` and `user_badges`; migration `0038_orbit_drop_badges` dropped both. Badges came back with migration `0041_orbit_platform_admin`, without tables: the registry is code (`packages/shared/src/badges.ts`), and a badge is either derived from server state (`staff` from `users.is_admin`, `verified` from `spaces.verification_status`, a member's `administrator` or `moderator` from their role bits in the space, worked out when the member is sent) or granted by an instance admin and stored as a JSON array in `users.badges` or `spaces.badges`. Nothing a space's roles or a client send can set one.
 
 ## RBAC Tables
 
@@ -272,7 +312,14 @@ PK: (userId, friendId)
 | color | text | `'#b9bbbe'` | Hex |
 | position | integer | 0 | Hierarchy rank: @everyone 0, other roles distinct from 1 up, higher is more senior (permissions.md, "Role hierarchy") |
 | permissions | text | | Bigint decimal string |
+| description | text | | What the role is for, at most 200 characters. Migration `0040_orbit_roles_profiles` |
+| colorSecondary | text | | Hex; with it, names in the role's colours are a gradient from `color` to it. Migration 0040 |
+| icon | text | | An emoji (or a short sequence of them) shown with the role. Migration 0040 |
+| hoist | integer NOT NULL | 1 | Members whose top shown role this is get their own member list group. Migration 0040 |
+| mentionable | integer NOT NULL | 0 | Anyone may mention the role without MENTION_EVERYONE. Migration 0040. See permissions.md, "Role display" |
 | createdAt | integer NOT NULL | | |
+
+Migration `0040_orbit_roles_profiles` only adds columns (to `roles`, `spaces`, `space_members` and `users`) and sets `spaces.owner_group`; no existing value changes.
 
 ### member_roles
 PK: (spaceId, userId, roleId)
@@ -391,6 +438,180 @@ PK: (spaceId, userId, restrictionType)
 | moderatorId | text | FK → users.id |
 | createdAt | integer NOT NULL | |
 
+#### Space moderation (0039)
+Migration `0039_orbit_space_moderation` adds the four tables below, `spaces.default_notification_level`, `channels.slowmode_seconds` and `space_members.timed_out_until` (with `channel_slowmode_posts` above). It only adds: every new column is nullable or has a default, so existing rows, raw inserts and fixtures that name only the older columns keep working. What the rows mean is in [spaces.md](spaces.md), "Moderation".
+
+### space_moderation_settings
+A space's automatic message rules (`SpaceModerationSettings`). A space without a row has the defaults. Written only by `PATCH /api/spaces/:id/moderation` (`writeModerationSettings`), as `normalizeModerationSettings` returns the change.
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| spaceId | text PK | | FK → spaces.id CASCADE |
+| blockedWords | text NOT NULL | `'[]'` | JSON array of the stored entries (trimmed, deduplicated without case, at most 100 of at most 48 characters) |
+| blockLinks | integer NOT NULL | 0 | 1 = refuse web links |
+| blockInvites | integer NOT NULL | 0 | 1 = refuse space invite links |
+| maxMentions | integer NOT NULL | 0 | Most user and role mentions in one message; 0 = no limit |
+| minAccountAgeMinutes | integer NOT NULL | 0 | 0 = off |
+| minMemberAgeMinutes | integer NOT NULL | 0 | 0 = off |
+| updatedAt | integer NOT NULL | | Epoch ms of the last change; the API sends `updatedAt: null` for a space without a row |
+
+### space_audit_log
+One row per recorded change, written only through `recordAudit` (`utils/auditLog.ts`), which never fails the request that made the change.
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK | Snowflake (`generateSnowflake`, as messages), so ids sort by time and page the log |
+| spaceId | text NOT NULL | FK → spaces.id CASCADE |
+| actorId | text NOT NULL | The acting user's row id here. No foreign key: an entry outlives its actor |
+| action | text NOT NULL | One of `AUDIT_LOG_ACTIONS` |
+| targetType | text | `AuditLogTargetType`: space, channel, category, role, member, message, invite, join_request |
+| targetId | text | The target's id |
+| targetLabel | text | The target's name when the entry was written |
+| changes | text | JSON `AuditLogChange[]`, NULL when the entry records no field |
+| reason | text | A ban's or a timeout's reason |
+| createdAt | integer NOT NULL | Epoch ms |
+
+**Indexes:** `idx_space_audit_log_space_page` on `(space_id, CAST(id AS INTEGER))`, the order `GET /api/spaces/:id/audit-log` pages in (newest first; ids compared as numbers, written exactly so in the query as for `idx_messages_channel_unread`); `idx_space_audit_log_space_created` on `(space_id, created_at)` for the retention sweep. **Retention:** 180 days, swept per space from `recordAudit` at most once an hour.
+
+### space_departed_timeouts
+PK: (spaceId, userId). The running timeout of a member who left or was kicked, so that joining again does not lift it.
+| Column | Type | Notes |
+|--------|------|-------|
+| spaceId | text NOT NULL | FK → spaces.id CASCADE |
+| userId | text NOT NULL | FK → users.id CASCADE |
+| timedOutUntil | integer NOT NULL | When the timeout ends (epoch ms) |
+
+Written by `holdDepartingTimeout` just before the member row is deleted (which also drops the space's holds that have ended), read and deleted by `restoreHeldTimeout` on every join path, which puts a hold still running back on the new `space_members` row. A ban writes none, and deletes any hold the user left behind (`dropHeldTimeout` in `utils/spaceModeration.ts`).
+
+---
+
+## Platform Administration Tables
+
+What the instance's administrators decide over accounts and spaces, apart from anything a space's roles allow (admin.md, "Platform administration"; api.md, "Platform administration"). A space's two reviews, Verification and Discovery approval, each keep one status column on `spaces` (`verification_status`, `discovery_status`), one request row per space, and a shared history; the platform audit log records the admins' actions. `utils/spaceReview.ts` is the only writer of the review tables, and the routes that call it decide who may act (the owner by `spaces.owner_id`, an admin by `users.is_admin`).
+
+#### Platform administration (0041)
+Migration `0041_orbit_platform_admin` creates the four tables below and adds `users.badges`, `users.suspended_at`, `users.suspended_until`, `users.suspension_reason`, `spaces.badges`, `spaces.verification_status` and `spaces.discovery_status`, all nullable and without defaults, so existing rows and raw inserts that name only the older columns keep working.
+
+Its data step moves every space that was listed before approvals existed into review, rather than keeping it listed or dropping it. Every space whose `visibility` is `public` or `request`, whatever `instance_settings.discovery_enabled` and its own `directory_listed` say, gets `discovery_status = 'pending'`, a `space_discovery_requests` row (category `other`, requested by its owner at the migration's time in whole seconds, no decision) and a `space_review_events` row with the id `migrated:<spaceId>`, process `discovery`, action `migrated`, status `pending` and the owner as actor. Its visibility and `directory_listed` are kept; it is hidden from Explore and the directory document until an admin approves it, and the owner can name its category by sending the request again. Last, the migration sets `instance_settings.directory_dirty = 1`, so the pinger's boot ping tells the hub, where one is configured, that the served document shrank.
+
+Migration `0042_orbit_drop_discoverable` drops `users.discoverable` (see "users").
+
+### space_verification_requests
+A space's verification request, one row per space: the owner's `PUT /api/spaces/:id/verification` inserts it or, sent again, replaces every field and clears the decision (`submitVerification`, an upsert on `space_id`). The status is `spaces.verification_status`; the steps are in `space_review_events`.
+
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| spaceId | text PK | | FK → spaces.id CASCADE |
+| name | text NOT NULL | | The space's name when the request was sent |
+| description | text | | The space's description when the request was sent |
+| category | text NOT NULL | | One of `SPACE_CATEGORIES` (`packages/shared/src/platform.ts`); an unknown stored value reads as `other` |
+| website | text | | An `http`/`https` address without credentials, at most 200 characters once normalised; never fetched |
+| profiles | text NOT NULL | `'[]'` | JSON array of up to 5 public profile addresses under the same rule, each once |
+| reason | text NOT NULL | | Why the space should be verified, 20-1000 characters |
+| proof | text NOT NULL | | How the requester shows they run the community (a public post, a page, a contact the reviewer can check), 10-1000 characters |
+| requestedBy | text NOT NULL | | The owner's row id. No foreign key |
+| requestedAt | integer NOT NULL | | Epoch ms. An admin's decision may name it (`requestedAt` in the body) to be refused once the request was sent again |
+| decidedBy | text | | The deciding admin's row id; NULL until decided and after a resubmission |
+| decidedAt | integer | | |
+| decisionNote | text | | The admin's note, which the owner reads |
+
+### space_discovery_requests
+A space's Discovery request, one row per space: the owner's `PUT /api/spaces/:id/discovery` inserts it or, sent again, replaces the category and the requester and clears the decision (`submitDiscovery`). The status is `spaces.discovery_status`.
+
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| spaceId | text PK | | FK → spaces.id CASCADE |
+| category | text NOT NULL | | One of `SPACE_CATEGORIES`; `other` on the rows migration 0041 wrote. Explore carries it as `ExploreSpace.category` |
+| requestedBy | text NOT NULL | | The owner's row id. No foreign key |
+| requestedAt | integer NOT NULL | | Epoch ms |
+| decidedBy | text | | The deciding admin's row id |
+| decidedAt | integer | | |
+| decisionNote | text | | The admin's note |
+| approvedSnapshot | text | | JSON `{ name, description, icon, banner, category }` as an admin approved the listing: written by every Discovery `approve`, kept by the other decisions and by a resubmission, NULL until the first approval. Nothing reads it back: the re-review after an edit compares the edit with the row it changes (`reviewsAfterEdit`) |
+
+### space_review_events
+The history of both reviews: every request, withdrawal, decision and automatic change of a space's verification or Discovery status, which the owner and the admins both read (`reviewStateOf`, oldest first by `created_at`, then `id`). Rows are only inserted.
+
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| id | text PK | | Snowflake (`generateSnowflake`); `migrated:<spaceId>` on the rows migration 0041 wrote |
+| spaceId | text NOT NULL | | FK → spaces.id CASCADE |
+| process | text NOT NULL | | `verification` / `discovery` |
+| action | text NOT NULL | | One of `REVIEW_ACTIONS`: `submit`, `withdraw` (the owner's); `approve`, `reject`, `request_info`, `request_changes`, `revoke`, `admin_withdraw` (an admin's); `changed` (an edit moved the Discovery status); `migrated` (0041). A row with an action this version does not know is left out when read |
+| status | text | | The status the step left; NULL when it left none (a withdrawn verification request) |
+| actorId | text NOT NULL | | Who took the step: the owner, the admin, the member whose edit moved the status, the owner for a migrated row. No foreign key |
+| note | text | | The admin's note; NULL for every other step |
+| createdAt | integer NOT NULL | | Epoch ms |
+
+**Index:** `idx_space_review_events_space` on `(space_id, process, created_at)`.
+
+### announcements
+
+What the operator says to everyone signed in, while it runs ([admin.md](admin.md), "The console").
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PK | Snowflake |
+| tone | text | NOT NULL | `info` or `warning` |
+| body | text | NOT NULL | 3 to 500 characters, shown as plain text |
+| createdBy | text | NOT NULL | The admin; kept as an id, no foreign key |
+| createdAt | integer | NOT NULL | |
+| endsAt | integer | | When it ends by itself; null runs until ended |
+| endedAt | integer | | When an admin ended it |
+
+**Indexes:** `idx_announcements_live` on `(endedAt, endsAt)`.
+
+### admin_notes
+
+What the admins keep for each other about an account. Deleted with the account in `tombstoneUser`, and in its data export (`reports-and-notices.json`).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PK | Snowflake |
+| userId | text | NOT NULL, FK users ON DELETE CASCADE | The account it is about |
+| authorId | text | NOT NULL | The admin who wrote it; no foreign key |
+| body | text | NOT NULL | Up to 1000 characters |
+| createdAt | integer | NOT NULL | |
+
+**Indexes:** `idx_admin_notes_user` on `userId`.
+
+### signup_rules
+
+Who may not sign up. Asked at sign-up and when an address is set; it touches no account that exists.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| kind | text | PK with value | `email_domain` or `username` |
+| value | text | PK with kind | In lower case |
+| note | text | | |
+| createdBy | text | NOT NULL | The admin; no foreign key |
+| createdAt | integer | NOT NULL | |
+
+### starter_spaces
+
+The public spaces a new account of this instance starts in, at most 5.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| spaceId | text | PK, FK spaces ON DELETE CASCADE | |
+| addedBy | text | NOT NULL | The admin; no foreign key |
+| addedAt | integer | NOT NULL | Their order |
+
+### platform_audit_log
+What the instance's administrators did to accounts, spaces and the instance, written only through `recordPlatformAudit` (`utils/platformAudit.ts`), which never fails the request: the action is already taken, so a failed insert is logged and the request goes on. No foreign keys: an entry outlives its actor and its target.
+
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| id | text PK | | Snowflake, so ids sort by time and page the log |
+| actorId | text NOT NULL | | The acting admin's row id |
+| action | text NOT NULL | | One of `PLATFORM_AUDIT_ACTIONS` (`packages/shared/src/platform.ts`): suspensions, role changes, password resets, deletions, badges, review decisions, settings saves, invite changes, storage cleanups |
+| targetType | text NOT NULL | | `user`, `space` or `instance` (settings, invites, storage); a row of another type is left out when read |
+| targetId | text NOT NULL | | The user's or space's id; for `instance` the invite's id, `settings` or `storage` |
+| targetLabel | text | | The target's name when the entry was written (username, space name, invite name) |
+| reason | text | | The suspension reason, the review note, the optional note of a badge change or an unsuspension |
+| details | text | | JSON object of what the action set (`PlatformAuditValue`s: a status, an end time, the badges added and removed, the changed setting names); NULL when empty |
+| createdAt | integer NOT NULL | | Epoch ms |
+
+**Indexes:** `idx_platform_audit_log_page` on `(CAST(id AS INTEGER))`, the order `GET /api/admin/audit` pages in (newest first; `before` compared as a number, written exactly so in the query as for `idx_messages_channel_unread`); `idx_platform_audit_log_target` on `(target_type, target_id)` for the entries of one account or space. **Retention:** none, unlike `space_audit_log`; these are the records an admin team answers for, and there are few of them.
+
 ---
 
 ## Registration Invites
@@ -420,7 +641,7 @@ One row per successful invite-token consumption. Surrogate ID supports future pe
 | id | text PK | Snowflake |
 | inviteId | text NOT NULL | FK → invite_links.id ON DELETE CASCADE — hard-deleting an invite drops its redemption history with it. |
 | userId | text | FK → users.id ON DELETE SET NULL — defensive against future hard-delete paths; tombstone (soft-delete) keeps the row populated. |
-| registrantUsername | text NOT NULL | Snapshot of username at the registration moment. Preserves forensic value when the user is later renamed or tombstoned (`!deleted:{uid}`). |
+| registrantUsername | text NOT NULL | Snapshot of username at the registration moment. Preserves forensic value when the user is later renamed or tombstoned (`!deleted:{uid}`). | When the account is deleted it becomes `Deleted User`.
 | redeemedAt | integer NOT NULL | Epoch ms |
 
 **Indexes:** `idx_invite_redemptions_invite_id` on `(inviteId)`, `idx_invite_redemptions_user_id` on `(userId)`.
@@ -430,6 +651,8 @@ The user INSERT, `usedCount` increment, and redemption row INSERT all run in a s
 ---
 
 ## Instance Settings (singleton, id=1)
+
+Migration `0037_orbit_drop_upstream_reporting` dropped the five `telemetry_*` columns and `support_card_enabled` here, and `users.last_active_day` / `users.last_client`: they served only the upstream project's opt-in usage report and its fundraising card, which Tavvit does not have.
 
 | Column | Type | Default | Notes |
 |--------|------|---------|-------|
@@ -454,17 +677,11 @@ The user INSERT, `usedCount` increment, and redemption row INSERT all run in a s
 | federationRelayEnabled | integer NOT NULL | 1 | |
 | federationRelayTtlDays | integer NOT NULL | 30 | |
 | autoAcceptPeering | integer NOT NULL | 1 | When 0, `peer/accept` rejects unsolicited requests with 403 |
-| telemetryEnabled | integer | | Opt-in usage pings. null = never asked, 0 = off, 1 = on. |
-| telemetryId | text | | Random UUID, minted on the first off-to-on transition and kept for the life of the install, through off. Never the federation `instanceId`. |
-| telemetryLastDay | text | | Last UTC day (`YYYY-MM-DD`) successfully reported. |
-| telemetryLastError | text | | JSON `{ day, status }` of the last failed attempt, null after a success. |
-| telemetryDeclinedVersion | text | | The server version running when telemetry was last switched off (by the modal, the panel, `install.sh` or a receiver `410`). The ask returns on the next minor release; null for a no recorded before the column existed, which is asked once more. |
 | directoryEnabled | integer NOT NULL | 0 | The admin allows spaces on this instance to be listed in the space directory. Never 1 while `discoveryEnabled` is 0: both settings PATCH routes clear it in the same write that turns discovery off, and `directoryEnabled: true` with discovery off is refused (`400 directory_requires_discovery`). |
 | directoryDirty | integer NOT NULL | 0 | A directory ping is owed. Set by `markDirectoryDirty()` on every change to the served document except member counts; cleared by a ping the hub accepted, and only if nothing changed while it was in flight. Survives restarts and the toggle being off. |
 | directoryLastPingAt | integer | | Epoch ms of the last directory ping the hub accepted, null before the first. |
 | directoryLastError | text | | JSON `DirectoryPingError` (`{ at, status, reason? }`) of the last failed directory ping, null after a success. Also the per-day guard for the daily slot: the pinger will not retry a failing hub by the slot on a day that already recorded an error. See [directory.md](directory.md). |
 | directoryBrowseEnabled | integer NOT NULL | 1 | The admin allows people on this instance to see spaces from other instances in Explore ("Outer Space"). The incoming half of the directory, independent of `directoryEnabled`, which is the outgoing half. `GET /api/directory` answers `404 directory_disabled` while it is 0, and `instance/info` reports `directoryAvailable: false`. Default 1, which is what every instance did before the column existed. `DIRECTORY_ENDPOINT` sits above it: with no endpoint there is nothing to browse whatever it says. Nowhere in the served document, so changing it never marks `directoryDirty`. See [directory.md](directory.md). |
-| supportCardEnabled | integer (boolean mode) NOT NULL | 1 | The web client's Backspace page shows the Support card, which links to the project's Ko-fi page. Read only by the web client, through `supportCardEnabled` on `GET /api/instance/info`; it hides only that card and changes nothing the server does. Default 1; migration `0017_fat_rafael_vega.sql` adds it, and an existing row takes the default. Written through `PATCH /api/settings/instance`. |
 | installedAt | integer | | First-boot timestamp (epoch ms). Backfilled by `ensureDefaults` from the oldest local non-deleted account, or `Date.now()` on a fresh DB, so it is non-null after boot and never overwritten. |
 | ledgerStartedAt | integer | | When this instance began recording applied relay events in `federation_applied_events` (epoch ms): set by migration 0022 on an existing instance, null on one that ran it before its first boot. The pull reads no friend event older than it (federation.md "Pull sync", "Cursor") |
 | updatedAt | integer NOT NULL | | |
@@ -718,3 +935,207 @@ Per-remote credential this user's client presents when registering or logging in
 **Lifecycle:** created get-or-create with `onConflictDoNothing` + re-read (first-writer-wins — a racing write never replaces a stored secret). Deleted by `tombstoneUser` (explicitly: a tombstone keeps the `users` row, so the CASCADE never fires and live credentials would otherwise outlive the account) and by `POST /api/users/@me/federation-identity/delete` in `soft`/`full` mode. **Not** deleted in `leave` mode — the remote account survives and keeps authenticating with the secret.
 
 **Migration note:** `0011` is a bare `CREATE TABLE`. It reads and rewrites nothing, so it is forward-safe on a populated database and idempotent on re-run. Restoring a **pre-**`0011` backup into a **post-**`0011` deployment works — `migrate()` re-applies `0011` on boot — but any credential rows written after the snapshot are lost, and the client will mint fresh secrets for those origins. Recovery is automatic while a remote token is still valid (`provisioned_at` comes back NULL, so `ensureRemoteCredential` rotates the remote onto the new secret); otherwise the user re-authenticates through the per-instance login form once. See `deployment.md`.
+
+## Bots (migration 0062)
+
+| Table or column | Notes |
+|-----------------|-------|
+| `bots` | `id` (= `users.id`, cascades), `owner_id` (cascades; `tombstoneUser` retires an owner's bots), `description`, `token_hash` (SHA-256), `created_at`, `last_used_at`. |
+| `bot_commands` | `bot_id` (cascades), `name`, `description`. PK `(bot_id, name)`. |
+| `instance_settings.bots_enabled` | 0 by default: the operator turns bots on. |
+| `roles.bot_id` | The role made for a bot when it came into a space; it gets the same one back after a kick. |
+
+## Voice messages, saved messages, keywords, soundboard (migrations 0059 to 0061)
+
+| Table or column | Notes |
+|-----------------|-------|
+| `attachments.voice_waveform` | Bar heights as `12,40,7`, for a voice message. Null for any other file. |
+| `saved_messages` | `id`, `user_id`, `message_id`, `dm_message_id`, `remind_at`, `reminder_sent_at`, `created_at`. All foreign keys cascade. Unique per person and message. [saved.md](saved.md). |
+| `notification_keywords` | `user_id`, `word`, `created_at`. PK `(user_id, word)`. |
+| `space_sounds` | `id`, `space_id` (cascades), `name`, `mimetype`, `size`, `duration`, `created_by` (no foreign key, cleared by `tombstoneUser`), `created_at`. 0061 also gives every existing @everyone role USE_SOUNDBOARD (bit 27). [sounds.md](sounds.md). |
+
+## Threads, events, welcome and webhooks (migrations 0056 to 0058)
+
+### channels: threads (0056)
+
+| Column | Notes |
+|--------|-------|
+| `parent_channel_id` | A thread's channel, `type = 'thread'`. Cascades with the parent. |
+| `thread_starter_message_id` | Set null when that message is deleted. |
+| `thread_created_by` | Cleared by `tombstoneUser`. |
+
+`thread_members` (`thread_id`, `user_id`, `joined_at`) is who follows a thread. 0056 also gives every existing @everyone role CREATE_THREADS (bit 17).
+
+### space_events, space_event_rsvps (0057)
+
+| Table | Notes |
+|-------|-------|
+| `space_events` | `id`, `space_id`, `title`, `description`, `location`, `channel_id` (set null), `starts_at`, `ends_at`, `created_by` (no foreign key, cleared by `tombstoneUser`), `reminder_sent_at`, `created_at`. |
+| `space_event_rsvps` | `event_id`, `user_id`, `created_at`. PK `(event_id, user_id)`. |
+
+### spaces, space_members: welcome and rules (0057)
+
+| Column | Notes |
+|--------|-------|
+| `spaces.welcome_text`, `rules_text` | Shown as markdown. |
+| `spaces.rules_required_since` | Null while agreeing is optional. Only members who joined after this moment are held to it. |
+| `spaces.welcome_channel_ids` | JSON array of channel ids. |
+| `space_members.rules_accepted_at` | Null until they agreed. Leaving removes the row, so someone who comes back agrees again. |
+
+### users.account_kind, webhooks (0058)
+
+| Column or table | Notes |
+|-----------------|-------|
+| `users.account_kind` | `person` (default), `webhook`, later `bot`. A new query that lists people has to filter on it: [webhooks.md](webhooks.md). |
+| `webhooks` | `id`, `space_id`, `channel_id`, `user_id` (its account), `name`, `token_hash` (SHA-256), `created_by` (no foreign key, cleared by `tombstoneUser`), `created_at`, `last_used_at`. All three foreign keys cascade. |
+
+## Pins, spoilers, forwards, polls, push (migrations 0050 to 0055)
+
+`messages` gets `pinned_at`, `pinned_by` (a partial index on the channel and `pinned_at`) and `forwarded`. `dm_messages` gets the same and `pin_changed_at`, the last change either way, so a relayed older state does not replace a newer one. `attachments` gets `spoiler`, set when the message is sent. `instance_settings` gets `signup_challenge` (`off`, `normal`, `high`): the column's default is `off`, the migration set the row that existed to `normal`, and `ensureDefaults` writes a new row with `normal`.
+
+### polls, poll_options, poll_votes
+
+| Column | Notes |
+|--------|-------|
+| `polls.message_id` | PK, the message that asks; its content is the question. Cascades with the message. |
+| `polls.multiple`, `ends_at`, `ended_at`, `created_at` | Null `ends_at` runs until someone ends it. |
+| `poll_options.id`, `message_id`, `position`, `label` | Cascades with the message. |
+| `poll_votes.option_id`, `message_id`, `user_id`, `created_at` | PK `(option_id, user_id)`. `tombstoneUser` removes a deleted account's. |
+
+### push_keys, push_subscriptions
+
+`push_keys` is one row: this instance's signing key, apart from the settings so no settings route can hand it out.
+
+| `push_subscriptions` | Notes |
+|--------|-------|
+| `id` | Snowflake |
+| `user_id` | Cascades; `tombstoneUser` removes them too |
+| `session_id` | Cascades, so ending the session ends the device's pushes; null for a token from before sessions |
+| `endpoint` | UNIQUE. One browser is one row, for whoever signed in there last |
+| `p256dh`, `auth` | What the message is encrypted for |
+| `show_text`, `direct_messages`, `locale` | The device's own choices, which the server follows while the app is closed |
+| `failures`, `last_success_at`, `created_at` | 20 failures in a row remove it |
+
+## Two factors and security activity (migration 0048)
+
+`users.two_factor_enabled_at`: since when signing in takes a second factor (auth.md). `tombstoneUser` clears it and all of the below.
+
+**`two_factor_secrets`**: `user_id` (PK, FK), `secret_enc` (`v1.<iv>.<tag>.<ciphertext>`, AES-256-GCM under `TOTP_ENCRYPTION_KEY`, the account's id as associated data), `confirmed_at` (null while being set up), `last_used_step`, `failed_attempts`, `locked_until`, `created_at`.
+
+**`two_factor_recovery_codes`**: `code_hash` (PK, HMAC-SHA-256 under a key derived from the same), `user_id`, `used_at`, `created_at`.
+
+**`mfa_tickets`**: the sign-in's first step passed, the second due. `ticket_hash` (PK), `user_id`, `device_id`, `attempts`, `created_at`, `expires_at` (5 minutes).
+
+**`security_events`**: what happened, for the owner to read. `id`, `user_id`, `kind` (`SecurityEventKind`), `client_label`, `address_hint`, `count`, `created_at`. 90 days, 200 per account.
+
+**`known_devices`**: `user_id` + `device_hash` (PK), `first_seen_at`, `last_seen_at`. A hash of a random id the browser keeps, with the account's id. 20 per account; gone after 180 days unseen.
+
+---
+
+## Mail (migration 0047)
+
+`users` gains `email`, `email_verified_at`, `pending_email`, `locale`; a partial unique index keeps confirmed addresses unique and nothing else. `instance_settings.email_required_since`: since when new accounts need one, null while nobody does (email.md, "The gate"). `tombstoneUser` clears all of it.
+
+**`email_tokens`**: a link in a mail, only its hash. `token_hash` (PK, SHA-256), `user_id` (FK, cascade, and scrubbed by `tombstoneUser`), `purpose` (`verify` | `reset`), `address`, `created_at`, `expires_at`. One per account and purpose. Swept hourly.
+
+**`email_outbox`**: mail waiting, and a week's memory of what went. `id`, `kind`, `priority`, `user_id`, `to_address`, `to_hash`, `locale`, `params`, `link_nonce`, `status` (`queued` | `sent` | `failed` | `expired`), `attempts`, `next_attempt_at`, `expires_at`, `provider_id`, `last_error`, `created_at`, `sent_at`. Never a body. `to_address`, `link_nonce` and `params` go when a row is done.
+
+**`email_usage_daily`**: `day` (PK, UTC), `accepted`, `failed`, `bounced`, `complained`, `provider_day`, `provider_month`. No personal data.
+
+**`email_suppressions`**: `address_hash` (PK), `reason` (`bounce` | `complaint`), `created_at`. Bounces lapse after 30 days.
+
+---
+
+## Sessions (migration 0046)
+
+**`sessions`**: one signed-in device (auth.md, "Tokens and sessions"). `id` (text PK, 128 random bits, the token's `sid`), `user_id` (FK, cascade, and scrubbed by `tombstoneUser`), `created_at`, `last_active_at`, `expires_at`, `client_label` ("Chrome · Windows", null when unknown), `address_hint` (the address cut short). Indexes on `user_id` and `expires_at`. `users.password_hash` now holds an Argon2id PHC string, or until the next login a bcrypt one.
+
+---
+
+## Contact rules, invite links and data exports (migrations 0044, 0045)
+
+**Columns:**
+- `users.dm_policy` (text, default `friends_and_spaces`): who may start a conversation with this person. `nobody`, `friends`, `friends_and_spaces` or `anyone`.
+- `users.friend_request_policy` (text, default `anyone`): who may send them a friend request and find them by name. `nobody`, `shared_spaces` or `anyone`.
+- `instance_settings.emoji_policy` (text, default `admins`): who may add to the emoji library. `admins` or `everyone`.
+- `instance_settings.storage_per_account_bytes` (integer, default 5 GB) and `instance_settings.spaces_per_account` (integer, default 25): what one account may keep and own; 0 means no limit (migration `0063_tavvit_account_limits`, [uploads.md](uploads.md), "Limits per account").
+- `users.storage_limit_bytes` (integer, null): an account's own limit, set by an admin; 0 means none, null the instance's. `idx_attachments_uploader` makes the sum of an account's files cheap.
+- `messages.cards` (text, null): JSON, what a bot or a webhook showed besides text ([bots.md](bots.md), "Cards"). `bot_commands.options` (text, null): JSON, what a command asks for (migration `0064_tavvit_bot_api`).
+
+The two on `users` go out only on a person's own row (`sanitizeUser(row, true)`). On a replicated row they mean nothing: the account's own instance decides (social.md, "Who may reach someone").
+
+**`space_invites`**: one row per link into a space (spaces.md, "Invite links").
+
+| Column | Type | Notes |
+|--------|------|-------|
+| code | text PK | 48 random bits, base64url |
+| space_id | text FK, cascade | |
+| created_by | text FK, set null | |
+| created_at | integer NOT NULL | |
+| expires_at | integer | When it stops working; null for never |
+| max_uses | integer | How many people it may let in; null for no limit |
+| uses | integer NOT NULL, default 0 | Counted in one statement with the limit check |
+
+Migration 0044 copies each `spaces.invite_code` in. That column still names the standing link, the one the Invite dialog hands out. A revoked link has no row.
+
+**`data_exports`**: a person's copy of their data (legal.md, "Data export"). `id`, `user_id` (FK, cascade), `status` (`pending`, `ready`, `failed`), `created_at`, `expires_at`, `size_bytes`. The file is `<id>.zip` in `config.exportDir`.
+
+---
+
+## Legal tables (migration 0043)
+
+Full description: [legal.md](legal.md).
+
+**`legal_documents`:** one published version of a document, never edited. `id`, `kind` (`terms`, `privacy`), `version` (unique per kind), `texts` (JSON, language to Markdown), `published_at`, `effective_at`, `changes`, `published_by`.
+
+**`content_reports`:** `id`, `status` (`open`, `closed`), `category`, `explanation`, `target_type`, `target_id`, `target_url`, `snapshot` (JSON `ReportSnapshot`), `reporter_user_id`, `reporter_name`, `reporter_email`, `created_at`, `decision`, `ground`, `decision_note`, `decided_by`, `decided_at`. Decided ones are deleted after a year.
+
+**`user_notices`:** `id`, `user_id`, `kind`, `ground`, `note`, `subject`, `until`, `decision`, `created_at`, `read_at`. Read ones are deleted after a year; all go with the account.
+
+**Columns:** `instance_settings.legal_operator` (JSON `LegalOperator`), `users.terms_version`, `users.terms_accepted_at`.
+
+Migration 0043 also renames an instance still called by the old default (`Orbit`) to `Tavvit`. `platform_audit_log` rows are deleted after two years.
+
+## operator_alerts
+
+What the operator has to hear about (`utils/operatorAlerts.ts`, operations.md). A row stays after it clears, to keep the day's mail counted.
+
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| cause | text | | PK: `disk_high`, `backup_failed`, `backup_old`, `offsite_failed`, `restart_loop` |
+| active | integer | 1 | Whether it holds now |
+| detail | text | | The figure or the error that goes with it |
+| since | integer | | When it began this time |
+| last_mailed_at | integer | | When the administrators were last told |
+
+`instance_settings.recent_starts` (text) holds when the server started lately, as JSON, the last 20, to tell a restart loop from an update. `announcements.on_status_page` (integer, default 0): also on the public status page.
+
+## Community channels (migration 0066)
+
+See [forums.md](forums.md) and [spaces.md](spaces.md), "Own invite address". `channels.type` also takes `announcement` and `forum`.
+
+| Table or column | Notes |
+|-----------------|-------|
+| `forum_tags` | `id`, `channel_id` (cascades with the forum), `name`, `color` (may be null), `position`, `created_at`. At most 20 per forum, checked in the route. Names are unique in a forum without regard to case. |
+| `forum_post_tags` | `thread_id`, `tag_id`, both cascade. Primary key the pair. At most 5 per post, checked in the route. |
+| `channel_follows` | `id`, `source_channel_id` and `target_channel_id` (cascade), `account_id` (its account, `users.account_kind = 'follow'`), `created_by` (no foreign key, cleared by `tombstoneUser`), `created_at`. The pair is unique. |
+| `blocked_vanity_codes` | `code` (primary key), `created_at`. Names an administrator took away, which nobody can take again. |
+| `spaces.vanity_code` | Null or a unique name in small letters. Also a row of `space_invites`. |
+| `users.account_kind` | Also `follow`, with the same rules as `webhook`. |
+
+## Changing a username (migration 0067)
+
+See [auth.md](auth.md), "Changing a username".
+
+| Table or column | Notes |
+|-----------------|-------|
+| `users.username_changed_at` | When this account last changed its name. Null if it never did. |
+| `retired_usernames` | `username` (primary key), `user_id` (cascades), `until`. Names given up, out of reach until `until`. Deleted by `tombstoneUser`, listed in the personal export (`security.json`). |
+
+## Channel icons (migration 0068)
+
+See [spaces.md](spaces.md), "Channel icons".
+
+| Table or column | Notes |
+|-----------------|-------|
+| `channels.icon` | Null, `glyph:<id>` or one emoji. Only adds a nullable column, so every existing channel keeps its type's icon. |

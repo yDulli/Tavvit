@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { createInstance, type i18n as I18n } from 'i18next';
-import { HttpError, RateLimitError } from '../api/client';
+import { HttpError, RateLimitError, RequestTimeoutError } from '../api/client';
 import { describeCodedError, describeError } from './errors';
 
 let i18n: I18n;
@@ -111,7 +111,7 @@ describe('HttpError.fromBody', () => {
       statusCode: 409,
     });
     expect(describeError(err)).toBe(
-      'Your account on that instance has a password of its own. Sign in with it to reconnect.',
+      'Your account on that instance has a password of its own. Log in with it to reconnect.',
     );
   });
 });
@@ -129,6 +129,9 @@ describe('describeCodedError', () => {
 
   it('uses the fallback for an error that did not come from the server', () => {
     expect(describeCodedError(new TypeError('Failed to fetch'), 'Fallback', i18n)).toBe('Fallback');
+    expect(describeError(new TypeError('Failed to fetch'), i18n)).toBe(i18n.t('errors:network'));
+    expect(describeError(new TypeError('Load failed'), i18n)).toBe(i18n.t('errors:network'));
+    expect(describeError(new RequestTimeoutError(), i18n)).toBe(i18n.t('errors:network'));
     expect(describeCodedError('not an error', 'Fallback', i18n)).toBe('Fallback');
   });
 });

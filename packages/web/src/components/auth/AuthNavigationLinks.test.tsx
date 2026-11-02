@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { api } from '../../api/client';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -27,9 +28,10 @@ vi.mock('../../api/client', async (importOriginal) => {
   return {
     ...original,
     api: {
+      desktop: { release: vi.fn(async () => ({ release: null })) },
       instance: {
-        // Keep instance metadata pending: neither navigation prompt depends on it,
-        // and avoiding a state update keeps these tests focused on link semantics.
+        // Pending unless a test answers it: the registration page does not depend
+        // on it, and a state update would only distract from the link semantics.
         info: vi.fn(() => new Promise(() => {})),
       },
       auth: {
@@ -50,12 +52,14 @@ describe('authentication navigation prompts', () => {
   });
 
   it.each([
-    ['en', 'Register'],
+    ['en', 'Sign up'],
     ['de', 'Registrieren'],
     ['ru', 'Зарегистрироваться'],
   ] as const)('navigates from login to registration in %s', async (language, linkLabel) => {
     await setLanguage(language);
     const user = userEvent.setup();
+    // The prompt offers registration only where it is open; here it is.
+    vi.mocked(api.instance.info).mockResolvedValue({ registrationOpen: true, name: 'Tavvit' } as never);
 
     render(
       <MemoryRouter initialEntries={['/login?redirect=%2Fchannels%2F%40me']}>
@@ -66,7 +70,7 @@ describe('authentication navigation prompts', () => {
       </MemoryRouter>,
     );
 
-    const link = screen.getByRole('link', { name: linkLabel });
+    const link = await screen.findByRole('link', { name: linkLabel });
     expect(link).toHaveAttribute('href', '/register?redirect=%2Fchannels%2F%40me');
 
     await user.click(link);
@@ -74,7 +78,7 @@ describe('authentication navigation prompts', () => {
   });
 
   it.each([
-    ['en', 'Log In'],
+    ['en', 'Log in'],
     ['de', 'Anmelden'],
     ['ru', 'Войти'],
   ] as const)('navigates from registration to login in %s', async (language, linkLabel) => {

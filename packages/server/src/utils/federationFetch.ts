@@ -75,6 +75,10 @@ export async function assertPeerOriginAllowed(origin: string, trust: OriginTrust
  * 3xx from a peer is a misconfiguration or an attempt to move the request
  * elsewhere; callers see the 3xx and handle it through their existing
  * non-2xx branch.
+ *
+ * With FEDERATION_ENABLED off this is a hard stop: every server-to-server
+ * request in the codebase goes through here, so nothing can reach a peer
+ * however a caller got to it.
  */
 export async function federationFetch(
   origin: string,
@@ -82,6 +86,9 @@ export async function federationFetch(
   init: RequestInit,
   trust: OriginTrust,
 ): Promise<Response> {
+  if (!config.federation.enabled) {
+    throw new Error('Federation is disabled on this instance');
+  }
   await assertPeerOriginAllowed(origin, trust);
   const target = new URL(path, origin).toString();
   return fetch(target, { ...init, redirect: 'manual' });

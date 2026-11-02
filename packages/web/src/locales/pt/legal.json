@@ -1,0 +1,238 @@
+{
+  "links": {
+    "label": "Informações legais",
+    "terms": "Termos de uso",
+    "privacy": "Privacidade",
+    "imprint": "Aviso legal",
+    "report": "Denunciar conteúdo",
+    "source": "Código-fonte"
+  },
+  "shell": {
+    "back": "Voltar ao app",
+    "backHome": "Voltar à página inicial"
+  },
+  "documents": {
+    "terms": {
+      "title": "Termos de uso"
+    },
+    "privacy": {
+      "title": "Política de privacidade"
+    },
+    "missing": "Este documento ainda não foi publicado. Pergunte ao operador deste servidor.",
+    "meta": "Versão {{version}}, em vigor desde {{date}}"
+  },
+  "imprint": {
+    "title": "Aviso legal",
+    "missing": "O operador deste servidor ainda não preencheu isto.",
+    "provider": "Provedor",
+    "representative": "Representado por",
+    "contact": "Contato",
+    "register": "Registro comercial",
+    "vatId": "Número fiscal (IVA)",
+    "editorial": "Responsável pelo conteúdo editorial",
+    "dsaContact": "Ponto de contato (Art. 11 e 12 do DSA)",
+    "dsaContactBody": "{{email}}, em alemão ou inglês"
+  },
+  "report": {
+    "pageTitle": "Denunciar conteúdo",
+    "pageIntro": "Avise o operador deste servidor sobre conteúdo ilegal ou violação dos termos. Você não precisa de uma conta.",
+    "dialogTitle": "Denunciar",
+    "about": "Você está denunciando",
+    "category": "Qual é o problema?",
+    "categoryChoose": "Escolha uma opção",
+    "categories": {
+      "hate": "Discurso de ódio ou incitação",
+      "violence": "Ameaças ou incitação à violência",
+      "child_safety": "Abuso sexual de crianças",
+      "terrorism": "Conteúdo terrorista",
+      "defamation": "Insulto ou difamação",
+      "privacy": "Dados privados sem consentimento",
+      "copyright": "Violação de direitos autorais",
+      "fraud": "Fraude ou malware",
+      "other_illegal": "Outra coisa ilegal",
+      "terms_violation": "Violação dos termos, não ilegal"
+    },
+    "where": "Onde está?",
+    "wherePlaceholder": "Um link, ou o espaço, canal e horário",
+    "explanation": "Por que isto é ilegal ou contra os termos?",
+    "explanationPlaceholder": "Diga o que é o conteúdo e o que ele viola.",
+    "explanationHint": "Pelo menos {{min}} caracteres.",
+    "name": "Seu nome",
+    "email": "Seu endereço de e-mail",
+    "contactOptional": "Nesta categoria, você pode deixar nome e endereço em branco.",
+    "goodFaith": "O que denuncio aqui é verdadeiro e completo, até onde sei.",
+    "send": "Enviar denúncia",
+    "sentTitle": "Sua denúncia foi recebida.",
+    "sentBody": "O operador vai analisar e decidir. Se você informou um e-mail, pode receber resposta por lá.",
+    "sentBodyAccount": "O operador vai analisar e decidir. Você saberá o resultado aqui no app.",
+    "close": "Fechar",
+    "menuMessage": "Denunciar mensagem",
+    "menuUser": "Denunciar pessoa",
+    "menuSpace": "Denunciar espaço"
+  },
+  "terms": {
+    "dialogTitle": "Termos de uso",
+    "required": "Para continuar usando este servidor, aceite os termos de uso dele.",
+    "upcoming": "Os termos de uso mudam em {{date}}. Você já pode lê-los e aceitá-los.",
+    "changes": "O que mudou",
+    "logOut": "Sair",
+    "later": "Mais tarde",
+    "accept": "Aceito",
+    "retry": "Tentar de novo"
+  },
+  "notices": {
+    "reason": "Motivo",
+    "ground": {
+      "illegal": "Esta decisão se baseia na lei.",
+      "terms": "Esta decisão se baseia nos termos de uso."
+    },
+    "untilLifted": "Vale até o operador suspendê-la.",
+    "until": "Vale até {{date}}.",
+    "redress": "Você pode contestar esta decisão entrando em contato com o operador. O caminho até os tribunais continua aberto.",
+    "contact": "Contato: {{email}}",
+    "ok": "Entendi",
+    "listTitle": "Avisos do operador",
+    "content_removed": {
+      "title": "Seu conteúdo foi removido"
+    },
+    "account_suspended": {
+      "title": "Sua conta foi suspensa"
+    },
+    "listing_withdrawn": {
+      "title": "Seu espaço saiu da listagem"
+    },
+    "report_decided": {
+      "title": "Sua denúncia foi decidida",
+      "outcome": {
+        "no_action": "O operador analisou sua denúncia e não encontrou motivo para agir.",
+        "content_removed": "O operador removeu o conteúdo que você denunciou.",
+        "account_suspended": "O operador suspendeu a conta que você denunciou.",
+        "listing_withdrawn": "O operador tirou da listagem o espaço que você denunciou.",
+        "handled": "O operador agiu com base na sua denúncia."
+      }
+    },
+    "warning": {
+      "title": "Você recebeu uma advertência"
+    },
+    "address_withdrawn": {
+      "title": "O endereço próprio do seu espaço foi retirado"
+    }
+  },
+  "external": {
+    "notice": "Isto vem de {{host}}. Ao carregar, esse servidor fica sabendo seu endereço IP.",
+    "load": "Carregar",
+    "always": "Sempre permitir",
+    "compactTitle": "Carregar de {{host}}",
+    "compactLoad": "Carregar",
+    "settingsTitle": "Conteúdo de outros servidores",
+    "settingsLabel": "Sempre carregar conteúdo de outros servidores",
+    "settingsDescription": "Prévias de links, GIFs e vídeos vêm de outros servidores, que então veem seu endereço IP. Com isto desligado, você decide a cada vez.",
+    "playLoads": "Ao reproduzir, carrega de {{name}}, que então vê seu endereço IP."
+  },
+  "register": {
+    "agree": "Tenho pelo menos {{age}} anos e aceito os <terms>termos de uso</terms>. A <privacy>política de privacidade</privacy> explica como meus dados são tratados.",
+    "agreeFirst": "Aceite os termos de uso para continuar."
+  },
+  "admin": {
+    "title": "Informações legais",
+    "description": "Quem opera um servidor é o provedor dele e responde pelo que acontece aqui. Preencha seus dados e publique os termos e a política de privacidade.",
+    "operator": {
+      "title": "Quem opera este servidor",
+      "description": "Aparece publicamente no aviso legal e é usado nos rascunhos.",
+      "kind": "Operado por",
+      "kinds": {
+        "person": "Uma pessoa física",
+        "organization": "Uma empresa ou associação"
+      },
+      "minimumAge": "Idade mínima",
+      "name": "Nome completo, ou nome e forma jurídica",
+      "address": "Endereço postal",
+      "addressHint": "Um endereço onde você possa ser encontrado por correio. Caixa postal não basta.",
+      "email": "Endereço de e-mail",
+      "emailHint": "Para dúvidas, contestações e autoridades. As denúncias são respondidas daqui.",
+      "representative": "Representado por (opcional)",
+      "phone": "Telefone (opcional)",
+      "register": "Registro comercial (opcional)",
+      "vatId": "Número fiscal, IVA (opcional)",
+      "editorial": "Responsável pelo conteúdo editorial (opcional)",
+      "hosting": "Provedor de hospedagem, nome e endereço (opcional)",
+      "dpo": "Encarregado de proteção de dados (opcional)",
+      "save": "Salvar dados",
+      "saved": "Salvo."
+    },
+    "documents": {
+      "title": "Termos e política de privacidade",
+      "description": "Cada publicação é uma nova versão. As anteriores ficam guardadas, porque um aceite indica a versão a que se refere.",
+      "kindLabel": "Documento",
+      "languageLabel": "Idioma",
+      "languages": {
+        "de": "Alemão",
+        "en": "Inglês"
+      },
+      "insertDraft": "Inserir rascunho",
+      "loadLatest": "Carregar versão publicada",
+      "operatorFirst": "Preencha primeiro quem opera este servidor.",
+      "draftWarning": "O rascunho segue o que está ligado neste servidor, mas não é aconselhamento jurídico. Leia, adapte e peça a um advogado que revise antes de um lançamento público.",
+      "textLabel": "Texto (Markdown)",
+      "effective": "Em vigor a partir de (opcional)",
+      "effectiveHint": "Vazio vale na hora. Em uma mudança, dê tempo às pessoas, como 30 dias.",
+      "changes": "O que mudou",
+      "changesRequired": "Obrigatório: as pessoas leem isto antes de aceitar de novo.",
+      "changesHint": "Opcional na primeira versão e na política de privacidade.",
+      "publish": "Publicar: {{title}}",
+      "published": "Publicado."
+    },
+    "history": {
+      "title": "Versões publicadas",
+      "version": "Versão {{version}}",
+      "effective": "Em vigor a partir de {{date}}"
+    },
+    "reports": {
+      "title": "Denúncias",
+      "description": "Denúncias de conteúdo ilegal ou violação dos termos, de qualquer pessoa. Você decide cada uma; a pessoa afetada e quem denunciou são avisados.",
+      "tabs": {
+        "open": "Abertas",
+        "closed": "Decididas"
+      },
+      "emptyOpen": "Nenhuma denúncia aguardando.",
+      "emptyClosed": "Nenhuma denúncia foi decidida ainda.",
+      "detailTitle": "Denúncia",
+      "category": "Denunciado como",
+      "explanation": "Explicação",
+      "where": "Onde",
+      "reported": "Denunciado: {{type}}, como estava na época",
+      "targets": {
+        "message": "mensagem",
+        "dm_message": "mensagem direta",
+        "user": "pessoa",
+        "space": "espaço",
+        "link": "endereço"
+      },
+      "unknownAuthor": "Autor desconhecido",
+      "attachments": "Anexos: {{names}}",
+      "reporter": "Denunciado por",
+      "anonymous": "Não informado",
+      "replyByEmail": "Este servidor não escreve para quem denuncia: confirme e responda a esta denúncia pelo seu próprio endereço.",
+      "decision": "Decisão",
+      "decisions": {
+        "no_action": "Nada a fazer",
+        "content_removed": "Remover o conteúdo",
+        "account_suspended": "Suspender a conta",
+        "listing_withdrawn": "Tirar o espaço da listagem",
+        "handled": "Resolvido em outra parte da administração"
+      },
+      "ground": "Em que se baseia",
+      "groundChoose": "Escolha uma opção",
+      "grounds": {
+        "illegal": "A lei",
+        "terms": "Os termos de uso"
+      },
+      "duration": "Por quanto tempo",
+      "note": "Motivo",
+      "noteHint": "A pessoa afetada lê isto. Cite a regra ou a lei e o que aconteceu.",
+      "noteHintNoAction": "Para seu próprio registro. Quem denunciou só fica sabendo o resultado.",
+      "decide": "Decidir",
+      "noteTooLong": "O motivo de uma suspensão pode ter no máximo {{max}} caracteres."
+    }
+  }
+}

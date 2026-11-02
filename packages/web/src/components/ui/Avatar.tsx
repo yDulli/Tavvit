@@ -21,11 +21,29 @@ interface AvatarProps {
   palette?: 'user' | 'space';
 }
 
-const statusColors: Record<string, string> = {
-  online: 'bg-status-online',
-  idle: 'bg-status-idle',
-  dnd: 'bg-status-dnd',
-  offline: 'bg-status-offline',
+/**
+ * How round an avatar's corner is: a share of its size, so a 24px chip, a 40px
+ * message avatar and a 96px profile picture are all the same shape. The share
+ * is the person's own setting (Settings, Appearance: squircle, circle or
+ * square, `--avatar-roundness` on <html>); a squircle is the default. Group
+ * avatars (`AvatarStack`) use it too.
+ */
+export function avatarRadius(size: number): string {
+  return `calc(${size}px * var(--avatar-roundness, 0.3))`;
+}
+
+/**
+ * Each presence state has its own shape as well as its own colour, so it
+ * reads without colour: a full disc for online, a crescent for idle, a disc
+ * with a bar through it for do not disturb, a ring for offline. Drawn on a
+ * 10 by 10 grid and filled even-odd, so the cut parts show the cutout behind.
+ */
+const STATUS_GLYPHS: Record<string, { path: string; color: string }> = {
+  online: { path: 'M5 0a5 5 0 1 1 0 10A5 5 0 0 1 5 0Z', color: 'text-status-online' },
+  // The outer circle around the bottom right, back along a circle of radius 3.4 centred at (2.6, 2.6).
+  idle: { path: 'M4.8 0A5 5 0 1 1 0 4.8A3.4 3.4 0 1 0 4.8 0Z', color: 'text-status-idle' },
+  dnd: { path: 'M5 0a5 5 0 1 1 0 10A5 5 0 0 1 5 0ZM2.3 4.1h5.4v1.8H2.3Z', color: 'text-status-dnd' },
+  offline: { path: 'M5 0a5 5 0 1 1 0 10A5 5 0 0 1 5 0ZM5 2.7a2.3 2.3 0 1 0 0 4.6a2.3 2.3 0 1 0 0-4.6Z', color: 'text-status-offline' },
 };
 
 /**
@@ -69,6 +87,8 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
 
   const ringWidth = ring?.width ?? 0;
   const outerSize = size + ringWidth * 2;
+  const radius = avatarRadius(outerSize);
+  const innerRadius = avatarRadius(size);
 
   // Only compute mask when status dot is visible
   const cutoutMask = status ? buildCutoutMask(size, ringWidth) : undefined;
@@ -85,10 +105,11 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
       style={{ width: outerSize, height: outerSize }}
       onClick={onClick}
     >
-      {/* Inner masked circle — ring background + avatar content */}
+      {/* Inner masked square — ring background + avatar content */}
       <div
-        className="w-full h-full rounded-full"
+        className="w-full h-full"
         style={{
+          borderRadius: radius,
           padding: ringWidth,
           backgroundColor: ring?.color,
           ...maskStyle,
@@ -100,7 +121,8 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
               ? src : `/api/uploads/${src}`}
             alt={name}
             loading="lazy"
-            className="w-full h-full rounded-full object-cover"
+            className="w-full h-full object-cover"
+            style={{ borderRadius: innerRadius }}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
               const parent = (e.target as HTMLImageElement).parentElement;
@@ -112,23 +134,28 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
           />
         ) : null}
         <div
-          className={`avatar-fallback w-full h-full rounded-full flex items-center justify-center font-bold text-white ${src ? 'hidden' : 'flex'}`}
-          style={{ background: gradient.gradient, fontSize: fontPx, ...(src ? { display: 'none' } : {}) }}
+          className={`avatar-fallback w-full h-full flex items-center justify-center font-semibold text-white ${src ? 'hidden' : 'flex'}`}
+          style={{ background: gradient.gradient, fontSize: fontPx, borderRadius: innerRadius, ...(src ? { display: 'none' } : {}) }}
         >
           {initials}
         </div>
       </div>
       {/* Status dot — outside the masked div so it isn't clipped */}
       {status && (
-        <div
-          className={`absolute rounded-full ${statusColors[status] ?? 'bg-status-offline'}`}
+        <svg
+          viewBox="0 0 10 10"
+          aria-hidden="true"
+          data-status={STATUS_GLYPHS[status] ? status : 'offline'}
+          className={`absolute ${(STATUS_GLYPHS[status] ?? STATUS_GLYPHS.offline!).color}`}
           style={{
             width: dotDiameter,
             height: dotDiameter,
             bottom: dotInset - dotDiameter / 2,
             right: dotInset - dotDiameter / 2,
           }}
-        />
+        >
+          <path d={(STATUS_GLYPHS[status] ?? STATUS_GLYPHS.offline!).path} fill="currentColor" fillRule="evenodd" />
+        </svg>
       )}
     </div>
   );

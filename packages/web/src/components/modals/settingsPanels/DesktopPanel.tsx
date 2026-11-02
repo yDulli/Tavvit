@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { Toggle } from '../../ui/Toggle';
+import { SettingsPage, ToggleRow } from './_shared/SettingsControls';
 import { useUpdateStore } from '../../../stores/updateStore';
 import { useFormatters, type Formatters } from '../../../i18n/formatters';
 
@@ -52,24 +52,20 @@ function AutoLaunchSettings() {
 
   return (
     <>
-      <div className="flex items-center justify-between py-1">
-        <div className="flex-1 mr-4">
-          <div className="text-sm text-txt-primary">{t('desktop.autoLaunch.openAtLogin.label')}</div>
-          <div className="text-xs text-txt-tertiary mt-0.5">
-            {t('desktop.autoLaunch.openAtLogin.description')}
-          </div>
-        </div>
-        <Toggle enabled={openAtLogin} onChange={handleOpenAtLoginChange} disabled={busy} />
-      </div>
-      <div className="flex items-center justify-between py-1">
-        <div className="flex-1 mr-4">
-          <div className={`text-sm ${openAtLogin ? 'text-txt-primary' : 'text-txt-tertiary'}`}>{t('desktop.autoLaunch.startMinimized.label')}</div>
-          <div className="text-xs text-txt-tertiary mt-0.5">
-            {t('desktop.autoLaunch.startMinimized.description')}
-          </div>
-        </div>
-        <Toggle enabled={startMinimized} onChange={handleStartMinimizedChange} disabled={busy || !openAtLogin} />
-      </div>
+      <ToggleRow
+        label={t('desktop.autoLaunch.openAtLogin.label')}
+        description={t('desktop.autoLaunch.openAtLogin.description')}
+        enabled={openAtLogin}
+        disabled={busy}
+        onChange={handleOpenAtLoginChange}
+      />
+      <ToggleRow
+        label={t('desktop.autoLaunch.startMinimized.label')}
+        description={t('desktop.autoLaunch.startMinimized.description')}
+        enabled={startMinimized}
+        disabled={busy || !openAtLogin}
+        onChange={handleStartMinimizedChange}
+      />
     </>
   );
 }
@@ -171,27 +167,26 @@ function UpdateSettings() {
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center justify-between py-1">
-        <div className="flex-1 mr-4 min-w-0">
-          <div className="text-sm text-txt-primary">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0 flex-1 basis-48">
+          <div className="text-ui font-medium text-txt-primary">
             {currentVersion ? t('desktop.updates.versionLabel', { version: currentVersion }) : t('desktop.updates.appName')}
           </div>
-          <div className={`text-xs mt-0.5 ${tone}`}>{detail}</div>
+          <div className={`mt-0.5 text-meta leading-snug ${tone}`}>{detail}</div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           {action && (
-            <button
-              onClick={action.onClick}
-              className="px-3 py-1.5 text-sm font-medium text-white bg-accent-primary hover:bg-accent-primary/80 rounded-lg transition-colors"
-            >
+            <button type="button" onClick={action.onClick} className="btn-primary btn-sm">
               {action.label}
             </button>
           )}
           {capability !== 'external' && (
             <button
+              type="button"
               onClick={checkNow}
               disabled={busy}
-              className="px-3 py-1.5 text-sm text-txt-secondary hover:text-txt-primary bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors disabled:opacity-50"
+              aria-busy={status.phase === 'checking'}
+              className="btn-outline btn-sm"
             >
               {status.phase === 'checking' ? t('desktop.updates.checkingShort') : t('desktop.updates.checkNow')}
             </button>
@@ -200,7 +195,7 @@ function UpdateSettings() {
       </div>
 
       {status.phase === 'downloading' && (
-        <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden" role="progressbar" aria-valuenow={status.percent} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-1 overflow-hidden rounded-sm bg-interactive-muted" role="progressbar" aria-valuenow={status.percent} aria-valuemin={0} aria-valuemax={100}>
           <div
             className="h-full bg-accent-primary transition-[width] duration-300"
             style={{ width: `${status.percent}%` }}
@@ -208,13 +203,18 @@ function UpdateSettings() {
         </div>
       )}
 
+      {capability === 'auto' && (
+        <p className="text-meta leading-snug text-txt-tertiary">
+          {t('desktop.updates.autoNote')}
+        </p>
+      )}
       {capability === 'manual' && (
-        <p className="text-xs text-txt-tertiary leading-relaxed">
+        <p className="text-meta leading-snug text-txt-tertiary">
           {t('desktop.updates.manualNote')}
         </p>
       )}
       {capability === 'external' && (
-        <p className="text-xs text-txt-tertiary leading-relaxed">
+        <p className="text-meta leading-snug text-txt-tertiary">
           <Trans t={t} i18nKey="desktop.updates.externalNote" components={{ code: <code /> }} />
         </p>
       )}
@@ -240,28 +240,11 @@ export function DesktopPanel() {
   }, []);
 
   return (
-    <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('desktop.title')}</h2>
-
-      <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5 space-y-3">
+    <SettingsPage title={t('desktop.title')}>
+      <div className="surface-card space-y-5 rounded-lg p-4">
         {sandboxed === false && <AutoLaunchSettings />}
         <UpdateSettings />
-
-        <div className="border-t border-white/[0.04]" />
-
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm text-txt-primary font-medium">{window.location.origin}</div>
-            <div className="text-xs text-txt-tertiary mt-0.5">{t('desktop.instance.current')}</div>
-          </div>
-          <button
-            onClick={() => window.backspace?.clearInstanceUrl()}
-            className="px-3 py-1.5 text-sm text-txt-secondary hover:text-txt-primary bg-white/[0.04] hover:bg-white/[0.08] rounded-lg transition-colors"
-          >
-            {t('desktop.instance.change')}
-          </button>
-        </div>
       </div>
-    </div>
+    </SettingsPage>
   );
 }

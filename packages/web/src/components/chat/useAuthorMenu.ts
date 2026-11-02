@@ -45,7 +45,7 @@ interface Options {
  * row and opens the message menu.
  */
 export function useAuthorMenu({ channelId, authorId, origin, isDm, canSend, isAuthor }: Options) {
-  const { t } = useTranslation('chat');
+  const { t } = useTranslation(['chat', 'legal']);
   const pokeSupported = useChannelPokeStore(s => s.hosts[origin] === true);
   return (event: MouseEvent | KeyboardEvent) => {
     if (!canSend || !channelId || isAuthor) return;
@@ -67,7 +67,12 @@ export function useAuthorMenu({ channelId, authorId, origin, isDm, canSend, isAu
         },
       });
     }
-    if (items.length === 0) return;
+    items.push({
+      type: 'action', key: 'report-author', label: t('legal:report.menuUser'),
+      onClick: () => useUIStore.getState().openModal('report', {
+        target: { type: 'user', id: authorId, origin, label: author ? spaceMemberName(author.member, author.user) : null },
+      }),
+    });
     event.preventDefault();
     event.stopPropagation();
     useContextMenuStore.getState().open(menuPositionFor(event), items);

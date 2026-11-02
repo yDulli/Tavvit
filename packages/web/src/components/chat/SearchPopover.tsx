@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useId, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { formatters } from '../../i18n/formatters';
@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { useFloatingPosition } from '../../hooks/useFloatingPosition';
 import { isDmChannel, getChannelOrigin, getApiForOrigin } from '../../stores/spaceStore';
 import { Avatar } from '../ui/Avatar';
+import { Icon } from '../ui/Icon';
 import { highlightMatch } from './searchHighlight';
 import { messageTextForPreview } from '../../utils/stickerMessages';
 import { useEmojiShortcodeNames } from '../../utils/emojiShortcodes';
@@ -38,7 +39,7 @@ function formatTime(timestamp: number): string {
 
 const _FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, replicatedInstances: [] } as unknown as User;
 
-function SearchResultRow({
+export function SearchResultRow({
   msg,
   origin,
   query,
@@ -57,8 +58,9 @@ function SearchResultRow({
   const avatar = msg.user ? canonical.avatar : undefined;
   return (
     <button
+      type="button"
       onClick={() => onJumpToMessage(msg.id)}
-      className="w-full px-3 py-2.5 hover:bg-interactive-hover transition-colors text-left flex items-start gap-2.5 group/result"
+      className="list-row w-full items-start gap-2.5"
     >
       <div className="flex-shrink-0 mt-0.5">
         <Avatar
@@ -69,22 +71,20 @@ function SearchResultRow({
         />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-[13px] font-semibold text-txt-primary truncate">
+        <div className="flex items-baseline gap-2">
+          <span className="text-ui font-medium text-txt-primary truncate">
             {displayName}
           </span>
-          <span className="text-[10px] text-txt-tertiary flex-shrink-0">
+          <span className="tabular flex-shrink-0 font-mono text-2xs text-txt-tertiary">
             {formatTime(msg.createdAt)}
           </span>
         </div>
-        <div className="text-[13px] text-txt-secondary leading-[1.4] line-clamp-2 mt-0.5">
+        <div className="text-ui text-txt-secondary leading-[1.4] line-clamp-2 mt-0.5 [overflow-wrap:anywhere]">
           {highlightMatch(messageTextForPreview(msg.content ?? ''), query)}
         </div>
         {msg.attachments && msg.attachments.length > 0 && (
-          <div className="flex items-center gap-1 mt-1 text-[11px] text-txt-tertiary">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H9v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S6 2.79 6 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" />
-            </svg>
+          <div className="flex items-center gap-1 mt-1 text-label text-txt-tertiary">
+            <Icon name="paperclip" size={12} />
             {t('search:results.attachments', { count: msg.attachments.length })}
           </div>
         )}
@@ -97,6 +97,7 @@ export function SearchPopover({ open, onClose, anchorRef, channelId, isDm, onJum
   const { t } = useTranslation(['search', 'common']);
   const popoverRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const filterId = useId();
   const { style } = useFloatingPosition(anchorRef, popoverRef, {
     placement: 'bottom',
     offset: 8,
@@ -135,13 +136,14 @@ export function SearchPopover({ open, onClose, anchorRef, channelId, isDm, onJum
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        onClose();
-      }
+      const target = e.target as Node;
+      // The button that opens it closes it: this would close it and that click open it again.
+      if (popoverRef.current?.contains(target) || anchorRef.current?.contains(target)) return;
+      onClose();
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [open, onClose]);
+  }, [open, onClose, anchorRef]);
 
   // Escape handler
   useEffect(() => {
@@ -208,71 +210,73 @@ export function SearchPopover({ open, onClose, anchorRef, channelId, isDm, onJum
 
   if (!open) return null;
 
+  const hasAnyFilter = !!(fromFilter || hasFilter || beforeFilter || afterFilter);
+
   return createPortal(
     <div
       ref={popoverRef}
       style={style}
-      className="w-[420px] max-h-[500px] glass rounded-lg shadow-xl flex flex-col animate-fade-in"
+      className="w-[420px] max-w-[calc(100*var(--app-vw)-16px)] max-h-[min(500px,calc(100*var(--app-vh)-64px))] glass rounded-lg flex flex-col animate-fade-in"
     >
       {/* Search input */}
-      <div className="p-3 border-b border-white/[0.07]">
-        <div className="flex items-center gap-2 bg-surface-input rounded-lg px-3 py-2 border border-white/[0.06] shadow-input">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0">
-            <path d="M21.707 20.293l-5.395-5.395A7.457 7.457 0 0018 10.5 7.5 7.5 0 1010.5 18c1.575 0 3.027-.486 4.228-1.31l5.476 5.476a.997.997 0 001.414 0l.089-.089a1 1 0 000-1.414l.001-.37zM10.5 16a5.5 5.5 0 110-11 5.5 5.5 0 010 11z" />
-          </svg>
+      <div className="p-2.5 border-b border-border-hard">
+        <div className="relative flex items-center">
+          <Icon name="search" size={15} className="pointer-events-none absolute left-2.5 text-txt-tertiary" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('search:input.placeholder')}
-            className="input-embedded flex-1 text-[14px]"
+            className="input-search h-8 w-full py-0 pl-8 pr-8 text-ui"
           />
           {query && (
             <button
+              type="button"
               onClick={() => setQuery('')}
-              className="text-txt-tertiary hover:text-txt-primary transition-colors"
+              className="icon-btn absolute right-1 h-6 w-6"
+              aria-label={t('common:actions.clear')}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-              </svg>
+              <Icon name="x" size={14} />
             </button>
           )}
         </div>
 
         {/* Filter toggle */}
         <button
+          type="button"
           onClick={() => setShowFilters(!showFilters)}
-          className="mt-2 text-[12px] text-txt-tertiary hover:text-txt-secondary transition-colors flex items-center gap-1"
+          aria-expanded={showFilters}
+          className="mt-1.5 -ml-1 flex items-center gap-1 rounded-md py-0.5 pl-0.5 pr-1.5 text-meta text-txt-tertiary transition-colors hover:text-txt-primary"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className={`transition-transform ${showFilters ? 'rotate-90' : ''}`}>
-            <path d="M10 17l5-5-5-5v10z" />
-          </svg>
+          <Icon name="chevron-right" size={14} className={`transition-transform duration-100 ${showFilters ? 'rotate-90' : ''}`} />
           {t('search:filters.toggle')}
-          {(fromFilter || hasFilter || beforeFilter || afterFilter) && (
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-primary" />
+          {hasAnyFilter && (
+            <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-accent-primary" />
           )}
         </button>
 
         {/* Filters row */}
         {showFilters && (
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-2">
             <div>
-              <label className="text-[11px] text-txt-tertiary font-medium mb-1 block">{t('search:filters.from.label')}</label>
+              <label className="field-label mb-1" htmlFor={`${filterId}-from`}>{t('search:filters.from.label')}</label>
               <input
+                id={`${filterId}-from`}
                 type="text"
                 value={fromFilter}
                 onChange={(e) => setFromFilter(e.target.value)}
                 placeholder={t('search:filters.from.placeholder')}
-                className="input-search w-full px-2 py-1 text-[13px]"
+                className="input-search h-8 w-full py-0 pl-2.5 pr-2 text-ui"
               />
             </div>
             <div>
-              <label className="text-[11px] text-txt-tertiary font-medium mb-1 block">{t('search:filters.has.label')}</label>
+              <label className="field-label mb-1" htmlFor={`${filterId}-has`}>{t('search:filters.has.label')}</label>
               <select
+                id={`${filterId}-has`}
                 value={hasFilter}
                 onChange={(e) => setHasFilter(e.target.value)}
-                className="input-search w-full px-2 py-1 text-[13px] appearance-none cursor-pointer"
+                className="input-search h-8 w-full py-0 pl-2.5 text-ui"
               >
                 <option value="">{t('search:filters.has.any')}</option>
                 <option value="file">{t('search:filters.has.file')}</option>
@@ -281,21 +285,23 @@ export function SearchPopover({ open, onClose, anchorRef, channelId, isDm, onJum
               </select>
             </div>
             <div>
-              <label className="text-[11px] text-txt-tertiary font-medium mb-1 block">{t('search:filters.before.label')}</label>
+              <label className="field-label mb-1" htmlFor={`${filterId}-before`}>{t('search:filters.before.label')}</label>
               <input
+                id={`${filterId}-before`}
                 type="date"
                 value={beforeFilter}
                 onChange={(e) => setBeforeFilter(e.target.value)}
-                className="input-search w-full px-2 py-1 text-[13px]"
+                className="input-search h-8 w-full py-0 pl-2.5 pr-2 text-ui"
               />
             </div>
             <div>
-              <label className="text-[11px] text-txt-tertiary font-medium mb-1 block">{t('search:filters.after.label')}</label>
+              <label className="field-label mb-1" htmlFor={`${filterId}-after`}>{t('search:filters.after.label')}</label>
               <input
+                id={`${filterId}-after`}
                 type="date"
                 value={afterFilter}
                 onChange={(e) => setAfterFilter(e.target.value)}
-                className="input-search w-full px-2 py-1 text-[13px]"
+                className="input-search h-8 w-full py-0 pl-2.5 pr-2 text-ui"
               />
             </div>
           </div>
@@ -303,31 +309,31 @@ export function SearchPopover({ open, onClose, anchorRef, channelId, isDm, onJum
       </div>
 
       {/* Results */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 scrollbar-thin">
         {isSearching && results.length === 0 && (
           <div className="flex items-center justify-center py-8">
-            <div className="w-5 h-5 border-2 border-txt-tertiary border-t-transparent rounded-full animate-spin" />
+            <div className="h-4 w-4 rounded-full border-[1.5px] border-txt-tertiary border-r-transparent animate-spin" />
           </div>
         )}
 
-        {!isSearching && results.length === 0 && (query || fromFilter || hasFilter || beforeFilter || afterFilter) && (
-          <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/50 mb-2">
-              <path d="M21.707 20.293l-5.395-5.395A7.457 7.457 0 0018 10.5 7.5 7.5 0 1010.5 18c1.575 0 3.027-.486 4.228-1.31l5.476 5.476a.997.997 0 001.414 0l.089-.089a1 1 0 000-1.414l.001-.37zM10.5 16a5.5 5.5 0 110-11 5.5 5.5 0 010 11z" />
-            </svg>
-            <span className="text-txt-tertiary text-[13px]">{t('search:results.empty')}</span>
+        {!isSearching && results.length === 0 && (query || hasAnyFilter) && (
+          <div className="empty-state">
+            <span className="empty-state-icon" aria-hidden="true">
+              <Icon name="search" size={18} />
+            </span>
+            <p className="empty-state-body">{t('search:results.empty')}</p>
           </div>
         )}
 
-        {!query && !fromFilter && !hasFilter && !beforeFilter && !afterFilter && results.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-            <span className="text-txt-tertiary text-[13px]">{t('search:results.hint')}</span>
+        {!query && !hasAnyFilter && results.length === 0 && (
+          <div className="px-4 py-7 text-center text-ui text-txt-tertiary">
+            {t('search:results.hint')}
           </div>
         )}
 
         {results.length > 0 && (
-          <>
-            <div className="px-3 py-2 text-[11px] text-txt-tertiary font-medium">
+          <div className="p-1.5">
+            <div className="label-mono px-2.5 pb-1 pt-1">
               {t('search:results.count', { count: totalCount })}
             </div>
             {results.map((msg) => (
@@ -340,17 +346,19 @@ export function SearchPopover({ open, onClose, anchorRef, channelId, isDm, onJum
               />
             ))}
             {results.length < totalCount && (
-              <div className="px-3 py-2 border-t border-white/[0.07]">
+              <div className="pt-1.5">
                 <button
+                  type="button"
                   onClick={handleLoadMore}
                   disabled={isSearching}
-                  className="w-full py-1.5 text-[13px] text-accent-primary hover:text-accent-primary-hover transition-colors font-medium disabled:opacity-50"
+                  aria-busy={isSearching}
+                  className="btn-quiet btn-sm w-full"
                 >
                   {isSearching ? t('common:states.loading') : t('search:results.loadMore', { remaining: totalCount - results.length })}
                 </button>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>,

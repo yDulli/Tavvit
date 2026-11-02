@@ -24,6 +24,8 @@ const settings: InstanceAdminSettings = {
   federatedRegistrationOpen: true,
   discoveryEnabled: true,
   maxUploadSizeMb: 100,
+  storagePerAccountGb: 5,
+  spacesPerAccount: 25,
   federationRelayEnabled: true,
   federationRelayTtlDays: 30,
   defaultAutoRotateIntervalDays: 90,

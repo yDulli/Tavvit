@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ============================================================
-# Backspace — Production Installer
+# Tavvit — Production Installer
 # ============================================================
-# Sets up Backspace on a Linux server in one of three deployment modes,
+# Sets up Tavvit on a Linux server in one of three deployment modes,
 # auto-detecting which one fits your environment:
 #
 #   allinone  The bundled Caddy owns ports 80/443 and does automatic HTTPS
 #             for your domain. The simplest setup — pick this if 80/443 are free.
 #   proxy     You already run a reverse proxy (nginx, Traefik, Caddy, Nginx Proxy
-#             Manager, SWAG…). Backspace is published on 127.0.0.1:APP_PORT and
+#             Manager, SWAG…). Tavvit is published on 127.0.0.1:APP_PORT and
 #             the installer prints ready-to-paste proxy config. No bundled Caddy.
 #   tunnel    You expose the box through a tunnel (Cloudflare Tunnel, Tailscale…).
 #             Same as proxy, plus tunnel-specific guidance. (Voice does not work
@@ -23,16 +23,26 @@
 #     APP_PORT=8080 \                 # proxy/tunnel only; auto-picked if unset
 #     ENABLE_VOICE=true \
 #     INSTANCE_NAME="My Chat" \
-#     TELEMETRY=on|off \              # the optional daily usage ping; leave it
-#                                     # unset and the admin panel asks after the
-#                                     # first login
+#     TAVVIT_ADMIN_USERNAME=alice \    # create the administrator without a prompt;
+#                                     # a password is generated and printed once
 #     ./install.sh
 #
-#   BACKSPACE_BUILD=true ./install.sh  Force a local from-source build instead of
-#                                      pulling the prebuilt image (fork operators).
+# Tavvit is private by default: registration is closed, so the first
+# administrator is created here (or later with ./tavvit-admin.sh), never through
+# an open web form. Friends join with invite links the administrator creates.
+#
+# The image is built from this checkout (there is no public Tavvit image). To
+# pull one you publish yourself instead, set BACKSPACE_BUILD=false together with
+# BACKSPACE_IMAGE=ghcr.io/<you>/tavvit and BACKSPACE_PULL_POLICY=missing.
 # ============================================================
 
 set -euo pipefail
+
+# Run from the directory this file is in, whatever the caller's directory is, and
+# restore the executable bit on the helper scripts: an upload from Windows (or a
+# plain copy) drops it, and ./tavvit-admin.sh would then say "Permission denied".
+cd "$(dirname "$0")"
+chmod +x ./*.sh 2>/dev/null || true
 
 # ── Output helpers ──────────────────────────────────────────
 
@@ -65,7 +75,7 @@ step "Checking prerequisites"
 
 # Must be Linux — host networking (LiveKit) is Linux-only
 if [[ "$(uname -s)" != "Linux" ]]; then
-  error "Backspace production deployment requires Linux."
+  error "Tavvit production deployment requires Linux."
   error "Detected: $(uname -s)"
   error "For development, use: pnpm dev"
   exit 1
@@ -130,15 +140,18 @@ success "Docker Compose $($COMPOSE version --short 2>/dev/null || echo 'installe
 # Does any running container publish this host port? (matches "…:<port>->" in the
 # Ports column; the ":" before the port and "->" after pin it to the HOST port,
 # so :80 doesn't match :8080 and never matches the container-side port.)
+# Here-strings rather than pipes into `grep -q`, whose early exit can SIGPIPE the command before it,
+# which under pipefail turns a match into a miss (see update.sh).
 docker_publishes_port() {
-  $DOCKER ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -qE ":${1}->"
+  grep -qE ":${1}->" <<<"$($DOCKER ps --format '{{.Names}} {{.Ports}}' 2>/dev/null || true)"
 }
 
-# Same, but ignore Backspace's own container (used when re-running on a host that
+# Same, but ignore Tavvit's own container (used when re-running on a host that
 # already runs this instance — its published port must not count as a conflict).
 docker_publishes_port_other() {
-  $DOCKER ps --format '{{.Names}} {{.Ports}}' 2>/dev/null \
-    | grep -vE '^backspace ' | grep -qE ":${1}->"
+  local others
+  others="$(grep -vE '^backspace ' <<<"$($DOCKER ps --format '{{.Names}} {{.Ports}}' 2>/dev/null || true)" || true)"
+  grep -qE ":${1}->" <<<"$others"
 }
 
 # Is the port in use by anything (host socket OR any container)?
@@ -150,7 +163,7 @@ port_in_use() {
   docker_publishes_port "$port"
 }
 
-# In use by something OTHER than our own Backspace container?
+# In use by something OTHER than our own Tavvit container?
 port_in_use_by_other() {
   local port=$1
   if ss -tln 2>/dev/null | grep -qE ":${port}[[:space:]]"; then
@@ -213,7 +226,7 @@ env_val() {
 
 existing_mode=$(env_val DEPLOY_MODE)
 CADDY_RUNNING=false
-if $DOCKER ps --format '{{.Names}}' 2>/dev/null | grep -q '^caddy$'; then
+if grep -qx 'caddy' <<<"$($DOCKER ps --format '{{.Names}}' 2>/dev/null || true)"; then
   CADDY_RUNNING=true
 fi
 
@@ -227,7 +240,7 @@ choose_mode_interactively() {
   if [[ "$port80_free" == true && "$port443_free" == true ]]; then
     echo "  Ports 80 and 443 are free — All-in-One (bundled Caddy + auto-HTTPS) is available."
     echo ""
-    echo "  How do you want to expose Backspace?"
+    echo "  How do you want to expose Tavvit?"
     echo -e "    ${BOLD}1)${NC} All-in-One — bundled Caddy handles HTTPS for you   ${GREEN}(recommended)${NC}"
     echo -e "    ${BOLD}2)${NC} Behind my own reverse proxy (nginx, Traefik, Caddy, Nginx Proxy Manager, SWAG…)"
     echo -e "    ${BOLD}3)${NC} Behind a tunnel (Cloudflare Tunnel, Tailscale…)"
@@ -245,7 +258,7 @@ choose_mode_interactively() {
     [[ "$port443_free" == false ]] && echo "      443 → held by $(port_holder 443)"
     echo ""
     info "All-in-One needs 80 and 443 free, so it's unavailable here."
-    info "That's fine — run Backspace behind what already owns those ports:"
+    info "That's fine — run Tavvit behind what already owns those ports:"
     echo ""
     echo -e "    ${BOLD}1)${NC} Behind my own reverse proxy (nginx, Traefik, Caddy, Nginx Proxy Manager, SWAG…)   ${GREEN}(recommended)${NC}"
     echo -e "    ${BOLD}2)${NC} Behind a tunnel (Cloudflare Tunnel, Tailscale…)"
@@ -460,8 +473,8 @@ ENABLE_VOICE="${ENABLE_VOICE:-true}"
 
 existing_name=$(env_val INSTANCE_NAME)
 if [[ -z "${INSTANCE_NAME:-}" ]]; then
-  read -rp "Instance name [${existing_name:-Backspace}]: " INSTANCE_NAME || INSTANCE_NAME=""
-  INSTANCE_NAME="${INSTANCE_NAME:-${existing_name:-Backspace}}"
+  read -rp "Instance name [${existing_name:-Tavvit}]: " INSTANCE_NAME || INSTANCE_NAME=""
+  INSTANCE_NAME="${INSTANCE_NAME:-${existing_name:-Tavvit}}"
 fi
 
 # ── Max upload size ─────────────────────────────────────────
@@ -505,6 +518,15 @@ else
   info "Preserved existing JWT_SECRET"
 fi
 
+# What two-factor secrets are encrypted with. Losing it locks those accounts out of 2FA.
+TOTP_ENCRYPTION_KEY=$(env_val TOTP_ENCRYPTION_KEY)
+if [[ -z "$TOTP_ENCRYPTION_KEY" ]]; then
+  TOTP_ENCRYPTION_KEY=$(openssl rand -hex 32)
+  info "Generated new TOTP_ENCRYPTION_KEY"
+else
+  info "Preserved existing TOTP_ENCRYPTION_KEY"
+fi
+
 LIVEKIT_API_KEY=$(env_val LIVEKIT_API_KEY)
 LIVEKIT_API_SECRET=$(env_val LIVEKIT_API_SECRET)
 if [[ "$ENABLE_VOICE" == true ]]; then
@@ -528,9 +550,18 @@ step "Writing configuration files"
 
 # ── .env ────────────────────────────────────────────────────
 
+# Never overwrite a working configuration without keeping it. The old .env holds
+# secrets, so the copy is readable by its owner only; .gitignore excludes it.
+if [[ -f .env ]]; then
+  env_backup=".env.backup-$(date -u +%Y%m%dT%H%M%SZ)"
+  cp -p .env "$env_backup"
+  chmod 600 "$env_backup"
+  info "Kept your previous configuration as ${env_backup}"
+fi
+
 {
   cat << EOF
-# Backspace Configuration
+# Tavvit Configuration
 # Generated by install.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 DOMAIN=${DOMAIN}
@@ -588,9 +619,22 @@ HOST=0.0.0.0
 
 # Authentication
 JWT_SECRET=${JWT_SECRET}
+TOTP_ENCRYPTION_KEY=${TOTP_ENCRYPTION_KEY}
 
-# Registration
-REGISTRATION_OPEN=true
+# Registration. Tavvit is private: accounts come from invite links an administrator
+# creates (Settings -> Instance -> Registration) or from ./tavvit-admin.sh.
+# Set to true only if you want anyone who finds the address to be able to sign up.
+REGISTRATION_OPEN=false
+
+# Federation (linking with other Backspace/Tavvit servers) is off. Leave it off
+# unless you know you need it: it opens the server to peer requests and relaxes
+# the browser's connection policy. See docs/tavvit/DEPLOYMENT.md.
+# FEDERATION_ENABLED=false
+
+# AGPL-3.0 section 13: Tavvit is a modified version of Backspace. Network users
+# must be able to get the source of the version you run. Publish your copy of
+# this repository and put its address here (see docs/tavvit/LICENSING.md).
+# TAVVIT_SOURCE_URL=https://github.com/<you>/tavvit
 
 # Max upload size in bytes
 MAX_UPLOAD_SIZE=${MAX_UPLOAD_SIZE}
@@ -694,21 +738,24 @@ fi
 
 # ── Phase 6: Build & Deploy ────────────────────────────────
 
-step "Deploying Backspace"
+step "Deploying Tavvit"
 
-# AGPL-3.0 § 13 source offer: bake the running build's git commit into the image
-# so GET /api/instance/info advertises the exact source version. Passed straight
-# to the build as --build-arg (survives the sudo/non-sudo $COMPOSE split, unlike
-# an exported env var). Empty when this isn't a git checkout (e.g. tarball
-# install) or git is unavailable → the server treats the commit as null. A pulled
-# prebuilt image already carries the commit baked at CI build time.
-BUILD_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo '')"
+# AGPL-3.0 § 13 source offer: bake the running build's id into the image so
+# GET /api/instance/info advertises the exact source version. Passed straight to
+# the build as --build-arg (survives the sudo/non-sudo $COMPOSE split, unlike an
+# exported env var). A git checkout uses its commit; an uploaded release (made by
+# scripts/package-release.mjs) carries its own id in the RELEASE file. Empty when
+# neither exists → the server treats the commit as null.
+BUILD_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || true)"
+if [[ -z "$BUILD_COMMIT" && -f RELEASE ]]; then
+  BUILD_COMMIT="$(sed -n 's/^name=.*-\([0-9a-f]\{8\}\)$/\1/p' RELEASE | head -1)"
+fi
 
 build_from_source() {
   if [[ -n "$BUILD_COMMIT" ]]; then
-    info "Building Backspace image from commit ${BUILD_COMMIT} (first build takes a few minutes)..."
+    info "Building Tavvit image from commit ${BUILD_COMMIT} (first build takes a few minutes)..."
   else
-    info "Building Backspace image (first build takes a few minutes)..."
+    info "Building Tavvit image (first build takes a few minutes)..."
   fi
   $COMPOSE build --build-arg BACKSPACE_COMMIT="$BUILD_COMMIT"
 }
@@ -747,12 +794,15 @@ EOF
   fi
 }
 
-if [[ "${BACKSPACE_BUILD:-false}" == "true" ]]; then
-  info "BACKSPACE_BUILD=true — building from source (skipping the prebuilt image)."
+# Tavvit builds from this checkout by default: there is no public Tavvit image, and
+# the upstream image on GHCR is Backspace, not this code. BACKSPACE_BUILD=false
+# opts into pulling an image you publish yourself (see the header).
+if [[ "${BACKSPACE_BUILD:-true}" == "true" ]]; then
+  info "Building Tavvit from this checkout."
   build_from_source
   record_install_channel source
 else
-  image_ref="${BACKSPACE_IMAGE:-ghcr.io/thezwiss/backspace}:${BACKSPACE_IMAGE_TAG:-latest}"
+  image_ref="${BACKSPACE_IMAGE:-tavvit}:${BACKSPACE_IMAGE_TAG:-local}"
   info "Fetching prebuilt image ${image_ref} ..."
   if $COMPOSE pull backspace; then
     success "Pulled prebuilt image"
@@ -776,7 +826,7 @@ info "Starting services..."
 $COMPOSE up -d
 
 # Wait for health check
-info "Waiting for Backspace to become healthy..."
+info "Waiting for Tavvit to become healthy..."
 healthy=false
 for i in $(seq 1 60); do
   status=$($DOCKER inspect backspace --format '{{.State.Health.Status}}' 2>/dev/null || echo "waiting")
@@ -788,14 +838,20 @@ for i in $(seq 1 60); do
 done
 
 if [[ "$healthy" == true ]]; then
-  success "Backspace is healthy"
+  success "Tavvit is healthy"
 else
   warn "Health check hasn't passed yet. Check logs: docker compose logs backspace"
 fi
 
+# AGPL-3.0 § 13: people on this server can download what it runs. A checkout has
+# no release manifest and sets TAVVIT_SOURCE_URL instead.
+if [[ -f MANIFEST ]]; then
+  bash ./publish-source.sh || warn "Could not publish the source archive. Run: bash publish-source.sh"
+fi
+
 # ── Phase 7: Set instance name ──────────────────────────────
 
-if [[ "$healthy" == true && -n "$INSTANCE_NAME" && "$INSTANCE_NAME" != "Backspace" ]]; then
+if [[ "$healthy" == true && -n "$INSTANCE_NAME" && "$INSTANCE_NAME" != "Tavvit" ]]; then
   # Pass the name through the container environment (never string-interpolated
   # into the JS source) so names with quotes/spaces/'$' are stored verbatim and
   # can't break or inject into the node -e program.
@@ -808,47 +864,63 @@ if [[ "$healthy" == true && -n "$INSTANCE_NAME" && "$INSTANCE_NAME" != "Backspac
   ' 2>/dev/null && success "Instance name set to: ${INSTANCE_NAME}" || warn "Could not set instance name (set it manually in admin settings)"
 fi
 
-# ── Phase 7b: Optional usage ping (TELEMETRY=on|off) ────────
-# For unattended installs only. Interactive runs are never asked here: the admin
-# panel asks once after the first login, with the full explanation. Leaving
-# TELEMETRY unset writes nothing to the database and leaves that ask intact.
+# ── Phase 7a: Create the administrator ──────────────────────
+# Tavvit is private by default: registration is closed, so there is no web form
+# that can make the first account (and leaving one open, "first visitor becomes
+# admin", would let whoever finds the address first take the instance). The
+# administrator is created here, on the server, by the person running the
+# installer, who by definition owns it.
 #
-# The transition mirrors setTelemetryEnabled() in
-# packages/server/src/telemetry/state.ts: turning on mints an id if the
-# instance never had one, turning on an instance that is already on changes
-# nothing, and turning off keeps the id for a later re-enable and stamps the
-# running version as the declined one, so the admin panel stays quiet about it
-# until the next minor release rather than asking at the first login. Neither
-# branch touches telemetry_last_day: that column is the reporter's record of
-# what it sent, and writing it here would cost the instance a day's ping.
-# Nothing here can fail the install.
-if [[ -n "${TELEMETRY:-}" ]]; then
-  if [[ "$TELEMETRY" != "on" && "$TELEMETRY" != "off" ]]; then
-    error "TELEMETRY must be 'on' or 'off' (got '${TELEMETRY}'). Leaving the usage ping unset."
-  elif [[ "$healthy" != true ]]; then
-    warn "Skipped the usage ping setting: the container isn't healthy yet (set it in admin settings)"
+#   - At a terminal: asks for a username, then for a password at a hidden prompt.
+#   - TAVVIT_ADMIN_USERNAME set and no terminal (unattended): creates that account
+#     with a generated password, printed once. A password is never read from an
+#     environment variable or an argument, where it would sit in history and in
+#     the process list.
+#   - Otherwise: says exactly which command to run.
+#
+# Skipped when an account already exists, so re-running the installer on a live
+# instance is harmless. Nothing here can fail the install.
+ADMIN_CREATED=false
+TAVVIT_CLI=(node --import tsx/esm src/scripts/tavvit-admin.ts)
+if [[ "$healthy" == true ]]; then
+  existing_accounts=$($DOCKER exec -w /app/packages/server backspace "${TAVVIT_CLI[@]}" list 2>/dev/null || true)
+  if [[ "$existing_accounts" != "No accounts yet"* ]]; then
+    if [[ -n "$existing_accounts" ]]; then
+      info "Accounts already exist on this instance, so no administrator was created."
+      ADMIN_CREATED=true
+    else
+      warn "Could not read the account list. Create the administrator yourself with:  ./tavvit-admin.sh create <username> --admin"
+    fi
+  elif [[ -t 0 && -t 1 ]]; then
+    step "Create your administrator account"
+    admin_name="${TAVVIT_ADMIN_USERNAME:-}"
+    while true; do
+      if [[ -z "$admin_name" ]]; then
+        read -rp "Username for your administrator account [admin]: " admin_name || admin_name=""
+        admin_name="${admin_name:-admin}"
+      fi
+      if [[ "$admin_name" =~ ^[a-z0-9_]{3,32}$ ]]; then break; fi
+      warn "A username is 3-32 characters: lowercase letters, digits and underscores."
+      admin_name=""
+      TAVVIT_ADMIN_USERNAME=""
+    done
+    info "Choose a password for '${admin_name}' (at least 8 characters; what you type is hidden)."
+    if $DOCKER exec -it -w /app/packages/server backspace "${TAVVIT_CLI[@]}" create "$admin_name" --admin; then
+      ADMIN_CREATED=true
+    else
+      warn "The administrator was not created. Run it again with:  ./tavvit-admin.sh create ${admin_name} --admin"
+    fi
+  elif [[ -n "${TAVVIT_ADMIN_USERNAME:-}" ]]; then
+    if [[ ! "$TAVVIT_ADMIN_USERNAME" =~ ^[a-z0-9_]{3,32}$ ]]; then
+      warn "TAVVIT_ADMIN_USERNAME must be 3-32 characters: lowercase letters, digits and underscores."
+    elif $DOCKER exec -w /app/packages/server backspace "${TAVVIT_CLI[@]}" create "$TAVVIT_ADMIN_USERNAME" --admin --generate; then
+      ADMIN_CREATED=true
+    else
+      warn "The administrator was not created. Run:  ./tavvit-admin.sh create ${TAVVIT_ADMIN_USERNAME} --admin"
+    fi
   else
-    # Pass the value through the container environment rather than interpolating
-    # it into the JS source, the same way the instance name is passed above.
-    telemetry_result=$($DOCKER exec -e BS_TELEMETRY="$TELEMETRY" -w /app/packages/server backspace node -e '
-      const Database = require("better-sqlite3");
-      const crypto = require("crypto");
-      const db = new Database("/app/data/backspace.db");
-      const row = db.prepare("SELECT telemetry_enabled FROM instance_settings WHERE id = 1").get();
-      if (!row) { db.close(); console.error("No instance_settings row"); process.exit(1); }
-      const now = Date.now();
-      let result;
-      if (process.env.BS_TELEMETRY === "on") {
-        const changes = db.prepare("UPDATE instance_settings SET telemetry_enabled = 1, telemetry_id = COALESCE(telemetry_id, ?), telemetry_last_error = NULL, updated_at = ? WHERE id = 1 AND (telemetry_enabled IS NULL OR telemetry_enabled = 0)").run(crypto.randomUUID(), now).changes;
-        result = changes === 1 ? "on, the first ping goes out at the next slot" : "already on, left as it is";
-      } else {
-        const version = require("./package.json").version;
-        db.prepare("UPDATE instance_settings SET telemetry_enabled = 0, telemetry_declined_version = ?, telemetry_last_error = NULL, updated_at = ? WHERE id = 1").run(version, now);
-        result = "off, nothing is sent";
-      }
-      db.close();
-      console.log(result);
-    ' 2>/dev/null) && success "Usage ping: ${telemetry_result}" || warn "Could not set the usage ping (set it in admin settings)"
+    warn "No account exists yet, and registration is closed. Create the administrator with:"
+    warn "  ./tavvit-admin.sh create <username> --admin"
   fi
 fi
 
@@ -879,7 +951,7 @@ if [[ "$DEPLOY_MODE" == "allinone" ]]; then
       sleep 2
     done
     if [[ "$https_status" == "live" ]]; then
-      success "HTTPS is live — a valid TLS certificate is installed and Backspace is serving over it."
+      success "HTTPS is live — a valid TLS certificate is installed and Tavvit is serving over it."
     else
       warn "HTTPS is not live yet — Caddy hasn't obtained a publicly-trusted certificate."
     fi
@@ -896,7 +968,7 @@ else
       sleep 1
     done
     if [[ "$app_reachable" == "yes" ]]; then
-      success "Backspace is answering on http://127.0.0.1:${APP_PORT_FINAL} — point your $( [[ "$DEPLOY_MODE" == tunnel ]] && echo tunnel || echo 'reverse proxy') at it."
+      success "Tavvit is answering on http://127.0.0.1:${APP_PORT_FINAL} — point your $( [[ "$DEPLOY_MODE" == tunnel ]] && echo tunnel || echo 'reverse proxy') at it."
     else
       warn "Could not reach http://127.0.0.1:${APP_PORT_FINAL}/api/health yet — check: docker compose logs backspace"
     fi
@@ -1069,7 +1141,7 @@ EOF
 
 # ── Phase 8: Summary ───────────────────────────────────────
 
-step "Backspace is running"
+step "Tavvit is running"
 
 echo -e "  ${BOLD}URL:${NC}       https://${DOMAIN}"
 echo -e "  ${BOLD}Instance:${NC}  ${INSTANCE_NAME}"
@@ -1089,9 +1161,9 @@ if [[ "$DEPLOY_MODE" == "allinone" ]]; then
     echo "    2. Ports 80 and 443 are open and forwarded to this host from the internet"
     echo -e "  Watch progress:  ${BOLD}docker compose logs -f caddy${NC}"
     echo ""
-    echo -e "  ${YELLOW}Then open https://${DOMAIN} and create the first account — it becomes the instance admin.${NC}"
+    echo -e "  ${YELLOW}Then open https://${DOMAIN} and sign in.${NC}"
   else
-    echo -e "  ${YELLOW}Open https://${DOMAIN} and create the first account — it becomes the instance admin.${NC}"
+    echo -e "  ${YELLOW}Open https://${DOMAIN} and sign in.${NC}"
   fi
 
   echo ""
@@ -1117,8 +1189,8 @@ if [[ "$DEPLOY_MODE" == "allinone" ]]; then
 
 elif [[ "$DEPLOY_MODE" == "proxy" ]]; then
   echo ""
-  echo -e "  Backspace listens on ${BOLD}127.0.0.1:${APP_PORT_FINAL}${NC} (loopback only — never expose it directly)."
-  echo -e "  Point your reverse proxy at it, then open ${BOLD}https://${DOMAIN}${NC} and register the first account (it becomes admin)."
+  echo -e "  Tavvit listens on ${BOLD}127.0.0.1:${APP_PORT_FINAL}${NC} (loopback only — never expose it directly)."
+  echo -e "  Point your reverse proxy at it, then open ${BOLD}https://${DOMAIN}${NC} and sign in."
   echo ""
   echo -e "  ${BOLD}Paste one of these into your reverse proxy${NC} (WebSocket, X-Forwarded-*, and body cap already set):"
   echo ""
@@ -1143,8 +1215,8 @@ elif [[ "$DEPLOY_MODE" == "proxy" ]]; then
 
 elif [[ "$DEPLOY_MODE" == "tunnel" ]]; then
   echo ""
-  echo -e "  Backspace listens on ${BOLD}127.0.0.1:${APP_PORT_FINAL}${NC} (loopback only). Your tunnel fronts it."
-  echo -e "  Once the ingress rule is live, open ${BOLD}https://${DOMAIN}${NC} and register the first account (it becomes admin)."
+  echo -e "  Tavvit listens on ${BOLD}127.0.0.1:${APP_PORT_FINAL}${NC} (loopback only). Your tunnel fronts it."
+  echo -e "  Once the ingress rule is live, open ${BOLD}https://${DOMAIN}${NC} and sign in."
   echo ""
   print_tunnel_snippet
   echo ""
@@ -1152,7 +1224,7 @@ elif [[ "$DEPLOY_MODE" == "tunnel" ]]; then
   echo -e "  request-body limit. Raising it above ~100MB will make large uploads fail at the edge."
   echo ""
   echo -e "  ${YELLOW}Voice/video is not available over a tunnel${NC} — WebRTC/UDP media can't traverse it."
-  echo -e "  If you need voice, run Backspace behind a reverse proxy (proxy mode) with the"
+  echo -e "  If you need voice, run Tavvit behind a reverse proxy (proxy mode) with the"
   echo -e "  media ports opened, or use All-in-One with ports 80/443."
 fi
 
@@ -1163,12 +1235,19 @@ echo "    docker compose restart          # Restart all services"
 echo "    docker compose down             # Stop everything"
 echo "    ./update.sh                                   # Update (snapshots first, rolls back if it fails)"
 echo "    ./update.sh --check                           # Check for an update, changing nothing"
+echo "    ./tavvit-admin.sh create <name> --member       # Add an account (or --admin); also: list, reset-password, status"
+echo "    ./backup.sh                                   # Snapshot the database now"
+echo "    ./doctor.sh                                   # Check this installation and say what is wrong"
 echo ""
 
-# The teaser for the ask that waits in the app. Skipped when TELEMETRY already
-# answered it on the command line, since Phase 7b printed what it did.
-if [[ -z "${TELEMETRY:-}" ]]; then
-  echo -e "  One more thing waits after your first login: a small, optional usage ping,"
-  echo -e "  and a note from me about why. It is off until you say otherwise."
-  echo ""
+if [[ "$ADMIN_CREATED" == true ]]; then
+  echo -e "  ${BOLD}Next:${NC} sign in, then invite your friends: Settings -> Instance -> Registration -> Create link."
+  echo -e "  Invite links expire and can be revoked. Nobody can register without one."
+else
+  echo -e "  ${BOLD}Next:${NC} create your administrator account (nobody can sign up until you do):"
+  echo -e "    ${BOLD}./tavvit-admin.sh create <username> --admin${NC}"
 fi
+echo ""
+echo -e "  ${BOLD}Before others use it:${NC} fill in Settings -> Instance -> Legal (operator, terms, privacy policy)."
+echo -e "  The source the AGPL-3.0 requires is served from this server (docs/tavvit/LICENSING.md)."
+echo ""

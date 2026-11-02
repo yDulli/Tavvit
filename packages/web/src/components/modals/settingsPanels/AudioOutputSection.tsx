@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useVoiceStore } from '../../../stores/voiceStore';
 import { AudioManager } from '../../../audio/AudioManager';
 import { useAudioDevices } from '../../../hooks/useAudioDevices';
-import { SectionShell, DropdownItem } from './_shared/SettingsPickerPrimitives';
+import { Icon } from '../../ui/Icon';
+import { DevicePicker, DropdownItem } from './_shared/SettingsPickerPrimitives';
+import { SettingsSection, SliderRow } from './_shared/SettingsControls';
 
 /**
  * Feature-detect per-element output routing support. iOS Safari has zero
@@ -100,9 +102,9 @@ function AudioOutputSectionInner() {
 
   if (permState === 'unknown') {
     return (
-      <SectionShell title={t('voice.output.title')}>
-        <div className="text-sm text-txt-tertiary">{t('voice.output.checkingAccess')}</div>
-      </SectionShell>
+      <SettingsSection title={t('voice.output.title')}>
+        <p className="text-ui text-txt-tertiary">{t('voice.output.checkingAccess')}</p>
+      </SettingsSection>
     );
   }
 
@@ -126,81 +128,44 @@ function AudioOutputSectionInner() {
   };
 
   return (
-    <SectionShell title={t('voice.output.title')}>
-      <div className="space-y-3">
-        {showPicker ? (
-          <div ref={dropdownRef}>
-            <button
-              type="button"
-              onClick={() => setListOpen((v) => !v)}
-              className="w-full px-3 py-2 flex items-center justify-between rounded-md bg-surface-base hover:bg-interactive-hover transition-colors"
-            >
-              <span className="text-[13px] text-txt-primary truncate text-left">{selectedLabel}</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
-                className={`text-txt-tertiary flex-shrink-0 ml-2 transition-transform ${listOpen ? 'rotate-90' : ''}`}>
-                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-              </svg>
-            </button>
-            {listOpen && (
-              <div className="mt-1 rounded-md bg-surface-base border border-border-hard py-1 max-h-64 overflow-y-auto">
-                <DropdownItem label={systemDefaultLabel} active={outputDeviceId === 'default'} onClick={() => handleSelect('default')} />
-                {outputs.filter(d => d.deviceId !== 'default').map((d) => (
-                  <DropdownItem
-                    key={d.deviceId}
-                    label={outputLabels.get(d.deviceId) ?? d.deviceId}
-                    active={outputDeviceId === d.deviceId}
-                    onClick={() => handleSelect(d.deviceId)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        ) : permState === 'granted' && !supportsSinkId ? (
-          <div className="text-xs text-txt-tertiary">
-            {t('voice.output.device.unsupported')}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="text-xs text-txt-tertiary">
-              {t('voice.output.permissionPrompt.description')}
-            </div>
-            <button
-              onClick={() => { requestPermission().catch(() => {}); }}
-              className="text-[13px] px-3 py-2 rounded-md bg-accent-primary hover:bg-accent-primary-hover text-white font-medium transition-colors"
-            >
-              {t('voice.output.permissionPrompt.enable')}
-            </button>
-          </div>
-        )}
-
+    <SettingsSection title={t('voice.output.title')}>
+      {showPicker ? (
+        <DevicePicker selectedLabel={selectedLabel} open={listOpen} onToggle={() => setListOpen((v) => !v)} pickerRef={dropdownRef}>
+          <DropdownItem label={systemDefaultLabel} active={outputDeviceId === 'default'} onClick={() => handleSelect('default')} />
+          {outputs.filter(d => d.deviceId !== 'default').map((d) => (
+            <DropdownItem
+              key={d.deviceId}
+              label={outputLabels.get(d.deviceId) ?? d.deviceId}
+              active={outputDeviceId === d.deviceId}
+              onClick={() => handleSelect(d.deviceId)}
+            />
+          ))}
+        </DevicePicker>
+      ) : permState === 'granted' && !supportsSinkId ? (
+        <p className="text-meta leading-snug text-txt-tertiary">{t('voice.output.device.unsupported')}</p>
+      ) : (
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="text-[13px] font-medium text-txt-primary">{t('voice.output.volume.label')}</div>
-            <div className="text-xs text-txt-tertiary tabular-nums">{t('common:units.percent', { value: outputVolume })}</div>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={200}
-            value={outputVolume}
-            onChange={(e) => setOutputVolume(Number(e.target.value))}
-            className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-surface-base [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
-            style={{
-              background: `linear-gradient(to right, rgb(var(--accent-primary)) 0%, rgb(var(--accent-primary)) ${outputVolume / 2}%, rgb(var(--interactive-muted)) ${outputVolume / 2}%, rgb(var(--interactive-muted)) 100%)`,
-            }}
-          />
+          <p className="text-meta leading-snug text-txt-tertiary">{t('voice.output.permissionPrompt.description')}</p>
+          <button type="button" onClick={() => { requestPermission().catch(() => {}); }} className="btn-outline mt-2.5">
+            {t('voice.output.permissionPrompt.enable')}
+          </button>
         </div>
+      )}
 
-        <button
-          onClick={handleTestTone}
-          className="w-full text-[13px] px-3 py-2 rounded-md bg-surface-base hover:bg-interactive-hover text-txt-primary transition-colors flex items-center justify-center gap-2"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
-          </svg>
-          {t('voice.output.testSound')}
-        </button>
-      </div>
-    </SectionShell>
+      <SliderRow
+        id="output-volume"
+        label={t('voice.output.volume.label')}
+        value={outputVolume}
+        min={0}
+        max={200}
+        valueLabel={t('common:units.percent', { value: outputVolume })}
+        onChange={setOutputVolume}
+      />
+
+      <button type="button" onClick={handleTestTone} className="btn-outline">
+        <Icon name="volume" size={15} />
+        {t('voice.output.testSound')}
+      </button>
+    </SettingsSection>
   );
 }

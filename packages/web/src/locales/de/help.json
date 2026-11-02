@@ -1,0 +1,117 @@
+{
+  "title": "Hilfe",
+  "lead": "Antworten auf das, was am häufigsten gefragt wird.",
+  "topics": {
+    "start": {
+      "title": "Erste Schritte",
+      "items": {
+        "join": {
+          "q": "Wie trete ich einem Space bei?",
+          "a": "Öffne einen Einladungslink, den dir jemand geschickt hat, oder such dir unter Entdecken einen Space aus."
+        },
+        "create": {
+          "q": "Wie erstelle ich einen eigenen Space?",
+          "a": "Drück auf das Plus in der oberen Leiste und gib ihm einen Namen. Dann lädst du Leute über einen Einladungslink aus dem Menü des Space ein."
+        },
+        "friends": {
+          "q": "Wie füge ich einen Freund hinzu?",
+          "a": "Öffne Freunde, drück auf Freunde hinzufügen und gib den Benutzernamen ein."
+        }
+      }
+    },
+    "account": {
+      "title": "Dein Konto",
+      "items": {
+        "password": {
+          "q": "Ich habe mein Passwort vergessen",
+          "a": "Drück auf der Anmeldeseite auf „Passwort vergessen?“. Ein Link geht an deine bestätigte Adresse. Ohne eine können dir die Betreiber dieses Servers helfen."
+        },
+        "twoFactor": {
+          "q": "Wie schütze ich mein Konto besser?",
+          "a": "Schalte unter Einstellungen, Sicherheit die Zwei-Faktor-Anmeldung ein und bewahre deine Wiederherstellungscodes sicher auf."
+        },
+        "devices": {
+          "q": "Wo sehe ich, welche Geräte angemeldet sind?",
+          "a": "Unter Einstellungen, Sicherheit. Dort kannst du jedes einzeln abmelden."
+        },
+        "storage": {
+          "q": "Wie viel kann ich hochladen?",
+          "a": "Der Server legt eine Größe pro Datei und eine Summe für dein Konto fest. Unter Einstellungen, Konto siehst du, wie viel du nutzt."
+        },
+        "delete": {
+          "q": "Wie lösche ich mein Konto?",
+          "a": "Unter Einstellungen, Konto. Eigene Spaces musst du vorher übergeben oder löschen."
+        },
+        "username": {
+          "q": "Kann ich meinen Benutzernamen ändern?",
+          "a": "Ja, in den Einstellungen unter deinem Konto, einmal in 30 Tagen. Danach meldest du dich mit dem neuen Namen an, und der alte bleibt 30 Tage reserviert, damit sich niemand für dich ausgeben kann. Den Anzeigenamen kannst du jederzeit ändern."
+        }
+      }
+    },
+    "voice": {
+      "title": "Sprache und Video",
+      "items": {
+        "hear": {
+          "q": "Niemand hört mich",
+          "a": "Erlaube deinem Browser das Mikrofon und wähle unter Einstellungen, Sprache & Video das richtige aus."
+        },
+        "share": {
+          "q": "Wie teile ich meinen Bildschirm?",
+          "a": "Tritt einem Sprachkanal bei und drück in der Anrufleiste auf den Bildschirm-Knopf. Der Space muss es erlauben."
+        }
+      }
+    },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "items": {
+        "none": {
+          "q": "Ich bekomme keine Benachrichtigungen",
+          "a": "Prüf Einstellungen, Benachrichtigungen, und ob dein Browser oder Handy sie für diese Seite erlaubt."
+        },
+        "keywords": {
+          "q": "Kann ich bei einem bestimmten Wort benachrichtigt werden?",
+          "a": "Ja. Trag es unter Einstellungen, Benachrichtigungen ein, dann meldet sich Tavvit, wenn jemand es schreibt."
+        }
+      }
+    },
+    "safety": {
+      "title": "Sicherheit",
+      "items": {
+        "report": {
+          "q": "Wie melde ich etwas?",
+          "a": "Öffne das Menü der Nachricht und wähl Melden, oder nutze das Meldeformular, das auch ohne Konto geht."
+        },
+        "block": {
+          "q": "Wie blockiere ich jemanden?",
+          "a": "Öffne das Profil und wähl Blockieren. Die Person kann dir dann nicht mehr schreiben."
+        },
+        "bots": {
+          "q": "Was kann ein Bot sehen?",
+          "a": "Was in den Kanälen steht, die der Space ihn lesen lässt. Ein Bot ist als solcher markiert und wird von jemand anderem betrieben."
+        }
+      }
+    },
+    "desktop": {
+      "title": "Die Desktop-App",
+      "items": {
+        "where": {
+          "q": "Wo bekomme ich sie?",
+          "a": "Auf der Download-Seite, verlinkt von der Produktseite und von Über."
+        },
+        "smartscreen": {
+          "q": "Windows warnt mich vor der App",
+          "a": "Die App ist noch nicht signiert, deshalb kennt Windows sie nicht. Drück auf Weitere Informationen, dann auf Trotzdem ausführen."
+        }
+      }
+    },
+    "more": {
+      "title": "Noch etwas",
+      "items": {
+        "who": {
+          "q": "Wer betreibt diesen Server?",
+          "a": "Das steht im Impressum, dazu, wie du die Betreiber erreichst."
+        }
+      }
+    }
+  }
+}

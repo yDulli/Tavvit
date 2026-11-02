@@ -9,7 +9,19 @@ export function applySpaceMemberUpdate(origin: string, member: MemberWithUser): 
   useSpaceStore.setState({
     members: state.members.map(existing => existing.spaceId === member.spaceId && existing.userId === member.userId
       // Profile/presence have their own live events; a database snapshot must not overwrite them.
-      ? { ...existing, nickname: member.nickname, roles: member.roles }
+      ? {
+          ...existing,
+          nickname: member.nickname,
+          roles: member.roles,
+          // A host that predates timeouts leaves the field out; one that has
+          // them always sends it, null once a timeout is over or lifted.
+          ...(member.timedOutUntil !== undefined ? { timedOutUntil: member.timedOutUntil } : {}),
+          // The member's profile for this space, likewise only from a host
+          // that has space profiles.
+          ...(member.avatar !== undefined ? { avatar: member.avatar } : {}),
+          ...(member.banner !== undefined ? { banner: member.banner } : {}),
+          ...(member.bio !== undefined ? { bio: member.bio } : {}),
+        }
       : existing),
   });
 }

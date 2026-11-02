@@ -36,22 +36,27 @@ beforeEach(() => {
   useUIStore.setState({ showDms: false });
 });
 
-describe('SpaceSidebar @me item', () => {
-  it('is active on /backspace, which is reached from the DM sidebar', () => {
-    renderAt('/backspace');
-    expect(railButton('Direct Messages')).toHaveAttribute('aria-current', 'page');
+describe('SpaceSidebar Home tile', () => {
+  it('is active on /about, which is reached from the home sidebar', () => {
+    renderAt('/about');
+    expect(railButton('Home')).toHaveAttribute('aria-current', 'page');
     expect(railButton('Explore Spaces')).not.toHaveAttribute('aria-current');
+  });
+
+  it('is active on /friends', () => {
+    renderAt('/friends');
+    expect(railButton('Home')).toHaveAttribute('aria-current', 'page');
   });
 
   it('is not active on /explore, where the Explore action is', () => {
     renderAt('/explore');
-    expect(railButton('Direct Messages')).not.toHaveAttribute('aria-current');
+    expect(railButton('Home')).not.toHaveAttribute('aria-current');
     expect(railButton('Explore Spaces')).toHaveAttribute('aria-current', 'page');
   });
 
   it('is active on the DM home', () => {
     useUIStore.setState({ showDms: true });
     renderAt('/channels/@me');
-    expect(railButton('Direct Messages')).toHaveAttribute('aria-current', 'page');
+    expect(railButton('Home')).toHaveAttribute('aria-current', 'page');
   });
 });

@@ -184,7 +184,7 @@ describe('VoiceChannel occupancy timer', () => {
 });
 
 describe('VoiceChannel own row', () => {
-  const ORBIT = 'https://orbit.example';
+  const TAVVIT = 'https://orbit.example';
   const dragHandlers = () => ({ draggable: true, isBeingDragged: false, onDragStart: () => {}, onDragEnd: () => {} });
 
   function renderWithDrag() {
@@ -199,9 +199,9 @@ describe('VoiceChannel own row', () => {
 
   it("is the user's row on a remote space's instance, not the row that has the session row's id", () => {
     // orbit knows the user as o-7; orbit's Cleo has the id the session row has.
-    useAuthStore.setState({ myRowIds: new Map([[ORBIT, 'o-7']]) });
+    useAuthStore.setState({ myRowIds: new Map([[TAVVIT, 'o-7']]) });
     useSpaceStore.setState({
-      channelOriginMap: new Map([['voice-1', ORBIT]]),
+      channelOriginMap: new Map([['voice-1', TAVVIT]]),
       members: [
         { spaceId: 'space-1', userId: 'o-7', user: { id: 'o-7', username: 'ada@nova', displayName: 'Ada', avatar: null }, roles: [] },
         { spaceId: 'space-1', userId: '1', user: { id: '1', username: 'cleo', displayName: 'Cleo', avatar: null }, roles: [] },
@@ -232,5 +232,17 @@ describe('VoiceChannel own row', () => {
     expect(rowOf('Bob')).toHaveAttribute('draggable', 'true');
     fireEvent.contextMenu(rowOf('Ada'));
     expect(open).not.toHaveBeenCalled();
+  });
+});
+
+describe("a voice channel's own icon", () => {
+  it('stands where the speaker was', () => {
+    render(<VoiceChannel channelId="voice-1" channelName="Voice" channelIcon="🍿" onClick={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Voice' }).textContent).toContain('🍿');
+  });
+
+  it('gives way to the lock where the user cannot join', () => {
+    render(<VoiceChannel channelId="voice-1" channelName="Voice" channelIcon="🍿" onClick={() => {}} locked />);
+    expect(screen.getByRole('button', { name: 'Voice' }).textContent).not.toContain('🍿');
   });
 });

@@ -30,7 +30,7 @@ jobs:
       matrix:
         # 22 is the support floor (`engines.node` in package.json), 24 is what
         # `.nvmrc` selects and what the Docker image runs.
-        node-version: [22, 24]
+        node-version: [24]
 
     steps:
       - name: Harden the runner

@@ -140,6 +140,11 @@ export function registerAttachRoutes(app: FastifyInstance): void {
     if (!formerHome || detached.federationHomeOrphaned !== 1) {
       return reply.code(403).send({ error: 'Only detached accounts can re-attach', statusCode: 403 });
     }
+    // Re-attached it is federated again, and a federated account is never an admin here: whoever
+    // holds that identity on its home would then administer this instance. Demote it first.
+    if (detached.isAdmin === 1) {
+      return sendError(reply, 403, 'federated_user_cannot_be_admin');
+    }
 
     // Guard 2: the home domain must be an ACTIVE peer — the proof is only as
     // trustworthy as the S2S channel it is verified over.

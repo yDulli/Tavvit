@@ -29,7 +29,11 @@ const { mockLocalPreview, mockRemotePreview, mockCreateApiClient, mockNavigate }
 // replace the preview reads.
 vi.mock('../api/client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/client')>()),
-  api: { spaces: { invitePreview: mockLocalPreview } },
+  api: {
+    spaces: { invitePreview: mockLocalPreview },
+    // The page asks the home instance whether it federates; these cases never need the answer.
+    instance: { info: () => new Promise(() => {}) },
+  },
   createApiClient: mockCreateApiClient,
 }));
 
@@ -123,7 +127,7 @@ describe('JoinPage for a space joined by request', () => {
     expect(await screen.findByText('Request sent to Quiet Harbor')).toBeInTheDocument();
     expect(screen.getByText('A manager will review it. The space appears in your list once they approve.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Back to Backspace' }));
+    await user.click(screen.getByRole('button', { name: 'Back to Tavvit' }));
     expect(mockNavigate).toHaveBeenCalledWith('/channels/@me');
   });
 
@@ -308,5 +312,36 @@ describe('JoinPage for spaces not joined by request', () => {
     expect(requestJoinSpace).not.toHaveBeenCalled();
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/channels/S-OPEN'));
     expect(screen.queryByText(/takes join requests/)).not.toBeInTheDocument();
+  });
+});
+
+describe('JoinPage other-instance option', () => {
+  async function answerInfoWith(federationEnabled: boolean | undefined) {
+    const { __resetHomeInstanceInfoForTests } = await import('../hooks/useHomeInstanceInfo');
+    const { api } = await import('../api/client');
+    __resetHomeInstanceInfoForTests();
+    (api as unknown as { instance: { info: () => Promise<unknown> } }).instance.info = () =>
+      Promise.resolve({ name: 'Tavvit', ...(federationEnabled === undefined ? {} : { federationEnabled }) });
+  }
+
+  beforeEach(() => {
+    useAuthStore.setState({ token: null, user: null });
+    mockLocalPreview.mockResolvedValue(preview());
+  });
+
+  it('is offered to a visitor where the instance federates', async () => {
+    await answerInfoWith(true);
+    renderAt('abc123');
+    await screen.findByText('Quiet Harbor');
+    expect(await screen.findByRole('button', { name: 'I use another instance' })).toBeInTheDocument();
+  });
+
+  it('is not offered on a private server, which has nowhere else to send you', async () => {
+    await answerInfoWith(false);
+    renderAt('abc123');
+    await screen.findByText('Quiet Harbor');
+    expect(await screen.findByRole('link', { name: 'Create an account' })).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByRole('button', { name: 'I use another instance' })).toBeNull();
   });
 });

@@ -120,10 +120,12 @@ export function viewerCanActOnUserInSpace(spaceId: string, targetUserId: string)
 /**
  * Whether the viewer may open the member role editor for `target` in `space`:
  * they hold MANAGE_ROLES there (`myPermissions`, the space's own answer;
- * unknown means no), the target is neither the viewer (by their id on the
- * space's instance) nor the owner, the viewer may act on the target, and
- * at least one role other than @everyone ranks below the viewer, so there is
- * a role to give or take. `roles` is the space's loaded role list.
+ * unknown means no), and at least one role other than @everyone ranks below
+ * the viewer, so there is a role to give or take; then either the viewer owns
+ * the space and the target is themselves (the owner's rights come from
+ * ownership, so their own roles are theirs to set), or the target is neither
+ * the viewer nor the owner and the viewer may act on them. The instance
+ * applies the same rule. `roles` is the space's loaded role list.
  */
 export function viewerCanEditMemberRoles(
   space: Pick<TaggedSpace, 'id' | 'ownerId' | '_instanceOrigin'>,
@@ -133,11 +135,14 @@ export function viewerCanEditMemberRoles(
   target: MemberWithUser,
 ): boolean {
   if (!hasPermissionBit(myPermissions, PermissionBits.MANAGE_ROLES)) return false;
-  if (target.userId === myUserIdInSpace(space) || target.userId === space.ownerId) return false;
   const hasRoleToManage = roles.some(
     (role) => role.spaceId === space.id && role.id !== space.id && viewerCanManageRoleAt(space, members, role.position),
   );
-  return hasRoleToManage && viewerCanActOn(space, members, target);
+  if (!hasRoleToManage) return false;
+  const me = myUserIdInSpace(space);
+  if (target.userId === me) return me === space.ownerId;
+  if (target.userId === space.ownerId) return false;
+  return viewerCanActOn(space, members, target);
 }
 
 // ─── Held-bits rule ─────────────────────────────────────────────────────────

@@ -11,15 +11,13 @@ import { ListInDirectoryConfirm, ShowGlobalSpacesConfirm } from '../modals/Direc
  * from the set because the settings changed, not because the component
  * remembers the click.
  *
- * The role is part of a row's name wherever it changes what renders, which is
- * every row that has an action: the member half of a pair is the same fact
- * with nothing to click.
+ * Every row is for an administrator. A member cannot change any of these
+ * settings and the page they came to browse is not where an instance tells
+ * them how it is configured, so a member gets no row at all.
  */
 type DiscoveryHintRow =
-  | 'discoveryOffMember'
   | 'discoveryOffAdmin'
   | 'notListed'
-  | 'browseOffMember'
   | 'browseOffAdmin';
 
 /**
@@ -81,21 +79,12 @@ function discoveryHintRows(state: {
   directoryAvailable: boolean | null;
   isAdmin: boolean;
 }): DiscoveryHintRow[] {
-  if (state.limits === null) return [];
+  if (state.limits === null || !state.isAdmin) return [];
   const rows: DiscoveryHintRow[] = [];
 
-  if (!state.limits.discoveryEnabled) {
-    rows.push(state.isAdmin ? 'discoveryOffAdmin' : 'discoveryOffMember');
-  }
-  // Only an admin is told about the listing: a member cannot change it, and
-  // "the spaces you can see are not listed somewhere you are not looking" is
-  // not a fact a member needs on the page they came to browse.
-  if (!state.limits.directoryEnabled && state.isAdmin && state.directoryConfigured === true) {
-    rows.push('notListed');
-  }
-  if (state.directoryConfigured === true && state.directoryAvailable === false) {
-    rows.push(state.isAdmin ? 'browseOffAdmin' : 'browseOffMember');
-  }
+  if (!state.limits.discoveryEnabled) rows.push('discoveryOffAdmin');
+  if (!state.limits.directoryEnabled && state.directoryConfigured === true) rows.push('notListed');
+  if (state.directoryConfigured === true && state.directoryAvailable === false) rows.push('browseOffAdmin');
 
   return rows;
 }
@@ -107,7 +96,7 @@ function discoveryHintRows(state: {
  * state a choice the instance made about what it lists and what it shows.
  */
 function isWarningRow(row: DiscoveryHintRow): boolean {
-  return row === 'discoveryOffAdmin' || row === 'discoveryOffMember';
+  return row === 'discoveryOffAdmin';
 }
 
 interface InstanceDiscoveryHintProps {
@@ -151,7 +140,7 @@ interface InstanceDiscoveryHintProps {
  * One strip, one material, one line per fact. Two or three of these sit above
  * the spaces the page is actually for, so none of them is a card and none of
  * them is filled: the warning row carries its tone in the text, and every
- * action is the same quiet link.
+ * action is the same small outlined button.
  */
 export function InstanceDiscoveryHint({
   directoryConfigured,
@@ -275,14 +264,7 @@ export function InstanceDiscoveryHint({
   const textOf = (row: DiscoveryHintRow): string => {
     switch (row) {
       case 'discoveryOffAdmin': return t('spaces:explore.discoveryOff.admin');
-      case 'discoveryOffMember': return t('spaces:explore.discoveryOff.member');
       case 'notListed': return t('spaces:explore.notListed.text');
-      // The two browse rows state the one fact in two voices, like the two
-      // discovery rows above them. A member cannot act on it, so the sentence
-      // has to say that the state is their administrator's choice rather than
-      // a fault: an unexplained absence reads as something broken. An admin
-      // knows they chose it and is told the fact alone, next to the switch.
-      case 'browseOffMember': return t('spaces:explore.browseOff.member');
       default: return t('spaces:explore.browseOff.admin');
     }
   };
@@ -305,7 +287,7 @@ export function InstanceDiscoveryHint({
   };
 
   return (
-    <div className="mb-4 rounded-lg bg-white/[0.03] border border-white/[0.04] divide-y divide-white/[0.04]">
+    <div className="mb-4 rounded-lg surface-card divide-y divide-border-hard">
       {rows.map((row) => {
         const action = actionOf(row);
         const message = failure !== null && failure.row === row ? failure.message : '';
@@ -320,7 +302,7 @@ export function InstanceDiscoveryHint({
                   not a Tailwind breakpoint: this app decides mobile from the
                   layout width at the current interface scale, not from the
                   raw viewport. */}
-              <p className={`w-full desktop:w-auto desktop:flex-1 desktop:min-w-[14rem] text-[13px] ${isWarningRow(row) ? 'text-accent-amber' : 'text-txt-tertiary'}`}>
+              <p className={`w-full desktop:w-auto desktop:flex-1 desktop:min-w-[14rem] text-ui ${isWarningRow(row) ? 'text-accent-amber' : 'text-txt-secondary'}`}>
                 {textOf(row)}
               </p>
               {action !== null && (
@@ -330,13 +312,14 @@ export function InstanceDiscoveryHint({
                   // Only the row whose write is in flight: a stacked strip
                   // must not disable the neighbour's unrelated action.
                   disabled={pending === row}
-                  className="shrink-0 text-[13px] text-accent-primary hover:text-accent-primary/80 font-medium transition-colors disabled:text-txt-tertiary disabled:cursor-default"
+                  aria-busy={pending === row}
+                  className="btn-outline btn-sm shrink-0"
                 >
                   {action.label}
                 </button>
               )}
             </div>
-            {message && <p className="mt-1 text-[13px] text-txt-danger">{message}</p>}
+            {message && <p className="mt-1 text-ui text-txt-danger">{message}</p>}
           </div>
         );
       })}

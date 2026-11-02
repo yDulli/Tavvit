@@ -3,7 +3,9 @@ import { useTranslation, Trans } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useKeybindStore, BINDABLE_ACTIONS, Keybind } from '../../../stores/keybindStore';
 import { isElectron, isElectronMac } from '../../../platform/platform';
+import { codeToNumeric, shortcutTypesText } from '../../../utils/keybindKeys';
 import { useKeybindPortalStatus } from '../../../hooks/useKeybindPortalStatus';
+import { SettingsPage, SettingsSection } from './_shared/SettingsControls';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -43,21 +45,11 @@ function keyDisplayName(t: SettingsT, code: string, key: string): string {
   return key.length === 1 ? key.toUpperCase() : key;
 }
 
-function codeToNumeric(code: string): number {
-  // djb2 hash — produces unique numeric IDs for all KeyboardEvent.code values
-  let hash = 5381;
-  for (let i = 0; i < code.length; i++) {
-    hash = ((hash << 5) + hash + code.charCodeAt(i)) | 0;
-  }
-  return hash >>> 0; // ensure unsigned
-}
-
 // ---------------------------------------------------------------------------
 // Keybind Row
 // ---------------------------------------------------------------------------
 
 interface KeybindRowProps {
-  actionId: string;
   label: string;
   keybind: Keybind | undefined;
   isRecording: boolean;
@@ -67,44 +59,44 @@ interface KeybindRowProps {
   rowRef: React.RefObject<HTMLDivElement>;
 }
 
-function KeybindRow({ actionId, label, keybind, isRecording, recordingDisplay, onStartRecording, onDelete, rowRef }: KeybindRowProps) {
+function KeybindRow({ label, keybind, isRecording, recordingDisplay, onStartRecording, onDelete, rowRef }: KeybindRowProps) {
   const { t } = useTranslation(['settings', 'common']);
   return (
     <div
       ref={rowRef}
-      className={`flex items-center justify-between px-4 py-3 rounded-lg transition-all ${
-        isRecording
-          ? 'ring-2 ring-accent-mint bg-surface-elevated'
-          : 'bg-white/[0.03] hover:bg-surface-elevated'
+      className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${
+        isRecording ? 'bg-interactive-selected shadow-[inset_2px_0_0_rgb(var(--accent-primary))]' : ''
       }`}
     >
-      <div className="flex-1 min-w-0">
-        <div className="text-sm text-txt-primary">{label}</div>
-        <div className="text-xs text-txt-tertiary mt-0.5">
+      <div className="min-w-0 flex-1">
+        <div className="text-ui font-medium text-txt-primary">{label}</div>
+        <div className="mt-1 flex min-h-[18px] flex-wrap items-center gap-1 text-meta text-txt-tertiary">
           {isRecording ? (
-            <span className="text-accent-mint animate-pulse">
+            <span className="animate-pulse text-accent-soft">
               {recordingDisplay || t('keybinds.row.recordingPrompt')}
             </span>
           ) : keybind ? (
-            keybind.displayLabel
+            keybind.displayLabel.split(' + ').map((key, index) => <kbd key={`${key}-${index}`} className="kbd">{key}</kbd>)
           ) : (
             t('keybinds.row.notBound')
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1.5 ml-3">
+      <div className="flex flex-shrink-0 items-center gap-1">
         {!isRecording && (
           <>
             <button
+              type="button"
               onClick={onStartRecording}
-              className="text-xs px-2.5 py-1 rounded text-txt-tertiary hover:text-txt-primary hover:bg-white/[0.06] transition-colors"
+              className={`btn-sm ${keybind ? 'btn-quiet' : 'btn-outline'}`}
             >
               {keybind ? t('common:actions.edit') : t('keybinds.row.record')}
             </button>
             {keybind && (
               <button
+                type="button"
                 onClick={onDelete}
-                className="text-xs px-2.5 py-1 rounded text-txt-tertiary hover:text-rose-400 hover:bg-rose-400/10 transition-colors"
+                className="btn-quiet btn-sm hover:bg-accent-rose/10 hover:text-txt-danger"
               >
                 {t('common:actions.delete')}
               </button>
@@ -112,7 +104,7 @@ function KeybindRow({ actionId, label, keybind, isRecording, recordingDisplay, o
           </>
         )}
         {isRecording && (
-          <span className="text-[10px] text-txt-tertiary">{t('keybinds.row.escToCancel')}</span>
+          <span className="text-meta text-txt-tertiary">{t('keybinds.row.escToCancel')}</span>
         )}
       </div>
     </div>
@@ -149,6 +141,8 @@ export function KeybindsPanel() {
 
   const [accessibilityTrusted, setAccessibilityTrusted] = useState<boolean | null>(null);
   const [hookError, setHookError] = useState<string | null>(null);
+  // A shortcut the desktop app refused to listen for because it types text on its own.
+  const [typingRefused, setTypingRefused] = useState(false);
 
   const pressedCodesRef = useRef(new Map<string, { numeric: number; display: string }>());
   const mouseButtonRef = useRef<number | null>(null);
@@ -212,6 +206,15 @@ export function KeybindsPanel() {
     if (!hasNonModifier && !mouseBtn) {
       return;
     }
+
+    // The desktop app's hook hears the whole computer, so it does not listen for keys that type
+    // text on their own (desktop/src/keybindPolicy.ts). Say so instead of saving a dead shortcut.
+    if (isElectron() && shortcutTypesText(keys, mouseBtn ?? undefined)) {
+      setTypingRefused(true);
+      cancelRecording();
+      return;
+    }
+    setTypingRefused(false);
 
     const newKeybind: Keybind = { actionId, keys, mouseButton: mouseBtn ?? undefined, displayLabel };
 
@@ -317,23 +320,21 @@ export function KeybindsPanel() {
 
   if (portal) {
     return (
-      <div className="space-y-5">
-        <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('keybinds.title')}</h2>
-        <div className="rounded-lg bg-surface-elevated p-3.5 text-sm text-txt-secondary" role="status">
+      <SettingsPage title={t('keybinds.title')}>
+        <div className="surface-card rounded-lg p-4 text-ui leading-relaxed text-txt-secondary" role="status">
           <p>{t('keybinds.portal.description')}</p>
           <p className="mt-2">{t(`keybinds.portal.${portal.state}`)}</p>
           {portal.state === 'unavailable' && (
-            <button type="button" onClick={() => window.backspace?.retryKeybindPortal?.()}
-              className="mt-3 rounded px-3 py-1.5 bg-white/[0.06] text-txt-primary hover:bg-white/[0.1]">
+            <button type="button" onClick={() => window.backspace?.retryKeybindPortal?.()} className="btn-outline btn-sm mt-3">
               {t('keybinds.portal.retry')}
             </button>
           )}
         </div>
-        <dl className="space-y-1.5">
+        <dl className="surface-card divide-y divide-border-hard rounded-lg">
           {BINDABLE_ACTIONS.map((action) => (
-            <div key={action.id} className="rounded-lg bg-white/[0.03] px-4 py-3">
-              <dt className="text-sm text-txt-primary">{t(`keybinds.action.${action.id}`)}</dt>
-              <dd className="text-xs text-txt-tertiary mt-1">
+            <div key={action.id} className="px-4 py-2.5">
+              <dt className="text-ui font-medium text-txt-primary">{t(`keybinds.action.${action.id}`)}</dt>
+              <dd className="mt-0.5 text-meta text-txt-tertiary">
                 {portal.shortcuts[action.id]
                   ? t('keybinds.portal.assigned', { shortcut: portal.shortcuts[action.id] })
                   : t('keybinds.portal.notAssigned')}
@@ -341,25 +342,25 @@ export function KeybindsPanel() {
             </div>
           ))}
         </dl>
-      </div>
+      </SettingsPage>
     );
   }
 
   return (
-    <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('keybinds.title')}</h2>
+    <SettingsPage title={t('keybinds.title')}>
       {/* macOS Accessibility Warning */}
       {isElectronMac() && accessibilityTrusted === false && (
-        <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3.5">
-          <div className="text-sm text-amber-200 font-medium">{t('keybinds.accessibility.title')}</div>
-          <div className="text-xs text-amber-200/70 mt-1">
+        <div className="rounded-lg border border-accent-amber/25 bg-accent-amber/10 px-3.5 py-3">
+          <div className="text-ui font-medium text-txt-primary">{t('keybinds.accessibility.title')}</div>
+          <div className="mt-1 text-meta leading-snug text-txt-secondary">
             {t('keybinds.accessibility.description')}
           </div>
           <button
+            type="button"
             onClick={() => {
               window.backspace?.checkAccessibility().then(setAccessibilityTrusted);
             }}
-            className="mt-2 text-xs px-3 py-1.5 rounded bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 transition-colors"
+            className="btn-outline btn-sm mt-2.5"
           >
             {t('keybinds.accessibility.grant')}
           </button>
@@ -368,35 +369,39 @@ export function KeybindsPanel() {
 
       {/* Linux hook error warning */}
       {isElectron() && hookError && (
-        <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3.5">
-          <div className="text-sm text-amber-200 font-medium">{t('keybinds.hookError.title')}</div>
-          <div className="text-xs text-amber-200/70 mt-1">
+        <div className="rounded-lg border border-accent-amber/25 bg-accent-amber/10 px-3.5 py-3">
+          <div className="text-ui font-medium text-txt-primary">{t('keybinds.hookError.title')}</div>
+          <div className="mt-1 text-meta leading-snug text-txt-secondary">
             <Trans
               t={t}
               i18nKey="keybinds.hookError.description"
-              components={{ code: <code className="bg-black/20 px-1 rounded" /> }}
+              components={{ code: <code className="rounded bg-black/20 px-1 font-mono" /> }}
             />
           </div>
         </div>
       )}
 
-      {/* Web limitation note */}
-      {!isElectron() && (
-        <div className="text-xs text-txt-tertiary px-1">
-          {t('keybinds.note.webOnly')}
+      {/* A shortcut that types text on its own: refused just now, or kept from before the rule. */}
+      {isElectron() && (typingRefused || BINDABLE_ACTIONS.some((action) => {
+        const kb = getKeybind(action.id);
+        return kb !== undefined && shortcutTypesText(kb.keys, kb.mouseButton);
+      })) && (
+        <div role="status" className="rounded-lg border border-accent-amber/25 bg-accent-amber/10 px-3.5 py-3">
+          <div className="text-ui font-medium text-txt-primary">{t('keybinds.typingKey.title')}</div>
+          <div className="mt-1 text-meta leading-snug text-txt-secondary">{t('keybinds.typingKey.description')}</div>
         </div>
       )}
 
-      {/* Keybind rows */}
-      <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-          {t('keybinds.section.voice')}
-        </div>
-        <div className="space-y-1.5">
+      {/* Keybind rows; in a browser the line above them says how far they reach. */}
+      <SettingsSection
+        title={t('keybinds.section.voice')}
+        description={isElectron() ? undefined : t('keybinds.note.webOnly')}
+        flush
+      >
+        <div className="divide-y divide-border-hard">
           {BINDABLE_ACTIONS.map((action) => (
             <KeybindRow
               key={action.id}
-              actionId={action.id}
               label={t(`keybinds.action.${action.id}`)}
               keybind={getKeybind(action.id)}
               isRecording={recordingActionId === action.id}
@@ -410,12 +415,12 @@ export function KeybindsPanel() {
             />
           ))}
         </div>
-      </div>
+      </SettingsSection>
 
       {/* Conflict dialog */}
       {conflict && (
-        <div className="rounded-lg bg-surface-elevated border border-white/[0.06] p-3.5">
-          <div className="text-sm text-txt-primary">
+        <div role="alert" className="surface-card rounded-lg p-4">
+          <div className="text-ui leading-relaxed text-txt-primary">
             <Trans
               t={t}
               i18nKey="keybinds.conflict.message"
@@ -426,22 +431,16 @@ export function KeybindsPanel() {
               components={{ strong: <span className="font-medium" /> }}
             />
           </div>
-          <div className="flex gap-2 mt-2.5">
-            <button
-              onClick={confirmConflict}
-              className="text-xs px-3 py-1.5 rounded bg-accent-mint/20 text-accent-mint hover:bg-accent-mint/30 transition-colors"
-            >
-              {t('keybinds.conflict.overwrite')}
-            </button>
-            <button
-              onClick={cancelConflict}
-              className="text-xs px-3 py-1.5 rounded bg-white/[0.06] text-txt-secondary hover:bg-white/[0.1] transition-colors"
-            >
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={cancelConflict} className="btn-quiet btn-sm">
               {t('common:actions.cancel')}
+            </button>
+            <button type="button" onClick={confirmConflict} className="btn-primary btn-sm">
+              {t('keybinds.conflict.overwrite')}
             </button>
           </div>
         </div>
       )}
-    </div>
+    </SettingsPage>
   );
 }

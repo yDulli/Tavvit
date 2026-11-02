@@ -7,6 +7,7 @@ import { deleteUploadFile } from '../../../utils/fileCleanup.js';
 import { sanitizeUser } from '../../../utils/sanitize.js';
 import { loadDmChannelWire } from '../../../utils/dmChannelWire.js';
 import { generateSnowflake } from '../../../utils/snowflake.js';
+import { isUploadOn, mediaOriginsFor } from '../../../utils/remoteMedia.js';
 import { connectionManager } from '../../../ws/handler.js';
 import { GROUP_DM_NAME_MAX_LENGTH, GROUP_DM_NAME_MIN_LENGTH } from '@backspace/shared/src/constants.js';
 import { and, eq, or } from 'drizzle-orm';
@@ -754,7 +755,9 @@ export async function processGroupMetadataUpdateEvent(
     }
   }
 
-  if (metadata.icon !== null && !(metadata.icon.startsWith('http://') || metadata.icon.startsWith('https://'))) {
+  // Every member here fetches the icon by themselves, so it is a file of the sending peer or of this
+  // instance, by its address, and nothing anywhere else (utils/remoteMedia.ts).
+  if (metadata.icon !== null && !isUploadOn(metadata.icon, mediaOriginsFor(sourceInstance))) {
     rejected.push({ messageId: event.messageId, reason: 'invalid_payload' });
     return;
   }

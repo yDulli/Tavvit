@@ -14,7 +14,8 @@ vi.mock('../../audio/AudioManager', () => ({
 // The pages themselves have their own tests; here only which one renders matters.
 vi.mock('../chat/ExplorePage', () => ({ ExplorePage: () => <div data-testid="page">explore</div> }));
 vi.mock('../chat/FriendsPage', () => ({ FriendsPage: () => <div data-testid="page">friends</div> }));
-vi.mock('../projectHub/ProjectHubPage', () => ({ ProjectHubPage: () => <div data-testid="page">backspace</div> }));
+vi.mock('../home/HomePage', () => ({ HomePage: () => <div data-testid="page">home</div> }));
+vi.mock('../about/AboutPage', () => ({ AboutPage: () => <div data-testid="page">about</div> }));
 
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -38,26 +39,37 @@ beforeEach(() => {
 });
 
 describe('MainContent home pages', () => {
-  it('renders the Backspace page on /backspace', () => {
-    renderAt('/backspace');
-    expect(screen.getByTestId('page')).toHaveTextContent('backspace');
+  it('renders the About page on /about', () => {
+    renderAt('/about');
+    expect(screen.getByTestId('page')).toHaveTextContent('about');
   });
 
-  it('still renders Explore on /explore', () => {
+  it('renders Explore on /explore', () => {
     renderAt('/explore');
     expect(screen.getByTestId('page')).toHaveTextContent('explore');
   });
 
-  it('renders Friends on the DM home', () => {
-    useUIStore.setState({ showDms: true });
-    renderAt('/channels/@me');
+  it('renders Friends on /friends', () => {
+    renderAt('/friends');
     expect(screen.getByTestId('page')).toHaveTextContent('friends');
   });
 
-  it('renders the Backspace page on /backspace before the previous space is cleared', () => {
+  it('renders the Home dashboard on the DM home with no conversation open', () => {
+    useUIStore.setState({ showDms: true });
+    renderAt('/channels/@me');
+    expect(screen.getByTestId('page')).toHaveTextContent('home');
+  });
+
+  it('renders the About page on /about before the previous space is cleared', () => {
     // The route effect that clears the space runs after the first render.
     useSpaceStore.setState({ currentSpaceId: 'space-1' });
-    renderAt('/backspace');
-    expect(screen.getByTestId('page')).toHaveTextContent('backspace');
+    renderAt('/about');
+    expect(screen.getByTestId('page')).toHaveTextContent('about');
+  });
+
+  it('renders Friends on /friends before the previous space is cleared', () => {
+    useSpaceStore.setState({ currentSpaceId: 'space-1' });
+    renderAt('/friends');
+    expect(screen.getByTestId('page')).toHaveTextContent('friends');
   });
 });

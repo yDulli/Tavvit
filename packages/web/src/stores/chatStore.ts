@@ -1,5 +1,8 @@
+import { isNewerId } from '../utils/messageIds';
 import { create } from 'zustand';
-import type { MessageWithUser, Reaction, ReadState, User } from '@backspace/shared';
+import type { PollInfo } from '@backspace/shared/src/polls';
+import type { ThreadSummary } from '@backspace/shared/src/threads';
+import type { MessagePinState, MessageWithUser, Reaction, ReadState, User } from '@backspace/shared';
 import { wsSend } from '../hooks/useWebSocket';
 import { HttpError } from '../api/client';
 import { isDmChannel, getChannelOrigin, getApiForOrigin, useSpaceStore } from './spaceStore';
@@ -130,15 +133,6 @@ function mapHeldMessage(
   return next;
 }
 
-/** Read positions are snowflakes of the channel's origin; compare them as numbers. */
-function isNewerId(candidate: string, than: string | undefined): boolean {
-  if (than === undefined) return true;
-  try {
-    return BigInt(candidate) > BigInt(than);
-  } catch {
-    return false;
-  }
-}
 
 function withLoadState(states: Map<string, ChannelLoadState>, channelId: string, state: ChannelLoadState | null): Map<string, ChannelLoadState> {
   const next = new Map(states);
@@ -289,6 +283,12 @@ interface ChatState {
   addMessage: (channelId: string, message: MessageWithUser) => void;
   addRealtimeMessage: (channelId: string, message: MessageWithUser) => void;
   updateMessage: (message: MessageWithUser) => void;
+  /** A message's pin changed: the row keeps everything else, a draft or a reaction landing meanwhile included. */
+  applyMessagePin: (channelId: string, messageId: string, pin: MessagePinState) => void;
+  /** What a message shows of the thread that grew from it. Null when the thread went. */
+  applyThreadSummary: (channelId: string, messageId: string, thread: ThreadSummary | null) => void;
+  /** A poll's count moved. What goes to a whole channel has no `myVotes`: the reader's own stay. */
+  applyPoll: (channelId: string, messageId: string, poll: PollInfo) => void;
   removeMessage: (messageId: string, channelId: string) => void;
   /**
    * Whether the store holds the signed-in user's reaction with `emoji` on
@@ -969,6 +969,50 @@ export const useChatStore = create<ChatState>((set, get) => ({
         current.map(m => m.id === normalizedMessage.id ? normalizedMessage : m),
       );
       return { messages: newMessages, detachedChannels };
+    });
+  },
+
+  applyMessagePin: (channelId, messageId, pin) => {
+    set((state) => {
+      const detachedChannels = mapHeldMessage(state.detachedChannels, messageId, (message) => ({ ...message, ...pin }));
+      const current = state.messages.get(channelId);
+      if (!current?.some((message) => message.id === messageId)) {
+        return detachedChannels === state.detachedChannels ? state : { detachedChannels };
+      }
+      const messages = new Map(state.messages);
+      messages.set(channelId, current.map((message) => (message.id === messageId ? { ...message, ...pin } : message)));
+      return { messages, detachedChannels };
+    });
+  },
+
+  applyThreadSummary: (channelId, messageId, thread) => {
+    set((state) => {
+      const withThread = (message: MessageWithUser): MessageWithUser => ({ ...message, thread: thread ?? undefined });
+      const detachedChannels = mapHeldMessage(state.detachedChannels, messageId, withThread);
+      const current = state.messages.get(channelId);
+      if (!current?.some((message) => message.id === messageId)) {
+        return detachedChannels === state.detachedChannels ? state : { detachedChannels };
+      }
+      const messages = new Map(state.messages);
+      messages.set(channelId, current.map((message) => (message.id === messageId ? withThread(message) : message)));
+      return { messages, detachedChannels };
+    });
+  },
+
+  applyPoll: (channelId, messageId, poll) => {
+    set((state) => {
+      const merged = (message: MessageWithUser): MessageWithUser => ({
+        ...message,
+        poll: { ...poll, myVotes: poll.myVotes ?? message.poll?.myVotes },
+      });
+      const detachedChannels = mapHeldMessage(state.detachedChannels, messageId, merged);
+      const current = state.messages.get(channelId);
+      if (!current?.some((message) => message.id === messageId)) {
+        return detachedChannels === state.detachedChannels ? state : { detachedChannels };
+      }
+      const messages = new Map(state.messages);
+      messages.set(channelId, current.map((message) => (message.id === messageId ? merged(message) : message)));
+      return { messages, detachedChannels };
     });
   },
 

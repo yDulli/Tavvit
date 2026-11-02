@@ -459,9 +459,10 @@ describe('detached account: registration 409 + suffixed stub creation (detach sp
         url: '/api/auth/register',
         payload: {
           username: 'alice@peer.example',
-          password: 'password123',
+          password: 'tests-only-passphrase',
           homeInstance: 'peer.example',
           homeUserId: 'new-home-uid',
+          attachProof: 'a'.repeat(64),
         },
       });
       expect(res.statusCode).toBe(409);

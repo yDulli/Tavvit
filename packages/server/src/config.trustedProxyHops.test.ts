@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { trustProxyFor } from './utils/trustProxy.js';
 
 /**
  * Two things are under test here, and they are two halves of one value.
@@ -21,11 +22,11 @@ async function loadHops(): Promise<number> {
   return mod.config.trustedProxyHops;
 }
 
-async function clientAddress(headers: Record<string, string>, hops: number): Promise<string> {
-  const app: FastifyInstance = Fastify({ trustProxy: hops });
+async function clientAddress(headers: Record<string, string>, hops: number, remoteAddress = '127.0.0.1'): Promise<string> {
+  const app: FastifyInstance = Fastify({ trustProxy: trustProxyFor(hops) });
   app.get('/whoami', async (request) => ({ ip: request.ip }));
   try {
-    const response = await app.inject({ method: 'GET', url: '/whoami', headers });
+    const response = await app.inject({ method: 'GET', url: '/whoami', headers, remoteAddress });
     const body: unknown = JSON.parse(response.body);
     const { ip } = body as { ip: string };
     return ip;
@@ -151,12 +152,22 @@ describe('the client address rate limits are keyed on', () => {
   });
 
   it('at zero hops ignores the header entirely, which is the directly exposed case', async () => {
-    // The residue the default cannot close on its own: with one trusted hop, a
-    // lone entry is indistinguishable from a proxy's word, so an instance
-    // exposed with no proxy in front trusts what the client sent. Zero is the
-    // setting for that deployment, and it reads the socket address whatever
-    // the client claims.
+    // From a private peer (the proxy's network, here loopback) a lone entry is
+    // the proxy's word. Zero reads the socket address whatever the client claims.
     expect(await clientAddress({ 'x-forwarded-for': '9.9.9.9' }, 1)).toBe('9.9.9.9');
     expect(await clientAddress({ 'x-forwarded-for': '9.9.9.9' }, 0)).toBe('127.0.0.1');
+  });
+
+  it('believes nothing a client sends when it connected directly from outside, whatever the count', async () => {
+    // What a count alone could not tell apart: no proxy sits on a public address, so the
+    // connecting peer is the client and its forwarded hops are its own words (utils/trustProxy.ts).
+    expect(await clientAddress({ 'x-forwarded-for': '9.9.9.9' }, 1, '203.0.113.50')).toBe('203.0.113.50');
+    expect(await clientAddress({ 'x-forwarded-for': '1.1.1.1, 9.9.9.9' }, 2, '203.0.113.50')).toBe('203.0.113.50');
+  });
+
+  it('believes a proxy on the Docker network or this machine, IPv6 and mapped IPv4 alike', async () => {
+    expect(await clientAddress({ 'x-forwarded-for': '203.0.113.7' }, 1, '172.18.0.3')).toBe('203.0.113.7');
+    expect(await clientAddress({ 'x-forwarded-for': '203.0.113.7' }, 1, '::ffff:172.18.0.3')).toBe('203.0.113.7');
+    expect(await clientAddress({ 'x-forwarded-for': '203.0.113.7' }, 1, '::1')).toBe('203.0.113.7');
   });
 });

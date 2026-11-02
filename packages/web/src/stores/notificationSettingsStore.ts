@@ -3,6 +3,7 @@ import {
   resolveChannelNotificationPolicy,
   type ChannelNotificationPolicy,
   type NotificationSetting,
+  type SpaceDefaultNotificationLevel,
   type UpdateNotificationSettingRequest,
 } from '@backspace/shared';
 import { getApiForOrigin } from '../utils/crossStoreResolvers';
@@ -23,8 +24,29 @@ import { getApiForOrigin } from '../utils/crossStoreResolvers';
  *
  * The store imports no other store (it reaches the instance through
  * `crossStoreResolvers`), so `utils/alerts.ts` and the components can read it
- * without import cycles.
+ * without import cycles. The one input it needs from the space list, a
+ * space's default level, comes through `setSpaceDefaultLevelLookup`.
  */
+
+/**
+ * The level the moderators of a space chose as its members' starting point
+ * (`Space.defaultNotificationLevel`), by the instance that hosts the space and
+ * its id there; null when the space has none. spaceStore holds the spaces and
+ * registers the lookup when it loads.
+ */
+export type SpaceDefaultLevelLookup = (origin: string, spaceId: string) => SpaceDefaultNotificationLevel | null;
+
+let lookupSpaceDefaultLevel: SpaceDefaultLevelLookup = () => null;
+
+/** Called once by spaceStore, which owns the space list. */
+export function setSpaceDefaultLevelLookup(lookup: SpaceDefaultLevelLookup): void {
+  lookupSpaceDefaultLevel = lookup;
+}
+
+/** The default level of a space, or null when it has none or the space is not known. */
+export function spaceDefaultNotificationLevel(origin: string, spaceId: string | undefined): SpaceDefaultNotificationLevel | null {
+  return spaceId === undefined ? null : lookupSpaceDefaultLevel(origin, spaceId);
+}
 
 export interface NotificationTarget {
   spaceId: string;
@@ -47,8 +69,10 @@ interface NotificationSettingsState {
   /** Keyed by `notificationSettingKey`. A cleared setting stays as an entry with nothing chosen. */
   settings: ReadonlyMap<string, NotificationSetting>;
   /**
-   * Bumped when a timed mute ends, so components that show a mute re-render
-   * at that moment. Read alongside `settings`; its value means nothing else.
+   * Bumped when something a policy depends on changes outside `settings`: a
+   * timed mute ends, or a space's default level changes
+   * (`spaceDefaultsChanged`). Components that show a policy read it alongside
+   * `settings` so they re-render at that moment; its value means nothing else.
    */
   clock: number;
 
@@ -60,6 +84,8 @@ interface NotificationSettingsState {
   update: (origin: string, target: NotificationTarget, change: UpdateNotificationSettingRequest) => Promise<NotificationSetting>;
   /** The instance is gone (removed or signed out of): drop what it said. */
   forgetOrigin: (origin: string) => void;
+  /** A space's default level changed (spaceStore reports it): bumps `clock`. */
+  spaceDefaultsChanged: () => void;
   reset: () => void;
 }
 
@@ -83,6 +109,11 @@ function newer(current: NotificationSetting | undefined, incoming: NotificationS
 }
 
 export const useNotificationSettingsStore = create<NotificationSettingsState>((set, get) => {
+  /** A new `clock` value, always different from the last one. */
+  function tick(): void {
+    set({ clock: Math.max(Date.now(), get().clock + 1) });
+  }
+
   /** Arms one timer for the nearest end of a timed mute still in the future. */
   function scheduleExpiry(settings: ReadonlyMap<string, NotificationSetting>): void {
     if (expiryTimer !== null) {
@@ -99,7 +130,7 @@ export const useNotificationSettingsStore = create<NotificationSettingsState>((s
     if (nearest === Infinity) return;
     expiryTimer = setTimeout(() => {
       expiryTimer = null;
-      set({ clock: Date.now() });
+      tick();
       scheduleExpiry(get().settings);
     }, Math.min(nearest - now + 1, MAX_TIMER_MS));
   }
@@ -172,6 +203,10 @@ export const useNotificationSettingsStore = create<NotificationSettingsState>((s
       commit(settings);
     },
 
+    spaceDefaultsChanged: () => {
+      tick();
+    },
+
     reset: () => {
       sessionGeneration += 1;
       loadSeq.clear();
@@ -196,8 +231,9 @@ export function selectNotificationSetting(
 
 /**
  * What applies to a space channel at `now`: the inheritance and mute rules of
- * `resolveChannelNotificationPolicy`, over this store's entries. A space id
- * that is not known yet resolves to the defaults.
+ * `resolveChannelNotificationPolicy`, over this store's entries and the
+ * space's default level (`spaceDefaultNotificationLevel`). A space id that is
+ * not known yet resolves to the defaults.
  */
 export function selectChannelNotificationPolicy(
   state: Pick<NotificationSettingsState, 'settings'>,
@@ -208,5 +244,5 @@ export function selectChannelNotificationPolicy(
 ): ChannelNotificationPolicy {
   const spaceSetting = spaceId ? selectNotificationSetting(state, origin, { spaceId, channelId: null }) : undefined;
   const channelSetting = selectNotificationSetting(state, origin, { spaceId: spaceId ?? '', channelId });
-  return resolveChannelNotificationPolicy(spaceSetting, channelSetting, now);
+  return resolveChannelNotificationPolicy(spaceSetting, channelSetting, now, spaceDefaultNotificationLevel(origin, spaceId));
 }

@@ -7,11 +7,15 @@ import { useInstanceStore, RemoteLoginRequiredError, type RemoteLoginReason } fr
 import { api, createApiClient } from '../api/client';
 import { parseInviteInput, buildInstanceJoinUrl } from '../utils/inviteParser';
 import { Avatar } from './ui/Avatar';
+import { Icon } from './ui/Icon';
+import { LegalLinks } from './legal/LegalLinks';
+import { LoadingSpinner } from './ui/LoadingSpinner';
 import type { InvitePreview } from '@backspace/shared';
 import { describeError } from '../i18n/errors';
 import { isAlreadyMemberError, isJoinRequestPendingError, isNotRequestableError, JoinRequestRequiredError } from '../utils/joinErrors';
 import { sendInviteJoinRequest, type InviteRequestOutcome } from '../utils/inviteJoinRequest';
 import { FallbackNotice } from './modals/RemotePasswordStep';
+import { useFederationEnabled } from '../hooks/useFederationEnabled';
 
 type JoinPhase = 'preview' | 'connect' | 'fallback' | 'other-instance' | 'already-member' | 'request-sent';
 
@@ -24,10 +28,31 @@ type JoinPhase = 'preview' | 'connect' | 'fallback' | 'other-instance' | 'alread
  */
 type JoinAction = 'join' | 'request';
 
+/** The one card the page is: the error's and the invite's. */
+const CARD = 'modal-panel my-auto flex-shrink-0 w-full max-w-[440px] glass-modal rounded-lg p-6 desktop:p-8 z-10';
+
+/** The page around the card: where you are, a way to the start, and the legal line every public page has. */
+function JoinFrame({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation('common');
+  return (
+    <div className="stage-light isolate h-full overflow-y-auto flex flex-col items-center bg-surface-base relative px-4 py-6">
+      <div aria-hidden="true" className="hero-light" />
+      <a href="/" className="mb-6 flex w-fit items-center gap-2.5 self-start">
+        <img src="/icons/logo-mark.svg" alt="" className="h-6 w-6" />
+        <span className="text-lead font-semibold tracking-[-0.01em] text-txt-primary">{t('appName')}</span>
+      </a>
+      {children}
+      <LegalLinks className="mt-6 justify-center" />
+    </div>
+  );
+}
+
 export function JoinPage() {
   const { t } = useTranslation(['auth', 'common']);
   const { inviteCode: rawInviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
+  // Joining from another server needs federation; a private server offers only its own sign-in.
+  const federation = useFederationEnabled() === true;
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
   const loadUser = useAuthStore((s) => s.loadUser);
@@ -46,7 +71,9 @@ export function JoinPage() {
   }, [token, user, isAuthLoading, loadUser]);
 
   const [preview, setPreview] = useState<InvitePreview | null>(null);
-  const [previewError, setPreviewError] = useState('');
+  // Why the preview did not load, kept as a fact; the words are this render's,
+  // so they follow the reader's language.
+  const [previewFailure, setPreviewFailure] = useState<{ cause: unknown } | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(true);
 
   const [phase, setPhase] = useState<JoinPhase>('preview');
@@ -80,20 +107,13 @@ export function JoinPage() {
 
   // Fetch preview on mount
   useEffect(() => {
-    if (!rawInviteCode) {
-      setPreviewError(t('auth:join.errors.noCode'));
-      setIsLoadingPreview(false);
-      return;
-    }
-
     if (!parsed) {
-      setPreviewError(t('auth:join.errors.invalidCode'));
       setIsLoadingPreview(false);
       return;
     }
 
     setIsLoadingPreview(true);
-    setPreviewError('');
+    setPreviewFailure(null);
 
     const fetchPreview = async () => {
       try {
@@ -108,14 +128,22 @@ export function JoinPage() {
         setAction(data.visibility === 'request' ? 'request' : 'join');
         setRequestSpaceId(data.spaceId);
       } catch (err) {
-        setPreviewError(err instanceof Error ? describeError(err) : t('auth:join.errors.loadFailed'));
+        setPreviewFailure({ cause: err });
       } finally {
         setIsLoadingPreview(false);
       }
     };
 
     fetchPreview();
-  }, [rawInviteCode, parsed]);
+  }, [parsed]);
+
+  const previewError = !rawInviteCode
+    ? t('auth:join.errors.noCode')
+    : !parsed
+      ? t('auth:join.errors.invalidCode')
+      : previewFailure
+        ? (previewFailure.cause instanceof Error ? describeError(previewFailure.cause) : t('auth:join.errors.loadFailed'))
+        : '';
 
   /**
    * Run the page's action against the invite's instance: send the join
@@ -263,59 +291,52 @@ export function JoinPage() {
   // Loading state
   if (isLoadingPreview) {
     return (
-      <div className="h-full overflow-y-auto flex flex-col items-center bg-surface-base relative">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgb(var(--accent-primary)/0.06)_0%,transparent_50%)]" />
+      <JoinFrame>
         <div className="my-auto flex-shrink-0 text-center relative z-10">
-          <svg className="animate-spin w-10 h-10 text-accent-primary mx-auto mb-4" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <p className="text-txt-tertiary">{t('auth:join.loading')}</p>
+          <LoadingSpinner size={28} className="mb-3 text-txt-tertiary" />
+          <p className="text-ui text-txt-tertiary">{t('auth:join.loading')}</p>
         </div>
-      </div>
+      </JoinFrame>
     );
   }
 
   // Error state — invalid/expired invite
   if (previewError || !preview) {
     return (
-      <div className="h-full overflow-y-auto flex flex-col items-center bg-surface-base relative">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgb(var(--accent-primary)/0.06)_0%,transparent_50%)]" />
-        <div className="my-auto flex-shrink-0 w-full max-w-[480px] bg-surface-elevated rounded-md p-8 shadow-elevation-high relative z-10 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-accent-rose/10 flex items-center justify-center">
-            <svg className="w-8 h-8 text-accent-rose" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
-          </div>
-          <h1 className="text-xl font-bold text-txt-primary mb-2">{t('auth:join.invalid.title')}</h1>
-          <p className="text-txt-secondary text-sm mb-6">
+      <JoinFrame>
+        <div className={`${CARD} text-center`}>
+          <span aria-hidden="true" className="empty-state-icon mx-auto mb-4 text-txt-danger">
+            <Icon name="alert" size={18} />
+          </span>
+          <h1 className="page-title mb-2">{t('auth:join.invalid.title')}</h1>
+          <p className="text-ui leading-[1.5] text-txt-secondary mb-6">
             {previewError || t('auth:join.invalid.description')}
           </p>
           {token ? (
             <button
+              type="button"
               onClick={() => navigate('/channels/@me')}
-              className="px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors"
+              className="btn-hero btn-lg"
             >
               {t('auth:join.invalid.backToApp')}
             </button>
           ) : (
             <Link
               to="/login"
-              className="inline-block px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors"
+              className="btn-hero btn-lg"
             >
               {t('common:actions.logIn')}
             </Link>
           )}
         </div>
-      </div>
+      </JoinFrame>
     );
   }
 
   // Main invite page
   return (
-    <div className="h-full overflow-y-auto flex flex-col items-center bg-surface-base relative">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgb(var(--accent-primary)/0.06)_0%,transparent_50%)]" />
-      <div className="my-auto flex-shrink-0 w-full max-w-[480px] bg-surface-elevated rounded-md p-8 shadow-elevation-high relative z-10">
+    <JoinFrame>
+      <div className={CARD}>
         {/* Space preview */}
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
@@ -328,22 +349,25 @@ export function JoinPage() {
               palette="space"
             />
           </div>
-          <p className="text-xs text-txt-tertiary uppercase tracking-wide mb-1">{action === 'request' ? t('auth:join.invitedToRequest') : t('auth:join.invitedTo')}</p>
-          <h1 className="text-2xl font-bold text-txt-primary">{preview.spaceName}</h1>
+          <p className="label-mono mb-1">{action === 'request' ? t('auth:join.invitedToRequest') : t('auth:join.invitedTo')}</p>
+          <h1 className="page-title">{preview.spaceName}</h1>
           {preview.description && (
-            <p className="text-txt-secondary text-sm mt-2">{preview.description}</p>
+            <p className="mt-2 text-ui leading-[1.5] text-txt-secondary">{preview.description}</p>
           )}
-          <div className="flex items-center justify-center gap-4 mt-3 text-xs text-txt-tertiary">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-txt-tertiary/40" />
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-meta text-txt-tertiary">
+            <span className="flex items-center gap-1.5">
+              <Icon name="users" size={13} />
               {t('auth:join.memberCount', { count: preview.memberCount })}
             </span>
-            <span>{preview.instanceName}</span>
+            <span className="flex min-w-0 items-center gap-1.5">
+              <Icon name="globe" size={12} className="flex-shrink-0" />
+              <span className="truncate">{preview.instanceName}</span>
+            </span>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
+          <div role="alert" className="mb-4 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">
             {error}
           </div>
         )}
@@ -352,21 +376,21 @@ export function JoinPage() {
         {phase === 'preview' && (
           <>
             {action === 'request' && (
-              <p className="mb-3 text-center text-txt-secondary text-sm">{t('auth:join.request.notice')}</p>
+              <p className="mb-3 text-center text-ui leading-[1.5] text-txt-secondary">{t('auth:join.request.notice')}</p>
             )}
             {token && user ? (
               /* Authenticated user — show identity card + join */
               <div className="space-y-3">
-                <div className="flex items-center gap-3 bg-surface-input rounded-lg p-3">
+                <div className="surface-card flex items-center gap-3 rounded-lg p-3">
                   <Avatar
                     src={user.avatar || null}
                     name={user.displayName || user.username}
-                    size={40}
+                    size={32}
                     avatarColor={user.avatarColor}
                   />
                   <div className="min-w-0">
-                    <p className="text-txt-primary font-medium text-sm truncate">{user.displayName || user.username}</p>
-                    <p className="text-txt-tertiary text-xs truncate">@{user.username}</p>
+                    <p className="text-ui font-medium text-txt-primary truncate">{user.displayName || user.username}</p>
+                    <p className="font-mono text-label text-txt-tertiary truncate">@{user.username}</p>
                   </div>
                 </div>
                 {action === 'request' && (
@@ -378,75 +402,86 @@ export function JoinPage() {
                     maxLength={JOIN_REQUEST_MESSAGE_MAX}
                     rows={2}
                     disabled={isJoining}
-                    className="input-standard w-full py-2 text-sm resize-none"
+                    className="input-standard w-full py-2 resize-none"
                   />
                 )}
                 <button
+                  type="button"
                   onClick={handleJoin}
                   disabled={isJoining}
-                  className="w-full py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-busy={isJoining}
+                  className="btn-hero btn-lg w-full"
                 >
                   {action === 'request'
                     ? (isJoining ? t('auth:join.request.sending') : t('auth:join.request.askAs', { name: user.displayName || user.username }))
                     : (isJoining ? t('auth:join.joining') : t('auth:join.joinAs', { name: user.displayName || user.username }))}
                 </button>
-                <p className="text-center text-xs text-txt-tertiary">
+                <p className="text-center text-meta text-txt-tertiary">
                   {t('auth:join.notYou')}{' '}
                   <button
                     type="button"
                     onClick={() => { logout(); navigate(`/login${redirectParam}`); }}
-                    className="text-accent-primary hover:underline"
+                    className="rounded-sm text-txt-secondary underline decoration-border-soft underline-offset-2 transition-colors hover:text-txt-primary"
                   >
                     {t('auth:join.switchAccount')}
                   </button>
-                  {' · '}
-                  <button
-                    type="button"
-                    onClick={() => { setPhase('other-instance'); setError(''); }}
-                    className="text-accent-primary hover:underline"
-                  >
-                    {t('auth:join.otherInstance')}
-                  </button>
+                  {federation && (
+                    <>
+                      {' · '}
+                      <button
+                        type="button"
+                        onClick={() => { setPhase('other-instance'); setError(''); }}
+                        className="rounded-sm text-txt-secondary underline decoration-border-soft underline-offset-2 transition-colors hover:text-txt-primary"
+                      >
+                        {t('auth:join.otherInstance')}
+                      </button>
+                    </>
+                  )}
                 </p>
               </div>
             ) : token ? (
               /* Token exists but user still loading */
               <button
+                type="button"
                 disabled
-                className="w-full py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-hero btn-lg w-full"
               >
                 {t('common:states.loading')}
               </button>
             ) : (
               /* Unauthenticated user */
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Link
                   to={`/login${redirectParam}`}
-                  className="block w-full py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors text-center"
+                  className="btn-hero btn-lg w-full"
                 >
                   {action === 'request' ? t('auth:join.request.loginToAsk') : t('auth:join.loginToJoin')}
                 </Link>
                 <Link
                   to={`/register${redirectParam}`}
-                  className="block w-full py-2.5 bg-surface-input hover:bg-surface-elevated text-txt-primary font-medium rounded transition-colors text-center"
+                  className="btn-outline btn-lg w-full"
                 >
                   {t('auth:join.createAccount')}
                 </Link>
 
-                {/* Divider */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-border-soft" />
-                  <span className="text-xs text-txt-tertiary">{t('common:labels.or')}</span>
-                  <div className="flex-1 h-px bg-border-soft" />
-                </div>
+                {federation && (
+                  <>
+                    {/* Divider */}
+                    <div className="flex items-center gap-3 py-1">
+                      <div className="flex-1 h-px bg-border-soft" />
+                      <span className="text-meta text-txt-tertiary">{t('common:labels.or')}</span>
+                      <div className="flex-1 h-px bg-border-soft" />
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={() => { setPhase('other-instance'); setError(''); }}
-                  className="block w-full py-2.5 bg-surface-input hover:bg-surface-elevated text-txt-primary font-medium rounded transition-colors text-center"
-                >
-                  {t('auth:join.otherInstance')}
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => { setPhase('other-instance'); setError(''); }}
+                      className="btn-outline btn-lg w-full"
+                    >
+                      {t('auth:join.otherInstance')}
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </>
@@ -455,7 +490,7 @@ export function JoinPage() {
         {/* Phase: other-instance — domain input for federation redirect */}
         {phase === 'other-instance' && (
           <form onSubmit={handleOtherInstanceRedirect}>
-            <label className="block text-xs font-bold text-txt-secondary uppercase mb-1.5">
+            <label className="field-label">
               {t('auth:join.domain.label')}
             </label>
             <div className="flex gap-2 mb-1.5">
@@ -464,24 +499,24 @@ export function JoinPage() {
                 value={otherDomain}
                 onChange={(e) => setOtherDomain(e.target.value)}
                 placeholder={t('auth:join.domain.placeholder')}
-                className="input-standard flex-1 py-2.5"
+                className="input-standard min-w-0 flex-1 h-10"
                 autoFocus
               />
               <button
                 type="submit"
                 disabled={!otherDomain.trim()}
-                className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+                className="btn-hero btn-lg"
               >
                 {t('auth:join.domain.go')}
               </button>
             </div>
-            <p className="text-xs text-txt-tertiary mb-4">
+            <p className="text-meta leading-[1.45] text-txt-tertiary mb-4">
               {t('auth:join.domain.redirectNote')}
             </p>
             <button
               type="button"
               onClick={() => { setPhase('preview'); setOtherDomain(''); setError(''); }}
-              className="px-4 py-2.5 text-txt-tertiary hover:text-txt-secondary text-sm transition-colors"
+              className="btn-quiet"
             >
               {t('common:actions.back')}
             </button>
@@ -493,19 +528,19 @@ export function JoinPage() {
           <form onSubmit={handleConnect}>
             <input type="text" autoComplete="username" value={user?.username || ''} readOnly tabIndex={-1} className="sr-only" />
             {/* Identity card */}
-            <div className="flex items-center gap-3 bg-surface-input rounded-lg p-3 mb-3">
+            <div className="surface-card flex items-center gap-3 rounded-lg p-3 mb-3">
               <Avatar
                 src={user?.avatar || null}
                 name={user?.displayName || user?.username || '?'}
-                size={40}
+                size={32}
                 avatarColor={user?.avatarColor}
               />
               <div className="min-w-0">
-                <p className="text-txt-primary font-medium text-sm truncate">{user?.displayName || user?.username}</p>
-                <p className="text-txt-tertiary text-xs truncate">@{user?.username}</p>
+                <p className="text-ui font-medium text-txt-primary truncate">{user?.displayName || user?.username}</p>
+                <p className="font-mono text-label text-txt-tertiary truncate">@{user?.username}</p>
               </div>
             </div>
-            <p className="text-txt-tertiary text-xs mb-4">
+            <p className="text-meta text-txt-tertiary mb-4">
               <Trans
                 t={t}
                 i18nKey="auth:join.connect.connectingTo"
@@ -514,7 +549,7 @@ export function JoinPage() {
               />
             </p>
             <div className="mb-4">
-              <label className="block text-xs font-bold text-txt-secondary uppercase mb-1.5">
+              <label className="field-label">
                 {t('common:labels.password')}
               </label>
               <input
@@ -527,7 +562,7 @@ export function JoinPage() {
                 autoFocus
                 autoComplete="current-password"
               />
-              <p className="text-xs text-txt-tertiary mt-1">
+              <p className="text-meta leading-[1.45] text-txt-tertiary mt-1.5">
                 {t('auth:join.connect.passwordNote', { host: hostDisplay })}
               </p>
             </div>
@@ -535,14 +570,15 @@ export function JoinPage() {
               <button
                 type="button"
                 onClick={() => { setPhase('preview'); setPassword(''); setError(''); }}
-                className="px-4 py-2.5 text-txt-tertiary hover:text-txt-secondary text-sm transition-colors"
+                className="btn-quiet btn-lg"
               >
                 {t('common:actions.back')}
               </button>
               <button
                 type="submit"
                 disabled={isJoining || !password}
-                className="flex-1 py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-busy={isJoining}
+                className="btn-hero btn-lg flex-1"
               >
                 {isJoining
                   ? t('auth:join.connect.submitting')
@@ -572,7 +608,7 @@ export function JoinPage() {
             <FallbackNotice reason={fallbackReason} host={hostDisplay} className="mb-3" />
             <div className="mb-4 space-y-3">
               <div>
-                <label className="block text-xs font-bold text-txt-secondary uppercase mb-1.5">{t('common:labels.username')}</label>
+                <label className="field-label">{t('common:labels.username')}</label>
                 <input
                   type="text"
                   value={fallbackUsername}
@@ -584,7 +620,7 @@ export function JoinPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-txt-secondary uppercase mb-1.5">{t('auth:join.fallback.passwordLabel')}</label>
+                <label className="field-label">{t('auth:join.fallback.passwordLabel')}</label>
                 <input
                   type="password"
                   value={fallbackPassword}
@@ -601,14 +637,15 @@ export function JoinPage() {
               <button
                 type="button"
                 onClick={() => { setPhase('connect'); setFallbackPassword(''); setError(''); }}
-                className="px-4 py-2.5 text-txt-tertiary hover:text-txt-secondary text-sm transition-colors"
+                className="btn-quiet btn-lg"
               >
                 {t('common:actions.back')}
               </button>
               <button
                 type="submit"
                 disabled={isJoining || !fallbackUsername || !fallbackPassword}
-                className="flex-1 py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-busy={isJoining}
+                className="btn-hero btn-lg flex-1"
               >
                 {isJoining
                   ? t('auth:join.fallback.submitting')
@@ -618,7 +655,7 @@ export function JoinPage() {
           </form>
         )}
       </div>
-    </div>
+    </JoinFrame>
   );
 }
 
@@ -629,20 +666,19 @@ function RequestSentCard({ spaceName, outcome, onDone }: { spaceName: string; ou
   const { t } = useTranslation(['auth']);
   return (
     <div className="text-center" role="status">
-      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-accent-mint/10 flex items-center justify-center">
-        <svg className="w-6 h-6 text-accent-mint" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-      <p className="text-txt-primary font-medium mb-1">
+      <span aria-hidden="true" className="empty-state-icon mx-auto mb-3 text-txt-positive">
+        <Icon name="check" size={18} />
+      </span>
+      <p className="text-body font-semibold text-txt-primary mb-1">
         {outcome === 'sent'
           ? t('auth:join.requestSent.title', { space: spaceName })
           : t('auth:join.requestSent.pendingTitle', { space: spaceName })}
       </p>
-      <p className="text-txt-tertiary text-xs mb-4">{t('auth:join.requestSent.body')}</p>
+      <p className="text-ui leading-[1.5] text-txt-secondary mb-4">{t('auth:join.requestSent.body')}</p>
       <button
+        type="button"
         onClick={onDone}
-        className="px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors"
+        className="btn-hero btn-lg w-full"
       >
         {t('auth:join.invalid.backToApp')}
       </button>
@@ -659,16 +695,15 @@ function AlreadyMemberCard({ spaceName, spaceId, navigate }: { spaceName: string
 
   return (
     <div className="text-center">
-      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-accent-mint/10 flex items-center justify-center">
-        <svg className="w-6 h-6 text-accent-mint" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-      </div>
-      <p className="text-txt-primary font-medium mb-1">{t('auth:join.alreadyMember.title', { space: spaceName })}</p>
-      <p className="text-txt-tertiary text-xs mb-4">{t('auth:join.alreadyMember.redirecting')}</p>
+      <span aria-hidden="true" className="empty-state-icon mx-auto mb-3 text-txt-positive">
+        <Icon name="check" size={18} />
+      </span>
+      <p className="text-body font-semibold text-txt-primary mb-1">{t('auth:join.alreadyMember.title', { space: spaceName })}</p>
+      <p className="text-ui leading-[1.5] text-txt-secondary mb-4">{t('auth:join.alreadyMember.redirecting')}</p>
       <button
+        type="button"
         onClick={() => navigate(`/channels/${spaceId}`)}
-        className="px-6 py-2.5 bg-accent-primary hover:bg-accent-primary/80 text-white font-medium rounded transition-colors"
+        className="btn-hero btn-lg w-full"
       >
         {t('auth:join.alreadyMember.go', { space: spaceName })}
       </button>

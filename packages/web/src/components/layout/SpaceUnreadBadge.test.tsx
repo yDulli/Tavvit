@@ -21,7 +21,8 @@ describe('space unread message badge', () => {
   it('sums message counts of the space\'s channels and caps the number at 99+', () => {
     useUnreadCountStore.getState().hydrate('', { a: 80, b: 25, c: 999 });
     render(<SpaceUnreadBadge spaceId="space" />);
-    expect(screen.getByText('99+')).toHaveClass('bg-notification');
+    expect(screen.getByText('99+')).toHaveClass('count-badge');
+    expect(screen.getByText('99+')).not.toHaveClass('count-badge-muted');
     // Counts stop at 100 per channel, so above 99 the label says no more than the badge.
     expect(screen.getByText('More than 99 unread messages')).toBeInTheDocument();
   });
@@ -45,8 +46,7 @@ describe('space unread message badge', () => {
     useUnreadCountStore.getState().hydrate('', { a: 7 });
     useNotificationSettingsStore.getState().apply('', { spaceId: 'space', channelId: null, level: null, muted: true, mutedUntil: Date.now() + 60000, updatedAt: Date.now() });
     render(<SpaceUnreadBadge spaceId="space" />);
-    expect(screen.getByText('7')).toHaveClass('bg-interactive-muted');
-    expect(screen.getByText('7')).not.toHaveClass('bg-notification');
+    expect(screen.getByText('7')).toHaveClass('count-badge-muted');
     expect(useUnreadCountStore.getState().counts[''].a).toBe(7);
     expect(useChatStore.getState().unreadChannels.has('a')).toBe(true);
   });

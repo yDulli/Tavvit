@@ -1,3 +1,4 @@
+import { loginWithSecondFactor } from '../api/secondFactorLogin';
 import { create } from 'zustand';
 import type {
   User,
@@ -742,10 +743,7 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
         // The login itself is the verification, so there is nothing to pre-check.
         finalUsername = bareUsername;
         try {
-          response = await tempClient.auth.login({
-            username: bareUsername,
-            password,
-          });
+          response = await loginWithSecondFactor(tempClient, origin, { username: bareUsername, password });
         } catch {
           throw new RemoteLoginRequiredError(bareUsername, 'credential-refused');
         }
@@ -769,6 +767,17 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
         credentialOrigin = credential.origin;
         finalUsername = `${bareUsername}@${trueHomeHost}`;
 
+        // The target asks the home whether this is really its person, which takes two things the
+        // home has to do first: trust the target, and give this session a proof for it. Without
+        // them the registration is refused and the login below is what is left.
+        let attachProof: string | undefined;
+        try {
+          await homeApi.federation.ensurePeered({ remoteOrigin: origin, reason: 'instance_connect' });
+          attachProof = (await homeApi.auth.attachProof(targetHost)).token;
+        } catch (err) {
+          console.warn(`[federation] The home could not vouch for this account on ${origin}:`, err);
+        }
+
         // 2a: Attempt registration with namespaced username
         let refusal: RemoteLoginReason | null = null;
         try {
@@ -778,6 +787,7 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
             displayName: displayName || currentUser.displayName || undefined,
             homeInstance: trueHomeHost,
             homeUserId: trueHomeUserId,
+            attachProof,
           });
         } catch (err) {
           // Already registered, or registration closed: fall through to login,
@@ -865,7 +875,7 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
 
     try {
       const tempClient = createApiClient(origin, () => null);
-      const response = await tempClient.auth.login({ username, password });
+      const response = await loginWithSecondFactor(tempClient, origin, { username, password });
 
       // Fetch instance info for the label
       const info = await tempClient.instance.info();

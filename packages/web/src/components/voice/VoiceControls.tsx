@@ -6,6 +6,13 @@ import { ScreenShareSettingsPopover } from './ScreenShareSettingsPopover';
 import { ConnectionInfoPopover } from './ConnectionInfoPopover';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { handleCameraAction, handleDisconnectAction, handleScreenShareAction, reconnectVoice } from '../../utils/voiceActions';
+import { Icon } from '../ui/Icon';
+import { VoiceIcon } from './voiceIcons';
+
+// The three toggles under the status: a hairline at rest, the violet of a control that is on.
+const toggleBase = 'flex h-8 flex-1 items-center justify-center rounded-md border transition-colors duration-100';
+const toggleOff = `${toggleBase} border-border-hard text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary active:bg-interactive-active`;
+const toggleOn = `${toggleBase} border-accent-primary/40 bg-accent-primary/15 text-accent-soft hover:bg-accent-primary/25 active:bg-accent-primary/30`;
 
 /**
  * VoiceControls renders the voice status + button rows.
@@ -89,12 +96,6 @@ export function VoiceControls() {
       ? 'text-status-online'
       : 'text-status-idle';
 
-  const statusBgColor = connectionError
-    ? 'bg-accent-rose/20'
-    : isLiveKitConnected
-      ? 'bg-status-online/20'
-      : 'bg-status-idle/20';
-
   const qualityColor =
     connectionQuality === 'excellent' || connectionQuality === 'good'
       ? 'text-status-online'
@@ -104,53 +105,48 @@ export function VoiceControls() {
           ? 'text-txt-danger'
           : statusColor; // 'unknown' falls back to connection-state color
 
-  const btnBase = 'flex-1 h-[34px] flex items-center justify-center rounded-[4px] transition-colors';
-  const btnDefaultStyle = 'bg-surface-base text-txt-tertiary hover:bg-surface-channel hover:text-txt-secondary';
-
   return (
     <>
       {/* Row 1: Signal icon + status text + disconnect */}
-      <div className="relative flex items-center gap-2 px-3 pt-3 pb-1">
+      <div className="relative flex items-center gap-2 px-2 pt-2 pb-1.5">
         <button
           ref={connectionBtnRef}
           onClick={() => {
             setShowConnectionInfo(!showConnectionInfo);
             if (!showConnectionInfo) setShowShareMenu(false);
           }}
-          className={`w-8 h-8 rounded-lg ${statusBgColor} flex items-center justify-center flex-shrink-0 hover:brightness-125 transition-all`}
+          data-active={showConnectionInfo ? 'true' : undefined}
+          aria-haspopup="dialog"
+          aria-expanded={showConnectionInfo}
+          aria-label={t('voice:controls.connectionInfo')}
+          className={`icon-btn icon-btn-lg ${qualityColor}`}
           title={t('voice:controls.connectionInfo')}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className={qualityColor}>
-            <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z" />
-          </svg>
+          <VoiceIcon name="signal" size={18} />
         </button>
 
         <div className="min-w-0 flex-1">
-          <div title={statusLabel} className={`truncate text-[13px] font-semibold leading-[18px] ${statusColor}`}>
+          <div title={statusLabel} className={`truncate text-ui font-medium leading-[18px] ${statusColor}`}>
             {statusLabel}
           </div>
-          <div title={detailLabel} className="text-[12px] text-txt-tertiary truncate leading-[16px]">
+          <div title={detailLabel} className="text-meta text-txt-tertiary truncate leading-4">
             {detailLabel}
           </div>
         </div>
 
-        <div className="flex items-center gap-0.5 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {voiceConnectionStatus === 'disconnected' && connectionError && (
-            <button
-              onClick={handleRetry}
-              className="px-2 h-7 text-[12px] text-accent-primary hover:bg-interactive-hover rounded"
-            >
+            <button onClick={handleRetry} className="btn-outline btn-sm">
               {t('voice:status.retry')}
             </button>
           )}
           <button
             onClick={handleDisconnect}
-            className="w-7 h-7 flex items-center justify-center text-txt-tertiary hover:text-txt-primary transition-colors rounded"
+            aria-label={t('voice:controls.disconnect')}
+            className="icon-btn icon-btn-lg text-txt-secondary hover:bg-accent-rose/15 hover:text-txt-danger active:bg-accent-rose/25"
             title={t('voice:controls.disconnect')}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 9C10.4 9 8.85 9.25 7.4 9.72V12.82C7.4 13.22 7.17 13.56 6.84 13.72C5.86 14.21 4.97 14.84 4.18 15.57C4 15.75 3.75 15.85 3.48 15.85C3.2 15.85 2.95 15.74 2.77 15.56L0.29 13.08C0.11 12.9 0 12.65 0 12.38C0 12.1 0.11 11.85 0.29 11.67C3.34 8.78 7.46 7 12 7S20.66 8.78 23.71 11.67C23.89 11.85 24 12.1 24 12.38C24 12.65 23.89 12.9 23.71 13.08L21.23 15.56C21.05 15.74 20.8 15.85 20.52 15.85C20.25 15.85 20 15.75 19.82 15.57C19.03 14.84 18.14 14.21 17.16 13.72C16.83 13.56 16.6 13.22 16.6 12.82V9.72C15.15 9.25 13.6 9 12 9Z" />
-            </svg>
+            <Icon name="phone" size={18} className="rotate-[135deg]" />
           </button>
         </div>
 
@@ -163,27 +159,16 @@ export function VoiceControls() {
       </div>
 
       {/* Row 2: Camera, Screen Share, Noise Suppression */}
-      <div className="relative flex items-center gap-1 px-3 pb-2 pt-1">
+      <div className="relative flex items-center gap-1 px-2 pb-2">
         {canSpeak && (
           <button
             onClick={handleCameraAction}
-            className={`${btnBase} ${
-              isCameraOn
-                ? 'bg-surface-base text-status-online hover:bg-surface-channel'
-                : btnDefaultStyle
-            }`}
+            aria-pressed={isCameraOn}
+            aria-label={isCameraOn ? t('voice:controls.cameraOff') : t('voice:controls.cameraOn')}
+            className={isCameraOn ? toggleOn : toggleOff}
             title={isCameraOn ? t('voice:controls.cameraOff') : t('voice:controls.cameraOn')}
           >
-            {isCameraOn ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17 10.5V7C17 6.45 16.55 6 16 6H4C3.45 6 3 6.45 3 7V17C3 17.55 3.45 18 4 18H16C16.55 18 17 17.55 17 17V13.5L21 17.5V6.5L17 10.5Z" />
-              </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17 10.5V7C17 6.45 16.55 6 16 6H4C3.45 6 3 6.45 3 7V17C3 17.55 3.45 18 4 18H16C16.55 18 17 17.55 17 17V13.5L21 17.5V6.5L17 10.5Z" />
-                <line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-              </svg>
-            )}
+            {isCameraOn ? <Icon name="video" size={18} /> : <VoiceIcon name="video-off" size={18} />}
           </button>
         )}
 
@@ -195,46 +180,23 @@ export function VoiceControls() {
             // only claims a popup in the state where it actually opens one.
             aria-haspopup={isScreenSharing ? 'dialog' : undefined}
             aria-expanded={isScreenSharing ? showShareMenu : undefined}
-            className={`${btnBase} ${
-              isScreenSharing
-                ? 'bg-surface-base text-status-online hover:bg-surface-channel'
-                : btnDefaultStyle
-            }`}
+            aria-label={isScreenSharing ? t('voice:controls.shareOptions') : t('voice:controls.shareScreen')}
+            className={isScreenSharing ? toggleOn : toggleOff}
             title={isScreenSharing ? t('voice:controls.shareOptions') : t('voice:controls.shareScreen')}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20 18C21.1 18 22 17.1 22 16V6C22 4.9 21.1 4 20 4H4C2.9 4 2 4.9 2 6V16C2 17.1 2.9 18 4 18H0V20H24V18H20ZM4 6H20V16H4V6Z" />
-              <path d="M15 11L11 14V12H9V10H11V8L15 11Z" />
-            </svg>
+            <VoiceIcon name="screen-share" size={18} />
           </button>
         )}
 
         {/* AI Noise Suppression (RNNoise) */}
         <button
           onClick={() => setRnnoiseEnabled(!rnnoiseEnabled)}
-          className={`${btnBase} ${
-            rnnoiseEnabled
-              ? 'bg-surface-base text-status-online hover:bg-surface-channel'
-              : btnDefaultStyle
-          }`}
+          aria-pressed={rnnoiseEnabled}
+          aria-label={rnnoiseEnabled ? t('voice:controls.noiseSuppressionOff') : t('voice:controls.noiseSuppressionOn')}
+          className={rnnoiseEnabled ? toggleOn : toggleOff}
           title={rnnoiseEnabled ? t('voice:controls.noiseSuppressionOff') : t('voice:controls.noiseSuppressionOn')}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" opacity={rnnoiseEnabled ? 0.15 : 0.08} />
-            <path d="M12 1a2 2 0 012 2v1a2 2 0 01-4 0V3a2 2 0 012-2z" />
-            <path d="M12 7c-1.66 0-3 1.34-3 3v2c0 1.66 1.34 3 3 3s3-1.34 3-3v-2c0-1.66-1.34-3-3-3z" />
-            <path d="M17 11v1c0 2.76-2.24 5-5 5s-5-2.24-5-5v-1H5v1c0 3.53 2.61 6.43 6 6.92V21h2v-2.08c3.39-.49 6-3.39 6-6.92v-1h-2z" />
-            {rnnoiseEnabled ? (
-              <>
-                <circle cx="18" cy="5" r="1.2" fill="currentColor" />
-                <circle cx="20" cy="8" r="0.9" fill="currentColor" opacity="0.7" />
-                <circle cx="6" cy="5" r="1.2" fill="currentColor" />
-                <circle cx="4" cy="8" r="0.9" fill="currentColor" opacity="0.7" />
-              </>
-            ) : (
-              <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
-            )}
-          </svg>
+          <VoiceIcon name={rnnoiseEnabled ? 'waves' : 'waves-off'} size={18} />
         </button>
 
         {/* Screen share menu — quality settings + stop, anchored to the share button */}

@@ -1,4 +1,5 @@
 import { stickerUrl } from '@backspace/shared/src/stickers.js';
+import { withoutSpoilers } from '@backspace/shared/src/spoilers.js';
 import { eq, inArray } from 'drizzle-orm';
 import sharp from 'sharp';
 import type { Embed } from '@backspace/shared';
@@ -28,7 +29,7 @@ export async function probeRemoteImageDimensions(
   try {
     const response = await safeFetch(url, {
       headers: {
-        'User-Agent': 'BackspaceBot/1.0',
+        'User-Agent': 'TavvitBot/1.0',
         Accept: 'image/*',
         Range: `bytes=0-${PROBE_BYTES - 1}`,
       },
@@ -74,7 +75,8 @@ export function extractUrls(content: string | null): string[] {
 
   // A sticker already has its own renderer; do not also unfurl its asset URL.
   if (stickerUrl(content)) return [];
-  const matches = content.match(/https?:\/\/[^\s<>"{}|\\^`[\]]+/g);
+  // A preview of a link inside a spoiler would give away what the spoiler hides.
+  const matches = withoutSpoilers(content).match(/https?:\/\/[^\s<>"{}|\\^`[\]]+/g);
   if (!matches) return [];
 
   // Deduplicate while preserving order

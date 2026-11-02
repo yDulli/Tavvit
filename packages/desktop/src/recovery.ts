@@ -2,7 +2,7 @@ import { app, shell } from 'electron';
 import type { BrowserWindow, MenuItemConstructorOptions } from 'electron';
 import type { AppUpdater } from 'electron-updater';
 import path from 'path';
-import { loadInstanceUrl, clearInstanceUrl, getPickerPath } from './instanceUrl';
+import { DEV_URL_ENV, resolveAppUrl } from './appUrl';
 import { RELEASES_URL } from './updateStatus';
 import { getDesktopLanguage, translateDesktop, type DesktopLanguage } from './l10n';
 
@@ -103,14 +103,12 @@ export function extractErrorCode(err: unknown): string | null {
 interface MenuActions {
   onShow: () => void;
   onHide: () => void;
-  onChangeInstance: () => void;
+  onReload: () => void;
   onCheckForUpdates: () => void;
   onRestartToInstall: () => void;
-  // Manual-download path: opens the releases page for builds that cannot
+  // Manual-download path: opens the download page for builds that cannot
   // install their own updates.
   onOpenReleases: () => void;
-  // AGPL-3.0 § 13: open the Corresponding Source of the running instance.
-  onOpenSource: () => void;
   onQuit: () => void;
 }
 
@@ -195,8 +193,7 @@ export function buildTrayMenuTemplate(
 
   items.push(
     { type: 'separator' },
-    { label: t('tray.changeInstance'), click: actions?.onChangeInstance },
-    { label: t('tray.sourceCode'), click: actions?.onOpenSource },
+    { label: t('tray.reload'), click: actions?.onReload },
     { type: 'separator' },
     { label: t('tray.quit'), click: actions?.onQuit },
   );
@@ -213,7 +210,6 @@ export function buildAppMenuTemplate(
   const t = (key: Parameters<typeof translateDesktop>[1]) => translateDesktop(language, key);
   const appSubmenu: MenuItemConstructorOptions[] = [
     { role: 'about' },
-    { label: t('tray.sourceCode'), click: () => actions?.onOpenSource?.() },
   ];
 
   const checkItem = checkForUpdatesItem(state, () => actions?.onCheckForUpdates?.(), language);
@@ -224,7 +220,7 @@ export function buildAppMenuTemplate(
 
   appSubmenu.push(
     { type: 'separator' },
-    { label: t('tray.changeInstance'), click: actions?.onChangeInstance },
+    { label: t('tray.reload'), click: actions?.onReload },
     { type: 'separator' },
     { role: 'hide' },
     { role: 'hideOthers' },
@@ -381,6 +377,18 @@ export function setOnQuitRequested(cb: (() => void) | null): void {
   onQuitRequestedCallback = cb;
 }
 
+let onInstallRequestedCallback: (() => void) | null = null;
+
+/**
+ * Wired by main.ts to its installUpdateNow (updateInstall.ts), so the tray's
+ * and the recovery page's "Restart to Install Update" install the same way as
+ * the toast and the automatic install: silently, then the app starts again,
+ * back in the tray when it was there.
+ */
+export function setOnInstallRequested(cb: (() => void) | null): void {
+  onInstallRequestedCallback = cb;
+}
+
 // ---------------------------------------------------------------------------
 // Recovery mode entry
 // ---------------------------------------------------------------------------
@@ -428,7 +436,6 @@ export type RecoveryAction =
   | 'reload'
   | 'check-update'
   | 'install-update'
-  | 'change-instance'
   | 'open-releases'
   | 'quit';
 
@@ -436,7 +443,6 @@ const VALID_ACTIONS: ReadonlySet<string> = new Set([
   'reload',
   'check-update',
   'install-update',
-  'change-instance',
   'open-releases',
   'quit',
 ]);
@@ -448,17 +454,13 @@ export function isValidRecoveryAction(action: unknown): action is RecoveryAction
 export function handleRecoveryAction(action: RecoveryAction): void {
   switch (action) {
     case 'reload': {
-      const url = loadInstanceUrl();
       // Optimistic exit — clear recovery state BEFORE loading. If the load
       // fails, did-fail-load re-enters recovery. If it stalls, boot timer fires.
       recoveryStore.markRecoveryExited();
       recoveryStore.update({ mode: 'normal', reason: null });
       console.log('[recovery] exited (reload)');
-      if (!url) {
-        mainWindowRef?.loadFile(getPickerPath(), { query: { lang: getDesktopLanguage() } });
-        return;
-      }
-      mainWindowRef?.loadURL(url);
+      mainWindowRef?.loadURL(resolveAppUrl({ isPackaged: app.isPackaged, devUrl: process.env[DEV_URL_ENV] }));
+      mainWindowRef?.show();
       return;
     }
     case 'check-update': {
@@ -472,27 +474,13 @@ export function handleRecoveryAction(action: RecoveryAction): void {
       // recovery.html UI hides the Restart button unless updateState='downloaded',
       // but a buggy/malicious renderer could send this action at any time.
       if (recoveryStore.get().updateState !== 'downloaded') return;
-      // Direct quitAndInstall — does NOT rely on autoInstallOnAppQuit.
+      // Direct install — does NOT rely on autoInstallOnAppQuit.
       // Force-kill-fix: if user reaches recovery and clicks here, install
       // happens cleanly even if the on-quit hook would otherwise be bypassed.
-      autoUpdaterRef?.quitAndInstall();
-      return;
-    }
-    case 'change-instance': {
-      // Non-destructive: don't clear the saved URL here. The picker pre-fills it
-      // and offers Cancel — the URL is only overwritten when the user explicitly
-      // Connects to a different one. (clearInstanceUrl IPC remains for explicit
-      // "disconnect" operations from the web settings UI.)
-      recoveryStore.markRecoveryExited();
-      recoveryStore.update({ mode: 'normal', reason: null });
-      console.log('[recovery] exited (change-instance)');
-      mainWindowRef?.loadFile(getPickerPath(), { query: { lang: getDesktopLanguage() } });
-      // Ensure visible — tray clicks may happen with window hidden, and the
-      // recovery surface should also remain visible during the navigation.
-      // When invoked from recovery.html (window already showing), these are
-      // idempotent no-ops.
-      mainWindowRef?.show();
-      mainWindowRef?.focus();
+      // Silent, then the app starts again (main.ts installUpdateNow); without
+      // the callback the updater is asked directly.
+      if (onInstallRequestedCallback) onInstallRequestedCallback();
+      else autoUpdaterRef?.quitAndInstall(true, true);
       return;
     }
     case 'open-releases': {

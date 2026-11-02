@@ -7,6 +7,7 @@ import { getChannelSpaceId, hasPermission, computePermissions, isDmMember, Permi
 import type { LiveKitTokenRequest, LiveKitTokenResponse } from '@backspace/shared';
 import { getDb, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
+import { memberActionRefusal } from '../utils/spaceModeration.js';
 
 /**
  * Generate a LiveKit token for a federated call participant.
@@ -78,8 +79,14 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
       if (!spaceId) {
         return sendError(reply, 404, 'channel_not_found');
       }
-      if (!hasPermission(request.userId, spaceId, PermissionBits.CONNECT, channelId)) {
+      // VIEW_CHANNEL as well: CONNECT alone would let a member hear a hidden voice channel (permissions.md).
+      if (!hasPermission(request.userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.CONNECT, channelId)) {
         return sendError(reply, 403, 'voice_connect_forbidden');
+      }
+      // A timed-out member joins no voice in the space (docs/systems/spaces.md, "Moderation").
+      const timeout = memberActionRefusal(spaceId, request.userId);
+      if (timeout) {
+        return sendError(reply, timeout.status, timeout.code, timeout.details);
       }
       // Check SPEAK and STREAM permissions for granular token grants
       const perms = computePermissions(request.userId, spaceId, channelId);
@@ -92,9 +99,11 @@ export async function livekitRoutes(app: FastifyInstance): Promise<void> {
 
     const identity = `${request.userId}:${request.username}`;
 
+    // Short, since it is what someone put out of a call could come back with: a connected client
+    // gets new ones from LiveKit by itself, and joining anew asks here first.
     const token = new AccessToken(config.livekit.apiKey, config.livekit.apiSecret, {
       identity,
-      ttl: '1h',
+      ttl: '10m',
     });
 
     // Build canPublishSources based on permissions

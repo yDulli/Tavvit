@@ -1,22 +1,55 @@
 {
   "update": {
-    "laterHint": "You can install this later from Settings, Desktop",
+    "laterHint": "It installs by itself the next time Tavvit is in the tray or you are away.",
+    "laterHintSettings": "You can install this later from Settings, Desktop",
     "dismiss": "Dismiss this update",
     "failed": {
       "title": "Update could not be installed",
-      "body": "Backspace {{version}} downloaded, but installing it failed. You can install it by hand instead."
+      "body": "Tavvit {{version}} downloaded, but installing it failed. You can install it by hand instead."
     },
     "ready": {
       "title": "Update ready",
-      "body": "Backspace {{version}} is downloaded and ready to install."
+      "body": "Tavvit {{version}} is downloaded. It installs by itself when you are away, never during a call, or now with a restart."
     },
     "available": {
-      "title": "Backspace {{version}} is available",
+      "title": "Tavvit {{version}} is available",
       "body": "This build cannot update itself, so download the new version to move up.",
       "bodyWithCurrent": "You are on {{currentVersion}}. This build cannot update itself, so download the new version to move up."
     },
     "restartNow": "Restart now",
     "download": "Download",
     "later": "Later"
+  },
+  "download": {
+    "kicker": "Desktop",
+    "title": "Tavvit for Windows",
+    "description": "The same Tavvit in its own window. It can start with your computer, keeps you signed in, and push-to-talk works while another app is in front.",
+    "button": "Download for Windows",
+    "short": "Download",
+    "meta": "v{{version}} · {{size}}",
+    "detected": "Detected: {{system}}",
+    "unsupported": "There is no desktop app for {{system}} yet. The download is the Windows installer; on this device Tavvit runs in the browser.",
+    "otherVersions": "All installers",
+    "arch": {
+      "x64": "Windows, 64-bit (x64)",
+      "arm64": "Windows on ARM (arm64)"
+    },
+    "system": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS",
+      "other": "this system"
+    },
+    "none": "No desktop release has been published on this server yet. Tavvit works fully in the browser in the meantime.",
+    "failed": "The list of downloads could not be loaded.",
+    "retry": "Try again",
+    "releasedOn": "Released {{date}}",
+    "checksum": "SHA-512",
+    "browserNote": "No installation needed to use Tavvit:",
+    "openInBrowser": "open it in the browser",
+    "backToApp": "Back to Tavvit",
+    "signIn": "Log in"
   }
 }

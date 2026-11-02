@@ -42,6 +42,11 @@ export function roleView(row: RoleRow, withPermissions: boolean): Role {
     color: row.color ?? '#b9bbbe',
     position: row.position ?? 0,
     isEveryone: row.id === row.spaceId,
+    description: row.description ?? null,
+    colorSecondary: row.colorSecondary ?? null,
+    icon: row.icon ?? null,
+    hoist: row.hoist !== 0,
+    mentionable: row.mentionable === 1,
     createdAt: row.createdAt,
   };
   if (withPermissions) role.permissions = row.permissions ?? '0';

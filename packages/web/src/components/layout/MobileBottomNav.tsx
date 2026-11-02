@@ -1,12 +1,11 @@
 import React from 'react';
+import { SlidingMark } from '../ui/SlidingMark';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../stores/uiStore';
 import { useChatStore } from '../../stores/chatStore';
 import { isIncomingRequest, useSocialStore } from '../../stores/socialStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useNavigate } from 'react-router-dom';
-import { useInstanceUpdateBadge } from '../../hooks/useInstanceUpdateBadge';
-import { useHubUpdateState } from '../../hooks/useHubUpdateState';
 
 export function MobileBottomNav() {
   const { t } = useTranslation('mobile');
@@ -21,9 +20,6 @@ export function MobileBottomNav() {
   const dmChannels = useSpaceStore((s) => s.dmChannels);
   const readStates = useChatStore((s) => s.readStates);
   const requests = useSocialStore((s) => s.requests);
-  const updateBadge = useInstanceUpdateBadge();
-  // The Backspace row lives on the You screen, so its dot surfaces here.
-  const hubUpdated = useHubUpdateState().state === 'updated';
 
   // Hide when any screen is pushed (chat, settings, friends, etc.)
   if (mobileStack.length > 0) return null;
@@ -89,40 +85,49 @@ export function MobileBottomNav() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
         </svg>
       ),
-      badge: (pendingIncoming.length > 0 || updateBadge || hubUpdated) ? ('dot' as const) : null,
+      badge: pendingIncoming.length > 0 ? ('dot' as const) : null,
     },
   ];
 
   return (
     <nav
-      className="glass-bubble flex items-center justify-around shrink-0"
+      className="sliding-list lit flex items-stretch shrink-0 border-t border-border-hard bg-surface-base"
       style={{
         paddingBottom: 'var(--safe-bottom)',
         height: 'calc(56px + var(--safe-bottom))',
       }}
     >
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => handleTab(tab.id)}
-          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 relative transition-colors ${
-            mobileScreen === tab.id ? 'text-accent-primary' : 'text-txt-secondary'
-          }`}
-        >
-          <div className="relative">
-            {tab.icon}
-            {tab.badge === 'dot' && (
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-notification rounded-full" />
-            )}
-            {typeof tab.badge === 'number' && (
-              <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-notification text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                {tab.badge > 99 ? '99+' : tab.badge}
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-medium">{tab.label}</span>
-        </button>
-      ))}
+      <SlidingMark variant="line" selector="[data-active-line]" />
+      {tabs.map((tab) => {
+        const isActive = mobileScreen === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => handleTab(tab.id)}
+            aria-current={isActive ? 'page' : undefined}
+            className={`relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 transition-colors active:bg-interactive-active ${
+              isActive ? 'text-txt-primary' : 'text-txt-secondary hover:text-txt-primary'
+            }`}
+          >
+            {/* The tab you are on, as on the top bar of the desktop: primary
+                text and a violet edge on the bar's own hairline. */}
+            {isActive && <span aria-hidden="true" data-active-line="" className="active-line absolute -top-px left-1/2 h-[2px] w-10 -translate-x-1/2" />}
+            <div className="relative">
+              {tab.icon}
+              {tab.badge === 'dot' && (
+                <span className="absolute -top-px -right-px h-2 w-2 rounded-full bg-txt-primary ring-2 ring-surface-base" />
+              )}
+              {typeof tab.badge === 'number' && (
+                <span className="count-badge absolute -top-1 -right-2.5 ring-2 ring-surface-base">
+                  {tab.badge > 99 ? '99+' : tab.badge}
+                </span>
+              )}
+            </div>
+            <span className="max-w-full truncate text-2xs font-medium">{tab.label}</span>
+          </button>
+        );
+      })}
     </nav>
   );
 }

@@ -30,6 +30,7 @@ vi.mock('../db/index.js', () => ({
 // accounts never relay regardless. The ws layer is fully mocked.
 vi.mock('../ws/handler.js', () => ({
   connectionManager: {
+    closeSessionSockets: vi.fn(),
     sendToUser: vi.fn(),
     sendToSpace: vi.fn(),
     sendToDmMembers: vi.fn(),

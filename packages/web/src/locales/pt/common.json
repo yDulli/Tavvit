@@ -1,5 +1,5 @@
 {
-  "appName": "Backspace",
+  "appName": "Tavvit",
   "actions": {
     "save": "Salvar",
     "cancel": "Cancelar",
@@ -82,7 +82,8 @@
     "searchMembers": "Pesquisar membros…",
     "noMembersFound": "Nenhum membro encontrado",
     "or": "ou",
-    "nameAZ": "Nome (A-Z)"
+    "nameAZ": "Nome (A-Z)",
+    "adminConsole": "Console de administração"
   },
   "time": {
     "today": "Hoje às {{time}}",
@@ -111,7 +112,12 @@
   },
   "language": {
     "label": "Idioma",
-    "description": "Menus, botões e mensagens do sistema aparecem neste idioma. As mensagens de outras pessoas continuam como foram escritas."
+    "description": "Menus, botões e mensagens do sistema aparecem neste idioma. As mensagens de outras pessoas continuam como foram escritas.",
+    "translate": {
+      "label": "Traduzir mensagens para",
+      "same": "O idioma do app",
+      "hint": "Clique com o botão direito em uma mensagem, ou segure no celular, e escolha Traduzir."
+    }
   },
   "crash": {
     "title": "Algo deu errado",
@@ -119,19 +125,186 @@
     "details": "Detalhes do erro"
   },
   "app": {
-    "loading": "Carregando o Backspace"
+    "loading": "Carregando o Tavvit"
   },
   "chrome": {
     "toggleMemberList": "Alternar lista de membros",
     "closeSettings": "Fechar configurações"
   },
-  "sourceCode": {
-    "label": "Código-fonte (AGPL)",
-    "labelWithBuild": "Código-fonte (AGPL) · {{build}}",
-    "title": "Ver o código-fonte da versão que esta instância está executando (AGPL-3.0)"
-  },
   "devices": {
     "newAudioInput": "{{label}} detectado. Escolha-o nas configurações de voz para trocar.",
     "unnamedAudioInput": "Novo dispositivo de áudio"
+  },
+  "connection": {
+    "lost": "Conexão perdida. Reconectando…"
+  },
+  "switcher": {
+    "title": "Alternador rápido",
+    "placeholder": "Ir para uma conversa, amigo, espaço ou canal…",
+    "noResults": "Nada corresponde a “{{query}}”.",
+    "hint": "↑ ↓ para mover, Enter para abrir, Esc para fechar",
+    "kind": {
+      "dm": "Conversa",
+      "friend": "Amigo",
+      "space": "Espaço",
+      "channel": "Canal",
+      "page": "Página"
+    }
+  },
+  "activity": {
+    "line": {
+      "playing": "Jogando {{name}}",
+      "listening": "Ouvindo {{name}}",
+      "watching": "Assistindo {{name}}",
+      "streaming": "Transmitindo {{name}}"
+    }
+  },
+  "contextMenu": {
+    "cut": "Recortar",
+    "paste": "Colar",
+    "selectAll": "Selecionar tudo",
+    "noSuggestions": "Nenhuma sugestão de ortografia",
+    "addToDictionary": "Adicionar ao dicionário",
+    "pasteBlocked": "O navegador não permite que o Tavvit leia a área de transferência. Cole com {{shortcut}}.",
+    "clipboardFailed": "Não foi possível copiar para a área de transferência.",
+    "copyUsername": "Copiar nome de usuário",
+    "usernameCopied": "Nome de usuário copiado",
+    "editChannel": "Editar canal",
+    "markRead": "Marcar como lida",
+    "markReadFailed": "Não foi possível marcar como lida. Tente novamente.",
+    "jumpToMessage": "Ir para a mensagem",
+    "copyMessageLink": "Copiar link da mensagem"
+  },
+  "badges": {
+    "staff": {
+      "name": "Equipe",
+      "description": "Faz parte da equipe que administra esta instância"
+    },
+    "bot": {
+      "name": "Bot",
+      "description": "Um programa operado por uma pessoa"
+    },
+    "server_owner": {
+      "name": "Dono do espaço",
+      "description": "É dono deste espaço"
+    },
+    "administrator": {
+      "name": "Administrador",
+      "description": "Tem a permissão de Administrador neste espaço"
+    },
+    "moderator": {
+      "name": "Moderador",
+      "description": "Pode moderar membros e mensagens neste espaço"
+    },
+    "helper": {
+      "name": "Ajudante",
+      "description": "Ajuda as pessoas a se orientarem nesta instância"
+    },
+    "founder": {
+      "name": "Membro fundador",
+      "description": "Estava aqui quando esta instância começou"
+    },
+    "early_supporter": {
+      "name": "Apoiador inicial",
+      "description": "Apoiou esta instância logo no início"
+    },
+    "bug_hunter": {
+      "name": "Caça-bugs",
+      "description": "Encontrou e relatou um bug"
+    },
+    "developer": {
+      "name": "Desenvolvedor",
+      "description": "Trabalha no Tavvit ou nesta instância"
+    },
+    "creator": {
+      "name": "Criador",
+      "description": "Cria coisas de que a comunidade gosta"
+    },
+    "event_participant": {
+      "name": "Participante de evento",
+      "description": "Participou de um evento desta instância"
+    },
+    "community_contributor": {
+      "name": "Colaborador da comunidade",
+      "description": "Ajuda a comunidade a crescer"
+    },
+    "beta_tester": {
+      "name": "Testador beta",
+      "description": "Testou novos recursos antes de todo mundo"
+    },
+    "verified": {
+      "name": "Verificado",
+      "description": "Os administradores desta instância conferiram quem está por trás deste espaço"
+    },
+    "partner": {
+      "name": "Parceiro",
+      "description": "Uma comunidade com a qual esta instância trabalha"
+    }
+  },
+  "review": {
+    "verification": {
+      "none": "Não solicitada",
+      "pending": "Em análise",
+      "needs_info": "Faltam informações",
+      "verified": "Aprovada",
+      "rejected": "Recusada",
+      "revoked": "Revogada"
+    },
+    "discovery": {
+      "none": "Não enviada",
+      "pending": "Em análise",
+      "changes_requested": "Alterações solicitadas",
+      "approved": "Publicada",
+      "rejected": "Recusada",
+      "withdrawn": "Retirada"
+    },
+    "categories": {
+      "gaming": "Jogos",
+      "music": "Música",
+      "art": "Arte e design",
+      "technology": "Tecnologia",
+      "education": "Educação",
+      "science": "Ciência",
+      "entertainment": "Entretenimento",
+      "sports": "Esportes",
+      "community": "Comunidade",
+      "other": "Outros"
+    },
+    "actions": {
+      "submit": "Solicitação enviada",
+      "withdraw": "Solicitação retirada",
+      "approve": "Aprovada",
+      "reject": "Recusada",
+      "request_info": "Mais informações solicitadas",
+      "request_changes": "Alterações solicitadas",
+      "revoke": "Verificação revogada",
+      "admin_withdraw": "Listagem tirada do ar",
+      "changed": "De volta à análise após uma edição",
+      "migrated": "Encaminhada para análise"
+    },
+    "toast": {
+      "verification": "Verificação de {{space}}: {{status}}",
+      "discovery": "Listagem de {{space}} em Explorar: {{status}}"
+    },
+    "history": "Histórico",
+    "noHistory": "Nada aconteceu ainda.",
+    "unknownActor": "Uma conta removida",
+    "noDescription": "Nenhuma descrição ainda.",
+    "members_one": "{{count}} membro",
+    "members_many": "{{count}} membros",
+    "members_other": "{{count}} membros"
+  },
+  "notFound": {
+    "title": "Não há nada aqui",
+    "body": "Este endereço não leva a lugar nenhum. O link pode estar antigo ou escrito errado.",
+    "toApp": "Voltar ao app",
+    "toHome": "Ir para a página inicial"
+  },
+  "emailPrompt": {
+    "unconfirmed": "Seu endereço {{address}} ainda não foi confirmado. Procure nosso e-mail ou verifique nas configurações.",
+    "missing": "Adicione um endereço de e-mail para poder voltar se esquecer sua senha.",
+    "required": "Confirme seu endereço de e-mail para criar spaces e iniciar conversas com pessoas que não são suas amigas.",
+    "open": "Abrir configurações",
+    "dismiss": "Agora não"
   }
 }

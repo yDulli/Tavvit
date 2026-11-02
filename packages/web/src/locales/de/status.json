@@ -1,0 +1,35 @@
+{
+  "title": "Status",
+  "lead": "Ob hier gerade alles läuft.",
+  "checking": "Wird geprüft …",
+  "unreachable": "Der Server antwortet nicht. Versuche es gleich noch einmal.",
+  "allGood": "Alles läuft.",
+  "someDown": "Etwas läuft nicht.",
+  "services": {
+    "chat": "Nachrichten und Konten",
+    "uploads": "Dateien hochladen",
+    "voice": "Sprache und Video",
+    "mail": "E-Mail"
+  },
+  "states": {
+    "ok": "Läuft",
+    "down": "Läuft nicht",
+    "off": "Hier nicht eingerichtet"
+  },
+  "notes": "Von den Betreibern dieses Servers",
+  "noteOngoing": "Seit {{date}}",
+  "noteEnded": "{{date}} bis {{until}}",
+  "limit": "Diese Seite läuft auf demselben Server. Fällt der ganze Server aus, ist auch sie weg.",
+  "frame": {
+    "home": "Startseite",
+    "help": "Hilfe",
+    "changelog": "Neuigkeiten",
+    "status": "Status",
+    "terms": "Nutzungsbedingungen",
+    "privacy": "Datenschutz",
+    "imprint": "Impressum",
+    "report": "Inhalt melden",
+    "developers": "Entwickler",
+    "roadmap": "Roadmap"
+  }
+}

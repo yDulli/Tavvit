@@ -1,19 +1,34 @@
+import { SpaceEventsPage } from '../events/SpaceEventsView';
+import { SpaceWelcomeGate } from '../modals/SpaceWelcomeGate';
+import { useRecentPlacesStore } from '../../stores/recentPlacesStore';
+import { useAuthStore } from '../../stores/authStore';
 import React, { useEffect } from 'react';
-import { isMobileViewport } from '../../platform/interfaceScale';
-import { useParams, useNavigate } from 'react-router-dom';
+import { isCompactViewport, isMobileViewport } from '../../platform/interfaceScale';
+import { useMatch, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
-import { SpaceSidebar } from './SpaceSidebar';
+import { TopBar } from './TopBar';
 import { ChannelSidebar } from './ChannelSidebar';
 import { MainContent } from './MainContent';
+import { AdminConsole, SettingsPanelSuspense } from '../modals/lazySettingsPanels';
+import { AnnouncementBar } from '../ui/AnnouncementBar';
+import { AmbientLight } from './AmbientLight';
+import { PlaceStage } from './PlaceStage';
 import { RightPanel } from './RightPanel';
+import { ThreadPanel } from '../chat/ThreadPanel';
+import { useThreadStore } from '../../stores/threadStore';
 import { MobileShell } from './MobileShell';
 import { ImagePreview } from '../chat/ImagePreview';
 import { CreateSpaceModal } from '../modals/CreateSpace';
+import { DiscordImportModal } from '../modals/DiscordImportModal';
+import { SpaceProfileModal } from '../modals/SpaceProfileModal';
 import { JoinSpaceModal } from '../modals/JoinSpace';
 import { CreateChannelModal } from '../modals/CreateChannel';
 import { CreateCategoryModal } from '../modals/CreateCategory';
 import { InviteModal } from '../modals/InviteModal';
+import { ReportModal } from '../legal/ReportForm';
+import { ForwardMessageModal } from '../modals/ForwardMessageModal';
+import { CreatePollModal } from '../modals/CreatePollModal';
 import { UserSettingsModal } from '../modals/UserSettings';
 import { SpaceSettingsModal } from '../modals/SpaceSettings';
 import { ChannelSettingsModal } from '../modals/ChannelSettingsModal';
@@ -29,11 +44,13 @@ import { PictureInPicture } from '../voice/PictureInPicture';
 import { SoundController } from '../voice/SoundController';
 import { GlobalAudioRenderer } from '../voice/GlobalAudioRenderer';
 import { NotificationController } from '../NotificationController';
+import { PushController } from '../PushController';
 import { UserProfilePopoutLayer } from '../ui/UserProfilePopoutLayer';
 import { ToastContainer } from '../ui/ToastContainer';
+import { ConnectionBanner } from '../ui/ConnectionBanner';
+import { EmailPromptBar } from '../ui/EmailPromptBar';
+import { QuickSwitcher } from '../ui/QuickSwitcher';
 import { UpdateToast } from '../ui/UpdateToast';
-import { InstanceUpdateToast } from '../ui/InstanceUpdateToast';
-import { ContextMenuRenderer } from '../ui/ContextMenuRenderer';
 import { useAuth } from '../../hooks/useAuth';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
 import { useWebSocket } from '../../hooks/useWebSocket';
@@ -42,6 +59,7 @@ import { useLiveKit } from '../../hooks/useLiveKit';
 import { useKeybinds } from '../../hooks/useKeybinds';
 import { useDeepLinkHandler } from '../../platform/deepLink';
 import { initActivityBridge, teardownActivityBridge } from '../../platform/activityBridge';
+import { initCallStateBridge, teardownCallStateBridge } from '../../platform/callStateBridge';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -52,7 +70,10 @@ import { isAppSystemAudioSource, userDevicesSignature } from '../../utils/system
 export function AppLayout() {
   const { t } = useTranslation('common');
   const { spaceId, channelId } = useParams<{ spaceId?: string; channelId?: string }>();
+  const eventsPage = useMatch('/channels/:spaceId/events') !== null;
   const navigate = useNavigate();
+  const inAdminConsole = useMatch('/admin/*') !== null;
+  const threadOpen = useThreadStore((s) => s.open !== null);
   
   // Global interaction handler to resume AudioContext
   useEffect(() => {
@@ -238,9 +259,9 @@ export function AppLayout() {
   const setCurrentChannel = useChatStore((s) => s.setCurrentChannel);
   const loadMessages = useChatStore((s) => s.loadMessages);
   const setIsMobile = useUIStore((s) => s.setIsMobile);
+  const setIsCompact = useUIStore((s) => s.setIsCompact);
   const setShowDms = useUIStore((s) => s.setShowDms);
 
-  const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const isMobile = useUIStore((s) => s.isMobile);
   
   const channels = useSpaceStore((s) => s.channels);
@@ -262,7 +283,7 @@ export function AppLayout() {
   }, [connectVoice, disconnectVoice]);
 
   // Initialize WebSocket
-  useWebSocket();
+  const { isConnected: homeConnected } = useWebSocket();
 
   // Federation toast notifications for remote instance connection state changes
   useFederationToasts();
@@ -270,7 +291,7 @@ export function AppLayout() {
   // Keybinds handler
   useKeybinds();
 
-  // Deep link handler for Electron (backspace:// protocol)
+  // Deep link handler for Electron (tavvit:// protocol)
   useDeepLinkHandler();
 
   // Electron activity detection bridge (game/app process scanning → activityStore)
@@ -279,13 +300,23 @@ export function AppLayout() {
     return () => teardownActivityBridge();
   }, []);
 
+  // Electron update timing: the desktop app installs a downloaded update by
+  // itself, never while a voice session is open (platform/callStateBridge.ts).
+  useEffect(() => {
+    initCallStateBridge();
+    return () => teardownCallStateBridge();
+  }, []);
+
   // Responsive detection
   useEffect(() => {
-    const checkMobile = () => setIsMobile(isMobileViewport());
+    const checkMobile = () => {
+      setIsMobile(isMobileViewport());
+      setIsCompact(isCompactViewport());
+    };
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [setIsMobile]);
+  }, [setIsMobile, setIsCompact]);
 
   // Handle route params
   useEffect(() => {
@@ -314,6 +345,17 @@ export function AppLayout() {
     }
   }, [channelId, spaceId, setCurrentChannel, loadMessages]);
 
+  useEffect(() => {
+    if (eventsPage) useThreadStore.getState().closeThread();
+  }, [eventsPage]);
+
+  // Remember where the user was, for Home's "Pick up where you left off".
+  const signedInUserId = useAuthStore((s) => s.user?.id);
+  useEffect(() => {
+    if (!signedInUserId || !spaceId || !channelId) return;
+    useRecentPlacesStore.getState().visit(signedInUserId, { channelId, spaceId: spaceId === '@me' ? null : spaceId });
+  }, [signedInUserId, spaceId, channelId]);
+
   // Auto-select last visited (or first) channel when opening a server without a channelId.
   // Desktop-only: on mobile, `/channels/<spaceId>` should leave the user at the channel
   // sidebar overview (MobileSpacesScreen), not auto-jump into a text channel — otherwise
@@ -321,7 +363,7 @@ export function AppLayout() {
   // user past the sidebar straight into a chat screen, with no clean back path.
   useEffect(() => {
     if (useUIStore.getState().isMobile) return;
-    if (!spaceId || spaceId === '@me' || channelId) return;
+    if (!spaceId || spaceId === '@me' || channelId || eventsPage) return;
     if (channels.length === 0) return;
 
     const firstChannel = channels[0];
@@ -339,7 +381,7 @@ export function AppLayout() {
     if (target) {
       navigate(`/channels/${spaceId}/${target.id}`, { replace: true });
     }
-  }, [spaceId, channelId, channels, navigate]);
+  }, [spaceId, channelId, channels, navigate, eventsPage]);
 
   // Guard: redirect when URL channelId no longer exists (deleted, permission revoked, etc.)
   useEffect(() => {
@@ -357,48 +399,46 @@ export function AppLayout() {
 
   if (!user || showBootSkeleton) {
     return (
-      <div className="h-full flex bg-surface-base" role="status" aria-label={t('app.loading')}>
-        {/* Space strip */}
-        <div className="w-[72px] hidden desktop:flex flex-col items-center gap-3 pt-4 bg-surface-base flex-shrink-0">
-          {Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className="skeleton skeleton-circle w-12 h-12" style={{ animationDelay: `${i * 0.1}s` }} />
+      <div className="h-full flex flex-col bg-surface-base" role="status" aria-label={t('app.loading')}>
+        {/* Top bar */}
+        <div className="hidden desktop:flex h-[var(--topbar-height)] flex-shrink-0 items-center gap-3 border-b border-border-hard px-4">
+          <div className="skeleton w-5 h-5 rounded" />
+          <div className="skeleton skeleton-bar w-16 h-3" />
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="skeleton skeleton-bar h-3" style={{ width: `${64 + (i * 23) % 40}px`, animationDelay: `${i * 0.1}s` }} />
           ))}
         </div>
 
-        {/* Sidebar */}
-        <div className="w-60 hidden desktop:flex bg-surface-channel flex-shrink-0 flex-col pt-4 px-2">
-          {/* Header bar */}
-          <div className="skeleton skeleton-bar w-[60%] h-4 mb-6 ml-2" />
-          {/* Channel items */}
-          {Array.from({ length: 8 }, (_, i) => (
-            <div key={i} className="flex items-center gap-2 px-2 py-1.5 mb-0.5" style={{ animationDelay: `${i * 0.08}s` }}>
-              <div className="skeleton w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ animationDelay: `${i * 0.08}s` }} />
-              <div className="skeleton skeleton-bar flex-1" style={{ width: `${45 + (i * 11) % 35}%`, animationDelay: `${i * 0.08}s` }} />
-            </div>
-          ))}
-        </div>
-
-        {/* Main chat area */}
-        <div className="flex-1 bg-surface-chat flex flex-col">
-          {/* Channel header */}
-          <div className="h-12 flex items-center px-4 border-b border-white/[0.04]">
-            <div className="skeleton skeleton-bar w-32 h-3.5" />
-          </div>
-
-          {/* Messages area — bottom-aligned */}
-          <div className="flex-1 flex flex-col justify-end px-4 pb-6">
-            {Array.from({ length: 6 }, (_, i) => (
-              <div key={i} className="flex gap-3 mb-5" style={{ animationDelay: `${i * 0.12}s` }}>
-                <div className="skeleton skeleton-circle w-10 h-10 flex-shrink-0" style={{ animationDelay: `${i * 0.12}s` }} />
-                <div className="flex-1 space-y-2 pt-1">
-                  <div className="skeleton skeleton-bar" style={{ width: `${20 + (i * 7) % 20}%`, animationDelay: `${i * 0.12}s` }} />
-                  <div className="skeleton skeleton-bar h-2.5" style={{ width: `${50 + (i * 13) % 40}%`, animationDelay: `${i * 0.12}s` }} />
-                  {i % 3 === 0 && (
-                    <div className="skeleton skeleton-bar h-2.5" style={{ width: `${30 + (i * 11) % 35}%`, animationDelay: `${i * 0.12}s` }} />
-                  )}
-                </div>
+        <div className="flex flex-1 min-h-0">
+          {/* Sidebar */}
+          <div className="w-[var(--sidebar-width)] hidden desktop:flex flex-shrink-0 flex-col border-r border-border-hard bg-surface-channel pt-4 px-3">
+            <div className="skeleton skeleton-bar w-[55%] h-3.5 mb-6 ml-1" />
+            {Array.from({ length: 8 }, (_, i) => (
+              <div key={i} className="flex items-center gap-2 px-1 py-2" style={{ animationDelay: `${i * 0.08}s` }}>
+                <div className="skeleton w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ animationDelay: `${i * 0.08}s` }} />
+                <div className="skeleton skeleton-bar flex-1" style={{ width: `${45 + (i * 11) % 35}%`, animationDelay: `${i * 0.08}s` }} />
               </div>
             ))}
+          </div>
+
+          {/* Main chat area */}
+          <div className="flex-1 flex flex-col bg-surface-chat">
+            <div className="h-[var(--topbar-height)] flex items-center px-5 border-b border-border-hard">
+              <div className="skeleton skeleton-bar w-32 h-3.5" />
+            </div>
+
+            {/* Messages area, bottom-aligned */}
+            <div className="flex-1 flex flex-col justify-end px-5 pb-6">
+              {Array.from({ length: 6 }, (_, i) => (
+                <div key={i} className="flex gap-3 mb-5" style={{ animationDelay: `${i * 0.12}s` }}>
+                  <div className="skeleton w-8 h-8 rounded flex-shrink-0" style={{ animationDelay: `${i * 0.12}s` }} />
+                  <div className="flex-1 space-y-2 pt-1">
+                    <div className="skeleton skeleton-bar" style={{ width: `${20 + (i * 7) % 20}%`, animationDelay: `${i * 0.12}s` }} />
+                    <div className="skeleton skeleton-bar h-2.5" style={{ width: `${50 + (i * 13) % 40}%`, animationDelay: `${i * 0.12}s` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -409,13 +449,24 @@ export function AppLayout() {
   if (isMobile) {
     return (
       <>
-        <MobileShell />
+        <AmbientLight />
+        <ConnectionBanner connected={homeConnected} />
+        <QuickSwitcher />
+        {inAdminConsole ? <SettingsPanelSuspense><AdminConsole /></SettingsPanelSuspense> : <MobileShell />}
         {/* Modals still render globally for both mobile and desktop */}
         <CreateSpaceModal />
+        <DiscordImportModal />
+        <SpaceProfileModal />
         <JoinSpaceModal />
         <CreateChannelModal />
         <CreateCategoryModal />
         <InviteModal />
+        <ReportModal />
+      <ForwardMessageModal />
+      <CreatePollModal />
+        <ForwardMessageModal />
+      <CreatePollModal />
+        <CreatePollModal />
         {/* UserSettings is a pushed screen on mobile (MobileSettingsScreen), not a modal */}
         <SpaceSettingsModal />
         <ChannelSettingsModal />
@@ -439,35 +490,54 @@ export function AppLayout() {
         <SoundController />
         <GlobalAudioRenderer />
         <NotificationController />
+        <PushController />
+        <SpaceWelcomeGate />
         <UpdateToast />
-        <InstanceUpdateToast />
         <ToastContainer />
-        <ContextMenuRenderer />
       </>
     );
   }
 
   // ── Desktop layout ──
+  // The top bar holds every place (Home and the spaces, as tabs) and the
+  // person's own controls; under it sit the channel column, the conversation
+  // and the people on the right, parted by hairlines, with one light across them.
   return (
-    <div className="h-full flex flex-col desktop:grid desktop:grid-cols-[312px_1fr] desktop:grid-rows-[minmax(0,1fr)] bg-surface-base overflow-hidden">
-      {/* Space sidebar - always visible on desktop */}
-      <div className={`fixed inset-y-0 left-0 z-40 flex w-[312px] transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full desktop:translate-x-0'} desktop:static desktop:z-auto desktop:w-auto desktop:transform-none`}>
-        <SpaceSidebar />
-        <ChannelSidebar />
-      </div>
+    <div className="h-full flex flex-col overflow-hidden bg-surface-base">
+      <AmbientLight />
+      <ConnectionBanner connected={homeConnected} />
+      <EmailPromptBar />
+      <AnnouncementBar />
+      <QuickSwitcher />
+      <TopBar />
 
-      {/* Main content area */}
-      <div className="flex-1 flex min-w-0 min-h-0 bg-surface-chat relative">
-        <MainContent />
-        <RightPanel />
+      <div className="relative flex min-h-0 flex-1">
+        {inAdminConsole ? (
+          <SettingsPanelSuspense><AdminConsole /></SettingsPanelSuspense>
+        ) : (
+          <>
+            <ChannelSidebar />
+            <main className="lit flex min-w-0 min-h-0 flex-1 bg-surface-chat">
+              <PlaceStage>
+                {eventsPage && spaceId ? <SpaceEventsPage spaceId={spaceId} /> : <MainContent />}
+              </PlaceStage>
+            </main>
+            {threadOpen && !eventsPage ? <ThreadPanel /> : <RightPanel />}
+          </>
+        )}
       </div>
 
       {/* Modals */}
       <CreateSpaceModal />
+      <DiscordImportModal />
+      <SpaceProfileModal />
       <JoinSpaceModal />
       <CreateChannelModal />
       <CreateCategoryModal />
       <InviteModal />
+      <ReportModal />
+      <ForwardMessageModal />
+      <CreatePollModal />
       <UserSettingsModal />
       <SpaceSettingsModal />
       <ChannelSettingsModal />
@@ -484,6 +554,8 @@ export function AppLayout() {
       <SoundController />
       <GlobalAudioRenderer />
       <NotificationController />
+      <PushController />
+      <SpaceWelcomeGate />
       <UpdateToast />
 
       <UserProfilePopoutLayer />
@@ -491,9 +563,7 @@ export function AppLayout() {
       {/* Federation toasts render through ToastContainer below (raised by the
           useFederationToasts() hook above); this also mounts the instance
           update toast. */}
-      <InstanceUpdateToast />
       <ToastContainer />
-      <ContextMenuRenderer />
     </div>
   );
 }

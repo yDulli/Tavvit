@@ -4,6 +4,10 @@ import sharp from 'sharp';
 import { execFile as execFileCb } from 'child_process';
 import { promisify } from 'util';
 
+// libvips keeps finished operations in a cache, and with them the files they read. Windows
+// refuses to rename a file something holds open, and the file is renamed right after this.
+sharp.cache(false);
+
 const execFile = promisify(execFileCb);
 const FFMPEG_TIMEOUT = 10_000; // 10 seconds
 

@@ -34,9 +34,9 @@ id_ed25519*
 # Generated deployment config (contains secrets)
 livekit.yaml
 
-# Local deploy targets & private ops notes — REAL hosts/IPs/users for the
-# maintainer's own infra. NEVER commit: this is a public repo. deploy.sh reads
-# .deploy.local at runtime if present; the committed defaults stay placeholders.
+# Local deploy targets & private ops notes — real hosts, IPs and users. Never
+# commit them. (The upstream deploy.sh that read .deploy.local is gone; the names
+# stay ignored so an old file cannot be committed by accident.)
 /.deploy.local
 /.deploy-local/
 

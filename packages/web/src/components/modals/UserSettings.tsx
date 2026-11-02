@@ -1,28 +1,32 @@
+import { DevelopersPanel } from './settingsPanels/DevelopersPanel';
 import { Fragment, useState, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Modal } from '../ui/Modal';
 import { Avatar } from '../ui/Avatar';
-import { SourceCodeLink } from '../ui/SourceCodeLink';
-import { api } from '../../api/client';
-import type { InstanceInfoResponse } from '@backspace/shared';
+import { LegalLinks } from '../legal/LegalLinks';
 import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import {
   AccountPanel,
+  SecurityPanel,
+  AccessibilityPanel,
   AppearancePanel,
+  LanguagePanel,
+  NotificationsPanel,
   VoicePanel,
+  GamesPanel,
+  EmojiSettingsPanel,
   PrivacyPanel,
   ConnectionsPanel,
   DesktopPanel,
-  DesktopDownloadPanel,
-  InstancePanel,
   KeybindsPanel,
   SettingsPanelSuspense,
 } from './lazySettingsPanels';
 import { isElectron } from '../../platform/platform';
-import { useInstanceUpdateBadge } from '../../hooks/useInstanceUpdateBadge';
-import { SettingsSectionsProvider, useSettingsSectionsContext } from './SettingsSectionsContext';
-import { HiButton } from '../telemetry/answers/HiButton';
+import { useFederationEnabled } from '../../hooks/useFederationEnabled';
+import { Icon } from '../ui/Icon';
+import { SlidingMark } from '../ui/SlidingMark';
 
 /**
  * Every tab of user settings, in nav order. The nav on both layouts, the
@@ -32,13 +36,19 @@ import { HiButton } from '../telemetry/answers/HiButton';
  */
 const USER_SETTINGS_TABS = [
   { id: 'account', group: 'user', label: 'settings:nav.tabs.account' },
-  { id: 'appearance', group: 'user', label: 'settings:nav.tabs.appearance' },
-  { id: 'voice', group: 'user', label: 'settings:nav.tabs.voice' },
+  { id: 'security', group: 'user', label: 'settings:nav.tabs.security' },
   { id: 'privacy', group: 'user', label: 'settings:nav.tabs.privacy' },
+  { id: 'notifications', group: 'user', label: 'settings:nav.tabs.notifications' },
+  { id: 'appearance', group: 'app', label: 'settings:nav.tabs.appearance' },
+  { id: 'accessibility', group: 'app', label: 'settings:nav.tabs.accessibility' },
+  { id: 'language', group: 'app', label: 'settings:nav.tabs.language' },
+  { id: 'voice', group: 'app', label: 'settings:nav.tabs.voice' },
+  { id: 'emoji', group: 'app', label: 'settings:nav.tabs.emoji' },
   { id: 'connections', group: 'app', label: 'settings:nav.tabs.connections' },
+  { id: 'games', group: 'app', label: 'settings:nav.tabs.games' },
+  { id: 'developers', group: 'app', label: 'settings:nav.tabs.developers' },
   { id: 'keybinds', group: 'app', label: 'settings:nav.tabs.keybinds' },
   { id: 'desktop', group: 'app', label: 'settings:nav.tabs.desktop' },
-  { id: 'instance', group: 'admin', label: 'settings:nav.tabs.instance' },
 ] as const;
 
 export type UserSettingsTab = (typeof USER_SETTINGS_TABS)[number]['id'];
@@ -47,64 +57,52 @@ type TabGroup = (typeof USER_SETTINGS_TABS)[number]['group'];
 const GROUP_HEADINGS = {
   user: 'settings:nav.userSettings',
   app: 'settings:nav.appSettings',
-  admin: 'settings:nav.administration',
 } as const satisfies Record<TabGroup, string>;
 
-const GROUP_ORDER: readonly TabGroup[] = ['user', 'app', 'admin'];
+const GROUP_ORDER: readonly TabGroup[] = ['user', 'app'];
 
 function isUserSettingsTab(value: unknown): value is UserSettingsTab {
   return typeof value === 'string' && USER_SETTINGS_TABS.some((tab) => tab.id === value);
 }
 
-function tabVisible(tab: UserSettingsTab, isAdmin: boolean): boolean {
-  return USER_SETTINGS_TABS.find((entry) => entry.id === tab)?.group !== 'admin' || isAdmin;
+/** What decides which tabs a person is offered. */
+interface TabAccess {
+  /** This instance federates; account linking ("Connections") is meaningless otherwise. */
+  federation: boolean;
+  /** Running inside the desktop app; the Desktop tab holds that app's own settings. */
+  electron: boolean;
 }
 
-export function SidebarSubLinks() {
-  const ctx = useSettingsSectionsContext();
-  if (!ctx || ctx.sections.length === 0) return null;
+function tabVisible(tab: UserSettingsTab, access: TabAccess): boolean {
+  if (tab === 'connections') return access.federation;
+  if (tab === 'desktop') return access.electron;
+  return true;
+}
 
+function SettingsScrollContainer({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden">
-      {ctx.sections.map((section) => (
-        section.invite === true ? (
-          // Same invitation as the tab strip, sized for the narrow column.
-          <div key={section.id} className="flex px-2 py-1.5">
-            <HiButton onClick={() => ctx.scrollToSection(section.id)}>{section.label}</HiButton>
-          </div>
-        ) : (
-        <button
-          key={section.id}
-          onClick={() => ctx.scrollToSection(section.id)}
-          className={`w-full flex items-center gap-1.5 text-left pl-6 pr-2 py-1 text-xs rounded-md transition-colors ${
-            ctx.activeSection === section.id
-              ? 'text-txt-primary'
-              : 'text-txt-tertiary hover:text-txt-secondary'
-          }`}
-          aria-current={ctx.activeSection === section.id ? 'true' : undefined}
-        >
-          <span className="flex-1 min-w-0 truncate">{section.label}</span>
-          {section.badgeCount !== undefined && section.badgeCount > 0 && (
-            <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-accent-amber/15 text-accent-amber">
-              {section.badgeCount}
-            </span>
-          )}
-          {section.badgeDot === true && (
-            <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-accent-amber" />
-          )}
-        </button>
-        )
-      ))}
+    <div className="panel-light flex-1 min-w-0 overflow-y-auto scrollbar-thin bg-surface-chat py-8">
+      {children}
     </div>
   );
 }
 
-function SettingsScrollContainer({ children }: { children: React.ReactNode }) {
-  const ctx = useSettingsSectionsContext();
+/** The way to the admin console, which is a page of its own and not a tab of this dialog. */
+function AdminConsoleRow({ tall, onLeave }: { tall: boolean; onLeave: () => void }) {
+  const { t } = useTranslation('settings');
+  const navigate = useNavigate();
   return (
-    <div ref={ctx?.scrollContainerRef} className="flex-1 min-w-0 overflow-y-auto scrollbar-thin py-6">
-      {children}
-    </div>
+    <button
+      type="button"
+      onClick={() => {
+        onLeave();
+        navigate('/admin');
+      }}
+      className={`nav-item w-full ${tall ? 'h-11' : ''}`}
+    >
+      <span className="min-w-0 flex-1 truncate">{t('nav.tabs.instance')}</span>
+      <Icon name="chevron-right" size={15} className="flex-shrink-0 text-txt-tertiary" />
+    </button>
   );
 }
 
@@ -117,24 +115,13 @@ export function UserSettingsModal() {
   const isAdmin = useAuthStore((s) => s.user?.isAdmin);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const updateBadge = useInstanceUpdateBadge();
+  const federation = useFederationEnabled() === true;
+  const electron = isElectron();
+  const access: TabAccess = { federation, electron };
 
   const [tab, setTab] = useState<UserSettingsTab>('account');
   const [mobileView, setMobileView] = useState<'tabs' | 'content'>('tabs');
-  // AGPL § 13: home-instance source offer. Fetched from the public info endpoint
-  // so the source link reflects the version this instance is actually running.
-  const [instanceInfo, setInstanceInfo] = useState<InstanceInfoResponse | null>(null);
-
   const isOpen = activeModal === 'userSettings';
-
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    api.instance.info()
-      .then((info) => { if (!cancelled) setInstanceInfo(info); })
-      .catch(() => { /* Non-critical — link falls back to hidden if unreachable. */ });
-    return () => { cancelled = true; };
-  }, [isOpen]);
 
   // Deep-linking: a caller may name the tab to open on. A tab that does not
   // exist, or that this user cannot see, opens Account; on mobile a named tab
@@ -142,120 +129,121 @@ export function UserSettingsModal() {
   useEffect(() => {
     if (isOpen) {
       const requested = modalData.tab;
-      const deepLinked = isUserSettingsTab(requested) && tabVisible(requested, isAdmin === true);
+      const deepLinked = isUserSettingsTab(requested) && tabVisible(requested, { federation, electron });
       setTab(deepLinked ? requested : 'account');
       setMobileView(deepLinked ? 'content' : 'tabs');
     }
-  }, [isOpen, modalData.tab, isAdmin]);
+    // `federation` is read when the modal opens; the answer is cached by then.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, modalData.tab]);
 
   const handleLogout = () => {
     logout();
     closeModal();
   };
 
-  const tabClass = (target: UserSettingsTab) =>
-    `w-full min-w-0 truncate text-left px-3 py-2 rounded-md text-sm transition-colors ${
-      tab === target ? 'bg-interactive-selected text-txt-primary font-medium' : 'text-txt-tertiary hover:text-txt-secondary hover:bg-interactive-hover'
-    }`;
-
   const handleTabClick = (target: UserSettingsTab) => {
     setTab(target);
     if (isMobile) setMobileView('content');
   };
 
-  const renderNav = (layout: 'desktop' | 'mobile'): ReactNode =>
-    GROUP_ORDER.filter((group) => group !== 'admin' || isAdmin).map((group, index) => (
-      <Fragment key={group}>
-        {index > 0 && <div className="border-t border-white/[0.04] my-2 mx-2" />}
-        <div className="text-[10px] font-semibold text-txt-tertiary uppercase tracking-wider px-3 py-1">{t(GROUP_HEADINGS[group])}</div>
-        {USER_SETTINGS_TABS.filter((entry) => entry.group === group).map((entry) => (
-          entry.id === 'instance' && layout === 'desktop' ? (
-            <Fragment key={entry.id}>
-              <button
-                onClick={() => handleTabClick(entry.id)}
-                className={`${tabClass(entry.id)} flex items-center gap-1.5`}
-                aria-current={tab === entry.id ? 'page' : undefined}
-              >
-                <span className="flex-1 min-w-0 truncate">{t(entry.label)}</span>
-                {updateBadge && <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-accent-amber" />}
-              </button>
-              {tab === 'instance' && <SidebarSubLinks />}
-            </Fragment>
-          ) : (
+  // One `.nav-item` per tab: the open one is a step lighter with the violet
+  // edge. On the phone the rows are taller, for a thumb.
+  const renderNav = (layout: 'desktop' | 'mobile'): ReactNode => (
+    <>
+      {GROUP_ORDER.map((group, index) => (
+        <Fragment key={group}>
+          <div className={`label-mono px-2.5 pb-1.5 ${index > 0 ? 'pt-5' : 'pt-1'}`}>{t(GROUP_HEADINGS[group])}</div>
+          {USER_SETTINGS_TABS.filter((entry) => entry.group === group && tabVisible(entry.id, access)).map((entry) => (
             <button
               key={entry.id}
+              type="button"
               onClick={() => handleTabClick(entry.id)}
-              className={tabClass(entry.id)}
+              className={`nav-item w-full ${layout === 'mobile' ? 'h-11' : ''}`}
+              data-active={tab === entry.id}
               aria-current={tab === entry.id ? 'page' : undefined}
             >
-              {t(entry.label)}
+              <span className="min-w-0 flex-1 truncate">{t(entry.label)}</span>
+              {layout === 'mobile' && <Icon name="chevron-right" size={15} className="flex-shrink-0 text-txt-tertiary" />}
             </button>
-          )
-        ))}
-      </Fragment>
-    ));
+          ))}
+        </Fragment>
+      ))}
+      {isAdmin && (
+        <>
+          <div className="label-mono px-2.5 pb-1.5 pt-5">{t('settings:nav.administration')}</div>
+          <AdminConsoleRow tall={layout === 'mobile'} onLeave={closeModal} />
+        </>
+      )}
+    </>
+  );
 
   const panels: Record<UserSettingsTab, () => ReactNode> = {
     account: () => <AccountPanel />,
+    security: () => <SecurityPanel />,
     appearance: () => <AppearancePanel />,
+    accessibility: () => <AccessibilityPanel />,
+    language: () => <LanguagePanel />,
+    notifications: () => <NotificationsPanel />,
     voice: () => <VoicePanel />,
+    games: () => <GamesPanel />,
+    emoji: () => <EmojiSettingsPanel />,
     privacy: () => <PrivacyPanel />,
     connections: () => <ConnectionsPanel />,
+    developers: () => <DevelopersPanel />,
     keybinds: () => <KeybindsPanel />,
-    desktop: () => (isElectron()
-      ? <DesktopPanel />
-      : <DesktopDownloadPanel version={instanceInfo?.version ?? null} />),
-    instance: () => (isAdmin ? <InstancePanel /> : null),
+    desktop: () => <DesktopPanel />,
   };
 
   return (
     <Modal isOpen={isOpen} onClose={closeModal} size="settings" mobileStyle="fullscreen">
-      <SettingsSectionsProvider>
       <div className="flex h-full">
-        {/* Desktop Sidebar */}
-        <div className="hidden desktop:flex w-52 flex-shrink-0 flex-col p-4 gap-3">
-          {/* User card */}
-          <div className="glass-bubble rounded-lg p-3 flex items-center gap-3">
+        {/* Desktop navigation: a flat column on the sidebar colour, parted from
+            the page by a hairline, like the app's own sidebars. */}
+        <div className="hidden desktop:flex w-60 flex-shrink-0 flex-col border-r border-border-hard bg-surface-channel">
+          {/* Who is signed in */}
+          <div className="panel-bar flex items-center gap-2.5 px-4">
             <Avatar
               src={user?.avatar}
               name={user?.displayName || user?.username || ''}
-              size={36}
+              size={28}
               userId={user?.id}
               avatarColor={user?.avatarColor}
             />
             <div className="min-w-0">
-              <div className="text-sm font-medium text-txt-primary truncate">{user?.displayName || user?.username}</div>
-              <div className="text-xs text-txt-tertiary truncate">@{user?.username}</div>
+              <div className="truncate text-ui font-medium leading-tight text-txt-primary">{user?.displayName || user?.username}</div>
+              <div className="truncate font-mono text-label leading-tight text-txt-tertiary">@{user?.username}</div>
             </div>
           </div>
 
           {/* Nav list */}
-          <div className="glass-bubble rounded-lg p-2 flex-1 flex flex-col">
+          <nav aria-label={t('common:labels.settings')} className="sliding-list flex flex-1 flex-col overflow-y-auto scrollbar-thin px-2 py-3">
+            <SlidingMark variant="row" />
             {renderNav('desktop')}
 
             <div className="flex-1" />
 
-            <div className="border-t border-white/[0.04] my-2 mx-2" />
+            <div className="divider-fade mx-1 mb-2 mt-4" />
             <button
+              type="button"
               onClick={handleLogout}
-              className="w-full text-left px-3 py-2 rounded-md text-sm text-txt-danger hover:bg-accent-rose/10 transition-colors"
+              className="nav-item w-full text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger"
             >
-              {t('settings:nav.logOut')}
+              <Icon name="logout" size={16} className="flex-shrink-0" />
+              <span className="min-w-0 flex-1 truncate">{t('settings:nav.logOut')}</span>
             </button>
 
-            {instanceInfo && (
-              <div className="px-3 pt-2">
-                <SourceCodeLink sourceCodeUrl={instanceInfo.sourceCodeUrl} version={instanceInfo.version} commit={instanceInfo.commit} />
-              </div>
-            )}
-          </div>
+            <div className="px-2.5 pt-2">
+              <LegalLinks />
+            </div>
+          </nav>
         </div>
 
         {/* Mobile: Tab list */}
         {isMobile && mobileView === 'tabs' && (
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {/* Mobile user card */}
-            <div className="glass-bubble rounded-lg p-3 flex items-center gap-3">
+            <div className="rounded-lg border border-border-hard bg-surface-channel p-3 flex items-center gap-3">
               <Avatar
                 src={user?.avatar}
                 name={user?.displayName || user?.username || ''}
@@ -264,28 +252,28 @@ export function UserSettingsModal() {
                 avatarColor={user?.avatarColor}
               />
               <div className="min-w-0">
-                <div className="text-sm font-medium text-txt-primary truncate">{user?.displayName || user?.username}</div>
-                <div className="text-xs text-txt-tertiary truncate">@{user?.username}</div>
+                <div className="truncate text-body font-medium text-txt-primary">{user?.displayName || user?.username}</div>
+                <div className="truncate font-mono text-meta text-txt-tertiary">@{user?.username}</div>
               </div>
             </div>
 
-            <div className="glass-bubble rounded-lg p-2 space-y-0.5">
+            <nav aria-label={t('common:labels.settings')} className="rounded-lg border border-border-hard bg-surface-channel p-2">
               {renderNav('mobile')}
 
-              <div className="border-t border-white/[0.04] my-2 mx-2" />
+              <div className="divider-fade mx-1 my-2" />
               <button
+                type="button"
                 onClick={handleLogout}
-                className="w-full text-left px-3 py-2 rounded-md text-sm text-txt-danger hover:bg-accent-rose/10 transition-colors"
+                className="nav-item h-11 w-full text-txt-danger hover:bg-accent-rose/10 hover:text-txt-danger"
               >
-                {t('settings:nav.logOut')}
+                <Icon name="logout" size={16} className="flex-shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{t('settings:nav.logOut')}</span>
               </button>
 
-              {instanceInfo && (
-                <div className="px-3 pt-2">
-                  <SourceCodeLink sourceCodeUrl={instanceInfo.sourceCodeUrl} version={instanceInfo.version} commit={instanceInfo.commit} />
-                </div>
-              )}
-            </div>
+              <div className="px-2.5 pt-2">
+                <LegalLinks />
+              </div>
+            </nav>
           </div>
         )}
 
@@ -296,13 +284,12 @@ export function UserSettingsModal() {
               {/* Mobile back button */}
               {isMobile && (
                 <button
+                  type="button"
                   onClick={() => setMobileView('tabs')}
-                  className="flex items-center gap-1.5 text-txt-tertiary hover:text-txt-secondary mb-4 text-sm"
+                  className="btn-quiet -ml-2 mb-4 px-2"
                   aria-label={t('settings:nav.backToMenu')}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-                  </svg>
+                  <Icon name="chevron-left" size={16} />
                   {t('common:labels.settings')}
                 </button>
               )}
@@ -313,7 +300,6 @@ export function UserSettingsModal() {
           </SettingsScrollContainer>
         )}
       </div>
-      </SettingsSectionsProvider>
     </Modal>
   );
 }

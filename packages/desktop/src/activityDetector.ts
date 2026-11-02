@@ -1,8 +1,21 @@
-import { execFile } from 'child_process';
 import https from 'https';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
+import { PRODUCTION_URL } from './appUrl';
+import type { UserGame } from './gameDetectionSettings';
+import { readInstalledGames, readRunningSteamGames, runScan, windowsTool } from './gameLibraries';
+import {
+  chooseGame,
+  isRunning,
+  parseDictionary,
+  parseProcessList,
+  parseWindowTitles,
+  processKey,
+  windowMatches,
+  type GameDictionary,
+  type GameEntry,
+} from './gameMatching';
 
 // ─── Local Activity type (structural match with @backspace/shared Activity) ─
 
@@ -19,158 +32,52 @@ interface Activity {
   timestamps?: ActivityTimestamps;
 }
 
-// ─── Game dictionary types ──────────────────────────────────────────────────
-
-interface GameEntry {
-  id: string;
-  name: string;
-  processes: string[];
-  type?: string;
-}
-
-interface VersionedDictionary {
-  version: number;
-  games: GameEntry[];
-}
-
-const VALID_TYPES = new Set(['playing', 'listening', 'watching', 'streaming']);
 const POLL_INTERVAL_MS = 15_000;
-const REMOTE_URL = 'https://raw.githubusercontent.com/TheZwiss/backspace/main/packages/desktop/resources/games.json';
+/** After this many failed listings in a row, nothing is known to be running any more. */
+const FAILURES_BEFORE_CLEAR = 3;
+/** How often the games installed through Epic and GOG are read again, so a new one is found without a restart. */
+const INSTALLED_REFRESH_MS = 10 * 60_000;
+const STEAM_PROCESS = processKey('steam.exe', 'win32');
+/**
+ * Newer game lists come from the server the app opens, never a third party:
+ * every desktop release publishes its list beside the installers
+ * (docs/systems/desktop.md, "Releases"). Without one the bundled list stands.
+ */
+const REMOTE_URL = `${PRODUCTION_URL}/downloads/desktop/games.json`;
 
 // ─── Module state ───────────────────────────────────────────────────────────
 
-let processMap: Map<string, GameEntry> = new Map();
 let gameEntries: GameEntry[] = [];
+let ignoredSteamApps: ReadonlySet<number> = new Set();
+let dictionaryVersion = 0;
+let hasSavedDictionary = false;
+/** Programs the person added themselves; they win over everything else. */
+let userEntries: GameEntry[] = [];
+let installedEntries: GameEntry[] = [];
+let installedReadAt = 0;
 let currentGameId: string | null = null;
 let currentActivity: Activity | null = null;
+/** Everything found running at the last poll, and since when. */
+const runningSince = new Map<string, number>();
 let intervalId: NodeJS.Timeout | null = null;
 let isPolling = false;
-let hasErrored = false;
+let consecutiveFailures = 0;
+/**
+ * Moves on every start and stop, so a scan that was still running when
+ * detection stopped (or restarted) writes nothing: its answer is about a
+ * session that is over.
+ */
+let generation = 0;
 let onChangeCallback: ((activity: Activity | null) => void) | null = null;
 
 // ─── Dictionary loading ────────────────────────────────────────────────────
 
-/**
- * Parse and validate a game entry from the dictionary.
- * Returns a valid GameEntry or null if the entry is malformed.
- */
-function parseGameEntry(entry: unknown): GameEntry | null {
-  if (!entry || typeof entry !== 'object') return null;
-  const e = entry as Record<string, unknown>;
-
-  if (typeof e.id !== 'string' || !e.id || typeof e.name !== 'string' || !e.name ||
-      !Array.isArray(e.processes) || e.processes.length === 0 ||
-      !e.processes.every((p: unknown) => typeof p === 'string')) {
-    return null;
-  }
-
-  const type = typeof e.type === 'string' && VALID_TYPES.has(e.type) ? e.type : 'playing';
-
-  return {
-    id: e.id,
-    name: e.name,
-    processes: e.processes as string[],
-    type,
-  };
-}
-
-/**
- * Load a game dictionary from a file path.
- * Supports both formats:
- *   - Bare array (legacy, version 0): [{ id, name, processes }, ...]
- *   - Versioned object: { version: number, games: [...] }
- *
- * On success, populates `gameEntries` and `processMap` and returns the version.
- * On failure, returns { success: false, version: 0 } without modifying state.
- */
-function loadDictionary(filePath: string): { success: boolean; version: number } {
-  let raw: string;
-  try {
-    raw = fs.readFileSync(filePath, 'utf-8');
-  } catch {
-    console.warn('[ActivityDetector] Dictionary not found at', filePath);
-    return { success: false, version: 0 };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    console.warn('[ActivityDetector] Dictionary contains malformed JSON at', filePath);
-    return { success: false, version: 0 };
-  }
-
-  // Determine format: bare array (version 0) vs versioned object
-  let version = 0;
-  let entries: unknown[];
-
-  if (Array.isArray(parsed)) {
-    // Legacy bare-array format
-    version = 0;
-    entries = parsed;
-  } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-    const obj = parsed as Record<string, unknown>;
-    if (typeof obj.version === 'number' && Array.isArray(obj.games)) {
-      version = obj.version;
-      entries = obj.games;
-    } else {
-      console.warn('[ActivityDetector] Dictionary has unknown structure at', filePath);
-      return { success: false, version: 0 };
-    }
-  } else {
-    console.warn('[ActivityDetector] Dictionary root must be an array or versioned object at', filePath);
-    return { success: false, version: 0 };
-  }
-
-  const newEntries: GameEntry[] = [];
-  const newMap = new Map<string, GameEntry>();
-
-  for (const entry of entries) {
-    const gameEntry = parseGameEntry(entry);
-    if (!gameEntry) {
-      const e = entry as Record<string, unknown> | null;
-      console.warn('[ActivityDetector] Skipping invalid entry:', e?.id ?? JSON.stringify(entry));
-      continue;
-    }
-
-    newEntries.push(gameEntry);
-
-    for (const proc of gameEntry.processes) {
-      const key = proc.toLowerCase();
-      if (!newMap.has(key)) {
-        newMap.set(key, gameEntry);
-      }
-    }
-  }
-
-  if (newMap.size === 0) {
-    console.warn('[ActivityDetector] No valid entries in dictionary at', filePath);
-    return { success: false, version: 0 };
-  }
-
-  // Commit to module state
-  gameEntries = newEntries;
-  processMap = newMap;
-
-  console.log(`[ActivityDetector] Loaded ${newEntries.length} games (${newMap.size} process names) v${version} from ${filePath}`);
-  return { success: true, version };
-}
-
-/**
- * Hot-swap the process map and game entries without resetting detection state.
- * Used when a remote dictionary update is fetched in the background.
- */
-function hotSwapDictionary(newEntries: GameEntry[], newMap: Map<string, GameEntry>): void {
-  gameEntries = newEntries;
-  processMap = newMap;
-  // Note: currentGameId and currentActivity are intentionally preserved
-  // so detection state survives dictionary updates.
-}
-
-// ─── Remote sync ────────────────────────────────────────────────────────────
-
 function getCachePath(): string {
   return path.join(app.getPath('userData'), 'games-cache.json');
+}
+
+function getSeedPath(): string {
+  return path.join(__dirname, '..', 'resources', 'games.json');
 }
 
 function getETagPath(): string {
@@ -193,52 +100,56 @@ function writeETag(etag: string): void {
   }
 }
 
-/**
- * Validate a parsed dictionary object without loading it into module state.
- * Returns the validated entries and map, or null if invalid.
- */
-function validateDictionary(parsed: unknown): {
-  version: number;
-  entries: GameEntry[];
-  map: Map<string, GameEntry>;
-} | null {
-  let version = 0;
-  let rawEntries: unknown[];
-
-  if (Array.isArray(parsed)) {
-    version = 0;
-    rawEntries = parsed;
-  } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-    const obj = parsed as Record<string, unknown>;
-    if (typeof obj.version === 'number' && Array.isArray(obj.games)) {
-      version = obj.version;
-      rawEntries = obj.games;
-    } else {
-      return null;
-    }
-  } else {
+function readDictionary(filePath: string): GameDictionary | null {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(filePath, 'utf-8');
+  } catch {
     return null;
   }
-
-  const entries: GameEntry[] = [];
-  const map = new Map<string, GameEntry>();
-
-  for (const entry of rawEntries) {
-    const gameEntry = parseGameEntry(entry);
-    if (!gameEntry) continue;
-    entries.push(gameEntry);
-    for (const proc of gameEntry.processes) {
-      const key = proc.toLowerCase();
-      if (!map.has(key)) {
-        map.set(key, gameEntry);
-      }
-    }
+  try {
+    const dictionary = parseDictionary(JSON.parse(raw));
+    if (!dictionary) console.warn('[ActivityDetector] No usable game list at', filePath);
+    return dictionary;
+  } catch {
+    console.warn('[ActivityDetector] Game list contains malformed JSON at', filePath);
+    return null;
   }
-
-  if (map.size === 0) return null;
-
-  return { version, entries, map };
 }
+
+/**
+ * Replaces the list without resetting detection state, so a game being shown
+ * stays shown when a newer list arrives in the background.
+ */
+function applyDictionary(dictionary: GameDictionary): void {
+  gameEntries = dictionary.games;
+  ignoredSteamApps = dictionary.ignoredSteamApps;
+  dictionaryVersion = dictionary.version;
+  console.log(`[ActivityDetector] Using ${dictionary.games.length} games, list v${dictionary.version}`);
+}
+
+/**
+ * The newer of the list the last sync saved and the one this build brought: a
+ * list saved by an older version of the app must not outlive a better one that
+ * an update brought along.
+ */
+function loadLocalDictionary(): void {
+  const saved = readDictionary(getCachePath());
+  const bundled = readDictionary(getSeedPath());
+  hasSavedDictionary = saved !== null;
+  const best = saved && bundled ? (saved.version > bundled.version ? saved : bundled) : saved ?? bundled;
+  if (best) {
+    applyDictionary(best);
+  } else {
+    // Steam, the other launchers and the programs the person added work without a list.
+    console.warn('[ActivityDetector] No valid game list found');
+    gameEntries = [];
+    ignoredSteamApps = new Set();
+    dictionaryVersion = 0;
+  }
+}
+
+// ─── Remote sync ────────────────────────────────────────────────────────────
 
 /**
  * Fetch a URL over HTTPS and return the response body and headers.
@@ -251,7 +162,7 @@ function fetchRemote(url: string, etag: string | null): Promise<{
 } | null> {
   return new Promise((resolve) => {
     const headers: Record<string, string> = {
-      'User-Agent': 'Backspace-Desktop/1.0',
+      'User-Agent': 'Tavvit-Desktop/1.0',
     };
     if (etag) {
       headers['If-None-Match'] = etag;
@@ -264,7 +175,7 @@ function fetchRemote(url: string, etag: string | null): Promise<{
         return;
       }
 
-      // Follow single redirect (GitHub raw may 301/302)
+      // Follow a redirect, which a proxy in front of the server may send
       if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location) {
         res.resume();
         fetchRemote(res.headers.location, etag).then(resolve).catch(() => resolve(null));
@@ -306,104 +217,58 @@ function atomicWrite(filePath: string, data: string): void {
 }
 
 /**
- * Sync the game dictionary from a remote source.
- *
- * Strategy:
- * 1. Load the best local source (cache file or bundled seed), whichever has a higher version.
- * 2. Fetch from GitHub in the background.
- * 3. If the remote version is newer, atomically write to cache, save ETag, and hot-swap.
+ * Sync the game list from the app's own server, in the background, after the
+ * best local list is already in use. A newer one is saved and takes over at once.
  */
 async function syncDictionary(): Promise<void> {
-  const cachePath = getCachePath();
-  const seedPath = path.join(__dirname, '..', 'resources', 'games.json');
-
-  // Step 1: Determine best local version (cache vs. seed)
-  // The seed was already loaded by startActivityDetection before calling us,
-  // but the cache might have a higher version.
-  const cacheResult = loadDictionary(cachePath);
-  let currentVersion = cacheResult.success ? cacheResult.version : 0;
-
-  if (!cacheResult.success) {
-    // Cache missing or corrupt — seed was already loaded, read its version
-    const seedResult = loadDictionary(seedPath);
-    currentVersion = seedResult.success ? seedResult.version : 0;
-  }
-
-  // Step 2: Fetch remote
-  const etag = readETag();
-
-  let response: { status: number; body: string; etag: string | null } | null;
-  try {
-    response = await fetchRemote(REMOTE_URL, etag);
-  } catch {
-    console.log('[ActivityDetector] Remote sync fetch failed — continuing with local dictionary');
-    return;
-  }
+  // The tag belongs to the saved copy: without that copy, "unchanged" would keep the older bundled list.
+  const response = await fetchRemote(REMOTE_URL, hasSavedDictionary ? readETag() : null);
 
   if (!response) {
-    console.log('[ActivityDetector] Remote sync failed (network error) — continuing with local dictionary');
+    console.log('[ActivityDetector] Remote sync failed or no list published — continuing with local list');
     return;
   }
-
-  // Step 3: Handle response
   if (response.status === 304) {
-    console.log('[ActivityDetector] Remote dictionary unchanged (304)');
+    console.log('[ActivityDetector] Remote list unchanged (304)');
     return;
   }
 
-  if (response.status !== 200) {
-    console.log(`[ActivityDetector] Remote sync returned status ${response.status} — skipping`);
-    return;
-  }
-
-  // Parse and validate the remote dictionary
   let parsed: unknown;
   try {
     parsed = JSON.parse(response.body);
   } catch {
-    console.warn('[ActivityDetector] Remote dictionary contains malformed JSON — skipping');
+    console.warn('[ActivityDetector] Remote list contains malformed JSON — skipping');
+    return;
+  }
+  const remote = parseDictionary(parsed);
+  if (!remote) {
+    console.warn('[ActivityDetector] Remote list validation failed — skipping');
     return;
   }
 
-  const validated = validateDictionary(parsed);
-  if (!validated) {
-    console.warn('[ActivityDetector] Remote dictionary validation failed — skipping');
+  // Saved either way, so the next start gets a 304.
+  if (response.etag) writeETag(response.etag);
+
+  if (remote.version <= dictionaryVersion) {
+    console.log(`[ActivityDetector] Remote list v${remote.version} is not newer than local v${dictionaryVersion} — skipping`);
     return;
   }
 
-  // Only apply if version is newer
-  if (validated.version <= currentVersion) {
-    console.log(`[ActivityDetector] Remote version (${validated.version}) is not newer than local (${currentVersion}) — skipping`);
-    // Still save ETag so we get 304 next time
-    if (response.etag) {
-      writeETag(response.etag);
-    }
-    return;
-  }
-
-  // Atomic write the cache
   try {
-    atomicWrite(cachePath, response.body);
+    atomicWrite(getCachePath(), response.body);
+    hasSavedDictionary = true;
   } catch (err) {
+    // Non-fatal — it is still used until the app quits
     console.warn('[ActivityDetector] Failed to write cache:', err);
-    // Non-fatal — we can still hot-swap in memory
   }
-
-  // Save ETag
-  if (response.etag) {
-    writeETag(response.etag);
-  }
-
-  // Hot-swap: rebuild processMap and gameEntries from validated data
-  hotSwapDictionary(validated.entries, validated.map);
-  console.log(`[ActivityDetector] Hot-swapped to remote dictionary v${validated.version} (${validated.entries.length} games, ${validated.map.size} process names)`);
+  applyDictionary(remote);
 }
 
 // ─── Platform-specific process listing ──────────────────────────────────────
 
 function getProcessCommand(): { executable: string; args: string[] } {
   if (process.platform === 'win32') {
-    return { executable: 'tasklist', args: ['/fo', 'csv', '/nh'] };
+    return { executable: windowsTool('tasklist.exe'), args: ['/fo', 'csv', '/nh'] };
   }
   if (process.platform === 'darwin') {
     return { executable: 'ps', args: ['-c', '-A', '-o', 'comm'] };
@@ -412,87 +277,130 @@ function getProcessCommand(): { executable: string; args: string[] } {
   return { executable: 'ps', args: ['-A', '-o', 'comm'] };
 }
 
-function parseProcessList(stdout: string): Set<string> {
-  const names = new Set<string>();
-
-  if (process.platform === 'win32') {
-    // Windows tasklist CSV: "ImageName","PID","SessionName","Session#","MemUsage"
-    for (const line of stdout.split('\n')) {
-      const match = line.match(/^"([^"]+)"/);
-      if (match && match[1]) {
-        names.add(match[1].toLowerCase());
+/**
+ * The games of the list that run inside a program plenty of other things use,
+ * told by the title of its window. Asked only while that program runs, and only
+ * about it: the listing with titles is far slower than the plain one. The title
+ * decides here and goes no further.
+ */
+async function gamesByWindowTitle(running: ReadonlySet<string>): Promise<Set<string>> {
+  const found = new Set<string>();
+  if (process.platform !== 'win32') return found;
+  const titlesOf = new Map<string, string[]>();
+  for (const entry of gameEntries) {
+    for (const window of entry.windows ?? []) {
+      const program = processKey(window.process);
+      if (!running.has(program)) continue;
+      let titles = titlesOf.get(program);
+      if (!titles) {
+        titles = await runScan(windowsTool('tasklist.exe'), ['/v', '/fi', `imagename eq ${window.process}`, '/fo', 'csv', '/nh'])
+          .then(parseWindowTitles, (): string[] => []);
+        titlesOf.set(program, titles);
       }
-    }
-  } else {
-    // macOS/Linux: one process name per line, first line may be header
-    const lines = stdout.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      const name = lines[i]?.trim();
-      if (!name) continue;
-      // Skip header line (COMM or COMMAND)
-      if (i === 0 && (name === 'COMM' || name === 'COMMAND')) continue;
-      names.add(name.toLowerCase());
+      if (windowMatches(window, titles)) found.add(entry.id);
     }
   }
+  return found;
+}
 
-  return names;
+async function refreshInstalledGames(): Promise<void> {
+  if (process.platform !== 'win32' || Date.now() - installedReadAt < INSTALLED_REFRESH_MS) return;
+  installedReadAt = Date.now();
+  installedEntries = await readInstalledGames();
+}
+
+/**
+ * Everything that is being played, in order of priority: what the person added,
+ * then what Steam says, then what the launchers have installed, then the list.
+ * A launcher knows its own games by their exact names, the list only by a
+ * process name that some other program might share.
+ */
+async function findRunningGames(running: ReadonlySet<string>): Promise<GameEntry[]> {
+  const steam = process.platform === 'win32' && running.has(STEAM_PROCESS)
+    ? await readRunningSteamGames(ignoredSteamApps)
+    : [];
+  const titled = await gamesByWindowTitle(running);
+  await refreshInstalledGames();
+  return [
+    ...userEntries.filter((entry) => isRunning(entry, running)),
+    ...steam,
+    ...installedEntries.filter((entry) => isRunning(entry, running)),
+    ...gameEntries.filter((entry) => isRunning(entry, running) || titled.has(entry.id)),
+  ];
 }
 
 // ─── Poll logic ─────────────────────────────────────────────────────────────
 
-function poll(): void {
+function clearCurrentGame(): void {
+  currentGameId = null;
+  runningSince.clear();
+  if (currentActivity) {
+    currentActivity = null;
+    onChangeCallback?.(null);
+  }
+}
+
+/** Show the game that won. The same name from another source is the same game: no change, same start time. */
+function showGame(running: readonly GameEntry[]): void {
+  const seenBefore = new Set(runningSince.keys());
+  const now = Date.now();
+  const stillRunning = new Set(running.map((entry) => entry.id));
+  for (const id of seenBefore) {
+    if (!stillRunning.has(id)) runningSince.delete(id);
+  }
+  for (const id of stillRunning) {
+    if (!runningSince.has(id)) runningSince.set(id, now);
+  }
+
+  const game = chooseGame(running, currentGameId, seenBefore);
+  if (!game) {
+    clearCurrentGame();
+    return;
+  }
+
+  currentGameId = game.id;
+  const type = game.type ?? 'playing';
+  if (currentActivity?.name === game.name && currentActivity.type === type) return;
+  currentActivity = { type, name: game.name, timestamps: { start: runningSince.get(game.id) ?? now } };
+  onChangeCallback?.(currentActivity);
+}
+
+async function poll(): Promise<void> {
   if (isPolling) return; // Previous poll still in-flight
   isPolling = true;
+  const scanGeneration = generation;
 
-  const { executable, args } = getProcessCommand();
-
-  execFile(executable, args, { maxBuffer: 1024 * 1024 }, (error, stdout) => {
-    isPolling = false;
-
-    if (error) {
-      if (!hasErrored) {
-        console.warn('[ActivityDetector] execFile failed:', error.message, '— stopping detection');
-        hasErrored = true;
-        stopActivityDetection();
+  try {
+    const { executable, args } = getProcessCommand();
+    let stdout: string;
+    try {
+      stdout = await runScan(executable, args);
+    } catch (error) {
+      if (scanGeneration !== generation) return;
+      // A failed listing (a timeout, a busy machine) is tried again at the next
+      // poll; detection never stops on its own. After a few failures in a row
+      // the last game is no longer known to be running, so it is not shown.
+      consecutiveFailures += 1;
+      if (consecutiveFailures === 1) {
+        console.warn('[ActivityDetector] listing processes failed:', error instanceof Error ? error.message : error, '— trying again');
       }
+      if (consecutiveFailures === FAILURES_BEFORE_CLEAR) clearCurrentGame();
       return;
     }
+    if (scanGeneration !== generation) return;
+    consecutiveFailures = 0;
 
-    const runningProcesses = parseProcessList(stdout);
+    const running = await findRunningGames(parseProcessList(stdout, process.platform, process.pid));
+    if (scanGeneration !== generation) return;
+    showGame(running);
+  } finally {
+    isPolling = false;
+  }
+}
 
-    // Find first matching game (dictionary order = priority)
-    let matchedEntry: GameEntry | null = null;
-    for (const entry of gameEntries) {
-      for (const proc of entry.processes) {
-        if (runningProcesses.has(proc.toLowerCase())) {
-          matchedEntry = entry;
-          break;
-        }
-      }
-      if (matchedEntry) break;
-    }
-
-    if (matchedEntry) {
-      if (matchedEntry.id !== currentGameId) {
-        // New game detected (or game changed)
-        currentGameId = matchedEntry.id;
-        currentActivity = {
-          type: matchedEntry.type ?? 'playing',
-          name: matchedEntry.name,
-          timestamps: { start: Date.now() },
-        };
-        onChangeCallback?.(currentActivity);
-      }
-      // Same game still running — no change, skip IPC
-    } else {
-      if (currentGameId !== null) {
-        // Game exited
-        currentGameId = null;
-        currentActivity = null;
-        onChangeCallback?.(null);
-      }
-      // No game was running before either — skip
-    }
+function pollInBackground(): void {
+  poll().catch((err: unknown) => {
+    console.warn('[ActivityDetector] Poll failed:', err);
   });
 }
 
@@ -503,28 +411,18 @@ export function startActivityDetection(
 ): void {
   if (intervalId) return; // Already running
 
-  // Load from best available local source: cache first, then bundled seed
-  const cachePath = path.join(app.getPath('userData'), 'games-cache.json');
-  const seedPath = path.join(__dirname, '..', 'resources', 'games.json');
-
-  const cacheResult = loadDictionary(cachePath);
-  if (!cacheResult.success) {
-    // Cache missing or corrupt — fall back to bundled seed
-    const seedResult = loadDictionary(seedPath);
-    if (!seedResult.success) {
-      console.warn('[ActivityDetector] No valid dictionary found — detection disabled');
-      return;
-    }
-  }
+  loadLocalDictionary();
 
   onChangeCallback = onActivityChange;
-  hasErrored = false;
+  consecutiveFailures = 0;
+  installedReadAt = 0;
+  generation += 1;
 
   // Run first poll immediately
-  poll();
+  pollInBackground();
 
   // Then poll every 15 seconds
-  intervalId = setInterval(poll, POLL_INTERVAL_MS);
+  intervalId = setInterval(pollInBackground, POLL_INTERVAL_MS);
 
   // Fire-and-forget: sync from remote in background
   syncDictionary().catch((err) => {
@@ -533,13 +431,32 @@ export function startActivityDetection(
 }
 
 export function stopActivityDetection(): void {
+  generation += 1;
   if (intervalId) {
     clearInterval(intervalId);
     intervalId = null;
   }
   onChangeCallback = null;
+  // Nothing is being watched any more, so nothing is being played as far as anyone knows.
+  currentGameId = null;
+  currentActivity = null;
+  runningSince.clear();
 }
 
 export function getCurrentActivity(): Activity | null {
   return currentActivity;
+}
+
+/**
+ * Replace the programs the person added in an earlier version, which still count
+ * until they remove them. A game that is no longer listed is forgotten at once,
+ * and the next poll runs now rather than in 15 seconds, so what else is running
+ * shows straight away.
+ */
+export function setUserGames(games: readonly UserGame[]): void {
+  userEntries = games.map((game) => ({ id: `user:${game.process}`, name: game.name, processes: [game.process], type: 'playing' }));
+  if (currentGameId?.startsWith('user:') && !userEntries.some((entry) => entry.id === currentGameId)) {
+    clearCurrentGame();
+  }
+  if (intervalId) pollInBackground();
 }

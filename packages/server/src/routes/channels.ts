@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, ne } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
@@ -25,29 +25,107 @@ import {
 } from '@backspace/shared/src/constants.js';
 import { connectionManager } from '../ws/handler.js';
 import { checkVoicePermissions } from '../ws/events.js';
+import { endFollowersOf } from './channelFollows.js';
 import { deleteAttachmentFiles } from '../utils/fileCleanup.js';
 import { sendError } from '../utils/httpErrors.js';
 import { checkChannelTopic } from '../utils/channelTopic.js';
 import { canActOnMemberInSpace, canManageRoleInSpace } from '../utils/roleHierarchy.js';
 import { viewerReadsPermissionData } from '../utils/permissionDataView.js';
+import { channelToWire } from '../utils/spaceWire.js';
+import { clearSlowmodePosts } from '../utils/spaceModeration.js';
+import {
+  addedFields,
+  auditChange,
+  auditUserLabel,
+  changedFields,
+  recordAudit,
+  removedFields,
+} from '../utils/auditLog.js';
+import { isSlowmodeSeconds } from '@backspace/shared';
 import type {
+  AuditLogChange,
+  AuditLogTargetType,
+  AuditLogValue,
   CreateChannelRequest,
   UpdateChannelRequest,
   Channel,
   ChannelCategory,
 } from '@backspace/shared';
+import { normalizeChannelIcon } from '@backspace/shared/src/channelIcons.js';
 
-function rowToChannel(row: typeof schema.channels.$inferSelect): Channel {
+/** A category's name for the audit log, or null when the channel is in none (or it no longer exists). */
+function categoryNameOf(categoryId: string | null): string | null {
+  if (!categoryId) return null;
+  return getDb().select({ name: schema.channelCategories.name }).from(schema.channelCategories)
+    .where(eq(schema.channelCategories.id, categoryId)).get()?.name ?? null;
+}
+
+/**
+ * The fields of a channel the audit log compares: name, type, topic, icon, slow
+ * mode and category (by name, so a deleted category still reads). Position is
+ * left out: reordering is not recorded.
+ */
+function auditedChannelFields(row: typeof schema.channels.$inferSelect): Record<string, AuditLogValue> {
   return {
-    id: row.id,
-    spaceId: row.spaceId,
     name: row.name,
-    type: row.type as Channel['type'],
+    type: row.type,
     topic: row.topic,
-    position: row.position ?? 0,
-    categoryId: row.categoryId ?? null,
-    createdAt: row.createdAt,
+    icon: row.icon,
+    slowmodeSeconds: row.slowmodeSeconds ?? 0,
+    category: categoryNameOf(row.categoryId),
   };
+}
+
+/**
+ * The name to record for an override's target: the role's name (`@everyone`
+ * included), or the member's name in the space.
+ */
+function overrideTargetLabel(spaceId: string, targetType: string, targetId: string): string | null {
+  if (targetType === 'role') {
+    return getDb().select({ name: schema.roles.name }).from(schema.roles)
+      .where(and(eq(schema.roles.id, targetId), eq(schema.roles.spaceId, spaceId))).get()?.name ?? null;
+  }
+  return auditUserLabel(spaceId, targetId);
+}
+
+/**
+ * The entry for an override written (`override_update`) or deleted
+ * (`override_delete`) on a channel or a category: who it is for (`target`)
+ * and its allow and deny bits, before and after.
+ */
+function recordOverrideAudit(params: {
+  spaceId: string;
+  actorId: string;
+  action: 'override_update' | 'override_delete';
+  targetType: Extract<AuditLogTargetType, 'channel' | 'category'>;
+  targetId: string;
+  targetLabel: string;
+  overrideTargetType: string;
+  overrideTargetId: string;
+  before: { allow: string; deny: string } | undefined;
+  after: { allow: string; deny: string } | null;
+}): void {
+  const label = overrideTargetLabel(params.spaceId, params.overrideTargetType, params.overrideTargetId);
+  const changes: AuditLogChange[] = params.after
+    ? [
+      auditChange('target', undefined, label),
+      auditChange('allow', params.before?.allow, params.after.allow),
+      auditChange('deny', params.before?.deny, params.after.deny),
+    ]
+    : [
+      auditChange('target', label, undefined),
+      auditChange('allow', params.before?.allow, undefined),
+      auditChange('deny', params.before?.deny, undefined),
+    ];
+  recordAudit({
+    spaceId: params.spaceId,
+    actorId: params.actorId,
+    action: params.action,
+    targetType: params.targetType,
+    targetId: params.targetId,
+    targetLabel: params.targetLabel,
+    changes,
+  });
 }
 
 function rowToCategory(row: typeof schema.channelCategories.$inferSelect): ChannelCategory {
@@ -58,6 +136,33 @@ function rowToCategory(row: typeof schema.channelCategories.$inferSelect): Chann
     position: row.position ?? 0,
     createdAt: row.createdAt,
   };
+}
+
+/**
+ * An announcement channel is one only those with the right may write in: @everyone is denied it
+ * here, as an ordinary override anyone with the right can see and change, and a role or a member
+ * is given it the same way. Back to a text channel, that denial goes again.
+ */
+function setAnnouncementOverride(spaceId: string, channelId: string, closed: boolean): void {
+  const db = getDb();
+  const where = and(
+    eq(schema.channelOverrides.channelId, channelId),
+    eq(schema.channelOverrides.targetType, 'role'),
+    eq(schema.channelOverrides.targetId, spaceId),
+  );
+  const row = db.select().from(schema.channelOverrides).where(where).get();
+  const allow = row ? stringToPermissions(row.allow) & ~PermissionBits.SEND_MESSAGES : 0n;
+  const held = row ? stringToPermissions(row.deny) : 0n;
+  const deny = closed ? held | PermissionBits.SEND_MESSAGES : held & ~PermissionBits.SEND_MESSAGES;
+  if (allow === 0n && deny === 0n) {
+    db.delete(schema.channelOverrides).where(where).run();
+  } else if (row) {
+    db.update(schema.channelOverrides).set({ allow: permissionsToString(allow), deny: permissionsToString(deny) }).where(where).run();
+  } else {
+    db.insert(schema.channelOverrides).values({
+      channelId, targetType: 'role', targetId: spaceId, allow: permissionsToString(allow), deny: permissionsToString(deny),
+    }).run();
+  }
 }
 
 /** Whether a category is private (`isHiddenFromEveryone` on its overrides). */
@@ -103,7 +208,7 @@ function broadcastChannelVisibility(spaceId: string, channelIds: readonly string
         if (channel.type === 'voice') seesVoiceChannel = true;
         connectionManager.sendToUser(userId, {
           type: 'channel_updated',
-          channel: { ...rowToChannel(channel), isPrivate: privateIds.has(channel.id), myPermissions: permissionsToString(perms) },
+          channel: { ...channelToWire(channel), isPrivate: privateIds.has(channel.id), myPermissions: permissionsToString(perms) },
           spaceId,
         }, perms);
       } else {
@@ -236,6 +341,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/spaces/:id/channels - List channels in a space
   app.get<{ Params: { id: string } }>('/api/spaces/:id/channels', {
     preHandler: authenticate,
+    config: { botAllowed: true },
   }, async (request, reply) => {
     const { id } = request.params;
     const db = getDb();
@@ -251,7 +357,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
 
     const allChannels = db.select()
       .from(schema.channels)
-      .where(eq(schema.channels.spaceId, id))
+      .where(and(eq(schema.channels.spaceId, id), ne(schema.channels.type, 'thread')))
       .all();
 
     // Filter by VIEW_CHANNEL permission per channel
@@ -263,7 +369,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     // Sort by position
     visibleChannels.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
-    return reply.code(200).send(visibleChannels.map(rowToChannel));
+    return reply.code(200).send(visibleChannels.map((ch) => channelToWire(ch)));
   });
 
   // POST /api/spaces/:id/channels - Create a channel (admin+)
@@ -292,7 +398,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 400, 'channel_name_length', { min: CHANNEL_NAME_MIN_LENGTH, max: CHANNEL_NAME_MAX_LENGTH });
     }
 
-    if (!type || !['text', 'voice'].includes(type)) {
+    if (!type || !['text', 'voice', 'announcement', 'forum'].includes(type)) {
       return sendError(reply, 400, 'channel_type_invalid');
     }
 
@@ -338,13 +444,22 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       categoryId: validCategoryId,
       createdAt: now,
     }).run();
+    if (type === 'announcement') setAnnouncementOverride(id, channelId, true);
 
     const channel = db.select().from(schema.channels).where(eq(schema.channels.id, channelId)).get();
-    if (!channel) {
+    if (!channel || channel.type === 'thread') {
       return sendError(reply, 500, 'internal_error');
     }
 
-    const channelData = rowToChannel(channel);
+    const channelData = channelToWire(channel);
+
+    recordAudit({
+      spaceId: id, actorId: request.userId, action: 'channel_create',
+      targetType: 'channel', targetId: channelId, targetLabel: channel.name,
+      changes: addedFields({
+        name: channel.name, type: channel.type, topic: channel.topic, category: categoryNameOf(channel.categoryId),
+      }).filter((entry) => entry.to !== null),
+    });
 
     // Broadcast channel_created with per-user permissions
     // (same pattern as broadcastOverrideChange — permissions are per-user
@@ -377,11 +492,11 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, topic, position, categoryId } = request.body;
+    const { name, topic, position, categoryId, slowmodeSeconds, type, icon } = request.body;
     const db = getDb();
 
     const channel = db.select().from(schema.channels).where(eq(schema.channels.id, id)).get();
-    if (!channel) {
+    if (!channel || channel.type === 'thread') {
       return sendError(reply, 404, 'channel_not_found');
     }
 
@@ -391,6 +506,24 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const updates: Partial<typeof schema.channels.$inferInsert> = {};
+
+    // A text channel and an announcement channel hold the same things, so one can become the other.
+    // A voice channel or a forum holds something else.
+    if (type !== undefined && type !== channel.type) {
+      const interchangeable = (value: string): boolean => value === 'text' || value === 'announcement';
+      if (!interchangeable(type) || !interchangeable(channel.type)) {
+        return sendError(reply, 400, 'channel_type_change_invalid');
+      }
+      updates.type = type;
+    }
+
+    // Slow mode takes one of the offered intervals; 0 switches it off.
+    if (slowmodeSeconds !== undefined) {
+      if (!isSlowmodeSeconds(slowmodeSeconds)) {
+        return sendError(reply, 400, 'slowmode_invalid');
+      }
+      updates.slowmodeSeconds = slowmodeSeconds;
+    }
 
     if (name !== undefined) {
       if (typeof name !== 'string') {
@@ -409,6 +542,12 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
         return sendError(reply, 400, checked.code, checked.details);
       }
       updates.topic = checked.topic;
+    }
+
+    if (icon !== undefined) {
+      const checked = normalizeChannelIcon(icon);
+      if (!checked.ok) return sendError(reply, 400, 'channel_icon_invalid');
+      updates.icon = checked.icon;
     }
 
     if (position !== undefined) {
@@ -443,10 +582,29 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 500, 'internal_error');
     }
 
-    const channelData = rowToChannel(updated);
+    // With slow mode off nobody waits here, so the post times are dropped.
+    if (updated.slowmodeSeconds === 0 && channel.slowmodeSeconds !== 0) {
+      clearSlowmodePosts(id);
+    }
 
-    // If categoryId changed, permissions may have changed due to different category overrides
-    if (categoryId !== undefined) {
+    if (updates.type) {
+      setAnnouncementOverride(spaceId, id, updates.type === 'announcement');
+      if (updates.type === 'text') endFollowersOf(id);
+    }
+
+    const channelChanges = changedFields(auditedChannelFields(channel), auditedChannelFields(updated));
+    if (channelChanges.length > 0) {
+      recordAudit({
+        spaceId, actorId: request.userId, action: 'channel_update',
+        targetType: 'channel', targetId: id, targetLabel: updated.name, changes: channelChanges,
+      });
+    }
+
+    const channelData = channelToWire(updated);
+
+    // If categoryId changed, permissions may have changed due to different category overrides,
+    // and an announcement channel changes who may write.
+    if (categoryId !== undefined || updates.type) {
       broadcastOverrideChange(spaceId, id);
       if (channel.type === 'voice') {
         checkVoicePermissions(spaceId);
@@ -471,7 +629,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     const db = getDb();
 
     const channel = db.select().from(schema.channels).where(eq(schema.channels.id, id)).get();
-    if (!channel) {
+    if (!channel || channel.type === 'thread') {
       return sendError(reply, 404, 'channel_not_found');
     }
 
@@ -484,11 +642,12 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     const participants = connectionManager.getRoomParticipants(id);
     if (participants.size > 0) {
       for (const participantId of Array.from(participants)) {
-        connectionManager.leaveRoom(id, participantId);
-        connectionManager.clearVoiceUserStatus(participantId);
-        connectionManager.sendToSpace(spaceId, {
+        // To those who can see the channel, while it and its overrides still exist.
+        connectionManager.sendToChannel(spaceId, id, {
           type: 'voice_state_update', channelId: id, userId: participantId, action: 'leave',
         });
+        connectionManager.leaveRoom(id, participantId);
+        connectionManager.clearVoiceUserStatus(participantId);
         connectionManager.sendToUser(participantId, {
           type: 'voice_disconnected', userId: participantId, channelId: id,
         });
@@ -507,8 +666,11 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Collect attachment filenames BEFORE cascade deletes DB records
+    // Its threads go with it: the rows by cascade, their files and read states here.
+    const threadIds = db.select({ id: schema.channels.id }).from(schema.channels)
+      .where(eq(schema.channels.parentChannelId, id)).all().map((thread) => thread.id);
     const channelMsgIds = db.select({ id: schema.messages.id })
-      .from(schema.messages).where(eq(schema.messages.channelId, id)).all().map(m => m.id);
+      .from(schema.messages).where(inArray(schema.messages.channelId, [id, ...threadIds])).all().map(m => m.id);
 
     let attachmentRows: { filename: string }[] = [];
     if (channelMsgIds.length > 0) {
@@ -517,11 +679,17 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Clean up read_states (no FK, rows would be orphaned)
-    db.delete(schema.readStates).where(eq(schema.readStates.channelId, id)).run();
+    db.delete(schema.readStates).where(inArray(schema.readStates.channelId, [id, ...threadIds])).run();
 
     // Delete messages in channel (attachments cascade), then channel
     db.delete(schema.messages).where(eq(schema.messages.channelId, id)).run();
     db.delete(schema.channels).where(eq(schema.channels.id, id)).run();
+
+    recordAudit({
+      spaceId, actorId: request.userId, action: 'channel_delete',
+      targetType: 'channel', targetId: id, targetLabel: channel.name,
+      changes: removedFields({ name: channel.name, type: channel.type }),
+    });
 
     // Delete attachment files from disk
     deleteAttachmentFiles(attachmentRows);
@@ -545,7 +713,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     const db = getDb();
 
     const channel = db.select().from(schema.channels).where(eq(schema.channels.id, id)).get();
-    if (!channel) {
+    if (!channel || channel.type === 'thread') {
       return sendError(reply, 404, 'channel_not_found');
     }
 
@@ -587,7 +755,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const channel = db.select().from(schema.channels).where(eq(schema.channels.id, id)).get();
-    if (!channel) {
+    if (!channel || channel.type === 'thread') {
       return sendError(reply, 404, 'channel_not_found');
     }
 
@@ -646,6 +814,14 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       }).run();
     });
 
+    recordOverrideAudit({
+      spaceId: channel.spaceId, actorId: request.userId, action: 'override_update',
+      targetType: 'channel', targetId: id, targetLabel: channel.name,
+      overrideTargetType: targetType, overrideTargetId: targetId,
+      before: existingChannelOverride,
+      after: { allow: permissionsToString(bits.allow), deny: permissionsToString(bits.deny) },
+    });
+
     // Notify all space members of the permission change
     broadcastOverrideChange(channel.spaceId, id);
     checkVoicePermissions(channel.spaceId);
@@ -670,7 +846,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       }
 
       const channel = db.select().from(schema.channels).where(eq(schema.channels.id, id)).get();
-      if (!channel) {
+      if (!channel || channel.type === 'thread') {
         return sendError(reply, 404, 'channel_not_found');
       }
 
@@ -709,6 +885,15 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
           eq(schema.channelOverrides.targetId, targetId),
         )
       ).run();
+
+      if (existing) {
+        recordOverrideAudit({
+          spaceId: channel.spaceId, actorId: request.userId, action: 'override_delete',
+          targetType: 'channel', targetId: id, targetLabel: channel.name,
+          overrideTargetType: targetType, overrideTargetId: targetId,
+          before: existing, after: null,
+        });
+      }
 
       // Notify all space members of the permission change
       broadcastOverrideChange(channel.spaceId, id);
@@ -834,6 +1019,14 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       }).run();
     });
 
+    recordOverrideAudit({
+      spaceId: category.spaceId, actorId: request.userId, action: 'override_update',
+      targetType: 'category', targetId: id, targetLabel: category.name,
+      overrideTargetType: targetType, overrideTargetId: targetId,
+      before: existingCategoryOverride,
+      after: { allow: permissionsToString(bits.allow), deny: permissionsToString(bits.deny) },
+    });
+
     broadcastCategoryOverrideChange(category.spaceId, id);
     checkVoicePermissions(category.spaceId);
 
@@ -896,6 +1089,15 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
         )
       ).run();
 
+      if (existing) {
+        recordOverrideAudit({
+          spaceId: category.spaceId, actorId: request.userId, action: 'override_delete',
+          targetType: 'category', targetId: id, targetLabel: category.name,
+          overrideTargetType: targetType, overrideTargetId: targetId,
+          before: existing, after: null,
+        });
+      }
+
       broadcastCategoryOverrideChange(category.spaceId, id);
       checkVoicePermissions(category.spaceId);
 
@@ -952,6 +1154,12 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     if (!category) {
       return sendError(reply, 500, 'internal_error');
     }
+
+    recordAudit({
+      spaceId: id, actorId: request.userId, action: 'category_create',
+      targetType: 'category', targetId: categoryId, targetLabel: category.name,
+      changes: addedFields({ name: category.name }),
+    });
 
     const categoryData = rowToCategory(category);
     connectionManager.sendToSpace(id, {
@@ -1014,6 +1222,15 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 500, 'internal_error');
     }
 
+    // A rename is recorded; a move within the list is a reorder, which is not.
+    const categoryChanges = changedFields({ name: category.name }, { name: updated.name });
+    if (categoryChanges.length > 0) {
+      recordAudit({
+        spaceId: category.spaceId, actorId: request.userId, action: 'category_update',
+        targetType: 'category', targetId: id, targetLabel: updated.name, changes: categoryChanges,
+      });
+    }
+
     const updatedData = { ...rowToCategory(updated), isPrivate: isCategoryPrivate(id, category.spaceId) };
     connectionManager.sendToSpace(category.spaceId, {
       type: 'category_updated',
@@ -1054,6 +1271,12 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       // Delete the category
       tx.delete(schema.channelCategories)
         .where(eq(schema.channelCategories.id, id)).run();
+    });
+
+    recordAudit({
+      spaceId, actorId: request.userId, action: 'category_delete',
+      targetType: 'category', targetId: id, targetLabel: category.name,
+      changes: removedFields({ name: category.name }),
     });
 
     // Broadcast category deletion
@@ -1101,7 +1324,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
 
     // Validate all channel IDs belong to this space
     const spaceChannels = db.select().from(schema.channels)
-      .where(eq(schema.channels.spaceId, id)).all();
+      .where(and(eq(schema.channels.spaceId, id), ne(schema.channels.type, 'thread'))).all();
     const spaceChannelIds = new Set(spaceChannels.map(ch => ch.id));
     for (const ch of channelUpdates) {
       if (!spaceChannelIds.has(ch.id)) {
@@ -1155,6 +1378,24 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       .filter((ch) => previousCategory.get(ch.id) !== ch.categoryId)
       .map((ch) => ch.id);
 
+    // A move to another category is a change to the channel and is recorded;
+    // a reorder within the same one is not.
+    const categoryNames = new Map(spaceCategories.map((c) => [c.id, c.name]));
+    const channelNames = new Map(spaceChannels.map((ch) => [ch.id, ch.name]));
+    for (const ch of channelUpdates) {
+      const before = previousCategory.get(ch.id) ?? null;
+      if (before === ch.categoryId) continue;
+      recordAudit({
+        spaceId: id, actorId: request.userId, action: 'channel_update',
+        targetType: 'channel', targetId: ch.id, targetLabel: channelNames.get(ch.id) ?? null,
+        changes: [auditChange(
+          'category',
+          before === null ? null : categoryNames.get(before) ?? null,
+          ch.categoryId === null ? null : categoryNames.get(ch.categoryId) ?? null,
+        )],
+      });
+    }
+
     // Broadcast the updated layout to all space members with per-user channel filtering
     broadcastChannelLayout(id, movedChannelIds);
     const movedIds = new Set(movedChannelIds);
@@ -1177,7 +1418,7 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
 function broadcastChannelLayout(spaceId: string, movedChannelIds: readonly string[]): void {
   const db = getDb();
   const allChannels = db.select().from(schema.channels)
-    .where(eq(schema.channels.spaceId, spaceId)).all();
+    .where(and(eq(schema.channels.spaceId, spaceId), ne(schema.channels.type, 'thread'))).all();
   const allCategories = db.select().from(schema.channelCategories)
     .where(eq(schema.channelCategories.spaceId, spaceId)).all();
   const channelPrivateIds = idsHiddenFromEveryone(
@@ -1213,7 +1454,7 @@ function broadcastChannelLayout(spaceId: string, movedChannelIds: readonly strin
       if ((perms & PermissionBits.VIEW_CHANNEL) !== 0n) {
         if (ch.type === 'voice' && moved.has(ch.id)) seesMovedVoiceChannel = true;
         visibleChannels.push({
-          ...rowToChannel(ch),
+          ...channelToWire(ch),
           isPrivate: channelPrivateIds.has(ch.id),
           myPermissions: permissionsToString(perms),
         });

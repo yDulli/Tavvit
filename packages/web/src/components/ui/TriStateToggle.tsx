@@ -17,14 +17,16 @@ export function TriStateToggle({
   label?: string;
 }) {
   const { t } = useTranslation(['spaces']);
+  // Three small square buttons in one sunken strip; the one in force is filled
+  // in its own tone (rose for deny, neutral, violet for allow).
   const btnClass = (v: TriState, active: boolean) => {
-    const base = 'w-6 h-6 flex items-center justify-center rounded-full transition-colors text-xs font-bold';
+    const base = 'w-6 h-6 flex items-center justify-center rounded transition-colors text-meta font-semibold';
     const interaction = disabled ? 'cursor-not-allowed' : 'cursor-pointer';
-    if (!active) return `${base} ${interaction} text-txt-tertiary${disabled ? '' : ' hover:text-txt-secondary'}`;
+    if (!active) return `${base} ${interaction} text-txt-tertiary${disabled ? '' : ' hover:bg-interactive-hover hover:text-txt-secondary active:bg-interactive-active'}`;
     switch (v) {
       case 'deny': return `${base} ${interaction} bg-accent-rose/15 text-accent-rose`;
-      case 'neutral': return `${base} ${interaction} bg-white/[0.06] text-txt-tertiary`;
-      case 'allow': return `${base} ${interaction} bg-accent-primary/15 text-accent-primary`;
+      case 'neutral': return `${base} ${interaction} bg-interactive-selected text-txt-secondary`;
+      case 'allow': return `${base} ${interaction} bg-accent-primary/20 text-accent-soft`;
     }
   };
 
@@ -52,7 +54,7 @@ export function TriStateToggle({
     <div
       role="group"
       aria-label={label}
-      className={`flex items-center gap-0.5 bg-surface-input rounded-full p-0.5${disabled ? ' opacity-50' : ''}`}
+      className={`flex items-center gap-0.5 rounded-md border border-border-hard bg-surface-input p-0.5${disabled ? ' opacity-50' : ''}`}
     >
       {button('deny', '✕', value === 'deny' ? 'neutral' : 'deny')}
       {button('neutral', '/', 'neutral')}

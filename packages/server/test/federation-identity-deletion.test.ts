@@ -138,31 +138,8 @@ async function mirrorOnRemote(
   authoredMessageIds: string[];
   dmChannelId: string;
 }> {
-  const { registerLocal } = await import('./helpers/testUsers.js');
-
-  const federatedUsername = `${homeUser.username}@${home.domain}`;
-  const regRes = await fetch(`${remote.origin}/api/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      username: federatedUsername,
-      password: homeUser.password,
-      displayName: homeUser.username,
-      homeInstance: home.domain,
-      homeUserId: homeUser.id,
-    }),
-  });
-  if (!regRes.ok) throw new Error(`mirror register failed (${remote.origin}): ${regRes.status} ${await regRes.text()}`);
-  const data = await regRes.json() as { user: { id: string }; token: string };
-  const remoteUser: TestUser = {
-    id: data.user.id,
-    username: federatedUsername,
-    password: homeUser.password,
-    token: data.token,
-    origin: remote.origin,
-    homeUserId: homeUser.id,
-    homeInstance: home.domain,
-  };
+  const { insertFederatedAccount, registerLocal } = await import('./helpers/testUsers.js');
+  const remoteUser = await insertFederatedAccount(remote, home, homeUser);
 
   const observerOnRemote = await registerLocal(remote, `${label}_obs`);
 
@@ -844,7 +821,7 @@ describe('Federation identity deletion — all-remotes fan-out', () => {
   });
 
   it('#2 leave mode all-remotes: both registries cleaned, both remote rows untouched', async () => {
-    const { registerLocal } = await import('./helpers/testUsers.js');
+    const { insertFederatedAccount, registerLocal } = await import('./helpers/testUsers.js');
     const { openInspector } = await import('./helpers/dbInspect.js');
     const { logMatched } = await import('./helpers/twoInstanceHarness.js');
     const home = await registerLocal(multiHarness.home, 't2');
@@ -854,21 +831,7 @@ describe('Federation identity deletion — all-remotes fan-out', () => {
     // remotes share neither DB nor port, but sequential is cheap and explicit).
     const remoteUserIds: string[] = [];
     for (const r of multiHarness.remotes) {
-      const resR = await fetch(`${r.origin}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: `${home.username}@${multiHarness.home.domain}`,
-          password: home.password,
-          displayName: home.username,
-          homeInstance: multiHarness.home.domain,
-          homeUserId: home.id,
-        }),
-      });
-      // /api/auth/register returns 201 Created (verified against auth.ts).
-      expect(resR.ok).toBe(true);
-      const data = await resR.json() as { user: { id: string }; token: string };
-      remoteUserIds.push(data.user.id);
+      remoteUserIds.push((await insertFederatedAccount(r, multiHarness.home, home)).id);
     }
 
     // Seed home registry with BOTH remotes via a single PUT.

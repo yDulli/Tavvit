@@ -7,6 +7,13 @@ import { uploadSticker } from './stickerUpload';
 import { MAX_PERSONAL_STICKERS } from '@backspace/shared/src/stickers';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
 import { PickerEscapeScope } from './pickerEscape';
+import { useExternalMediaStore } from '../../stores/externalMediaStore';
+
+// A sticker message asks the instance store which servers this client talks to, and that store
+// reaches the audio pipeline, which jsdom cannot build.
+vi.mock('../../audio/AudioManager', () => ({
+  AudioManager: { getInstance: vi.fn().mockReturnValue({ setOutputDevice: vi.fn(), setVolume: vi.fn() }) },
+}));
 
 vi.mock('../../api/client', async importOriginal => ({
   ...await importOriginal<typeof import('../../api/client')>(),
@@ -112,6 +119,8 @@ describe('sticker controls', () => {
   });
 
   it('previews the full image without a permanent collection button', async () => {
+    // chat.test is another server than this page's: the person has said yes to it.
+    useExternalMediaStore.setState({ alwaysAllow: false, allowedHosts: ['chat.test'] });
     render(<StickerMessage token={sticker.token} />);
     fireEvent.click(screen.getByRole('button', { name: 'Preview sticker' }));
     expect(preview).toHaveBeenCalledWith(sticker.token.slice('sticker:'.length));

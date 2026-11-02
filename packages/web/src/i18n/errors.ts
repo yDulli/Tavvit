@@ -9,15 +9,27 @@ import defaultI18n from './index';
  * the server's own English `error` text (an unconverted route, or a peer on
  * an older version), then the message of a plain Error, then the generic
  * fallback. Interpolation values arrive as `details` on the error body.
+ *
+ * A request that got no answer is said in the reader's language: `fetch` rejects
+ * with a TypeError in the browser's own words ("Failed to fetch", "Load failed").
  */
 export function describeError(err: unknown, instance: I18n = defaultI18n): string {
   if (err instanceof HttpError && err.code) {
     return describeErrorCode(err.code, err.message, err.details, instance);
   }
+  if (gotNoAnswer(err)) {
+    return instance.t('errors:network');
+  }
   if (err instanceof Error && err.message.trim().length > 0) {
     return err.message;
   }
   return instance.t('errors:generic');
+}
+
+/** A timeout from the API client, or what `fetch` rejects with when no response came back, in each browser's words. */
+function gotNoAnswer(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return err.name === 'RequestTimeoutError' || (err instanceof TypeError && /fetch|network|load failed/i.test(err.message));
 }
 
 /**

@@ -21,15 +21,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * exactly as the live relay does, or the receiver cannot find the message when
  * the sender only holds a relayed copy of it.
  *
- * Two instances in one process: HOME serves the sync, ORBIT pulls it and feeds
+ * Two instances in one process: HOME serves the sync, TAVVIT pulls it and feeds
  * the events to `processRelayEvents` the way `syncPeerMutationLog` does. Each
  * has its own in-memory database; `getDb` and `getOurOrigin` follow whichever
  * instance is "running".
  *
- * The message is bob's, native on ORBIT (`msg-on-orbit`). HOME holds a relayed
+ * The message is bob's, native on TAVVIT (`msg-on-orbit`). HOME holds a relayed
  * copy of it under its own id (`copy-on-home`). alice, native on HOME, reacts to
  * that copy, so HOME's mutation log names the message by `copy-on-home`, an id
- * ORBIT has never seen.
+ * TAVVIT has never seen.
  */
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>;
@@ -141,7 +141,7 @@ async function buildApp(): Promise<FastifyInstance> {
   return server;
 }
 
-/** ORBIT pulls HOME's mutation log through HOME's real sync endpoint. */
+/** TAVVIT pulls HOME's mutation log through HOME's real sync endpoint. */
 async function orbitPullsFromHome(sinceTimestamp: number): Promise<FederationRelayEvent[]> {
   current = home;
   const body = JSON.stringify({ sinceTimestamp, limit: 100 });
@@ -163,7 +163,7 @@ async function orbitPullsFromHome(sinceTimestamp: number): Promise<FederationRel
   return (JSON.parse(res.body) as FederationSyncResponse).events;
 }
 
-/** ORBIT replays pulled events exactly as `syncPeerMutationLog` does. */
+/** TAVVIT replays pulled events exactly as `syncPeerMutationLog` does. */
 async function orbitReplays(events: FederationRelayEvent[]) {
   current = orbit;
   const { processRelayEvents } = await import('./federation.js');
@@ -236,10 +236,10 @@ describe('POST /api/federation/sync — replayed reactions carry shared message 
 
 /**
  * #333: the other two places the reacted message can live. The reaction is
- * always alice's on HOME, and ORBIT pulls it from HOME.
- * - Native sender: the message is alice's own, native on HOME; ORBIT holds a
+ * always alice's on HOME, and TAVVIT pulls it from HOME.
+ * - Native sender: the message is alice's own, native on HOME; TAVVIT holds a
  *   relayed copy of it, so the reaction must name HOME's id and HOME.
- * - Third instance: the message is carol's, native on THIRD; HOME and ORBIT
+ * - Third instance: the message is carol's, native on THIRD; HOME and TAVVIT
  *   each hold a relayed copy, so the reaction must name THIRD's id and THIRD,
  *   which neither copy's local id is.
  */

@@ -28,8 +28,8 @@ const CODES: FederationPeerStatusReason[] = [
 describe('peerRejectedToast', () => {
   it.each(CODES)('reads %s from the catalog in the selected language, naming the peer', async (code) => {
     const { peerRejectedToast } = await import('./peerRejectedToast');
-    const text = peerRejectedToast({ peerOrigin: 'https://orbit.example', peerLabel: 'Orbit', reason: 'x', reasonCode: code });
-    expect(text).toBe(deFederation.peerRejected[code].replace('{{name}}', 'Orbit'));
+    const text = peerRejectedToast({ peerOrigin: 'https://orbit.example', peerLabel: 'Tavvit', reason: 'x', reasonCode: code });
+    expect(text).toBe(deFederation.peerRejected[code].replace('{{name}}', 'Tavvit'));
   });
 
   it('falls back to the server text when an older server sends no code', async () => {
@@ -43,13 +43,13 @@ describe('peerRejectedToast', () => {
     const { peerRejectedToast } = await import('./peerRejectedToast');
     const text = peerRejectedToast({
       peerOrigin: 'https://orbit.example',
-      peerLabel: 'Orbit',
+      peerLabel: 'Tavvit',
       reason: 'A reason a newer server added',
       // The event arrives as JSON: nothing on the wire stops a code this union lacks.
       reasonCode: 'some_future_reason' as FederationPeerStatusReason,
     });
     expect(text).toBe(deFederation.peerRejected.fallback
-      .replace('{{name}}', 'Orbit')
+      .replace('{{name}}', 'Tavvit')
       .replace('{{reason}}', 'A reason a newer server added'));
   });
 });

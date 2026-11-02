@@ -65,7 +65,8 @@ afterEach(() => {
 function nameIn(rowId: string, text: string): { text: string | null; globe: boolean } {
   const row = document.getElementById(`msg-${rowId}`)!;
   const name = within(row).getByText(text);
-  return { text: name.textContent, globe: name.querySelector('svg') !== null };
+  // The globe sits beside the name's own truncating box, inside `PersonName`.
+  return { text: name.textContent, globe: name.parentElement!.querySelector('svg') !== null };
 }
 
 // One rule for every row that names a person, as the DM list and header do:

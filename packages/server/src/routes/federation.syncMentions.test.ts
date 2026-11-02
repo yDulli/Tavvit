@@ -21,9 +21,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * sync-pull stores mentions under its own ids too.
  *
  * Two instances in one process, as in `federation.syncReactionCoords.test.ts`:
- * HOME serves the sync, ORBIT pulls it and replays it through
+ * HOME serves the sync, TAVVIT pulls it and replays it through
  * `processRelayEvents`. alice (native on HOME) wrote a message on HOME that
- * mentions bob (native on ORBIT) by HOME's row for him, and herself.
+ * mentions bob (native on TAVVIT) by HOME's row for him, and herself.
  */
 
 type TestDb = ReturnType<typeof drizzle<typeof schema>>;

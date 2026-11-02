@@ -16,7 +16,7 @@ it('anchors the popup at the typed @ after a displayed mention and mirrors nativ
   expect(anchor.previousSibling?.textContent).toBe(' hello\n');
   expect(anchor.nextSibling?.textContent).toBe('@al');
   expect(textareaRef.current?.value).toBe('@alice hello\n@al');
-  expect(container.querySelector('.text-accent-primary')).toHaveTextContent('@alice');
+  expect(container.querySelector('.text-accent-soft')).toHaveTextContent('@alice');
   fireEvent.scroll(textareaRef.current!, { target: { scrollTop: 22 } });
   expect(anchor.parentElement?.parentElement?.style.transform).toBe('translateY(-22px)');
 });

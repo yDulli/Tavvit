@@ -11,7 +11,7 @@ Source files:
 ## Voice Channel Join Flow
 
 1. Client sends `voice_join { channelId }` via WS
-2. Server checks CONNECT permission, enforces one-room-per-user
+2. Server checks VIEW_CHANNEL and CONNECT (nothing is implied by sight, permissions.md; CONNECT alone let a member into a hidden voice channel by its id), enforces one-room-per-user. `POST /api/livekit/token` checks the same two.
 3. Server loads voice restrictions from DB (space mute/deafen)
 4. Server broadcasts `voice_state_update { action: 'join', channelElapsedSeconds }` to space. `channelElapsedSeconds` is the whole occupied duration computed by the server, so client/server clock skew cannot change the channel timer; the client advances it from receipt time on one shared, visibility-aware one-second beat. The duration survives participant joins and reconnect grace, and resets when the last participant leaves.
 5. Client calls `POST /api/livekit/token { channelId }` → gets JWT + LiveKit URL
@@ -57,7 +57,7 @@ UI affordances:
 
 **Token grants (DM calls):** Always full (canSpeak=true, canStream=true)
 
-**Identity format:** `{userId}:{username}`, TTL: 1 hour, Room: `{channelId}` or `dm-{dmChannelId}`
+**Identity format:** `{userId}:{username}`, TTL: 10 minutes (a connected client gets new ones from LiveKit by itself, and joining anew asks here first), Room: `{channelId}` or `dm-{dmChannelId}`
 
 **Multi-tab:** Each user has one `voiceWs` binding. New tab → old socket gets `voice_disconnected { reason: 'displaced' }`
 
@@ -339,9 +339,17 @@ Three independent muting mechanisms:
 
 **Effective state:** `effectiveMuted = isMuted || spaceMuted || permissionMuted`
 
+### Removing someone from a call
+
+A connected client is not asked again by LiveKit, so leaving the room in this server's own state does not end the call there. `evictFromLiveKit` (`utils/livekitEviction.ts`) tells LiveKit, and looks through every room, since a client may hold a token and be in a call without having told the socket. It runs for a suspension and a deleted account (`forceDisconnectUser`), and when a session ends if that session held the call, or no device of theirs is left (`closeSessionSockets`): LiveKit knows a person and not a session, so a call on another device goes on. It never holds up what asked for it, and a failure is logged. A call hosted by another instance is that instance's to end.
+
+The server reaches LiveKit at `LIVEKIT_API_URL`, which `docker-compose.yml` sets to `http://host.docker.internal:7880`, the way Caddy reaches it. The public `LIVEKIT_URL` has a path (`/livekit`) that LiveKit's client drops.
+
 ### Move & Disconnect
 - `voice_move`: Requires MOVE_MEMBERS. Same space only. Preserves voice status.
 - `voice_disconnect`: Requires DISCONNECT_MEMBERS. Full teardown.
+- Every moderation action (mute, deafen, move, disconnect) also takes VIEW_CHANNEL on the channel it acts in; a move takes VIEW_CHANNEL and MOVE_MEMBERS on both channels, and the person moved must be able to see and enter the target (VIEW_CHANNEL and CONNECT), so nobody is put in a room they could not join by themselves.
+- Every voice event of a space (`voice_state_update`, `voice_status_update`, `voice_space_muted`, `voice_space_deafened`) goes to the members who can see the channel (`sendToChannel`), as the snapshot (`buildSpaceVoiceState`) always did.
 - Space mute/deafen, move and disconnect of another member also require outranking them in the role hierarchy (permissions.md, "Role hierarchy"); a refusal is a WS `error` with `code: 'role_hierarchy'`.
 
 ---
@@ -442,7 +450,7 @@ The card is a fixed, near-viewport `glass-modal` surface (viewport width minus 6
 
 **What was captured.** The ready bar's kind and name come *only* from a tile the app enumerated and the user clicked (`isScreen` → "Screen" / "Window", plus the source name). Nothing is read off the captured track: `MediaTrackSettings.displaySurface` looks like the right source for this and is not — Firefox omits it, and Electron on a Wayland portal session reports `window` for a whole monitor — and Firefox's `track.label` names a monitor after picking a window there. A confidently wrong label is worse than none, so browser and portal captures show the plain "Ready to go live" and let the live preview, which is the ground truth everywhere, speak for itself.
 
-The quality panel is a **drawer** that slides in over the stage from the right with a scrim. It opens from the **Stream settings** button in the footer's action pill (icon + label, icon-only on phones, next to Cancel / Start) or from the footer summary line; its own close button, the scrim, and Escape (before the screen) close it. It starts collapsed on every open.
+The quality panel is a **drawer** that slides in over the stage from the right with a scrim. It opens from the **Stream settings** button among the footer's actions (icon + label, icon-only on phones, next to Cancel / Start) or from the footer summary line; its own close button, the scrim, and Escape (before the screen) close it. It starts collapsed on every open.
 
 Source picking differs by platform, the rest of the screen is identical (drawer, summary + Cancel/Start in the footer):
 
@@ -515,7 +523,7 @@ The screen-share button is the **only** control-bar entry to screen sharing and 
 | Not sharing | `handleScreenShareAction()` → `openScreenShareSetup()` → the setup screen above |
 | Sharing | Toggles `ScreenShareSettingsPopover` anchored to the button, rendered with `onStopSharing` |
 
-`ScreenShareSettingsPopover` takes an optional `onStopSharing` callback. When present it appends a full-width `bg-accent-rose` "Stop Sharing" button below the stats footer; the control bars pass it (they have no other stop control), while the local `StreamTile` context menu omits it because it already carries its own "Stop Streaming" item. Quality changes made from the popover apply mid-stream through the `screenShareConfig` effect in `useLiveKit` (constraints + overdrive re-applied; a codec change republishes).
+`ScreenShareSettingsPopover` takes an optional `onStopSharing` callback. When present it appends a full-width `.btn-danger` "Stop Sharing" button below the stats footer; the control bars pass it (they have no other stop control), while the local `StreamTile` context menu omits it because it already carries its own "Stop Streaming" item. Quality changes made from the popover apply mid-stream through the `screenShareConfig` effect in `useLiveKit` (constraints + overdrive re-applied; a codec change republishes).
 
 Both control bars close the menu whenever `isScreenSharing` drops to `false`, so a share ended elsewhere (the OS "Stop sharing" bar, `handleScreenShareUnpublished`, the keybind) never leaves a stale popover anchored to the button. The popover's click-outside listener ignores `mousedown` on its own anchor; the anchor's click handler is the sole owner of the open/close toggle (`ConnectionInfoPopover` follows the same contract).
 

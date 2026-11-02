@@ -1,4 +1,6 @@
 import { stickerUrl } from '@backspace/shared/src/stickers';
+import { emojiIdOfReaction } from '@backspace/shared/src/customEmoji';
+import { CustomEmojiImage } from '../ui/CustomEmojiImage';
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +9,7 @@ import { useFormatters } from '../../i18n/formatters';
 import { useSelfIdentity } from '../../stores/authStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
+import { useBump } from '../../hooks/useBump';
 import { useFloatingPosition } from '../../hooks/useFloatingPosition';
 import { usePortalContainer } from '../../hooks/usePortalContainer';
 import { useDismissOnEscape } from '../../hooks/useDismissOnEscape';
@@ -15,6 +18,9 @@ import { parseFederatedUsername } from '../../utils/identity';
 import { isOwnReaction, reactionSentence, summarizeReactors } from './reactionSummary';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
 import { buildImageMenuItems } from './imageMenuItems';
+import { useConnectedOrigins } from '../../hooks/useConnectedOrigins';
+import { useBlockedHost } from '../ui/ExternalMedia';
+import { Icon } from '../ui/Icon';
 
 interface ReactionPillProps {
   emoji: string;
@@ -22,6 +28,8 @@ interface ReactionPillProps {
   reactions: readonly Reaction[];
   /** The instance that issued the message and its reactions. */
   origin: string;
+  /** It was not there when the message's row mounted: it comes in with a small jump. */
+  added?: boolean;
   onToggle: () => void;
 }
 
@@ -47,9 +55,15 @@ function truncateName(name: string): string {
  * routed through the cross-instance user views so a remote user shows their
  * home instance's name rather than a stub's.
  */
-export function ReactionPill({ emoji, reactions, origin, onToggle }: ReactionPillProps) {
-  const { t } = useTranslation(['chat', 'common']);
-  const imageUrl = stickerUrl(emoji);
+export function ReactionPill({ emoji, reactions, origin, added = false, onToggle }: ReactionPillProps) {
+  const { t } = useTranslation(['chat', 'common', 'legal']);
+  const bumps = useBump(reactions.length);
+  const stickerAddress = stickerUrl(emoji);
+  // A sticker from a server this client does not talk to is not fetched until the person says
+  // yes to that server (docs/systems/legal.md): until then the pill shows a plain picture mark.
+  const blockedHost = useBlockedHost(stickerAddress, useConnectedOrigins());
+  const imageUrl = blockedHost ? null : stickerAddress;
+  const customEmojiId = emojiIdOfReaction(emoji);
   const fmt = useFormatters();
   const self = useSelfIdentity();
   const isMobile = useUIStore((s) => s.isMobile);
@@ -134,14 +148,15 @@ export function ReactionPill({ emoji, reactions, origin, onToggle }: ReactionPil
         onBlur={hide}
         aria-pressed={mine}
         aria-describedby={descriptionId}
-        className={`glass-pill flex items-center gap-1 rounded-[6px] cursor-pointer transition-all duration-[120ms] ease-out focus-visible:ring-2 focus-visible:ring-accent-primary/60 ${
+        className={`glass-pill flex min-h-6 items-center gap-1.5 rounded-md px-1.5 py-px leading-none cursor-pointer active:bg-interactive-active ${
           mine ? 'glass-pill-mine' : ''
-        }`}
-        style={{ padding: '2px 8px', fontSize: '13px', lineHeight: 1 }}
+        }${added ? ' bump' : ''}`}
       >
-        {imageUrl ? <img src={imageUrl} alt={t('chat:stickers.sticker')} className="w-7 h-7 object-contain" />
-          : <span style={{ fontSize: '14px', lineHeight: 1 }}>{emoji}</span>}
-        <span className={`font-semibold ${mine ? 'text-accent-mint' : 'text-txt-secondary'}`} style={{ fontSize: '12px' }}>
+        {imageUrl ? <img src={imageUrl} alt={t('chat:stickers.sticker')} className="h-7 w-7 overflow-hidden object-contain text-2xs" />
+          : stickerAddress ? <span title={t('legal:external.compactTitle', { host: blockedHost })}><Icon name="image" size={16} className="text-txt-tertiary" /></span>
+          : customEmojiId ? <CustomEmojiImage id={customEmojiId} size="inline" className="!h-4 !min-w-4 align-middle" />
+          : <span className="text-body leading-none">{emoji}</span>}
+        <span key={bumps} className={`tabular font-mono text-label font-medium ${mine ? 'text-accent-soft' : 'text-txt-secondary'}${bumps > 0 ? ' bump' : ''}`}>
           {fmt.formatNumber(reactions.length)}
         </span>
       </button>
@@ -152,14 +167,16 @@ export function ReactionPill({ emoji, reactions, origin, onToggle }: ReactionPil
           role="tooltip"
           style={style}
           className={`glass flex items-center pointer-events-none animate-fade-in ${imageUrl
-            ? 'flex-col w-[224px] max-w-[calc(100*var(--app-vw)-24px)] rounded-xl overflow-hidden'
+            ? 'flex-col w-[224px] max-w-[calc(100*var(--app-vw)-24px)] rounded-lg overflow-hidden'
             : 'rounded-md px-2.5 py-1.5 gap-2 max-w-[360px]'}`}
         >
           {imageUrl ? <div className="w-full p-4">
             <img src={imageUrl} alt={t('chat:stickers.preview')} className="w-full h-40 object-contain" />
           </div>
-            : <span className="text-[16px] leading-none flex-shrink-0">{emoji}</span>}
-          <span className={`text-[13px] leading-[18px] text-txt-secondary [overflow-wrap:anywhere] ${imageUrl ? 'w-full border-t border-border-soft px-3 py-2.5 text-center' : ''}`}>
+            : stickerAddress ? <Icon name="image" size={16} className="flex-shrink-0 text-txt-tertiary" />
+            : customEmojiId ? <CustomEmojiImage id={customEmojiId} size="inline" className="!h-5 !min-w-5 align-middle flex-shrink-0" />
+            : <span className="text-base leading-none flex-shrink-0">{emoji}</span>}
+          <span className={`text-ui leading-[18px] text-txt-secondary [overflow-wrap:anywhere] ${imageUrl ? 'w-full border-t border-border-soft px-3 py-2.5 text-center' : ''}`}>
             {before}
             <span className="font-medium text-txt-primary">{names}</span>
             {after}

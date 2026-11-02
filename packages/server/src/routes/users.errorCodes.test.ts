@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { eq } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
 import { setWorkerId } from '../utils/snowflake.js';
 import { signJwt, hashPassword } from '../utils/auth.js';
@@ -26,6 +27,7 @@ vi.mock('../db/index.js', () => ({
 
 vi.mock('../ws/handler.js', () => ({
   connectionManager: {
+    closeSessionSockets: vi.fn(),
     sendToUser: vi.fn(),
     sendToSpace: vi.fn(),
     sendToDmMembers: vi.fn(),
@@ -112,6 +114,36 @@ describe('user routes send error codes', () => {
     });
   });
 
+  describe('the last administrator who can act', () => {
+    const leave = () => app.inject({
+      method: 'DELETE', url: '/api/users/@me', headers: auth(),
+      payload: { username: LOCAL_USERNAME, password: LOCAL_PASSWORD },
+    });
+    const addAdmin = (id: string, extra: Partial<typeof schema.users.$inferInsert> = {}) =>
+      testDb.insert(schema.users).values({ id, username: id, passwordHash: 'x', isAdmin: 1, createdAt: 1, ...extra }).run();
+
+    beforeEach(() => {
+      testDb.update(schema.users).set({ isAdmin: 1 }).where(eq(schema.users.id, LOCAL_ID)).run();
+    });
+
+    it('cannot delete their account', async () => {
+      const res = await leave();
+      expect(res.statusCode).toBe(400);
+      expect(res.json().code).toBe('last_admin_cannot_leave');
+    });
+
+    it('is not saved from that by one who is suspended or gone', async () => {
+      addAdmin('admin-suspended', { suspendedAt: 1, suspensionReason: 'For a test' });
+      addAdmin('admin-gone', { isDeleted: 1 });
+      expect((await leave()).json().code).toBe('last_admin_cannot_leave');
+    });
+
+    it('can go once another can act', async () => {
+      addAdmin('admin-other');
+      expect((await leave()).statusCode).toBe(200);
+    });
+  });
+
   it('PATCH @me with nothing to change is no_fields_to_update', async () => {
     const res = await app.inject({ method: 'PATCH', url: '/api/users/@me', headers: auth(), payload: {} });
     expect(res.statusCode).toBe(400);
@@ -182,7 +214,7 @@ describe('user routes send error codes', () => {
   it('POST change-password accepts a new password of exactly the shared minimum', async () => {
     const res = await app.inject({
       method: 'POST', url: '/api/users/@me/change-password', headers: auth(),
-      payload: { currentPassword: LOCAL_PASSWORD, newPassword: 'a'.repeat(PASSWORD_MIN_LENGTH) },
+      payload: { currentPassword: LOCAL_PASSWORD, newPassword: 'xkqzjvwb-mnr'.slice(0, PASSWORD_MIN_LENGTH) },
     });
     expect(res.statusCode).toBe(200);
     expect(typeof res.json().token).toBe('string');

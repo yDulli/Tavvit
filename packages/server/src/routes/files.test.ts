@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, onTestFinished } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
@@ -297,22 +297,14 @@ describe('POST /api/files — tus upload endpoint', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it("rejects tokens issued before the user's password was changed", async () => {
-    // Sign a token with iat = T1 (1000s ago).
-    const t1 = Math.floor(Date.now() / 1000) - 1000;
+  it('rejects a token from before sessions', async () => {
     const { config } = await import('../config.js');
-    const token = jwt.sign(
-      { userId: USER_A_ID, username: 'user_a', iat: t1 },
-      config.jwtSecret,
-      { algorithm: 'HS256', expiresIn: '7d' },
-    );
-
-    // Set passwordChangedAt to T2 (500s ago) in milliseconds — newer than iat.
-    const t2Ms = (Math.floor(Date.now() / 1000) - 500) * 1000;
-    testDb.update(schema.users)
-      .set({ passwordChangedAt: t2Ms })
-      .where(eq(schema.users.id, USER_A_ID))
-      .run();
+    const token = jwt.sign({ userId: USER_A_ID, username: 'user_a' }, config.jwtSecret, { algorithm: 'HS256', expiresIn: '7d' });
+    const testsTake = (value: boolean) => {
+      (globalThis as { __tavvitTestsTakeSessionlessTokens?: boolean }).__tavvitTestsTakeSessionlessTokens = value;
+    };
+    testsTake(false);
+    onTestFinished(() => testsTake(true));
 
     const res = await app.inject({
       method: 'POST',

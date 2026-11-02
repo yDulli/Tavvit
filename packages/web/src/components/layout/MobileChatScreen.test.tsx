@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactElement } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { MobileChatScreen } from './MobileChatScreen';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
@@ -19,11 +21,17 @@ vi.mock('../../audio/AudioManager', () => ({
     })),
   },
 }));
-vi.mock('../chat/MessageList', () => ({ MessageList: () => null }));
+const { messageListProps } = vi.hoisted(() => ({ messageListProps: vi.fn() }));
+vi.mock('../chat/MessageList', () => ({
+  MessageList: (props: unknown) => {
+    messageListProps(props);
+    return null;
+  },
+}));
 vi.mock('../chat/MessageInput', () => ({ MessageInput: () => null }));
 vi.mock('./TransferIndicator', () => ({ TransferIndicator: () => null }));
 vi.mock('../../utils/userViewLookup', () => ({ useCanonicalUserView: (user: User) => user }));
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }) }));
 
 const START = 'spaces:main.dm.startVoiceCall';
 const CANCEL = 'mobile:chat.cancelCall';
@@ -38,6 +46,11 @@ const groupDm = {
   ownerId: 'self',
 } as DmChannel;
 const params = { channelId: dm.id, spaceId: '@me' };
+
+/** The screen reads `?message=` from the address, so it renders inside a router. */
+function renderScreen(ui: ReactElement) {
+  return render(ui, { wrapper: MemoryRouter });
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -54,13 +67,13 @@ describe('mobile DM calls', () => {
     ['a 1:1 DM', dm.id],
     ['a group DM', groupDm.id],
   ])('offers an enabled call button in %s', (_label, channelId) => {
-    render(<MobileChatScreen params={{ channelId, spaceId: '@me' }} />);
+    renderScreen(<MobileChatScreen params={{ channelId, spaceId: '@me' }} />);
     expect(screen.getByRole('button', { name: START })).toBeEnabled();
   });
 
   it.each(['', 'https://remote.example'])('starts and cancels a call on origin %j', (origin) => {
     useSpaceStore.setState({ channelOriginMap: new Map([[dm.id, origin]]) });
-    render(<MobileChatScreen params={params} />);
+    renderScreen(<MobileChatScreen params={params} />);
     fireEvent.click(screen.getByRole('button', { name: START }));
     expect(useVoiceStore.getState().outgoingCall).toEqual({ dmChannelId: dm.id, withCamera: false });
     expect(wsSend).toHaveBeenCalledWith({ type: 'dm_call_start', dmChannelId: dm.id }, origin);
@@ -75,13 +88,13 @@ describe('mobile DM calls', () => {
       outgoingCall: { dmChannelId: dm.id, withCamera: false },
       incomingCall: { dmChannelId: null, federatedCallId: 'remote-call', callOrigin: 'https://elsewhere.example', callerId: 'c', callerName: 'C', livekit: null },
     });
-    render(<MobileChatScreen params={params} />);
+    renderScreen(<MobileChatScreen params={params} />);
     fireEvent.click(screen.getByRole('button', { name: CANCEL }));
     expect(wsSend).toHaveBeenCalledWith({ type: 'dm_call_end', dmChannelId: dm.id, federatedCallId: null }, 'https://call-host.example');
   });
 
   it('prevents another call while one is active, outgoing or incoming elsewhere', () => {
-    render(<MobileChatScreen params={params} />);
+    renderScreen(<MobileChatScreen params={params} />);
     for (const state of [
       { activeDmCall: { dmChannelId: 'other', federatedCallId: null, callOrigin: null, livekit: null } },
       { outgoingCall: { dmChannelId: 'other', withCamera: false } },
@@ -97,7 +110,7 @@ describe('mobile DM calls', () => {
 
   it('cannot call back over a call ringing in from this DM', () => {
     useVoiceStore.setState({ incomingCall: { dmChannelId: dm.id, federatedCallId: null, callOrigin: null, callerId: partner.id, callerName: 'alice', livekit: null } });
-    render(<MobileChatScreen params={params} />);
+    renderScreen(<MobileChatScreen params={params} />);
     const button = screen.getByRole('button', { name: START });
     expect(button).toBeDisabled();
     fireEvent.click(button);
@@ -108,7 +121,7 @@ describe('mobile DM calls', () => {
   it('joins the call already running in a group DM instead of starting one', () => {
     const connectFn = vi.fn().mockResolvedValue(undefined);
     useVoiceStore.setState({ voiceUsers: new Map([[groupDm.id, ['partner', 'bob']]]), connectFn });
-    render(<MobileChatScreen params={{ channelId: groupDm.id, spaceId: '@me' }} />);
+    renderScreen(<MobileChatScreen params={{ channelId: groupDm.id, spaceId: '@me' }} />);
     fireEvent.click(screen.getByRole('button', { name: JOIN }));
     expect(useVoiceStore.getState().activeDmCall).toEqual({ dmChannelId: groupDm.id, federatedCallId: null, callOrigin: null, livekit: null });
     expect(useVoiceStore.getState().outgoingCall).toBeNull();
@@ -118,7 +131,7 @@ describe('mobile DM calls', () => {
 
   it('opens the call screen while in a call with this DM', () => {
     useVoiceStore.setState({ activeDmCall: { dmChannelId: dm.id, federatedCallId: null, callOrigin: null, livekit: null } });
-    render(<MobileChatScreen params={params} />);
+    renderScreen(<MobileChatScreen params={params} />);
     expect(screen.queryByRole('button', { name: START })).toBeNull();
     const button = screen.getByRole('button', { name: OPEN });
     expect(button).toBeEnabled();
@@ -128,7 +141,7 @@ describe('mobile DM calls', () => {
   });
 
   it('does not offer calls in space channels or deleted-partner DMs', () => {
-    const { rerender } = render(<MobileChatScreen params={{ ...params, spaceId: 'space' }} />);
+    const { rerender } = renderScreen(<MobileChatScreen params={{ ...params, spaceId: 'space' }} />);
     expect(screen.queryByRole('button', { name: START })).toBeNull();
     act(() => useSpaceStore.setState({ dmChannels: [{ ...dm, members: [{ ...partner, isDeleted: true }] }] }));
     rerender(<MobileChatScreen params={params} />);
@@ -138,16 +151,36 @@ describe('mobile DM calls', () => {
 
 describe('mobile chat header labels', () => {
   it('names the back button', () => {
-    render(<MobileChatScreen params={params} />);
+    renderScreen(<MobileChatScreen params={params} />);
     expect(screen.getByRole('button', { name: 'common:actions.back' })).toBeInTheDocument();
   });
 
   it('names the group info and members buttons through the catalogs', () => {
-    const { unmount } = render(<MobileChatScreen params={{ channelId: groupDm.id, spaceId: '@me' }} />);
+    const { unmount } = renderScreen(<MobileChatScreen params={{ channelId: groupDm.id, spaceId: '@me' }} />);
     expect(screen.getByRole('button', { name: 'dm:groupInfo.title' })).toBeInTheDocument();
     unmount();
     useSpaceStore.setState({ channels: [{ id: 'c-1', name: 'general', type: 'text' }] as never });
-    render(<MobileChatScreen params={{ channelId: 'c-1', spaceId: 'space' }} />);
+    renderScreen(<MobileChatScreen params={{ channelId: 'c-1', spaceId: 'space' }} />);
     expect(screen.getByRole('button', { name: 'common:labels.members' })).toBeInTheDocument();
+  });
+});
+
+describe('opening at a linked message', () => {
+  it('hands ?message= to the message list of the conversation the address names', () => {
+    render(
+      <MemoryRouter initialEntries={[`/channels/@me/${dm.id}?message=m-42`]}>
+        <MobileChatScreen params={params} />
+      </MemoryRouter>,
+    );
+    expect(messageListProps).toHaveBeenLastCalledWith(expect.objectContaining({ channelId: dm.id, jumpToMessageId: 'm-42' }));
+  });
+
+  it('leaves a conversation the address does not name alone', () => {
+    render(
+      <MemoryRouter initialEntries={['/channels/@me/other-dm?message=m-42']}>
+        <MobileChatScreen params={params} />
+      </MemoryRouter>,
+    );
+    expect(messageListProps).toHaveBeenLastCalledWith(expect.objectContaining({ channelId: dm.id, jumpToMessageId: null }));
   });
 });

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { Server as TusServer } from '@tus/server';
+import { EVENTS, Server as TusServer } from '@tus/server';
 import { FileStore } from '@tus/file-store';
 import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
@@ -7,22 +7,20 @@ import { generateSnowflake } from '../utils/snowflake.js';
 import { verifyJwtAndUser, AuthError } from '../utils/auth.js';
 import {
   parseUploadMetadata,
-  extractExtension,
   buildTusMetadata,
   isOwnerOfUpload,
   type UploadMetadata,
 } from '../utils/tusHooks.js';
 import {
-  generateThumbnail,
-  isResizableImage,
-  probeImageDimensions,
-  probeMediaMeta,
-  generateVideoThumbnail,
-  thumbFilename,
-} from '../utils/thumbnail.js';
-import { classifyVideoPlayable } from '../utils/mediaPlayable.js';
+  finishedUploadExceedsLimit,
+  releaseUpload,
+  reserveUpload,
+  uploadRefusal,
+  type UploadRefusal,
+} from '../utils/accountLimits.js';
+import { errorBody } from '../utils/httpErrors.js';
+import { finalizeUpload } from '../utils/uploadFinalize.js';
 import { eq } from 'drizzle-orm';
-import type { Attachment } from '@backspace/shared';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -79,21 +77,10 @@ function startRateLimitPruner(): void {
   if (typeof rateLimitPruneTimer.unref === 'function') rateLimitPruneTimer.unref();
 }
 
-// ─── Derive mimetype from metadata filename, falling back to octet-stream ───
-const EXT_MIMETYPES: Record<string, string> = {
-  '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.png': 'image/png', '.gif': 'image/gif', '.svg': 'image/svg+xml',
-  '.avif': 'image/avif', '.tiff': 'image/tiff', '.bmp': 'image/bmp',
-  '.ico': 'image/x-icon',
-  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
-  '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav',
-  '.flac': 'audio/flac', '.aac': 'audio/aac', '.opus': 'audio/opus',
-  '.pdf': 'application/pdf',
-};
-
-function mimetypeFromFilename(originalName: string): string {
-  const ext = path.extname(originalName).toLowerCase();
-  return EXT_MIMETYPES[ext] ?? 'application/octet-stream';
+/** A refusal as the rest of the API words it, so the client can say it in the person's language. */
+function refusedUpload(code: UploadRefusal): { status_code: number; body: string } {
+  const status = code === 'disk_full' ? 507 : 413;
+  return { status_code: status, body: JSON.stringify(errorBody(status, code)) };
 }
 
 export async function filesRoutes(app: FastifyInstance): Promise<void> {
@@ -189,9 +176,16 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
         .get();
       const maxSize = settings?.maxUploadSizeBytes ?? config.maxUploadSize;
 
-      if (upload.size !== undefined && upload.size > maxSize) {
+      // A length given later would pass this limit and the account's unchecked.
+      if (upload.size === undefined) {
+        throw { status_code: 400, body: 'Upload-Length is required' };
+      }
+      if (upload.size > maxSize) {
         throw { status_code: 413, body: 'File too large' };
       }
+
+      const refusal = uploadRefusal(userId, upload.size);
+      if (refusal) throw refusedUpload(refusal);
 
       // Extract originalName from existing metadata (decoded by tus already)
       const rawMetaHeader = req.headers['upload-metadata'] as string | undefined;
@@ -217,6 +211,8 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
         if (v !== undefined) mergedMetadata[k] = v;
       }
 
+      reserveUpload(upload.id, userId, upload.size);
+
       return { res, metadata: mergedMetadata };
     },
 
@@ -239,145 +235,31 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
         throw { status_code: 403, body: 'Forbidden: ownership mismatch' };
       }
 
-      const ext = extractExtension(originalName);
-      const filename = `${snowflakeId}${ext}`;
       const srcPath = path.join(config.tusUploadDir, upload.id);
-      const dstPath = path.join(config.uploadDir, filename);
 
-      // Ensure upload dir exists (may differ from tus staging dir) — needed
-      // before media processing because thumbnails are written there.
-      fs.mkdirSync(config.uploadDir, { recursive: true });
-
-      const mimetype = mimetypeFromFilename(originalName);
-
-      // ── Media processing (on the still-staging file in .tus/) ────────────
-      // Wrapped defensively: any failure here must not abort the upload —
-      // we still want the file to land and get an attachments row, just
-      // without thumb/dimensions/duration metadata.
-      let stagedThumbName: string | null = null;
-      let width: number | null = null;
-      let height: number | null = null;
-      let duration: number | null = null;
-      // Tri-state web-playability for video (null = unknown/optimistic). Lets
-      // the client render a download fallback for codecs the browser can't
-      // decode (e.g. HEVC .mov) instead of a dead <video> stuck at 0:00.
-      let playable: boolean | null = null;
-      try {
-        if (isResizableImage(mimetype)) {
-          stagedThumbName = await generateThumbnail(srcPath, mimetype, config.uploadDir);
-          const dims = await probeImageDimensions(srcPath);
-          if (dims) {
-            width = dims.width;
-            height = dims.height;
-          }
-        } else if (mimetype.startsWith('video/')) {
-          const videoThumb = await generateVideoThumbnail(srcPath, config.uploadDir);
-          if (videoThumb) {
-            stagedThumbName = videoThumb.thumbnailFilename;
-            width = videoThumb.width;
-            height = videoThumb.height;
-          }
-          const mediaMeta = await probeMediaMeta(srcPath, mimetype);
-          if (mediaMeta) {
-            duration = mediaMeta.duration ?? null;
-            if (width === null && mediaMeta.width) width = mediaMeta.width;
-            if (height === null && mediaMeta.height) height = mediaMeta.height;
-            playable = classifyVideoPlayable(mimetype, mediaMeta.codec);
-          }
-        } else if (mimetype.startsWith('audio/')) {
-          const mediaMeta = await probeMediaMeta(srcPath, mimetype);
-          if (mediaMeta?.duration) duration = mediaMeta.duration;
-        }
-      } catch (err) {
-        console.error('[files] Media processing failed (non-fatal):', err);
-        // Reset to a clean baseline; if a partial thumb was written we
-        // attempt to clean it up below.
-        if (stagedThumbName) {
-          try {
-            fs.unlinkSync(path.join(config.uploadDir, stagedThumbName));
-          } catch { /* ignore */ }
-          stagedThumbName = null;
-        }
-        width = null; height = null; duration = null; playable = null;
+      // From here on it counts by its row, or not at all. What the start held for it is
+      // gone after a restart, and the limit may have gone down since.
+      releaseUpload(upload.id);
+      if (finishedUploadExceedsLimit(storedUserId, upload.size ?? fs.statSync(srcPath).size)) {
+        await tusServer.datastore.remove(upload.id);
+        throw refusedUpload('storage_limit_reached');
       }
 
-      // ── Commit point: rename .tus/<id> → uploads/<snowflakeId><ext> ──────
-      // After this succeeds we own a permanent file. If anything below
-      // throws we must delete it (or the unlinked-attachment janitor will).
-      fs.renameSync(srcPath, dstPath);
-
-      // The thumb generators name their output `<basename(srcPath)>_thumb.webp`
-      // — i.e. `<uploadId>_thumb.webp`. Rename it to the canonical
-      // `<snowflakeId>_thumb.webp` so storageJanitor's reference set matches.
-      let thumbnailFilename: string | null = null;
-      if (stagedThumbName) {
-        const stagedThumbPath = path.join(config.uploadDir, stagedThumbName);
-        const finalThumbName = thumbFilename(filename);
-        const finalThumbPath = path.join(config.uploadDir, finalThumbName);
-        try {
-          fs.renameSync(stagedThumbPath, finalThumbPath);
-          thumbnailFilename = finalThumbName;
-        } catch (err) {
-          console.error('[files] Thumbnail rename failed (non-fatal):', err);
-          try { fs.unlinkSync(stagedThumbPath); } catch { /* ignore */ }
-          thumbnailFilename = null;
-        }
-      }
+      const attachment = await finalizeUpload({
+        srcPath,
+        snowflakeId,
+        uploaderId: storedUserId,
+        originalName,
+        ...(upload.size !== undefined ? { size: upload.size } : {}),
+        voiceWaveform: meta.voiceWaveform,
+        voiceDuration: meta.voiceDuration,
+      });
 
       // Best-effort: delete tus .json sidecar
       const sidecarPath = `${srcPath}.json`;
       if (fs.existsSync(sidecarPath)) {
         try { fs.unlinkSync(sidecarPath); } catch { /* ignore */ }
       }
-
-      const size = upload.size ?? fs.statSync(dstPath).size;
-      const now = Date.now();
-
-      // ── Insert attachments row ───────────────────────────────────────────
-      try {
-        const db = getDb();
-        db.insert(schema.attachments).values({
-          id: snowflakeId,
-          uploaderId: storedUserId,
-          messageId: null,
-          dmMessageId: null,
-          filename,
-          originalName,
-          mimetype,
-          size,
-          thumbnailFilename,
-          width,
-          height,
-          duration,
-          playable,
-          createdAt: now,
-        }).run();
-      } catch (err) {
-        // INSERT failed after the rename succeeded — best-effort delete the
-        // committed file + thumbnail so we don't leak an orphan. The
-        // storageJanitor unlinked-attachment sweep would also catch it
-        // eventually, but this keeps the failure window small.
-        try { fs.unlinkSync(dstPath); } catch { /* ignore */ }
-        if (thumbnailFilename) {
-          try { fs.unlinkSync(path.join(config.uploadDir, thumbnailFilename)); } catch { /* ignore */ }
-        }
-        throw err;
-      }
-
-      const attachment: Attachment = {
-        id: snowflakeId,
-        messageId: '',
-        filename,
-        originalName,
-        mimetype,
-        size,
-        thumbnailFilename: thumbnailFilename ?? undefined,
-        width: width ?? undefined,
-        height: height ?? undefined,
-        duration: duration ?? undefined,
-        playable,
-        createdAt: now,
-      };
 
       return {
         res,
@@ -387,6 +269,8 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
       };
     },
   });
+
+  tusServer.on(EVENTS.POST_TERMINATE, (_req, _res, id) => releaseUpload(id));
 
   // Register the content-type parser that tus requires
   app.addContentTypeParser(

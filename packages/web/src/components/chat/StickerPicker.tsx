@@ -7,6 +7,7 @@ import { StickerUploadForm } from './StickerUploadForm';
 import { StickerRenameForm } from './StickerRenameForm';
 import { StickerGrid } from './StickerGrid';
 import { describeError } from '../../i18n/errors';
+import { Icon } from '../ui/Icon';
 import './stickers.css';
 
 /** Entries whose name holds the query, ignoring case. A blank query keeps every entry. */
@@ -129,48 +130,44 @@ export function StickerPicker({ onSelect, mobile = false }: { onSelect: (token: 
           closeRename();
         }} /> : <>
         <div className="flex shrink-0 items-center justify-between gap-2 px-4 pt-3 pb-2">
-          <h3 className="text-sm font-semibold">{t('stickers.title')} <span className="ml-1 text-xs font-normal text-txt-tertiary">{!loading && items.length}</span></h3>
+          <h3 className="text-ui font-semibold">{t('stickers.title')} <span className="tabular ml-1 font-mono text-label font-normal text-txt-tertiary">{!loading && items.length}</span></h3>
           <div className="flex items-center gap-1">
             {items.length > 0 && <button type="button" disabled={!!removing} aria-pressed={managing}
               className="sticker-secondary-button" onClick={() => setManaging(!managing)}>{t(managing ? 'stickers.done' : 'stickers.manage')}</button>}
             <button type="button" data-sticker-upload disabled={loading || !!removing || full} onClick={startUpload} className="sticker-primary-button">
-              <span aria-hidden="true" className="text-lg leading-none">+</span>{t('stickers.upload')}
+              <Icon name="plus" size={14} />{t('stickers.upload')}
             </button>
           </div>
         </div>
-        <p className="px-4 pb-3 text-xs text-txt-tertiary">{t(managing ? 'stickers.manageHint' : full ? 'stickers.full' : 'stickers.collectionHint')}</p>
+        <p className="px-4 pb-3 text-meta text-txt-tertiary">{t(managing ? 'stickers.manageHint' : full ? 'stickers.full' : 'stickers.collectionHint')}</p>
         {items.length > 0 && <div className="relative mx-4 mb-3 flex shrink-0 items-center">
-          <svg className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-txt-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-          </svg>
+          <Icon name="search" size={14} className="pointer-events-none absolute left-2.5 text-txt-tertiary" />
           <input type="text" role="searchbox" value={search} onChange={event => setSearch(event.target.value)}
             placeholder={t('stickers.search')} aria-label={t('stickers.search')} maxLength={100}
-            className="input-search w-full pl-8 pr-8 text-xs" />
+            className="input-search h-8 w-full py-0 pl-8 pr-8 text-ui" />
           {search && <button type="button" onClick={() => setSearch('')} aria-label={t('common:actions.clear')}
-            className="absolute right-1.5 flex h-6 w-6 items-center justify-center rounded-md text-txt-tertiary hover:bg-interactive-hover hover:text-txt-primary">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            className="icon-btn absolute right-1 h-6 w-6">
+            <Icon name="x" size={14} />
           </button>}
         </div>}
-        {error && <p role="alert" className="mx-4 mb-3 rounded-lg bg-accent-rose/10 px-3 py-2 text-xs text-txt-danger">{error}</p>}
-        {notice && <p role="status" className="mx-4 mb-2 text-xs text-txt-positive">{notice}</p>}
+        {error && <p role="alert" className="mx-4 mb-3 rounded-md border border-accent-rose/25 bg-accent-rose/10 px-3 py-2 text-meta text-txt-danger">{error}</p>}
+        {notice && <p role="status" className="mx-4 mb-2 text-meta text-txt-positive">{notice}</p>}
         {loading ? <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 pb-3">
           <div role="status" aria-label={t('stickers.loading')} className="grid grid-cols-4 gap-2">
-            {Array.from({ length: 12 }, (_, index) => <div key={index} className="aspect-square rounded-xl bg-interactive-hover animate-pulse" />)}
+            {Array.from({ length: 12 }, (_, index) => <div key={index} className="skeleton skeleton-block aspect-square" />)}
           </div>
         </div> : items.length === 0 ? <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 pb-3">
-          {!error && <div className="flex h-full min-h-48 flex-col items-center justify-center gap-3 text-center px-5">
-            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-primary/10 text-accent-primary">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
-                <path d="M20 13V7a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v9a4 4 0 0 0 4 4h6Zm-7 7v-3a4 4 0 0 1 4-4h3" /><path d="M7.5 12a4 4 0 0 0 5 2M8 8h.01M15 8h.01" strokeLinecap="round" />
-              </svg>
+          {!error && <div className="empty-state h-full min-h-48">
+            <span className="empty-state-icon" aria-hidden="true">
+              <Icon name="smile" size={18} />
             </span>
-            <p className="text-sm font-medium">{t('stickers.empty')}</p>
-            <p className="text-xs leading-5 text-txt-tertiary">{t('stickers.emptyHint')}</p>
-            <button type="button" onClick={startUpload} className="sticker-secondary-button">{t('stickers.chooseImage')}</button>
+            <p className="empty-state-title">{t('stickers.empty')}</p>
+            <p className="empty-state-body">{t('stickers.emptyHint')}</p>
+            <button type="button" onClick={startUpload} className="btn-outline btn-sm mt-2">{t('stickers.chooseImage')}</button>
           </div>}
         </div> : <StickerGrid items={visible} noMatches={visible.length === 0} managing={managing} removing={removing}
           onSelect={onSelect} onRename={startRename} onRemove={id => void remove(id)} />}
-        <div className="shrink-0 border-t border-border-soft px-4 py-2.5 text-[11px] text-txt-tertiary">{t('stickers.limits')}</div>
+        <div className="shrink-0 border-t border-border-hard px-4 py-2 text-label text-txt-tertiary">{t('stickers.limits')}</div>
       </>}
     </div>
   );

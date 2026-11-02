@@ -23,6 +23,13 @@
 export interface CspInput {
   /** `config.livekit.url`. Absent, empty or unparseable means voice is off. */
   livekitUrl?: string | null;
+  /**
+   * `config.federation.enabled`. False means this instance never talks to, or
+   * lets its browser talk to, another instance, so `connect-src` can be limited
+   * to the instance itself and LiveKit. Absent keeps the permissive policy that
+   * federation needs; `index.ts` always passes the real value.
+   */
+  federationEnabled?: boolean;
 }
 
 /**
@@ -64,13 +71,28 @@ function livekitOrigin(raw: string | null | undefined): string | null {
 export function buildCspDirectives(input: CspInput): Record<string, string[]> {
   const livekit = livekitOrigin(input.livekitUrl);
 
-  // Peers are discovered at runtime and are not enumerable, so the schemes are
-  // listed rather than the hosts. `http:` is present alongside `https:` because
-  // self-hosters do run instances on a plain-HTTP LAN; on an HTTPS page the
-  // browser blocks mixed content regardless, so listing it costs nothing there.
-  const connectSrc = ["'self'", 'https:', 'http:', 'wss:', 'ws:', 'blob:', 'data:'];
-  if (livekit && !connectSrc.includes(livekit)) {
-    connectSrc.push(livekit);
+  // With federation on, peers are discovered at runtime and are not
+  // enumerable, so the schemes are listed rather than the hosts. `http:` is
+  // present alongside `https:` because self-hosters do run instances on a
+  // plain-HTTP LAN; on an HTTPS page the browser blocks mixed content
+  // regardless, so listing it costs nothing there.
+  //
+  // With federation off (Tavvit's default) the browser only ever talks to this
+  // instance, so the policy names nothing else. That closes the exfiltration
+  // channel a script injection would otherwise have through fetch/WebSocket.
+  const connectSrc = input.federationEnabled === false
+    ? ["'self'", 'blob:', 'data:']
+    : ["'self'", 'https:', 'http:', 'wss:', 'ws:', 'blob:', 'data:'];
+  if (livekit) {
+    // The LiveKit client opens its signalling WebSocket on the configured URL
+    // but also calls the same host over plain HTTP(S) (its /rtc/validate
+    // probe). Whether a `wss://host` source also covers `https://host` varies
+    // by browser, so both families are listed for that one origin.
+    const host = livekit.slice(livekit.indexOf('://') + 3);
+    const secure = livekit.startsWith('wss://') || livekit.startsWith('https://');
+    for (const origin of secure ? [`wss://${host}`, `https://${host}`] : [`ws://${host}`, `http://${host}`]) {
+      if (!connectSrc.includes(origin)) connectSrc.push(origin);
+    }
   }
 
   return {

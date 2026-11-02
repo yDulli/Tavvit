@@ -126,7 +126,7 @@ async function flipElectronFuses(context, platform) {
   const ext = { darwin: '.app', mas: '.app', win32: '.exe', linux: '' }[platform] ?? '';
   // Mirrors electron-builder's own (newer) PlatformPackager#addElectronFuses
   // path resolution: the Linux packager exposes `executableName`; mac/win
-  // use `appInfo.productFilename` ("Backspace").
+  // use `appInfo.productFilename` ("Tavvit").
   const executableName =
     typeof context.packager.executableName === 'string'
       ? context.packager.executableName

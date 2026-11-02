@@ -8,7 +8,26 @@ import { sendError } from '../utils/httpErrors.js';
 import { markDirectoryDirty, readDirectoryState } from '../directory/state.js';
 import { countListedSpaces } from '../directory/document.js';
 import type { InstanceStreamingLimits, InstanceAdminSettings } from '@backspace/shared';
-import { STANDARD_RESOLUTIONS, STANDARD_FRAMERATES, BITRATE_MATRIX_KBPS } from '@backspace/shared/src/constants.js';
+import { STANDARD_RESOLUTIONS, STANDARD_FRAMERATES, BITRATE_MATRIX_KBPS, DEFAULT_INSTANCE_NAME } from '@backspace/shared/src/constants.js';
+import { accentColorProblem } from '@backspace/shared/src/color.js';
+import { ACCOUNT_LIMITS, storageBytesToGb, storageGbToBytes } from '@backspace/shared/src/accountLimits.js';
+import { recordPlatformAudit } from '../utils/platformAudit.js';
+
+/**
+ * Records which instance settings a save changed (docs/systems/admin.md,
+ * "Platform audit log"): the names only, since some values are long lists.
+ */
+function auditSettingsChange(
+  actorId: string,
+  updateData: Record<string, number | string | boolean | null>,
+  currentRow: typeof schema.instanceSettings.$inferSelect,
+): void {
+  const current: Record<string, unknown> = currentRow;
+  const changed = Object.keys(updateData)
+    .filter((key) => key !== 'updatedAt' && JSON.stringify(updateData[key] ?? null) !== JSON.stringify(current[key] ?? null));
+  if (changed.length === 0) return;
+  recordPlatformAudit({ actorId, action: 'settings_update', targetType: 'instance', targetId: 'settings', details: { fields: changed } });
+}
 
 function rowToLimits(row: typeof schema.instanceSettings.$inferSelect): InstanceStreamingLimits {
   return {
@@ -54,13 +73,17 @@ function rowToAdminSettings(row: SettingsRow, sqlite: Database.Database): Instan
   const maxUploadBytes = row.maxUploadSizeBytes ?? config.maxUploadSize;
   const directory = readDirectoryState(sqlite);
   return {
-    instanceName: row.instanceName ?? 'Backspace',
+    instanceName: row.instanceName ?? DEFAULT_INSTANCE_NAME,
+    emailRequired: row.emailRequiredSince !== null,
+    emojiPolicy: row.emojiPolicy === 'everyone' ? 'everyone' : 'admins',
     registrationOpen: row.registrationOpen !== null ? row.registrationOpen === 1 : config.registrationOpen,
     federatedRegistrationOpen: row.federatedRegistrationOpen === 1,
     discoveryEnabled: row.discoveryEnabled === 1,
     gifApiKey: gifKey ? `****${gifKey.slice(-4)}` : undefined,
     gifEnabled: !!gifKey,
     maxUploadSizeMb: Math.round(maxUploadBytes / (1024 * 1024)),
+    storagePerAccountGb: storageBytesToGb(row.storagePerAccountBytes),
+    spacesPerAccount: row.spacesPerAccount,
     federationRelayEnabled: row.federationRelayEnabled === 1,
     federationRelayTtlDays: row.federationRelayTtlDays,
     defaultAutoRotateIntervalDays: row.defaultAutoRotateIntervalDays,
@@ -70,7 +93,7 @@ function rowToAdminSettings(row: SettingsRow, sqlite: Database.Database): Instan
     directoryLastPingAt: directory.lastPingAt,
     directoryLastError: directory.lastError,
     directoryListedSpaceCount: countListedSpaces(sqlite),
-    supportCardEnabled: row.supportCardEnabled,
+    accentColor: row.accentColor ?? null,
   };
 }
 
@@ -117,7 +140,7 @@ function directoryDocumentChanged(updateData: SettingsUpdate, currentRow: Settin
     if (updateData[key] !== undefined && updateData[key] !== currentRow[key]) return true;
   }
   return updateData.instanceName !== undefined
-    && updateData.instanceName !== (currentRow.instanceName ?? 'Backspace');
+    && updateData.instanceName !== (currentRow.instanceName ?? DEFAULT_INSTANCE_NAME);
 }
 
 export async function settingsRoutes(app: FastifyInstance): Promise<void> {
@@ -258,6 +281,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
     }
 
     db.update(schema.instanceSettings).set(updateData).where(eq(schema.instanceSettings.id, 1)).run();
+    auditSettingsChange(request.userId, updateData, currentRow);
 
     if (directoryDocumentChanged(updateData, currentRow)) {
       markDirectoryDirty(getRawDb());
@@ -301,6 +325,24 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
       updateData.registrationOpen = body.registrationOpen ? 1 : 0;
     }
 
+    if (body.emailRequired !== undefined) {
+      if (typeof body.emailRequired !== 'boolean') {
+        return sendError(reply, 400, 'field_not_boolean', { field: 'emailRequired' });
+      }
+      // From now on: an account older than the switch is not concerned, and turning it off
+      // and on again moves the line forward, so nobody who already got in falls behind it.
+      const since = db.select({ since: schema.instanceSettings.emailRequiredSince }).from(schema.instanceSettings)
+        .where(eq(schema.instanceSettings.id, 1)).get()?.since ?? null;
+      updateData.emailRequiredSince = body.emailRequired ? since ?? Date.now() : null;
+    }
+
+    if (body.emojiPolicy !== undefined) {
+      if (body.emojiPolicy !== 'admins' && body.emojiPolicy !== 'everyone') {
+        return sendError(reply, 400, 'validation_failed', { field: 'emojiPolicy' });
+      }
+      updateData.emojiPolicy = body.emojiPolicy;
+    }
+
     if (body.federatedRegistrationOpen !== undefined) {
       if (typeof body.federatedRegistrationOpen !== 'boolean') {
         return sendError(reply, 400, 'field_not_boolean', { field: 'federatedRegistrationOpen' });
@@ -325,11 +367,23 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
 
     // Only the web client reads it, to hide the Support card. Nowhere in the
     // directory document, so it never owes a ping either.
-    if (body.supportCardEnabled !== undefined) {
-      if (typeof body.supportCardEnabled !== 'boolean') {
-        return sendError(reply, 400, 'field_not_boolean', { field: 'supportCardEnabled' });
+
+    // The accent colour is applied by every client as a CSS variable and drives
+    // button backgrounds under white text, so it is validated here, not trusted
+    // from the browser. null or '' restores the built-in violet.
+    if (body.accentColor !== undefined) {
+      if (body.accentColor === null || body.accentColor === '') {
+        updateData.accentColor = null;
+      } else {
+        const problem = accentColorProblem(body.accentColor);
+        if (problem === 'invalid') {
+          return sendError(reply, 400, 'accent_color_invalid');
+        }
+        if (problem !== null) {
+          return sendError(reply, 400, 'accent_color_low_contrast');
+        }
+        updateData.accentColor = (body.accentColor as string).toLowerCase();
       }
-      updateData.supportCardEnabled = body.supportCardEnabled;
     }
 
     if (body.gifApiKey !== undefined) {
@@ -350,6 +404,22 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
         return sendError(reply, 400, 'upload_limit_out_of_range', { min: 1, max: MAX_MB });
       }
       updateData.maxUploadSizeBytes = mb * 1024 * 1024;
+    }
+
+    if (body.storagePerAccountGb !== undefined) {
+      const bytes = storageGbToBytes(body.storagePerAccountGb);
+      if (bytes === null) {
+        return sendError(reply, 400, 'account_limit_out_of_range', { min: 0, max: ACCOUNT_LIMITS.MAX_STORAGE_GB });
+      }
+      updateData.storagePerAccountBytes = bytes;
+    }
+
+    if (body.spacesPerAccount !== undefined) {
+      const spaces = body.spacesPerAccount;
+      if (typeof spaces !== 'number' || !Number.isInteger(spaces) || spaces < 0 || spaces > ACCOUNT_LIMITS.MAX_SPACES) {
+        return sendError(reply, 400, 'account_limit_out_of_range', { min: 0, max: ACCOUNT_LIMITS.MAX_SPACES });
+      }
+      updateData.spacesPerAccount = spaces;
     }
 
     if (body.federationRelayEnabled !== undefined) {
@@ -389,6 +459,7 @@ export async function settingsRoutes(app: FastifyInstance): Promise<void> {
     }
 
     db.update(schema.instanceSettings).set(updateData).where(eq(schema.instanceSettings.id, 1)).run();
+    auditSettingsChange(request.userId, updateData, currentRow);
 
     if (directoryDocumentChanged(updateData, currentRow)) {
       markDirectoryDirty(getRawDb());

@@ -2,7 +2,11 @@ import { usePendingMessageStore, type PendingBubble } from './pendingMessageStor
 import { useTransferStore } from './transferStore';
 import { useUIStore } from './uiStore';
 import { getApiForOrigin, getChannelOrigin, getChannelKind, useSpaceStore } from './spaceStore';
+import { useSlowmodeStore } from './slowmodeStore';
 import { HttpError, RateLimitError } from '../api/client';
+import { describeError } from '../i18n/errors';
+import { hasPermissionBit, PermissionBits } from '../utils/permissions';
+import { slowmodeRetryAfterSeconds } from '../components/chat/composerLimits';
 
 let started = false;
 
@@ -164,16 +168,37 @@ export function startPendingMessageOrchestrator(): void {
 
 const sentClientIds = new Set<string>();
 
+/**
+ * The slow-mode interval the signed-in user has to keep in a space channel, in
+ * seconds: 0 when it is off or they are exempt (they may manage messages or
+ * the channel), reckoned as the composer does (composerModeration.ts).
+ */
+function slowmodeIntervalOf(channelId: string): number {
+  const state = useSpaceStore.getState();
+  const seconds = state.channels.find((c) => c.id === channelId)?.slowmodeSeconds ?? 0;
+  if (seconds <= 0) return 0;
+  const perms = state.channelPermissions.get(channelId);
+  const exempt = hasPermissionBit(perms, PermissionBits.MANAGE_MESSAGES)
+    || hasPermissionBit(perms, PermissionBits.MANAGE_CHANNELS);
+  return exempt ? 0 : seconds;
+}
+
 async function deferredSend(b: PendingBubble, attempt = 0): Promise<void> {
   const transfers = useTransferStore.getState().transfers;
   const attachmentIds = b.transferIds
     .map((tid) => transfers.get(tid)?.attachmentId)
     .filter((id): id is string => Boolean(id));
+  const spoilerAttachments = b.transferIds
+    .map((tid) => transfers.get(tid))
+    .filter((transfer) => transfer?.spoiler === true)
+    .map((transfer) => transfer?.attachmentId)
+    .filter((id): id is string => Boolean(id));
 
   let client;
+  let origin: string;
   let isDm: boolean;
   try {
-    const origin = getChannelOrigin(b.channelId);
+    origin = getChannelOrigin(b.channelId);
     client = getApiForOrigin(origin);
     isDm = getChannelKind(b.channelId) === 'dm';
   } catch (err) {
@@ -187,24 +212,37 @@ async function deferredSend(b: PendingBubble, attempt = 0): Promise<void> {
       await client.dm.sendMessage(b.channelId, {
         content: b.content,
         attachments: attachmentIds,
+        spoilerAttachments,
         replyToId: b.replyToId ?? undefined,
       });
     } else {
       await client.channels.sendMessage(b.channelId, {
         content: b.content,
         attachments: attachmentIds,
+        spoilerAttachments,
         replyToId: b.replyToId ?? undefined,
       });
     }
     usePendingMessageStore.getState().removeByClientId(b.channelId, b.clientId);
+    // An accepted post starts the channel's slow-mode wait, as a text send
+    // from the composer does.
+    if (!isDm) {
+      const interval = slowmodeIntervalOf(b.channelId);
+      if (interval > 0) useSlowmodeStore.getState().startWait(origin, b.channelId, interval * 1000);
+    }
   } catch (err) {
     const status = err instanceof HttpError ? err.status : 0;
     const isRateLimited = err instanceof RateLimitError;
 
     // 4xx (client error) and rate limits are permanent — mark failed,
-    // user retries manually.
+    // user retries manually. A refusal with a code (slow mode, the space's
+    // message rules, a timeout, a missing permission) is said once, in the
+    // user's language, while the bubble keeps its retry and discard row.
     if ((status >= 400 && status < 500) || isRateLimited) {
       usePendingMessageStore.getState().markFailed(b.clientId);
+      const retryAfter = slowmodeRetryAfterSeconds(err);
+      if (retryAfter !== null && !isDm) useSlowmodeStore.getState().startWait(origin, b.channelId, retryAfter * 1000);
+      if (err instanceof HttpError && err.code) useUIStore.getState().addToast(describeError(err), 'warning');
       return;
     }
     // Network error / 5xx: one immediate retry while online, then mark failed.

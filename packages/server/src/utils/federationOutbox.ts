@@ -1,3 +1,4 @@
+import { parseWaveform } from '@backspace/shared/src/voiceMessages.js';
 import { getDb } from '../db/index.js';
 import * as schema from '../db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
@@ -420,6 +421,8 @@ export function queueDmRelay(
     height: a.height ?? undefined,
     duration: a.duration ?? undefined,
     playable: a.playable ?? null,
+    ...(a.spoiler ? { spoiler: true } : {}),
+    ...(a.voiceWaveform ? { voiceWaveform: parseWaveform(a.voiceWaveform) ?? undefined } : {}),
     thumbnailFilename: a.thumbnailFilename ?? undefined,
     sourceUrl: `${domainOrigin}/api/uploads/${a.filename}`,
   }));
@@ -608,6 +611,7 @@ export function buildRelayPayload(
     replyToId?: string | null;
     editedAt?: number | null;
     createdAt: number;
+    forwarded?: boolean;
   },
   user: {
     id: string;
@@ -628,6 +632,7 @@ export function buildRelayPayload(
     ...(mentions ? { mentions } : {}),
     editedAt: message.editedAt ?? null,
     createdAt: message.createdAt,
+    ...(message.forwarded ? { forwarded: true } : {}),
   };
 }
 

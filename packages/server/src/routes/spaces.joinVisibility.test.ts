@@ -202,7 +202,7 @@ describe('POST /api/spaces/:id/invite — visibility guard', () => {
     const res = await app.inject({ method: 'POST', url: '/api/spaces/s-req-none/invite' });
     expect(res.statusCode).toBe(200);
     const code = res.json().inviteCode as string;
-    expect(code).toMatch(/^[0-9a-f]{8}$/);
+    expect(code).toMatch(/^[\w-]{8}$/);
     const stored = testDb.select().from(schema.spaces).all().find(sp => sp.id === 's-req-none');
     expect(stored?.inviteCode).toBe(code);
   });

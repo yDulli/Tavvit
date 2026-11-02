@@ -1,7 +1,10 @@
+import { usableInvite } from './spaceInvites.js';
 import type { AvatarColor, InvitePreview, SpaceVisibility } from '@backspace/shared';
-import { eq } from 'drizzle-orm';
+import { DEFAULT_INSTANCE_NAME } from '@backspace/shared/src/constants.js';
+import { eq, sql } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { safeFetch } from './ssrf.js';
+import { instanceOrigin, mediaOriginsFor, shownPicture } from './remoteMedia.js';
 
 export interface SpaceInviteSnapshot {
   spaceId: string;
@@ -21,22 +24,23 @@ export interface SpaceInviteSnapshot {
  */
 export function getLocalInvitePreview(inviteCode: string): InvitePreview | null {
   const db = getDb();
-  const space = db.select().from(schema.spaces)
-    .where(eq(schema.spaces.inviteCode, inviteCode)).get();
+  const invite = usableInvite(inviteCode);
+  if (!invite) return null;
+  const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, invite.spaceId)).get();
   if (!space) return null;
 
-  const memberCount = db.select().from(schema.spaceMembers)
-    .where(eq(schema.spaceMembers.spaceId, space.id)).all().length;
+  const memberCount = db.select({ value: sql<number>`count(*)` }).from(schema.spaceMembers)
+    .where(eq(schema.spaceMembers.spaceId, space.id)).get()?.value ?? 0;
 
   const settings = db.select().from(schema.instanceSettings)
     .where(eq(schema.instanceSettings.id, 1)).get();
-  const instanceName = settings?.instanceName ?? 'Backspace';
+  const instanceName = settings?.instanceName ?? DEFAULT_INSTANCE_NAME;
 
   return {
     spaceId: space.id,
     spaceName: space.name,
     description: space.description ?? null,
-    icon: space.icon ?? null,
+    icon: shownPicture(space.icon, mediaOriginsFor()),
     avatarColor: (space.avatarColor as AvatarColor | null) ?? null,
     memberCount,
     instanceName,
@@ -91,10 +95,11 @@ export async function fetchSpaceInviteSnapshot(
       spaceId: data.spaceId,
       spaceName: data.spaceName,
       description: data.description ?? null,
-      icon: data.icon ?? null,
+      // Whoever sees the invite fetches its icon: a file of that instance, by name or address, and nothing elsewhere.
+      icon: typeof data.icon === 'string' ? shownPicture(data.icon, [instanceOrigin(spaceInstanceOrigin) ?? spaceInstanceOrigin]) : null,
       avatarColor: data.avatarColor ?? null,
       memberCount: typeof data.memberCount === 'number' ? data.memberCount : 0,
-      instanceName: data.instanceName ?? 'Backspace',
+      instanceName: data.instanceName ?? DEFAULT_INSTANCE_NAME,
     };
   } catch {
     return null;

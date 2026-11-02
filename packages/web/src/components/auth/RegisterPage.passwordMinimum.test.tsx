@@ -27,6 +27,7 @@ vi.mock('../../api/client', async (importOriginal) => {
   return {
     ...original,
     api: {
+      desktop: { release: vi.fn(async () => ({ release: null })) },
       instance: {
         // Pending metadata leaves registration treated as open, so step 1 is
         // gated only by the credential checks under test.

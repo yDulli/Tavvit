@@ -12,8 +12,6 @@ vi.mock('../audio/AudioManager', () => ({
     }),
   },
 }));
-vi.mock('../hooks/useMascotAnimation', () => ({ useMascotAnimation: vi.fn() }));
-
 /**
  * A socket the real handler talks to. The test plays each server by feeding
  * events through `onmessage`.
@@ -60,7 +58,7 @@ type TaggedSpace = import('../stores/spaceStore').TaggedSpace;
 
 // #346. The viewer's home is the page's instance. Bob is native on orbit
 // (id bob-home); the home keeps a replicated row for him (id stub-a).
-const ORBIT = 'https://orbit.test';
+const TAVVIT = 'https://orbit.test';
 const NOVA = 'https://nova.test';
 const playing: Activity[] = [{ type: 'playing', name: 'Factorio' }];
 
@@ -198,7 +196,7 @@ describe('#346: member status follows the person, not a raw id', () => {
   it("updates a replicated member from their own home's report", () => {
     const stubRow = user({ id: 'stub-a', displayName: 'Bob', status: 'offline', homeUserId: 'bob-home', homeInstance: 'orbit.test' });
     showSpace('', stubRow);
-    const orbit = socketFor(ORBIT);
+    const orbit = socketFor(TAVVIT);
     orbit.deliver({ type: 'presence_update', userId: 'bob-home', status: 'online', homeUserId: null, homeInstance: null });
     expect(statusOf('stub-a')).toBe('online');
   });

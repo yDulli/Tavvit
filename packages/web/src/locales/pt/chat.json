@@ -6,6 +6,8 @@
     "edited": "(editada)",
     "rowLabel": "{{author}}, {{time}}",
     "gifAlt": "GIF",
+    "webhookTag": "Webhook",
+    "botTag": "Bot",
     "upload": {
       "failed": "Falha no envio",
       "discard": "Descartar"
@@ -28,7 +30,8 @@
       "bySelf": "Você reagiu",
       "byOne": "{{name}} reagiu",
       "byMany": "{{names}} reagiram"
-    }
+    },
+    "followTag": "Seguido"
   },
   "list": {
     "noHistoryPermission": "Você não tem permissão para ver o histórico de mensagens neste canal",
@@ -90,12 +93,21 @@
     "sendMessage": "Enviar mensagem",
     "uploadFailed": "Falha ao enviar {{file}}: {{reason}}",
     "uploadFailedReason": "Falha no envio",
+    "uploadTooLarge": "O arquivo é grande demais para este servidor.",
     "typing": {
       "named_one": "{{names}} está digitando",
       "named_many": "{{names}} estão digitando",
       "named_other": "{{names}} estão digitando",
       "several": "Várias pessoas estão digitando"
-    }
+    },
+    "timedOut": "Você está de castigo neste espaço até {{time}}.",
+    "slowmode": {
+      "label": "Modo lento",
+      "active": "Modo lento: {{interval}} entre mensagens",
+      "wait": "Modo lento: você pode enviar de novo em {{time}}"
+    },
+    "rulesRequired": "Aceite as regras deste espaço para escrever aqui.",
+    "readRules": "Ler as regras"
   },
   "menu": {
     "saveImage": "Salvar imagem",
@@ -108,10 +120,28 @@
     "copySelectedText": "Copiar texto selecionado",
     "copyText": "Copiar texto",
     "markUnread": "Marcar como não lida",
+    "pinMessage": "Fixar mensagem",
+    "unpinMessage": "Desafixar mensagem",
+    "forwardMessage": "Encaminhar",
+    "startThread": "Iniciar tópico",
+    "openThread": "Abrir tópico",
     "editMessage": "Editar mensagem",
     "deleteMessage": "Excluir mensagem",
+    "selectMessages": "Selecionar mensagens",
     "linkCopied": "Link copiado",
-    "linkCopyFailed": "Falha ao copiar o link"
+    "linkCopyFailed": "Falha ao copiar o link",
+    "saveMessage": "Salvar mensagem",
+    "unsaveMessage": "Remover de salvas",
+    "remindMe": "Lembrar-me",
+    "remind": {
+      "hour": "Em uma hora",
+      "threeHours": "Em três horas",
+      "tomorrow": "Amanhã de manhã",
+      "nextWeek": "Em uma semana"
+    },
+    "remindSet": "Você será lembrado em {{time}}.",
+    "translate": "Traduzir",
+    "hideTranslation": "Ocultar tradução"
   },
   "attachment": {
     "progress": {
@@ -163,7 +193,8 @@
   },
   "notification": {
     "unknownSender": "Alguém",
-    "attachmentOnly": "Enviou um anexo"
+    "attachmentOnly": "Enviou um anexo",
+    "hiddenBody": "Nova mensagem"
   },
   "embed": {
     "loadAction": "Clique para carregar",
@@ -229,5 +260,182 @@
     "action": "Cutucar",
     "received": "{{actor}} cutucou {{target}}",
     "disconnected": "Não foi possível cutucar: sem conexão com o servidor"
+  },
+  "blocked": {
+    "run_one": "Mensagem bloqueada",
+    "run_many": "{{count}} mensagens bloqueadas",
+    "run_other": "{{count}} mensagens bloqueadas",
+    "show": "Mostrar",
+    "hide": "Ocultar"
+  },
+  "emoji": {
+    "category": "Emojis compartilhados"
+  },
+  "pins": {
+    "title": "Mensagens fixadas",
+    "emptyTitle": "Nada fixado ainda",
+    "emptyBody": "Fixe uma mensagem pelo menu dela para mantê-la sempre à mão aqui.",
+    "unpin": "Desafixar",
+    "pinned": "Fixada",
+    "line": "{{actor}} fixou uma mensagem",
+    "lineJump": "Ver"
+  },
+  "spoiler": {
+    "reveal": "Mostrar spoiler",
+    "revealAttachment": "Mostrar spoiler: {{name}}",
+    "hidden": "[spoiler]",
+    "label": "Spoiler",
+    "mark": "Enviar como spoiler"
+  },
+  "forward": {
+    "title": "Encaminhar mensagem",
+    "search": "Procurar um canal ou conversa",
+    "noPlaces": "Nenhum destino encontrado.",
+    "hint": "Ela chega como sua mensagem, marcada como encaminhada. Não diz quem a escreveu nem onde.",
+    "done": "Encaminhada para {{place}}",
+    "mark": "Encaminhada"
+  },
+  "selection": {
+    "pick": "Selecionar esta mensagem",
+    "delete": "Excluir",
+    "confirmBody": "Isso não pode ser desfeito. O registro de auditoria guarda quantas foram, não o que diziam.",
+    "count_one": "{{count}} selecionada",
+    "count_other": "{{count}} selecionadas",
+    "confirmTitle_one": "Excluir {{count}} mensagem?",
+    "confirmTitle_other": "Excluir {{count}} mensagens?",
+    "count_many": "{{count}} selecionadas",
+    "confirmTitle_many": "Excluir {{count}} mensagens?"
+  },
+  "poll": {
+    "ended": "Encerrada",
+    "endsIn": "restam {{time}}",
+    "multiple": "Você pode escolher várias.",
+    "publicVotes": "Todos neste canal podem ver quem escolheu o quê.",
+    "noVoters": "Ninguém ainda.",
+    "end": "Encerrar enquete",
+    "endTitle": "Encerrar esta enquete agora?",
+    "endBody": "Depois disso ninguém pode votar, e todos veem o resultado.",
+    "create": {
+      "open": "Criar enquete",
+      "title": "Nova enquete",
+      "question": "Pergunta",
+      "options": "Respostas",
+      "optionLabel": "Resposta {{number}}",
+      "removeOption": "Remover resposta {{number}}",
+      "addOption": "Adicionar resposta",
+      "repeated": "Cada resposta só pode aparecer uma vez.",
+      "duration": "Duração",
+      "noEnd": "Até alguém encerrar",
+      "allowMultiple": "Permitir várias respostas",
+      "submit": "Publicar enquete"
+    },
+    "voteCount_one": "{{value}} voto",
+    "voteCount_many": "{{value}} votos",
+    "voteCount_other": "{{value}} votos",
+    "voters_one": "{{value}} pessoa votou",
+    "voters_many": "{{value}} pessoas votaram",
+    "voters_other": "{{value}} pessoas votaram"
+  },
+  "thread": {
+    "panel": "Tópico",
+    "listTitle": "Tópicos",
+    "showArchived": "Arquivados",
+    "showActive": "Ativos",
+    "emptyTitle": "Nenhum tópico ainda",
+    "emptyBody": "Inicie um pelo menu de uma mensagem, para que uma conversa paralela não atravesse o canal.",
+    "emptyArchived": "Nada no arquivo",
+    "noReplies": "Sem respostas ainda",
+    "noStarter": "A mensagem que originou este tópico não existe mais.",
+    "gone": "Este tópico foi excluído.",
+    "close": "Fechar tópico",
+    "follow": "Seguir este tópico",
+    "unfollow": "Deixar de seguir",
+    "rename": "Renomear tópico",
+    "delete": "Excluir tópico",
+    "deleteTitle": "Excluir este tópico?",
+    "deleteBody": "Tudo o que foi dito nele será excluído. A mensagem que o originou permanece no canal.",
+    "replies_one": "{{value}} resposta",
+    "replies_many": "{{value}} respostas",
+    "replies_other": "{{value}} respostas",
+    "composer": "Responder neste tópico"
+  },
+  "voiceMessage": {
+    "record": "Gravar mensagem de voz",
+    "holdToRecord": "Segure para gravar uma mensagem de voz",
+    "recording": "Gravando mensagem de voz",
+    "release": "Solte para parar",
+    "stop": "Parar",
+    "discard": "Descartar",
+    "preview": "Sua mensagem de voz, ainda não enviada",
+    "send": "Enviar mensagem de voz",
+    "play": "Reproduzir",
+    "pause": "Pausar",
+    "position": "Posição na mensagem de voz",
+    "speed": "Velocidade: {{speed}} vezes",
+    "speedShort": "{{speed}}x",
+    "denied": "Permita o microfone no navegador para gravar uma mensagem de voz.",
+    "unsupported": "Este navegador não consegue gravar mensagens de voz."
+  },
+  "commands": {
+    "title": "Comandos",
+    "onlyYou": "Só você vê isto. Some ao recarregar.",
+    "dismiss": "Dispensar",
+    "required": "(obrigatório)",
+    "pick": "Escolher",
+    "send": "Enviar"
+  },
+  "forum": {
+    "newPost": "Nova publicação",
+    "allTags": "Todas",
+    "filterLabel": "Filtrar por tag",
+    "loading": "Carregando publicações",
+    "loadMore": "Mostrar mais",
+    "unknownAuthor": "Alguém",
+    "empty": {
+      "title": "Nenhuma publicação ainda",
+      "body": "Comece a primeira: cada publicação tem sua própria conversa."
+    },
+    "emptyFiltered": {
+      "title": "Nenhuma publicação com esta tag",
+      "body": "Escolha outra tag ou veja todas as publicações."
+    },
+    "compose": {
+      "title": "Nova publicação",
+      "titleLabel": "Título",
+      "contentLabel": "Sobre o que é?",
+      "filesHint": "Você pode adicionar arquivos na publicação assim que ela estiver no ar.",
+      "tagsLabel": "Tags (até {{max}})",
+      "submit": "Publicar",
+      "submitting": "Publicando…"
+    },
+    "tags": {
+      "edit": "Alterar tags",
+      "editTitle": "Tags desta publicação",
+      "none": "Este fórum ainda não tem tags. Quem pode gerenciá-lo pode adicioná-las nas configurações."
+    },
+    "messages_one": "{{count}} mensagem",
+    "messages_many": "{{count}} de mensagens",
+    "messages_other": "{{count}} mensagens"
+  },
+  "follow": {
+    "button": "Seguir",
+    "title": "Seguir #{{channel}}",
+    "intro": "Novas publicações deste canal chegam como cópia no canal que você escolher. Elas não notificam ninguém, e edições ou exclusões posteriores não são repassadas.",
+    "none": "Para seguir este canal, você precisa da permissão de gerenciar webhooks em um canal de texto de outro espaço.",
+    "targetLabel": "Publicar em",
+    "submit": "Seguir",
+    "done": "#{{channel}} em {{space}} agora recebe estas publicações."
+  },
+  "translation": {
+    "working": "Traduzindo…",
+    "downloading": "Baixando o idioma, isso leva cerca de um minuto na primeira vez…",
+    "from": "Traduzido de: {{language}}",
+    "fromUnknown": "Traduzido",
+    "same": "Isto já está em {{language}}.",
+    "nothing": "Não há nada para traduzir aqui.",
+    "none": "A tradução não está configurada aqui.",
+    "google": "Abrir no Google Tradutor",
+    "googleHint": "Isso envia as palavras da mensagem ao Google.",
+    "hide": "Ocultar"
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { Friend, FriendRequest, User } from '@backspace/shared';
+import type { Friend, FriendRequest, User, UserSearchResult } from '@backspace/shared';
 
 /**
  * The friends and requests lists hold one entry per person (`userKey`),
@@ -10,20 +10,22 @@ import type { Friend, FriendRequest, User } from '@backspace/shared';
  * home and Cleo to orbit, and both have row id u-1. Bob is native to orbit
  * (b-1); home knows him as replicated row nb.
  */
-const { ORBIT, homeApi, orbitApi, instances } = vi.hoisted(() => {
+const { TAVVIT, homeApi, orbitApi, instances, upsertUserView } = vi.hoisted(() => {
   const socialApi = () => ({
     friends: vi.fn<() => Promise<Friend[]>>(),
     requests: vi.fn<() => Promise<FriendRequest[]>>(),
-    search: vi.fn<(query: string) => Promise<User[]>>(async () => []),
+    search: vi.fn<(query: string) => Promise<UserSearchResult[]>>(async () => []),
     removeFriend: vi.fn<(id: string) => Promise<{ success: boolean }>>(async () => ({ success: true })),
     updateRequest: vi.fn<(id: string, status: string) => Promise<{ success: boolean }>>(async () => ({ success: true })),
     cancelRequest: vi.fn<(id: string) => Promise<{ success: boolean }>>(async () => ({ success: true })),
   });
   const orbitApi = socialApi();
-  const ORBIT = 'https://orbit.example';
+  const TAVVIT = 'https://orbit.example';
   // The connections the client holds; a test that removes orbit empties it.
   const instances: { origin: string; status: string; api: { social: typeof orbitApi } }[] = [];
-  return { ORBIT, homeApi: socialApi(), orbitApi, instances };
+  // The profile cache's writer: the friends and requests loads feed it, a search never does.
+  const upsertUserView = vi.fn<(user: User, origin: string) => void>();
+  return { TAVVIT, homeApi: socialApi(), orbitApi, instances, upsertUserView };
 });
 
 vi.mock('../api/client', () => ({
@@ -39,7 +41,7 @@ vi.mock('./instanceStore', () => ({
 }));
 
 vi.mock('./spaceStore', () => ({
-  useSpaceStore: { getState: () => ({ upsertUserView: () => {} }) },
+  useSpaceStore: { getState: () => ({ upsertUserView }) },
 }));
 
 vi.mock('../utils/assetUrls', () => ({
@@ -79,7 +81,7 @@ const bobOnHome = user('nb', 'bob@orbit.example', { homeInstance: 'orbit.example
 /** A list entry named by the instance whose row it is shown by, that row's id and the person's username. */
 function shown(entry: { id: string; _instanceOrigin: string; username?: string; user?: User }): string {
   const name = entry.username ?? entry.user?.username ?? '';
-  return `${entry._instanceOrigin === ORBIT ? 'orbit' : 'home'} ${entry.id} ${name}`;
+  return `${entry._instanceOrigin === TAVVIT ? 'orbit' : 'home'} ${entry.id} ${name}`;
 }
 
 function friendNames(): string[] {
@@ -100,7 +102,7 @@ function requests(): TaggedFriendRequest[] {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  instances.splice(0, instances.length, { origin: ORBIT, status: 'connected', api: { social: orbitApi } });
+  instances.splice(0, instances.length, { origin: TAVVIT, status: 'connected', api: { social: orbitApi } });
   useSocialStore.getState().reset();
   homeApi.friends.mockResolvedValue([friend(daveOnHome), friend(bobOnHome)]);
   orbitApi.friends.mockResolvedValue([friend(cleoOnOrbit), friend(bobOnOrbit)]);
@@ -133,7 +135,7 @@ describe('friend_removed', () => {
   });
 
   it("removes the friend the sending instance names, not another instance's user with the same id", () => {
-    useSocialStore.getState().removeFriendLocally('u-1', ORBIT);
+    useSocialStore.getState().removeFriendLocally('u-1', TAVVIT);
     expect(friendNames()).toEqual(['home u-1 dave', 'orbit b-1 bob']);
 
     useSocialStore.getState().removeFriendLocally('u-1', '');
@@ -145,17 +147,17 @@ describe('friend_removed', () => {
     expect(friendNames()).toEqual(['home u-1 dave', 'orbit u-1 cleo']);
 
     // The other instance's event that follows the relay finds nothing left.
-    useSocialStore.getState().removeFriendLocally('b-1', ORBIT);
+    useSocialStore.getState().removeFriendLocally('b-1', TAVVIT);
     expect(friendNames()).toEqual(['home u-1 dave', 'orbit u-1 cleo']);
   });
 
   it("removes the merged entry on its shown row's instance's event too", () => {
-    useSocialStore.getState().removeFriendLocally('b-1', ORBIT);
+    useSocialStore.getState().removeFriendLocally('b-1', TAVVIT);
     expect(friendNames()).toEqual(['home u-1 dave', 'orbit u-1 cleo']);
   });
 
   it('ignores an id the sending instance never listed', () => {
-    useSocialStore.getState().removeFriendLocally('nb', ORBIT);
+    useSocialStore.getState().removeFriendLocally('nb', TAVVIT);
     expect(friendNames()).toEqual(['home u-1 dave', 'orbit b-1 bob', 'orbit u-1 cleo']);
   });
 });
@@ -166,7 +168,7 @@ describe('request removal events', () => {
   });
 
   it("removes the request the sending instance names, not another instance's request with the same ids", () => {
-    useSocialStore.getState().removeRequestById('r-1', ORBIT, 'u-1');
+    useSocialStore.getState().removeRequestById('r-1', TAVVIT, 'u-1');
     expect(requestNames()).toEqual(['home r-1 dave', 'orbit r-bob-orbit bob']);
   });
 
@@ -182,7 +184,7 @@ describe('request removal events', () => {
 
   it('joins a request row that arrives for a listed person to their entry, so its removal finds it', () => {
     useSocialStore.getState().reset();
-    useSocialStore.getState().addIncomingRequest(request('r-bob-orbit', 'me-orbit', bobOnOrbit), ORBIT);
+    useSocialStore.getState().addIncomingRequest(request('r-bob-orbit', 'me-orbit', bobOnOrbit), TAVVIT);
     useSocialStore.getState().addIncomingRequest(request('r-bob-home', 'me-home', bobOnHome), '');
     expect(requestNames()).toEqual(['orbit r-bob-orbit bob']);
 
@@ -191,7 +193,7 @@ describe('request removal events', () => {
   });
 
   it('keeps a request from a different person with the same id on another instance when one is accepted', () => {
-    useSocialStore.getState().addFriendFromAccepted(friend(cleoOnOrbit), 'r-1', ORBIT);
+    useSocialStore.getState().addFriendFromAccepted(friend(cleoOnOrbit), 'r-1', TAVVIT);
     expect(requestNames()).toEqual(['home r-1 dave', 'orbit r-bob-orbit bob']);
     expect(friendNames()).toEqual(['orbit u-1 cleo']);
   });
@@ -212,14 +214,14 @@ describe('actions on a merged entry', () => {
   });
 
   it('removes the friend a row names, not a friend on another instance with the same id', async () => {
-    await useSocialStore.getState().removeFriend(cleoOnOrbit, ORBIT);
+    await useSocialStore.getState().removeFriend(cleoOnOrbit, TAVVIT);
     expect(orbitApi.removeFriend).toHaveBeenCalledWith('u-1');
     expect(homeApi.removeFriend).not.toHaveBeenCalled();
     expect(friendNames()).toEqual(['home u-1 dave', 'orbit b-1 bob']);
   });
 
   it('sends an accept to the instance that holds the request and drops only that person', async () => {
-    await useSocialStore.getState().updateFriendRequest('r-1', ORBIT, 'accepted');
+    await useSocialStore.getState().updateFriendRequest('r-1', TAVVIT, 'accepted');
     expect(orbitApi.updateRequest).toHaveBeenCalledWith('r-1', 'accepted');
     expect(homeApi.updateRequest).not.toHaveBeenCalled();
     expect(requestNames()).toEqual(['home r-1 dave', 'orbit r-bob-orbit bob']);
@@ -250,10 +252,10 @@ describe('actions on a merged entry', () => {
     const erinOnHome = user('e-h', 'erin@nova.example', { homeInstance: 'nova.example', homeUserId: 'e-1' });
     const erinOnOrbit = user('e-o', 'erin@nova.example', { homeInstance: 'nova.example', homeUserId: 'e-1' });
     useSocialStore.getState().addFriendFromAccepted(friend(erinOnHome), 'r-e-h', '');
-    useSocialStore.getState().addFriendFromAccepted(friend(erinOnOrbit), 'r-e-o', ORBIT);
+    useSocialStore.getState().addFriendFromAccepted(friend(erinOnOrbit), 'r-e-o', TAVVIT);
     expect(friends().filter(f => f.username.startsWith('erin')).map(shown)).toEqual(['home e-h erin@nova.example']);
 
-    useSocialStore.getState().updateFriendPresence(erinOnOrbit, ORBIT, 'dnd');
+    useSocialStore.getState().updateFriendPresence(erinOnOrbit, TAVVIT, 'dnd');
     useSocialStore.getState().removeDeletedUser(erinOnHome, '');
 
     const erin = friends().filter(f => f.username.startsWith('erin'));
@@ -270,9 +272,9 @@ describe('a no-op removal', () => {
 
   it('keeps the same lists when nothing matched, so subscribers do not re-render', () => {
     const before = useSocialStore.getState();
-    useSocialStore.getState().removeFriendLocally('nobody', ORBIT);
-    useSocialStore.getState().removeRequestById('r-nobody', ORBIT, 'nobody');
-    useSocialStore.getState().removeDeletedUser(user('nobody', 'nobody'), ORBIT);
+    useSocialStore.getState().removeFriendLocally('nobody', TAVVIT);
+    useSocialStore.getState().removeRequestById('r-nobody', TAVVIT, 'nobody');
+    useSocialStore.getState().removeDeletedUser(user('nobody', 'nobody'), TAVVIT);
     useSocialStore.getState().removeInstanceRows('https://never.example');
     expect(useSocialStore.getState()).toBe(before);
   });
@@ -285,7 +287,7 @@ describe('rows of a merged entry', () => {
   });
 
   it("applies the home's profile update to every row of a merged entry", () => {
-    useSocialStore.getState().updateFriendProfile({ ...bobOnOrbit, displayName: 'Robert' }, ORBIT);
+    useSocialStore.getState().updateFriendProfile({ ...bobOnOrbit, displayName: 'Robert' }, TAVVIT);
     const bob = friends().find(f => f.username === 'bob')!;
     expect(bob.displayName).toBe('Robert');
     expect(bob._rows?.map(r => r.displayName)).toEqual(['Robert', 'Robert']);
@@ -293,7 +295,7 @@ describe('rows of a merged entry', () => {
   });
 
   it('replaces a row the same instance sends again instead of adding a second one', () => {
-    useSocialStore.getState().addIncomingRequest(request('r-bob-orbit', 'me-orbit', { ...bobOnOrbit, displayName: 'Robert' }), ORBIT);
+    useSocialStore.getState().addIncomingRequest(request('r-bob-orbit', 'me-orbit', { ...bobOnOrbit, displayName: 'Robert' }), TAVVIT);
     const bob = requests().find(r => r.user?.username === 'bob')!;
     expect(bob._rows?.map(shown)).toEqual(['home r-bob-home bob@orbit.example', 'orbit r-bob-orbit bob']);
     expect(bob.user?.displayName).toBe('Robert');
@@ -301,25 +303,59 @@ describe('rows of a merged entry', () => {
 
   it("finds a friend row by any instance's id, not only the row the entry is shown by", () => {
     expect(friendRowAt(friends(), 'nb', '')?.username).toBe('bob@orbit.example');
-    expect(friendRowAt(friends(), 'nb', ORBIT)).toBeUndefined();
+    expect(friendRowAt(friends(), 'nb', TAVVIT)).toBeUndefined();
   });
 
   it('finds the pending request with a person as the asking instance holds it', () => {
     expect(pendingRequestWith(requests(), bobOnHome, '')?.id).toBe('r-bob-home');
-    expect(pendingRequestWith(requests(), bobOnOrbit, ORBIT)?.id).toBe('r-bob-orbit');
+    expect(pendingRequestWith(requests(), bobOnOrbit, TAVVIT)?.id).toBe('r-bob-orbit');
     // Row u-1 on the page's instance is Dave, not Cleo.
     expect(pendingRequestWith(requests(), cleoOnOrbit, '')?.user?.username).toBe('dave');
-    expect(pendingRequestWith(requests(), user('x-1', 'xena'), ORBIT)).toBeUndefined();
+    expect(pendingRequestWith(requests(), user('x-1', 'xena'), TAVVIT)).toBeUndefined();
   });
 });
 
 describe('searching users on several instances', () => {
+  /** A user as `GET /api/social/search` returns them: only what a result row shows. */
+  function found(row: User): UserSearchResult {
+    return {
+      id: row.id, username: row.username, displayName: row.displayName, avatar: row.avatar,
+      avatarColor: row.avatarColor, homeInstance: row.homeInstance, homeUserId: row.homeUserId,
+    };
+  }
+
+  it("asks the page's instance and every connected one with the query it was given", async () => {
+    homeApi.search.mockResolvedValue([]);
+    orbitApi.search.mockResolvedValue([]);
+    await useSocialStore.getState().searchUsers('bob');
+    expect(homeApi.search).toHaveBeenCalledWith('bob');
+    expect(orbitApi.search).toHaveBeenCalledWith('bob');
+  });
+
   it('returns two users native to different instances with the same row id as two results', async () => {
-    homeApi.search.mockResolvedValue([daveOnHome, bobOnHome]);
-    orbitApi.search.mockResolvedValue([cleoOnOrbit, bobOnOrbit]);
-    const results = await useSocialStore.getState().searchUsers('a');
+    homeApi.search.mockResolvedValue([found(daveOnHome), found(bobOnHome)]);
+    orbitApi.search.mockResolvedValue([found(cleoOnOrbit), found(bobOnOrbit)]);
+    const results = await useSocialStore.getState().searchUsers('bob');
     expect(results.map(shown)).toEqual(['home u-1 dave', 'orbit b-1 bob', 'orbit u-1 cleo']);
     expect(results.every(r => !('_rows' in r))).toBe(true);
+  });
+
+  it('keeps what the other instances found when one of the searches fails', async () => {
+    homeApi.search.mockRejectedValue(new Error('rate limited'));
+    orbitApi.search.mockResolvedValue([found(cleoOnOrbit)]);
+    const results = await useSocialStore.getState().searchUsers('cleo');
+    expect(results.map(shown)).toEqual(['orbit u-1 cleo']);
+  });
+
+  it('writes nothing into the profile cache: a result is narrower than a user', async () => {
+    homeApi.search.mockResolvedValue([found(daveOnHome), found(bobOnHome)]);
+    orbitApi.search.mockResolvedValue([found(bobOnOrbit)]);
+    await useSocialStore.getState().searchUsers('bob');
+    expect(upsertUserView).not.toHaveBeenCalled();
+
+    // The friends list, whose rows are whole users, still does.
+    await useSocialStore.getState().loadFriends();
+    expect(upsertUserView).toHaveBeenCalled();
   });
 });
 
@@ -330,14 +366,14 @@ describe('an instance that is disconnected or removed', () => {
   });
 
   it("drops that instance's rows; a person another instance lists stays, shown by its row", () => {
-    useSocialStore.getState().removeInstanceRows(ORBIT);
+    useSocialStore.getState().removeInstanceRows(TAVVIT);
     expect(friendNames()).toEqual(['home u-1 dave', 'home nb bob@orbit.example']);
     expect(requestNames()).toEqual(['home r-1 dave', 'home r-bob-home bob@orbit.example']);
     expect(friends().find(f => f.id === 'nb')?._rows).toBeUndefined();
   });
 
   it('then acts on the instance whose row is left', async () => {
-    useSocialStore.getState().removeInstanceRows(ORBIT);
+    useSocialStore.getState().removeInstanceRows(TAVVIT);
     instances.splice(0, instances.length);
     await useSocialStore.getState().removeFriend(bobOnHome, '');
     expect(homeApi.removeFriend).toHaveBeenCalledWith('nb');
@@ -346,9 +382,9 @@ describe('an instance that is disconnected or removed', () => {
 
   it('refuses an action on rows of an origin the client no longer holds, and sends nothing', async () => {
     instances.splice(0, instances.length);
-    await expect(useSocialStore.getState().removeFriend(bobOnOrbit, ORBIT)).rejects.toBeInstanceOf(SocialInstanceNotConnectedError);
-    await expect(useSocialStore.getState().updateFriendRequest('r-1', ORBIT, 'accepted')).rejects.toThrow('orbit.example');
-    await expect(useSocialStore.getState().cancelFriendRequest('r-1', ORBIT)).rejects.toBeInstanceOf(SocialInstanceNotConnectedError);
+    await expect(useSocialStore.getState().removeFriend(bobOnOrbit, TAVVIT)).rejects.toBeInstanceOf(SocialInstanceNotConnectedError);
+    await expect(useSocialStore.getState().updateFriendRequest('r-1', TAVVIT, 'accepted')).rejects.toThrow('orbit.example');
+    await expect(useSocialStore.getState().cancelFriendRequest('r-1', TAVVIT)).rejects.toBeInstanceOf(SocialInstanceNotConnectedError);
     expect(homeApi.removeFriend).not.toHaveBeenCalled();
     expect(homeApi.updateRequest).not.toHaveBeenCalled();
     expect(homeApi.cancelRequest).not.toHaveBeenCalled();
@@ -364,13 +400,13 @@ describe('an accept or cancel from a discover card', () => {
 
   it("drops the person's entry by the card's user when the list lacks the card's request row", async () => {
     // The card was loaded from orbit with a request id the list does not hold yet.
-    await useSocialStore.getState().updateFriendRequest('r-bob-new', ORBIT, 'accepted', bobOnOrbit);
+    await useSocialStore.getState().updateFriendRequest('r-bob-new', TAVVIT, 'accepted', bobOnOrbit);
     expect(orbitApi.updateRequest).toHaveBeenCalledWith('r-bob-new', 'accepted');
     expect(requestNames()).toEqual(['home r-1 dave', 'orbit r-1 cleo']);
   });
 
   it('cancels the same way, and keeps a different person with the same id on another instance', async () => {
-    await useSocialStore.getState().cancelFriendRequest('r-new', ORBIT, cleoOnOrbit);
+    await useSocialStore.getState().cancelFriendRequest('r-new', TAVVIT, cleoOnOrbit);
     expect(orbitApi.cancelRequest).toHaveBeenCalledWith('r-new');
     expect(requestNames()).toEqual(['home r-1 dave', 'orbit r-bob-orbit bob']);
   });

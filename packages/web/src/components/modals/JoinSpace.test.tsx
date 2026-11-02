@@ -18,6 +18,7 @@ import { JoinSpaceModal } from './JoinSpace';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useExploreStore } from '../../stores/exploreStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { HttpError } from '../../api/client';
 import { JoinRequestRequiredError } from '../../utils/joinErrors';
 
@@ -49,6 +50,7 @@ beforeEach(() => {
     requestJoin: vi.fn().mockResolvedValue({ id: 'r1', spaceId: 'p1', status: 'pending' }),
   });
   useUIStore.setState({ isMobile: false });
+  useSettingsStore.setState({ isAdmin: false });
 });
 
 function renderModal() {
@@ -197,13 +199,24 @@ describe('JoinSpaceModal', () => {
     ).toBeInTheDocument();
   });
 
-  it('hides discovery and shows a notice when discovery is disabled', () => {
+  it('hides discovery and tells an administrator it is off when discovery is disabled', () => {
+    useSettingsStore.setState({ isAdmin: true });
     useExploreStore.setState({ discoveryEnabled: false });
     useUIStore.setState({ activeModal: 'joinSpace' });
     renderModal();
     expect(screen.getByText(/discovery is turned off/i)).toBeInTheDocument();
     expect(screen.queryByText('Browse all in Explore')).not.toBeInTheDocument();
     // invite path still available
+    expect(screen.getByPlaceholderText('e.g. abc123 or https://instance.com/join/abc123')).toBeInTheDocument();
+  });
+
+  it('shows a member just the invite field when discovery is disabled: no notice, no dangling divider', () => {
+    useExploreStore.setState({ discoveryEnabled: false });
+    useUIStore.setState({ activeModal: 'joinSpace' });
+    renderModal();
+    expect(screen.queryByText(/discovery is turned off/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Browse all in Explore')).not.toBeInTheDocument();
+    expect(screen.queryByText('Have an invite code?')).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('e.g. abc123 or https://instance.com/join/abc123')).toBeInTheDocument();
   });
 

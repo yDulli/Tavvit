@@ -24,7 +24,7 @@ function TransferMemberRow({
   return (
     <button
       onClick={() => onSelect(member.userId)}
-      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-white/[0.06] transition-colors"
+      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md hover:bg-interactive-hover transition-colors"
     >
       <Avatar
         src={canonical.avatar}
@@ -38,7 +38,7 @@ function TransferMemberRow({
           {displayName}
         </span>
         {canonical.displayName && (
-          <span className="text-[11px] text-txt-tertiary truncate max-w-full">
+          <span className="text-label text-txt-tertiary truncate max-w-full">
             {canonical.username}
           </span>
         )}
@@ -139,13 +139,13 @@ export function TransferOwnershipModal({ spaceId, onClose }: { spaceId: string; 
   };
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
+    <div className="modal-scrim fixed inset-0 z-[10000] flex items-center justify-center">
       <div
         ref={modalRef}
         className="w-[380px] max-h-[480px] glass-modal rounded-xl flex flex-col animate-in fade-in zoom-in-95 duration-150"
       >
         {/* Header */}
-        <div className="px-4 pt-4 pb-3 border-b border-white/[0.06]">
+        <div className="px-4 pt-4 pb-3 border-b border-border-hard">
           <h3 className="text-base font-semibold text-txt-primary">{t('spaces:ownership.title')}</h3>
           <p className="text-xs text-txt-tertiary mt-0.5">
             <Trans

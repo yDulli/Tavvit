@@ -1,4 +1,5 @@
 import { getDb } from '../db/index.js';
+import { config } from '../config.js';
 import * as schema from '../db/schema.js';
 import { and, eq } from 'drizzle-orm';
 import { generateSnowflake } from './snowflake.js';
@@ -314,6 +315,14 @@ export async function ensurePeered(
   origin: string,
   intent: EnsurePeeredCallerIntent,
 ): Promise<EnsurePeeredResult> {
+  // Federation is a deployment-level opt-in (FEDERATION_ENABLED). With it off no
+  // handshake is ever attempted, whoever asks: a friend handle a user typed, a
+  // worker retry, an outbox warm-up. Callers already treat 'failed' as "peer
+  // unreachable", which is the honest answer here.
+  if (!config.federation.enabled) {
+    return { status: 'failed', error: 'Federation is disabled on this instance' };
+  }
+
   // Validate origin format
   const normalized = validateOrigin(origin);
   if (!normalized) {

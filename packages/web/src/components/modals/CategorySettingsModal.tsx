@@ -21,6 +21,9 @@ const CATEGORY_PERMISSIONS: PermissionDef[] = [
   { key: 'MANAGE_MESSAGES', bit: PermissionBits.MANAGE_MESSAGES },
   { key: 'ATTACH_FILES', bit: PermissionBits.ATTACH_FILES },
   { key: 'MENTION_EVERYONE', bit: PermissionBits.MENTION_EVERYONE },
+  { key: 'PIN_MESSAGES', bit: PermissionBits.PIN_MESSAGES },
+  { key: 'CREATE_THREADS', bit: PermissionBits.CREATE_THREADS },
+  { key: 'MANAGE_WEBHOOKS', bit: PermissionBits.MANAGE_WEBHOOKS },
   { key: 'READ_MESSAGE_HISTORY', bit: PermissionBits.READ_MESSAGE_HISTORY },
   { key: 'ADD_REACTIONS', bit: PermissionBits.ADD_REACTIONS },
   { key: 'CONNECT', bit: PermissionBits.CONNECT },
@@ -63,7 +66,7 @@ function OverviewTab({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+        <label className="field-label">
           {t('spaces:category.settings.categoryLabel')}
         </label>
         <InlineNameEditor
@@ -83,7 +86,7 @@ function OverviewTab({
       </div>
 
       {error && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">
           {error}
         </div>
       )}
@@ -102,11 +105,12 @@ function OverviewTab({
       )}
 
       {canManageChannels && (
-        <div className="pt-4 border-t border-border-soft">
-          <label className="block text-xs font-bold text-accent-rose uppercase mb-2">{t('common:labels.dangerZone')}</label>
+        <div className="border-t border-border-hard pt-4">
+          <div className="label-mono mb-2 text-txt-danger">{t('common:labels.dangerZone')}</div>
           <button
+            type="button"
             onClick={onDeleteCategory}
-            className="w-full px-3 py-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-accent-rose text-sm font-medium hover:bg-accent-rose/20 transition-colors"
+            className="btn-danger btn-sm"
           >
             {t('spaces:category.settings.deleteButton')}
           </button>
@@ -200,27 +204,32 @@ export function CategorySettingsModal() {
 
   const showTabs = canManageRoles;
 
-  const tabClass = (target: typeof tab) =>
-    `w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors ${
-      tab === target ? 'bg-interactive-selected text-txt-primary' : 'text-txt-tertiary hover:text-txt-secondary hover:bg-interactive-hover'
-    }`;
-
   return (
     <>
       <Modal isOpen={isOpen} onClose={closeModal} title={t('spaces:category.settings.title')} mobileStyle="fullscreen" maxWidth={showTabs ? 'max-w-2xl' : 'max-w-md'}>
         {showTabs ? (
-          <div className="flex gap-4 h-[min(520px,calc(70*var(--app-vh)))]">
-            {/* Tabs */}
-            <div className="w-32 flex-shrink-0 self-start z-10">
-              <div className="glass-bubble rounded-lg p-1.5 space-y-0.5">
-                <button onClick={() => setTab('overview')} className={tabClass('overview')}>
-                  {t('spaces:settings.nav.tabs.overview')}
-                </button>
-                <button onClick={() => setTab('permissions')} className={tabClass('permissions')}>
-                  {t('spaces:permissions.title')}
-                </button>
-              </div>
-            </div>
+          <div className="flex h-full flex-col gap-4 desktop:h-[min(520px,calc(70*var(--app-vh)))] desktop:flex-row">
+            {/* Tabs: the same flat navigation rows as the channel settings */}
+            <nav className="z-10 flex flex-shrink-0 gap-1 desktop:w-36 desktop:flex-col desktop:gap-0.5 desktop:self-start" aria-label={t('spaces:category.settings.title')}>
+              <button
+                type="button"
+                onClick={() => setTab('overview')}
+                data-active={tab === 'overview'}
+                aria-current={tab === 'overview' ? 'page' : undefined}
+                className="nav-item h-10 flex-1 justify-center desktop:h-8 desktop:w-full desktop:flex-none desktop:justify-start"
+              >
+                {t('spaces:settings.nav.tabs.overview')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('permissions')}
+                data-active={tab === 'permissions'}
+                aria-current={tab === 'permissions' ? 'page' : undefined}
+                className="nav-item h-10 flex-1 justify-center desktop:h-8 desktop:w-full desktop:flex-none desktop:justify-start"
+              >
+                {t('spaces:permissions.title')}
+              </button>
+            </nav>
 
             {/* Content */}
             <div className="flex-1 min-w-0 overflow-y-auto scrollbar-thin">

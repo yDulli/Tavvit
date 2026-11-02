@@ -4,8 +4,9 @@ const lookup = vi.fn<(host: string) => Promise<{ address: string; family: number
 vi.mock('dns', () => ({ default: { promises: { lookup: (h: string) => lookup(h) } } }));
 
 const allowPrivate = vi.fn<() => boolean>(() => false);
+const federationOn = vi.fn<() => boolean>(() => true);
 vi.mock('../config.js', () => ({
-  config: { get federation() { return { allowPrivatePeers: allowPrivate() }; } },
+  config: { get federation() { return { enabled: federationOn(), allowPrivatePeers: allowPrivate() }; } },
 }));
 
 const { assertPeerOriginAllowed, federationFetch } = await import('./federationFetch.js');
@@ -96,12 +97,28 @@ describe('federationFetch', () => {
   beforeEach(() => {
     lookup.mockReset();
     allowPrivate.mockReset().mockReturnValue(false);
+    federationOn.mockReset().mockReturnValue(true);
     transport.mockReset().mockResolvedValue(new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', transport);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('refuses every request, at either trust level, while federation is switched off', async () => {
+    // FEDERATION_ENABLED is the master switch. Every server-to-server request in
+    // the codebase goes through this function, so this is the test that proves
+    // nothing can reach a peer with the switch off, however a caller got here.
+    federationOn.mockReturnValue(false);
+    lookup.mockResolvedValue({ address: '93.184.216.34', family: 4 });
+    for (const trust of ['approved', 'asserted'] as const) {
+      await expect(
+        federationFetch('https://peer.test', '/api/federation/relay', { method: 'POST' }, trust),
+      ).rejects.toThrow(/Federation is disabled/);
+    }
+    expect(transport).not.toHaveBeenCalled();
+    expect(lookup).not.toHaveBeenCalled();
   });
 
   it('does not issue the request when the gate refuses the origin', async () => {

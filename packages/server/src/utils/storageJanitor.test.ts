@@ -210,3 +210,24 @@ describe('cleanupStorage — dm_channels.icon protection', () => {
     expect(result.deletedFiles).toBe(1);
   });
 });
+
+describe('cleanupStorage — space profile pictures', () => {
+  it('keeps the picture and banner a member set for one space', async () => {
+    // The space profile route removes the upload's attachment row once the
+    // member row holds the file, so space_members is its only reference.
+    const { cleanupStorage } = await import('./storageJanitor.js');
+    testDb.insert(schema.users).values({ id: 'member-1', username: 'member', passwordHash: 'x', createdAt: 1 }).run();
+    testDb.insert(schema.spaces).values({ id: 'space-1', name: 'Space', ownerId: 'member-1', createdAt: 1 }).run();
+    writeFile('space-avatar.webp');
+    writeFile('space-banner.webp');
+    testDb.insert(schema.spaceMembers).values({
+      spaceId: 'space-1', userId: 'member-1', joinedAt: 1, avatar: 'space-avatar.webp', banner: 'space-banner.webp',
+    }).run();
+
+    const result = cleanupStorage(false);
+
+    expect(fs.existsSync(path.join(tmpUploadDir, 'space-avatar.webp'))).toBe(true);
+    expect(fs.existsSync(path.join(tmpUploadDir, 'space-banner.webp'))).toBe(true);
+    expect(result.deletedFiles).toBe(0);
+  });
+});

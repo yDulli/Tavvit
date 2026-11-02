@@ -6,6 +6,8 @@
     "edited": "(bearbeitet)",
     "rowLabel": "{{author}}, {{time}}",
     "gifAlt": "GIF-Animation",
+    "webhookTag": "Webhook",
+    "botTag": "Bot",
     "upload": {
       "failed": "Upload fehlgeschlagen",
       "discard": "Verwerfen"
@@ -27,7 +29,8 @@
       "bySelf": "Du hast reagiert",
       "byOne": "{{name}} hat reagiert",
       "byMany": "{{names}} haben reagiert"
-    }
+    },
+    "followTag": "Gefolgt"
   },
   "list": {
     "noHistoryPermission": "Du hast keine Berechtigung, den Nachrichtenverlauf dieses Kanals zu sehen",
@@ -88,11 +91,20 @@
     "sendMessage": "Nachricht senden",
     "uploadFailed": "{{file}} konnte nicht hochgeladen werden: {{reason}}",
     "uploadFailedReason": "Upload fehlgeschlagen",
+    "uploadTooLarge": "Die Datei ist zu groß für diesen Server.",
     "typing": {
       "named_one": "{{names}} schreibt",
       "named_other": "{{names}} schreiben",
       "several": "Mehrere Personen schreiben"
-    }
+    },
+    "timedOut": "Du hast in diesem Space bis {{time}} eine Auszeit.",
+    "slowmode": {
+      "label": "Langsamer Modus",
+      "active": "Langsamer Modus: {{interval}} zwischen Nachrichten",
+      "wait": "Langsamer Modus: du kannst in {{time}} wieder senden"
+    },
+    "rulesRequired": "Stimme den Regeln dieses Space zu, um hier zu schreiben.",
+    "readRules": "Regeln lesen"
   },
   "menu": {
     "saveImage": "Bild speichern",
@@ -105,10 +117,28 @@
     "copySelectedText": "Markierten Text kopieren",
     "copyText": "Text kopieren",
     "markUnread": "Als ungelesen markieren",
+    "pinMessage": "Nachricht anpinnen",
+    "unpinMessage": "Pin entfernen",
+    "forwardMessage": "Weiterleiten",
+    "startThread": "Thread starten",
+    "openThread": "Thread öffnen",
     "editMessage": "Nachricht bearbeiten",
     "deleteMessage": "Nachricht löschen",
+    "selectMessages": "Nachrichten auswählen",
     "linkCopied": "Link kopiert",
-    "linkCopyFailed": "Link konnte nicht kopiert werden"
+    "linkCopyFailed": "Link konnte nicht kopiert werden",
+    "saveMessage": "Nachricht speichern",
+    "unsaveMessage": "Aus Gespeichert entfernen",
+    "remindMe": "Erinnere mich",
+    "remind": {
+      "hour": "In einer Stunde",
+      "threeHours": "In drei Stunden",
+      "tomorrow": "Morgen früh",
+      "nextWeek": "In einer Woche"
+    },
+    "remindSet": "Du wirst am {{time}} erinnert.",
+    "translate": "Übersetzen",
+    "hideTranslation": "Übersetzung ausblenden"
   },
   "attachment": {
     "progress": {
@@ -159,7 +189,8 @@
   },
   "notification": {
     "unknownSender": "Jemand",
-    "attachmentOnly": "Hat einen Anhang gesendet"
+    "attachmentOnly": "Hat einen Anhang gesendet",
+    "hiddenBody": "Neue Nachricht"
   },
   "embed": {
     "loadAction": "Zum Laden klicken",
@@ -221,5 +252,175 @@
     "action": "Anstupsen",
     "received": "{{actor}} hat {{target}} angestupst",
     "disconnected": "Verbindung getrennt. Anstupsen wurde nicht gesendet."
+  },
+  "blocked": {
+    "run_one": "Blockierte Nachricht",
+    "run_other": "{{count}} blockierte Nachrichten",
+    "show": "Anzeigen",
+    "hide": "Ausblenden"
+  },
+  "emoji": {
+    "category": "Gemeinsame Emojis"
+  },
+  "pins": {
+    "title": "Angepinnte Nachrichten",
+    "emptyTitle": "Noch nichts angepinnt",
+    "emptyBody": "Pinne eine Nachricht über ihr Menü an, dann bleibt sie hier griffbereit.",
+    "unpin": "Pin entfernen",
+    "pinned": "Angepinnt",
+    "line": "{{actor}} hat eine Nachricht angepinnt",
+    "lineJump": "Ansehen"
+  },
+  "spoiler": {
+    "reveal": "Spoiler anzeigen",
+    "revealAttachment": "Spoiler anzeigen: {{name}}",
+    "hidden": "[Spoiler]",
+    "label": "Spoiler",
+    "mark": "Als Spoiler senden"
+  },
+  "forward": {
+    "title": "Nachricht weiterleiten",
+    "search": "Kanal oder Unterhaltung suchen",
+    "noPlaces": "Kein Ziel gefunden.",
+    "hint": "Sie kommt als deine Nachricht an, als weitergeleitet markiert. Wer sie wo geschrieben hat, steht nicht dabei.",
+    "done": "Weitergeleitet an {{place}}",
+    "mark": "Weitergeleitet"
+  },
+  "selection": {
+    "pick": "Diese Nachricht auswählen",
+    "delete": "Löschen",
+    "confirmBody": "Das lässt sich nicht rückgängig machen. Im Audit-Log steht, wie viele es waren, aber nicht, was darin stand.",
+    "count_one": "{{count}} ausgewählt",
+    "count_other": "{{count}} ausgewählt",
+    "confirmTitle_one": "{{count}} Nachricht löschen?",
+    "confirmTitle_other": "{{count}} Nachrichten löschen?"
+  },
+  "poll": {
+    "ended": "Beendet",
+    "endsIn": "noch {{time}}",
+    "multiple": "Du kannst mehrere wählen.",
+    "publicVotes": "Alle in diesem Kanal können sehen, wer was gewählt hat.",
+    "noVoters": "Noch niemand.",
+    "end": "Umfrage beenden",
+    "endTitle": "Umfrage jetzt beenden?",
+    "endBody": "Danach kann niemand mehr abstimmen, und alle sehen das Ergebnis.",
+    "create": {
+      "open": "Umfrage erstellen",
+      "title": "Neue Umfrage",
+      "question": "Frage",
+      "options": "Antworten",
+      "optionLabel": "Antwort {{number}}",
+      "removeOption": "Antwort {{number}} entfernen",
+      "addOption": "Antwort hinzufügen",
+      "repeated": "Jede Antwort darf nur einmal vorkommen.",
+      "duration": "Läuft",
+      "noEnd": "Bis jemand sie beendet",
+      "allowMultiple": "Mehrere Antworten erlauben",
+      "submit": "Umfrage senden"
+    },
+    "voteCount_one": "{{value}} Stimme",
+    "voteCount_other": "{{value}} Stimmen",
+    "voters_one": "{{value}} Person hat abgestimmt",
+    "voters_other": "{{value}} Personen haben abgestimmt"
+  },
+  "thread": {
+    "panel": "Thread",
+    "listTitle": "Threads",
+    "showArchived": "Archiv",
+    "showActive": "Aktiv",
+    "emptyTitle": "Noch keine Threads",
+    "emptyBody": "Starte einen über das Menü einer Nachricht, damit ein Nebengespräch nicht durch den ganzen Kanal läuft.",
+    "emptyArchived": "Nichts im Archiv",
+    "noReplies": "Noch keine Antworten",
+    "noStarter": "Die Nachricht, aus der dieser Thread entstand, ist weg.",
+    "gone": "Dieser Thread wurde gelöscht.",
+    "close": "Thread schließen",
+    "follow": "Diesem Thread folgen",
+    "unfollow": "Nicht mehr folgen",
+    "rename": "Thread umbenennen",
+    "delete": "Thread löschen",
+    "deleteTitle": "Diesen Thread löschen?",
+    "deleteBody": "Alles, was darin steht, geht mit. Die Nachricht, aus der er entstand, bleibt im Kanal.",
+    "replies_one": "{{value}} Antwort",
+    "replies_other": "{{value}} Antworten",
+    "composer": "In diesem Thread antworten"
+  },
+  "voiceMessage": {
+    "record": "Sprachnachricht aufnehmen",
+    "holdToRecord": "Gedrückt halten, um eine Sprachnachricht aufzunehmen",
+    "recording": "Sprachnachricht wird aufgenommen",
+    "release": "Zum Beenden loslassen",
+    "stop": "Stopp",
+    "discard": "Verwerfen",
+    "preview": "Deine Sprachnachricht, noch nicht gesendet",
+    "send": "Sprachnachricht senden",
+    "play": "Abspielen",
+    "pause": "Pause",
+    "position": "Stelle in der Sprachnachricht",
+    "speed": "Geschwindigkeit: {{speed}}-fach",
+    "speedShort": "{{speed}}x",
+    "denied": "Erlaube das Mikrofon in deinem Browser, um eine Sprachnachricht aufzunehmen.",
+    "unsupported": "Dieser Browser kann keine Sprachnachricht aufnehmen."
+  },
+  "commands": {
+    "title": "Befehle",
+    "onlyYou": "Nur du siehst das. Nach dem Neuladen ist es weg.",
+    "dismiss": "Ausblenden",
+    "required": "(Pflichtfeld)",
+    "pick": "Auswählen",
+    "send": "Senden"
+  },
+  "forum": {
+    "newPost": "Neuer Beitrag",
+    "allTags": "Alle",
+    "filterLabel": "Nach Tag filtern",
+    "loading": "Beiträge werden geladen",
+    "loadMore": "Mehr anzeigen",
+    "unknownAuthor": "Jemand",
+    "empty": {
+      "title": "Noch keine Beiträge",
+      "body": "Schreib den ersten: Jeder Beitrag bekommt sein eigenes Gespräch."
+    },
+    "emptyFiltered": {
+      "title": "Keine Beiträge mit diesem Tag",
+      "body": "Wähle einen anderen Tag oder sieh dir alle Beiträge an."
+    },
+    "compose": {
+      "title": "Neuer Beitrag",
+      "titleLabel": "Titel",
+      "contentLabel": "Worum geht es?",
+      "filesHint": "Dateien kannst du im Beitrag ergänzen, sobald er steht.",
+      "tagsLabel": "Tags (bis zu {{max}})",
+      "submit": "Veröffentlichen",
+      "submitting": "Wird veröffentlicht…"
+    },
+    "tags": {
+      "edit": "Tags ändern",
+      "editTitle": "Tags dieses Beitrags",
+      "none": "Dieses Forum hat noch keine Tags. Wer es verwalten darf, kann sie in den Einstellungen anlegen."
+    },
+    "messages_one": "{{count}} Nachricht",
+    "messages_other": "{{count}} Nachrichten"
+  },
+  "follow": {
+    "button": "Folgen",
+    "title": "#{{channel}} folgen",
+    "intro": "Neue Beiträge aus diesem Kanal kommen als Kopie in dem Kanal an, den du wählst. Sie pingen niemanden, und spätere Änderungen oder Löschungen werden nicht übernommen.",
+    "none": "Um diesem Kanal zu folgen, brauchst du das Recht „Webhooks verwalten“ in einem Textkanal eines anderen Space.",
+    "targetLabel": "Veröffentlichen in",
+    "submit": "Folgen",
+    "done": "#{{channel}} in {{space}} bekommt diese Beiträge jetzt."
+  },
+  "translation": {
+    "working": "Wird übersetzt…",
+    "downloading": "Sprache wird geladen, das dauert beim ersten Mal etwa eine Minute…",
+    "from": "Übersetzt aus: {{language}}",
+    "fromUnknown": "Übersetzt",
+    "same": "Das ist schon auf {{language}}.",
+    "nothing": "Hier gibt es nichts zu übersetzen.",
+    "none": "Übersetzen ist hier nicht eingerichtet.",
+    "google": "In Google Übersetzer öffnen",
+    "googleHint": "Das schickt die Worte dieser Nachricht an Google.",
+    "hide": "Ausblenden"
   }
 }

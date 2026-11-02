@@ -1,43 +1,31 @@
 import { useTranslation } from 'react-i18next';
-import { availableLanguages, setLanguage, supportedLanguages, type SupportedLanguage } from '../../../i18n';
-import { getLanguage } from '../../../i18n';
+import { isTranslationTarget, TRANSLATION_TARGETS } from '@backspace/shared/src/translation';
+import { useTranslationTargetStore } from '../../../stores/translationTargetStore';
+import { LanguageSelect } from '../../ui/LanguageSelect';
+import { SettingsSection } from './_shared/SettingsControls';
 
-/**
- * The language picker. Each option is shown in its own language, and the
- * list is deliberately not translated: a user who cannot read the current
- * language still has to be able to find their own.
- */
 export function LanguageSection() {
   const { t } = useTranslation(['common']);
-  const current = getLanguage();
-  // A previewed unreleased language (dev `?lang=`) is shown as the current
-  // option so the select does not silently display the wrong value.
-  const options = availableLanguages.some((l) => l.code === current)
-    ? availableLanguages
-    : [...availableLanguages, ...supportedLanguages.filter((l) => l.code === current)];
-
+  const chosenTarget = useTranslationTargetStore((s) => s.chosenTarget);
+  const setChosenTarget = useTranslationTargetStore((s) => s.setChosenTarget);
   return (
-    <div>
-      <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">
-        {t('common:language.label')}
-      </div>
-      <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3.5">
-        <label htmlFor="language-select" className="block text-xs text-txt-tertiary mb-2">
-          {t('common:language.description')}
-        </label>
+    <SettingsSection title={t('common:language.label')} description={t('common:language.description')}>
+      <LanguageSelect id="language-select" className="input-standard w-full" />
+      <div className="mt-4">
+        <label htmlFor="translate-target" className="field-label">{t('common:language.translate.label')}</label>
         <select
-          id="language-select"
-          value={current}
-          onChange={(e) => { void setLanguage(e.target.value as SupportedLanguage); }}
-          className="input-standard w-full appearance-none"
+          id="translate-target"
+          value={chosenTarget ?? ''}
+          onChange={(event) => setChosenTarget(isTranslationTarget(event.target.value) ? event.target.value : null)}
+          className="input-standard w-full"
         >
-          {options.map((language) => (
-            <option key={language.code} value={language.code} lang={language.code}>
-              {language.nativeName}
-            </option>
+          <option value="">{t('common:language.translate.same')}</option>
+          {TRANSLATION_TARGETS.map((target) => (
+            <option key={target.code} value={target.code} lang={target.code}>{target.nativeName}</option>
           ))}
         </select>
+        <p className="mt-1.5 text-meta text-txt-tertiary">{t('common:language.translate.hint')}</p>
       </div>
-    </div>
+    </SettingsSection>
   );
 }

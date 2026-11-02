@@ -1,0 +1,261 @@
+/* The public developer docs (docs/systems/developers.md). Graphite, as in the app; these pages load no app. */
+@font-face { font-family: 'Geist'; src: url('/fonts/Geist-Latin.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Geist Mono'; src: url('/fonts/GeistMono-Latin.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+
+:root {
+  --frame: #0d0e11;
+  --sidebar: #111216;
+  --content: #15161b;
+  --floating: #1e1f25;
+  --hairline: rgba(255, 255, 255, 0.08);
+  --hairline-strong: rgba(255, 255, 255, 0.14);
+  --text: #eceef2;
+  --text-secondary: #a9adb7;
+  --text-tertiary: #767b86;
+  --accent: #7466e8;
+  --accent-soft: #a69cf5;
+  --radius: 6px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0;
+  background: var(--frame);
+  color: var(--text);
+  font: 400 14px/1.65 'Geist', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-soft); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+/* ── The head of every page ── */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--frame);
+  border-bottom: 1px solid var(--hairline);
+}
+.brand { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 600; flex-shrink: 0; }
+.brand:hover { text-decoration: none; }
+.logo { width: 24px; height: 24px; display: block; }
+.brand-sub { color: var(--text-tertiary); font-weight: 400; font-family: 'Geist Mono', monospace; font-size: 12px; }
+.site-search { position: relative; flex: 1; max-width: 360px; min-width: 0; margin-left: auto; }
+.site-search input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--sidebar);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 13px;
+}
+.site-search input:focus { outline: none; border-color: var(--accent); }
+.search-results {
+  position: absolute;
+  top: 38px;
+  left: 0;
+  right: 0;
+  max-height: 60vh;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--floating);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.search-results a { display: block; padding: 6px 8px; border-radius: 4px; color: var(--text); font-size: 13px; }
+.search-results a:hover, .search-results a[aria-current='true'] { background: rgba(255, 255, 255, 0.06); text-decoration: none; }
+.search-results small { display: block; color: var(--text-tertiary); font-size: 12px; }
+.search-empty { padding: 6px 8px; color: var(--text-tertiary); font-size: 13px; }
+.site-links { display: flex; gap: 14px; flex-shrink: 0; font-size: 13px; }
+.site-links a { color: var(--text-secondary); }
+.site-links a:hover { color: var(--text); text-decoration: none; }
+
+/* ── A docs page ── */
+.docs-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 200px;
+  gap: 40px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.docs-nav, .docs-contents {
+  position: sticky;
+  top: 56px;
+  align-self: start;
+  max-height: calc(100vh - 56px);
+  padding: 24px 0;
+  overflow-y: auto;
+  font-size: 13px;
+}
+.docs-nav ul, .docs-contents ul { margin: 0 0 16px; padding: 0; list-style: none; }
+.docs-nav-title {
+  margin: 0 0 6px;
+  color: var(--text-tertiary);
+  font: 500 11px/1.4 'Geist Mono', monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.docs-nav a, .docs-contents a { display: block; padding: 3px 8px; color: var(--text-secondary); border-radius: 4px; }
+.docs-nav a:hover, .docs-contents a:hover { color: var(--text); text-decoration: none; }
+.docs-nav a[aria-current='page'] { color: var(--text); background: rgba(255, 255, 255, 0.06); box-shadow: inset 2px 0 0 var(--accent); }
+.docs-nav-toggle > summary { display: none; }
+.docs-main { min-width: 0; padding: 32px 0 48px; }
+.docs-title { margin: 0; font-size: 32px; line-height: 1.2; font-weight: 600; letter-spacing: -0.01em; }
+.docs-lead { margin: 8px 0 24px; color: var(--text-secondary); font-size: 15px; }
+/* On what a link leads to, not on the page: there it would also move the page for the search box in the fixed head. */
+.docs-main h2, .docs-main h3 { scroll-margin-top: 72px; }
+.docs-main h2 { margin: 36px 0 10px; font-size: 18px; font-weight: 600; }
+.docs-main h3 { margin: 28px 0 8px; font: 500 14px/1.5 'Geist Mono', monospace; color: var(--text); overflow-wrap: anywhere; }
+.docs-main p, .docs-main ul, .docs-main ol { margin: 0 0 12px; color: var(--text-secondary); }
+.docs-main li { margin-bottom: 4px; }
+.docs-main strong { color: var(--text); font-weight: 600; }
+
+code { font: 400 13px/1.6 'Geist Mono', monospace; }
+:not(pre) > code { padding: 1px 5px; background: rgba(255, 255, 255, 0.07); border-radius: 4px; color: var(--text); overflow-wrap: anywhere; }
+pre {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  background: var(--sidebar);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+}
+pre code { display: block; width: max-content; min-width: 100%; color: var(--text); }
+.code-line { display: block; min-height: 1.6em; white-space: pre; }
+.code-block { position: relative; margin: 0 0 14px; }
+.code-block pre { margin: 0; }
+/* Only while the code is pointed at, since it covers what stands at the end of a long line. */
+.copy-code {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+  color: var(--text-secondary);
+  background: var(--floating);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+}
+.code-block:hover .copy-code, .copy-code:focus-visible { opacity: 1; }
+.copy-code:hover { color: var(--text); }
+@media (hover: none) { .copy-code { opacity: 1; } }
+.token.comment { color: var(--text-tertiary); }
+.token.string, .token.attr-value, .token.char, .token.template-string { color: #8fd6b0; }
+.token.keyword, .token.boolean, .token.atrule { color: var(--accent-soft); }
+.token.number, .token.constant, .token.property { color: #e8c07d; }
+.token.function, .token.class-name { color: #8ec5f2; }
+.token.punctuation, .token.operator { color: var(--text-secondary); }
+
+.table-wrap { margin: 0 0 16px; overflow-x: auto; border: 1px solid var(--hairline); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { padding: 8px 12px; color: var(--text-tertiary); font: 500 11px/1.4 'Geist Mono', monospace; letter-spacing: 0.04em; text-align: left; text-transform: uppercase; background: var(--sidebar); }
+td { padding: 8px 12px; color: var(--text-secondary); border-top: 1px solid var(--hairline); vertical-align: top; }
+/* A name stays whole: a table too wide scrolls in its own frame. */
+td code { white-space: nowrap; overflow-wrap: normal; }
+
+.calculator { margin-top: 36px; }
+.calculator[hidden] { display: none; }
+.calculator-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 16px; margin-bottom: 12px; color: var(--text-secondary); font-size: 13px; }
+.calculator-grid label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.calculator-grid input { accent-color: var(--accent); }
+.calculator-result code { font-size: 15px; }
+
+.docs-neighbours { display: flex; justify-content: space-between; gap: 12px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--hairline); }
+.docs-neighbours a { display: block; color: var(--text); font-weight: 500; }
+.docs-neighbours a:hover { color: var(--accent-soft); text-decoration: none; }
+.docs-neighbours span { display: block; color: var(--text-tertiary); font-size: 12px; font-weight: 400; }
+.docs-neighbours .next { text-align: right; margin-left: auto; }
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  justify-content: center;
+  padding: 24px 16px;
+  border-top: 1px solid var(--hairline);
+  font-size: 12px;
+}
+.site-footer a { color: var(--text-tertiary); }
+.site-footer a:hover { color: var(--text-secondary); text-decoration: none; }
+
+/* ── The start page ── */
+.home-main { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+.home-hero {
+  padding: 72px 0 40px;
+  background: radial-gradient(ellipse 70% 60% at 50% -10%, rgba(116, 102, 232, 0.2), transparent 70%);
+}
+.eyebrow { margin: 0 0 12px; color: var(--text-tertiary); font: 500 12px/1.4 'Geist Mono', monospace; letter-spacing: 0.04em; text-transform: uppercase; }
+.home-hero h1 { max-width: 920px; margin: 0; font-size: clamp(34px, 6vw, 56px); line-height: 1.08; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; }
+.home-lead { max-width: 560px; margin: 16px 0 24px; color: var(--text-secondary); font-size: 16px; }
+.home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+.button {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 16px;
+  color: var(--text);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  font-weight: 500;
+}
+.button:hover { background: rgba(255, 255, 255, 0.05); text-decoration: none; }
+.button-main { color: #0d0e11; background: #fff; border-color: #fff; }
+.button-main:hover { background: #e6e7ea; }
+.home-sample { max-width: 720px; }
+.home-features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px 0 40px; }
+.feature {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--content);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  color: inherit;
+}
+.feature:hover { border-color: var(--hairline-strong); text-decoration: none; }
+.feature h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+.feature p { flex: 1; margin: 0 0 12px; color: var(--text-secondary); font-size: 13px; }
+.feature span { color: var(--accent-soft); font-size: 13px; }
+.home-more { padding: 8px 0 56px; }
+.home-more h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
+.home-more ul { margin: 0; padding: 0; list-style: none; color: var(--text-secondary); }
+.home-more li { padding: 8px 0; border-top: 1px solid var(--hairline); }
+.home-more strong { color: var(--text); font-weight: 600; }
+
+/* ── Narrower ── */
+@media (max-width: 1100px) {
+  .docs-layout { grid-template-columns: 200px minmax(0, 1fr); gap: 28px; }
+  .docs-contents { display: none; }
+}
+@media (max-width: 760px) {
+  .site-header { gap: 10px; padding: 0 12px; }
+  .brand-sub, .site-links-app { display: none; }
+  .site-search { max-width: none; }
+  .docs-layout { display: block; padding: 0 16px; }
+  .docs-nav { position: static; max-height: none; padding: 12px 0 0; }
+  .docs-nav-toggle > summary { display: list-item; padding: 6px 0; color: var(--text-secondary); cursor: pointer; font-size: 13px; }
+  .docs-main { padding-top: 16px; }
+  .docs-title { font-size: 26px; }
+  .home-main { padding: 0 16px; }
+  .home-hero { padding-top: 40px; }
+  .home-features { grid-template-columns: minmax(0, 1fr); }
+}

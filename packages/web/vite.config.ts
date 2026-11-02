@@ -3,28 +3,30 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import { developerDocs } from './developers/plugin.mjs';
 import { devCspPreamble } from './src/build/devCsp';
-import { preloadStartupChunks } from './src/build/startupChunks';
 import { PRECACHE_GLOB_PATTERNS, PRECACHE_MAX_FILE_BYTES } from './src/build/precache';
 
 export default defineConfig({
   plugins: [
     devCspPreamble(),
-    preloadStartupChunks(),
     react(),
+    developerDocs(),
     VitePWA({
       // 'prompt' keeps a new build waiting until SwAutoUpdate applies it, so an
       // update never reloads the page out from under a live voice session.
       registerType: 'prompt',
       includeAssets: ['icons/favicon-32.png', 'icons/favicon-16.png', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'Backspace',
-        short_name: 'Backspace',
-        description: 'The self-hosted Discord and TeamSpeak alternative. HD voice, video, and screen share — open source and free (AGPL-3.0).',
+        // The server answers /manifest.webmanifest with the instance's own name
+        // (see packages/server/src/utils/webDocument.ts); these are the fallbacks.
+        name: 'Tavvit',
+        short_name: 'Tavvit',
+        description: 'A home for your friends and communities: channels, direct messages, voice and screen sharing.',
         display: 'standalone',
         start_url: '/',
-        theme_color: '#0b0b10',
-        background_color: '#0b0b10',
+        theme_color: '#0d0e11',
+        background_color: '#0d0e11',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -33,13 +35,27 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/uploads/],
+        // /downloads: the desktop installers and the updater's latest.yml are
+        // files from the server, never the app's page (routes/desktopDownloads.ts).
+        // /developers: the docs are pages of the server's; only /developers/bots
+        // is the app (docs/systems/developers.md).
+        navigateFallbackDenylist: [
+          /^\/api/,
+          /^\/ws/,
+          /^\/uploads/,
+          /^\/downloads\//,
+          /^\/developers\/?$/,
+          /^\/developers\/(?:docs|assets)(?:\/|$)/,
+          /^\/\.well-known\//,
+        ],
+        globIgnores: ['**/node_modules/**/*', 'developers/**'],
         // No skipWaiting: a new worker activates only on SwAutoUpdate's
         // SKIP_WAITING message. The one exception is replacing a worker from
         // before that flow, which public/sw-rollover.js handles.
         // clientsClaim only matters on the first install, where there is no
         // older worker to replace.
-        importScripts: ['sw-rollover.js'],
+        // sw-push.js shows a push while the app is closed (docs/systems/push.md).
+        importScripts: ['sw-rollover.js', 'sw-push.js'],
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         // The precached file types; the CI size check reads the same list.
@@ -71,6 +87,15 @@ export default defineConfig({
       '/ws': {
         target: 'ws://localhost:3005',
         ws: true,
+      },
+      '/downloads': {
+        target: 'http://localhost:3005',
+        changeOrigin: true,
+      },
+      // The docs, from the last build. /developers/bots stays the app.
+      '^/developers(?:/|/docs(?:/.*)?|/assets/.*)?$': {
+        target: 'http://localhost:3005',
+        changeOrigin: true,
       },
     },
   },

@@ -1,7 +1,7 @@
 {
   "general": {
     "title": "Geral",
-    "description": "Configure sua instância do Backspace. Estas configurações afetam todos os usuários.",
+    "description": "Configure sua instância do Tavvit. Estas configurações afetam todos os usuários.",
     "instanceName": {
       "label": "Nome da instância",
       "description": "O nome exibido na página de login e para instâncias federadas.",
@@ -21,13 +21,13 @@
         },
         "global": {
           "label": "Permitir listagem global",
-          "description": "Cada espaço poderá então ser listado manualmente no diretório global do Backspace pelas próprias configurações de Descoberta."
+          "description": "Os espaços aprovados poderão então ser listados também no diretório global do Tavvit, quando os donos aderirem pelas configurações de Descoberta."
         }
       },
       "unconfigured": "Esta instância não está configurada para acessar um diretório, portanto nada aqui pode ser listado globalmente."
     },
     "directory": {
-      "listingHint": "Ativar isto não lista nenhum espaço por si só. Cada espaço ainda precisa ativar \"{{setting}}\" nas próprias configurações de Descoberta.",
+      "listingHint": "Ativar isto não lista nenhum espaço por si só. Um espaço precisa ter uma listagem aprovada e ativar “{{setting}}” nas próprias configurações de Descoberta.",
       "showMeWhere": "Mostrar onde",
       "saveAndShowMeWhere": "Salvar e mostrar onde",
       "listedCount_one": "{{count}} espaço listado",
@@ -56,11 +56,6 @@
       "toggleDescription": "As pessoas daqui veem espaços de outras instâncias em Espaço Sideral. Os navegadores carregam os ícones e banners desses espaços das instâncias que os hospedam.",
       "unavailable": "Esta instância não está configurada para acessar um diretório, então não há nada para mostrar."
     },
-    "supportCard": {
-      "label": "Página do Backspace",
-      "toggleLabel": "Mostrar o cartão de suporte",
-      "toggleDescription": "Mostra na página do Backspace um cartão com um link para a página do projeto no Ko-fi. Desativá-lo oculta apenas esse cartão."
-    },
     "gif": {
       "label": "Pesquisa de GIFs",
       "description": "Ativar pesquisa de GIFs fornecida pelo Klipy. Obtenha uma chave de API gratuita no portal de desenvolvedores do Klipy.",
@@ -69,6 +64,21 @@
       "enabled": "Ativado",
       "notConfigured": "Não configurado",
       "clearKey": "Limpar chave"
+    },
+    "accent": {
+      "label": "Cor de destaque",
+      "description": "A cor dos botões e dos destaques para todos neste servidor.",
+      "custom": "Personalizada",
+      "useDefault": "Usar a padrão",
+      "preview": "Exemplo",
+      "invalid": "Digite uma cor como #7466e8.",
+      "tooLight": "Esta cor é clara demais: o texto branco num botão seria difícil de ler.",
+      "tooDark": "Esta cor é escura demais: ela sumiria nos painéis escuros."
+    },
+    "emoji": {
+      "title": "Emoji",
+      "label": "Todos podem adicionar emojis",
+      "description": "Desativado: só administradores adicionam à biblioteca. Todos podem usar o que está nela."
     }
   },
   "registration": {
@@ -263,6 +273,13 @@
       "saved": "Limite de upload definido como {{limit}}",
       "saveFailed": "Falha ao atualizar o limite de upload"
     },
+    "accountLimits": {
+      "label": "Limites por conta",
+      "description": "Para que nenhuma conta sozinha possa encher o disco. Administradores não têm limite, 0 significa sem limite, e o que uma conta já guarda permanece quando você reduz um limite. Uma conta pode ter um limite próprio na sua página.",
+      "storage": "Arquivos por conta (GB)",
+      "spaces": "Espaços por conta",
+      "saved": "Limites salvos"
+    },
     "cleanup": {
       "label": "Limpeza",
       "nothingFound": "Nenhum arquivo órfão, upload obsoleto ou registro pendente encontrado.",
@@ -355,57 +372,6 @@
       "description": "Alguns valores de taxa de bits excedem seu máximo de {{max}}. As transmissões nessas combinações terão a qualidade reduzida ao seu limite."
     }
   },
-  "updates": {
-    "title": "Atualizações",
-    "badge": {
-      "settingsAriaLabel": "Configurações, atualização da instância disponível",
-      "toast": "O Backspace {{version}} está disponível para esta instância",
-      "toastAction": "Ver"
-    },
-    "description": "O que esta instância está executando e como atualizá-la.",
-    "loading": "Carregando status da atualização…",
-    "loadFailed": "Não foi possível carregar o status da atualização.",
-    "copyFailed": "Não foi possível copiar. Selecione o comando e copie manualmente.",
-    "running": {
-      "label": "Em execução",
-      "commit": "commit {{commit}} · ",
-      "channel": {
-        "prebuilt": "imagem pré-compilada",
-        "source": "compilada a partir do código-fonte",
-        "unknown": "método de instalação não registrado"
-      }
-    },
-    "available": {
-      "label": "Disponível",
-      "version": "O Backspace {{version}} está disponível",
-      "released": "Lançado em {{date}} · ",
-      "releaseNotes": "Notas da versão",
-      "fromInstallDir": "Do seu diretório de instalação:",
-      "scriptDescription": "Cria um snapshot do banco de dados, baixa a nova imagem e reinicia apenas o contêiner do Backspace. Se a nova versão não iniciar corretamente ou continuar executando o código antigo, ela restaura a versão que você está usando agora.",
-      "noScript": "Não tenho o update.sh",
-      "manualIntro": "O update.sh acompanha o projeto a partir da versão 1.0.5. Em um checkout do Git, <code>git pull</code> o traz. Caso contrário, execute as etapas manualmente, depois de criar um snapshot com <code>./backup.sh</code>.",
-      "prebuiltInstall": "Instalação por imagem pré-compilada:",
-      "sourceInstall": "Instalação a partir do código-fonte:",
-      "manualWarning": "Nomeie explicitamente o serviço <code>backspace</code> e não passe <code>--remove-orphans</code>. O Compose sugerirá essa opção se você executar outros contêineres neste projeto, e ela os excluiria."
-    },
-    "upToDate": "Você está na versão mais recente.",
-    "disabled": {
-      "title": "As verificações de atualização estão desativadas",
-      "description": "Esta instância não entrará em contato com o GitHub. Defina <code>BACKSPACE_UPDATE_CHECK=true</code> no seu <code>.env</code> para permitir a consulta ou verifique a página de versões manualmente."
-    },
-    "rateLimited": {
-      "title": "O GitHub limitou a consulta por taxa",
-      "description": "Isso não indica se existe uma atualização. Tente novamente mais tarde."
-    },
-    "unreachable": {
-      "title": "Não foi possível verificar se há atualizações",
-      "description": "Não foi possível acessar o GitHub, então isso não indica se existe uma atualização. Sua instância não foi afetada."
-    },
-    "lastChecked": "Última verificação: {{when}}",
-    "noLookups": "Nenhuma consulta é realizada",
-    "checkAgain": "Verificar novamente",
-    "checking": "Verificando…"
-  },
   "users": {
     "title": "Usuários",
     "description": "Visualize e gerencie as contas de usuários desta instância.",
@@ -464,20 +430,563 @@
     "deleteDialog": {
       "title": "Excluir usuário",
       "description": "Excluir permanentemente <strong>{{username}}</strong>? Isso removerá a pessoa de todos os espaços, DMs e listas de amigos. Isso não pode ser desfeito.",
-      "confirm": "Excluir usuário"
+      "confirm": "Excluir usuário",
+      "reason": "Por quê (para o registro de auditoria)",
+      "password": "Sua senha, para confirmar que é você"
     }
   },
-  "mobile": {
-    "title": "Instância",
+  "platform": {
+    "decision": {
+      "noteRequired": "Motivo (obrigatório, visível para o dono)",
+      "noteOptional": "Motivo (opcional, visível para o dono)",
+      "notePlaceholder": "O que o dono deve saber sobre esta decisão",
+      "counter": "{{length}}/{{max}}"
+    },
+    "reviews": {
+      "title": "Análises",
+      "description": "Solicitações abertas, as mais antigas primeiro. Abra uma para lê-la por completo, ver a prévia da listagem e o histórico e decidir informando um motivo.",
+      "verification": "Solicitações de verificação · {{n}}",
+      "discovery": "Solicitações de listagem · {{n}}",
+      "noVerification": "Nenhuma solicitação de verificação está aguardando.",
+      "noDiscovery": "Nenhuma solicitação de listagem está aguardando."
+    },
+    "spaces": {
+      "title": "Espaços",
+      "description": "Todos os espaços que esta instância hospeda. Abra um para ver as análises, as insígnias e o histórico.",
+      "detailTitle": "Espaço",
+      "searchPlaceholder": "Pesquisar por nome ou ID…",
+      "filterLabel": "Mostrar",
+      "filters": {
+        "all": "Todos os espaços",
+        "listed": "Listados em Explorar",
+        "verified": "Verificados",
+        "open_review": "Em análise"
+      },
+      "empty": "Nenhum espaço encontrado.",
+      "page": "Página {{page}} de {{total}}",
+      "members_one": "{{count}} membro",
+      "members_many": "{{count}} membros",
+      "members_other": "{{count}} membros",
+      "visibility": {
+        "public": "Público",
+        "request": "Entrada por solicitação",
+        "private": "Privado"
+      },
+      "created": "Criado em {{date}}",
+      "directoryOptIn": "Aderiu ao diretório",
+      "ownedBy": "Pertence a {{name}} (@{{username}})",
+      "ownerGone": "A conta do dono não existe mais"
+    },
+    "requestedBy": "Enviada por {{name}} em {{date}}",
+    "verification": {
+      "title": "Verificação",
+      "name": "Nome",
+      "description": "Descrição",
+      "category": "Categoria",
+      "website": "Site",
+      "profiles": "Perfis públicos",
+      "reason": "Motivo",
+      "proof": "Comprovação",
+      "requested": "Envio",
+      "none": "Nenhuma verificação foi solicitada.",
+      "history": "Histórico da verificação"
+    },
+    "discovery": {
+      "title": "Listagem em Explorar",
+      "category": "Categoria",
+      "requested": "Envio",
+      "lastNote": "Última observação",
+      "none": "Nenhuma listagem foi solicitada.",
+      "history": "Histórico da listagem"
+    },
+    "decisions": {
+      "verification": {
+        "approve": {
+          "button": "Verificar",
+          "title": "Verificar este espaço?",
+          "description": "O espaço exibe o selo de verificação em todos os lugares onde aparece, até que a verificação seja revogada.",
+          "confirm": "Verificar"
+        },
+        "request_info": {
+          "button": "Pedir mais informações",
+          "title": "Pedir mais informações?",
+          "description": "A solicitação volta ao dono com a sua observação e retorna à fila quando for enviada de novo.",
+          "confirm": "Pedir"
+        },
+        "reject": {
+          "button": "Recusar",
+          "title": "Recusar esta solicitação?",
+          "description": "O espaço não será verificado. O dono verá o seu motivo e poderá enviar uma nova solicitação.",
+          "confirm": "Recusar"
+        },
+        "revoke": {
+          "button": "Revogar",
+          "title": "Revogar a verificação?",
+          "description": "O selo de verificação some imediatamente. O dono verá o seu motivo.",
+          "confirm": "Revogar"
+        }
+      },
+      "discovery": {
+        "approve": {
+          "button": "Aprovar listagem",
+          "title": "Listar este espaço em Explorar?",
+          "description": "O espaço aparece em Explorar como mostra a prévia. Se o nome, a descrição ou as imagens forem editados, ele volta para análise.",
+          "confirm": "Aprovar"
+        },
+        "request_changes": {
+          "button": "Pedir alterações",
+          "title": "Pedir alterações?",
+          "description": "A solicitação volta ao dono com a sua observação e retorna à fila quando for enviada de novo.",
+          "confirm": "Pedir"
+        },
+        "reject": {
+          "button": "Recusar",
+          "title": "Recusar esta listagem?",
+          "description": "O espaço fica fora de Explorar. O dono verá o seu motivo e poderá enviar uma nova solicitação.",
+          "confirm": "Recusar"
+        },
+        "withdraw": {
+          "button": "Tirar do ar",
+          "title": "Tirar esta listagem do ar?",
+          "description": "O espaço sai de Explorar imediatamente, ou a solicitação dele sai da fila. O dono verá o seu motivo.",
+          "confirm": "Tirar do ar"
+        }
+      }
+    },
+    "badges": {
+      "spaceTitle": "Insígnias",
+      "spaceHint": "Insígnias que você concede a este espaço. “Verificado” não está entre elas: vem da verificação.",
+      "userTitle": "Insígnias",
+      "userHint": "Insígnias que você concede a esta pessoa. “Equipe” não está entre elas: vem da função de administrador."
+    },
+    "audit": {
+      "title": "Registro de auditoria",
+      "description": "Tudo o que os administradores fizeram aqui: suspensões, decisões de análise, insígnias, funções, convites e configurações.",
+      "filterLabel": "Mostrar",
+      "filters": {
+        "all": "Tudo",
+        "user": "Contas",
+        "space": "Espaços",
+        "instance": "Instância"
+      },
+      "more": "Mostrar registros mais antigos",
+      "empty": "Nada registrado ainda.",
+      "aboutSpace": "Registro de auditoria deste espaço",
+      "aboutUser": "Registro de auditoria desta conta",
+      "by": "por {{name}}",
+      "actions": {
+        "user_suspend": "Conta suspensa",
+        "user_unsuspend": "Suspensão removida",
+        "user_role": "Função de administrador alterada",
+        "user_password_reset": "Senha redefinida",
+        "user_delete": "Conta excluída",
+        "user_badges": "Insígnias de uma conta alteradas",
+        "space_badges": "Insígnias de um espaço alteradas",
+        "verification_approve": "Espaço verificado",
+        "verification_reject": "Solicitação de verificação recusada",
+        "verification_request_info": "Mais informações solicitadas para a verificação",
+        "verification_revoke": "Verificação revogada",
+        "discovery_approve": "Listagem aprovada",
+        "discovery_reject": "Listagem recusada",
+        "discovery_request_changes": "Alterações solicitadas na listagem",
+        "discovery_withdraw": "Listagem tirada do ar",
+        "settings_update": "Configurações da instância alteradas",
+        "invite_create": "Convite criado",
+        "invite_update": "Convite alterado",
+        "invite_revoke": "Convite revogado",
+        "invite_reinstate": "Convite reativado",
+        "invite_delete": "Convite excluído",
+        "storage_cleanup": "Armazenamento limpo",
+        "unknown": "Uma ação que esta versão não conhece",
+        "legal_operator_update": "Alterou os dados do operador",
+        "legal_publish": "Publicou um documento legal",
+        "report_decide": "Decidiu uma denúncia",
+        "announcement_create": "Enviou um anúncio",
+        "announcement_end": "Encerrou um anúncio",
+        "user_note_add": "Adicionou uma nota",
+        "user_note_delete": "Excluiu uma nota",
+        "user_warn": "Advertiu uma conta",
+        "user_sessions_end": "Desconectou uma conta",
+        "user_storage_limit": "Alterou o limite de arquivos de uma conta",
+        "signup_rule_add": "Adicionou uma regra de cadastro",
+        "signup_rule_remove": "Removeu uma regra de cadastro",
+        "signup_challenge_update": "Alterou a proteção contra cadastros automáticos",
+        "bots_update": "Alterou se bots são permitidos",
+        "bot_delete": "Excluiu um bot",
+        "starter_spaces_update": "Alterou os espaços iniciais",
+        "backup_create": "Fez um backup",
+        "accounts_export": "Exportou as contas",
+        "audit_export": "Exportou o registro de auditoria",
+        "peer_trust": "Alterou a confiança em outra instância",
+        "space_vanity_revoke": "Retirou um endereço de convite"
+      },
+      "details": {
+        "until": "Até {{date}}",
+        "untilLifted": "Até ser removida",
+        "storageOwn": "Limite próprio: {{limit}}",
+        "storageNone": "Sem limite",
+        "storageInstance": "Limite da instância",
+        "madeAdmin": "Função de administrador concedida",
+        "removedAdmin": "Função de administrador removida",
+        "badgesAdded": "Adicionadas: {{badges}}",
+        "badgesRemoved": "Removidas: {{badges}}",
+        "fields": "Alterações: {{fields}}",
+        "cleanup_one": "{{count}} arquivo removido ({{size}})",
+        "cleanup_many": "{{count}} arquivos removidos ({{size}})",
+        "cleanup_other": "{{count}} arquivos removidos ({{size}})",
+        "sessions": "Sessões: {{n}}",
+        "rows": "Linhas: {{n}}",
+        "peer": {
+          "initiated": "Pediu para conectar",
+          "approved": "Aprovado",
+          "denied": "Recusado",
+          "revoked": "Confiança retirada",
+          "reset": "Redefinido",
+          "removed": "Registro excluído",
+          "rotated": "Novo segredo compartilhado"
+        }
+      }
+    },
+    "users": {
+      "detailTitle": "Conta",
+      "joined": "Entrou em",
+      "memberships": "Espaços",
+      "friends": "Amigos",
+      "messages": "Mensagens",
+      "ownedSpaces": "Espaços próprios",
+      "statusFilter": "Status",
+      "allStatuses": "Todas as contas",
+      "suspendedOnly": "Suspensas",
+      "manage": "Gerenciar"
+    },
+    "suspension": {
+      "chip": "Suspensa",
+      "title": "Suspensão",
+      "activeUntilLifted": "Suspensa desde {{date}}, até que um administrador remova a suspensão.",
+      "activeUntil": "Suspensa desde {{since}} até {{until}}.",
+      "lift": "Remover suspensão",
+      "hint": "A suspensão mantém a pessoa de fora: sem login, sem mensagens, sem chamadas. Nada da conta é excluído, e ela termina sozinha no prazo que você escolher.",
+      "duration": "Duração",
+      "durations": {
+        "h1": "1 hora",
+        "h24": "24 horas",
+        "h72": "3 dias",
+        "h168": "7 dias",
+        "h720": "30 dias",
+        "lifted": "Até ser removida"
+      },
+      "reason": "Motivo (obrigatório)",
+      "reasonPlaceholder": "O que a pessoa fez, em uma frase que ela entenda",
+      "reasonShown": "A pessoa verá este motivo ao tentar entrar.",
+      "suspend": "Suspender",
+      "deleted": "Uma conta excluída não pode ser suspensa.",
+      "self": "Você não pode suspender a sua própria conta.",
+      "adminFirst": "Remova a função de administrador antes de suspender esta conta.",
+      "confirmTitle": "Suspender esta conta?",
+      "confirmDescription": "As sessões de @{{username}} serão encerradas em todos os dispositivos, e não será possível entrar na conta. Duração: {{duration}}.",
+      "liftTitle": "Remover a suspensão?",
+      "liftDescription": "@{{username}} poderá entrar de novo imediatamente.",
+      "liftNoteLabel": "Motivo (opcional, fica no registro de auditoria)",
+      "liftNotePlaceholder": "Por que a suspensão termina agora"
+    },
+    "vanity": {
+      "title": "Endereço de convite próprio",
+      "hint": "Ao retirá-lo, o dono recebe o motivo e ninguém poderá usar esse endereço de novo. Os outros links continuam funcionando.",
+      "revoke": "Retirar",
+      "confirmTitle": "Retirar este endereço?",
+      "confirmBody": "O dono lerá o motivo informado aqui."
+    }
+  },
+  "email": {
+    "title": "E-mail",
+    "intro": "E-mails que este servidor envia sobre contas. \"Aceito\" significa que o provedor o recebeu, não que ele chegou.",
+    "off": {
+      "title": "O e-mail está desligado",
+      "body": "Este servidor não envia e-mails. Por isso as contas não têm endereço, e só um administrador pode redefinir uma senha esquecida. Para ligar, defina EMAIL_TRANSPORT no .env: docs/systems/email.md explica como."
+    },
+    "warnings": {
+      "title": "Precisa de atenção",
+      "blocked": "O provedor recusa este servidor, por causa da chave ou do domínio. Os e-mails ficam aguardando, e \"Esqueci a senha\" informa que não está disponível.",
+      "held": "O limite do dia ou do mês foi atingido. Os e-mails aguardam até ele recomeçar.",
+      "heldUntil": "Um limite do provedor foi atingido. Os e-mails aguardam até {{date}}.",
+      "day": "Mais de 80% do limite de hoje foi usado. As redefinições de senha seguem até o último e-mail; os outros param antes.",
+      "month": "Mais de 90% do limite deste mês foi usado.",
+      "bounces": "Mais de 4% dos e-mails dos últimos 30 dias voltaram. Nesse nível um provedor pode pausar a conta inteira, inclusive redefinições de senha.",
+      "complaints": "Mais de 0,08% dos e-mails dos últimos 30 dias foram denunciados como spam. Nesse nível um provedor pode pausar a conta inteira, inclusive redefinições de senha.",
+      "noWebhook": "RESEND_WEBHOOK_SECRET não está definido. Por isso este servidor não fica sabendo de devoluções e continua enviando para endereços que falham."
+    },
+    "rows": {
+      "title": "Envio",
+      "transport": "Transporte",
+      "from": "Remetente",
+      "today": "Aceitos hoje",
+      "month": "Aceitos neste mês",
+      "queued": "Aguardando",
+      "failed": "Falhas hoje",
+      "bounced": "Devolvidos hoje",
+      "complained": "Denunciados como spam hoje",
+      "lastError": "Último erro"
+    },
+    "required": {
+      "title": "Novas contas",
+      "label": "Exigir um endereço confirmado",
+      "description": "A partir de agora, uma conta nova precisa informar um endereço. Até ele ser confirmado, a conta pode usar os spaces para os quais foi convidada e falar com amigos, mas não pode criar spaces nem abordar desconhecidos. As contas existentes não são afetadas."
+    },
+    "test": {
+      "title": "Teste",
+      "description": "Envia um e-mail para verificar se funciona. No plano gratuito de um provedor, ele conta para o limite.",
+      "address": "Enviar para",
+      "submit": "Enviar e-mail de teste",
+      "queued": "O e-mail de teste está a caminho"
+    }
+  },
+  "console": {
+    "title": "Console de administração",
+    "lead": "{{instance}} · versão {{version}}",
+    "export": "Exportar como CSV",
+    "groups": {
+      "overview": "Visão geral",
+      "moderation": "Moderação",
+      "community": "Comunidade",
+      "instance": "Instância"
+    },
     "sections": {
+      "overview": "Visão geral",
+      "reviews": "Análises",
+      "reports": "Denúncias",
+      "users": "Usuários",
+      "spaces": "Espaços",
+      "audit": "Registro de auditoria",
+      "announcements": "Anúncios",
+      "signup": "Regras de cadastro",
+      "starter": "Espaços iniciais",
+      "bots": "Bots",
       "general": "Geral",
       "registration": "Cadastro",
+      "email": "E-mail",
+      "legal": "Jurídico",
       "federation": "Federação",
       "streaming": "Transmissão",
       "storage": "Armazenamento",
-      "updates": "Atualizações",
-      "users": "Usuários",
-      "telemetry": "Oi"
+      "system": "Sistema"
+    },
+    "search": {
+      "label": "Pesquisar contas e espaços",
+      "placeholder": "Pesquisar contas e espaços…",
+      "accounts": "Contas",
+      "spaces": "Espaços",
+      "nothing": "Nada encontrado para “{{query}}”."
+    },
+    "dashboard": {
+      "attention": "Esperando por você",
+      "caughtUp": "Nada está esperando por você.",
+      "reports": "Denúncias aguardando uma decisão",
+      "reviews": "Espaços aguardando uma análise",
+      "alerts": "Problemas com o servidor",
+      "today": "Hoje",
+      "trends": "Os últimos 30 dias",
+      "stats": {
+        "accounts": "Contas",
+        "online": "On-line agora",
+        "active": "Ativas hoje",
+        "messages": "Mensagens hoje"
+      },
+      "newThisWeek": "{{n}} novas em 7 dias",
+      "onlineRightNow": "Conectadas agora",
+      "delta": {
+        "up": "{{percent}} a mais que nos 7 dias anteriores",
+        "down": "{{percent}} a menos que nos 7 dias anteriores",
+        "same": "O mesmo que nos 7 dias anteriores",
+        "new": "Nenhuma nos 7 dias anteriores"
+      },
+      "charts": {
+        "messages": "Mensagens por dia",
+        "active": "Contas ativas por dia",
+        "signups": "Contas novas por dia",
+        "mail": "E-mails enviados por dia"
+      },
+      "total30": "{{total}} em 30 dias",
+      "showTable": "Mostrar como tabela",
+      "showChart": "Mostrar como gráfico",
+      "day": "Dia",
+      "value": "Número",
+      "security": "Quão seguras as contas estão",
+      "twoFactor": "Login em dois fatores",
+      "confirmedEmail": "Endereço confirmado",
+      "ofAccounts": "{{n}} de {{total}} contas",
+      "standing": "Como estão as coisas",
+      "spacesTotal": "Espaços",
+      "spacesListed": "Listados em Explorar",
+      "spacesVerified": "Espaços verificados",
+      "suspended": "Contas suspensas",
+      "admins": "Administradores",
+      "toSystem": "Ver o sistema"
+    },
+    "announcements": {
+      "description": "Uma mensagem para todos os conectados, em um banner acima do app. Ela é enviada na hora, e cada pessoa pode ocultá-la no próprio dispositivo.",
+      "new": "Novo anúncio",
+      "message": "Mensagem",
+      "placeholder": "Manutenção hoje às 22h, cerca de dez minutos.",
+      "tone": "Tom",
+      "tones": {
+        "info": "Informação",
+        "warning": "Aviso"
+      },
+      "duration": "Duração",
+      "onStatusPage": "Também na página de status pública",
+      "untilEnded": "Até eu encerrar",
+      "send": "Enviar para todos",
+      "preview": "Como fica",
+      "running": "Ativos agora",
+      "noneRunning": "Nada ativo.",
+      "sinceOpen": "Desde {{date}}",
+      "sinceUntil": "Desde {{date}}, até {{until}}",
+      "end": "Encerrar",
+      "past": "Anteriores"
+    },
+    "signup": {
+      "description": "Quem não pode se cadastrar aqui. Isso é verificado quando uma conta é criada e quando um endereço é definido. Contas que já existem mantêm nome e endereço.",
+      "challenge": "Cadastros automáticos",
+      "challengeHint": "Antes de criar uma conta, o navegador resolve uma pequena tarefa. Isso detém scripts simples, nada sai deste servidor e as pessoas mal percebem. Para quem paga o preço mesmo assim, servem as listas abaixo e os endereços confirmados.",
+      "challengeLevels": {
+        "off": "Desligado",
+        "normal": "Normal",
+        "high": "Alto"
+      },
+      "domains": "Domínios de e-mail bloqueados",
+      "domainsHint": "Endereços deste domínio e de tudo abaixo dele são recusados.",
+      "domainPlaceholder": "exemplo.com",
+      "usernames": "Nomes de usuário reservados",
+      "usernamesHint": "Ninguém pode se cadastrar com estes nomes, com qualquer combinação de maiúsculas e minúsculas.",
+      "usernamePlaceholder": "suporte",
+      "add": "Adicionar",
+      "addUsual": "Adicionar os nomes de sempre (admin, support, staff…)",
+      "empty": "Nada aqui ainda.",
+      "remove": "Remover {{value}}"
+    },
+    "starter": {
+      "description": "Espaços públicos em que toda conta nova deste servidor começa, para que ninguém veja primeiro um app vazio. Vale para contas criadas a partir de agora e não move quem já está aqui.",
+      "emptyTitle": "Nenhum espaço inicial",
+      "emptyBody": "Contas novas começam sem espaços.",
+      "add": "Adicionar um espaço público",
+      "searchPlaceholder": "Pesquisar espaços públicos…",
+      "noResults": "Nenhum espaço público com esse nome.",
+      "full": "É o suficiente: no máximo {{max}}.",
+      "remove": "Remover",
+      "notPublic": "Não é mais público: contas novas o ignoram até que volte a ser."
+    },
+    "system": {
+      "description": "Como o próprio servidor está, e um backup quando você quiser um antes de uma grande mudança.",
+      "version": "Versão",
+      "uptime": "Em execução há",
+      "memory": "Memória em uso",
+      "database": "Banco de dados",
+      "socketPeople": "Pessoas conectadas: {{n}}",
+      "sockets": "Conexões abertas",
+      "notYet": "Ainda não",
+      "milliseconds": "{{n}} ms",
+      "eventLoopWorst": "{{n}} ms no pior caso",
+      "eventLoop": "Atraso sob carga",
+      "disk": "Disco",
+      "diskFree": "{{free}} livres de {{total}}",
+      "services": "Serviços",
+      "mail": "E-mail",
+      "mailStates": {
+        "off": "Desligado",
+        "ok": "Funcionando",
+        "held": "Retido",
+        "blocked": "Bloqueado"
+      },
+      "twoFactor": "Login em dois fatores",
+      "voice": "Voz e vídeo",
+      "federation": "Federação",
+      "on": "Ligado",
+      "off": "Desligado",
+      "backups": "Cópias de segurança",
+      "backUpNow": "Fazer backup agora",
+      "backupDone": "O backup está pronto.",
+      "backupsEvery": "Um é feito sozinho a cada {{interval}}.",
+      "backupsManual": "Nenhum é feito sozinho.",
+      "restoreHint": "A restauração é feita no servidor, com restore.sh.",
+      "noBackups": "Ainda não há backups.",
+      "reasons": {
+        "pre-migration": "Antes de uma atualização",
+        "scheduled": "Programado",
+        "manual": "Manual",
+        "console": "Deste console"
+      },
+      "alerts": {
+        "title": "Problemas",
+        "since": "Desde {{date}}",
+        "disk_high": "O disco está {{detail}}% cheio. Quando encher, os envios param e o banco de dados pode ser danificado.",
+        "backup_failed": "O último backup programado falhou: {{detail}}",
+        "backup_old": "O backup mais novo tem {{detail}} horas.",
+        "offsite_failed": "A cópia para outra máquina falhou: {{detail}}",
+        "restart_loop": "O servidor iniciou {{detail}} vezes em quinze minutos. Veja o log."
+      },
+      "translation": "Tradução de mensagens"
+    },
+    "account": {
+      "tabs": {
+        "overview": "Visão geral",
+        "moderation": "Moderação",
+        "access": "Logins",
+        "notes": "Notas",
+        "log": "Registro"
+      },
+      "storage": {
+        "title": "Arquivos",
+        "used": "{{used}} de {{limit}} usados",
+        "usedNoLimit": "{{used}} usados, sem limite",
+        "ownLimit": "Limite próprio em GB",
+        "instanceDefault": "Limite da instância",
+        "reset": "Voltar ao limite da instância",
+        "hint": "0 significa sem limite. O que a conta já guarda permanece quando você o reduz."
+      },
+      "sessions": "Onde esta conta está conectada",
+      "noSessions": "Não está conectada em lugar nenhum.",
+      "unknownDevice": "Dispositivo desconhecido",
+      "lastActive": "Última atividade {{date}}",
+      "end": "Desconectar",
+      "endAll": "Desconectar de todos os lugares",
+      "endAllTitle": "Desconectar esta conta de todos os lugares?",
+      "endAllBody": "Cada dispositivo terá de entrar de novo. A pessoa vê isso na atividade de segurança. Para impedir o acesso, suspenda a conta.",
+      "security": "Atividade de segurança",
+      "noEvents": "Nada registrado.",
+      "notes": "Notas para os administradores",
+      "notePlaceholder": "O que os outros administradores devem saber.",
+      "notesHint": "Aqui só administradores as veem, e a pessoa pode lê-las na exportação dos dados dela.",
+      "addNote": "Adicionar nota",
+      "deleteNote": "Excluir nota",
+      "warning": "Advertência",
+      "warningHint": "Um aviso do operador com o seu motivo e o caminho para contestar. Não muda nada na conta.",
+      "ground": "Com base em",
+      "grounds": {
+        "terms": "Os termos de uso",
+        "illegal": "A lei"
+      },
+      "warningReason": "Motivo, mostrado à pessoa",
+      "warn": "Enviar advertência",
+      "warnTitle": "Enviar esta advertência?",
+      "warnBody": "A pessoa a vê no app com o seu motivo.",
+      "warningSent": "A advertência foi enviada."
     }
+  },
+  "bots": {
+    "title": "Bots",
+    "switchTitle": "Bots nesta instância",
+    "switchDescription": "Desligado por padrão. Desligado, todo bot para imediatamente e nenhum pode ser criado.",
+    "switchLabel": "Permitir bots",
+    "listTitle": "Quem opera o quê",
+    "empty": "Nenhum bot ainda.",
+    "owner": "Operado por {{name}}",
+    "neverUsed": "nunca usado",
+    "lastUsed": "último uso: {{time}}",
+    "remove": "Excluir bot",
+    "removeTitle": "Excluir este bot?",
+    "removeBody": "{{name}} sai de todos os espaços e o token para de funcionar. O que escreveu permanece.",
+    "spaces_one": "em {{formatted}} espaço",
+    "spaces_many": "em {{formatted}} espaços",
+    "spaces_other": "em {{formatted}} espaços"
   }
 }

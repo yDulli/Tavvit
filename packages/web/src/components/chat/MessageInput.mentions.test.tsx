@@ -42,7 +42,7 @@ function member(spaceId: string, user: User): MemberWithUser {
   return { spaceId, userId: user.id, nickname: null, joinedAt: 1, user, roles: [] };
 }
 
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const me = makeUser('me', 'alice', 'Alice');
 // The DM is pinned to a remote origin: its member ids are that origin's ids.
 const meOnOrbit = makeUser('me-orbit', 'alice@home.example', 'Alice');
@@ -69,7 +69,7 @@ beforeEach(() => {
   useAuthStore.setState({ user: me });
   useUIStore.setState({ isMobile: false });
   useComposerStore.setState({ states: new Map() });
-  useAuthStore.getState().recordMyRow(ORBIT, meOnOrbit.id);
+  useAuthStore.getState().recordMyRow(TAVVIT, meOnOrbit.id);
 });
 
 afterEach(() => {
@@ -90,7 +90,7 @@ describe('MessageInput mention picker (#338)', () => {
   it("lists the DM's other members, not the roster of the space opened last", () => {
     useSpaceStore.setState({
       dmChannels: [dm],
-      channelOriginMap: new Map([[dm.id, ORBIT]]),
+      channelOriginMap: new Map([[dm.id, TAVVIT]]),
       // Stale roster of a space opened earlier in the session.
       members: [member('space-9', zed), member('space-9', me)],
       currentSpaceId: null,
@@ -108,7 +108,7 @@ describe('MessageInput mention picker (#338)', () => {
   it("inserts the member's id on the DM's origin", () => {
     useSpaceStore.setState({
       dmChannels: [dm],
-      channelOriginMap: new Map([[dm.id, ORBIT]]),
+      channelOriginMap: new Map([[dm.id, TAVVIT]]),
       members: [member('space-9', zed)],
     });
     render(<MessageInput channelId={dm.id} channelName="@Kai" />);
@@ -141,7 +141,7 @@ describe('MessageInput mention labels', () => {
   beforeEach(() => {
     useSpaceStore.setState({
       dmChannels: [dm],
-      channelOriginMap: new Map([[dm.id, ORBIT]]),
+      channelOriginMap: new Map([[dm.id, TAVVIT]]),
       // Stale roster of a space opened earlier in the session.
       members: [member('space-9', zed), member('space-9', me)],
     });

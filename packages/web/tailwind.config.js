@@ -9,8 +9,11 @@ export default {
       height: { screen: 'calc(100 * var(--app-vh))' },
       minHeight: { screen: 'calc(100 * var(--app-vh))' },
       colors: {
-        // ── AETHER DRIFT TOKENS ──
-        // RGB-channel variables enable Tailwind opacity modifiers (e.g. bg-accent-rose/10)
+        // ── TAVVIT TOKENS ──
+        // RGB-channel variables enable Tailwind opacity modifiers (e.g. bg-accent-rose/10).
+        // The values live in src/styles/globals.css; the names are the upstream
+        // design system's (surface-*, accent-*, txt-*), kept so every component and the
+        // colour-token test keep working while the palette is Tavvit's own.
         surface: {
           base:     'rgb(var(--bg-base) / <alpha-value>)',
           channel:  'rgb(var(--bg-channel) / <alpha-value>)',
@@ -35,6 +38,9 @@ export default {
           primary:         'rgb(var(--accent-primary) / <alpha-value>)',
           'primary-hover': 'rgb(var(--accent-primary-hover) / <alpha-value>)',
           'primary-active':'rgb(var(--accent-primary-active) / <alpha-value>)',
+          // The accent lifted until it reads as text on the dark panels (>= 4.5:1).
+          // Use it for accent-coloured text and icons; `primary` is for fills under white text.
+          soft:            'rgb(var(--accent-primary-soft) / <alpha-value>)',
         },
         txt: {
           primary:   'rgb(var(--text-primary) / <alpha-value>)',
@@ -65,15 +71,44 @@ export default {
         },
         notification: 'rgb(var(--notification) / <alpha-value>)',
       },
+      // Small, precise corners, every one multiplied by `--radius-scale`
+      // (Settings, Appearance), so the person's choice of sharp, standard or
+      // round reaches every control that uses a radius utility. `rounded-full`
+      // stays exact, for dots, toggles and the status pips.
+      borderRadius: {
+        none: '0px',
+        sm: 'calc(2px * var(--radius-scale))',
+        DEFAULT: 'calc(4px * var(--radius-scale))',
+        md: 'calc(5px * var(--radius-scale))',
+        lg: 'calc(6px * var(--radius-scale))',
+        xl: 'calc(8px * var(--radius-scale))',
+        '2xl': 'calc(10px * var(--radius-scale))',
+        '3xl': 'calc(14px * var(--radius-scale))',
+        full: '9999px',
+      },
+      // Surfaces sit flat and are separated by a hairline; only what floats
+      // above the page (menus, dialogs) casts a shadow, and a plain one.
       boxShadow: {
-        'header': '0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05)',
-        'elevation-low': '0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05), 0 2px 0 rgba(4, 4, 5, 0.05)',
-        'elevation-high': '0 8px 16px rgba(0, 0, 0, 0.24)',
-        'glass': '0 2px 8px rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.15), inset 0 1px 0 var(--glass-highlight)',
-        'input': 'inset 0 1px 2px rgba(0, 0, 0, 0.25)',
+        'header': 'none',
+        'elevation-low': '0 1px 2px rgb(0 0 0 / 0.4)',
+        'elevation-high': 'var(--shadow-popover)',
+        'glass': 'var(--shadow-popover)',
+        'input': 'none',
+      },
+      // The sizes of the interface, one name each. A size only: a line height,
+      // where one matters, comes from a `leading-*` utility beside it.
+      fontSize: {
+        '2xs': '10px',
+        label: '11px',
+        meta: '12px',
+        ui: '13px',
+        body: '14px',
+        lead: '15px',
+        title: '18px',
       },
       fontFamily: {
-        sans: ['DM Sans', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        sans: 'var(--font-ui)',
+        mono: 'var(--font-mono)',
       },
       animation: {
         'slide-up-sheet': 'slide-up-sheet 200ms ease-out',
@@ -89,6 +124,8 @@ export default {
   plugins: [
     ({ addVariant }) => {
       addVariant('desktop', 'html[data-viewport="desktop"] &');
+      // The desktop shell at tablet and small-laptop widths (platform/interfaceScale.ts).
+      addVariant('compact', 'html[data-viewport="desktop"][data-width="compact"] &');
     },
   ],
 };

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import * as schema from '../db/schema.js';
 import { ensureDefaults } from '../db/migrate.js';
 import { setWorkerId } from '../utils/snowflake.js';
-import { buildDirectoryDocument, absoluteAssetUrl } from './document.js';
+import { buildDirectoryDocument, absoluteAssetUrl, countListedSpaces } from './document.js';
 
 setWorkerId(2);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,12 +63,18 @@ interface SeedSpace {
   icon?: string | null;
   description?: string | null;
   createdAt?: number;
+  /**
+   * `spaces.discovery_status`. Only an admin's approval lists a space in
+   * Discovery (utils/discoveryListing.ts), so a seed is approved unless the
+   * case says otherwise.
+   */
+  discovery?: 'pending' | 'changes_requested' | 'approved' | 'rejected' | 'withdrawn' | null;
 }
 
 function seedSpace(s: SeedSpace): void {
   sqlite.prepare(
-    `INSERT INTO spaces (id, name, icon, banner, avatar_color, owner_id, invite_code, visibility, directory_listed, description, created_at)
-     VALUES (?, ?, ?, NULL, 'mint', 'u1', ?, ?, ?, ?, ?)`,
+    `INSERT INTO spaces (id, name, icon, banner, avatar_color, owner_id, invite_code, visibility, directory_listed, discovery_status, description, created_at)
+     VALUES (?, ?, ?, NULL, 'mint', 'u1', ?, ?, ?, ?, ?, ?)`,
   ).run(
     s.id,
     s.name ?? `Space ${s.id}`,
@@ -76,6 +82,7 @@ function seedSpace(s: SeedSpace): void {
     `inv-${s.id}`,
     s.visibility,
     s.listed,
+    s.discovery === undefined ? 'approved' : s.discovery,
     s.description ?? null,
     s.createdAt ?? 1_700_000_000_000,
   );
@@ -107,7 +114,7 @@ beforeEach(() => {
 });
 
 describe('buildDirectoryDocument', () => {
-  it('serves the envelope and the listed discoverable spaces, most members first', () => {
+  it('serves the envelope and the approved, opted-in spaces, most members first', () => {
     const doc = buildDirectoryDocument(sqlite, CTX);
     expect(doc).toEqual({
       schema: 1,
@@ -157,6 +164,28 @@ describe('buildDirectoryDocument', () => {
     for (const space of doc.spaces) {
       expect(exploreCounts.get(space.id)).toBe(space.memberCount);
     }
+  });
+
+  it('leaves an opted-in space out until an admin has approved its listing, as the Explore page does', async () => {
+    seedSpace({ id: 'waiting', visibility: 'public', listed: 1, members: ['u1', 'u2'], discovery: 'pending' });
+    seedSpace({ id: 'asked-again', visibility: 'public', listed: 1, members: ['u1'], discovery: 'changes_requested' });
+    seedSpace({ id: 'refused', visibility: 'request', listed: 1, members: ['u1'], discovery: 'rejected' });
+    seedSpace({ id: 'withdrawn', visibility: 'public', listed: 1, members: ['u1'], discovery: 'withdrawn' });
+    seedSpace({ id: 'never-asked', visibility: 'public', listed: 1, members: ['u1'], discovery: null });
+
+    expect(buildDirectoryDocument(sqlite, CTX).spaces.map((s) => s.id)).toEqual(['A', 'B']);
+    // The admin panel's "N spaces listed" counts through the same predicate.
+    expect(countListedSpaces(sqlite)).toBe(2);
+
+    const app = Fastify({ logger: false });
+    const { exploreRoutes } = await import('../routes/explore.js');
+    await app.register(exploreRoutes);
+    await app.ready();
+    const res = await app.inject({ method: 'GET', url: '/api/spaces/explore' });
+    await app.close();
+    expect(res.statusCode).toBe(200);
+    const explore = JSON.parse(res.body) as { spaces: { id: string }[] };
+    expect(explore.spaces.map((s) => s.id).sort()).toEqual(['A', 'B', 'C']);
   });
 
   it('turns stored icons into absolute URLs on this origin, and drops foreign ones', () => {

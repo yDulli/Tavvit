@@ -38,9 +38,9 @@ import { usePendingMessageStore, type PendingBubble } from '../../stores/pending
 import { ALL_PERMISSIONS, permissionsToString } from '../../utils/permissions';
 
 // The account is native to the page's instance (nova); the channel is on
-// orbit, which knows the user as o-7. Orbit's own Mira has id n-1, the id the
+// orbit, which knows the user as o-7. Tavvit's own Mira has id n-1, the id the
 // session row has on nova.
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const CHANNEL = 'orbit-chan';
 
 const me = { id: 'n-1', username: 'jannis', displayName: 'Jannis', avatar: null, homeInstance: null, homeUserId: null, createdAt: 1 } as unknown as User;
@@ -68,10 +68,10 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   latestMessages.mockReset();
   latestMessages.mockResolvedValue([miraMessage]);
-  useAuthStore.setState({ user: me, myRowIds: new Map([[ORBIT, 'o-7']]) });
+  useAuthStore.setState({ user: me, myRowIds: new Map([[TAVVIT, 'o-7']]) });
   useSpaceStore.setState({
     spaceChannelIndex: new Map([[CHANNEL, 'orbit-space']]),
-    channelOriginMap: new Map([[CHANNEL, ORBIT]]),
+    channelOriginMap: new Map([[CHANNEL, TAVVIT]]),
     channelPermissions: new Map([[CHANNEL, permissionsToString(ALL_PERMISSIONS)]]),
     dmChannels: [],
     members: [],
@@ -99,7 +99,7 @@ describe('pending bubbles on another instance', () => {
     fireEvent.click(await screen.findByText('Jannis'));
     expect(openUserProfile).toHaveBeenCalledTimes(1);
     const [row, origin] = openUserProfile.mock.calls[0] as [User, string];
-    expect(origin).toBe(ORBIT);
+    expect(origin).toBe(TAVVIT);
     expect(row.id).toBe('o-7');
     expect(isMe(row, origin)).toBe(true);
   });

@@ -1,7 +1,7 @@
 {
   "connections": {
     "title": "Connected Instances",
-    "description": "Link accounts across federated Backspace instances.",
+    "description": "Link accounts across federated Tavvit instances.",
     "empty": "No remote instances connected. Add one to start federating.",
     "addButton": "+ Add Instance",
     "home": {

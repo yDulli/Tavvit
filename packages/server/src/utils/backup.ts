@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { config } from '../config.js';
 
-export type SnapshotReason = 'pre-migration' | 'scheduled' | 'manual';
+export type SnapshotReason = 'pre-migration' | 'scheduled' | 'manual' | 'console';
 
 export interface SnapshotInfo {
   path: string;
@@ -13,7 +13,8 @@ export interface SnapshotInfo {
   mtimeMs: number;
 }
 
-const REASONS: SnapshotReason[] = ['pre-migration', 'scheduled', 'manual'];
+const REASONS: SnapshotReason[] = ['pre-migration', 'scheduled', 'manual', 'console'];
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function ensureDir(): string {
   fs.mkdirSync(config.backup.dir, { recursive: true });
@@ -43,12 +44,20 @@ export function createSnapshot(db: Database.Database, reason: SnapshotReason): s
   return file;
 }
 
+/** Who hears how the hook went: the warnings, without this file having to know of them. */
+let offsiteListener: ((failure: string | null) => void) | null = null;
+
+export function setOffsiteListener(listener: ((failure: string | null) => void) | null): void {
+  offsiteListener = listener;
+}
+
 function runOffsite(snapshotPath: string): void {
   const cmd = config.backup.offsiteCmd;
   if (!cmd) return;
   // Best-effort: failures are logged, never fatal.
   execFile('/bin/sh', ['-c', `${cmd} "$1"`, 'sh', snapshotPath], (err, _stdout, stderr) => {
     if (err) console.error(`[backup] off-box hook failed: ${err.message} ${stderr ?? ''}`);
+    offsiteListener?.(err ? err.message : null);
   });
 }
 
@@ -72,12 +81,16 @@ export function pruneSnapshots(): void {
     'pre-migration': config.backup.keepPreMigration,
     scheduled: config.backup.keepScheduled,
     manual: config.backup.keepManual,
+    console: config.backup.keepConsole,
   };
+  const oldestByHand = Date.now() - config.backup.handMaxAgeDays * DAY_MS;
   for (const reason of REASONS) {
     const ofReason = listSnapshots().filter(s => s.reason === reason); // newest-first
-    for (const stale of ofReason.slice(keep[reason])) {
-      try { fs.unlinkSync(stale.path); } catch (err) {
-        console.error(`[backup] failed to prune ${stale.path}: ${(err as Error).message}`);
+    const byHand = reason === 'manual' || reason === 'console';
+    const stale = ofReason.filter((snapshot, index) => index >= keep[reason] || (byHand && snapshot.mtimeMs < oldestByHand));
+    for (const snapshot of stale) {
+      try { fs.unlinkSync(snapshot.path); } catch (err) {
+        console.error(`[backup] failed to prune ${snapshot.path}: ${(err as Error).message}`);
       }
     }
   }

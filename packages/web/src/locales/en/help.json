@@ -1,0 +1,117 @@
+{
+  "title": "Help",
+  "lead": "Answers to what people ask most.",
+  "topics": {
+    "start": {
+      "title": "Getting started",
+      "items": {
+        "join": {
+          "q": "How do I join a space?",
+          "a": "Open an invite link someone sent you, or pick a space under Explore."
+        },
+        "create": {
+          "q": "How do I make my own space?",
+          "a": "Press the plus in the top bar and give it a name. Then invite people with an invite link from the space's menu."
+        },
+        "friends": {
+          "q": "How do I add a friend?",
+          "a": "Open Friends and press Add friends, then enter their username."
+        }
+      }
+    },
+    "account": {
+      "title": "Your account",
+      "items": {
+        "password": {
+          "q": "I forgot my password",
+          "a": "Press “Forgot your password?” on the sign-in page. A link goes to your confirmed address. Without one, the people who run this server can help."
+        },
+        "twoFactor": {
+          "q": "How do I protect my account better?",
+          "a": "Turn on two-factor sign-in under Settings, Security, and keep your recovery codes somewhere safe."
+        },
+        "devices": {
+          "q": "Where do I see which devices are signed in?",
+          "a": "Under Settings, Security. You can sign each of them out there."
+        },
+        "storage": {
+          "q": "How much can I upload?",
+          "a": "The server sets a size for one file and a total for your account. Settings, Account shows how much you use."
+        },
+        "delete": {
+          "q": "How do I delete my account?",
+          "a": "Under Settings, Account. If you own spaces, hand them on or delete them first."
+        },
+        "username": {
+          "q": "Can I change my username?",
+          "a": "Yes, in your settings under your account, once in 30 days. You sign in with the new name from then on, and your old name stays reserved for 30 days, so nobody can pose as you. Your display name can change at any time."
+        }
+      }
+    },
+    "voice": {
+      "title": "Voice and video",
+      "items": {
+        "hear": {
+          "q": "Nobody can hear me",
+          "a": "Allow your browser to use the microphone, and choose the right one under Settings, Voice & Video."
+        },
+        "share": {
+          "q": "How do I share my screen?",
+          "a": "Join a voice channel and press the screen button in the call controls. The space has to allow it."
+        }
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "items": {
+        "none": {
+          "q": "I get no notifications",
+          "a": "Check Settings, Notifications, and that your browser or phone allows them for this site."
+        },
+        "keywords": {
+          "q": "Can I be told about a word?",
+          "a": "Yes. Add it under Settings, Notifications, and you are alerted when someone writes it."
+        }
+      }
+    },
+    "safety": {
+      "title": "Safety",
+      "items": {
+        "report": {
+          "q": "How do I report something?",
+          "a": "Open the message's menu and choose Report, or use the report form, which works without an account."
+        },
+        "block": {
+          "q": "How do I block someone?",
+          "a": "Open their profile and choose Block. They can then no longer write to you."
+        },
+        "bots": {
+          "q": "What can a bot see?",
+          "a": "What is in the channels the space lets it read. A bot is marked as one, and someone else runs it."
+        }
+      }
+    },
+    "desktop": {
+      "title": "The desktop app",
+      "items": {
+        "where": {
+          "q": "Where do I get it?",
+          "a": "On the download page, linked from the product page and from About."
+        },
+        "smartscreen": {
+          "q": "Windows warns me about the app",
+          "a": "The app is not signed yet, so Windows does not know it. Press More info, then Run anyway."
+        }
+      }
+    },
+    "more": {
+      "title": "Anything else",
+      "items": {
+        "who": {
+          "q": "Who runs this server?",
+          "a": "The legal notice says who, and how to reach them."
+        }
+      }
+    }
+  }
+}

@@ -5,7 +5,46 @@ Source files: `packages/server/src/routes/*.ts`
 
 ---
 
+## The admin console
+
+Everything here but `GET /announcements` is behind `requireAdmin`. What each does: [admin.md](admin.md), "The console".
+
+```
+GET    /admin/dashboard                                     → AdminDashboard (admin)
+GET    /admin/system                                        → AdminSystemInfo (admin)
+POST   /admin/system/backup                                 → 201 { name } | 429 backup_too_soon (admin; 5 per 15 min)
+GET    /announcements                                       → AnnouncementsResponse (what runs; anyone signed in)
+GET    /admin/announcements                                 → AnnouncementsResponse (the last 50; admin)
+POST   /admin/announcements        { body, tone, durationHours? } → 201 Announcement | 409 announcement_limit (admin)
+POST   /admin/announcements/:id/end                         → Announcement (admin)
+GET    /admin/search?q=                                     → AdminSearchResponse (admin; 120 per min)
+GET    /admin/users.csv                                     → text/csv (admin; 10 per 15 min)
+GET    /admin/audit.csv                                     → text/csv (admin; 10 per 15 min)
+PUT    /admin/users/:id/storage-limit { limitGb | null }    → { success } | 400 account_limit_out_of_range, user_already_deleted | 404 (admin). 0: no limit; null: the instance's
+GET    /admin/users/:id/sessions                            → { sessions: SessionInfo[] } (admin)
+DELETE /admin/users/:id/sessions/:sessionId                 → { sessions } | 400 cannot_target_self (admin)
+POST   /admin/users/:id/sessions/end-all                    → { sessions: [] } | 400 cannot_target_self (admin)
+GET    /admin/users/:id/security                            → { events: SecurityEventInfo[] } (admin)
+GET    /admin/users/:id/notes                               → AdminNotesResponse (admin)
+POST   /admin/users/:id/notes      { body }                 → 201 AdminNotesResponse (admin)
+DELETE /admin/users/:id/notes/:noteId                       → AdminNotesResponse (admin)
+POST   /admin/users/:id/warn       { note, ground }         → { success } | 400 cannot_target_self (admin)
+GET    /admin/signup-rules                                  → SignupRulesResponse (admin)
+POST   /admin/signup-rules         { kind, value?, note?, usual? } → 201 SignupRulesResponse | 400 signup_rule_invalid | 409 signup_rule_limit (admin)
+DELETE /admin/signup-rules/:kind/:value                     → SignupRulesResponse (admin)
+GET    /admin/starter-spaces                                → StarterSpacesResponse (admin)
+PUT    /admin/starter-spaces       { spaceIds }             → StarterSpacesResponse | 400 starter_spaces_limit, space_not_public | 404 space_not_found (admin)
+```
+
+`POST /auth/register` and `PUT /users/@me/email` answer `400 email_domain_blocked` for an address the sign-up rules refuse, and `POST /auth/register` answers `400 username_reserved` for a reserved name, as `GET /auth/check-username` does. `POST /auth/register` limits `displayName` to 32 characters (`400 display_name_too_long`).
+
+`DELETE /admin/users/:id` takes `{ reason, password, twoFactorCode? }` for an account of this instance, the acting admin's own; `400 cannot_delete_admin` for an administrator. `DELETE /users/@me` answers `400 last_admin_cannot_leave` for the last administrator who can act. `GET /admin/spaces` takes `visibility=public`.
+
+---
+
 ## Rate limiting
+
+The page's own files (`/assets/`, `/fonts/`, `/icons/`, `/sounds/`) are not counted: a first visit asks for about 40 of them, and they are served from disk.
 
 Every request passes a limit: the global **200 per minute** registered in
 `packages/server/src/index.ts`, or the route's own where it declares one. A
@@ -15,11 +54,27 @@ minute even though the global number is smaller. Read the per-route numbers
 below as the whole budget for that route, not as a second gate. **The key is
 the client address and nothing else.** The limiter runs on Fastify's `onRequest` hook while `authenticate` is
 a route `preHandler`, so no user is attached to the request yet when the key is
-taken. Nothing in the HTTP limiter is per account; the only per-user budgets in
-the app are the two hand-written upload limits in `routes/files.ts` (30 upload
-creates and 1000 PATCHes per minute per user), which run inside the tus handler
-after auth, and the sticker upload limit in `routes/stickers.ts` (30 per minute
-per account, also counted after auth).
+taken. Nothing in the HTTP limiter is per account.
+
+The per-account budgets are hand-written, counted inside the route after auth
+and on top of the per-address limit, never instead of it: the two upload
+limits in `routes/files.ts` (30 upload creates and 1000 PATCHes per minute per
+user), which run inside the tus handler; sticker uploads in
+`routes/stickers.ts` (30 per minute); custom emoji uploads in
+`routes/emojis.ts` (10 per minute, `CUSTOM_EMOJI_LIMITS.UPLOADS_PER_MINUTE`);
+people search, `GET /social/search` (20 per minute); and review requests,
+`PUT /spaces/:id/verification` and `PUT /spaces/:id/discovery` (10 per hour,
+one budget for both). The last four are `createFixedWindowLimit` counters
+(`utils/fixedWindowLimit.ts`), keyed by `request.userId` and held in memory,
+so a restart forgets them; search and review requests count a request only
+once it passed its own checks. Over one of these four the answer is
+`429 rate_limited` in the shared body, without `retryAfter` or a
+`Retry-After` header. One more budget is per account but runs before any
+auth: the sign-in throttle (`utils/loginThrottle.ts`), keyed by the typed
+username (trimmed, lowercased), refuses every sign-in for a name that
+collected 10 failed attempts in 15 minutes, correct password or not, until the
+oldest failure leaves the window (`429 login_throttled`, `details.minutes`,
+with `retryAfter` and `Retry-After`); a successful sign-in clears it.
 
 The address comes from Fastify's `trustProxy`, which is a **count of trusted
 hops**: the `TRUSTED_PROXY_HOPS` environment variable, default 1, read in
@@ -43,8 +98,11 @@ overrides sit with their routes (`routes/auth.ts`, `routes/directory.ts`,
 address, for the same reason. The WebSocket `dm_message_create` event applies
 the DM create route's limit to the socket's address in a counter of its own
 (websocket.md, "DM Messages"). `DISABLE_RATE_LIMITS=1` or `=true`
-switches every limit off and exists for test harnesses that share the loopback
-address; it is never set in production.
+switches the plugin's limits off, and with them the `createFixedWindowLimit`
+budgets and the sign-in throttle above (the two tus upload limits stay), but
+only where `NODE_ENV` is not `production` (`utils/rateLimitSwitch.ts`); it
+exists for test harnesses that share the loopback address and is never set in
+production.
 
 Over the limit: `429` with the shared error body (`{ error, code:
 'rate_limited', statusCode: 429 }`, see [localization.md](localization.md))
@@ -54,16 +112,41 @@ plus `retryAfter` in whole seconds, and the plugin's own `Retry-After` header.
 
 ## Auth (`routes/auth.ts`) — public, rate-limited
 ```
-POST /auth/register         { username, password, displayName?, avatarColor?, homeInstance?, homeUserId?, inviteToken? } → { token, user }
+POST /auth/register         { username, password, displayName?, avatarColor?, homeInstance?, homeUserId?, inviteToken?, email?, locale? } → { token, user }
 GET  /auth/check-username    ?username= → { available, reason? }
 GET  /auth/check-invite      ?token=    → CheckInviteResponse
-POST /auth/login             { username, password } → { token, user }
+POST /auth/login             { username, password, deviceId? } → { token, user }; `username` may also be a confirmed address on an instance that sends mail
+POST /auth/password/forgot    { email, locale? }    → { success }, the same whoever the address belongs to; 503 email_not_configured | email_unavailable (email.md)
+POST /auth/password/reset     { token, password }   → { success }; ends every session, signs nobody in; 410 email_token_invalid
+POST /auth/email/verify       { token }             → { success, address }; 410 email_token_invalid, 409 email_address_in_use
+POST /auth/login/2fa          { ticket, code }      → { token, user }; 401 mfa_code_invalid | mfa_ticket_invalid, 429 mfa_locked. `code` is from an app, or a recovery code. A login with 2FA on answers 401 mfa_required with { ticket } first (auth.md)
+GET  /auth/security                                 → SecurityOverview: the 2FA state, the last password change, how many sessions, recent events
+POST /auth/2fa/setup          { password }          → { secret, otpauthUrl }; not in force yet. 503 two_factor_unavailable, 409 two_factor_already_enabled
+POST /auth/2fa/enable         { code }              → { recoveryCodes }, shown only now; other sessions end
+POST /auth/2fa/disable        { password, code }    → { success }
+POST /auth/2fa/recovery-codes { password, code }    → { recoveryCodes }; the old ones stop working
+POST /auth/sessions/end-all                         → { success }; every session, this one too
+POST /auth/logout                                   → { success }; the token stops working, its sockets close
+GET  /auth/sessions                                 → { sessions: SessionInfo[] }, this account's, on this instance
+DELETE /auth/sessions/:id                           → { sessions }; 404 for anyone else's
+POST /auth/sessions/end-others                      → { sessions }
 POST /auth/attach-proof      (JWT, rate-limited 5/15min)  { targetDomain } → { token }   (AttachProofResponse)
+GET  /users/@me/email                               → AccountEmailStatus (email.md)
+PUT  /users/@me/email         { address, password, locale?, twoFactorCode? } → AccountEmailStatus; 403 current_password_incorrect, 400 email_invalid | email_undeliverable, 429 rate_limited
+POST /users/@me/email/resend                        → AccountEmailStatus; 409 email_nothing_to_confirm | email_undeliverable, 429 rate_limited
+DELETE /users/@me/email/pending                     → AccountEmailStatus
+DELETE /users/@me/email       { password, twoFactorCode? } → AccountEmailStatus
+PUT  /users/@me/locale        { locale }            → { locale }; the language mail is written in
+GET  /admin/email/status                            → AdminEmailStatus (admin)
+POST /admin/email/test        { to }                → 202 { queued } (admin)
+POST /email/webhooks/resend                         → Svix-signed; only with EMAIL_TRANSPORT=resend and a secret
 ```
 
 **`POST /auth/attach-proof`** — JWT-authenticated. Mints a one-time 256-bit token (`randomBytes(32).toString('hex')`) for the logged-in **native** user, stored in `federation_attach_proofs` bound to `{ homeUserId, targetDomain, expiresAt = now+60s }`; expired rows are janitored on each mint (the delete targets `expires_at < now`; a used-but-unexpired row lingers until it expires). The token is handed to the peer named by `targetDomain`, which redeems it via `POST /federation/verify-attach-proof` to re-attach the caller's detached account there. See `federation.md` "S2S Detached-Account Re-Attach Proof" and re-attach spec §3.1.
 
 **`POST /auth/login`** — request/response shape unchanged, but two internal controls from instance-epoch self-healing gate the flow: (1) an account with `federationHomeOrphaned = 1` (home instance factory-reset) is **detached** — a sovereign local account whose local password hash is the sole authority; it logs in normally with that local password (the detach pivot removed the old pre-verification freeze), and the flag's only login effect is to permanently disable self-heal (step 7); (2) for non-detached federated accounts, the password self-heal runs an **epoch guard** — it re-hashes the stale local password only if the home instance's authenticated epoch (`fetchPeerEpoch`) matches the trusted baseline, failing closed when the epoch differs or can't be determined. A detached account can be re-bound to the owner's new home identity via `POST /users/@me/reattach` (re-attach spec §3.2), which clears the flag and re-enables normal federated semantics. No wire-shape change. See `auth.md` §4.
+
+**Suspended accounts (`account_suspended`).** While an instance admin's suspension of the account stands (Platform administration below; `auth.md` §13), `POST /auth/login` answers `403 account_suspended` with `details: { reason, until? }` (`until` in epoch ms, absent for a suspension until lifted) and signs no token, but only once the password proved right (against the local hash or through a federated self-heal): a wrong password or an unknown name answers `401 invalid_credentials` as for any account, so the reason reaches the account's owner and nobody who merely knows the name. Every authenticated route answers `401 account_suspended` with the same `details` (`verifyJwtAndUser` behind `authenticate`); the tus upload routes answer the 401 with the message only, and the WebSocket refuses the socket (websocket.md, "Refused sockets"). A token issued before the suspension is not revoked: it is accepted again once the suspension is lifted or its end has passed.
 
 **`POST /auth/register` gating** — branches on whether `homeInstance` is set:
 - **Federated path** (`homeInstance` set): gated solely by `instance_settings.federatedRegistrationOpen`. `inviteToken` is ignored entirely (not validated, not consumed). 403 `Federated registration is closed on this instance` when closed. The endpoint is **create-only**: it always INSERTs a new row and returns `201`, and never binds the submitted credentials to an existing row — a relay-created stub (`passwordHash = '!federation-replicated'`) is never claimed here, whatever `homeUserId`/`homeInstance` the caller supplies. Stub merges happen only via the proof-gated `POST /users/@me/reattach`. Login is never blocked by this gate.
@@ -84,11 +167,18 @@ type CheckInviteResponse =
 ## Users (`routes/users.ts`) — auth required
 ```
 GET    /users/@me                                        → { user }
-PATCH  /users/@me             { displayName?, avatar?, banner?, accentColor?, avatarColor?,
-                                bio?, customStatus?, status?, replicatedInstances?, homeUserId?,
-                                profileUpdatedAt?, discoverable?, showActivity? } → { user }
+PATCH  /users/@me             { displayName?, avatar?, banner?, accentColor?, accentColorSecondary?,
+                                avatarColor?, bio?, pronouns?, profileLinks?, profileLayout?,
+                                customStatus?, customStatusExpiresInMinutes?, status?,
+                                replicatedInstances?, homeUserId?,
+                                profileUpdatedAt?, showActivity? } → { user }
 POST   /users/@me/verify-password  { password }          → { valid }
 POST   /users/@me/change-password  { currentPassword?, newPassword } → { token }
+GET    /users/@me/storage                                → StorageUsage { usedBytes, limitBytes | null }; a person's own files and their bots'
+GET    /users/@me/data-export                            → DataExportStatus
+POST   /users/@me/data-export     { password }           → 202 DataExportStatus; 403 current_password_incorrect, 429 data_export_too_soon { hours }
+GET    /users/@me/data-export/download                   → the ZIP, to its owner alone; 404 data_export_not_ready
+GET    /users/@me/mentions    ?before&limit              → { mentions: MentionItem[], nextBefore }  (inbox.ts; `MentionItem.mentionedNames` names the people the text mentions, as that space shows them, because the client holds no member list for most spaces)
 DELETE /users/@me             { password, username }      → { success }
 PUT    /users/@me/space-layout { items, folders, updatedAt? } → { items, folders, updatedAt }
 GET    /users/@me/federation-registry                    → { registry: FederationRegistryEntry[], updatedAt: number }
@@ -98,7 +188,17 @@ GET    /users/:id                                        → { user }
 GET    /users/:id/mutuals     ?homeUserId=               → { mutualFriends[], mutualSpaces[] }
 ```
 
+**No discovery flag:** `discoverable` is gone with the Discover People list (migration `0042_orbit_drop_discoverable`); the route no longer reads it, so it is ignored next to other fields, and a body carrying nothing else answers `400 no_fields_to_update`. People are found by username only (`GET /social/search`, below).
+
+**Badges:** every `User` carries `badges` (`UserBadgeId[]`, in the order of the registry in `packages/shared/src/badges.ts`): `staff` for an instance admin (`users.is_admin`), then the badges an instance admin granted (`users.badges`, read through `grantedUserBadgesOf`, which drops anything the registry does not know as a granted user badge). A tombstone carries `[]`. Nothing on this route sets them; the only writer is `PUT /admin/users/:id/badges` (Platform administration below). Hosts that predate badges omit the field.
+
 **Status:** `status` is the user's chosen status: `online`, `idle` or `dnd`; anything else, including `offline`, is 400 `status_invalid`. It is stored in `users.chosen_status` and published as live presence (local `presence_update` and S2S relay) while the user is connected; see activity-presence.md "DB Persistence". A body with only `status` is a valid update.
+
+**Profile card fields:** `pronouns` (a string, trimmed, at most 40 characters, no control or bidirectional characters; blank or null clears it; `400 pronouns_too_long` with `details.max`), `profileLinks` (a list of at most 5 `{ url, label? }`, each `url` a plain `http`/`https` address without credentials of at most 200 characters and each `label` at most 32 characters; null or an empty list clears them; the same address twice is kept once; anything else is `400 profile_links_invalid` with `details.max`) and `profileLayout` (`'standard'`, `'centered'` or `'compact'`, or null for standard; `400 profile_layout_invalid`). Every `User` carries `pronouns`, `profileLinks` (a list, empty when none) and `profileLayout`. The rules are `normalizePronouns` / `normalizeProfileLinks` in packages/shared/src/profileFields.ts, which the editor and the profile card read too (auth.md, "Profile fields"). Like `accentColorSecondary`, these three are not relayed to federation peers.
+
+**Pictures:** `avatar` and `banner` name a file on this instance only when it is the caller's own upload that no message holds, or the picture already shown (`400 avatar_url_invalid` / `banner_url_invalid` otherwise); a replaced picture is deleted only once nothing else shows it (uploads.md, "Profile pictures"). The same rule holds for `icon` and `banner` on `POST /spaces` and `PATCH /spaces/:id` (`400 icon_url_invalid` / `banner_url_invalid`). An address (`http(s)://…`) is only taken for an upload of this instance (`/api/uploads/<name>`, nothing added): everyone who sees the picture fetches it by themselves, so it never points at another server (legal.md, "Content from other servers"). A group DM's `icon` (`PATCH /api/dm/:id`) may also be an upload at the home of the member who sets it. An address stored before 1.32.4 that points anywhere else is answered as `null`.
+
+**Stickers:** a message or a reaction whose content is a sticker token (`sticker:<address>`) is refused with `400 sticker_elsewhere` (on the socket, an `error` with that code) unless the sticker's file is on this instance or on the instance its author lives on (`utils/remoteMedia.ts`).
 
 **Write protection:** If the authenticated user is a replicated user (`homeInstance` is set **and** `federationHomeOrphaned !== 1`), the following fields are rejected with 403: `displayName`, `avatar`, `banner`, `accentColor`, `avatarColor`, `bio`. These fields are managed by the home instance via S2S relay. **Exception — detached accounts** (`federationHomeOrphaned === 1`): a federated account whose home instance was reset/lost is a sovereign local account with no home managing its profile, so it edits these durable fields locally like a native user (detach design §4.4). Detached edits are NOT relayed (the S2S profile-relay path stays gated on `!homeInstance`).
 
@@ -106,7 +206,7 @@ GET    /users/:id/mutuals     ?homeUserId=               → { mutualFriends[], 
 
 **`POST /users/@me/federation-credential`:** get-or-create the per-remote credential this account's client presents when registering or logging in as itself on another instance. Scoped to `request.userId`; the secret is never derived from and never equal to the account password. See `auth.md` §5b and `client-federation.md` §1.
 
-- `origin` is canonicalized to `https://host[:port]` (lowercased, no path), so `orbit.example`, `orbit.example/`, and `https://Orbit.example` all address one row. Unparseable or non-http(s) values → **400**; our own origin → **400** (a credential is only ever for a remote).
+- `origin` is canonicalized to `https://host[:port]` (lowercased, no path), so `orbit.example`, `orbit.example/`, and `https://Tavvit.example` all address one row. Unparseable or non-http(s) values → **400**; our own origin → **400** (a credential is only ever for a remote).
 - **409** when the caller is a replicated federated account (`homeInstance` set and `federationHomeOrphaned !== 1`) — credentials are issued by the account's own home instance so exactly one secret exists per (user, remote). Detached accounts follow the LOCAL rule and DO get credentials.
 - Creation is `onConflictDoNothing` + re-read, i.e. **first-writer-wins**: a racing second call returns the stored secret rather than replacing it and locking the loser out of the remote account.
 - `markProvisioned: true` latches `provisionedAt` (set-once, never rotates the secret). `provisioned: false` means the remote account may still carry a credential this instance did not issue, and the client will rotate it the next time it holds a live session there.
@@ -117,37 +217,63 @@ GET    /users/:id/mutuals     ?homeUserId=               → { mutualFriends[], 
 GET    /spaces                                                                 → { spaces[] }
 POST   /spaces                { name, icon?, description? }                    → { space }
 GET    /spaces/:id                                                             → { space, channels[], members[], roles[] }
-PATCH  /spaces/:id            { name?, icon?, banner?, description?, visibility?, avatarColor?, directoryListed?, ownerTitle? } → { space }   [MANAGE_SPACE; ownerTitle: owner]
+PATCH  /spaces/:id            { name?, icon?, banner?, description?, visibility?, avatarColor?, directoryListed?, ownerTitle?, ownerGroup?, defaultNotificationLevel? } → { space }   [MANAGE_SPACE; ownerTitle, ownerGroup: owner]
 DELETE /spaces/:id                                                             → { success }  [owner]
 POST   /spaces/:id/invite                                                      → { inviteCode }  [CREATE_INVITE]
 POST   /spaces/:id/join       { inviteCode }                                   → { space }
 POST   /spaces/join           { inviteCode }                                   → { space }
-GET    /spaces/invite/:code/preview                                            → InvitePreview (no auth)
+GET    /spaces/invite/:code/preview                                            → InvitePreview (no auth); 404 for a link that was revoked, ran out or expired
+GET    /spaces/:id/invites                                                     → { invites: SpaceInviteLink[] }  [MANAGE_SPACE]
+POST   /spaces/:id/invites    { expiresInSeconds, maxUses }                    → 201 { invites }  [CREATE_INVITE]; only the values in INVITE_EXPIRY_SECONDS and INVITE_MAX_USES, or null
+DELETE /spaces/:id/invites/:code                                               → { invites }  [MANAGE_SPACE]
 PATCH  /spaces/:id/transfer-ownership  { newOwnerId }                          → { space }  [owner]
 ```
 `POST /spaces/:id/invite` answers every visibility, `request` included (up to 1.9.0 it refused a request space with `403 space_uses_join_requests`). The two join routes never admit anyone to a `request` space: after the code matches they answer `403 user_banned`, `409 already_member`, then, for a request space, `409 join_request_pending` when the caller's request is waiting and otherwise `403 join_request_required` with `details: { spaceId }`, the id for `POST /spaces/:id/request-join`. They read the space's visibility on each call, so a code follows the space when its visibility changes. `InvitePreview` carries `visibility` (absent from an instance up to 1.9.0). See [spaces.md](spaces.md), "Join by Invite Code".
 `directoryListed` must be a boolean (`400 field_not_boolean`), is refused with `400 directory_private_space` when the resulting visibility is `private`, and is cleared in the same write when a listed space is switched to `private`. `Space.directoryListed` is carried on every space response and in the WebSocket ready payload. A change to the flag, to a served field (`name`, `description`, `icon`, `banner`, `avatarColor`, `visibility`) of a listed space, or a `DELETE` of a listed space marks the directory dirty so the pinger tells the hub. See [directory.md](directory.md).
+The PATCH also moves the space's Discovery review (Reviews below): a space whose listing is `approved` goes back to `pending`, hidden until an admin approves again, when the write changes its `name`, `description`, `icon` or `banner`; a public or request space made private while its listing is `approved` or its request open (`pending`, `changes_requested`) goes to `withdrawn`. An open request (`pending`, `changes_requested`) whose space changes those fields keeps its status and takes the edit as a new version (`requested_at` = the time of the edit), so an admin decision on the earlier view answers `409 review_status_conflict`; a `verified` space whose `name` changes goes back to `pending` without its badge. The statuses are written in the same update as the edit (`reviewsAfterEdit`, `utils/spaceReview.ts`), so no edit is listed or vouched for unseen, and each step is recorded as `changed` with the editor as actor and announced like any review step (`space_review_updated` to the owner, `review_queue_count` to the admins; websocket.md, "Platform administration"). A member with `MANAGE_SPACE` who is not the owner moves it the same way.
+Every `Space` the server sends (space responses, the ready payload, `space_updated`) carries `badges` (`SpaceBadgeId[]`): `verified` while `verification_status` is `verified`, then the badges an instance admin granted (`spaces.badges`). Every `MemberWithUser` of the space detail, the member list and `member_updated` carries `badges` (`MemberBadgeId[]`), worked out by the hosting server from the member's roles, whose bits members cannot see (`memberStaffBadges`, `utils/spaceWire.ts`): `administrator` when a role other than @everyone carries ADMINISTRATOR, else `moderator` when one carries KICK_MEMBERS, BAN_MEMBERS, MODERATE_MEMBERS or MANAGE_MESSAGES, else none. Owning the space is not among them: the client reads that from `Space.ownerId`. A member who just joined carries `[]`. Hosts that predate badges omit both fields.
 `ownerTitle` (a string, or `null` to reset) is accepted from the space's owner only: anyone else who sends it gets `403 space_owner_only` and nothing in the body is written, whatever role they hold. The owner is compared by the caller's row on this instance (`request.userId === spaces.owner_id`), so a federated owner sets it through their replicated row here. The value goes through `normalizeOwnerTitle` (`packages/shared/src/constants.ts`): `null` resets; a string is trimmed and refused with `400 space_owner_title_invalid` (`details: { max }`) when it trims to nothing, is longer than `MAX_OWNER_TITLE_LENGTH` (32 UTF-16 code units), holds a control character, a line or paragraph separator or a bidirectional control, or has no visible character. A blank string does not reset, unlike a nickname. `Space.ownerTitle` is carried on every space response and in the ready payload, `null` when unset. `PATCH /spaces/:id/transfer-ownership` clears it. Instances up to 1.10.0 omit the field and ignore it in a PATCH (`200`, nothing written).
+`ownerGroup` (a boolean, else `400 validation_failed`) is the owner's alone like `ownerTitle` (`403 space_owner_only` for anyone else, nothing written): true lists the owner in a group of their own at the top of the member list, false under their own roles with a crown (spaces.md, "Ownership and roles"). `Space.ownerGroup` is carried on every space response and in the ready payload.
+`defaultNotificationLevel` is `'all'`, `'mentions'` or `null` (the built-in default), else `400 notification_level_invalid`; it is the level members start with until they choose their own, and is carried on every space response and in the ready payload as `Space.defaultNotificationLevel` (spaces.md, "Moderation", "Default notification level"). `PATCH /spaces/:id/transfer-ownership` also ends a timeout the new owner was under. Every change these routes make is recorded in the space's audit log (spaces.md, "Moderation", "Audit log").
 
 ### Members
 ```
 GET    /spaces/:id/members                               → { members[] }
 PATCH  /spaces/:id/members/:uid  { roleIds?, nickname? } → { member }  [roleIds: MANAGE_ROLES; nickname: self, or MANAGE_SPACE]
-DELETE /spaces/:id/members/:uid                          → { success }  [KICK_MEMBERS|self]
+PATCH  /spaces/:id/members/@me/profile  { avatar?, banner?, bio? } → { member }  [self]
+DELETE /spaces/:id/members/:uid  { reason? }             → { success }  [KICK_MEMBERS|self]; the reason goes to the audit log, at most 512 characters
 ```
-`PATCH /members/:uid` takes `roleIds`, `nickname` or both; a body with neither, or one that is not an object, answers `400 validation_failed`. Every field is checked before anything is written, and both are written in one transaction, so a refused field leaves the other unchanged too. `nickname` is the member's name in this space (`space_members.nickname`); the account name is not touched. Anyone may set their own. Setting another member's needs `MANAGE_SPACE` (`403 missing_permission`), never reaches the owner (`403 space_owner_only`) and needs a higher rank (`403 role_hierarchy`). The value goes through `normalizeMemberNickname` (`packages/shared/src/constants.ts`): `null` or a string that trims to nothing clears it; otherwise it is trimmed and refused with `400 member_nickname_invalid` (`details: { max }`) when longer than `MAX_MEMBER_NICKNAME_LENGTH` (32 UTF-16 code units), when it holds a control character, a line or paragraph separator or a bidirectional control, or when it has no visible character. The answer is followed by `member_updated` to the space (websocket.md); a role change is also followed by `space_access_changed`. Instances up to 1.9.x read only `roleIds` and refuse a nickname-only body (`role_ids_invalid`, `cannot_change_own_roles` or `missing_permission`).
+`PATCH /members/:uid` takes `roleIds`, `nickname` or both; a body with neither, or one that is not an object, answers `400 validation_failed`. Every field is checked before anything is written, and both are written in one transaction, so a refused field leaves the other unchanged too. `nickname` is the member's name in this space (`space_members.nickname`); the account name is not touched. Anyone may set their own. Setting another member's needs `MANAGE_SPACE` (`403 missing_permission`), never reaches the owner (`403 space_owner_only`) and needs a higher rank (`403 role_hierarchy`). The value goes through `normalizeMemberNickname` (`packages/shared/src/constants.ts`): `null` or a string that trims to nothing clears it; otherwise it is trimmed and refused with `400 member_nickname_invalid` (`details: { max }`) when longer than `MAX_MEMBER_NICKNAME_LENGTH` (32 UTF-16 code units), when it holds a control character, a line or paragraph separator or a bidirectional control, or when it has no visible character. The answer is followed by `member_updated` to the space (websocket.md); a role change is also followed by `space_access_changed`. Instances up to 1.9.x read only `roleIds` and refuse a nickname-only body (`role_ids_invalid`, `cannot_change_own_roles` or `missing_permission`). The owner may change their own `roleIds`; anyone else gets `403 cannot_change_own_roles` (spaces.md, "Ownership and roles").
+
+`PATCH /members/@me/profile` sets the caller's own space profile (spaces.md, "Space profiles"): `avatar` and `banner` name a file the caller uploaded to this instance that no message holds, or the current one (`400 avatar_url_invalid` / `banner_url_invalid` otherwise), `bio` at most 190 characters (`400 bio_too_long`); null or `''` clears a field. `404 not_space_member` without a membership, `400 no_fields_to_update` for an empty body. Followed by `member_updated`. `MemberWithUser` carries `avatar`, `banner` and `bio`, null when unset.
 
 ### Bans
 ```
 GET    /spaces/:id/bans                                  → { bans[] }  [BAN_MEMBERS]
-POST   /spaces/:id/bans       { userId, reason? }        → { success }  [BAN_MEMBERS]
+POST   /spaces/:id/bans       { userId, reason?, deleteMessagesSeconds? }  → { success }  [BAN_MEMBERS]; 0, 3600, 86400 or 604800, see spaces.md, "Removing someone"
 DELETE /spaces/:id/bans/:uid                             → { success }  [BAN_MEMBERS]
 ```
 
+### Moderation (`routes/spaceModeration.ts`)
+```
+GET    /spaces/:id/moderation                                      → SpaceModerationSettings  [MANAGE_SPACE]
+PATCH  /spaces/:id/moderation        UpdateSpaceModerationRequest  → SpaceModerationSettings  [MANAGE_SPACE]
+PUT    /spaces/:id/members/:uid/timeout  { durationSeconds, reason? } → MemberResponse { member }  [MODERATE_MEMBERS + hierarchy]
+DELETE /spaces/:id/members/:uid/timeout                            → MemberResponse { member }  [MODERATE_MEMBERS + hierarchy]
+GET    /spaces/:id/audit-log  ?before=&limit=&action=&actorId=     → AuditLogResponse { entries, users, nextBefore }  [VIEW_AUDIT_LOG]
+```
+All five answer `404 space_not_found` for an unknown space and `403 missing_permission` (`details.permission`) without the bit. What the rules, timeouts and entries do is in [spaces.md](spaces.md), "Moderation".
+
+`GET /moderation` answers the space's rules, the defaults with `updatedAt: null` for a space that never changed them. `PATCH /moderation` takes any of `blockedWords` (a list of strings), `blockLinks`, `blockInvites` (booleans), `maxMentions` (a whole number 0 to `MAX_MENTIONS_CAP`), `minAccountAgeMinutes`, `minMemberAgeMinutes` (0 to `MAX_AGE_MINUTES`); a field left out keeps its value and unknown fields are ignored. A body that is not an object answers `400 validation_failed`, one with none of the fields `400 no_fields_to_update`, and the first field that is not valid `400 moderation_settings_invalid` with `details.field` (its name; for `blockedWords` also a list over `MAX_BLOCKED_WORDS` entries, an entry over `MAX_BLOCKED_WORD_LENGTH` characters, or one holding a control or bidirectional character), with nothing written. The answer is the rules as stored (`normalizeModerationSettings`: entries trimmed, deduplicated without case, empty ones dropped) with the new `updatedAt`; a change that leaves them as they were writes nothing and answers them unchanged.
+
+`PUT /members/:uid/timeout` takes `durationSeconds`, a whole number from `MIN_TIMEOUT_SECONDS` (60) to `MAX_TIMEOUT_SECONDS` (2,419,200, 28 days), else `400 timeout_duration_invalid`, and `reason`, a string or null trimmed to at most `MAX_REASON_LENGTH` (512) characters, else `400 timeout_reason_too_long` (`details.max`; a reason of another type is `400 validation_failed`). The end is the server's time plus the duration and replaces a running timeout. Both timeout routes refuse oneself (`400 cannot_target_self`), the owner (`400 cannot_target_owner`), a non-member (`404 member_not_found`) and a member the caller does not outrank (`403 role_hierarchy`), in that order after the permission check, and answer the member with `timedOutUntil` (null when none runs), followed by `member_updated` to the space. A timeout also disconnects the member from the space's voice. `DELETE` on a member who is not timed out changes nothing and answers the member.
+
+`GET /audit-log` answers at most `limit` entries (default `AUDIT_LOG_PAGE_SIZE` 50, clamped to 1-`AUDIT_LOG_MAX_PAGE_SIZE` 100), newest first, older than the entry id `before` when given, of one `action` (one of `AUDIT_LOG_ACTIONS`) and one `actorId` when given; `users` holds the public user objects of the page's actors and member targets, and `nextBefore` the id to send as `before` for the next older page, null at the end. A `before` that is not a decimal id, a `limit` that is not a whole number, an unknown `action` or a repeated parameter answers `400 validation_failed`.
+
 ### Roles
 ```
-POST   /spaces/:id/roles              { name, color?, permissions? }              → { role }  [MANAGE_ROLES]
-PATCH  /spaces/:id/roles/:rid         { name?, color?, position?, above?, below?, permissions?, permissionsVersion? }  → { role }  [MANAGE_ROLES]
+POST   /spaces/:id/roles              { name, color?, colorSecondary?, description?, icon?, hoist?, mentionable?, permissions? }  → { role }  [MANAGE_ROLES]
+PATCH  /spaces/:id/roles/:rid         { name?, color?, colorSecondary?, description?, icon?, hoist?, mentionable?, position?, above?, below?, permissions?, permissionsVersion? }  → { role }  [MANAGE_ROLES]
 DELETE /spaces/:id/roles/:rid                                                     → { success }  [MANAGE_ROLES]
 POST   /spaces/:id/members/:uid/roles { roleId }                                 → { success }  [MANAGE_ROLES]
 DELETE /spaces/:id/members/:uid/roles/:rid                                        → { success }  [MANAGE_ROLES]
@@ -158,16 +284,49 @@ A role in any answer carries `permissions` only for a viewer who holds `MANAGE_R
 
 `DELETE /spaces/:id/roles/:rid` answers `404 role_not_in_space` for a role id that is not in the space, and otherwise deletes the role together with every channel and category override that names it (overrides carry no foreign key to the role).
 
+The display fields (`colorSecondary`, `description`, `icon`, `hoist`, `mentionable`) are checked as spaces.md, "Create Role" lists them: `400 role_name_required`, `role_name_too_long`, `role_name_invalid` (a control, bidirectional or zero-width character; the joiners and variation selectors of emoji are allowed), `role_color_invalid`, `role_description_too_long`, `role_icon_invalid` or `validation_failed`, with nothing written; `hoist` and `mentionable` are refused on @everyone. Every `Role` carries them; `hoist` is true and `mentionable` false for a role that never set them.
+
+### Reviews (`routes/spaceReview.ts`)
+```
+GET    /spaces/:id/review                                  → SpaceReviewState  [owner, or instance admin]
+PUT    /spaces/:id/verification  VerificationRequestBody   → SpaceReviewState  [owner]
+DELETE /spaces/:id/verification                            → SpaceReviewState  [owner]
+PUT    /spaces/:id/discovery     { category }              → SpaceReviewState  [owner]
+DELETE /spaces/:id/discovery                               → SpaceReviewState  [owner]
+```
+The owner's side of the platform's two reviews of a space, Verification and Discovery approval; an instance admin decides them (Platform administration below; admin.md, "Platform administration"). "Owner" is `spaces.owner_id` compared with the caller's row on this instance (`request.userId`), as for `ownerTitle`: no role, the owner group or a permission bit stands in for owning the space, and anyone else gets `403 space_owner_only`. `GET` also answers an instance admin (`users.is_admin`). All five answer `404 space_not_found` for an unknown space. The types are in `packages/shared/src/platform.ts`.
+
+`SpaceReviewState` is `{ spaceId, verification: { status, request, history }, discovery: { status, request, history } }`: each process's status (`VerificationStatus` / `DiscoveryStatus`, null while never asked), its request as last sent with the decision on it (`VerificationRequestView`, `DiscoveryRequestView`, null without), and every step of it oldest first (`ReviewEvent`: `action`, the `status` it left, `actor`, the admin's `note`, `createdAt`).
+
+`PUT /verification` asks for verification, or asks again with new content from any status but `verified` (`409 review_already_verified`, checked before the body). The body is `{ category, website?, profiles?, reason, proof }`: `category` one of `SPACE_CATEGORIES` (`400 review_category_invalid`); `website` and each of `profiles` an `http`/`https` address without credentials or whitespace, at most `REVIEW_LIMITS.URL_MAX_LENGTH` (200) characters once normalised, never fetched (`400 review_url_invalid`, `details.max`; a `profiles` that is not a list answers the same), a blank entry skipped and a repeat kept once, at most 5 profiles (`400 review_too_many_profiles`, `details.max`); `reason` 20-1000 and `proof` 10-1000 characters once trimmed, without control characters other than tab and line feed (`400 review_reason_invalid` / `review_proof_invalid`, `details: { min, max }`). The request stores the space's name and description of the moment, replaces an earlier request with its decision, and sets the status `pending`. `DELETE /verification` takes back a request that is `pending` or `needs_info` (else `409 review_status_conflict`); the status returns to null.
+
+`PUT /discovery` asks for a listing, or asks again: the space must be public or request (`409 discovery_requires_listable_visibility`) and have a description (`409 discovery_requires_description`), and `category` is checked as above. It sets `pending` from any status, `approved` included, so a listed space that asks again leaves Discovery until an admin approves it again. The listing shows the space's name, description, pictures and member count; the request adds the category. `DELETE /discovery` takes back a request or a listing that is `pending`, `changes_requested` or `approved` (else `409 review_status_conflict`) and leaves `withdrawn`.
+
+The two `PUT`s share a budget of 10 per hour per account (`429 rate_limited`), counted only once a request passed the checks above; the `DELETE`s have only the global limit. Every step is announced (`announceReviewStep`, `utils/reviewNotify.ts`): `space_review_updated` to the owner and `review_queue_count` to the instance's admins, then `space_updated` to the space after a verification step (the verified badge) and, after a Discovery step of a space opted in to the directory, a dirty directory (websocket.md, "Platform administration").
+
+**Listed in Discovery.** Only an admin's approval lists a space: `LISTED_IN_DISCOVERY_SQL` (`utils/discoveryListing.ts`), `visibility IN ('public', 'request') AND discovery_status = 'approved'`, is the one predicate `GET /spaces/explore`, the directory document (`GET /directory/spaces`) and the admin overview read. A visibility of public or request lists nothing by itself, and `directoryListed` only adds the directory on top of an approved listing.
+
+## Import (`routes/discordImport.ts`) — auth required
+```
+POST   /import/discord/preview  { code? | template?, spaceId? }                         → DiscordImportPreview
+POST   /import/discord/apply    { code? | template?, target: { kind: 'new', name? } | { kind: 'existing', spaceId } }  → DiscordImportResult { space, plan }  [existing: owner, or MANAGE_ROLES + MANAGE_CHANNELS]
+```
+A Discord server template as a new space or added to one (spaces.md, "Importing a Discord template"). The source is `code` (a template code, fetched from `https://discord.com/api/v10/guilds/templates/{code}` and nowhere else) or `template` (that endpoint's JSON). `preview` changes nothing; `apply` writes the plan in one transaction and answers `201` for a new space, `200` for an existing one. Errors: `400 validation_failed`, `400 discord_template_code_invalid`, `400 discord_template_invalid` (`details.field`), `413 discord_template_too_many_roles` / `_too_many_channels` / `_too_many_overwrites` (`details.max`), `413 discord_template_too_large` (`details.max` in MB), `403 role_hierarchy` (the importer's top role is the lowest and the template would create roles), `404 discord_template_not_found`, `429 discord_rate_limited` (`details.retryAfterSeconds`), `502 discord_unreachable`, `404 space_not_found`, `403 import_target_forbidden`, and `429 rate_limited` past 10 starts a minute per user. The plan's types (`DiscordImportPlan`, its role, category, channel and note entries) are in packages/shared/src/discordImport.ts.
+
 ## Channels (`routes/channels.ts`) — auth required
 ```
 GET    /spaces/:id/channels                              → { channels[] }  [VIEW_CHANNEL]
 POST   /spaces/:id/channels   { name, type?, topic?, categoryId? } → { channel }  [MANAGE_CHANNELS]
-PATCH  /channels/:id          { name?, type?, topic?, categoryId? } → { channel }  [MANAGE_CHANNELS]
+PATCH  /channels/:id          { name?, type?, topic?, categoryId?, slowmodeSeconds?, icon? } → { channel }  [MANAGE_CHANNELS]
 DELETE /channels/:id                                     → { success }  [MANAGE_CHANNELS]
 PATCH  /spaces/:id/channels/reorder  { order }           → reordered  [MANAGE_CHANNELS]
 ```
 
 `topic` is a string of at most `CHANNEL_TOPIC_MAX_LENGTH` (1024) characters after `normalizeChannelTopic`; on PATCH, `null` or a blank string clears it. A non-string answers `400 channel_topic_invalid`, a longer topic `400 channel_topic_length` with `{ max }` (spaces.md, "Create Channel").
+
+`slowmodeSeconds` on PATCH is one of `SLOWMODE_SECONDS` (0 switches slow mode off), else `400 slowmode_invalid`. Every channel the server sends carries `slowmodeSeconds` (0 when off). See spaces.md, "Moderation", "Slow mode".
+
+`icon` on PATCH is `glyph:<id>` of the role icon set or one standard emoji (`normalizeChannelIcon`); null or a blank string goes back to the type's icon, anything else answers `400 channel_icon_invalid`. Every channel the server sends carries `icon` (null without one). See spaces.md, "Channel icons".
 
 ### Channel Overrides
 ```
@@ -197,6 +356,8 @@ PATCH  /messages/:id           { content }                → { message }  [auth
 DELETE /messages/:id                                      → { success }  [author|MANAGE_MESSAGES]
 ```
 `replyToId` on POST must name a message in the same channel, otherwise `400 Invalid reply target` and nothing is inserted. See permissions.md, "Reply-target confinement".
+
+After the permission, content, mass mention and reply checks below, the space's moderation can refuse a POST or PATCH (spaces.md, "Moderation", "Enforcement order"), first match first: `403 member_timed_out` (`details.until`, epoch ms), `403 account_too_new`, `403 membership_too_new`, on POST only `429 slowmode_active` (`details.retryAfterSeconds`), then `403 automod_blocked_word`, `403 automod_invite_blocked`, `403 automod_link_blocked`, `403 automod_too_many_mentions` (`details.max`). An edit is checked as a whole. The owner, ADMINISTRATOR and members with MANAGE_MESSAGES or MANAGE_SPACE are exempt from the ages and the automatic rules, members with MANAGE_MESSAGES or MANAGE_CHANNELS from slow mode; nobody from a timeout. A DELETE by someone other than the author is recorded in the audit log (`message_delete`).
 
 Content with `@everyone`, `@here` or a role token (`<@&roleId>`) outside code needs MENTION_EVERYONE on the channel: without it POST answers `403 missing_permission` (`details.permission` = `MENTION_EVERYONE`) and nothing is stored. PATCH refuses the same way only when the edit adds a mass mention the stored message did not have. Every channel message the server returns or broadcasts carries `mentionEveryone: boolean` and `mentionRoleIds: string[]`, read from its content; a system message carries `false` and `[]` whatever its content holds. See permissions.md, "Mass mentions".
 
@@ -252,18 +413,29 @@ DELETE /dm/messages/:id                                             → { succes
 GET    /social/friends                                    → { friends[] }
 GET    /social/requests                                   → { requests[] }
 POST   /social/requests        { username } | { homeUserId, homeInstance, username? } → { success, requestId }
-PATCH  /social/requests/:id    { status: 'accepted'|'declined' } → { request }
+PATCH  /social/requests/:id    { status: 'accepted'|'declined' } → { success } [recipient; pending requests only]
 DELETE /social/requests/:id                               → { success } (cancel, sender-only)
 DELETE /social/friends/:id                                → { success }
-GET    /social/discover        ?q=&limit=&offset=         → { users[], total }
-GET    /social/search          ?q=                        → { users[] }
+GET    /social/search          ?q=                        → UserSearchResult[]
 ```
+
+`GET /social/discover`, the Discover People list of everyone who had `discoverable` set, is gone together with the column (migration `0042_orbit_drop_discoverable`): no route lists an instance's people any more.
+
+### GET /api/social/search — finding people by username
+
+The search adds someone whose username one knows; it is not a directory. `q` is trimmed, one leading `@` dropped and the rest lowercased, and must then be 3-32 of `a-z`, `0-9` and `_`, the characters of a username (`400 user_search_query_invalid`, `details: { min, max }`). It matches usernames of this instance only, never display names: the exact name first, then names that start with `q` (an `_` in it matched literally) in alphabetical order, at most 8 results, with no paging and no total. Left out are the caller, deleted accounts, replicated rows (people of other instances, whose stored names are not usernames here), accounts suspended now (`suspendedNow`, `utils/suspension.ts`), and anyone in a block with the caller in either direction (`user_blocks`). Two limits apply: the route's own 30 per minute per address, and 20 per minute per account (`429 rate_limited`), counted only for a query that passed the check above.
+
+The answer is a bare array of `UserSearchResult` (`packages/shared/src/types.ts`): `{ id, username, displayName, avatar, avatarColor, homeInstance, homeUserId }`, what a result row, a friend request or a DM needs, and nothing of the profile beyond it. The web client's Add Friend tab asks the home instance and every connected instance (`socialStore.searchUsers`, one result per person); the two DM pickers (`NewDmModal`, `DmSearchBar`) ask the home instance.
+
+### PATCH /api/social/requests/:id — answering a request
+
+Only the recipient answers (`403 friend_request_not_recipient`), and only a request still `pending`: an accepted or declined one answers `404 friend_request_not_found`, as an unknown id does, and changes nothing. A `status` other than `accepted` or `declined` is `400 validation_failed`. Accepting writes the friendship in the same transaction as the status, and writes none when the two are already friends in either direction, so no answer creates a second friendship row.
 
 ### POST /api/social/requests — routing & error codes
 
 The target is named one of two ways (`SendFriendRequest` in `packages/shared/src/types.ts`):
 
-- **By identity:** `homeUserId` + `homeInstance` (bare host or full origin), both required together, else 400 `validation_failed`. Takes precedence over `username`. A `homeInstance` that is this instance's host (port included) or one of its bare domain names (`isOwnDomain`: the origin's host or `DOMAIN`) names a native user here by id (`users.id`, or the `homeUserId` natives carry); anything else is the federated branch with the peer asked by `POST /api/federation/users/by-home-id` instead of `/users/lookup`. The web client uses this for every user it already holds (profile modal, discover and search cards), because a replicated row's `username` is only this instance's label and may be `<homeUserId>@<domain>`, which no peer can look up.
+- **By identity:** `homeUserId` + `homeInstance` (bare host or full origin), both required together, else 400 `validation_failed`. Takes precedence over `username`. A `homeInstance` that is this instance's host (port included) or one of its bare domain names (`isOwnDomain`: the origin's host or `DOMAIN`) names a native user here by id (`users.id`, or the `homeUserId` natives carry); anything else is the federated branch with the peer asked by `POST /api/federation/users/by-home-id` instead of `/users/lookup`. The web client uses this for every user it already holds (profile modal, member menu, search results), because a replicated row's `username` is only this instance's label and may be `<homeUserId>@<domain>`, which no peer can look up.
 - **By username:** `bare` (local), `bare@<own host>` (also routed local — server normalizes), or `bare@<remote host>` (federated branch). Used for a typed handle; the client sends it trimmed and verbatim.
 
 Clients that send an identity send `username` alongside: a server that predates the identity fields ignores them and reads `username`. All parsing, routing, peering, and remote lookup are server-side.
@@ -278,7 +450,8 @@ Clients that send an identity send `username` alongside: a server that predates 
 | 400 | `invalid_target_domain` | Scheme resolution failed (e.g., non-localhost HTTP target when our scheme is HTTPS) |
 | 403 | `peer_rejected` | Remote instance has rejected federation; admin must intervene |
 | 403 | `not_authoritative_for_sender` | Caller is a federated (replicated) user; should not have reached here |
-| 404 | `user_not_found` | No such local user, or the remote lookup (by name or by home id) found no native user (also tombstoned) |
+| 403 | `blocked_by_you` / `interaction_unavailable` | A block stands between the two, in either direction (`blockRefusal`, `utils/blocks.ts`): the blocker reads `blocked_by_you`, the blocked person the neutral `interaction_unavailable`. Checked for a target here and, on the federated branch, once the remote lookup has resolved the target's row on this instance, before any request is stored or relayed |
+| 404 | `user_not_found` | No live native account here of that name or id (`findLocalUserByUsername` / `findNativeUserByHomeId`: a tombstone's or a replicated row's stored name is no handle), or the remote lookup (by name or by home id) found no native user (also tombstoned) |
 | 409 | `already_friends` | Friendship row already exists |
 | 409 | `peer_pending_approval` | Remote admin needs to approve the peering relationship |
 | 409 | `peer_pending_local_admin` | Local instance has `autoAcceptPeering=0` and the user attempted to friend-add a never-peered remote target. The user's own admin must approve before any traffic reaches the wire. Distinct from `peer_pending_approval` (remote admin must approve). See [federation.md → Outbound Peering Gate](federation.md#outbound-peering-gate). |
@@ -286,6 +459,190 @@ Clients that send an identity send `username` alongside: a server that predates 
 | 409 | `incoming_request_exists` | Opposite-direction pending request exists; response includes `requestId` for deep-link |
 | 429 | `lookup_rate_limited` | Remote `/users/lookup` or `/users/by-home-id` returned 429; `Retry-After` header forwarded |
 | 503 | `peer_unreachable` | Remote instance unreachable (network/timeout/lookup-unreachable) |
+
+## Pins (`routes/pins.ts`) — auth required
+
+| Method | Path | Rule |
+|--------|------|------|
+| GET | `/api/channels/:id/pins` | VIEW_CHANNEL and READ_MESSAGE_HISTORY. Hydrated messages, the latest pin first. |
+| PUT, DELETE | `/api/messages/:id/pin` | VIEW_CHANNEL and PIN_MESSAGES or MANAGE_MESSAGES, not while timed out. `403 system_message_immutable` for a system line, `400 pin_limit_reached` at `MAX_PINS_PER_CHANNEL` (50). |
+| GET | `/api/dm/:id/pins` | A member of the conversation. |
+| PUT, DELETE | `/api/dm/messages/:id/pin` | A member, `403 recipient_deleted` when the partner is gone. |
+
+PUT and DELETE answer `MessagePinState` and change nothing the second time. Each change sends `message_pin_changed`. A channel's pin also leaves a passive system line (`message_pinned`) and an audit entry; a conversation's relays as `pin_set`.
+
+## Forwarding (`routes/forward.ts`) — auth required
+
+`POST /api/messages/:id/forward` and `POST /api/dm/messages/:id/forward` take `{ channelId }` or `{ dmChannelId }`, exactly one (`400 validation_failed`). The reader's rights at the source, and at the target SEND_MESSAGES, ATTACH_FILES when it has files, and the space's moderation rules (`spaceMessageRefusal`), or `dmPostRefusal` in a conversation. A system line is refused.
+
+The result is a new message of the person forwarding it with `forwarded: true`. It names neither the original nor its author. Mentions become plain names and `@everyone` gets a zero-width space, so it alerts nobody where it lands. Files are copied on disk (`COPYFILE_FICLONE`), because deleting a message deletes its files; a file from a peer not here yet is left out, and `400 attachment_invalid` when that leaves nothing. Both ends are on this instance.
+
+## Deleting several messages (`routes/messages.ts`) — auth required
+
+`POST /api/channels/:id/messages/bulk-delete` with `{ messageIds }`, at most `MAX_BULK_DELETE_MESSAGES` (100), takes VIEW_CHANNEL and MANAGE_MESSAGES. Ids from another channel are ignored. Answers `{ deleted }`, sends one `messages_deleted`, and logs `channel_messages_delete` with the count, not the words.
+
+## Polls (`routes/polls.ts`) — auth required
+
+A poll is a message whose content is the question (`shared/src/polls.ts`).
+
+| Method | Path | Rule |
+|--------|------|------|
+| POST | `/api/channels/:id/polls` | SEND_MESSAGES. `{ question, options, multiple?, durationHours? }`: 2 to 10 different answers, a duration from `POLL_DURATIONS_HOURS` or null. The space's rules read the answers too; a mass mention in the question takes MENTION_EVERYONE. |
+| PUT | `/api/messages/:id/poll/votes` | VIEW_CHANNEL, READ_MESSAGE_HISTORY and ADD_REACTIONS, not while timed out. `{ optionIds }` is all of the person's answers; an empty list takes a vote back. `409 poll_ended` after the end. |
+| POST | `/api/messages/:id/poll/end` | Its author, or MANAGE_MESSAGES. |
+| GET | `/api/messages/:id/poll/voters?optionId=` | Whoever can read the channel: at most 100 people. |
+
+`MessageWithUser.poll` holds the count. Only an answer to one reader has `myVotes`, because what goes to a channel is the same for everyone in it: history, search and the pins pass `readerId` to `hydrateChannelMessages`. `PATCH /api/messages/:id` and the socket's edit answer `403 poll_not_editable`.
+
+## Forums and follows (`routes/forums.ts`, `routes/channelFollows.ts`) — auth required
+
+See [forums.md](forums.md). `POST /api/spaces/:id/channels` takes `type`: `text`, `voice`, `announcement` or `forum`, and `PATCH /api/channels/:id` takes `type` between `text` and `announcement`.
+
+| Method | Path | Who and what |
+|--------|------|--------------|
+| GET | `/api/channels/:id/posts?tag=&before=` | VIEW_CHANNEL and READ_MESSAGE_HISTORY. `ForumPostsResponse`: the tags and 30 posts by latest activity, `nextBefore` for the next page. Allowed for bots. |
+| POST | `/api/channels/:id/posts` | VIEW_CHANNEL, SEND_MESSAGES and CREATE_THREADS, ATTACH_FILES for files. `CreateForumPostRequest`. 201 `ForumPost`. Allowed for bots. |
+| GET | `/api/channels/:id/forum-tags` | VIEW_CHANNEL. `{ tags }`. |
+| PUT | `/api/channels/:id/forum-tags` | MANAGE_CHANNELS. `{ tags: [{ id?, name, color }] }`, all of them at once. |
+| PUT | `/api/threads/:id/tags` | Who started the post, or MANAGE_MESSAGES. `{ tagIds }`. |
+| GET | `/api/channels/:id/follows` | VIEW_CHANNEL and MANAGE_WEBHOOKS. `ChannelFollowsResponse`: `followers` and `following`. |
+| GET | `/api/channels/:id/follow-targets` | VIEW_CHANNEL. `{ spaces: FollowTargetSpace[] }`: where this person may have the channel's posts arrive. |
+| POST | `/api/channels/:id/follows` | VIEW_CHANNEL here, VIEW_CHANNEL and MANAGE_WEBHOOKS at `{ targetChannelId }`. 201 `ChannelFollowInfo`. |
+| DELETE | `/api/channel-follows/:id` | MANAGE_WEBHOOKS at either end. What arrived stays. |
+
+| PUT | `/api/spaces/:id/vanity` | MANAGE_SPACE. `{ code }`, or null to give it up. `{ vanityCode }`. |
+| POST | `/api/admin/spaces/:id/vanity/revoke` | Instance administrators. `{ reason }`. The name stays blocked. |
+
+## Changing a username (`routes/users.ts`) — auth required
+
+See [auth.md](auth.md), "Changing a username". Not for bots.
+
+| Method | Path | Who and what |
+|--------|------|--------------|
+| POST | `/api/users/@me/username` | `{ username, password, twoFactorCode? }`. `{ user }`. 400 for the shape, `username_same`, `username_reserved`; 403 `current_password_incorrect`, `username_change_home_only`; 409 `username_taken`, `username_change_connected`; 429 `username_change_too_soon`. |
+
+## Translating a message (`routes/translation.ts`) — auth required
+
+See [translation.md](translation.md). Not for bots.
+
+| Method | Path | Who and what |
+|--------|------|--------------|
+| POST | `/api/messages/:id/translate` | Who can read the message, in a channel or a conversation; 404 otherwise. `{ target }`, one of `TRANSLATION_TARGETS`. `TranslateMessageResponse`. 503 `translation_unavailable` without a provider, 502 `translation_failed`, 429 `translation_limit_reached`. |
+
+`GET /api/instance/info` has `translation`: whether this server has a provider.
+
+## Threads (`routes/threads.ts`) — auth required
+
+See [threads.md](threads.md). A thread is a channel with its parent's rights, so the channel routes also serve its messages; no listing names one.
+
+| Method | Path | Rule |
+|--------|------|------|
+| POST | `/api/messages/:id/thread` | VIEW_CHANNEL, READ_MESSAGE_HISTORY and CREATE_THREADS in the message's text channel, not while held back. `{ name? }`. Opens the one the message has instead of a second. |
+| GET | `/api/channels/:id/threads?archived=1` | Whoever can see the channel. |
+| GET | `/api/threads/:id` | The thread with its starting message. |
+| PUT, DELETE | `/api/threads/:id/follow` | Whoever can see it. |
+| PATCH, DELETE | `/api/threads/:id` | Who started it, or MANAGE_MESSAGES. |
+
+## Events (`routes/events.ts`) — auth required
+
+See [events.md](events.md) for the rules of each.
+
+| Method | Path |
+|--------|------|
+| GET, POST | `/api/spaces/:id/events` |
+| PATCH, DELETE | `/api/events/:id` |
+| PUT, DELETE | `/api/events/:id/rsvp` |
+| GET | `/api/events/:id/attendees` |
+
+## Welcome and rules (`routes/welcome.ts`) — auth required
+
+See [spaces.md](spaces.md), "Welcome and rules".
+
+| Method | Path | Rule |
+|--------|------|------|
+| GET | `/api/spaces/:id/welcome` | Members. `SpaceWelcome`, with only the channels this reader can see. |
+| PUT | `/api/spaces/:id/welcome` | MANAGE_SPACE. `{ welcomeText?, rulesText?, rulesRequired?, channelIds? }`. All of it, each time. |
+| POST | `/api/spaces/:id/rules/accept` | Members. |
+
+## Saved messages and keywords (`routes/saved.ts`, `routes/keywords.ts`) — auth required
+
+See [saved.md](saved.md) for the rules.
+
+| Method | Path |
+|--------|------|
+| GET | `/api/saved?before=`, `/api/saved/ids` |
+| PUT, DELETE | `/api/saved/messages/:id`, `/api/saved/dm-messages/:id` |
+| GET, PUT | `/api/users/@me/keywords` |
+| GET | `/api/users/@me/keyword-matches?before=&limit=` |
+
+## Soundboard (`routes/soundboard.ts`) — auth required
+
+See [sounds.md](sounds.md), "Soundboard".
+
+| Method | Path | Rule |
+|--------|------|------|
+| GET | `/api/spaces/:id/sounds` | Members. |
+| POST | `/api/spaces/:id/sounds` | MANAGE_SOUNDS. `{ name, audio (base64), duration? }`. |
+| PATCH, DELETE | `/api/sounds/:id` | MANAGE_SOUNDS. |
+| GET | `/api/sounds/:id/audio` | Members. |
+| POST | `/api/channels/:id/soundboard/:soundId/play` | In the call, USE_SOUNDBOARD, not held back. |
+
+## Status (`routes/publicStatus.ts`) — public
+
+`GET /api/status` → `PublicStatus`: whether `chat`, `uploads`, `voice` and `mail` are `ok`, `down` or `off`, and the operator's notes. No counts, versions or addresses. Remembered for 30 seconds; 60 requests a minute. See operations.md.
+
+## Load test (`routes/loadtest.ts`) — only with `LOADTEST_ALLOWED=1`, administrators only
+
+`GET /api/loadtest`, `POST /api/loadtest/people` `{ count, channels?, rolesPerPerson?, messages? }`. Without the switch they are not there at all. See operations.md.
+
+## Pages for developers
+
+Not JSON, and no sign-in: `GET /developers`, `/developers/docs` and `/developers/docs/:slug` answer the docs ([developers.md](developers.md)), and `GET /.well-known/security.txt` (`routes/legal.ts`) where to report a vulnerability, or 404 until the operator's details are filled in.
+
+## Bots (`routes/bots.ts`) — auth required
+
+See [bots.md](bots.md) for the rules, and `BOT_ROUTES` in `shared/src/bots.ts`, shown to developers at `/developers/docs/rest`, for the list of routes open to a bot's token (`Authorization: Bot <token>`). **Every other route refuses one with 403 `bot_route_forbidden`.**
+
+| Method | Path |
+|--------|------|
+| GET, POST | `/api/bots` |
+| GET, PATCH, DELETE | `/api/bots/:id` (its owner) |
+| POST | `/api/bots/:id/token` |
+| GET | `/api/bots/:id/public` |
+| POST | `/api/bots/:id/spaces/:spaceId` |
+| GET | `/api/bots/@me` (bot) |
+| PUT | `/api/bots/@me/commands` (bot) |
+| POST | `/api/bots/@me/files` (bot, `routes/botFiles.ts`) |
+| POST | `/api/interactions/:id/reply` (bot) |
+| PUT, DELETE | `/api/messages/:id/reactions/:emoji` (`routes/messages.ts`) |
+| GET | `/api/channels/:id/commands` |
+| POST | `/api/channels/:id/commands/:botId/:name` |
+| GET | `/api/admin/bots` |
+| PUT | `/api/admin/bots/enabled` |
+| DELETE | `/api/admin/bots/:id` |
+
+## Webhooks (`routes/webhooks.ts`)
+
+See [webhooks.md](webhooks.md). `POST /api/webhooks/:id/:token` is public: the token is the right. The others need auth and MANAGE_WEBHOOKS.
+
+| Method | Path |
+|--------|------|
+| GET, POST | `/api/channels/:id/webhooks` |
+| PATCH, DELETE | `/api/webhooks/:id` |
+| POST | `/api/webhooks/:id/rotate` |
+| POST | `/api/webhooks/:id/:token` |
+
+## Push (`routes/push.ts`) — auth required
+
+`GET /api/push/key` answers `{ publicKey }`. `POST /api/push/subscriptions` takes `{ endpoint, keys: { p256dh, auth }, showText?, directMessages?, locale? }`, for an account of this instance, with the address on the list of push services (`400 validation_failed`, field `endpoint`); at most 10 devices, the oldest goes. `DELETE /api/push/subscriptions` takes `{ endpoint }`, an account's own. docs/systems/push.md.
+
+## Blocks (`routes/blocks.ts`) — auth required
+```
+GET    /users/@me/blocks             → { blocks: [{ user, blockedAt }] }  (newest first)
+PUT    /users/@me/blocks/:userId     → { user, blockedAt }  201 new, 200 already blocked
+DELETE /users/@me/blocks/:userId     → { success }          (idempotent)
+```
+A block closes direct contact in both directions (friend requests, new 1-on-1s, messages in a shared 1-on-1, group creation) and ends a friendship; it never removes anyone from a shared space or group, where the clients hide the blocked person's messages. The blocker gets `blocked_by_you`, the blocked person the neutral `interaction_unavailable`. `cannot_block_self` (400), `user_not_found` (404). Blocks are the home instance's and name home rows. After a change the server sends the blocker `blocks_updated` and, for a ended friendship or withdrawn requests, the ordinary friend/request events to both sides.
 
 ## Search (`routes/search.ts`) — auth required
 ```
@@ -307,13 +664,16 @@ GET    /spaces/:id/join-requests         ?status=            → { requests[] } 
 PATCH  /spaces/:id/join-requests/:rid    { action }          → { request }  [MANAGE_SPACE]
 GET    /users/@me/join-requests          ?status=            → { requests[] }
 ```
+`GET /spaces/explore` lists only the spaces listed in Discovery (`LISTED_IN_DISCOVERY_SQL`, "Reviews" above: approved by an admin, public or request), and `totalAll` counts those; while `instance_settings.discoveryEnabled` is off it answers `{ spaces: [], total: 0, discoveryEnabled: false }`. Each `ExploreSpace` also carries `badges` (as on `Space`) and `category`, the category of its Discovery request (null for a value this version does not know). The two join routes check the visibility, not the listing: `public-join` admits anyone not banned who has the id of a public space, listed or not, and `request-join` takes a request for any request space.
+
+A decision is recorded in the space's audit log (`join_request_approve`, `join_request_decline`). Every join (`public-join`, an accepted request, and the two join-by-code routes in `routes/spaces.ts`) puts back a timeout the user left the space under (spaces.md, "Moderation", "Timeouts").
 
 ## Directory (`routes/directory.ts`)
 ```
 GET    /directory/spaces                 (public)                  → DirectoryDocument
 GET    /directory                        (auth)  ?q=&limit=&offset= → DirectoryFeed
 ```
-`GET /directory/spaces` is the document the space directory hub indexes: `{ schema: 1, origin, instance: { name, federatedRegistrationOpen, version }, spaces[] }`, at most 200 spaces that are listed, discoverable and public or request, every `icon`/`banner` an absolute URL on this origin or null. Unauthenticated by design (the hub is a stranger), cached in memory for 30 s or until the next change, and served `Cache-Control: no-cache` so no intermediary holds a pre-delist copy: the in-memory cache, not a shared cache, is what answers the revalidations. It never 404s: with the directory or discovery off, `spaces` is empty and the envelope stays, so a hub fetch of a switched-off instance is a success that clears its rows.
+`GET /directory/spaces` is the document the space directory hub indexes: `{ schema: 1, origin, instance: { name, federatedRegistrationOpen, version }, spaces[] }`, at most 200 spaces that are opted in (`directoryListed`) and listed in Discovery, which takes an admin's approval as well as a public or request visibility (`LISTED_IN_DISCOVERY_SQL`, "Reviews" above), every `icon`/`banner` an absolute URL on this origin or null. Unauthenticated by design (the hub is a stranger), cached in memory for 30 s or until the next change, and served `Cache-Control: no-cache` so no intermediary holds a pre-delist copy: the in-memory cache, not a shared cache, is what answers the revalidations. It never 404s: with the directory or discovery off, `spaces` is empty and the envelope stays, so a hub fetch of a switched-off instance is a success that clears its rows.
 
 `GET /directory` is the feed proxy the Explore page's Outer Space section reads; the browser never talks to the hub. `q` (cut to 100 chars), `limit` (1-100, default 50) and `offset` (0-1000) are clamped, not rejected, and forwarded to `{DIRECTORY_ENDPOINT}/v1/spaces`. Each distinct query is cached for 60 s (64 entries) counted from when the hub's edge copy was made (the receive time less the hub's `Age` header, absent or unparsable counting as 0, clamped to 60 s), so the proxy's answer is never older than 60 s end to end even though the hub caches for 60 s of its own; identical in-flight requests share one upstream fetch, and the route carries its own rate limit of 30 per minute, which replaces the global one for it (`429 rate_limited`, the global limiter's shape). `404 directory_disabled` when `DIRECTORY_ENDPOINT` is empty, and the same `404 directory_disabled` when the admin has turned `instance_settings.directoryBrowseEnabled` off, checked before any upstream fetch or cache read; `502 directory_unreachable` when the hub does not answer or answers something that is not a feed. Response `{ schema: 1, spaces: DirectoryEntry[] }`. See [directory.md](directory.md).
 
@@ -361,19 +721,20 @@ Backend: Klipy API (requires `gifApiKey` in instance_settings)
 ```
 POST /livekit/token  { channelId | dmChannelId } → { token, url }
 ```
-Permissions checked: CONNECT, SPEAK, STREAM (space channels). DM calls: always full grants.
+Permissions checked: CONNECT, SPEAK, STREAM (space channels). DM calls: always full grants. A member timed out in the channel's space gets no token: `403 member_timed_out` (`details.until`), after the CONNECT check.
 
 ## Instance (`routes/instance.ts`) — public
 ```
-GET /instance/info → { name, version, registrationOpen, federatedRegistrationOpen, instanceId, sourceCodeUrl, commit, directoryConfigured, directoryAvailable, directoryEnabled, supportCardEnabled }
+GET /instance/info → { name, version, registrationOpen, federatedRegistrationOpen, instanceId, sourceCodeUrl, commit, directoryConfigured, directoryAvailable, directoryEnabled, federationEnabled, setupRequired, sourceCodeConfigured, accentColor }
 ```
-`supportCardEnabled` is `instance_settings.supportCardEnabled` (default true): whether the web client's Backspace page shows the Support card. The web client is its only reader; the server does nothing else with it. Written by the admin through `PATCH /settings/instance`.
 Three directory facts, reported separately because folding any two of them leaves a client unable to tell which is false. `directoryConfigured` is `config.directory.endpoint !== ''` on its own: whether this instance has a hub to talk to at all, which is what the pinger, the proxy and Outer Space all rest on; every surface that promises the directory will do something gates on it. `directoryAvailable` is `directoryConfigured` **and** `instance_settings.directoryBrowseEnabled`: whether people here browse, the endpoint checked first so no setting can advertise a directory the instance cannot reach. The Explore page reads it here to decide whether to render the Outer Space section (directory.md §9). `directoryEnabled` is `instance_settings.directoryEnabled`: whether the admin allows spaces here to be listed. The two are independent; the space settings panel reads the latter through `GET /settings/streaming`, not from here.
 `federatedRegistrationOpen` is a UX hint consumed by the Connections add-instance pre-flight (see `client-federation.md`). The 403 from `POST /auth/register` remains the security boundary.
 
 `instanceId` (`InstanceInfoResponse.instanceId`, `string`) is this instance's persistent **epoch** — the incarnation UUID minted once by `ensureDefaults` and stable across restarts (see `database.md → Instance Settings`). It is served here (unauthenticated, credential-free) purely as a **detection** signal: `probePeerReachable` reads it to observe that a peer behind a known origin has been factory-reset (a changed epoch). It is **never** written to a peer's trusted baseline from this channel — only the authenticated `/federation/epoch`, relay envelope, and handshake do that. See `federation.md` "Instance Epoch".
 
-`sourceCodeUrl` (`string`) and `commit` (`string | null`) implement the **AGPL-3.0 § 13 network-use source offer**: every network user (and federated peer) can obtain the Corresponding Source of the exact version this instance is running. `sourceCodeUrl` comes from `config.sourceCodeUrl` (env `BACKSPACE_SOURCE_URL`, default `https://github.com/TheZwiss/backspace`) — operators who modify Backspace MUST set it to their fork's source. `commit` comes from `config.commit` (env `BACKSPACE_COMMIT`, injected at Docker build via `deploy.sh --build-arg`; `null` in local dev). The web client surfaces `sourceCodeUrl`/`version` via the `SourceCodeLink` component on settings sidebars and the pre-auth login/register pages; the desktop app exposes it via the tray + app menus ("Source code (AGPL)") and the native About panel.
+`sourceCodeUrl` (`string`) and `commit` (`string | null`) implement the **AGPL-3.0 § 13 network-use source offer**: every network user (and federated peer) can obtain the Corresponding Source of the exact version this instance is running. `sourceCodeUrl` comes from `config.sourceCodeUrl` (env `BACKSPACE_SOURCE_URL`, default `https://github.com/TheZwiss/backspace`) — operators who modify Backspace MUST set it to their fork's source. `commit` comes from `config.commit` (env `BACKSPACE_COMMIT`, injected at Docker build via `deploy.sh --build-arg`; `null` in local dev). The web client surfaces `sourceCodeUrl`/`version` through one `SourceCodeLink` line, at the foot of the settings sidebar and under the server's details on the About page; nowhere else in the interface mentions the licence or a repository. The desktop app shows the same web client and adds no source item of its own. `sourceCodeConfigured` is false while `TAVVIT_SOURCE_URL` is unset; only an administrator is told so (About page).
+
+The client shows it as one plain word in the legal links (`LegalLinks`, legal.md, "Source offer"); it does not put the version in the link, and About shows `version` and `commit` as a line of their own.
 
 ## Settings (`routes/settings.ts`)
 ```
@@ -381,20 +742,21 @@ GET   /settings/streaming    (auth)        → { streamingLimits }
 PATCH /settings/streaming    (admin)       → { streamingLimits }
 GET   /settings/instance     (admin)       → { instanceName, registrationOpen, federatedRegistrationOpen, discoveryEnabled,
                                                directoryEnabled, directoryBrowseEnabled, directoryLastPingAt,
-                                               directoryLastError, directoryListedSpaceCount, supportCardEnabled, ... }
+                                               directoryLastError, directoryListedSpaceCount, accentColor, ... }
 PATCH /settings/instance     (admin)       { instanceName?, registrationOpen?, federatedRegistrationOpen?,
                                              discoveryEnabled?, directoryEnabled?, directoryBrowseEnabled?,
-                                             supportCardEnabled?,
                                              gifApiKey?, maxUploadSizeMb?,
+                                             storagePerAccountGb?, spacesPerAccount?,
                                              federationRelayEnabled?, federationRelayTtlDays? } → { settings }
 ```
+Either PATCH that changed a stored value records `settings_update` in the platform audit log, target `instance` / `settings`, with `details.fields` naming the changed settings (their names only, since some values are long lists); a save that repeats every stored value records nothing.
+
 `registrationOpen` and `federatedRegistrationOpen` are **independent** toggles. PATCH validates `federatedRegistrationOpen` is `boolean` if provided; rejects 400 otherwise. `registrationOpen` is stored as a nullable column (null = fall back to `config.registrationOpen` env default); `federatedRegistrationOpen` is NOT NULL with default 1.
 
-`directoryEnabled` (space directory, see [directory.md](directory.md)) must be a boolean (`400 field_not_boolean`) and needs discovery on: `directoryEnabled: true` while the resulting `discoveryEnabled` is off is `400 directory_requires_discovery`. Both PATCH routes enforce the invariant the other way round too: a write that leaves discovery off clears `directoryEnabled` in the same write, on `/settings/instance` and on `/settings/streaming` (which carries `discoveryEnabled` but not `directoryEnabled`). `directoryLastPingAt`, `directoryLastError` and `directoryListedSpaceCount` are read-only; the PATCH ignores them in the body. The count is the number of spaces that are public or request to join and have opted in to the directory, whatever `directoryEnabled` says. `InstanceStreamingLimits.directoryEnabled` is also carried on `GET /settings/streaming`, read-only there, so a non-admin's space settings can tell whether the instance allows listing. `directoryConfigured` rides with it, also read-only and also from configuration rather than the row (`config.directory.endpoint !== ''`, the same fact `GET /instance/info` reports). It is here because this is the one settings document any signed-in user may read **on any instance**: a space that lives on a peer is gated by that peer's endpoint, which the home instance's `/instance/info` cannot answer for. Neither field is accepted on either PATCH; a body carrying one is ignored, as `directoryLastPingAt` is. A change to `directoryEnabled`, `discoveryEnabled`, `instanceName` or `federatedRegistrationOpen` marks the directory dirty; repeating a stored value does not.
+`directoryEnabled` (space directory, see [directory.md](directory.md)) must be a boolean (`400 field_not_boolean`) and needs discovery on: `directoryEnabled: true` while the resulting `discoveryEnabled` is off is `400 directory_requires_discovery`. Both PATCH routes enforce the invariant the other way round too: a write that leaves discovery off clears `directoryEnabled` in the same write, on `/settings/instance` and on `/settings/streaming` (which carries `discoveryEnabled` but not `directoryEnabled`). `directoryLastPingAt`, `directoryLastError` and `directoryListedSpaceCount` are read-only; the PATCH ignores them in the body. The count is the number of spaces that are listed in Discovery (approved, public or request to join; "Reviews" above) and have opted in to the directory, whatever `directoryEnabled` says. `InstanceStreamingLimits.directoryEnabled` is also carried on `GET /settings/streaming`, read-only there, so a non-admin's space settings can tell whether the instance allows listing. `directoryConfigured` rides with it, also read-only and also from configuration rather than the row (`config.directory.endpoint !== ''`, the same fact `GET /instance/info` reports). It is here because this is the one settings document any signed-in user may read **on any instance**: a space that lives on a peer is gated by that peer's endpoint, which the home instance's `/instance/info` cannot answer for. Neither field is accepted on either PATCH; a body carrying one is ignored, as `directoryLastPingAt` is. A change to `directoryEnabled`, `discoveryEnabled`, `instanceName` or `federatedRegistrationOpen` marks the directory dirty; repeating a stored value does not.
 
 `directoryBrowseEnabled` is the other directory axis: whether people on this instance see spaces from other instances in Explore. It must be a boolean (`400 field_not_boolean`), is independent of `directoryEnabled` (nothing clears it, and the discovery invariant does not touch it), is carried only on `/settings/instance` and not on `/settings/streaming`, and changing it never marks the directory dirty, since it is nowhere in the served document. It gates `GET /directory` and `directoryAvailable` on `GET /instance/info`. Default true. See [directory.md](directory.md).
 
-`supportCardEnabled` must be a boolean (`400 field_not_boolean` with `{ field: 'supportCardEnabled' }`). It is carried only on `/settings/instance` and not on `/settings/streaming`, is reported publicly on `GET /instance/info`, and never marks the directory dirty. Default true. What it hides: [admin.md](admin.md), General panel.
 
 ## Notification settings (`routes/notificationSettings.ts`) — auth required
 ```
@@ -418,67 +780,76 @@ GET    /admin/storage/stats                                → StorageStats
 GET    /admin/storage/orphans                              → { orphans[] }
 POST   /admin/storage/cleanup        { dryRun? }           → CleanupResult
 POST   /admin/storage/cleanup-media  { maxAgeDays, dryRun? } → CleanupResult
-GET    /admin/users  ?q=&page=&pageSize=&showDeleted=&homeInstance=&role=&joinedAfter=&joinedBefore=&sort= → AdminUserListResponse
+GET    /admin/users  ?q=&page=&pageSize=&showDeleted=&homeInstance=&role=&status=&joinedAfter=&joinedBefore=&sort= → AdminUserListResponse
 GET    /admin/users/instances                              → distinct home instance domains
 PATCH  /admin/users/:id/role         { isAdmin }           → AdminUser
 POST   /admin/users/:id/reset-password                     → { temporaryPassword }
 DELETE /admin/users/:id                                    → { success }
 ```
+`status=suspended` narrows the user list to accounts suspended now (`suspendedNow`, `utils/suspension.ts`): a suspension whose end has passed does not count, and any other `status` value is ignored. Every `AdminUser` (the list, the role route, the Platform administration routes below; `toAdminUser`, `utils/adminUser.ts`) carries `suspension`, the `UserSuspension { since, until, reason }` standing now or null, and `grantedBadges`, the badges an admin gave the account.
 
-## Admin: Instance Updates (`routes/adminUpdates.ts`) — admin required
+These routes write the platform audit log ("Audit log" below): the role route records `user_role` (`details.isAdmin`) when the flag changed, reset-password `user_password_reset`, the deletion `user_delete`, and `storage/cleanup` and `storage/cleanup-media` record `storage_cleanup` (`details: { kind: 'orphans' | 'media', deletedFiles, freedBytes }`, plus `maxAgeDays` for media) unless they are dry runs; the tus sweep (`POST /admin/storage/cleanup-tus`) records nothing. Reset-password ends the account's sessions with `forceDisconnectUser(id, { reason: 'Password reset', endPresence: true })`, the deletion with `forceDisconnectUser(id)` (websocket.md, "Forced disconnects").
+
+## Platform administration (`routes/platformAdmin.ts`) — admin required
 ```
-GET    /admin/instance/update-status  ?refresh=true    → InstanceUpdateStatus
+GET    /admin/overview                                            → PlatformOverview
+GET    /admin/users/:id                                           → AdminUserDetail
+POST   /admin/users/:id/suspend      { reason, durationHours }    → AdminUser
+POST   /admin/users/:id/unsuspend    { reason? }                  → AdminUser
+PUT    /admin/users/:id/badges       { badges, reason? }          → AdminUser
+GET    /admin/spaces   ?q=&filter=&page=&pageSize=                → AdminSpaceListResponse
+GET    /admin/spaces/:id                                          → AdminSpaceDetail
+PUT    /admin/spaces/:id/badges      { badges, reason? }          → AdminSpaceSummary
+GET    /admin/reviews                                             → ReviewQueueResponse
+POST   /admin/spaces/:id/verification/:decision  { note?, requestedAt? } → SpaceReviewState
+POST   /admin/spaces/:id/discovery/:decision     { note?, requestedAt? } → SpaceReviewState
+GET    /admin/audit    ?before=&limit=&targetType=&targetId=&action= → PlatformAuditResponse { entries, hasMore }
 ```
+The instance's own administration of accounts and spaces, apart from anything a space's roles allow (admin.md, "Platform administration"). Every route sits behind `[authenticate, requireAdmin]`, which reads `users.is_admin` on this instance; a space role, owning a space or a permission bit never opens one (`403 forbidden`). Every decision is recorded in the platform audit log. Nothing here is relayed to peers: a suspension, a badge or a review is this instance's. The types are in `packages/shared/src/platform.ts`.
 
-Read-only. There is deliberately no endpoint that applies an update: doing so from
-inside the container needs `/var/run/docker.sock` mounted, which is host root.
-See [admin.md](admin.md) for the full rationale and [deployment.md](deployment.md)
-for `./update.sh`, which the panel points at instead.
+**Overview.** `PlatformOverview` holds counts read from the database and the open sockets, nothing estimated: `users.total` (accounts homed here, not deleted), `online` (accounts with a socket open on this instance now, from any home), `new7d` (homed here, created in the last 7 days), `active7d` (accounts that wrote a space or DM message here in the last 7 days), `suspended` (homed here, suspended now), `admins`; `activity.messages7d` (space and DM messages on this instance created in the last 7 days); `spaces.total`, `listed` (the Discovery predicate, "Reviews" above), `verified` and `discoveryEnabled` (`instance_settings.discoveryEnabled`; while it is off no approved space is shown); `reviews`, the open-request counts `review_queue_count` carries.
 
-The GitHub lookup runs only on this request path, never on a timer, and is cached
-6h (failures for a tenth of that). `?refresh=true` bypasses the cache for an
-explicit re-check but cannot bypass `BACKSPACE_UPDATE_CHECK=false`, which makes
-the endpoint return `checkEnabled: false, reason: 'disabled'` without opening a
-socket. Every network failure is soft: `state: 'unknown'` with a `reason`, never a
-5xx, so the panel always reports the running version.
+**Accounts.** `GET /admin/users/:id` answers `AdminUserDetail`: the `AdminUser`, the spaces it owns with their member counts, how many memberships, friendships and messages (space and DM, this instance) it has, and the 20 newest audit entries that target it; `404 user_not_found`.
 
-## Admin: Telemetry (`routes/adminTelemetry.ts`) - admin required
+`POST /admin/users/:id/suspend` suspends an account for a time or until lifted; nothing of it is deleted. It is refused, in this order, for the caller's own account (`400 cannot_suspend_self`), an unknown one (`404 user_not_found`), a deleted one (`400 user_already_deleted`) and an instance admin (`400 cannot_suspend_admin`: demote first, so admins can never lock each other out), then for the body: `reason` 3-500 characters once trimmed, without control characters other than tab and line feed (`400 suspension_reason_invalid`, `details: { min, max }`), and `durationHours` a whole number from 1 to `SUSPENSION_LIMITS.MAX_DURATION_HOURS` (8760, a year) or null for until lifted (`400 suspension_duration_invalid`, `details.max`). It writes `suspended_at` (now), `suspended_until` (now plus the hours, or null) and `suspension_reason`, replacing a suspension that stood, closes the account's sockets on this instance with `forceDisconnectUser(id, { reason: 'Account suspended', endPresence: true })`, and records `user_suspend` with the reason and `details: { until, durationHours }`. From then on sign-in, every authenticated route and the socket refuse the account with `account_suspended` (Auth above; auth.md §13). A replicated row suspended here keeps that person off this instance only.
+
+`POST /admin/users/:id/unsuspend` lifts a suspension. One whose end has passed no longer counts but stays recorded until this route clears it. `404 user_not_found`, `409 user_not_suspended` when none is recorded, and an optional `reason` of 1-500 characters (`400 suspension_reason_invalid`). It clears the three columns and records `user_unsuspend` with the reason and `details.expired` (true when the suspension had already ended).
+
+**Badges.** `PUT /admin/users/:id/badges` and `PUT /admin/spaces/:id/badges` set the complete list of granted badges an account or a space carries: `badges` a list of at most 32 ids, each a granted badge of that scope in the registry (`GRANTED_USER_BADGES` / `GRANTED_SPACE_BADGES`, `packages/shared/src/badges.ts`); a missing or longer list, or any other id, the derived `staff` and `verified` included, is `400 badge_invalid`. The list is stored once per id in the registry's order, NULL when empty. `reason` (1-500 characters) goes into the audit entry; one outside that is dropped, not refused. A list that differs from the stored one records `user_badges` / `space_badges` with `details: { added, removed }` and sends `user_updated` to the person and everyone who sees their profile, or `space_updated` to the space (websocket.md); repeating the stored list records and sends nothing. The account route answers `404 user_not_found` and `400 user_already_deleted`, the space route `404 space_not_found`.
+
+**Spaces.** `GET /admin/spaces` lists every space on the instance, newest first. `q` (trimmed, at most 100 characters) matches part of the name or the exact id; `filter` is `all` (the default, also for an unknown value), `listed` (listed in Discovery), `verified`, or `open_review` (a verification `pending` or `needs_info`, or a Discovery request `pending` or `changes_requested`); `page` from 1, `pageSize` 1-100 (default 50). Each `AdminSpaceSummary` carries the owner (`PlatformActor`), member count, visibility, `directoryListed`, both review statuses, `badges` (all it shows) and `grantedBadges`. `GET /admin/spaces/:id` answers `AdminSpaceDetail`: the summary, the description and banner, the `SpaceReviewState` as the owner reads it, and the 20 newest audit entries that target the space; `404 space_not_found`.
+
+**Reviews.** `GET /admin/reviews` answers every open request: `verification` (status `pending` or `needs_info`) and `discovery` (`pending` or `changes_requested`), each oldest request first, each item with the space's summary, its description (and banner for Discovery, what the listing would show), the status and the request.
+
+The decision routes take, as `:decision`, one of `VERIFICATION_DECISIONS` or `DISCOVERY_DECISIONS` (`400 review_decision_invalid` otherwise, before the space is looked up):
+
+| Process | Decision | From | To | Note |
+|---------|----------|------|----|------|
+| verification | `approve` | `pending`, `needs_info` | `verified` | optional |
+| verification | `reject` | `pending`, `needs_info` | `rejected` | required |
+| verification | `request_info` | `pending` | `needs_info` | required |
+| verification | `revoke` | `verified` | `revoked` | required |
+| discovery | `approve` | `pending`, `changes_requested` | `approved` | optional |
+| discovery | `reject` | `pending`, `changes_requested` | `rejected` | required |
+| discovery | `request_changes` | `pending` | `changes_requested` | required |
+| discovery | `withdraw` | `approved`, `pending`, `changes_requested` | `withdrawn` | required |
+
+`note` is the reason the owner reads: trimmed, at most 1000 characters (`400 review_note_too_long`, which also answers a note holding a control character other than tab and line feed), refused when required and empty (`400 review_note_required`), and `400 validation_failed` (`details.field: 'note'`) when it is not a string. A decision that does not apply to the status now, or a space without a request, answers `409 review_status_conflict` and writes nothing, and so does a `requestedAt` (optional: the `requestedAt` of the request the admin read) that no longer matches the stored request because the owner sent it again since; the check and the write are one transaction. A Discovery `approve` of a space that is no longer public or request is `409 discovery_requires_listable_visibility`, and stores what it approved (name, description, icon, banner, category) on the request. The answer is the space's `SpaceReviewState`. The step is announced as an owner's is ("Reviews" above), the history records it (a Discovery `withdraw` as `admin_withdraw`), and the audit log records `verification_<decision>` / `discovery_<decision>` with the note as reason and `details.status`.
+
+**Audit log.** `GET /admin/audit` pages the platform audit log newest first (ids compared as numbers): at most `limit` entries (default `PLATFORM_AUDIT_PAGE_SIZE` 50, clamped to 1-100), older than the entry id `before` when given, narrowed to one `targetType` (`user`, `space` or `instance`), `targetId` (cut to 64 characters) and `action` (one of `PLATFORM_AUDIT_ACTIONS`) when given; `hasMore` says an older page exists. A `before` that is not 1-20 digits, an unknown `targetType` or an unknown `action` answers `400 validation_failed` with `details.field`. Each `PlatformAuditEntry` names its `actor` (`PlatformActor`, null when the row is gone), its target, the target's name when the entry was written (`targetLabel`), the `reason` and the `details`. The log has no retention, and writing an entry never fails the request that took the action (`recordPlatformAudit`, `utils/platformAudit.ts`, logs the failure). Besides the routes above, it records the user-management and storage routes of `routes/admin.ts` (above), every mutating route of `routes/invites.ts`, and both settings PATCHes (`settings_update`).
+
+## Desktop downloads (`routes/desktopDownloads.ts`) — public
 ```
-GET    /admin/telemetry              → TelemetryStatus
-PUT    /admin/telemetry              { enabled: boolean } → TelemetryStatus
-GET    /admin/telemetry/preview      → TelemetryPayload
+GET /desktop/release            → DesktopReleaseResponse  { release: { version, releasedAt, files: DesktopReleaseFile[] } | null }
+GET /downloads/desktop/<file>   (not under /api) → the file: an installer, its .blockmap, or latest.yml
 ```
-
-The opt-in daily usage report. `TelemetryStatus` is `{ enabled: boolean | null,
-id: string | null, lastDay: string | null, lastError: { day, status } | null,
-askDue: boolean }`, where `enabled: null` means the instance was never asked and
-`askDue` says whether the admin should see the ask now (always while never
-answered, never after a yes, and after a no again from the next minor release
-on; telemetry.md §7). All three routes are home-origin only.
-
-`PUT` requires `enabled` to be a boolean and returns 400 `validation_failed` for
-anything else (`"yes"`, `1`, a missing field). It is the only HTTP writer of the
-five `instance_settings` telemetry columns (the reporter records what it sent
-and `install.sh` can set the switch, both through the same `telemetry/state.ts`
-rules); the general settings PATCH never touches them. Enabling mints a `telemetry_id` if the instance never had one; disabling keeps
-the id, so a later re-enable reports under the same id, and stamps
-`telemetry_declined_version` with the running server version. Neither branch touches
-`telemetry_last_day`, which the reporter owns, so a toggle never costs a ping
-and never repeats one; both clear the pending error. Enabling an instance that is already on changes
-nothing. The id is never rotated.
-
-`GET /preview` returns the exact payload a ping would carry right now, built by
-the same function the reporter uses. While reporting is off `instance` is the
-literal string `preview`: an instance that was never on has no id and none is
-minted to render a preview, and one that was on keeps its id but does not show
-it next to "Off". The route writes nothing in either state.
-
-See [telemetry.md](telemetry.md) for the field semantics, the rounding rule and
-what is never sent.
+`release` is read per request from `latest.yml` in `<DOWNLOADS_DIR>/desktop/` and lists only the Windows installers that file names **and** the disk has, each with its real size, its SHA-512 from `latest.yml` and the same-origin `url` to download it from; null when nothing is published. `Cache-Control: no-cache`. The files are served by `@fastify/static` with Range support; `latest.yml` is `no-cache`, an installer is an attachment cached for an hour. A file that is not there is a JSON 404 (never the SPA page), because every installed desktop app fetches `latest.yml` from this address to look for updates. Publishing is copying files in; see [desktop.md](desktop.md), "Releases". Both are public: a visitor without an account is who needs the installer.
 
 ## Admin: Invite Management (`routes/invites.ts`) — admin required
 
 All endpoints sit behind `[authenticate, requireAdmin]`. Mutating endpoints wrap their read-modify-write in a SQLite transaction with an in-txn re-fetch + status re-derive; any state mismatch returns 409. Service layer: `packages/server/src/utils/inviteService.ts` (`InviteValidationError` → 400, `InviteNotFoundError` → 404, `InviteStateConflictError` → 409).
+
+Each mutating endpoint that succeeds records an entry in the platform audit log (Platform administration, "Audit log"), target `instance` and the invite's id: `invite_create`, `invite_update`, `invite_revoke`, `invite_reinstate` (`details.tokenRotated`) with the invite's name as label, and `invite_delete`.
 
 ```
 POST   /admin/invites                       { name, maxUses, expiresAt }              → InviteLinkSummary  (201)
@@ -583,7 +954,7 @@ type FederationResetEventsResponse = { events: FederationResetEvent[] };
 
 Disposition actions reuse existing endpoints (no new mutating routes): one-click Re-peer = `POST /peers/:id/reset` → `POST /peer/initiate`; full-purge Remove = `DELETE /api/admin/users/:id` (owns-spaces → transfer first). **`statusReason`** (`FederationPeerStatusReason | null`, see `federation.md` "Peer state") is included on each `GET /federation/peers` peer object so the client can raise the persistent Reset-cleanup banner only for reset-detected peers, surface an "incomplete Re-peer" warning for `repeer_incomplete`, and show why a peer needs attention or was rejected. See `federation.md` "Instance Epoch" and `client-federation.md` §8.
 
-**`POST /api/federation/users/lookup`** — HMAC-authenticated S2S endpoint. Resolves a username on this instance to its canonical `(homeUserId, profile snapshot)`. Used by the cross-instance friend-add flow on the sender's home server before queuing a `friend_request_create` event. Responds to native, non-deleted users only; ignores `discoverable`. Returns `{ found: false, code: 'user_not_found' }` for stubs, tombstoned users, or unknown handles. See `federation.md` §1 "S2S User Lookup" for the full contract.
+**`POST /api/federation/users/lookup`** — HMAC-authenticated S2S endpoint. Resolves a username on this instance to its canonical `(homeUserId, profile snapshot)`. Used by the cross-instance friend-add flow on the sender's home server before queuing a `friend_request_create` event. Responds to native, non-deleted users only (there is no `discoverable` flag to consult any more). Returns `{ found: false, code: 'user_not_found' }` for stubs, tombstoned users, or unknown handles. See `federation.md` §1 "S2S User Lookup" for the full contract.
 
 **`POST /api/users/@me/reattach`** — the owner-initiated detached-account re-attach (re-attach spec §3.2). JWT-authenticated as the detached account but registered in `routes/federation.ts` (consumes the peer HMAC channel + profile machinery). Body `{ token }` (64-hex; else 400). Re-binds the sovereign detached row to the owner's new home identity **only** when both proofs hold: the session IS the detached account AND the token verifies with the home peer over signed S2S (`POST /federation/verify-attach-proof`). Guards: non-detached/native → 403; missing/tombstoned session → 404 (already 401'd at `authenticate`); home not an active peer → 409; proof invalid → 401; new identity held by a **non-stub** local account → 409; the home handle held by another account on this instance → 409 `reattach_handle_taken`. On success: merges any pre-existing replicated stub for the new identity into the detached row (repoint+dedupe every `users.id` FK a DM/friend replica can hold, then delete the stub), sets `home_user_id`/`federation_home_orphaned=0`, names the account exactly `<handle>@<domain>` (`federation.md` "Account names"), nulls `profile_updated_at`, pulls+applies the home profile (best-effort), and broadcasts `user_updated`. The paired mint endpoint is `POST /api/auth/attach-proof` (see Auth). See `federation.md` "Peer-Side Re-Attach" and re-attach spec §3.2–3.3.
 
@@ -701,3 +1072,34 @@ POST /csp-report     (no auth) -> 204
 ```
 
 **`POST /api/csp-report`** is the Content Security Policy violation sink named by the policy's `report-uri` and `report-to`. Unauthenticated on purpose: a violation can happen on the login screen before any token exists. It registers content-type parsers for `application/csp-report` and `application/reports+json` in addition to the built-in `application/json`. Fastify ships parsers for neither of the first two and would otherwise answer 415, leaving an empty report log that looks exactly like a clean policy. It answers `204` to everything, including a malformed body, because a browser cannot act on an error and would only retry. It reads at most 16 KB off the wire and logs at most 4096 characters per report at `warn` level with the message `CSP violation reported`. Registered after `@fastify/rate-limit` so the shared 200/minute limit applies; that ordering is load-bearing. See `docs/systems/web-security.md`.
+
+## Legal (`routes/legal.ts`)
+
+Full description: [legal.md](legal.md).
+
+```
+GET  /api/legal                              public  LegalInfoResponse
+GET  /api/legal/documents/:kind?lang=&version=upcoming  public  LegalDocumentResponse
+POST /api/legal/reports                      public (5 per 10 min per address)  CreateReportBody → 201 { id, receivedAt }
+POST /api/legal/terms/accept                 auth    { version } → { termsVersion }
+GET  /api/legal/notices                      auth    UserNoticeListResponse
+POST /api/legal/notices/:id/read             auth
+GET  /api/admin/legal                        admin   AdminLegalResponse
+PUT  /api/admin/legal/operator               admin   LegalOperator
+GET  /api/admin/legal/documents/:id          admin   AdminLegalDocument
+GET  /api/admin/legal/templates/:kind?lang=  admin   { text }
+POST /api/admin/legal/documents              admin   PublishLegalDocumentBody → 201 { id, version }
+GET  /api/admin/reports?status=open|closed&before=  admin  AdminReportListResponse
+POST /api/admin/reports/:id/decide           admin   DecideReportBody → AdminReport
+GET  /downloads/source/<release>.tar.gz      public  the source of the running release
+```
+
+`POST /api/auth/register` takes `acceptedTermsVersion` and `ageConfirmed`: once terms are in force a local account needs both (`400 terms_not_accepted`, `400 age_not_confirmed`).
+
+## The rest of 1.23.0
+
+`GET /api/auth/challenge` (public, 30 a minute) answers the task for a new account: `{ level: 'off' }` or `{ level, salt, bits, signature }`. `POST /api/auth/register` takes `challenge: { salt, bits, signature, nonce }` and, as its first step, answers `400 signup_challenge_failed` without a good one. See auth.md, "Automatic sign-ups".
+
+`GET /api/admin/signup-rules` also answers `challengeLevel`; `PUT /api/admin/signup-rules/challenge` takes `{ level }`.
+
+`POST /api/channels/:id/messages` and `POST /api/dm/:id/messages` take `spoilerAttachments`, those of `attachments` to show as spoilers. An attachment on the wire has `spoiler`.

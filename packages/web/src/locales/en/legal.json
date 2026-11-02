@@ -1,0 +1,238 @@
+{
+  "links": {
+    "label": "Legal",
+    "terms": "Terms of use",
+    "privacy": "Privacy policy",
+    "imprint": "Legal notice",
+    "report": "Report content",
+    "source": "Source code"
+  },
+  "shell": {
+    "back": "Back to the app",
+    "backHome": "Back to the home page"
+  },
+  "documents": {
+    "terms": {
+      "title": "Terms of use"
+    },
+    "privacy": {
+      "title": "Privacy policy"
+    },
+    "missing": "This document has not been published yet. Ask the operator of this server.",
+    "meta": "Version {{version}}, in force since {{date}}"
+  },
+  "imprint": {
+    "title": "Legal notice",
+    "missing": "The operator of this server has not filled this in yet.",
+    "provider": "Provider",
+    "representative": "Represented by",
+    "contact": "Contact",
+    "register": "Register entry",
+    "vatId": "VAT ID",
+    "editorial": "Responsible for editorial content",
+    "dsaContact": "Point of contact (Art. 11 and 12 DSA)",
+    "dsaContactBody": "{{email}}, in German or English"
+  },
+  "report": {
+    "pageTitle": "Report content",
+    "pageIntro": "Tell the operator of this server about illegal content or a breach of the terms. You do not need an account.",
+    "dialogTitle": "Report",
+    "about": "You are reporting",
+    "category": "What is wrong with it?",
+    "categoryChoose": "Choose one",
+    "categories": {
+      "hate": "Hate speech or incitement",
+      "violence": "Threats or calls for violence",
+      "child_safety": "Sexual abuse of children",
+      "terrorism": "Terrorist content",
+      "defamation": "Insult or defamation",
+      "privacy": "Private data shared without consent",
+      "copyright": "Copyright infringement",
+      "fraud": "Fraud or malware",
+      "other_illegal": "Something else that is illegal",
+      "terms_violation": "A breach of the terms, not illegal"
+    },
+    "where": "Where is it?",
+    "wherePlaceholder": "A link, or the space, channel and time",
+    "explanation": "Why is this illegal or against the terms?",
+    "explanationPlaceholder": "Say what the content is and what it breaks.",
+    "explanationHint": "At least {{min}} characters.",
+    "name": "Your name",
+    "email": "Your email address",
+    "contactOptional": "For this category you may leave your name and address empty.",
+    "goodFaith": "What I report here is true and complete to the best of my knowledge.",
+    "send": "Send report",
+    "sentTitle": "Your report has been received.",
+    "sentBody": "The operator looks at it and decides. If you gave an email address, you may hear back there.",
+    "sentBodyAccount": "The operator looks at it and decides. You will be told the outcome here in the app.",
+    "close": "Close",
+    "menuMessage": "Report message",
+    "menuUser": "Report person",
+    "menuSpace": "Report space"
+  },
+  "terms": {
+    "dialogTitle": "Terms of use",
+    "required": "To continue using this server, please agree to its terms of use.",
+    "upcoming": "The terms of use change on {{date}}. You can read and agree to them now.",
+    "changes": "What changed",
+    "logOut": "Log out",
+    "later": "Later",
+    "accept": "I agree",
+    "retry": "Try again"
+  },
+  "notices": {
+    "reason": "Reason",
+    "ground": {
+      "illegal": "This decision rests on the law.",
+      "terms": "This decision rests on the terms of use."
+    },
+    "untilLifted": "It lasts until the operator lifts it.",
+    "until": "It lasts until {{date}}.",
+    "redress": "You can object to this decision by contacting the operator. The way to the courts stays open.",
+    "contact": "Contact: {{email}}",
+    "ok": "Got it",
+    "listTitle": "Notices from the operator",
+    "content_removed": {
+      "title": "Your content was removed"
+    },
+    "account_suspended": {
+      "title": "Your account was suspended"
+    },
+    "listing_withdrawn": {
+      "title": "Your space was taken off the listing"
+    },
+    "report_decided": {
+      "title": "Your report was decided",
+      "outcome": {
+        "no_action": "The operator looked at your report and found nothing to act on.",
+        "content_removed": "The operator removed the content you reported.",
+        "account_suspended": "The operator suspended the account you reported.",
+        "listing_withdrawn": "The operator took the space you reported off the listing.",
+        "handled": "The operator acted on your report."
+      }
+    },
+    "warning": {
+      "title": "You received a warning"
+    },
+    "address_withdrawn": {
+      "title": "Your space's own address was taken away"
+    }
+  },
+  "external": {
+    "notice": "This comes from {{host}}. Loading it tells that server your IP address.",
+    "load": "Load",
+    "always": "Always allow",
+    "compactTitle": "Load from {{host}}",
+    "compactLoad": "Load",
+    "settingsTitle": "Content from other servers",
+    "settingsLabel": "Always load content from other servers",
+    "settingsDescription": "Link previews, GIFs and videos come from other servers, which then see your IP address. When this is off, you decide each time.",
+    "playLoads": "Playing loads it from {{name}}, which then sees your IP address."
+  },
+  "register": {
+    "agree": "I am at least {{age}} years old and agree to the <terms>terms of use</terms>. The <privacy>privacy policy</privacy> explains how my data is handled.",
+    "agreeFirst": "Agree to the terms of use to continue."
+  },
+  "admin": {
+    "title": "Legal",
+    "description": "Whoever runs a server is its provider and answers for what is here. Fill in your details, then publish the terms and the privacy policy.",
+    "operator": {
+      "title": "Who runs this server",
+      "description": "Shown publicly on the legal notice page and used in the drafts.",
+      "kind": "Run by",
+      "kinds": {
+        "person": "A private person",
+        "organization": "A company or association"
+      },
+      "minimumAge": "Minimum age",
+      "name": "Full name, or name and legal form",
+      "address": "Postal address",
+      "addressHint": "An address where you can be reached by post. A P.O. box is not enough.",
+      "email": "Email address",
+      "emailHint": "For questions, objections and authorities. Reports are answered from here.",
+      "representative": "Represented by (optional)",
+      "phone": "Phone (optional)",
+      "register": "Register entry (optional)",
+      "vatId": "VAT ID (optional)",
+      "editorial": "Responsible for editorial content (optional)",
+      "hosting": "Hosting provider, name and address (optional)",
+      "dpo": "Data protection officer (optional)",
+      "save": "Save details",
+      "saved": "Saved."
+    },
+    "documents": {
+      "title": "Terms and privacy policy",
+      "description": "Each publication is a new version. Earlier ones stay on record, because an agreement names the version it was given to.",
+      "kindLabel": "Document",
+      "languageLabel": "Language",
+      "languages": {
+        "de": "German",
+        "en": "English"
+      },
+      "insertDraft": "Insert draft",
+      "loadLatest": "Load published version",
+      "operatorFirst": "Fill in who runs this server first.",
+      "draftWarning": "The draft follows what this server has switched on, but it is not legal advice. Read it, fit it to you and have a lawyer check it before a public release.",
+      "textLabel": "Text (Markdown)",
+      "effective": "In force from (optional)",
+      "effectiveHint": "Empty applies it at once. For a change, give people time, such as 30 days.",
+      "changes": "What changed",
+      "changesRequired": "Required: people read this before they agree again.",
+      "changesHint": "Optional for the first version and for the privacy policy.",
+      "publish": "Publish: {{title}}",
+      "published": "Published."
+    },
+    "history": {
+      "title": "Published versions",
+      "version": "Version {{version}}",
+      "effective": "In force from {{date}}"
+    },
+    "reports": {
+      "title": "Reports",
+      "description": "Reports of illegal content or breaches of the terms, from anyone. You decide each one; the person affected and the reporter are told.",
+      "tabs": {
+        "open": "Open",
+        "closed": "Decided"
+      },
+      "emptyOpen": "No reports are waiting.",
+      "emptyClosed": "No reports have been decided yet.",
+      "detailTitle": "Report",
+      "category": "Reported as",
+      "explanation": "Explanation",
+      "where": "Where",
+      "reported": "The reported {{type}}, as it was then",
+      "targets": {
+        "message": "message",
+        "dm_message": "direct message",
+        "user": "person",
+        "space": "space",
+        "link": "address"
+      },
+      "unknownAuthor": "Unknown author",
+      "attachments": "Attachments: {{names}}",
+      "reporter": "Reported by",
+      "anonymous": "Not named",
+      "replyByEmail": "This server does not write to people who report: confirm and answer this report from your own address.",
+      "decision": "Decision",
+      "decisions": {
+        "no_action": "Nothing to act on",
+        "content_removed": "Remove the content",
+        "account_suspended": "Suspend the account",
+        "listing_withdrawn": "Take the space off the listing",
+        "handled": "Dealt with elsewhere in the admin area"
+      },
+      "ground": "What this rests on",
+      "groundChoose": "Choose one",
+      "grounds": {
+        "illegal": "The law",
+        "terms": "The terms of use"
+      },
+      "duration": "How long",
+      "note": "Reason",
+      "noteHint": "The person affected reads this. Name the rule or the law and what happened.",
+      "noteHintNoAction": "For your own record. The reporter only hears the outcome.",
+      "decide": "Decide",
+      "noteTooLong": "A suspension's reason can be at most {{max}} characters long."
+    }
+  }
+}

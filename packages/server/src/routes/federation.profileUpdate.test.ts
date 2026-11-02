@@ -224,3 +224,55 @@ describe('relayed profile snapshots never overwrite a stored field', () => {
     expect(userUpdatedCount()).toBeGreaterThan(0);
   });
 });
+
+describe('processProfileUpdateEvent — a new name at home', () => {
+  const update = (messageId: string, profileUpdatedAt: number, username: string): FederationRelayEvent => ({
+    eventType: 'profile_update',
+    contextType: 'profile',
+    messageId,
+    encryptionVersion: 0,
+    timestamp: Date.now(),
+    profileUpdate: {
+      homeUserId: 'home-1',
+      homeInstance: 'orbit.ddns.net',
+      profileUpdatedAt,
+      username,
+      displayName: 'Someone',
+      avatar: null,
+      banner: null,
+      accentColor: null,
+      avatarColor: 'sky',
+      bio: null,
+    },
+  });
+  const nameOf = (id: string) => testDb.select().from(schema.users).where(eq(schema.users.id, id)).get()?.username;
+
+  it('names the row after it, with a newer version', async () => {
+    const fed = await import('./federation.js');
+    await fed.processProfileUpdateEvent(update('m-new', 2000, 'fresh'), 'orbit.ddns.net', testDb, [], []);
+    expect(nameOf('stub-1')).toBe('fresh@orbit.ddns.net');
+  });
+
+  it('does not bring an old name back with an older version', async () => {
+    const fed = await import('./federation.js');
+    await fed.processProfileUpdateEvent(update('m-old', 500, 'older'), 'orbit.ddns.net', testDb, [], []);
+    expect(nameOf('stub-1')).toBe('pbtest3@orbit.ddns.net');
+  });
+
+  it('leaves a name that is no handle alone', async () => {
+    const fed = await import('./federation.js');
+    await fed.processProfileUpdateEvent(update('m-odd', 2000, 'Not A Handle'), 'orbit.ddns.net', testDb, [], []);
+    expect(nameOf('stub-1')).toBe('pbtest3@orbit.ddns.net');
+  });
+
+  it('gives way to a row that holds the name, by taking the next free one', async () => {
+    testDb.insert(schema.users).values({
+      id: 'holder', username: 'fresh@orbit.ddns.net', passwordHash: 'real-hash',
+      homeInstance: 'orbit.ddns.net', homeUserId: 'home-2', createdAt: 1,
+    }).run();
+    const fed = await import('./federation.js');
+    await fed.processProfileUpdateEvent(update('m-held', 2000, 'fresh'), 'orbit.ddns.net', testDb, [], []);
+    expect(nameOf('holder')).toBe('fresh@orbit.ddns.net');
+    expect(nameOf('stub-1')).toBe('fresh~1@orbit.ddns.net');
+  });
+});

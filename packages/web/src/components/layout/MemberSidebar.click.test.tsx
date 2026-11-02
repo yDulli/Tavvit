@@ -22,7 +22,7 @@ import { ALL_PERMISSIONS, PermissionBits, permissionsToString } from '../../util
 // the click means the same thing for everyone.
 
 const SPACE_ID = 'space-1';
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 
 const SPACE: TaggedSpace = {
   id: SPACE_ID, name: 'Space', icon: null, banner: null, avatarColor: null, ownerId: 'owner',
@@ -96,11 +96,11 @@ describe('MemberSidebar: a click on a member', () => {
 
   it('opens the viewer\'s own card on a remote space, where they have a replicated id', async () => {
     seed(
-      { ...SPACE, _instanceOrigin: ORBIT },
+      { ...SPACE, _instanceOrigin: TAVVIT },
       [member('owner', 'Olga', []), member('lead-local', 'Lena', [LEADS]), member('helper', 'Hugo', [HELPERS])],
       PermissionBits.MANAGE_ROLES,
     );
-    useAuthStore.getState().recordMyRow(ORBIT, 'lead-local');
+    useAuthStore.getState().recordMyRow(TAVVIT, 'lead-local');
     await clickMember('Lena');
 
     expect(useUIStore.getState().activeModal).toBeNull();

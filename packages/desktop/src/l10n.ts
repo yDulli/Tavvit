@@ -21,10 +21,9 @@ export type DesktopLanguage = 'en' | 'ru' | 'de' | 'pt' | 'zh';
 const DESKTOP_LANGUAGES: readonly DesktopLanguage[] = ['en', 'ru', 'de', 'pt', 'zh'];
 
 const en = {
-  'tray.show': 'Show Backspace',
+  'tray.show': 'Show Tavvit',
   'tray.hide': 'Hide',
-  'tray.changeInstance': 'Change Instance',
-  'tray.sourceCode': 'Source code (AGPL)',
+  'tray.reload': 'Reload',
   'tray.quit': 'Quit',
   'menu.edit': 'Edit',
   'menu.window': 'Window',
@@ -35,7 +34,7 @@ const en = {
   'update.ready': 'Update Ready',
   'update.available': 'Update Available',
   'update.restartToInstall': 'Restart to Install Update',
-  'update.downloadVersion': 'Download Backspace {version}…',
+  'update.downloadVersion': 'Download Tavvit {version}…',
   'update.download': 'Download the Update…',
 } as const;
 
@@ -44,10 +43,9 @@ export type DesktopStringKey = keyof typeof en;
 type Catalog = Record<DesktopStringKey, string>;
 
 const ru: Catalog = {
-  'tray.show': 'Показать Backspace',
+  'tray.show': 'Показать Tavvit',
   'tray.hide': 'Скрыть',
-  'tray.changeInstance': 'Сменить сервер',
-  'tray.sourceCode': 'Исходный код (AGPL)',
+  'tray.reload': 'Перезагрузить',
   'tray.quit': 'Выйти',
   'menu.edit': 'Правка',
   'menu.window': 'Окно',
@@ -58,15 +56,14 @@ const ru: Catalog = {
   'update.ready': 'Обновление готово',
   'update.available': 'Доступно обновление',
   'update.restartToInstall': 'Перезапустить для установки',
-  'update.downloadVersion': 'Скачать Backspace {version}…',
+  'update.downloadVersion': 'Скачать Tavvit {version}…',
   'update.download': 'Скачать обновление…',
 };
 
 const de: Catalog = {
-  'tray.show': 'Backspace anzeigen',
+  'tray.show': 'Tavvit anzeigen',
   'tray.hide': 'Ausblenden',
-  'tray.changeInstance': 'Instanz wechseln',
-  'tray.sourceCode': 'Quellcode (AGPL)',
+  'tray.reload': 'Neu laden',
   'tray.quit': 'Beenden',
   'menu.edit': 'Bearbeiten',
   'menu.window': 'Fenster',
@@ -77,15 +74,14 @@ const de: Catalog = {
   'update.ready': 'Update bereit',
   'update.available': 'Update verfügbar',
   'update.restartToInstall': 'Neu starten und Update installieren',
-  'update.downloadVersion': 'Backspace {version} herunterladen…',
+  'update.downloadVersion': 'Tavvit {version} herunterladen…',
   'update.download': 'Update herunterladen…',
 };
 
 const zh: Catalog = {
-  'tray.show': '显示 Backspace',
+  'tray.show': '显示 Tavvit',
   'tray.hide': '隐藏',
-  'tray.changeInstance': '切换实例',
-  'tray.sourceCode': '源代码 (AGPL)',
+  'tray.reload': '重新加载',
   'tray.quit': '退出',
   'menu.edit': '编辑',
   'menu.window': '窗口',
@@ -96,15 +92,14 @@ const zh: Catalog = {
   'update.ready': '更新已就绪',
   'update.available': '有可用更新',
   'update.restartToInstall': '重启以安装更新',
-  'update.downloadVersion': '下载 Backspace {version}…',
+  'update.downloadVersion': '下载 Tavvit {version}…',
   'update.download': '下载更新…',
 };
 
 const pt: Catalog = {
-  'tray.show': 'Mostrar Backspace',
+  'tray.show': 'Mostrar Tavvit',
   'tray.hide': 'Ocultar',
-  'tray.changeInstance': 'Mudar instância',
-  'tray.sourceCode': 'Código-fonte (AGPL)',
+  'tray.reload': 'Recarregar',
   'tray.quit': 'Sair',
   'menu.edit': 'Editar',
   'menu.window': 'Janela',
@@ -115,7 +110,7 @@ const pt: Catalog = {
   'update.ready': 'Atualização pronta',
   'update.available': 'Atualização disponível',
   'update.restartToInstall': 'Reiniciar para instalar',
-  'update.downloadVersion': 'Baixar Backspace {version}…',
+  'update.downloadVersion': 'Baixar Tavvit {version}…',
   'update.download': 'Baixar atualização…',
 };
 
@@ -125,18 +120,12 @@ export function isDesktopLanguage(value: unknown): value is DesktopLanguage {
   return typeof value === 'string' && (DESKTOP_LANGUAGES as readonly string[]).includes(value);
 }
 
-/** `de-AT` → `de`; anything not shipped → null. Same rule as the web client. */
-function baseLanguage(tag: string): DesktopLanguage | null {
-  const base = tag.trim().toLowerCase().split('-')[0] ?? '';
-  return isDesktopLanguage(base) ? base : null;
-}
-
 /**
- * Stored renderer choice first, then the OS locale, then English.
+ * The language the renderer last reported, otherwise English. The system is not
+ * asked, the same rule as the web client: another language is something a person picks.
  */
-export function resolveDesktopLanguage(stored: string | null, appLocale: string): DesktopLanguage {
-  if (isDesktopLanguage(stored)) return stored;
-  return baseLanguage(appLocale) ?? 'en';
+export function resolveDesktopLanguage(stored: string | null): DesktopLanguage {
+  return isDesktopLanguage(stored) ? stored : 'en';
 }
 
 export function translateDesktop(
@@ -170,7 +159,7 @@ export function saveStoredLanguage(language: DesktopLanguage): void {
   fs.writeFileSync(getLanguagePath(), JSON.stringify({ language }));
 }
 
-/** The language for the current process: stored choice, else OS locale, else English. */
+/** The language for the current process: stored choice, else English. */
 export function getDesktopLanguage(): DesktopLanguage {
-  return resolveDesktopLanguage(loadStoredLanguage(), app.getLocale());
+  return resolveDesktopLanguage(loadStoredLanguage());
 }

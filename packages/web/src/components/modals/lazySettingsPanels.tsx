@@ -43,13 +43,18 @@ export function lazyPanel<M, P extends object>(
 
 export const AccountPanel = lazyPanel(() => import('./settingsPanels/AccountPanel'), (m) => m.AccountPanel);
 export const AppearancePanel = lazyPanel(() => import('./settingsPanels/AppearancePanel'), (m) => m.AppearancePanel);
+export const SecurityPanel = lazyPanel(() => import('./settingsPanels/SecurityPanel'), (m) => m.SecurityPanel);
+export const AccessibilityPanel = lazyPanel(() => import('./settingsPanels/AccessibilityPanel'), (m) => m.AccessibilityPanel);
+export const LanguagePanel = lazyPanel(() => import('./settingsPanels/LanguagePanel'), (m) => m.LanguagePanel);
+export const NotificationsPanel = lazyPanel(() => import('./settingsPanels/NotificationsPanel'), (m) => m.NotificationsPanel);
+export const YourSpacePanel = lazyPanel(() => import('./spaceSettingsPanels/YourSpacePanel'), (m) => m.YourSpacePanel);
 export const VoicePanel = lazyPanel(() => import('./settingsPanels/VoicePanel'), (m) => m.VoicePanel);
+export const GamesPanel = lazyPanel(() => import('./settingsPanels/GamesPanel'), (m) => m.GamesPanel);
+export const EmojiSettingsPanel = lazyPanel(() => import('./settingsPanels/EmojiSettingsPanel'), (m) => m.EmojiSettingsPanel);
 export const PrivacyPanel = lazyPanel(() => import('./settingsPanels/PrivacyPanel'), (m) => m.PrivacyPanel);
 export const ConnectionsPanel = lazyPanel(() => import('./settingsPanels/ConnectionsPanel'), (m) => m.ConnectionsPanel);
 export const KeybindsPanel = lazyPanel(() => import('./settingsPanels/KeybindsPanel'), (m) => m.KeybindsPanel);
 export const DesktopPanel = lazyPanel(() => import('./settingsPanels/DesktopPanel'), (m) => m.DesktopPanel);
-export const DesktopDownloadPanel = lazyPanel(() => import('./settingsPanels/DesktopDownloadPanel'), (m) => m.DesktopDownloadPanel);
-export const InstancePanel = lazyPanel(() => import('./settingsPanels/InstancePanel'), (m) => m.InstancePanel);
 
 export const GeneralPanel = lazyPanel(() => import('./instanceSettingsPanels/GeneralPanel'), (m) => m.GeneralPanel);
 export const RegistrationPanel = lazyPanel(() => import('./instanceSettingsPanels/RegistrationPanel'), (m) => m.RegistrationPanel);
@@ -57,13 +62,22 @@ export const FederationPanel = lazyPanel(() => import('./instanceSettingsPanels/
 export const StreamingPanel = lazyPanel(() => import('./instanceSettingsPanels/StreamingPanel'), (m) => m.StreamingPanel);
 export const StoragePanel = lazyPanel(() => import('./instanceSettingsPanels/StoragePanel'), (m) => m.StoragePanel);
 export const UsersPanel = lazyPanel(() => import('./instanceSettingsPanels/UsersPanel'), (m) => m.UsersPanel);
-export const UpdatesPanel = lazyPanel(() => import('./instanceSettingsPanels/UpdatesPanel'), (m) => m.UpdatesPanel);
-export const TelemetryPanel = lazyPanel(() => import('./instanceSettingsPanels/TelemetryPanel'), (m) => m.TelemetryPanel);
+export const ReviewQueuePanel = lazyPanel(() => import('./instanceSettingsPanels/ReviewQueuePanel'), (m) => m.ReviewQueuePanel);
+export const PlatformSpacesPanel = lazyPanel(() => import('./instanceSettingsPanels/PlatformSpacesPanel'), (m) => m.PlatformSpacesPanel);
+export const PlatformAuditPanel = lazyPanel(() => import('./instanceSettingsPanels/PlatformAuditPanel'), (m) => m.PlatformAuditPanel);
+export const ReportsPanel = lazyPanel(() => import('./instanceSettingsPanels/ReportsPanel'), (m) => m.ReportsPanel);
+export const LegalPanel = lazyPanel(() => import('./instanceSettingsPanels/LegalPanel'), (m) => m.LegalPanel);
+export const EmailPanel = lazyPanel(() => import('./instanceSettingsPanels/EmailPanel'), (m) => m.EmailPanel);
+export const AdminConsole = lazyPanel(() => import('../admin/AdminConsole'), (m) => m.AdminConsole);
 
 export const OverviewPanel = lazyPanel(() => import('./spaceSettingsPanels/OverviewPanel'), (m) => m.OverviewPanel);
 export const MembersPanel = lazyPanel(() => import('./spaceSettingsPanels/MembersPanel'), (m) => m.MembersPanel);
 export const RolesPanel = lazyPanel(() => import('./spaceSettingsPanels/RolesPanel'), (m) => m.RolesPanel);
+export const InvitesPanel = lazyPanel(() => import('./spaceSettingsPanels/InvitesPanel'), (m) => m.InvitesPanel);
 export const BansPanel = lazyPanel(() => import('./spaceSettingsPanels/BansPanel'), (m) => m.BansPanel);
+export const ModerationPanel = lazyPanel(() => import('./spaceSettingsPanels/ModerationPanel'), (m) => m.ModerationPanel);
+export const AuditLogPanel = lazyPanel(() => import('./spaceSettingsPanels/AuditLogPanel'), (m) => m.AuditLogPanel);
+export const VerificationPanel = lazyPanel(() => import('./spaceSettingsPanels/VerificationPanel'), (m) => m.VerificationPanel);
 
 /**
  * Holds the panel's place while its chunk loads. The block has a fixed height

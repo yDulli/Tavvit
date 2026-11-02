@@ -1,187 +1,140 @@
 import React, { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { User } from '@backspace/shared';
 import { useSocialStore, type TaggedFriend } from '../../stores/socialStore';
 import { useUIStore } from '../../stores/uiStore';
-import { useActivityStore, activitiesFor } from '../../stores/activityStore';
-import { Avatar } from '../ui/Avatar';
-import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
-import type { Activity, User } from '@backspace/shared';
-import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
-import { parseFederatedUsername, isFederationGlobeApplicable } from '../../utils/identity';
+import { selectPeoplePanelOpen } from '../../stores/peoplePanel';
+import { useFriendBuckets } from '../../hooks/useFriendBuckets';
+import { friendRowKey, type HomeFriend } from '../../utils/homeSummary';
+import { parseFederatedUsername, isFederationGlobeApplicable, userDisplayName } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { friendProfileUser, useFriendDoing } from '../home/friendDoing';
+import { Avatar } from '../ui/Avatar';
+import { Icon } from '../ui/Icon';
+import { SidePanel } from './SidePanel';
+import { useUserContextMenu } from './userMenu/useUserContextMenu';
 
-function ActivityFriendRow({
-  friend,
-  isOffline,
-  activities,
-  isRichActivity,
-  accentClass,
-  onClickFriend,
-}: {
-  friend: TaggedFriend;
-  isOffline: boolean;
-  activities: Activity[];
-  isRichActivity: boolean;
-  accentClass: string;
-  onClickFriend: (e: React.MouseEvent, friend: TaggedFriend) => void;
+/**
+ * One online friend: who, which instance they are from when it is not this
+ * one, and what they are doing in words. Pressing the row opens their profile
+ * card beside the column.
+ */
+function ActiveFriendRow({ row, onOpen, onContextMenu }: {
+  row: HomeFriend;
+  onOpen: (event: React.MouseEvent<HTMLButtonElement>, friend: TaggedFriend) => void;
+  onContextMenu: (event: React.MouseEvent, friend: TaggedFriend) => void;
 }) {
-  const canonical = useCanonicalUserView(friend as unknown as User, friend._instanceOrigin);
-  const { baseName } = parseFederatedUsername(canonical.username);
-  const friendDisplayName = canonical.displayName ?? baseName;
-
-  const rowClass = isRichActivity
-    ? `flex items-center gap-2.5 px-2.5 py-2 rounded-[10px] mb-1 cursor-pointer transition-colors glass-pill border-l-2 ${accentClass}`
-    : 'flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] hover:bg-interactive-hover cursor-pointer group transition-colors';
-
+  const canonical = useCanonicalUserView(row.friend as unknown as User, row.friend._instanceOrigin);
+  const name = userDisplayName(canonical);
+  const doing = useFriendDoing(row, canonical);
+  const domain = isFederationGlobeApplicable(canonical) ? parseFederatedUsername(canonical.username).domain : null;
   return (
-    <div
-      onClick={(e) => onClickFriend(e, friend)}
-      className={rowClass}
-    >
-      <Avatar
-        src={canonical.avatar}
-        name={friendDisplayName}
-        size={32}
-        status={isOffline ? 'offline' : canonical.status}
-        className={isOffline ? 'opacity-60' : undefined}
-        userId={canonical.homeUserId ?? canonical.id}
-        avatarColor={canonical.avatarColor}
-      />
-      <div className="flex-1 min-w-0">
-        <span className={`text-[13.5px] leading-[1.2] font-medium truncate ${isOffline ? 'text-txt-tertiary' : 'text-txt-primary'}`}>{friendDisplayName}</span>
-        {!isOffline && isFederationGlobeApplicable(canonical) && (
-          <div className="text-[10px] leading-[1.3] text-txt-tertiary truncate opacity-60">@{parseFederatedUsername(canonical.username).domain}</div>
-        )}
-        {!isOffline && (
-          <ActivityCard
-            activities={activities}
-            fallbackCustomStatus={canonical.customStatus}
-          />
-        )}
-      </div>
-    </div>
+    <li>
+      <button
+        type="button"
+        onClick={(event) => onOpen(event, row.friend)}
+        onContextMenu={(event) => onContextMenu(event, row.friend)}
+        className="list-row w-full items-start text-left"
+      >
+        <Avatar
+          src={canonical.avatar}
+          name={name}
+          size={32}
+          status={canonical.status}
+          userId={canonical.homeUserId ?? canonical.id}
+          avatarColor={canonical.avatarColor}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-baseline gap-1.5">
+            <span className="truncate text-ui font-medium leading-5 text-txt-primary">{name}</span>
+            {domain && <span className="min-w-0 truncate font-mono text-label text-txt-tertiary">@{domain}</span>}
+          </span>
+          <span className={`block truncate text-meta leading-4 ${doing.busy ? 'text-txt-secondary' : 'text-txt-tertiary'}`}>{doing.line}</span>
+          {doing.detail && <span className="block truncate text-meta leading-4 text-txt-tertiary">{doing.detail}</span>}
+        </span>
+      </button>
+    </li>
   );
 }
 
-export function ActivityPanel() {
+/**
+ * The people column beside the DM side of the app: the friends who are
+ * online right now, and nobody else. Friends on voice come first (with the
+ * space they are in), then those sharing an activity (playing, listening,
+ * watching, streaming), then the rest of who is around; within each, by name
+ * (utils/homeSummary.ts, `bucketFriends`). Offline friends are not listed:
+ * the column answers "who could I talk to now", and the Friends page keeps
+ * the whole list.
+ *
+ * `onAddFriends` is where the column can send someone with nobody online to
+ * find more people; the button is left out without it.
+ */
+export function ActivityPanel({ onAddFriends }: { onAddFriends?: () => void }) {
   const { t } = useTranslation(['social', 'common']);
   const friends = useSocialStore((s) => s.friends);
   const loadFriends = useSocialStore((s) => s.loadFriends);
-  const memberListOpen = useUIStore((s) => s.memberListOpen);
+  const memberListOpen = useUIStore(selectPeoplePanelOpen);
   const openUserProfile = useUIStore((s) => s.openUserProfile);
-  const userActivities = useActivityStore((s) => s.userActivities);
+  const buckets = useFriendBuckets();
+  const userMenu = useUserContextMenu();
 
   useEffect(() => {
-    loadFriends();
+    void loadFriends();
   }, [loadFriends]);
 
-  const { activeFriends, onlineFriends, offlineFriends } = useMemo(() => {
-    const active: TaggedFriend[] = [];
-    const online: TaggedFriend[] = [];
-    const offline: TaggedFriend[] = [];
-
-    for (const f of friends) {
-      if (f.status === 'offline') {
-        offline.push(f);
-        continue;
-      }
-      const activities = activitiesFor(userActivities, f, f._instanceOrigin);
-      const primary = getPrimaryActivity(activities);
-      // Active = has a non-custom activity (playing, listening, watching, streaming)
-      if (primary && primary.type !== 'custom') {
-        active.push(f);
-      } else {
-        online.push(f);
-      }
-    }
-
-    return { activeFriends: active, onlineFriends: online, offlineFriends: offline };
-  }, [friends, userActivities]);
+  const online = useMemo(() => [...buckets.inVoice, ...buckets.active, ...buckets.around], [buckets]);
 
   if (!memberListOpen) return null;
 
-  const handleFriendClick = (e: React.MouseEvent, friend: TaggedFriend) => {
-    e.stopPropagation();
-    openUserProfile(
-      {
-        id: friend.id,
-        username: friend.username,
-        displayName: friend.displayName,
-        avatar: friend.avatar,
-        banner: friend.banner,
-        accentColor: friend.accentColor,
-        avatarColor: friend.avatarColor,
-        bio: friend.bio,
-        status: friend.status,
-        customStatus: friend.customStatus,
-        createdAt: friend.createdAt,
-        homeUserId: friend.homeUserId,
-        homeInstance: friend.homeInstance,
-        isAdmin: false,
-        replicatedInstances: [],
-      },
-      friend._instanceOrigin,
-      e.currentTarget.getBoundingClientRect(),
-      'left',
-    );
-  };
-
-  const renderFriend = (friend: TaggedFriend, isOffline = false) => {
-    const activities = activitiesFor(userActivities, friend, friend._instanceOrigin);
-    const isRichActivity = !isOffline && hasRichActivity(activities);
-    const primary = getPrimaryActivity(activities);
-    const accentClass = primary ? getActivityAccentClass(primary.type) : '';
-    return (
-      <ActivityFriendRow
-        key={friend.id}
-        friend={friend}
-        isOffline={isOffline}
-        activities={activities}
-        isRichActivity={isRichActivity}
-        accentClass={accentClass}
-        onClickFriend={handleFriendClick}
-      />
-    );
+  const handleOpen = (event: React.MouseEvent<HTMLButtonElement>, friend: TaggedFriend) => {
+    event.stopPropagation();
+    openUserProfile(friendProfileUser(friend), friend._instanceOrigin, event.currentTarget.getBoundingClientRect(), 'left');
   };
 
   return (
-    <div className="w-60 bg-surface-channel flex-shrink-0 overflow-y-auto select-none no-scrollbar hidden desktop:block border-l border-border-hard">
-      <div className="p-3">
-        <h3 className="text-[20px] font-bold text-txt-primary mb-4 px-2">{t('social:activity.title')}</h3>
+    <SidePanel>
+      <div className="px-2.5 pb-4 pt-1.5">
+        <h2 className="flex h-7 items-center gap-1.5 px-2.5">
+          <span className="label-mono">{t('social:activity.title')}</span>
+          {online.length > 0 && (
+            <>
+              <span aria-hidden="true" className="label-mono tabular text-txt-secondary">{online.length}</span>
+              <span className="sr-only">{t('social:activity.onlineCount', { count: online.length })}</span>
+            </>
+          )}
+        </h2>
 
-        {activeFriends.length === 0 && onlineFriends.length === 0 && offlineFriends.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-[16px] font-bold text-txt-primary mb-1">{t('social:activity.quietTitle')}</div>
-            <div className="text-[14px] text-txt-tertiary max-w-[200px] mx-auto">
-              {t('social:activity.quietDescription')}
-            </div>
+        {online.length === 0 ? (
+          <div className="empty-state">
+            <span className="empty-state-icon" aria-hidden="true">
+              <Icon name="users" size={18} />
+            </span>
+            <p className="empty-state-title">{t('social:activity.nobodyTitle')}</p>
+            <p className="empty-state-body">
+              {friends.length > 0 ? t('social:activity.nobodyBody') : t('social:activity.noFriendsBody')}
+            </p>
+            {onAddFriends && (
+              <button type="button" onClick={onAddFriends} className="btn-outline btn-sm mt-2">
+                <Icon name="user-plus" size={14} />
+                {t('social:activity.addFriends')}
+              </button>
+            )}
           </div>
         ) : (
-          <>
-            {activeFriends.length > 0 && (
-              <div className="mb-4">
-                {activeFriends.map(f => renderFriend(f))}
-              </div>
-            )}
-            {onlineFriends.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-1">
-                  {t('social:activity.online', { n: onlineFriends.length })}
-                </h3>
-                {onlineFriends.map(f => renderFriend(f))}
-              </div>
-            )}
-            {offlineFriends.length > 0 && (
-              <div>
-                <h3 className="text-[10.5px] font-bold text-txt-tertiary uppercase tracking-[0.06em] px-2 mb-1">
-                  {t('social:activity.offline', { n: offlineFriends.length })}
-                </h3>
-                {offlineFriends.map(f => renderFriend(f, true))}
-              </div>
-            )}
-          </>
+          <ul className="mt-1 space-y-px">
+            {online.map((row) => (
+              <ActiveFriendRow
+                key={friendRowKey(row.friend)}
+                row={row}
+                onOpen={handleOpen}
+                // The column is on the right, so the profile card opens to its left.
+                onContextMenu={(event, friend) => userMenu.open(event, friendProfileUser(friend), friend._instanceOrigin, 'left')}
+              />
+            ))}
+          </ul>
         )}
       </div>
-    </div>
+      {userMenu.dialogs}
+    </SidePanel>
   );
 }

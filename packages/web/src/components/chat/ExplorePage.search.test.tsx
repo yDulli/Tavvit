@@ -114,8 +114,6 @@ vi.mock('../../api/client', async (importOriginal) => ({
   api: { instance: { info: instanceInfo } },
 }));
 
-vi.mock('../../hooks/useMascotAnimation', () => ({ useMascotAnimation: vi.fn() }));
-
 // The Inner cards' join hook: the page test never drives a join.
 vi.mock('../../hooks/useSpaceJoin', () => ({
   useSpaceJoin: () => ({
@@ -170,10 +168,10 @@ describe('ExplorePage search and the Outer Space gate', () => {
 
   it('renders the Inner header and, once the instance says so, the Outer header', async () => {
     renderPage();
+    await waitFor(() => expect(screen.getByText('Outer Space')).toBeInTheDocument());
     expect(screen.getByText('Inner Space')).toBeInTheDocument();
     expect(screen.getByText('Spaces on your instances')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('Outer Space')).toBeInTheDocument());
-    expect(screen.getByText('Communities across Backspace')).toBeInTheDocument();
+    expect(screen.getByText('Communities across Tavvit')).toBeInTheDocument();
     expect(instanceInfo).toHaveBeenCalledTimes(1);
   });
 
@@ -220,8 +218,8 @@ describe('ExplorePage search and the Outer Space gate', () => {
     expect(fetchMyRequests).toHaveBeenCalled();
     expect(screen.queryByText('Outer Space')).not.toBeInTheDocument();
     expect(fetchDirectory).not.toHaveBeenCalled();
-    // Inner Space is untouched by the gate.
-    expect(screen.getByText('Inner Space')).toBeInTheDocument();
+    // With nothing beyond this instance, "Inner Space" would name nothing.
+    expect(screen.queryByText('Inner Space')).not.toBeInTheDocument();
 
     // A search still drives Inner Space, and still never touches the directory.
     fireEvent.change(screen.getByPlaceholderText('Search spaces...'), { target: { value: 'nebula' } });
@@ -231,13 +229,13 @@ describe('ExplorePage search and the Outer Space gate', () => {
 
   it('the Inner empty copy follows the query the spaces answer, not the one being typed', async () => {
     renderPage();
-    expect(screen.getByText('No discoverable spaces yet.')).toBeInTheDocument();
+    expect(screen.getByText('No listed spaces yet.')).toBeInTheDocument();
 
     // Typing moves the search box at once; the fan-out behind it waits out
     // the debounce, so for that interval the copy would be describing a
     // result set that has not changed.
     fireEvent.change(screen.getByPlaceholderText('Search spaces...'), { target: { value: 'zzz' } });
-    expect(screen.getByText('No discoverable spaces yet.')).toBeInTheDocument();
+    expect(screen.getByText('No listed spaces yet.')).toBeInTheDocument();
     expect(screen.queryByText('No spaces match your search.')).not.toBeInTheDocument();
 
     // The fan-out lands: now the empty list is an empty answer for "zzz".
@@ -333,7 +331,7 @@ describe('ExplorePage search and the Outer Space gate', () => {
   it('keeps the Inner empty copy inside the Inner section and Outer below it', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('Outer Space')).toBeInTheDocument());
-    const innerEmpty = screen.getByText('No discoverable spaces yet.');
+    const innerEmpty = screen.getByText('No listed spaces yet.');
     const outerHeader = screen.getByText('Outer Space');
     expect(innerEmpty.compareDocumentPosition(outerHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -350,7 +348,7 @@ describe('ExplorePage connection chips', () => {
     useInstanceStore.setState({
       registry: new Map([[
         'https://orbit.example',
-        { origin: 'https://orbit.example', label: 'Orbit', username: 'jannis@home.example', remoteUserId: 'r1', status: 'connected', addedAt: 1, lastConnectedAt: 1, disconnectedAt: null, errorMessage: null },
+        { origin: 'https://orbit.example', label: 'Tavvit', username: 'jannis@home.example', remoteUserId: 'r1', status: 'connected', addedAt: 1, lastConnectedAt: 1, disconnectedAt: null, errorMessage: null },
       ]]),
     });
     renderPage();
@@ -378,7 +376,7 @@ describe('ExplorePage connection chips', () => {
     expect(fetchMyRequests).toHaveBeenCalledTimes(1);
 
     // The row sits between the Inner subtitle and the cards.
-    const subtitle = screen.getByText('Spaces on your instances');
+    const subtitle = await screen.findByText('Spaces on your instances');
     const row = screen.getByRole('list', { name: 'Connections that need attention' });
     expect(subtitle.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('Zwiss')).toBeInTheDocument();
@@ -475,10 +473,10 @@ describe('ExplorePage keeps an expired origin out of Outer Space through a faile
 // ── A connection change while the page is open ───────────────────────────────
 
 describe('ExplorePage follows a connection change while it is open', () => {
-  const ORBIT = 'https://orbit.example';
+  const TAVVIT = 'https://orbit.example';
 
   /** The space as Inner Space lists it on orbit, and as the directory feed carries it. */
-  const innerSpace = { id: 'nebula', name: 'Nebula Nine', _instanceOrigin: ORBIT, joined: false };
+  const innerSpace = { id: 'nebula', name: 'Nebula Nine', _instanceOrigin: TAVVIT, joined: false };
   const outerEntry: DirectoryEntry = {
     id: 'nebula',
     name: 'Nebula Nine',
@@ -489,21 +487,21 @@ describe('ExplorePage follows a connection change while it is open', () => {
     visibility: 'public',
     memberCount: 4,
     createdAt: 1,
-    origin: ORBIT,
-    instanceName: 'Orbit',
+    origin: TAVVIT,
+    instanceName: 'Tavvit',
     federatedRegistrationOpen: true,
   };
 
   function live(status: ConnectedInstance['status']): ConnectedInstance {
     return {
-      origin: ORBIT, label: 'Orbit', token: 'tok', user: { id: 'u1' } as ConnectedInstance['user'],
+      origin: TAVVIT, label: 'Tavvit', token: 'tok', user: { id: 'u1' } as ConnectedInstance['user'],
       username: 'jannis@home.example', status, api: {} as ConnectedInstance['api'],
     };
   }
 
   function registry(status: 'connected' | 'disconnected') {
-    return new Map([[ORBIT, {
-      origin: ORBIT, label: 'Orbit', username: 'jannis@home.example', remoteUserId: 'r1',
+    return new Map([[TAVVIT, {
+      origin: TAVVIT, label: 'Tavvit', username: 'jannis@home.example', remoteUserId: 'r1',
       status, addedAt: 1, lastConnectedAt: 1, disconnectedAt: null, errorMessage: null,
     }]]);
   }
@@ -515,7 +513,7 @@ describe('ExplorePage follows a connection change while it is open', () => {
     useInstanceStore.setState({ instances: [], registry: new Map(), _autoConnectDone: true });
     // The real fan-out reaches connected instances only; the mock follows it.
     fetchSpaces.mockImplementation(async () => {
-      const connected = useInstanceStore.getState().instances.some((i) => i.origin === ORBIT && i.status === 'connected');
+      const connected = useInstanceStore.getState().instances.some((i) => i.origin === TAVVIT && i.status === 'connected');
       useExploreStore.setState({ spaces: connected ? [innerSpace] : [] });
     });
   });

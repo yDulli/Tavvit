@@ -1,6 +1,9 @@
+import type { ThreadInfo } from '@backspace/shared/src/threads';
 import { create } from 'zustand';
-import type { Space, Channel, ChannelCategory, MemberWithUser, SpaceWithChannelsAndMembers, Role, SpaceFolder, SpaceLayoutItem, DmChannel, DmMessageWithUser, User, UpdateSpaceRequest, CreateSpaceRequest, UpdateChannelRequest } from '@backspace/shared';
-import { api, BackspaceApiClient, HttpError } from '../api/client';
+import type { Space, Channel, ChannelCategory, MemberWithUser, SpaceWithChannelsAndMembers, Role, SpaceFolder, SpaceLayoutItem, DmChannel, DmMessageWithUser, User, CreateSpaceRequest } from '@backspace/shared';
+import { isSpaceDefaultNotificationLevel } from '@backspace/shared';
+import { api, BackspaceApiClient, HttpError, type ChannelUpdateBody, type SpaceUpdateBody } from '../api/client';
+import type { DiscordImportApplyRequest, DiscordImportResult } from '@backspace/shared/src/discordImport';
 import { JoinRequestRequiredError } from '../utils/joinErrors';
 import { resolveAssetUrl, normalizeUserAssets } from '../utils/assetUrls';
 import { userKey, isIssuedByHome, withUserUpdate, type IdentityFields, type PresenceSubject } from '../utils/identity';
@@ -44,12 +47,40 @@ import {
 } from '../utils/crossStoreResolvers';
 import { useAuthStore, getMyUserIdForOrigin, isMe } from './authStore';
 import { useChatStore } from './chatStore';
-import { useNotificationSettingsStore } from './notificationSettingsStore';
+import { setSpaceDefaultLevelLookup, useNotificationSettingsStore } from './notificationSettingsStore';
+import { useSlowmodeStore } from './slowmodeStore';
 
 // ─── Instance-aware types ─────────────────────────────────────────────────────
 
 /** Server augmented with instance origin tracking (client-only, not in shared types). */
 export type TaggedSpace = Space & { _instanceOrigin: string; myRoleIds?: string[] };
+
+/**
+ * A space as this store keeps it: its wire fields, without the lists that have tables of their own.
+ * `satisfies` has the compiler refuse a field of `Space` left out here.
+ */
+function toTaggedSpace(space: Space, origin: string): TaggedSpace {
+  const fields = {
+    id: space.id,
+    name: space.name,
+    icon: space.icon,
+    banner: space.banner ?? null,
+    avatarColor: space.avatarColor ?? null,
+    ownerId: space.ownerId,
+    ownerTitle: space.ownerTitle,
+    // Undefined from a host that predates it: ownerHasOwnGroup reads that as on.
+    ownerGroup: space.ownerGroup,
+    inviteCode: space.inviteCode,
+    vanityCode: space.vanityCode ?? null,
+    visibility: space.visibility ?? 'private',
+    directoryListed: space.directoryListed ?? false,
+    description: space.description ?? null,
+    badges: space.badges,
+    defaultNotificationLevel: space.defaultNotificationLevel ?? null,
+    createdAt: space.createdAt,
+  } satisfies Record<keyof Space, unknown>;
+  return { ...fields, _instanceOrigin: origin };
+}
 
 // ─── Error types ─────────────────────────────────────────────────────────────
 
@@ -389,6 +420,8 @@ interface SpaceState {
   setSpaces: (spaces: TaggedSpace[]) => void;
   setCurrentSpace: (spaceId: string | null) => void;
   setChannels: (channels: Channel[]) => void;
+  /** Threads the user follows or has open, so their ids resolve like a channel's: origin, space, permissions. */
+  registerThreads: (origin: string, threads: readonly ThreadInfo[]) => void;
   setCategories: (categories: ChannelCategory[]) => void;
   setMembers: (members: MemberWithUser[]) => void;
   setRoles: (roles: Role[]) => void;
@@ -435,13 +468,20 @@ interface SpaceState {
    */
   loadSpaceDetail: (spaceId: string, options?: { quiet?: boolean }) => Promise<Channel[] | undefined>;
   createSpace: (data: CreateSpaceRequest) => Promise<Space>;
-  updateSpace: (spaceId: string, data: UpdateSpaceRequest) => Promise<void>;
+  /**
+   * Imports a Discord template (spaces.md, "Importing a Discord template"):
+   * a new space on the home instance joins the list at once; an existing
+   * space is imported into on its own instance, whose `space_access_changed`
+   * then brings its new channels and roles.
+   */
+  importDiscordTemplate: (data: DiscordImportApplyRequest) => Promise<DiscordImportResult>;
+  updateSpace: (spaceId: string, data: SpaceUpdateBody) => Promise<void>;
   deleteSpace: (spaceId: string) => Promise<void>;
   joinSpace: (spaceId: string, inviteCode: string) => Promise<void>;
   leaveSpace: (spaceId: string) => Promise<void>;
   joinByCode: (inviteCode: string, origin?: string) => Promise<Space>;
   generateInvite: (spaceId: string) => Promise<string>;
-  createChannel: (spaceId: string, name: string, type: 'text' | 'voice', topic?: string, categoryId?: string) => Promise<Channel>;
+  createChannel: (spaceId: string, name: string, type: 'text' | 'voice' | 'announcement' | 'forum', topic?: string, categoryId?: string) => Promise<Channel>;
   /**
    * A space channel the user can see, from an event or a response: its index
    * entry, permissions and, in the open space, its row. Wherever its space is.
@@ -460,7 +500,7 @@ interface SpaceState {
   removeCategory: (categoryId: string, spaceId: string, origin: string) => void;
   /** Updates a space channel on its own instance and applies the stored row,
    *  which the server may have normalized (see `normalizeChannelName`). */
-  updateChannel: (channelId: string, data: UpdateChannelRequest) => Promise<Channel>;
+  updateChannel: (channelId: string, data: ChannelUpdateBody) => Promise<Channel>;
   deleteChannel: (channelId: string) => Promise<void>;
   createCategory: (spaceId: string, name: string) => Promise<ChannelCategory>;
   /** Updates a category on its space's instance and applies the stored row. */
@@ -563,6 +603,8 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   _layoutUpdatedAt: 0,
 
   reset: () => {
+    // Slow-mode waits belong to the channels this store lists.
+    useSlowmodeStore.getState().reset();
     set({
       spaces: [],
       currentSpaceId: null,
@@ -601,6 +643,25 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       lastSelectedSpaceId: spaceId !== null ? spaceId : state.lastSelectedSpaceId,
     })),
   setChannels: (channels) => set({ channels }),
+  registerThreads: (origin, threads) => set((state) => {
+    let tables = channelTablesOf(state);
+    for (const thread of threads) {
+      tables = putChannels(tables, thread.spaceId, origin, [{
+        id: thread.id,
+        spaceId: thread.spaceId,
+        name: thread.name,
+        type: 'thread',
+        topic: null,
+        position: 0,
+        categoryId: null,
+        createdAt: thread.createdAt,
+        parentChannelId: thread.parentChannelId,
+        lastMessageId: thread.lastMessageId ?? null,
+        myPermissions: thread.myPermissions,
+      }]);
+    }
+    return channelTableFields(state, tables);
+  }),
   setCategories: (categories) => set({ categories }),
   setMembers: (members) => set({ members }),
   setRoles: (roles) => set({ roles }),
@@ -853,7 +914,19 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     return space;
   },
 
-  updateSpace: async (spaceId: string, data: UpdateSpaceRequest) => {
+  importDiscordTemplate: async (data: DiscordImportApplyRequest) => {
+    if (data.target.kind === 'existing') {
+      const spaceId = data.target.spaceId;
+      const origin = get().spaces.find((s) => s.id === spaceId)?._instanceOrigin ?? '';
+      return getApiForOrigin(origin).import.discordApply(data);
+    }
+    const result = await api.import.discordApply(data);
+    const tagged: TaggedSpace = { ...result.space, _instanceOrigin: '' };
+    set((state) => ({ spaces: [...state.spaces, tagged] }));
+    return result;
+  },
+
+  updateSpace: async (spaceId: string, data: SpaceUpdateBody) => {
     const space = get().spaces.find(s => s.id === spaceId);
     const origin = space?._instanceOrigin ?? '';
     const client = getApiForOrigin(origin);
@@ -940,7 +1013,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     return result.inviteCode;
   },
 
-  createChannel: async (spaceId: string, name: string, type: 'text' | 'voice', topic?: string, categoryId?: string) => {
+  createChannel: async (spaceId: string, name: string, type: 'text' | 'voice' | 'announcement' | 'forum', topic?: string, categoryId?: string) => {
     const space = get().spaces.find(s => s.id === spaceId);
     const origin = space?._instanceOrigin ?? '';
     const client = getApiForOrigin(origin);
@@ -1017,7 +1090,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     });
   },
 
-  updateChannel: async (channelId: string, data: UpdateChannelRequest) => {
+  updateChannel: async (channelId: string, data: ChannelUpdateBody) => {
     const origin = get().channelOriginMap.get(channelId) ?? '';
     const channel = await getApiForOrigin(origin).channels.update(channelId, data);
     // The channel_updated WS event carries the same row; applying the
@@ -1223,19 +1296,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
   populateFromReady: (origin: string, spaces: SpaceWithChannelsAndMembers[], folders?: SpaceFolder[], dmChannels?: DmChannel[], spaceLayout?: SpaceLayoutItem[] | null, layoutUpdatedAt?: number) => {
     // Tag all incoming servers with their instance origin
     const taggedSpaces: TaggedSpace[] = spaces.map(s => ({
-      id: s.id,
-      name: s.name,
-      icon: s.icon,
-      banner: s.banner ?? null,
-      avatarColor: s.avatarColor ?? null,
-      ownerId: s.ownerId,
-      ownerTitle: s.ownerTitle,
-      inviteCode: s.inviteCode,
-      visibility: s.visibility ?? 'private' as const,
-      directoryListed: s.directoryListed ?? false,
-      description: s.description ?? null,
-      createdAt: s.createdAt,
-      _instanceOrigin: origin,
+      ...toTaggedSpace(s, origin),
       // Cache our membership for every space, not only the currently open roster.
       myRoleIds: s.members?.find(m => m.userId === getMyUserIdForOrigin(origin))?.roles.map(r => r.id) ?? [],
     }));
@@ -1343,21 +1404,7 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
       if (space.banner) space.banner = resolveAssetUrl(space.banner, origin) ?? space.banner;
     }
 
-    const tagged: TaggedSpace = {
-      id: space.id,
-      name: space.name,
-      icon: space.icon,
-      banner: space.banner ?? null,
-      avatarColor: space.avatarColor ?? null,
-      ownerId: space.ownerId,
-      ownerTitle: space.ownerTitle,
-      inviteCode: space.inviteCode,
-      visibility: space.visibility,
-      directoryListed: space.directoryListed ?? false,
-      description: space.description,
-      createdAt: space.createdAt,
-      _instanceOrigin: origin,
-    };
+    const tagged = toTaggedSpace(space, origin);
 
     let dropped: string[] = [];
     set((state) => {
@@ -1408,9 +1455,11 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
 
   removeInstanceSpaces: (origin: string) => {
     // The instance is gone: the id its `ready` gave the user says nothing now,
-    // and neither do the notification settings it stored.
+    // and neither do the notification settings it stored or the slow-mode
+    // waits of its channels.
     useAuthStore.getState().forgetMyRow(origin);
     useNotificationSettingsStore.getState().forgetOrigin(origin);
+    useSlowmodeStore.getState().forgetOrigin(origin);
 
     // Collect channel IDs before set() for chatStore cleanup
     const currentState = get();
@@ -1480,6 +1529,33 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     }
   },
 }));
+
+// ─── Space default notification level ─────────────────────────────────────────
+// A channel whose member chose no level falls back to the default its space's
+// moderators set (`Space.defaultNotificationLevel`). The notification store
+// resolves policies without importing this store, so it reads the default
+// through this lookup, and is told when a default changes so the components
+// that show a policy re-render.
+
+setSpaceDefaultLevelLookup((origin, spaceId) => {
+  const level = useSpaceStore.getState().spaces
+    .find((s) => s.id === spaceId && (s._instanceOrigin ?? '') === origin)?.defaultNotificationLevel;
+  return isSpaceDefaultNotificationLevel(level) ? level : null;
+});
+
+/** Every space's default level in one comparable string. */
+function spaceDefaultsSignature(spaces: readonly TaggedSpace[]): string {
+  return spaces
+    .map((s) => `${s._instanceOrigin ?? ''}\u0000${s.id}\u0000${s.defaultNotificationLevel ?? ''}`)
+    .join('\u0001');
+}
+
+useSpaceStore.subscribe((state, previous) => {
+  if (state.spaces === previous.spaces) return;
+  if (spaceDefaultsSignature(state.spaces) !== spaceDefaultsSignature(previous.spaces)) {
+    useNotificationSettingsStore.getState().spaceDefaultsChanged();
+  }
+});
 
 /**
  * What the client knows a channel id to be. `unknown` until a listing or an

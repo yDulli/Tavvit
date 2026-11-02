@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import { AnnouncementBar } from '../ui/AnnouncementBar';
+import { EmailPromptBar } from '../ui/EmailPromptBar';
+import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import i18n from '../../i18n';
 import { useUIStore } from '../../stores/uiStore';
 import { useVoiceStore } from '../../stores/voiceStore';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigationType } from 'react-router-dom';
 import { useMobileRouteSync } from '../../hooks/useMobileRouteSync';
 import { MobileScreenStack } from './MobileScreenStack';
 import { MobileBottomNav } from './MobileBottomNav';
@@ -15,141 +16,114 @@ import { MobileDmsScreen } from './MobileDmsScreen';
 import { MobileYouScreen } from './MobileYouScreen';
 import { MobileChatScreen } from './MobileChatScreen';
 import { MobileSettingsScreen } from './MobileSettingsScreen';
-import { MobileInstancePanel } from './MobileInstancePanel';
 import { MobileScreenHeader } from './MobileScreenHeader';
-import { TransferIndicator } from './TransferIndicator';
 import { MobileVoiceMiniBar } from './MobileVoiceMiniBar';
 import { MobileVoiceFullScreen } from './MobileVoiceFullScreen';
 import { MobileMembersScreen } from './MobileMembersScreen';
 import { MobileGroupDmInfo } from './MobileGroupDmInfo';
 import { FriendsPage } from '../chat/FriendsPage';
-import { ProjectHubPage } from '../projectHub/ProjectHubPage';
-import type { ProjectLinks } from '../../utils/projectLinks';
+import { AboutPage } from '../about/AboutPage';
 import { ExplorePage } from '../chat/ExplorePage';
+import { InboxPage } from '../inbox/InboxPage';
+import { MobileThreadScreen } from './MobileThreadScreen';
+import { MobileEventsScreen } from './MobileEventsScreen';
 import { UserProfileModal } from '../modals/UserProfileModal';
-import {
-  GeneralPanel,
-  UpdatesPanel,
-  TelemetryPanel,
-  RegistrationPanel,
-  FederationPanel,
-  StreamingPanel,
-  StoragePanel,
-  UsersPanel,
-  SettingsPanelSuspense,
-} from '../modals/lazySettingsPanels';
+import { HOME_ROUTES } from '../../utils/homeNav';
 
 /**
- * Wrapper for the Federation sub-panel that forwards FederationPanel's
- * approval-count callback into the shared uiStore slot read by
- * MobileInstancePanel — this keeps the badge live while the admin is inside
- * the panel approving/denying requests.
+ * The About page as a pushed screen: the screen header in place of the page's
+ * own top bar.
  */
-function MobileFederationPanelWrapper() {
-  const { t } = useTranslation('settings');
-  const setApprovalCount = useUIStore((s) => s.setFederationApprovalCount);
+export function MobileAboutScreen() {
+  const { t } = useTranslation('home');
   return (
     <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={t('instance.tabs.federation')} rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4">
-        <SettingsPanelSuspense><FederationPanel onApprovalCountChange={setApprovalCount} /></SettingsPanelSuspense>
-      </div>
-    </div>
-  );
-}
-
-/**
- * The Backspace page as a pushed screen: the screen header in place of the
- * page's own top bar. `links` defaults to the real constant, as on the page;
- * the design workbench passes filled-in values.
- */
-export function MobileBackspaceScreen({ links }: { links?: ProjectLinks }) {
-  const { t } = useTranslation('project');
-  return (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={t('nav.label')} />
+      <MobileScreenHeader title={t('nav.about')} />
       {/* min-h-0 lets this fill only what the header leaves: the page's root
           is h-full, which as a direct flex item would floor its height at the
           whole screen and push its last 48px under the stack's clip. */}
-      <div className="flex-1 min-h-0 flex flex-col"><ProjectHubPage links={links} showTopBar={false} /></div>
+      <div className="flex-1 min-h-0 flex flex-col"><AboutPage showTopBar={false} /></div>
     </div>
   );
 }
+
+/**
+ * The inbox as a pushed screen: the screen header names it, and the page
+ * keeps only its tabs and its bulk action in the bar below.
+ */
+export function MobileInboxScreen() {
+  const { t } = useTranslation('home');
+  return (
+    <div className="flex flex-col h-full bg-surface-base">
+      <MobileScreenHeader title={t('nav.inbox')} />
+      {/* As for About: min-h-0 keeps the page's h-full root to the room the header leaves. */}
+      <div className="flex-1 min-h-0 flex flex-col"><InboxPage showTopBar={false} /></div>
+    </div>
+  );
+}
+
+/**
+ * A person's profile as a pushed screen: the profile dialog, opened once when
+ * the screen mounts. `origin` is the instance whose id `userId` is; a profile
+ * opened for a space member carries that member, so the dialog can show their
+ * roles and read their user from the space rather than the home instance.
+ * Opening it from an effect, not while rendering, keeps a re-render or the
+ * screen's slide-out from reopening it over a dialog that replaced it.
+ */
+function MobileUserProfileScreen({ params }: { params?: Record<string, string> }) {
+  const userId = params?.userId;
+  const origin = params?.origin ?? '';
+  const spaceId = params?.spaceId;
+  const memberUserId = params?.memberUserId;
+
+  useEffect(() => {
+    if (!userId) return;
+    const member = spaceId && memberUserId ? { spaceId, userId: memberUserId } : null;
+    useUIStore.getState().openModal('userProfile', { userId, origin, member });
+  }, [userId, origin, spaceId, memberUserId]);
+
+  return <UserProfileModal />;
+}
+
+/**
+ * The pages of the home area that are screens of their own on the phone. An
+ * address that names one (a deep link, a reload, the quick switcher's Inbox,
+ * a desktop window narrowed into the phone layout) opens its screen.
+ */
+const HOME_PAGE_SCREENS: Readonly<Record<string, string>> = {
+  [HOME_ROUTES.inbox]: 'inbox',
+  [HOME_ROUTES.friends]: 'friends',
+  [HOME_ROUTES.explore]: 'explore',
+  [HOME_ROUTES.about]: 'about',
+};
 
 export const mobileScreenMap: Readonly<Record<string, (params?: Record<string, string>) => React.ReactNode>> = {
   'channel-chat': (params) => <MobileChatScreen params={params} />,
   'friends': () => <FriendsPage mobile />,
   'settings': () => <MobileSettingsScreen />,
   'settings-account': () => <MobileSettingsScreen initialPanel="account" />,
+  'settings-security': () => <MobileSettingsScreen initialPanel="security" />,
   'settings-appearance': () => <MobileSettingsScreen initialPanel="appearance" />,
+  'settings-accessibility': () => <MobileSettingsScreen initialPanel="accessibility" />,
+  'settings-language': () => <MobileSettingsScreen initialPanel="language" />,
+  'settings-notifications': () => <MobileSettingsScreen initialPanel="notifications" />,
   'settings-voice': () => <MobileSettingsScreen initialPanel="voice" />,
+  'settings-games': () => <MobileSettingsScreen initialPanel="games" />,
+  'settings-emoji': () => <MobileSettingsScreen initialPanel="emoji" />,
   'settings-privacy': () => <MobileSettingsScreen initialPanel="privacy" />,
   'settings-connections': () => <MobileSettingsScreen initialPanel="connections" />,
   'settings-keybinds': () => <MobileSettingsScreen initialPanel="keybinds" />,
+  'settings-developers': () => <MobileSettingsScreen initialPanel="developers" />,
   'settings-desktop': () => <MobileSettingsScreen initialPanel="desktop" />,
-  'settings-instance': () => <MobileInstancePanel />,
-  'settings-instance-general': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={i18n.t('settings:instance.tabs.general')} rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><SettingsPanelSuspense><GeneralPanel /></SettingsPanelSuspense></div>
-    </div>
-  ),
-  'settings-instance-registration': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={i18n.t('settings:instance.tabs.registration')} rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><SettingsPanelSuspense><RegistrationPanel /></SettingsPanelSuspense></div>
-    </div>
-  ),
-  'settings-instance-federation': () => <MobileFederationPanelWrapper />,
-  'settings-instance-streaming': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={i18n.t('settings:instance.tabs.streaming')} rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><SettingsPanelSuspense><StreamingPanel /></SettingsPanelSuspense></div>
-    </div>
-  ),
-  'settings-instance-storage': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={i18n.t('settings:instance.tabs.storage')} rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><SettingsPanelSuspense><StoragePanel /></SettingsPanelSuspense></div>
-    </div>
-  ),
-  'settings-instance-updates': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={i18n.t('settings:instance.tabs.updates')} rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><SettingsPanelSuspense><UpdatesPanel /></SettingsPanelSuspense></div>
-    </div>
-  ),
-  'settings-instance-users': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={i18n.t('settings:instance.tabs.users')} rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><SettingsPanelSuspense><UsersPanel /></SettingsPanelSuspense></div>
-    </div>
-  ),
-  'settings-instance-telemetry': () => (
-    <div className="flex flex-col h-full bg-surface-base">
-      <MobileScreenHeader title={i18n.t('settings:instance.tabs.telemetry')} rightActions={<TransferIndicator />} />
-      <div className="flex-1 overflow-y-auto p-4"><SettingsPanelSuspense><TelemetryPanel /></SettingsPanelSuspense></div>
-    </div>
-  ),
   'members': (params) => <MobileMembersScreen params={params} />,
   'group-dm-info': (params) => <MobileGroupDmInfo params={params} />,
+  'thread': (params) => <MobileThreadScreen params={params} />,
+  'space-events': (params) => <MobileEventsScreen params={params} />,
   'voice-full': () => <MobileVoiceFullScreen />,
   'explore': () => <ExplorePage />,
-  'backspace': () => <MobileBackspaceScreen />,
-  'user-profile': (params) => {
-    // Open the user profile modal with the userId from params
-    if (params?.userId) {
-      // Set modalData so UserProfileModal can read it. `origin` is the
-      // instance whose id `userId` is. A profile opened for a space member
-      // carries that member, so the modal can show their roles and read their
-      // user from the space rather than the home instance.
-      const member = params.spaceId && params.memberUserId
-        ? { spaceId: params.spaceId, userId: params.memberUserId }
-        : null;
-      useUIStore.getState().openModal('userProfile', { userId: params.userId, origin: params.origin ?? '', member });
-    }
-    return <UserProfileModal />;
-  },
+  'about': () => <MobileAboutScreen />,
+  'inbox': () => <MobileInboxScreen />,
+  'user-profile': (params) => <MobileUserProfileScreen params={params} />,
 };
 
 export function MobileShell() {
@@ -171,6 +145,24 @@ export function MobileShell() {
   });
 
   useMobileRouteSync(location.pathname);
+
+  // A home page's address opens its screen. The stack is read when the
+  // address changes, not subscribed to, so pushing another screen on top
+  // never brings this one back; one already on top is not pushed twice. Going
+  // back to such an address (a POP after the first render) is leaving the
+  // screen that was above it, so it does not open the page's screen again.
+  const navigationType = useNavigationType();
+  const routedOnceRef = useRef(false);
+  useEffect(() => {
+    const firstRoute = !routedOnceRef.current;
+    routedOnceRef.current = true;
+    if (!firstRoute && navigationType === 'POP') return;
+    const screen = HOME_PAGE_SCREENS[location.pathname];
+    if (!screen) return;
+    const { mobileStack: stack, pushMobileScreen } = useUIStore.getState();
+    if (stack.at(-1)?.screen === screen) return;
+    pushMobileScreen(screen);
+  }, [location.pathname, navigationType]);
 
   // Sync browser back button with mobile stack
   useEffect(() => {
@@ -202,6 +194,8 @@ export function MobileShell() {
 
   return (
     <div className="flex flex-col" style={{ height: shellHeight }}>
+      <EmailPromptBar />
+      <AnnouncementBar />
       <MobileScreenStack
         rootScreen={rootScreens[mobileScreen]}
         screenMap={mobileScreenMap}

@@ -1,4 +1,8 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { channelTakesWebhooks } from '../../utils/channelKinds';
+import { ChannelIcon } from '../ui/ChannelIcon';
+import { FollowedThreadRows } from './FollowedThreadRows';
+import { SpaceEventsRow } from '../events/SpaceEventsRow';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore, getMyUserIdForOrigin, getChannelOrigin } from '../../stores/spaceStore';
@@ -13,7 +17,6 @@ import { useNavigate } from 'react-router-dom';
 import { getSpaceGradient } from '../../utils/gradients';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import type { Channel } from '@backspace/shared';
-import { Mascot } from '../ui/Mascot';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { TransferOwnershipModal } from '../modals/TransferOwnershipModal';
 import { MobileFolderSheet } from './MobileFolderSheet';
@@ -27,9 +30,21 @@ import { getSpaceChannelLocation } from '../../hooks/useNotificationSettings';
 import { ChannelMutedIndicator } from '../notifications/ChannelMutedIndicator';
 import { NotificationSettingsModal, type NotificationSettingsModalTarget } from '../notifications/NotificationSettingsModal';
 import { describeCodedError } from '../../i18n/errors';
+import { Icon } from '../ui/Icon';
+import { BAR_BUTTON, BAR_TITLE, SHEET_HANDLE, SHEET_ROW } from './mobileClasses';
+
+/** One tab of the space strip: the same steps as a tab of the desktop's top bar. */
+function stripTabClass(isSelected: boolean, hasUnread: boolean): string {
+  const tone = isSelected
+    ? 'bg-interactive-selected text-txt-primary'
+    : hasUnread
+      ? 'font-semibold text-txt-primary hover:bg-interactive-hover'
+      : 'text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary';
+  return `flex h-9 items-center gap-2 rounded-md px-2.5 text-ui font-medium transition-colors active:bg-interactive-active ${tone}`;
+}
 
 export function MobileSpacesScreen() {
-  const { t } = useTranslation(['spaces', 'common']);
+  const { t } = useTranslation(['spaces', 'common', 'home']);
   const spaces = useSpaceStore((s) => s.spaces);
   const channels = useSpaceStore((s) => s.channels);
   const categories = useSpaceStore((s) => s.categories);
@@ -62,7 +77,6 @@ export function MobileSpacesScreen() {
   const members = useSpaceStore((s) => s.members);
 
   const pushMobileScreen = useUIStore((s) => s.pushMobileScreen);
-  const setMobileTab = useUIStore((s) => s.setMobileTab);
   const openModal = useUIStore((s) => s.openModal);
   const setLastChannel = useUIStore((s) => s.setLastChannel);
   const addToast = useUIStore((s) => s.addToast);
@@ -170,6 +184,13 @@ export function MobileSpacesScreen() {
     () => resolveSpaceLayout(spaces, spaceLayout, folders),
     [spaces, spaceLayout, folders],
   );
+
+  // The tab of the selected space stays in view, also when the selection comes
+  // from an address or an invite rather than from the strip itself.
+  const stripRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    stripRef.current?.querySelector('[data-selected="true"]')?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
+  }, [selectedSpaceId, resolvedLayout]);
 
   const handleSpaceSelect = (spaceId: string) => {
     setSelectedSpaceId(spaceId);
@@ -443,11 +464,12 @@ export function MobileSpacesScreen() {
       PermissionBits.MANAGE_CHANNELS
     );
     const channel = channels.find((ch) => ch.id === channelId);
+    const canManageWebhooks = channelTakesWebhooks(channel?.type) && hasPermissionBit(channelPermissions.get(channelId), PermissionBits.MANAGE_WEBHOOKS);
     // Mobile has no header bell, so the channel's notification settings are
     // reached from its menu. Voice channels have no notification popover on
     // desktop either; their alerts follow the space setting.
     const location = channel && channel.type !== 'voice' ? getSpaceChannelLocation(channelId) : undefined;
-    if (!canManageChannels && !location) return;
+    if (!canManageChannels && !canManageWebhooks && !location) return;
 
     const items: ContextMenuItem[] = [
       {
@@ -467,11 +489,11 @@ export function MobileSpacesScreen() {
           });
         },
       },
-      { key: 'notif-sep', type: 'separator', hidden: !canManageChannels },
+      { key: 'notif-sep', type: 'separator', hidden: !canManageChannels && !canManageWebhooks },
       {
         key: 'channel-settings',
         type: 'action',
-        hidden: !canManageChannels,
+        hidden: !canManageChannels && !canManageWebhooks,
         label: t('spaces:channels.settings'),
         icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
         onClick: () => openModal('channelSettings', { channelId }),
@@ -527,6 +549,9 @@ export function MobileSpacesScreen() {
   // useDelayedLoading to avoid flicker on cached/fast loads).
   const isLoadingSelectedSpace = !!loadingSpaceId && loadingSpaceId === selectedSpaceId;
   const showChannelSkeleton = useDelayedLoading(isLoadingSelectedSpace);
+  // The list arrives with the socket's first message, just after this screen
+  // mounts, so "no space yet" only counts once that has had a moment to come.
+  const showNoSpaces = useDelayedLoading(spaces.length === 0, { threshold: 1500, minDisplay: 0 });
   // Render-branch gating for the channel-list area:
   //
   // Render order is: skeleton (loading) → mascot (loaded but empty) → real list.
@@ -605,29 +630,33 @@ export function MobileSpacesScreen() {
           onClick={() => handleChannelTap(channel)}
           onContextMenu={(e) => handleChannelContextMenu(e, channel.id)}
           data-context-menu={`channel-${channel.id}`}
-          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors ${
-            isActive ? 'bg-interactive-selected text-txt-primary' :
-            isInVoice ? 'bg-accent-mint/10 text-accent-mint' :
-            'text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary'
+          data-active={isActive ? 'true' : undefined}
+          data-unread={isUnread ? 'true' : undefined}
+          className={`nav-item h-10 w-full gap-2 px-2 text-body ${
+            isInVoice ? 'bg-accent-mint/10 text-accent-mint hover:bg-accent-mint/15 hover:text-accent-mint' : ''
           }`}
         >
-          {isVoice ? (
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          {isVoice && !channel.icon ? (
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
             </svg>
+          ) : channel.type === 'text' && !channel.icon ? (
+            <span aria-hidden="true" className="w-4 shrink-0 text-center opacity-60">#</span>
           ) : (
-            <span className="text-sm shrink-0 opacity-60">#</span>
+            <ChannelIcon type={channel.type} icon={channel.icon} size={16} muted className="shrink-0" />
           )}
-          <span className={`flex-1 text-sm truncate ${isUnread ? 'font-semibold text-txt-primary' : ''}`}>
+          <span className="min-w-0 flex-1 truncate">
             {channel.name}
           </span>
           {!isVoice && <ChannelMutedIndicator channelId={channel.id} className="text-txt-tertiary" />}
-          {isUnread && <span className="w-2 h-2 rounded-full bg-txt-primary shrink-0" />}
+          {isUnread && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-txt-primary shrink-0" />}
         </button>
+
+        {!isVoice && selectedSpaceId && <FollowedThreadRows channelId={channel.id} spaceId={selectedSpaceId} />}
 
         {/* Inline voice users */}
         {isVoice && vUsers.length > 0 && (
-          <div className="ml-7 mt-0.5 space-y-0.5">
+          <div className="ml-6 mt-0.5 space-y-0.5">
             {vUsers.map((userId) => {
               const member = members.find(m => m.userId === userId);
               const displayName = member?.user.displayName ?? member?.user.username ?? userId;
@@ -646,7 +675,7 @@ export function MobileSpacesScreen() {
                 <div
                   key={userId}
                   data-context-menu={`voice-user-${userId}`}
-                  className="px-3 py-1 rounded-lg hover:bg-interactive-hover transition-colors"
+                  className="rounded-md px-2 py-1 transition-colors hover:bg-interactive-hover active:bg-interactive-active"
                   onClick={() => openModal('userProfile', { userId, user: member?.user, origin: getChannelOrigin(channel.id) })}
                   onContextMenu={(e) => handleVoiceUserContextMenu(e, userId, channel.id)}
                 >
@@ -676,53 +705,32 @@ export function MobileSpacesScreen() {
   };
 
   return (
-    <div className="flex h-full">
-      {/* Space strip */}
-      <div className="w-[60px] shrink-0 glass-strip flex flex-col items-center py-2 gap-1.5 overflow-y-auto no-scrollbar">
-        {/* Home / DMs button */}
-        <button
-          onClick={() => {
-            setMobileTab('dms');
-            navigate('/channels/@me');
-          }}
-          className="w-10 h-10 rounded-2xl bg-surface-elevated flex items-center justify-center text-txt-secondary hover:text-txt-primary hover:bg-accent-primary transition-all"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-          </svg>
-        </button>
-
-        <div className="w-8 h-px bg-border-soft my-0.5" />
-
-        {/* Space icons (folder-aware) */}
+    <div className="flex h-full flex-col">
+      {/* The spaces, as a row of tabs across the top: the same idea as the desktop bar */}
+      <div className="lit flex-shrink-0 border-b border-border-hard bg-surface-base">
+      <nav ref={stripRef} className="tab-strip flex h-[47px] scroll-px-4 items-stretch gap-0.5 overflow-x-auto overflow-y-hidden pl-1.5 no-scrollbar">
         {resolvedLayout.map((item) => {
           if (item.type === 'folder') {
             const folder = item.folder;
             const hasUnread = item.spaces.some(s => spaceHasUnread(s.id));
             const isSelected = item.spaces.some(s => s.id === selectedSpaceId);
             return (
-              <div key={`folder-${folder.id}`} className="relative">
-                <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 flex items-center">
-                  <div className={`bg-white rounded-r-full transition-all duration-200 w-full ${
-                    isSelected ? 'h-8' : hasUnread ? 'h-2' : 'h-0'
-                  }`} />
-                </div>
+              <div key={`folder-${folder.id}`} data-selected={isSelected} className="relative flex flex-shrink-0 items-center">
                 <button
                   onClick={() => setOpenFolderId(folder.id)}
                   onContextMenu={(e) => e.preventDefault()}
-                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
-                    isSelected ? 'rounded-xl ring-2 ring-accent-primary/50' : 'hover:rounded-xl'
-                  } bg-surface-elevated`}
+                  className={stripTabClass(isSelected, hasUnread)}
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke={folder.color || 'currentColor'} strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-                  </svg>
+                  <Icon name="grid" size={16} style={folder.color ? { color: folder.color } : undefined} />
+                  <span className="max-w-[120px] truncate">{folder.name || t('spaces:sidebar.folder.tooltip', { count: item.spaces.length })}</span>
+                  {hasUnread && !isSelected && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-txt-primary" />}
                 </button>
+                {isSelected && <span aria-hidden="true" className="absolute inset-x-1.5 bottom-0 h-[2px] bg-accent-primary" />}
               </div>
             );
           }
 
-          // Standalone space — full space icon rendering with federation badge and context menu
+          // Standalone space: its picture and its name, with the federation mark and context menu
           const space = item.space;
           const isSelected = space.id === selectedSpaceId;
           const hasUnread = spaceHasUnread(space.id);
@@ -732,93 +740,97 @@ export function MobileSpacesScreen() {
                 : `/api/uploads/${space.icon}`)
             : null;
           const grad = getSpaceGradient(space.id, space.name, space.avatarColor);
+          const origin = (space as TaggedSpace)._instanceOrigin;
+          const inst = origin ? useInstanceStore.getState().instances.find(i => i.origin === origin) : undefined;
+          const isDisconnected = origin && inst ? inst.status !== 'connected' : false;
 
           return (
-            <div key={space.id} className="relative">
-              {/* Unread / selected pill */}
-              <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 flex items-center">
-                <div
-                  className={`bg-white rounded-r-full transition-all duration-200 w-full ${
-                    isSelected ? 'h-8' : hasUnread ? 'h-2' : 'h-0'
-                  }`}
-                />
-              </div>
+            <div key={space.id} data-selected={isSelected} className="relative flex flex-shrink-0 items-center">
               <button
                 data-context-menu
                 onClick={() => handleSpaceSelect(space.id)}
                 onContextMenu={(e) => handleSpaceContextMenu(e, space.id)}
-                className={`w-10 h-10 rounded-2xl overflow-hidden flex items-center justify-center transition-all ${
-                  isSelected ? 'rounded-xl ring-2 ring-accent-primary/50' : 'hover:rounded-xl'
-                }`}
-                style={!iconUrl ? { background: grad.gradient } : undefined}
+                className={stripTabClass(isSelected, hasUnread)}
               >
                 {iconUrl ? (
-                  <img src={iconUrl} alt={space.name} className="w-full h-full object-cover" />
+                  <img src={iconUrl} alt="" className="h-5 w-5 rounded object-cover" />
                 ) : (
-                  <span className="text-[15px] font-bold text-white">
+                  <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center rounded font-mono text-label font-semibold text-white" style={{ background: grad.gradient }}>
                     {space.name.charAt(0).toUpperCase()}
                   </span>
                 )}
+                <span className="max-w-[140px] truncate">{space.name}</span>
+                {origin && (
+                  isDisconnected
+                    ? <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-accent-amber" />
+                    : <Icon name="globe" size={12} className="text-txt-tertiary" />
+                )}
+                {hasUnread && !isSelected && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-txt-primary" />}
               </button>
-              {(() => {
-                const origin = (space as TaggedSpace)._instanceOrigin;
-                if (!origin) return null;
-                const instances = useInstanceStore.getState().instances;
-                const inst = instances.find(i => i.origin === origin);
-                const isDisconnected = inst ? inst.status !== 'connected' : false;
-                return (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-surface-base flex items-center justify-center">
-                    {isDisconnected ? (
-                      <div className="w-[8px] h-[8px] rounded-full bg-accent-amber" />
-                    ) : (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary/80">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-                      </svg>
-                    )}
-                  </div>
-                );
-              })()}
+              {isSelected && <span aria-hidden="true" className="absolute inset-x-1.5 bottom-0 h-[2px] bg-accent-primary" />}
             </div>
           );
         })}
 
-        <div className="w-8 h-px bg-border-soft my-0.5" />
-
-        {/* Add space button */}
-        <button
-          onClick={() => setShowAddSheet(true)}
-          className="w-10 h-10 rounded-2xl bg-surface-elevated flex items-center justify-center text-accent-mint hover:bg-accent-mint/10 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-        </button>
+        {/* Add space */}
+        <div className="flex flex-shrink-0 items-center pl-1">
+          <button
+            onClick={() => setShowAddSheet(true)}
+            aria-label={t('spaces:sidebar.addSpace')}
+            className="icon-btn h-9 w-9"
+          >
+            <Icon name="plus" size={18} />
+          </button>
+        </div>
+      </nav>
       </div>
 
       {/* Channel list */}
-      <div className="flex-1 flex flex-col min-w-0 bg-surface-channel">
+      <div className="lit flex-1 flex flex-col min-h-0 min-w-0 bg-surface-channel">
+        {/* No space yet: the first thing a new account sees on the phone. */}
+        {spaces.length === 0 && showNoSpaces && (
+          <div className="empty-state flex-1">
+            <span className="empty-state-icon" aria-hidden="true">
+              <Icon name="grid" size={18} />
+            </span>
+            <p className="empty-state-body">{t('home:spaces.empty')}</p>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <button type="button" onClick={() => openModal('createSpace')} className="btn-primary h-10">
+                {t('home:spaces.create')}
+              </button>
+              <button type="button" onClick={() => openModal('joinSpace')} className="btn-outline h-10">
+                {t('home:spaces.join')}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Space header */}
         {selectedSpace && (
-          <header className="h-12 flex items-center gap-2 px-3 border-b border-border-soft shrink-0">
-            <h1 className="flex-1 text-sm font-semibold text-txt-primary truncate">
+          <header className="panel-bar flex h-12 items-center gap-1 pl-4 pr-1">
+            <h1 className={BAR_TITLE}>
               {selectedSpace.name}
             </h1>
             {canInvite && (
               <button
+                type="button"
                 onClick={() => openModal('invite', { spaceId: selectedSpaceId })}
-                className="w-8 h-8 flex items-center justify-center text-txt-secondary hover:text-txt-primary"
+                aria-label={t('common:actions.invitePeople')}
+                className={BAR_BUTTON}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
                 </svg>
               </button>
             )}
             {canManageSpace && (
               <button
+                type="button"
                 onClick={() => openModal('spaceSettings', { spaceId: selectedSpaceId })}
-                className="w-8 h-8 flex items-center justify-center text-txt-secondary hover:text-txt-primary"
+                aria-label={t('common:labels.settings')}
+                className={BAR_BUTTON}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
@@ -830,14 +842,13 @@ export function MobileSpacesScreen() {
         {/* Channel list */}
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {showChannelSkeleton ? (
-            <div className="px-1 pt-1" role="status" aria-label={t('spaces:channels.loading')}>
+            <div role="status" aria-label={t('spaces:channels.loading')}>
               {/* Uncategorized group — 3 channel rows. Sized to match the real
-                  channel rows (`px-3 py-2 rounded-lg` with `text-sm`/`w-4 h-4`
-                  icon → ~36px height per row). */}
+                  channel rows (`.nav-item h-10 px-2` with a `w-4 h-4` icon). */}
               {Array.from({ length: 3 }, (_, i) => (
                 <div
                   key={`u-${i}`}
-                  className="flex items-center gap-2 px-3 py-2 mb-1"
+                  className="flex h-10 items-center gap-2 px-2"
                   style={{ animationDelay: `${i * 0.1}s` }}
                 >
                   <div
@@ -853,13 +864,13 @@ export function MobileSpacesScreen() {
               {/* Category group */}
               <div className="mt-4">
                 <div
-                  className="skeleton skeleton-bar h-2 w-[42%] ml-1 mb-2"
+                  className="skeleton skeleton-bar h-2 w-[42%] mx-2 mb-2"
                   style={{ animationDelay: '0.3s' }}
                 />
                 {Array.from({ length: 4 }, (_, i) => (
                   <div
                     key={`c-${i}`}
-                    className="flex items-center gap-2 px-3 py-2 mb-1"
+                    className="flex h-10 items-center gap-2 px-2"
                     style={{ animationDelay: `${(i + 3) * 0.1}s` }}
                   >
                     <div
@@ -876,6 +887,7 @@ export function MobileSpacesScreen() {
             </div>
           ) : (
             <>
+              {selectedSpaceId && <div className="mb-2"><SpaceEventsRow spaceId={selectedSpaceId} /></div>}
               {/* Uncategorized channels */}
               {uncategorizedChannels.map(renderChannelItem)}
 
@@ -886,20 +898,20 @@ export function MobileSpacesScreen() {
                 const isCollapsed = collapsedCategories.has(category.id);
 
                 return (
-                  <div key={category.id} className="mt-3">
+                  <div key={category.id} className="mt-3 first:mt-0">
                     <button
                       data-context-menu
                       onClick={() => toggleCategory(category.id)}
                       onContextMenu={(e) => handleCategoryContextMenu(e, category.id)}
-                      className="flex items-center gap-1 px-1 py-1 w-full text-left"
+                      className="flex min-h-8 w-full items-center gap-1.5 rounded-md px-2 text-left transition-colors hover:bg-interactive-hover active:bg-interactive-active"
                     >
                       <svg
-                        className={`w-3 h-3 text-txt-tertiary transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                        className={`w-3 h-3 flex-shrink-0 text-txt-tertiary transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                       </svg>
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-txt-tertiary truncate">
+                      <span className="label-mono truncate">
                         {category.name}
                       </span>
                     </button>
@@ -911,9 +923,13 @@ export function MobileSpacesScreen() {
               {/* Empty state — gated on settled (not loading) so the mascot
                   never flashes during the pre-skeleton load window. */}
               {isSpaceSettledEmpty && (
-                <div className="flex flex-col items-center justify-center h-32 opacity-80">
-                  <Mascot state="idle" className="w-20 h-20 mb-2" />
-                  <p className="text-txt-tertiary text-sm">{t('spaces:channels.empty')}</p>
+                <div className="empty-state h-32">
+                  <span className="empty-state-icon" aria-hidden="true">
+                    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16" />
+                    </svg>
+                  </span>
+                  <p className="empty-state-body">{t('spaces:channels.empty')}</p>
                 </div>
               )}
             </>
@@ -924,39 +940,39 @@ export function MobileSpacesScreen() {
       {/* Add Space bottom sheet */}
       {showAddSheet && (
         <>
-          <div className="fixed inset-0 z-[300] bg-black/50" onClick={() => setShowAddSheet(false)} />
+          <div className="modal-scrim fixed inset-0 z-[300]" onClick={() => setShowAddSheet(false)} />
           <div
-            className="fixed bottom-0 left-0 right-0 z-[301] rounded-t-2xl glass-bubble animate-slide-up-sheet"
+            className="fixed bottom-0 left-0 right-0 z-[301] rounded-t-lg glass-modal animate-slide-up-sheet"
             style={{ paddingBottom: 'var(--safe-bottom)' }}
           >
-            <div className="w-10 h-1 bg-txt-tertiary/30 rounded-full mx-auto mt-2 mb-1" />
-            <div className="py-2">
+            <div aria-hidden="true" className={SHEET_HANDLE} />
+            <div className="py-1">
               <button
                 onClick={() => { setShowAddSheet(false); openModal('createSpace'); }}
-                className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-interactive-hover"
+                className={SHEET_ROW}
               >
-                <svg className="w-5 h-5 text-accent-mint" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5 flex-shrink-0 text-txt-secondary" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                <span className="text-sm text-txt-primary">{t('spaces:mobile.addSheet.createSpace')}</span>
+                <span className="text-txt-primary">{t('spaces:mobile.addSheet.createSpace')}</span>
               </button>
               <button
                 onClick={() => { setShowAddSheet(false); openModal('joinSpace'); }}
-                className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-interactive-hover"
+                className={SHEET_ROW}
               >
-                <svg className="w-5 h-5 text-accent-sky" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5 flex-shrink-0 text-txt-secondary" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                 </svg>
-                <span className="text-sm text-txt-primary">{t('spaces:mobile.addSheet.joinSpace')}</span>
+                <span className="text-txt-primary">{t('spaces:mobile.addSheet.joinSpace')}</span>
               </button>
               <button
                 onClick={() => { setShowAddSheet(false); pushMobileScreen('explore'); }}
-                className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-interactive-hover"
+                className={SHEET_ROW}
               >
-                <svg className="w-5 h-5 text-accent-lavender" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5 flex-shrink-0 text-txt-secondary" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
                 </svg>
-                <span className="text-sm text-txt-primary">{t('spaces:mobile.addSheet.exploreSpaces')}</span>
+                <span className="text-txt-primary">{t('spaces:mobile.addSheet.exploreSpaces')}</span>
               </button>
             </div>
           </div>

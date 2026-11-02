@@ -91,7 +91,8 @@ function open(kind: Kind): void {
   render(kind === 'channel' ? <ChannelSettingsModal /> : <CategorySettingsModal />);
 }
 
-const privacySwitch = (): HTMLElement => screen.getByRole('switch');
+// A text channel has a second switch beside it, for being an announcement channel.
+const privacySwitch = (): HTMLElement => screen.getByRole('switch', { name: /^Private/ });
 const lockNote = (kind: Kind) => screen.queryByText(kind === 'channel'
   ? /This channel is hidden from members without explicit access/
   : /This category is hidden from members without explicit access/);

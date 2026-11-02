@@ -1,13 +1,60 @@
+import { VoiceMessagePlayer } from './VoiceMessagePlayer';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Attachment } from '@backspace/shared';
 import { useUIStore } from '../../stores/uiStore';
 import { useTransferStore } from '../../stores/transferStore';
+import { Icon, type IconName } from '../ui/Icon';
 import { Tooltip } from '../ui/Tooltip';
 import { useFormatters } from '../../i18n/formatters';
+import { mediaBox } from './mediaBox';
 
 interface AttachmentRendererProps {
   attachment: Attachment;
+  /**
+   * A picture as a cell of a gallery (`AttachmentList`): it fills a box of this
+   * shape, cut to fit, instead of keeping its own proportions.
+   */
+  tile?: 'wide' | 'square';
+}
+
+/** The square a file's kind is drawn in, in a file tile. */
+function FileGlyph({ name }: { name: IconName }) {
+  return (
+    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-border-hard bg-surface-input text-txt-tertiary transition-colors group-hover/att:text-txt-primary">
+      <Icon name={name} size={16} />
+    </span>
+  );
+}
+
+/**
+ * A picture or video the sender marked as a spoiler, until a reader asks for it. It takes
+ * the box the real one will, so opening it does not move the list
+ * (message-list.md, "Embed renderer dimension contract").
+ */
+function SpoilerCover({ attachment, previewUrl, tile, onReveal }: {
+  attachment: Attachment;
+  previewUrl: string | null;
+  tile: AttachmentRendererProps['tile'];
+  onReveal: () => void;
+}) {
+  const { t } = useTranslation(['chat']);
+  const box = tile ? undefined : mediaBox(attachment.width, attachment.height, { enlarge: attachment.mimetype.startsWith('video/') });
+  const shape = tile === 'wide' ? 'aspect-[4/3] w-full' : tile === 'square' ? 'aspect-square w-full' : 'max-w-[min(100%,400px)]';
+  return (
+    <div className={tile ? 'min-w-0' : 'max-w-fit'}>
+      <button
+        type="button"
+        onClick={onReveal}
+        aria-label={t('chat:spoiler.revealAttachment', { name: attachment.originalName })}
+        className={`spoiler-cover ${shape}`}
+        style={box}
+      >
+        {previewUrl && <img src={previewUrl} alt="" className="h-full w-full object-cover" loading="lazy" />}
+        <span className="spoiler-cover-label">{t('chat:spoiler.label')}</span>
+      </button>
+    </div>
+  );
 }
 
 /** Format a duration in seconds as `m:ss` (or `h:mm:ss` for long clips). */
@@ -87,53 +134,44 @@ function VideoAttachment({ attachment, attUrl, thumbUrl, federationInlineBadge }
 
   const { width, height, originalName, mimetype, size, duration } = attachment;
   const hasDimensions = !!(width && height);
-  const sizing = hasDimensions
-    ? { aspectRatio: `${width}/${height}`, maxHeight: 300 }
-    : undefined;
+  const sizing = mediaBox(width, height, { enlarge: true });
 
   if (failed) {
     const meta = [duration ? formatDuration(duration) : null, formatBytes(size)]
       .filter(Boolean)
       .join(' · ');
     return (
-      <div className="mt-1 max-w-[400px]">
+      <div className="max-w-[400px]">
         <button
           type="button"
           onClick={() => {
             void startDownload(attUrl, { filename: originalName, size, mimetype, tray: true });
           }}
-          className="block w-full text-left rounded-lg overflow-hidden border border-border-hard bg-surface-channel/50 hover:bg-interactive-hover transition-all group/vid"
+          className="surface-card group/att block w-full overflow-hidden rounded-lg text-left transition-colors -outline-offset-2 hover:border-border-soft hover:bg-interactive-hover active:bg-interactive-active"
         >
           {thumbUrl && (
-            <div className="relative w-full" style={sizing}>
+            <div className="relative mx-auto max-w-full" style={sizing}>
               <img
                 src={thumbUrl}
                 alt={originalName}
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
-              <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center gap-1.5 text-white">
-                <svg className="w-9 h-9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                </svg>
-                <span className="text-[12px] font-medium">{t('chat:attachment.video.cannotPlayDownload')}</span>
+              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1.5 text-white">
+                <Icon name="download" size={24} />
+                <span className="text-meta font-medium">{t('chat:attachment.video.cannotPlayDownload')}</span>
               </div>
             </div>
           )}
-          <div className="flex items-center gap-3 p-3">
-            {!thumbUrl && (
-              <div className="p-2 bg-surface-base rounded text-txt-tertiary flex-shrink-0">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </div>
-            )}
+          <div className="flex items-center gap-2.5 px-2.5 py-2">
+            {!thumbUrl && <FileGlyph name="video" />}
             <div className="min-w-0 flex-1">
-              <p className="text-txt-link text-[14px] font-medium truncate group-hover/vid:underline">{originalName}</p>
-              <p className="text-[12px] text-txt-tertiary">
-                {meta ? `${meta} · ` : ''}{t('chat:attachment.video.unsupportedFormat')}
+              <p className="truncate text-ui font-medium text-txt-primary group-hover/att:underline">{originalName}</p>
+              <p className="truncate text-meta text-txt-tertiary">
+                {meta ? <span className="tabular font-mono text-label">{meta} · </span> : null}{t('chat:attachment.video.unsupportedFormat')}
               </p>
             </div>
+            <Icon name="download" size={16} className="flex-shrink-0 text-txt-tertiary transition-colors group-hover/att:text-txt-primary" />
           </div>
         </button>
         {federationInlineBadge && <div className="mt-1">{federationInlineBadge}</div>}
@@ -142,9 +180,9 @@ function VideoAttachment({ attachment, attUrl, thumbUrl, federationInlineBadge }
   }
 
   return (
-    <div className="mt-1 max-w-[400px]">
+    <div className="max-w-[400px]">
       <div
-        className="relative max-h-[300px] rounded-lg overflow-hidden"
+        className="relative max-w-full overflow-hidden rounded-lg border border-border-hard bg-surface-input"
         style={sizing}
       >
         <video
@@ -153,7 +191,7 @@ function VideoAttachment({ attachment, attUrl, thumbUrl, federationInlineBadge }
           poster={thumbUrl ?? undefined}
           src={attUrl}
           onError={() => setFailed(true)}
-          className="w-full h-full rounded-lg"
+          className="h-full w-full"
         >
           {t('chat:attachment.video.unsupportedBrowser')}
         </video>
@@ -163,7 +201,49 @@ function VideoAttachment({ attachment, attUrl, thumbUrl, federationInlineBadge }
   );
 }
 
-export function AttachmentRenderer({ attachment }: AttachmentRendererProps) {
+/**
+ * Whether a cell of a gallery of `count` pictures sits in a row of two rather
+ * than three. Rows of two come first and take the larger pictures, so a gallery
+ * never ends on a lone one: five is two over three, seven is two, two and three.
+ */
+function inRowOfTwo(index: number, count: number): boolean {
+  const rowsOfTwo = count % 3 === 1 ? 2 : count % 3 === 2 ? 1 : 0;
+  return index < rowsOfTwo * 2;
+}
+
+/**
+ * The attachments of a message, in their order. A run of two or more pictures
+ * is a gallery; everything else stands on its own line.
+ */
+export function AttachmentList({ attachments }: { attachments: readonly Attachment[] }) {
+  const runs: Attachment[][] = [];
+  for (const attachment of attachments) {
+    const isImage = attachment.mimetype.startsWith('image/');
+    const last = runs[runs.length - 1];
+    if (isImage && last?.[0]?.mimetype.startsWith('image/')) last.push(attachment);
+    else runs.push([attachment]);
+  }
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
+      {runs.map((run) => (run.length === 1
+        ? <AttachmentRenderer key={run[0]!.id} attachment={run[0]!} />
+        : (
+          <div key={run[0]!.id} className="grid w-[400px] max-w-full grid-cols-6 gap-1">
+            {run.map((attachment, index) => {
+              const wide = inRowOfTwo(index, run.length);
+              return (
+                <div key={attachment.id} className={wide ? 'col-span-3' : 'col-span-2'}>
+                  <AttachmentRenderer attachment={attachment} tile={wide ? 'wide' : 'square'} />
+                </div>
+              );
+            })}
+          </div>
+        )))}
+    </div>
+  );
+}
+
+export function AttachmentRenderer({ attachment, tile }: AttachmentRendererProps) {
   const { t } = useTranslation(['chat']);
   const { formatBytes } = useFormatters();
   const openImagePreview = useUIStore((s) => s.openImagePreview);
@@ -178,6 +258,18 @@ export function AttachmentRenderer({ attachment }: AttachmentRendererProps) {
     : null;
 
   const { mimetype, originalName, size } = attachment;
+  const [revealed, setRevealed] = useState(false);
+
+  if (attachment.spoiler && !revealed && (mimetype.startsWith('image/') || mimetype.startsWith('video/'))) {
+    return (
+      <SpoilerCover
+        attachment={attachment}
+        previewUrl={thumbUrl ?? (mimetype.startsWith('image/') ? attUrl : null)}
+        tile={tile}
+        onReveal={() => setRevealed(true)}
+      />
+    );
+  }
 
   // Federation status — build tooltip text
   const federationTooltip = (() => {
@@ -222,7 +314,7 @@ export function AttachmentRenderer({ attachment }: AttachmentRendererProps) {
   // Inline badge — sits next to file size or below media, never absolute-positioned
   const federationInlineBadge = federationTooltip ? (
     <Tooltip content={federationTooltip.text} position="top">
-      <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded glass-pill text-xs cursor-default ${federationTooltip.type === 'remote' ? 'text-txt-tertiary' : 'text-accent-amber'}`}>
+      <div className={`inline-flex items-center gap-1 px-1 py-px rounded glass-pill text-meta cursor-default ${federationTooltip.type === 'remote' ? 'text-txt-tertiary' : 'text-accent-amber'}`}>
         <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           {federationTooltip.type === 'remote'
             ? <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
@@ -234,22 +326,26 @@ export function AttachmentRenderer({ attachment }: AttachmentRendererProps) {
   ) : null;
 
   if (mimetype.startsWith('image/')) {
-    const { width, height } = attachment;
+    const box = tile ? undefined : mediaBox(attachment.width, attachment.height);
+    const shape = tile === 'wide' ? 'aspect-[4/3] w-full' : tile === 'square' ? 'aspect-square w-full' : 'max-w-[min(100%,400px)]';
     return (
-      <div className="mt-1 max-w-fit">
-        <div
-          className="relative rounded-lg overflow-hidden border border-white/[0.06]"
-          style={width && height ? { aspectRatio: `${width}/${height}`, maxWidth: Math.min(width, 400), maxHeight: 300 } : undefined}
+      <div className={tile ? 'min-w-0' : 'max-w-fit'}>
+        <button
+          type="button"
+          onClick={() => openImagePreview(attUrl)}
+          aria-label={originalName}
+          className={`block overflow-hidden rounded-lg border border-border-hard bg-surface-input transition-colors -outline-offset-2 hover:border-interactive-muted ${shape}`}
+          style={box}
         >
           <img
             src={thumbUrl ?? attUrl}
             data-sticker-source={attUrl}
             alt={originalName}
-            className="w-full h-full max-w-[400px] max-h-[300px] object-contain cursor-pointer hover:brightness-95 transition-all"
-            onClick={() => openImagePreview(attUrl)}
+            // A box from the file's own size is its shape already, less the hairline.
+            className={tile || box ? 'h-full w-full object-cover' : 'max-h-[300px] object-contain'}
             loading="lazy"
           />
-        </div>
+        </button>
         {federationInlineBadge && <div className="mt-1">{federationInlineBadge}</div>}
       </div>
     );
@@ -266,29 +362,24 @@ export function AttachmentRenderer({ attachment }: AttachmentRendererProps) {
     );
   }
 
+  if (mimetype.startsWith('audio/') && attachment.voiceWaveform) {
+    return <VoiceMessagePlayer url={attUrl} bars={attachment.voiceWaveform} duration={attachment.duration} />;
+  }
+
   if (mimetype.startsWith('audio/')) {
     return (
-      <div className="relative mt-1 flex flex-col p-3 bg-surface-channel/50 rounded-lg border border-border-hard max-w-[420px]">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-surface-base rounded text-txt-tertiary flex-shrink-0">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-              />
-            </svg>
-          </div>
+      <div className="surface-card flex max-w-[400px] flex-col gap-2 rounded-lg p-2.5">
+        <div className="flex items-center gap-2.5">
+          <FileGlyph name="music" />
           <div className="min-w-0">
-            <p className="text-txt-primary text-[14px] font-medium truncate">{originalName}</p>
+            <p className="truncate text-ui font-medium text-txt-primary">{originalName}</p>
             <div className="flex items-center gap-2">
-              <p className="text-[12px] text-txt-tertiary">{formatBytes(size)}</p>
+              <p className="tabular font-mono text-label text-txt-tertiary">{formatBytes(size)}</p>
               {federationInlineBadge}
             </div>
           </div>
         </div>
-        <audio controls preload="metadata" className="w-full mt-2 h-8">
+        <audio controls preload="metadata" className="h-8 w-full">
           <source src={attUrl} type={mimetype} />
           {t('chat:attachment.audio.unsupportedBrowser')}
         </audio>
@@ -317,25 +408,17 @@ export function AttachmentRenderer({ attachment }: AttachmentRendererProps) {
           tray: true,
         });
       }}
-      className="mt-1 max-w-full desktop:max-w-[400px] flex items-center gap-3 p-4 bg-surface-channel/50 rounded-lg border border-border-hard hover:bg-interactive-hover transition-all group/att text-left w-full min-w-0"
+      className="surface-card group/att flex w-full min-w-0 max-w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors -outline-offset-2 hover:border-border-soft hover:bg-interactive-hover active:bg-interactive-active desktop:max-w-[400px]"
     >
-      <div className="p-2 bg-surface-base rounded text-txt-tertiary group-hover/att:text-txt-primary transition-colors flex-shrink-0">
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
-          />
-        </svg>
-      </div>
+      <FileGlyph name="file" />
       <div className="min-w-0 flex-1">
-        <p className="text-txt-link text-[15px] font-medium truncate hover:underline">{originalName}</p>
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-[12px] text-txt-tertiary font-medium">{formatBytes(size)}</p>
+        <p className="truncate text-ui font-medium text-txt-primary group-hover/att:underline">{originalName}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="tabular font-mono text-label text-txt-tertiary">{formatBytes(size)}</p>
           {federationInlineBadge}
         </div>
       </div>
+      <Icon name="download" size={16} className="flex-shrink-0 text-txt-tertiary transition-colors group-hover/att:text-txt-primary" />
     </button>
   );
 }

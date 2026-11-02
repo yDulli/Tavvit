@@ -1,6 +1,9 @@
+import { addSpaceReaction, REACTION_EMOJI_MAX_LENGTH, removeSpaceReaction } from '../utils/reactions.js';
+import { mayPostSticker } from '../utils/remoteMedia.js';
 import { handleChannelPoke } from './channelPoke.js';
 import type { WebSocket } from 'ws';
-import { addsMassMention, hasMassMention } from '@backspace/shared/src/mentions.js';
+import { addsGatedMassMention, hasGatedMassMention } from '@backspace/shared/src/mentions.js';
+import { mentionableRoleIds } from '../utils/mentionableRoles.js';
 import { eq, inArray, and } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { generateSnowflake } from '../utils/snowflake.js';
@@ -14,7 +17,6 @@ import type { CallRelayResult, CallFanoutFailure } from '../utils/federationOutb
 import { mapCallReasonToEventReason } from '../utils/federationOutbox.js';
 import { callRelayActor, fanOutCallEvent, relayCallEvent, userRelayIdentity, type CallRelayEventType } from '../utils/callFanout.js';
 import { sanitizeUser } from '../utils/sanitize.js';
-import { collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
 import { applyChosenStatus } from './presence.js';
 import { presenceUpdateFor, validateActivities } from './presenceEvent.js';
 import { deleteAttachmentFiles } from '../utils/fileCleanup.js';
@@ -28,8 +30,13 @@ import { canActOnMemberInSpace } from '../utils/roleHierarchy.js';
 import { ERROR_MESSAGES, errorText } from '../utils/httpErrors.js';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
 import { checkDmMessageCreate, checkDmMessageDelete, checkDmMessageEdit } from '../utils/dmMessageRules.js';
+import { oneOnOneBlockRefusal } from '../utils/blocks.js';
 import { consumeWsDmMessageCreate } from '../utils/dmMessageRateLimit.js';
 import { socketAddressOf } from './socketAddress.js';
+import { memberActionRefusal, recordSlowmodePost, spaceMessageRefusal } from '../utils/spaceModeration.js';
+import { recordMessageDeleteAudit } from '../utils/auditLog.js';
+import { isPollMessage } from '../utils/polls.js';
+import { pushDmCall } from '../utils/pushDelivery.js';
 
 /**
  * Re-evaluate SPEAK permission for all participants in voice channels
@@ -233,6 +240,12 @@ export function handleClientEvent(
     case 'activity_update':
       handleActivityUpdate(event, userId);
       break;
+    case 'client_focus':
+      connectionManager.setClientFocus(ws, event.focused === true);
+      break;
+    case 'thread_watch':
+      connectionManager.setThreadWatch(ws, typeof event.threadId === 'string' ? event.threadId : null);
+      break;
     default:
       connectionManager.sendToUser(userId, {
         type: 'error',
@@ -241,10 +254,21 @@ export function handleClientEvent(
   }
 }
 
+/**
+ * A coded refusal of a space message, reaction or voice event, with the code
+ * and details the REST route answers the same refusal with. It goes to the
+ * user's sessions, which show the code's text in their language
+ * (websocket.md, "error").
+ */
+function refuseSpaceEvent(userId: string, code: ErrorCode, details?: ErrorDetails): void {
+  connectionManager.sendToUser(userId, details
+    ? { type: 'error', message: errorText(code, details), code, details }
+    : { type: 'error', message: errorText(code), code });
+}
+
 /** The coded refusal of a mass mention without MENTION_EVERYONE, as REST answers it. */
 function sendMissingMentionEveryone(userId: string): void {
-  const details = { permission: 'MENTION_EVERYONE' };
-  connectionManager.sendToUser(userId, { type: 'error', message: errorText('missing_permission', details), code: 'missing_permission', details });
+  refuseSpaceEvent(userId, 'missing_permission', { permission: 'MENTION_EVERYONE' });
 }
 
 function handleMessageCreate(event: Record<string, unknown>, userId: string): void {
@@ -267,18 +291,24 @@ function handleMessageCreate(event: Record<string, unknown>, userId: string): vo
     return;
   }
 
+  // Every reader's client fetches a sticker by itself (utils/remoteMedia.ts).
+  if (!mayPostSticker(content.trim(), userId)) {
+    refuseSpaceEvent(userId, 'sticker_elsewhere');
+    return;
+  }
+
   const spaceId = getChannelSpaceId(channelId);
   if (!spaceId) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Channel not found' });
     return;
   }
 
-  if (!hasPermission(userId, spaceId, PermissionBits.SEND_MESSAGES, channelId)) {
+  if (!hasPermission(userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.SEND_MESSAGES, channelId)) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Missing SEND_MESSAGES permission' });
     return;
   }
 
-  if (hasMassMention(content) && !hasPermission(userId, spaceId, PermissionBits.MENTION_EVERYONE, channelId)) {
+  if (hasGatedMassMention(content, mentionableRoleIds(spaceId)) && !hasPermission(userId, spaceId, PermissionBits.MENTION_EVERYONE, channelId)) {
     sendMissingMentionEveryone(userId);
     return;
   }
@@ -289,18 +319,29 @@ function handleMessageCreate(event: Record<string, unknown>, userId: string): vo
     return;
   }
 
+  // The space's moderation (timeout, minimum ages, slow mode, automatic
+  // rules), the same checks in the same order as POST /channels/:id/messages.
+  const now = Date.now();
+  const refusal = spaceMessageRefusal({ spaceId, channelId, userId, content: content.trim(), kind: 'create', now });
+  if (refusal) {
+    refuseSpaceEvent(userId, refusal.code, refusal.details);
+    return;
+  }
+
   const db = getDb();
   const messageId = generateSnowflake();
-  const now = Date.now();
 
-  db.insert(schema.messages).values({
-    id: messageId,
-    channelId,
-    userId,
-    replyToId: replyToId || null,
-    content: content.trim(),
-    createdAt: now,
-  }).run();
+  db.transaction((tx) => {
+    tx.insert(schema.messages).values({
+      id: messageId,
+      channelId,
+      userId,
+      replyToId: replyToId || null,
+      content: content.trim(),
+      createdAt: now,
+    }).run();
+    recordSlowmodePost(tx, channelId, userId, now);
+  });
 
   const messageWithUser = getMessageWithUser(messageId);
   if (messageWithUser) {
@@ -336,6 +377,11 @@ function handleMessageEdit(event: Record<string, unknown>, userId: string): void
     return;
   }
 
+  if (!mayPostSticker(content.trim(), userId)) {
+    refuseSpaceEvent(userId, 'sticker_elsewhere');
+    return;
+  }
+
   const db = getDb();
   const message = db.select().from(schema.messages).where(eq(schema.messages.id, messageId)).get();
   if (!message) {
@@ -353,16 +399,31 @@ function handleMessageEdit(event: Record<string, unknown>, userId: string): void
     connectionManager.sendToUser(userId, { type: 'error', message: 'You can only edit your own messages' });
     return;
   }
+  if (isPollMessage(messageId)) {
+    refuseSpaceEvent(userId, 'poll_not_editable');
+    return;
+  }
 
   // The same rule as PATCH /api/messages/:id: adding a mass mention needs
   // MENTION_EVERYONE, keeping one the message already has does not.
   const mentionSpaceId = getChannelSpaceId(message.channelId);
-  if (addsMassMention(message.content, content) && (!mentionSpaceId || !hasPermission(userId, mentionSpaceId, PermissionBits.MENTION_EVERYONE, message.channelId))) {
+  if (addsGatedMassMention(message.content, content, mentionableRoleIds(mentionSpaceId)) && (!mentionSpaceId || !hasPermission(userId, mentionSpaceId, PermissionBits.MENTION_EVERYONE, message.channelId))) {
     sendMissingMentionEveryone(userId);
     return;
   }
 
+  // The space's moderation, as PATCH /api/messages/:id applies it to an edit.
   const now = Date.now();
+  if (mentionSpaceId) {
+    const refusal = spaceMessageRefusal({
+      spaceId: mentionSpaceId, channelId: message.channelId, userId, content: content.trim(), kind: 'edit', now,
+    });
+    if (refusal) {
+      refuseSpaceEvent(userId, refusal.code, refusal.details);
+      return;
+    }
+  }
+
   db.update(schema.messages)
     .set({ content: content.trim(), editedAt: now })
     .where(eq(schema.messages.id, messageId))
@@ -408,7 +469,7 @@ function handleMessageDelete(event: Record<string, unknown>, userId: string): vo
 
   // Allow author or MANAGE_MESSAGES permission holder to delete
   const isAuthor = message.userId === userId;
-  const canManageMessages = hasPermission(userId, spaceId, PermissionBits.MANAGE_MESSAGES, message.channelId);
+  const canManageMessages = hasPermission(userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.MANAGE_MESSAGES, message.channelId);
 
   if (!isAuthor && !canManageMessages) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'You cannot delete this message' });
@@ -428,6 +489,8 @@ function handleMessageDelete(event: Record<string, unknown>, userId: string): vo
   // Clean up files from disk (outside transaction — file I/O)
   deleteAttachmentFiles(attachmentRows);
 
+  if (!isAuthor) recordMessageDeleteAudit(spaceId, userId, message);
+
   connectionManager.sendToChannel(spaceId, message.channelId, {
     type: 'message_deleted',
     messageId,
@@ -443,7 +506,7 @@ function handleTypingStart(event: Record<string, unknown>, userId: string, usern
   const spaceId = getChannelSpaceId(channelId);
   if (!spaceId) return;
 
-  if (!hasPermission(userId, spaceId, PermissionBits.SEND_MESSAGES, channelId)) return;
+  if (!hasPermission(userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.SEND_MESSAGES, channelId)) return;
 
   // Clear previous typing timeout for this user+channel
   const key = `${userId}:${channelId}`;
@@ -495,8 +558,7 @@ function handleActivityUpdate(event: Record<string, unknown>, userId: string): v
   const status = connectionManager.getUserStatus(userId);
 
   const payload = presenceUpdateFor(userId, status, activities);
-  const targets = collectProfileBroadcastTargetIds(userId);
-  for (const uid of targets) connectionManager.sendToUser(uid, payload);
+  connectionManager.broadcastPresence(userId, payload);
   connectionManager.sendToUser(userId, payload);
 
   // S2S: broadcast to peers (activities + current status); see queueOutboxEvent.
@@ -511,7 +573,8 @@ function handleActivityUpdate(event: Record<string, unknown>, userId: string): v
 function broadcastRoomLeave(roomId: string, room: VoiceRoom, userId: string): void {
   if (room.roomType === 'space') {
     const meta = room.metadata as SpaceRoomMeta;
-    connectionManager.sendToSpace(meta.spaceId, {
+    // Those who can see the channel: a hidden one is nobody else's business.
+    connectionManager.sendToChannel(meta.spaceId, roomId, {
       type: 'voice_state_update',
       channelId: roomId,
       userId,
@@ -557,8 +620,18 @@ function handleVoiceJoin(event: Record<string, unknown>, userId: string, ws: Web
     return;
   }
 
-  if (!hasPermission(userId, spaceId, PermissionBits.CONNECT, channelId)) {
+  // VIEW_CHANNEL as well: nothing is implied by it (permissions.md), and CONNECT alone would let a
+  // member into a hidden voice channel by its id.
+  if (!hasPermission(userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.CONNECT, channelId)) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Missing CONNECT permission' });
+    rejectVoiceJoin(userId, channelId);
+    return;
+  }
+
+  // A timed-out member joins no voice in the space, a resume included.
+  const timeout = memberActionRefusal(spaceId, userId);
+  if (timeout) {
+    refuseSpaceEvent(userId, timeout.code, timeout.details);
     rejectVoiceJoin(userId, channelId);
     return;
   }
@@ -713,7 +786,8 @@ function handleVoiceJoin(event: Record<string, unknown>, userId: string, ws: Web
   for (const r of restrictions) {
     if (r.restrictionType === 'mute') {
       connectionManager.setSpaceMuted(spaceId, userId, true);
-      connectionManager.sendToSpace(spaceId, {
+      // It names the channel: to those who can see it, as every voice event of a space.
+      connectionManager.sendToChannel(spaceId, channelId, {
         type: 'voice_space_muted',
         userId,
         channelId,
@@ -722,7 +796,7 @@ function handleVoiceJoin(event: Record<string, unknown>, userId: string, ws: Web
       });
     } else if (r.restrictionType === 'deafen') {
       connectionManager.setSpaceDeafened(spaceId, userId, true);
-      connectionManager.sendToSpace(spaceId, {
+      connectionManager.sendToChannel(spaceId, channelId, {
         type: 'voice_space_deafened',
         userId,
         channelId,
@@ -854,7 +928,7 @@ function handleDmMessageCreate(event: Record<string, unknown>, userId: string, w
     refuseDmMessage(ws, check.refusal.code, check.refusal.details);
     return;
   }
-  const { content, attachmentIds, replyToId } = check.value;
+  const { content, attachmentIds, spoilerIds, replyToId } = check.value;
 
   const db = getDb();
   const messageId = generateSnowflake();
@@ -874,7 +948,7 @@ function handleDmMessageCreate(event: Record<string, unknown>, userId: string, w
 
     for (const attId of attachmentIds) {
       tx.update(schema.attachments)
-        .set({ dmMessageId: messageId })
+        .set({ dmMessageId: messageId, spoiler: spoilerIds.has(attId) })
         .where(eq(schema.attachments.id, attId))
         .run();
     }
@@ -1061,43 +1135,19 @@ function handleReactionAdd(event: Record<string, unknown>, userId: string): void
   const messageId = event.messageId as string;
   const emoji = event.emoji as string;
 
-  if (!messageId || !emoji) return;
+  if (!messageId || !emoji || typeof emoji !== 'string' || emoji.length > REACTION_EMOJI_MAX_LENGTH) return;
 
   const db = getDb();
 
   // Try space message first
   const message = db.select().from(schema.messages).where(eq(schema.messages.id, messageId)).get();
   if (message) {
-    const spaceId = getChannelSpaceId(message.channelId);
-    if (!spaceId || !isMember(spaceId, userId)) return;
-
-    if (!hasPermission(userId, spaceId, PermissionBits.ADD_REACTIONS, message.channelId)) {
+    const refusal = addSpaceReaction(message, userId, emoji);
+    if (refusal?.code === 'missing_permission') {
       connectionManager.sendToUser(userId, { type: 'error', message: 'Missing ADD_REACTIONS permission' });
-      return;
+    } else if (refusal && refusal.code !== 'message_not_found') {
+      refuseSpaceEvent(userId, refusal.code, refusal.details);
     }
-
-    const reactionId = generateSnowflake();
-    const now = Date.now();
-    // The unique index on (message_id, user_id, emoji) keeps one reaction per
-    // user and emoji. A repeat inserts nothing and announces nothing.
-    const inserted = db.insert(schema.reactions).values({
-      id: reactionId,
-      messageId,
-      userId,
-      emoji,
-      createdAt: now,
-    }).onConflictDoNothing().run();
-    if (inserted.changes === 0) return;
-
-    // Include user object so remote clients can use isSelf() for identity resolution
-    const reactionUser = db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
-    const userObj = reactionUser ? sanitizeUser(reactionUser) : undefined;
-
-    connectionManager.sendToChannel(spaceId, message.channelId, {
-      type: 'reaction_added',
-      messageId,
-      reaction: { id: reactionId, messageId, userId, emoji, createdAt: now, user: userObj },
-    });
     return;
   }
 
@@ -1109,6 +1159,11 @@ function handleReactionAdd(event: Record<string, unknown>, userId: string): void
   // Read-only enforcement: a dead 1-on-1 thread (partner tombstoned) accepts no
   // reaction mutations — the relay would fan out to all peers via undefined origins.
   if (isDeadOneOnOne(dmMsg.dmChannelId, userId)) return;
+  // The other members' clients fetch a sticker reaction by themselves (utils/remoteMedia.ts).
+  if (!mayPostSticker(emoji, userId)) {
+    refuseSpaceEvent(userId, 'sticker_elsewhere');
+    return;
+  }
 
   const reactionId = generateSnowflake();
   const now = Date.now();
@@ -1162,32 +1217,14 @@ function handleReactionRemove(event: Record<string, unknown>, userId: string): v
   const messageId = event.messageId as string;
   const emoji = event.emoji as string;
 
-  if (!messageId || !emoji) return;
+  if (!messageId || !emoji || typeof emoji !== 'string' || emoji.length > REACTION_EMOJI_MAX_LENGTH) return;
 
   const db = getDb();
 
   // Try space message first
   const message = db.select().from(schema.messages).where(eq(schema.messages.id, messageId)).get();
   if (message) {
-    const spaceId = getChannelSpaceId(message.channelId);
-    if (!spaceId || !isMember(spaceId, userId)) return;
-
-    const result = db.delete(schema.reactions)
-      .where(and(
-        eq(schema.reactions.messageId, messageId),
-        eq(schema.reactions.userId, userId),
-        eq(schema.reactions.emoji, emoji)
-      ))
-      .run();
-
-    if (result.changes > 0) {
-      connectionManager.sendToChannel(spaceId, message.channelId, {
-        type: 'reaction_removed',
-        messageId,
-        userId,
-        emoji,
-      });
-    }
+    removeSpaceReaction(message, userId, emoji);
     return;
   }
 
@@ -1397,6 +1434,13 @@ async function handleDmCallStart(event: Record<string, unknown>, userId: string,
     return;
   }
 
+  // A block between the two people of a 1-on-1 closes calling as well.
+  const blocked = oneOnOneBlockRefusal(dmChannelId, userId);
+  if (blocked) {
+    refuseDmCall(ws, blocked, dmChannelId);
+    return;
+  }
+
   // The DM already has a call hosted here. A member who is not in it joins
   // it, as if they had accepted the ring; one who is already in it (as a
   // participant, or as the caller of a call still ringing) has nothing to
@@ -1463,6 +1507,7 @@ async function handleDmCallStart(event: Record<string, unknown>, userId: string,
     callerId: userId,
     callerName: username,
   }, userId);
+  pushDmCall(dmChannelId, userId, username, (id) => connectionManager.isUserFocused(id));
 
   // Federation: notify remote instances (fire-and-forget)
   sendFederatedCallStart(dmChannelId, userId, username)
@@ -2257,7 +2302,7 @@ function handleVoiceSpaceMute(event: Record<string, unknown>, userId: string): v
   }
 
   const meta = targetRoom.room.metadata as SpaceRoomMeta;
-  if (!hasPermission(userId, meta.spaceId, PermissionBits.MUTE_MEMBERS, targetRoom.roomId)) {
+  if (!hasPermission(userId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.MUTE_MEMBERS, targetRoom.roomId)) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Missing MUTE_MEMBERS permission' });
     return;
   }
@@ -2292,8 +2337,8 @@ function handleVoiceSpaceMute(event: Record<string, unknown>, userId: string): v
     ).run();
   }
 
-  // Broadcast to all space members
-  connectionManager.sendToSpace(meta.spaceId, {
+  // Broadcast to the space members who can see the channel
+  connectionManager.sendToChannel(meta.spaceId, targetRoom.roomId, {
     type: 'voice_space_muted',
     userId: targetUserId,
     channelId: targetRoom.roomId,
@@ -2318,7 +2363,7 @@ function handleVoiceSpaceDeafen(event: Record<string, unknown>, userId: string):
   }
 
   const meta = targetRoom.room.metadata as SpaceRoomMeta;
-  if (!hasPermission(userId, meta.spaceId, PermissionBits.DEAFEN_MEMBERS, targetRoom.roomId)) {
+  if (!hasPermission(userId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.DEAFEN_MEMBERS, targetRoom.roomId)) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Missing DEAFEN_MEMBERS permission' });
     return;
   }
@@ -2352,7 +2397,7 @@ function handleVoiceSpaceDeafen(event: Record<string, unknown>, userId: string):
     ).run();
   }
 
-  connectionManager.sendToSpace(meta.spaceId, {
+  connectionManager.sendToChannel(meta.spaceId, targetRoom.roomId, {
     type: 'voice_space_deafened',
     userId: targetUserId,
     channelId: targetRoom.roomId,
@@ -2382,7 +2427,11 @@ function handleVoiceMove(event: Record<string, unknown>, userId: string): void {
   }
 
   const meta = currentRoom.room.metadata as SpaceRoomMeta;
-  if (!hasPermission(userId, meta.spaceId, PermissionBits.MOVE_MEMBERS, currentRoom.roomId)) {
+  // On both channels, and with sight of them: a moderator who cannot see a hidden voice
+  // channel neither takes anyone out of it nor puts anyone into it (permissions.md).
+  const moveBits = PermissionBits.VIEW_CHANNEL | PermissionBits.MOVE_MEMBERS;
+  if (!hasPermission(userId, meta.spaceId, moveBits, currentRoom.roomId)
+    || !hasPermission(userId, meta.spaceId, moveBits, targetChannelId)) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Missing MOVE_MEMBERS permission' });
     return;
   }
@@ -2404,19 +2453,23 @@ function handleVoiceMove(event: Record<string, unknown>, userId: string): void {
     connectionManager.sendToUser(userId, { type: 'error', message: 'User is already in that channel' });
     return;
   }
+  // Nobody is put into a channel they could not see or enter by themselves: they would not be
+  // let into its call (`/api/livekit/token`), and would sit in a room they cannot hear.
+  if (!hasPermission(targetUserId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.CONNECT, targetChannelId)) {
+    connectionManager.sendToUser(userId, { type: 'error', message: 'Target user cannot join that channel' });
+    return;
+  }
 
   const oldChannelId = currentRoom.roomId;
 
-  // Leave current room
-  connectionManager.leaveRoom(oldChannelId, targetUserId);
-
-  // Broadcast leave from old channel
-  connectionManager.sendToSpace(meta.spaceId, {
+  // Broadcast leave from old channel, to those who can see it, then leave it
+  connectionManager.sendToChannel(meta.spaceId, oldChannelId, {
     type: 'voice_state_update',
     channelId: oldChannelId,
     userId: targetUserId,
     action: 'leave',
   });
+  connectionManager.leaveRoom(oldChannelId, targetUserId);
 
   // Lazy-create target room and join
   connectionManager.createRoom(targetChannelId, 'space', { type: 'space', spaceId: meta.spaceId });
@@ -2428,8 +2481,8 @@ function handleVoiceMove(event: Record<string, unknown>, userId: string): void {
   // just occupied.
   const targetRoom = connectionManager.getRoom(targetChannelId);
 
-  // Broadcast join to new channel
-  connectionManager.sendToSpace(meta.spaceId, {
+  // Broadcast join to new channel, to those who can see it
+  connectionManager.sendToChannel(meta.spaceId, targetChannelId, {
     type: 'voice_state_update',
     channelId: targetChannelId,
     userId: targetUserId,
@@ -2481,36 +2534,51 @@ function handleVoiceDisconnect(event: Record<string, unknown>, userId: string): 
   }
 
   const meta = currentRoom.room.metadata as SpaceRoomMeta;
-  if (!hasPermission(userId, meta.spaceId, PermissionBits.DISCONNECT_MEMBERS, currentRoom.roomId)) {
+  if (!hasPermission(userId, meta.spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.DISCONNECT_MEMBERS, currentRoom.roomId)) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Missing DISCONNECT_MEMBERS permission' });
     return;
   }
 
   if (refusedByRoleHierarchy(meta.spaceId, userId, targetUserId)) return;
 
-  const channelId = currentRoom.roomId;
+  disconnectFromSpaceVoice(meta.spaceId, currentRoom.roomId, targetUserId);
+}
 
-  // Remove from voice room
-  connectionManager.leaveRoom(channelId, targetUserId);
-  connectionManager.clearVoiceWs(targetUserId);
-
-  // Clear ephemeral voice status (mute/camera/etc)
-  connectionManager.clearVoiceUserStatus(targetUserId);
-
-  // Broadcast leave to all space members
-  connectionManager.sendToSpace(meta.spaceId, {
+/**
+ * Take `userId` out of the voice channel `channelId` of `spaceId`: the room,
+ * their voice socket and their ephemeral voice status (mute, camera, ...) are
+ * dropped, the space sees them leave, and their sessions are told to tear down
+ * their LiveKit connection (`voice_disconnected`).
+ */
+function disconnectFromSpaceVoice(spaceId: string, channelId: string, userId: string): void {
+  // Announced before the leave, while the channel's viewers are still worked out the same way.
+  connectionManager.sendToChannel(spaceId, channelId, {
     type: 'voice_state_update',
     channelId,
-    userId: targetUserId,
+    userId,
     action: 'leave',
   });
-
-  // Notify the disconnected user so they clean up client-side
-  connectionManager.sendToUser(targetUserId, {
+  connectionManager.leaveRoom(channelId, userId);
+  connectionManager.clearVoiceWs(userId);
+  connectionManager.clearVoiceUserStatus(userId);
+  connectionManager.sendToUser(userId, {
     type: 'voice_disconnected',
-    userId: targetUserId,
+    userId,
     channelId,
   });
+}
+
+/**
+ * Disconnect `userId` from voice when they are in a voice channel of
+ * `spaceId`, as `voice_disconnect` does (a member who was just timed out).
+ * Answers whether they were.
+ */
+export function disconnectMemberFromSpaceVoice(spaceId: string, userId: string): boolean {
+  const current = connectionManager.getUserRoom(userId);
+  if (!current || current.room.roomType !== 'space') return false;
+  if ((current.room.metadata as SpaceRoomMeta).spaceId !== spaceId) return false;
+  disconnectFromSpaceVoice(spaceId, current.roomId, userId);
+  return true;
 }
 
 /**

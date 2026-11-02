@@ -81,7 +81,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   useAuthStore.setState({ user: me });
   useAuthStore.getState().recordMyRow(HOST, meOnHost.id);
-  useUIStore.setState({ isMobile: false });
+  useUIStore.setState({ isMobile: false, activeModal: null, modalData: {} });
   useSpaceStore.setState({
     currentSpaceId: 'space-1',
     dmChannels: [dm],
@@ -109,7 +109,7 @@ describe('Message author context menu', () => {
     const { container } = renderChannel(dm.id, makeMessage(dm.id, true));
 
     rightClickAvatar(container, bob.id);
-    expect(menuLabels()).toEqual(['@Bob']);
+    expect(menuLabels()).toEqual(['@Bob', 'Report person']);
     fireEvent.click(screen.getByRole('menuitem', { name: '@Bob' }));
     await nextFrame();
 
@@ -127,12 +127,25 @@ describe('Message author context menu', () => {
     renderChannel('space-ch-1', makeMessage('space-ch-1', false));
 
     fireEvent.contextMenu(screen.getAllByText('Bobby')[0]!, { clientX: 20, clientY: 30 });
-    expect(menuLabels()).toEqual(['@Bobby', 'Poke']);
+    expect(menuLabels()).toEqual(['@Bobby', 'Poke', 'Report person']);
     fireEvent.click(screen.getByRole('menuitem', { name: '@Bobby' }));
     await nextFrame();
 
     expect(useComposerStore.getState().get('space-ch-1').draftText).toBe('<@bob-host> ');
     expect(screen.getByRole('textbox')).toHaveValue('@Bobby ');
+  });
+
+  it("reports the author by their id on the channel's origin, under the name the channel gives them", () => {
+    renderChannel('space-ch-1', makeMessage('space-ch-1', false));
+
+    fireEvent.contextMenu(screen.getAllByText('Bobby')[0]!, { clientX: 20, clientY: 30 });
+    expect(menuLabels()).toEqual(['@Bobby', 'Report person']);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Report person' }));
+
+    expect(useUIStore.getState().activeModal).toBe('report');
+    expect(useUIStore.getState().modalData).toEqual({ target: { type: 'user', id: bob.id, origin: HOST, label: 'Bobby' } });
+    expect(useComposerStore.getState().get('space-ch-1').draftText).toBe('');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('opens the message menu instead where the viewer cannot send', () => {
@@ -145,6 +158,10 @@ describe('Message author context menu', () => {
     expect(labels.length).toBeGreaterThan(0);
     expect(labels).not.toContain('@Bobby');
     expect(labels).not.toContain('Poke');
+    // An author menu of Report person alone would pass the lines above: this
+    // says it stayed shut, and that someone who cannot write can still report.
+    expect(labels).not.toContain('Report person');
+    expect(labels).toContain('Report message');
   });
 
   it("opens the message menu on the viewer's own DM message", () => {
@@ -154,6 +171,10 @@ describe('Message author context menu', () => {
     const labels = menuLabels();
     expect(labels.length).toBeGreaterThan(0);
     expect(labels).not.toContain('@Alice');
+    // Edit Message is the message menu's, and nobody reports themselves from either menu.
+    expect(labels).toContain('Edit Message');
+    expect(labels).not.toContain('Report person');
+    expect(labels).not.toContain('Report message');
   });
 
   it('opens the author menu from the keyboard on the focused name, under the name', () => {
@@ -165,13 +186,13 @@ describe('Message author context menu', () => {
     expect(name).toHaveFocus();
 
     fireEvent.keyDown(name, { key: 'F10', shiftKey: true });
-    expect(menuLabels()).toEqual(['@Bobby', 'Poke']);
+    expect(menuLabels()).toEqual(['@Bobby', 'Poke', 'Report person']);
     expect(useContextMenuStore.getState().menu?.position).toEqual({ x: 116, y: 60 });
     expect(screen.getByRole('menuitem', { name: '@Bobby' }).closest('[role="menu"]')).toHaveFocus();
 
     act(() => useContextMenuStore.getState().close());
     fireEvent.keyDown(name, { key: 'ContextMenu' });
-    expect(menuLabels()).toEqual(['@Bobby', 'Poke']);
+    expect(menuLabels()).toEqual(['@Bobby', 'Poke', 'Report person']);
 
     act(() => useContextMenuStore.getState().close());
     fireEvent.keyDown(name, { key: 'F10' });
@@ -198,5 +219,9 @@ describe('Message author context menu', () => {
     expect(labels.length).toBeGreaterThan(0);
     expect(labels).not.toContain('Poke');
     expect(labels).not.toContain('@Alice');
+    // Edit Message is the message menu's, and nobody reports themselves from either menu.
+    expect(labels).toContain('Edit Message');
+    expect(labels).not.toContain('Report person');
+    expect(labels).not.toContain('Report message');
   });
 });

@@ -27,7 +27,7 @@ export function MobileNav() {
       {/* Backdrop when sidebar is open on mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-[35] desktop:hidden"
+          className="modal-scrim fixed inset-0 z-[35] desktop:hidden"
           onClick={toggleSidebar}
         />
       )}

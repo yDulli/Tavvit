@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { WebhooksTab } from './WebhooksTab';
+import { ForumTagsTab } from './ForumTagsTab';
+import { ToggleRow } from './settingsPanels/_shared/SettingsControls';
+import { channelTakesWebhooks } from '../../utils/channelKinds';
+import { ChannelIcon } from '../ui/ChannelIcon';
+import { ChannelIconPicker } from './ChannelIconPicker';
+import React, { useState, useEffect, useId } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { SLOWMODE_SECONDS, isSlowmodeSeconds, type ChannelType, type SlowmodeSeconds } from '@backspace/shared';
 import { Modal } from '../ui/Modal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useUIStore } from '../../stores/uiStore';
@@ -9,6 +16,7 @@ import { InlineNameEditor } from '../ui/InlineNameEditor';
 import { PermissionsEditor } from '../ui/PermissionsEditor';
 import type { PermissionDef } from '../ui/OverrideEntry';
 import { describeError } from '../../i18n/errors';
+import { useFormatters } from '../../i18n/formatters';
 import { useEntityOverrides } from '../../hooks/useEntityOverrides';
 import { PrivacySetting } from './PrivacySetting';
 import { ChannelTopicEditor } from './ChannelTopicEditor';
@@ -23,6 +31,9 @@ const TEXT_CHANNEL_PERMISSIONS: PermissionDef[] = [
   { key: 'MANAGE_MESSAGES', bit: PermissionBits.MANAGE_MESSAGES },
   { key: 'ATTACH_FILES', bit: PermissionBits.ATTACH_FILES },
   { key: 'MENTION_EVERYONE', bit: PermissionBits.MENTION_EVERYONE },
+  { key: 'PIN_MESSAGES', bit: PermissionBits.PIN_MESSAGES },
+  { key: 'CREATE_THREADS', bit: PermissionBits.CREATE_THREADS },
+  { key: 'MANAGE_WEBHOOKS', bit: PermissionBits.MANAGE_WEBHOOKS },
   { key: 'READ_MESSAGE_HISTORY', bit: PermissionBits.READ_MESSAGE_HISTORY },
   { key: 'ADD_REACTIONS', bit: PermissionBits.ADD_REACTIONS },
 ];
@@ -32,13 +43,87 @@ const VOICE_CHANNEL_PERMISSIONS: PermissionDef[] = [
   { key: 'CONNECT', bit: PermissionBits.CONNECT },
   { key: 'SPEAK', bit: PermissionBits.SPEAK },
   { key: 'STREAM', bit: PermissionBits.STREAM },
+  { key: 'USE_SOUNDBOARD', bit: PermissionBits.USE_SOUNDBOARD },
   { key: 'MUTE_MEMBERS', bit: PermissionBits.MUTE_MEMBERS },
   { key: 'DEAFEN_MEMBERS', bit: PermissionBits.DEAFEN_MEMBERS },
   { key: 'MOVE_MEMBERS', bit: PermissionBits.MOVE_MEMBERS },
   { key: 'DISCONNECT_MEMBERS', bit: PermissionBits.DISCONNECT_MEMBERS },
 ];
 
-const CHANNEL_ICON_PUBLIC = 'M5.88657 21C5.57547 21 5.3399 20.7189 5.39427 20.4126L6.00001 17H2.59511C2.28449 17 2.04905 16.7198 2.10259 16.4138L2.27759 15.4138C2.31946 15.1746 2.52722 15 2.77011 15H6.35001L7.41001 9H4.00511C3.69449 9 3.45905 8.71977 3.51259 8.41381L3.68759 7.41381C3.72946 7.17456 3.93722 7 4.18011 7H7.76001L8.39677 3.41262C8.43914 3.17391 8.64664 3 8.88907 3H9.87344C10.1845 3 10.4201 3.28107 10.3657 3.58738L9.76001 7H15.76L16.3968 3.41262C16.4391 3.17391 16.6466 3 16.8891 3H17.8734C18.1845 3 18.4201 3.28107 18.3657 3.58738L17.76 7H21.1649C21.4755 7 21.711 7.28023 21.6574 7.58619L21.4824 8.58619C21.4406 8.82544 21.2328 9 20.9899 9H17.41L16.35 15H19.7549C20.0655 15 20.301 15.2802 20.2474 15.5862L20.0724 16.5862C20.0306 16.8254 19.8228 17 19.5799 17H16L15.3632 20.5874C15.3209 20.8261 15.1134 21 14.8709 21H13.8866C13.5755 21 13.3399 20.7189 13.3943 20.4126L14 17H8.00001L7.36325 20.5874C7.32088 20.8261 7.11337 21 6.87094 21H5.88657ZM9.41001 9L8.35001 15H14.35L15.41 9H9.41001Z';
+
+// ─── Slow Mode ──────────────────────────────────────────────────────────────────
+
+/**
+ * How long members wait between two messages in a text channel. The change is
+ * saved as soon as it is picked, like the name and the topic; without
+ * MANAGE_CHANNELS the setting is read-only text. Members who may manage
+ * messages or the channel are exempt, which the hint says.
+ */
+function SlowmodeSetting({ seconds, canEdit, onSave }: {
+  /** The stored interval; 0 when slow mode is off. */
+  seconds: number;
+  canEdit: boolean;
+  /** Persists the interval. Rejects on failure; the caller shows the error. */
+  onSave: (seconds: SlowmodeSeconds) => Promise<void>;
+}) {
+  const { t } = useTranslation(['spaces']);
+  const { formatInterval } = useFormatters();
+  const [saving, setSaving] = useState(false);
+  const fieldId = useId();
+  const hintId = useId();
+
+  const label = (value: number): string =>
+    value === 0 ? t('spaces:channel.settings.slowmode.off') : formatInterval(value);
+  // A value from outside the list (a host with other steps) still shows as itself.
+  const values: readonly number[] = (SLOWMODE_SECONDS as readonly number[]).includes(seconds)
+    ? SLOWMODE_SECONDS
+    : [...SLOWMODE_SECONDS, seconds].sort((a, b) => a - b);
+
+  const choose = async (raw: string) => {
+    const next = Number(raw);
+    if (!isSlowmodeSeconds(next) || next === seconds) return;
+    setSaving(true);
+    try {
+      await onSave(next);
+    } catch {
+      // The caller has shown the error; the select keeps the stored value.
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const headingClass = 'field-label';
+  if (!canEdit) {
+    return (
+      <div>
+        <span className={headingClass}>{t('spaces:channel.settings.slowmode.label')}</span>
+        <p className="text-ui text-txt-secondary">{label(seconds)}</p>
+        <p className="mt-1.5 text-meta text-txt-tertiary">{t('spaces:channel.settings.slowmode.hint')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label htmlFor={fieldId} className={headingClass}>
+        {t('spaces:channel.settings.slowmode.label')}
+      </label>
+      <select
+        id={fieldId}
+        value={String(seconds)}
+        disabled={saving}
+        aria-describedby={hintId}
+        onChange={(e) => void choose(e.target.value)}
+        className="input-standard w-full"
+      >
+        {values.map((value) => (
+          <option key={value} value={String(value)}>{label(value)}</option>
+        ))}
+      </select>
+      <p id={hintId} className="mt-1.5 text-meta text-txt-tertiary">{t('spaces:channel.settings.slowmode.hint')}</p>
+    </div>
+  );
+}
 
 // ─── Overview Tab ───────────────────────────────────────────────────────────────
 
@@ -47,6 +132,7 @@ function OverviewTab({
   channelName,
   channelType,
   channelTopic,
+  slowmodeSeconds,
   isPrivate,
   isFetching,
   isLoading,
@@ -57,11 +143,17 @@ function OverviewTab({
   onDeleteChannel,
   onRename,
   onSaveTopic,
+  channelIcon,
+  iconBusy,
+  onSaveIcon,
+  onSaveSlowmode,
+  onSetAnnouncement,
 }: {
   channelId: string;
   channelName: string;
-  channelType: string;
+  channelType: ChannelType;
   channelTopic: string | null;
+  slowmodeSeconds: number;
   isPrivate: boolean;
   isFetching: boolean;
   isLoading: boolean;
@@ -72,21 +164,28 @@ function OverviewTab({
   onDeleteChannel: () => void;
   onRename: (name: string) => Promise<void>;
   onSaveTopic: (topic: string | null) => Promise<void>;
+  channelIcon: string | null;
+  iconBusy: boolean;
+  onSaveIcon: (icon: string | null) => Promise<void>;
+  onSaveSlowmode: (seconds: SlowmodeSeconds) => Promise<void>;
+  onSetAnnouncement: (on: boolean) => void;
 }) {
   const { t } = useTranslation(['spaces', 'common']);
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+        <label className="field-label">
           {t('spaces:channel.settings.channelLabel')}
         </label>
         <InlineNameEditor
           name={channelName}
-          icon={
+          icon={isPrivate ? (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="opacity-60 flex-shrink-0">
-              <path d={isPrivate ? LOCK_ICON : CHANNEL_ICON_PUBLIC} />
+              <path d={LOCK_ICON} />
             </svg>
-          }
+          ) : (
+            <ChannelIcon type={channelType} icon={channelIcon} size={20} muted className="flex-shrink-0" />
+          )}
           canEdit={canManageChannels}
           editLabel={t('spaces:channel.settings.rename')}
           fieldLabel={t('spaces:channel.settings.nameLabel')}
@@ -96,14 +195,38 @@ function OverviewTab({
         />
       </div>
 
-      {/* Only text channels show a topic (in the channel header), so only
-          they offer to edit one, the same as the create dialog. */}
-      {channelType === 'text' && (
-        <ChannelTopicEditor key={channelId} topic={channelTopic} canEdit={canManageChannels} onSave={onSaveTopic} />
+      {/* Its own icon in place of its type's, for who may manage it. Others see it in the row above. */}
+      {canManageChannels && channelType !== 'thread' && (
+        <div>
+          <span className="field-label">{t('spaces:channel.settings.icon.label')}</span>
+          <ChannelIconPicker value={channelIcon} type={channelType} busy={iconBusy} onChange={(icon) => void onSaveIcon(icon)} />
+          <p className="mt-1.5 text-meta text-txt-tertiary">{t('spaces:channel.settings.icon.hint')}</p>
+        </div>
+      )}
+
+      {/* A voice channel shows no topic (it is in the channel header of the others), so
+          it does not offer to edit one, the same as the create dialog. */}
+      {channelType !== 'voice' && (
+        <ChannelTopicEditor key={`topic-${channelId}`} topic={channelTopic} canEdit={canManageChannels} onSave={onSaveTopic} />
+      )}
+
+      {/* A text channel and an announcement channel hold the same things, so one can become the other. */}
+      {canManageChannels && (channelType === 'text' || channelType === 'announcement') && (
+        <ToggleRow
+          label={t('spaces:channel.settings.announcement.label')}
+          description={t('spaces:channel.settings.announcement.hint')}
+          enabled={channelType === 'announcement'}
+          onChange={onSetAnnouncement}
+        />
+      )}
+
+      {/* Slow mode limits how often members post, so a voice channel has none. */}
+      {channelType !== 'voice' && (
+        <SlowmodeSetting key={`slowmode-${channelId}`} seconds={slowmodeSeconds} canEdit={canManageChannels} onSave={onSaveSlowmode} />
       )}
 
       {error && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">
           {error}
         </div>
       )}
@@ -122,11 +245,12 @@ function OverviewTab({
       )}
 
       {canManageChannels && (
-        <div className="pt-4 border-t border-border-soft">
-          <label className="block text-xs font-bold text-accent-rose uppercase mb-2">{t('common:labels.dangerZone')}</label>
+        <div className="border-t border-border-hard pt-4">
+          <div className="label-mono mb-2 text-txt-danger">{t('common:labels.dangerZone')}</div>
           <button
+            type="button"
             onClick={onDeleteChannel}
-            className="w-full px-3 py-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-accent-rose text-sm font-medium hover:bg-accent-rose/20 transition-colors"
+            className="btn-danger btn-sm"
           >
             {t('spaces:channel.settings.deleteButton')}
           </button>
@@ -149,11 +273,12 @@ export function ChannelSettingsModal() {
   const spacePermissions = useSpaceStore((s) => s.spacePermissions);
   const channelPermissions = useSpaceStore((s) => s.channelPermissions);
 
-  const [tab, setTab] = useState<'overview' | 'permissions'>('overview');
+  const [tab, setTab] = useState<'overview' | 'permissions' | 'webhooks' | 'tags'>('overview');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [iconBusy, setIconBusy] = useState(false);
 
   const isOpen = activeModal === 'channelSettings';
   const channelId = modalData?.channelId as string | undefined;
@@ -222,6 +347,18 @@ export function ChannelSettingsModal() {
     }
   };
 
+  const handleSaveIcon = async (icon: string | null): Promise<void> => {
+    setError('');
+    setIconBusy(true);
+    try {
+      await useSpaceStore.getState().updateChannel(channelId, { icon });
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setIconBusy(false);
+    }
+  };
+
   const handleSaveTopic = async (topic: string | null): Promise<void> => {
     setError('');
     try {
@@ -232,29 +369,76 @@ export function ChannelSettingsModal() {
     }
   };
 
-  const showTabs = canManageRoles;
+  const handleSaveSlowmode = async (slowmodeSeconds: SlowmodeSeconds): Promise<void> => {
+    setError('');
+    try {
+      await useSpaceStore.getState().updateChannel(channelId, { slowmodeSeconds });
+    } catch (err) {
+      setError(describeError(err));
+      throw err;
+    }
+  };
 
-  const tabClass = (target: typeof tab) =>
-    `w-full text-left px-2.5 py-1.5 rounded text-sm transition-colors ${
-      tab === target ? 'bg-interactive-selected text-txt-primary' : 'text-txt-tertiary hover:text-txt-secondary hover:bg-interactive-hover'
-    }`;
+  const handleSetAnnouncement = (on: boolean): void => {
+    setError('');
+    useSpaceStore.getState().updateChannel(channelId, { type: on ? 'announcement' : 'text' }).catch((err: unknown) => setError(describeError(err)));
+  };
+
+  // A webhook posts into a text or announcement channel, and the route checks MANAGE_WEBHOOKS with its overrides.
+  const canManageWebhooks = channelTakesWebhooks(channel?.type) && hasPermissionBit(channelId ? channelPermissions.get(channelId) : undefined, PermissionBits.MANAGE_WEBHOOKS);
+  const canManageTags = channel?.type === 'forum' && canManageChannels;
+  const showTabs = canManageRoles || canManageWebhooks || canManageTags;
 
   return (
     <>
       <Modal isOpen={isOpen} onClose={closeModal} title={t('spaces:channel.settings.title')} mobileStyle="fullscreen" maxWidth={showTabs ? 'max-w-2xl' : 'max-w-md'}>
         {showTabs ? (
-          <div className="flex gap-4 h-[min(520px,calc(70*var(--app-vh)))]">
+          <div className="flex h-full flex-col gap-4 desktop:h-[min(520px,calc(70*var(--app-vh)))] desktop:flex-row">
             {/* Tabs */}
-            <div className="w-32 flex-shrink-0 self-start z-10">
-              <div className="glass-bubble rounded-lg p-1.5 space-y-0.5">
-                <button onClick={() => setTab('overview')} className={tabClass('overview')}>
-                  {t('spaces:settings.nav.tabs.overview')}
-                </button>
-                <button onClick={() => setTab('permissions')} className={tabClass('permissions')}>
+            <nav className="z-10 flex flex-shrink-0 gap-1 desktop:w-36 desktop:flex-col desktop:gap-0.5 desktop:self-start" aria-label={t('spaces:channel.settings.title')}>
+              <button
+                type="button"
+                onClick={() => setTab('overview')}
+                data-active={tab === 'overview'}
+                aria-current={tab === 'overview' ? 'page' : undefined}
+                className="nav-item h-10 flex-1 justify-center desktop:h-8 desktop:w-full desktop:flex-none desktop:justify-start"
+              >
+                {t('spaces:settings.nav.tabs.overview')}
+              </button>
+              {canManageRoles && (
+                <button
+                  type="button"
+                  onClick={() => setTab('permissions')}
+                  data-active={tab === 'permissions'}
+                  aria-current={tab === 'permissions' ? 'page' : undefined}
+                  className="nav-item h-10 flex-1 justify-center desktop:h-8 desktop:w-full desktop:flex-none desktop:justify-start"
+                >
                   {t('spaces:permissions.title')}
                 </button>
-              </div>
-            </div>
+              )}
+              {canManageTags && (
+                <button
+                  type="button"
+                  onClick={() => setTab('tags')}
+                  data-active={tab === 'tags'}
+                  aria-current={tab === 'tags' ? 'page' : undefined}
+                  className="nav-item h-10 flex-1 justify-center desktop:h-8 desktop:w-full desktop:flex-none desktop:justify-start"
+                >
+                  {t('spaces:channel.settings.tags.title')}
+                </button>
+              )}
+              {canManageWebhooks && (
+                <button
+                  type="button"
+                  onClick={() => setTab('webhooks')}
+                  data-active={tab === 'webhooks'}
+                  aria-current={tab === 'webhooks' ? 'page' : undefined}
+                  className="nav-item h-10 flex-1 justify-center desktop:h-8 desktop:w-full desktop:flex-none desktop:justify-start"
+                >
+                  {t('spaces:channel.settings.webhooks.title')}
+                </button>
+              )}
+            </nav>
 
             {/* Content */}
             <div className="flex-1 min-w-0 overflow-y-auto scrollbar-thin">
@@ -264,6 +448,7 @@ export function ChannelSettingsModal() {
                   channelName={channel.name}
                   channelType={channel.type}
                   channelTopic={channel.topic}
+                  slowmodeSeconds={channel.slowmodeSeconds ?? 0}
                   isPrivate={isPrivate}
                   isFetching={isFetching}
                   isLoading={isLoading}
@@ -274,9 +459,16 @@ export function ChannelSettingsModal() {
                   onDeleteChannel={() => setShowDeleteConfirm(true)}
                   onRename={handleRenameChannel}
                   onSaveTopic={handleSaveTopic}
+                  channelIcon={channel.icon ?? null}
+                  iconBusy={iconBusy}
+                  onSaveIcon={handleSaveIcon}
+                  onSaveSlowmode={handleSaveSlowmode}
+                  onSetAnnouncement={handleSetAnnouncement}
                 />
               )}
-              {tab === 'permissions' && (
+              {tab === 'tags' && canManageTags && <ForumTagsTab channelId={channelId} />}
+              {tab === 'webhooks' && canManageWebhooks && <WebhooksTab channelId={channelId} isAnnouncement={channel.type === 'announcement'} />}
+              {tab === 'permissions' && canManageRoles && (
                 <PermissionsEditor
                   entityId={channelId}
                   spaceId={currentSpaceId}
@@ -297,6 +489,7 @@ export function ChannelSettingsModal() {
             channelName={channel.name}
             channelType={channel.type}
             channelTopic={channel.topic}
+            slowmodeSeconds={channel.slowmodeSeconds ?? 0}
             isPrivate={isPrivate}
             isFetching={isFetching}
             isLoading={isLoading}
@@ -307,6 +500,11 @@ export function ChannelSettingsModal() {
             onDeleteChannel={() => setShowDeleteConfirm(true)}
             onRename={handleRenameChannel}
             onSaveTopic={handleSaveTopic}
+            channelIcon={channel.icon ?? null}
+            iconBusy={iconBusy}
+            onSaveIcon={handleSaveIcon}
+            onSaveSlowmode={handleSaveSlowmode}
+            onSetAnnouncement={handleSetAnnouncement}
           />
         )}
       </Modal>

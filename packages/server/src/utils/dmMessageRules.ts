@@ -1,9 +1,12 @@
 import { and, eq } from 'drizzle-orm';
 import { MAX_MESSAGE_LENGTH } from '@backspace/shared';
+import { spoilerAttachmentIds } from '@backspace/shared/src/spoilers.js';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
 import { getDb, schema } from '../db/index.js';
 import { isDeadOneOnOne, isDmMember } from './permissions.js';
 import { dmMessageEditRefusal } from './dmSystemMessages.js';
+import { oneOnOneBlockRefusal } from './blocks.js';
+import { mayPostSticker } from './remoteMedia.js';
 
 /**
  * The rules for creating, editing and deleting a DM message, in one place.
@@ -42,6 +45,8 @@ export interface DmMessageCreateInput {
   /** Trimmed text, or null for an attachment-only message. */
   content: string | null;
   attachmentIds: string[];
+  /** Those of them the sender marked as spoilers. */
+  spoilerIds: ReadonlySet<string>;
   replyToId: string | null;
 }
 
@@ -50,6 +55,7 @@ export interface DmMessageCreateFields {
   content?: unknown;
   attachments?: unknown;
   replyToId?: unknown;
+  spoilerAttachments?: unknown;
 }
 
 function refuse<T>(status: DmMessageRefusal['status'], code: ErrorCode, details?: ErrorDetails): DmMessageCheck<T> {
@@ -77,10 +83,23 @@ function isStringArray(value: unknown): value is string[] {
 }
 
 /**
+ * Whether `userId` may post into `dmChannelId` at all: membership, the read-only rule for a
+ * 1-on-1 whose partner was deleted, a block between the two. Null when they may.
+ */
+export function dmPostRefusal(dmChannelId: string, userId: string): DmMessageRefusal | null {
+  if (!isDmMember(dmChannelId, userId)) return { status: 403, code: 'not_dm_member' };
+  if (isDeadOneOnOne(dmChannelId, userId)) return { status: 403, code: 'recipient_deleted' };
+  const blocked = oneOnOneBlockRefusal(dmChannelId, userId);
+  if (blocked) return { status: 403, code: blocked };
+  return null;
+}
+
+/**
  * May `userId` post a message with `fields` into `dmChannelId`?
  *
  * Order: membership, the read-only rule for a 1-on-1 whose partner was
- * deleted (`recipient_deleted`), the shape of the fields, content, the reply
+ * deleted (`recipient_deleted`), a block between the two (`blocked_by_you` /
+ * `interaction_unavailable`), the shape of the fields, content, the reply
  * target, then each attachment (unlinked and uploaded by the sender).
  */
 export function checkDmMessageCreate(
@@ -90,6 +109,10 @@ export function checkDmMessageCreate(
 ): DmMessageCheck<DmMessageCreateInput> {
   if (!isDmMember(dmChannelId, userId)) return refuse(403, 'not_dm_member');
   if (isDeadOneOnOne(dmChannelId, userId)) return refuse(403, 'recipient_deleted');
+  // A block between the two closes the conversation to new messages, both ways.
+  // What was said before stays readable.
+  const blocked = oneOnOneBlockRefusal(dmChannelId, userId);
+  if (blocked) return refuse(403, blocked);
 
   const { content, attachments, replyToId } = fields;
   if (content !== undefined && content !== null && typeof content !== 'string') return refuse(400, 'validation_failed');
@@ -102,6 +125,8 @@ export function checkDmMessageCreate(
   if (typeof content === 'string' && content.length > MAX_MESSAGE_LENGTH) {
     return refuse(400, 'content_too_long', { max: MAX_MESSAGE_LENGTH });
   }
+  // The other member's client fetches a sticker as soon as the message shows (utils/remoteMedia.ts).
+  if (!mayPostSticker(text, userId)) return refuse(400, 'sticker_elsewhere');
 
   const reply = replyToId || null;
   if (reply && !isDmReplyTargetInChannel(dmChannelId, reply)) return refuse(400, 'reply_target_invalid');
@@ -113,7 +138,7 @@ export function checkDmMessageCreate(
     if (att.uploaderId && att.uploaderId !== userId) return refuse(400, 'attachment_not_owned');
   }
 
-  return { ok: true, value: { content: text.length > 0 ? text : null, attachmentIds, replyToId: reply } };
+  return { ok: true, value: { content: text.length > 0 ? text : null, attachmentIds, spoilerIds: spoilerAttachmentIds(fields.spoilerAttachments, attachmentIds), replyToId: reply } };
 }
 
 /**
@@ -131,6 +156,7 @@ export function checkDmMessageEdit(
 ): DmMessageCheck<{ message: DmMessageRow; content: string }> {
   if (typeof content !== 'string' || content.trim().length === 0) return refuse(400, 'content_required');
   if (content.length > MAX_MESSAGE_LENGTH) return refuse(400, 'content_too_long', { max: MAX_MESSAGE_LENGTH });
+  if (!mayPostSticker(content.trim(), editorId)) return refuse(400, 'sticker_elsewhere');
 
   const message = getDb().select().from(schema.dmMessages).where(eq(schema.dmMessages.id, messageId)).get();
   if (!message) return refuse(404, 'message_not_found');
@@ -142,6 +168,19 @@ export function checkDmMessageEdit(
   if (isDeadOneOnOne(message.dmChannelId, editorId)) return refuse(403, 'recipient_deleted');
 
   return { ok: true, value: { message, content: content.trim() } };
+}
+
+/**
+ * May `userId` change the pin of DM message `messageId`? Any member may, on any
+ * message but a system row, while the conversation takes changes at all.
+ */
+export function checkDmMessagePin(messageId: string, userId: string): DmMessageCheck<DmMessageRow> {
+  const message = getDb().select().from(schema.dmMessages).where(eq(schema.dmMessages.id, messageId)).get();
+  if (!message) return refuse(404, 'message_not_found');
+  if (!isDmMember(message.dmChannelId, userId)) return refuse(403, 'not_dm_member');
+  if (message.type === 'system') return refuse(403, 'system_message_immutable');
+  if (isDeadOneOnOne(message.dmChannelId, userId)) return refuse(403, 'recipient_deleted');
+  return { ok: true, value: message };
 }
 
 /**

@@ -1,7 +1,7 @@
 {
   "general": {
     "title": "Allgemein",
-    "description": "Richte deine Backspace-Instanz ein. Diese Einstellungen gelten für alle Nutzer.",
+    "description": "Richte deine Tavvit-Instanz ein. Diese Einstellungen gelten für alle Nutzer.",
     "instanceName": {
       "label": "Instanzname",
       "description": "Der Name, der auf der Anmeldeseite und gegenüber föderierten Instanzen angezeigt wird.",
@@ -21,13 +21,13 @@
         },
         "global": {
           "label": "Globales Eintragen erlauben",
-          "description": "Jeder Space kann dann in seinen Einstellungen unter „Entdecken“ von Hand ins globale Backspace-Verzeichnis eingetragen werden."
+          "description": "Freigegebene Spaces können dann auch im globalen Tavvit-Verzeichnis erscheinen, wenn ihre Owner das in den Einstellungen unter „Entdecken“ wählen."
         }
       },
       "unconfigured": "Diese Instanz ist nicht so eingerichtet, dass sie ein Verzeichnis erreicht; nichts von hier kann global eingetragen werden."
     },
     "directory": {
-      "listingHint": "Das allein trägt noch keinen Space ein. Jeder Space muss in seinen Einstellungen unter „Entdecken“ selbst „{{setting}}“ einschalten.",
+      "listingHint": "Das Einschalten listet für sich allein keinen Space. Ein Space braucht einen freigegebenen Eintrag und muss in seinen Einstellungen unter „Entdecken“ „{{setting}}“ einschalten.",
       "showMeWhere": "Zeig mir, wo",
       "saveAndShowMeWhere": "Speichern und zeigen, wo",
       "listedCount_one": "{{count}} Space eingetragen",
@@ -55,11 +55,6 @@
       "toggleDescription": "Leute hier sehen im Äußeren Space Spaces von anderen Instanzen. Ihre Browser laden Icon und Banner dieser Spaces von den Instanzen, denen sie gehören.",
       "unavailable": "Diese Instanz ist nicht so eingerichtet, dass sie ein Verzeichnis erreicht; es gibt also nichts anzuzeigen."
     },
-    "supportCard": {
-      "label": "Backspace-Seite",
-      "toggleLabel": "Karte zur Unterstützung des Projekts anzeigen",
-      "toggleDescription": "Zeigt auf der Backspace-Seite eine Karte, die auf die Ko-fi-Seite des Projekts verlinkt. Wenn ausgeschaltet, wird nur diese Karte ausgeblendet."
-    },
     "gif": {
       "label": "GIF-Suche",
       "description": "Aktiviere die GIF-Suche über Klipy. Einen kostenlosen API-Schlüssel gibt es im Klipy-Entwicklerportal.",
@@ -68,6 +63,21 @@
       "enabled": "Aktiviert",
       "notConfigured": "Nicht eingerichtet",
       "clearKey": "Schlüssel entfernen"
+    },
+    "accent": {
+      "label": "Akzentfarbe",
+      "description": "Die Farbe von Buttons und Hervorhebungen für alle auf diesem Server.",
+      "custom": "Eigene",
+      "useDefault": "Standard verwenden",
+      "preview": "Beispiel",
+      "invalid": "Gib eine Farbe wie #7466e8 ein.",
+      "tooLight": "Diese Farbe ist zu hell: weißer Text auf einem Button wäre schwer lesbar.",
+      "tooDark": "Diese Farbe ist zu dunkel: sie ginge in den dunklen Flächen unter."
+    },
+    "emoji": {
+      "title": "Emoji",
+      "label": "Alle dürfen Emoji hinzufügen",
+      "description": "Aus: Nur Administratoren fügen etwas zur Bibliothek hinzu. Benutzen dürfen sie alle."
     }
   },
   "registration": {
@@ -257,6 +267,13 @@
       "saved": "Upload-Limit auf {{limit}} gesetzt",
       "saveFailed": "Upload-Limit konnte nicht geändert werden"
     },
+    "accountLimits": {
+      "label": "Limits pro Konto",
+      "description": "Damit kein einzelnes Konto die Platte füllen kann. Admins haben kein Limit, 0 bedeutet keins, und was ein Konto schon hat, bleibt, wenn du ein Limit senkst. Einzelne Konten können auf ihrer Seite ein eigenes Limit bekommen.",
+      "storage": "Dateien pro Konto (GB)",
+      "spaces": "Spaces pro Konto",
+      "saved": "Limits gespeichert"
+    },
     "cleanup": {
       "label": "Aufräumen",
       "nothingFound": "Keine verwaisten Dateien, veralteten Uploads oder verwaisten Einträge gefunden.",
@@ -341,57 +358,6 @@
       "description": "Einige Bitraten liegen über deinem Maximum von {{max}}. Streams mit diesen Kombinationen werden auf deine Obergrenze heruntergeregelt."
     }
   },
-  "updates": {
-    "title": "Updates",
-    "badge": {
-      "settingsAriaLabel": "Einstellungen, Instanz-Update verfügbar",
-      "toast": "Backspace {{version}} ist für diese Instanz verfügbar",
-      "toastAction": "Ansehen"
-    },
-    "description": "Was auf dieser Instanz läuft und wie es weitergeht.",
-    "loading": "Update-Status wird geladen…",
-    "loadFailed": "Der Update-Status konnte nicht geladen werden.",
-    "copyFailed": "Kopieren nicht möglich. Markiere den Befehl und kopiere ihn von Hand.",
-    "running": {
-      "label": "Läuft",
-      "commit": "Commit {{commit}} · ",
-      "channel": {
-        "prebuilt": "vorgefertigtes Image",
-        "source": "aus dem Quellcode gebaut",
-        "unknown": "Installationsart nicht erfasst"
-      }
-    },
-    "available": {
-      "label": "Verfügbar",
-      "version": "Backspace {{version}} ist verfügbar",
-      "released": "Veröffentlicht am {{date}} · ",
-      "releaseNotes": "Versionshinweise",
-      "fromInstallDir": "Aus deinem Installationsverzeichnis:",
-      "scriptDescription": "Erstellt einen Datenbank-Snapshot, holt das neue Image und startet nur den Backspace-Container neu. Startet die neue Version nicht fehlerfrei oder läuft danach weiter der alte Code, wird die Version wiederhergestellt, die du jetzt verwendest.",
-      "noScript": "Ich habe kein update.sh",
-      "manualIntro": "update.sh ist ab 1.0.5 dabei. In einem Git-Checkout holt <code>git pull</code> es herein. Andernfalls führe die Schritte von Hand aus, nachdem du mit <code>./backup.sh</code> einen Snapshot erstellt hast.",
-      "prebuiltInstall": "Installation mit vorgefertigtem Image:",
-      "sourceInstall": "Installation aus dem Quellcode:",
-      "manualWarning": "Nenne den Dienst <code>backspace</code> ausdrücklich und übergib nicht <code>--remove-orphans</code>. Compose schlägt das vor, wenn in diesem Projekt weitere Container laufen, und würde sie löschen."
-    },
-    "upToDate": "Du bist auf der neuesten Version.",
-    "disabled": {
-      "title": "Update-Prüfungen sind ausgeschaltet",
-      "description": "Diese Instanz kontaktiert GitHub nicht. Setze <code>BACKSPACE_UPDATE_CHECK=true</code> in deiner <code>.env</code>, um die Abfrage zu erlauben, oder sieh selbst auf der Release-Seite nach."
-    },
-    "rateLimited": {
-      "title": "GitHub hat die Abfrage gedrosselt",
-      "description": "Das sagt nichts darüber aus, ob ein Update existiert. Versuche es später noch einmal."
-    },
-    "unreachable": {
-      "title": "Updates konnten nicht geprüft werden",
-      "description": "GitHub war nicht erreichbar, das sagt also nichts darüber aus, ob ein Update existiert. Deine Instanz ist davon nicht betroffen."
-    },
-    "lastChecked": "Zuletzt geprüft {{when}}",
-    "noLookups": "Es werden keine Abfragen gemacht",
-    "checkAgain": "Erneut prüfen",
-    "checking": "Wird geprüft…"
-  },
   "users": {
     "title": "Nutzer",
     "description": "Nutzerkonten auf dieser Instanz ansehen und verwalten.",
@@ -449,20 +415,560 @@
     "deleteDialog": {
       "title": "Nutzer löschen",
       "description": "<strong>{{username}}</strong> endgültig löschen? Die Person wird aus allen Spaces, Direktnachrichten und Freundeslisten entfernt. Das lässt sich nicht rückgängig machen.",
-      "confirm": "Nutzer löschen"
+      "confirm": "Nutzer löschen",
+      "reason": "Warum (für das Audit-Log)",
+      "password": "Dein Passwort, zur Bestätigung, dass du es bist"
     }
   },
-  "mobile": {
-    "title": "Instanz",
+  "platform": {
+    "decision": {
+      "noteRequired": "Begründung (Pflicht, der Owner liest sie)",
+      "noteOptional": "Begründung (optional, der Owner liest sie)",
+      "notePlaceholder": "Was der Owner zu dieser Entscheidung wissen sollte",
+      "counter": "{{length}}/{{max}}"
+    },
+    "reviews": {
+      "title": "Prüfungen",
+      "description": "Offene Anträge, die ältesten zuerst. Öffne einen, um ihn vollständig zu lesen, die Vorschau und den Verlauf zu sehen und mit Begründung zu entscheiden.",
+      "verification": "Verifizierungsanträge · {{n}}",
+      "discovery": "Eintragsanträge · {{n}}",
+      "noVerification": "Kein Verifizierungsantrag wartet.",
+      "noDiscovery": "Kein Eintragsantrag wartet."
+    },
+    "spaces": {
+      "title": "Spaces",
+      "description": "Alle Spaces dieser Instanz. Öffne einen für Prüfungen, Abzeichen und Verlauf.",
+      "detailTitle": "Space",
+      "searchPlaceholder": "Nach Name oder ID suchen…",
+      "filterLabel": "Anzeigen",
+      "filters": {
+        "all": "Alle Spaces",
+        "listed": "Unter „Entdecken“ gelistet",
+        "verified": "Verifiziert",
+        "open_review": "Offene Prüfung"
+      },
+      "empty": "Kein Space passt.",
+      "page": "Seite {{page}} von {{total}}",
+      "members_one": "{{count}} Mitglied",
+      "members_other": "{{count}} Mitglieder",
+      "visibility": {
+        "public": "Öffentlich",
+        "request": "Beitritt auf Anfrage",
+        "private": "Privat"
+      },
+      "created": "Erstellt am {{date}}",
+      "directoryOptIn": "Für das Verzeichnis angemeldet",
+      "ownedBy": "Gehört {{name}} (@{{username}})",
+      "ownerGone": "Owner-Konto nicht mehr vorhanden"
+    },
+    "requestedBy": "Gesendet von {{name}} am {{date}}",
+    "verification": {
+      "title": "Verifizierung",
+      "name": "Name",
+      "description": "Beschreibung",
+      "category": "Kategorie",
+      "website": "Webseite",
+      "profiles": "Öffentliche Profile",
+      "reason": "Begründung",
+      "proof": "Nachweis",
+      "requested": "Gesendet",
+      "none": "Es wurde keine Verifizierung beantragt.",
+      "history": "Verlauf der Verifizierung"
+    },
+    "discovery": {
+      "title": "Eintrag unter „Entdecken“",
+      "category": "Kategorie",
+      "requested": "Gesendet",
+      "lastNote": "Letzter Hinweis",
+      "none": "Es wurde kein Eintrag beantragt.",
+      "history": "Verlauf des Eintrags"
+    },
+    "decisions": {
+      "verification": {
+        "approve": {
+          "button": "Verifizieren",
+          "title": "Diesen Space verifizieren?",
+          "description": "Der Space trägt das Häkchen überall, wo er gezeigt wird, bis die Verifizierung entzogen wird.",
+          "confirm": "Verifizieren"
+        },
+        "request_info": {
+          "button": "Mehr Angaben erbitten",
+          "title": "Mehr Angaben erbitten?",
+          "description": "Der Antrag geht mit deinem Hinweis an den Owner zurück. Er kommt wieder in die Warteschlange, wenn der Owner ihn erneut sendet.",
+          "confirm": "Erbitten"
+        },
+        "reject": {
+          "button": "Ablehnen",
+          "title": "Diesen Antrag ablehnen?",
+          "description": "Der Space wird nicht verifiziert. Der Owner liest deine Begründung und kann einen neuen Antrag senden.",
+          "confirm": "Ablehnen"
+        },
+        "revoke": {
+          "button": "Entziehen",
+          "title": "Verifizierung entziehen?",
+          "description": "Das Häkchen verschwindet sofort. Der Owner liest deine Begründung.",
+          "confirm": "Entziehen"
+        }
+      },
+      "discovery": {
+        "approve": {
+          "button": "Eintrag freigeben",
+          "title": "Diesen Space unter „Entdecken“ listen?",
+          "description": "Der Space erscheint unter „Entdecken“ so, wie die Vorschau ihn zeigt. Ändert sich Name, Beschreibung oder ein Bild, geht er wieder in die Prüfung.",
+          "confirm": "Freigeben"
+        },
+        "request_changes": {
+          "button": "Änderungen erbitten",
+          "title": "Änderungen erbitten?",
+          "description": "Der Antrag geht mit deinem Hinweis an den Owner zurück. Er kommt wieder in die Warteschlange, wenn der Owner ihn erneut sendet.",
+          "confirm": "Erbitten"
+        },
+        "reject": {
+          "button": "Ablehnen",
+          "title": "Diesen Eintrag ablehnen?",
+          "description": "Der Space bleibt aus „Entdecken“ heraus. Der Owner liest deine Begründung und kann einen neuen Antrag senden.",
+          "confirm": "Ablehnen"
+        },
+        "withdraw": {
+          "button": "Herausnehmen",
+          "title": "Diesen Eintrag herausnehmen?",
+          "description": "Der Space verschwindet sofort aus „Entdecken“, oder sein Antrag verlässt die Warteschlange. Der Owner liest deine Begründung.",
+          "confirm": "Herausnehmen"
+        }
+      }
+    },
+    "badges": {
+      "spaceTitle": "Abzeichen",
+      "spaceHint": "Abzeichen, die du diesem Space gibst. „Verifiziert“ ist nicht dabei: Es folgt der Verifizierung.",
+      "userTitle": "Abzeichen",
+      "userHint": "Abzeichen, die du dieser Person gibst. „Team“ ist nicht dabei: Es folgt der Admin-Rolle."
+    },
+    "audit": {
+      "title": "Protokoll",
+      "description": "Alles, was die Admins hier getan haben: Sperren, Prüfentscheidungen, Abzeichen, Rollen, Einladungen und Einstellungen.",
+      "filterLabel": "Anzeigen",
+      "filters": {
+        "all": "Alles",
+        "user": "Konten",
+        "space": "Spaces",
+        "instance": "Instanz"
+      },
+      "more": "Ältere Einträge zeigen",
+      "empty": "Noch nichts protokolliert.",
+      "aboutSpace": "Protokoll zu diesem Space",
+      "aboutUser": "Protokoll zu diesem Konto",
+      "by": "von {{name}}",
+      "actions": {
+        "user_suspend": "Konto gesperrt",
+        "user_unsuspend": "Sperre aufgehoben",
+        "user_role": "Admin-Rolle geändert",
+        "user_password_reset": "Passwort zurückgesetzt",
+        "user_delete": "Konto gelöscht",
+        "user_badges": "Abzeichen eines Kontos geändert",
+        "space_badges": "Abzeichen eines Space geändert",
+        "verification_approve": "Space verifiziert",
+        "verification_reject": "Verifizierungsantrag abgelehnt",
+        "verification_request_info": "Mehr Angaben zur Verifizierung erbeten",
+        "verification_revoke": "Verifizierung entzogen",
+        "discovery_approve": "Eintrag freigegeben",
+        "discovery_reject": "Eintrag abgelehnt",
+        "discovery_request_changes": "Änderungen am Eintrag erbeten",
+        "discovery_withdraw": "Eintrag herausgenommen",
+        "settings_update": "Instanz-Einstellungen geändert",
+        "invite_create": "Einladung erstellt",
+        "invite_update": "Einladung geändert",
+        "invite_revoke": "Einladung widerrufen",
+        "invite_reinstate": "Einladung wiederhergestellt",
+        "invite_delete": "Einladung gelöscht",
+        "storage_cleanup": "Speicher aufgeräumt",
+        "unknown": "Eine Aktion, die diese Version nicht kennt",
+        "legal_operator_update": "Betreiberangaben geändert",
+        "legal_publish": "Rechtliches Dokument veröffentlicht",
+        "report_decide": "Über eine Meldung entschieden",
+        "announcement_create": "Ankündigung gesendet",
+        "announcement_end": "Ankündigung beendet",
+        "user_note_add": "Notiz angelegt",
+        "user_note_delete": "Notiz gelöscht",
+        "user_warn": "Konto verwarnt",
+        "user_sessions_end": "Konto abgemeldet",
+        "user_storage_limit": "Dateilimit eines Kontos geändert",
+        "signup_rule_add": "Registrierungsregel angelegt",
+        "signup_rule_remove": "Registrierungsregel entfernt",
+        "signup_challenge_update": "Schutz vor automatischen Anmeldungen geändert",
+        "bots_update": "Geändert, ob Bots erlaubt sind",
+        "bot_delete": "Einen Bot gelöscht",
+        "starter_spaces_update": "Start-Spaces geändert",
+        "backup_create": "Backup erstellt",
+        "accounts_export": "Konten exportiert",
+        "audit_export": "Audit-Log exportiert",
+        "peer_trust": "Vertrauen zu einer anderen Instanz geändert",
+        "space_vanity_revoke": "Einladungsadresse entzogen"
+      },
+      "details": {
+        "until": "Bis {{date}}",
+        "untilLifted": "Bis zur Aufhebung",
+        "storageOwn": "Eigenes Limit: {{limit}}",
+        "storageNone": "Kein Limit",
+        "storageInstance": "Limit der Instanz",
+        "madeAdmin": "Zum Admin gemacht",
+        "removedAdmin": "Admin-Rolle entzogen",
+        "badgesAdded": "Hinzugefügt: {{badges}}",
+        "badgesRemoved": "Entfernt: {{badges}}",
+        "fields": "Geändert: {{fields}}",
+        "cleanup_one": "{{count}} Datei entfernt ({{size}})",
+        "cleanup_other": "{{count}} Dateien entfernt ({{size}})",
+        "sessions": "Sitzungen: {{n}}",
+        "rows": "Zeilen: {{n}}",
+        "peer": {
+          "initiated": "Verbindung angefragt",
+          "approved": "Bestätigt",
+          "denied": "Abgelehnt",
+          "revoked": "Vertrauen entzogen",
+          "reset": "Zurückgesetzt",
+          "removed": "Eintrag gelöscht",
+          "rotated": "Neues gemeinsames Geheimnis"
+        }
+      }
+    },
+    "users": {
+      "detailTitle": "Konto",
+      "joined": "Beigetreten",
+      "memberships": "Spaces",
+      "friends": "Freunde",
+      "messages": "Nachrichten",
+      "ownedSpaces": "Eigene Spaces",
+      "statusFilter": "Status",
+      "allStatuses": "Alle Konten",
+      "suspendedOnly": "Gesperrt",
+      "manage": "Verwalten"
+    },
+    "suspension": {
+      "chip": "Gesperrt",
+      "title": "Sperre",
+      "activeUntilLifted": "Gesperrt seit {{date}}, bis ein Admin die Sperre aufhebt.",
+      "activeUntil": "Gesperrt seit {{since}}, bis {{until}}.",
+      "lift": "Sperre aufheben",
+      "hint": "Eine Sperre hält die Person fern: keine Anmeldung, keine Nachrichten, keine Anrufe. Vom Konto wird nichts gelöscht, und die Sperre endet von selbst zum gewählten Zeitpunkt.",
+      "duration": "Dauer",
+      "durations": {
+        "h1": "1 Stunde",
+        "h24": "24 Stunden",
+        "h72": "3 Tage",
+        "h168": "7 Tage",
+        "h720": "30 Tage",
+        "lifted": "Bis zur Aufhebung"
+      },
+      "reason": "Grund (Pflicht)",
+      "reasonPlaceholder": "Was die Person getan hat, in einem Satz, den sie versteht",
+      "reasonShown": "Die Person liest diesen Grund, wenn sie sich anmelden will.",
+      "suspend": "Sperren",
+      "deleted": "Ein gelöschtes Konto kann nicht gesperrt werden.",
+      "self": "Du kannst dein eigenes Konto nicht sperren.",
+      "adminFirst": "Entziehe zuerst die Admin-Rolle, bevor du dieses Konto sperrst.",
+      "confirmTitle": "Dieses Konto sperren?",
+      "confirmDescription": "@{{username}} wird überall abgemeldet und kann sich nicht anmelden. Dauer: {{duration}}.",
+      "liftTitle": "Sperre aufheben?",
+      "liftDescription": "@{{username}} kann sich sofort wieder anmelden.",
+      "liftNoteLabel": "Grund (optional, steht im Protokoll)",
+      "liftNotePlaceholder": "Warum die Sperre jetzt endet"
+    },
+    "vanity": {
+      "title": "Eigene Einladungsadresse",
+      "hint": "Beim Entziehen erfährt der Besitzer den Grund, und niemand kann diese Adresse wieder nehmen. Die anderen Links bleiben aktiv.",
+      "revoke": "Entziehen",
+      "confirmTitle": "Diese Adresse entziehen?",
+      "confirmBody": "Der Besitzer liest den Grund, den du hier angibst."
+    }
+  },
+  "email": {
+    "title": "E-Mail",
+    "intro": "Mails, die dieser Server zu Konten verschickt. „Angenommen“ heißt, der Anbieter hat sie übernommen, nicht, dass sie angekommen sind.",
+    "off": {
+      "title": "E-Mail ist aus",
+      "body": "Dieser Server versendet keine Mails. Konten haben deshalb keine Adresse, und ein vergessenes Passwort kann nur ein Administrator zurücksetzen. Zum Einschalten setzt du EMAIL_TRANSPORT in der .env; wie, steht in docs/systems/email.md."
+    },
+    "warnings": {
+      "title": "Braucht Aufmerksamkeit",
+      "blocked": "Der Anbieter weist diesen Server ab, wegen des Schlüssels oder der Domain. Mails warten, und „Passwort vergessen“ meldet, dass es gerade nicht geht.",
+      "held": "Das Tages- oder Monatslimit ist erreicht. Mails warten, bis es neu beginnt.",
+      "heldUntil": "Ein Limit des Anbieters ist erreicht. Mails warten bis {{date}}.",
+      "day": "Über 80 % des heutigen Limits sind verbraucht. Passwort-Resets gehen bis zur letzten Mail weiter, andere Mails stoppen früher.",
+      "month": "Über 90 % des Monatslimits sind verbraucht.",
+      "bounces": "Über 4 % der Mails der letzten 30 Tage kamen zurück. Ab hier kann ein Anbieter das ganze Konto pausieren, auch Passwort-Resets.",
+      "complaints": "Über 0,08 % der Mails der letzten 30 Tage wurden als Spam gemeldet. Ab hier kann ein Anbieter das ganze Konto pausieren, auch Passwort-Resets.",
+      "noWebhook": "RESEND_WEBHOOK_SECRET ist nicht gesetzt. Dieser Server erfährt deshalb nichts von Rückläufern und schickt weiter an Adressen, die nicht funktionieren."
+    },
+    "rows": {
+      "title": "Versand",
+      "transport": "Transportweg",
+      "from": "Absender",
+      "today": "Heute angenommen",
+      "month": "Diesen Monat angenommen",
+      "queued": "Wartend",
+      "failed": "Heute fehlgeschlagen",
+      "bounced": "Heute zurückgekommen",
+      "complained": "Heute als Spam gemeldet",
+      "lastError": "Letzter Fehler"
+    },
+    "required": {
+      "title": "Neue Konten",
+      "label": "Bestätigte Adresse verlangen",
+      "description": "Ab jetzt muss ein neues Konto eine Adresse angeben. Bis sie bestätigt ist, kann es Spaces nutzen, in die es eingeladen wurde, und mit Freunden schreiben, aber keine Spaces erstellen und keine Fremden ansprechen. Bestehende Konten betrifft das nicht."
+    },
+    "test": {
+      "title": "Testversand",
+      "description": "Schickt eine Mail, um zu prüfen, ob es funktioniert. Beim kostenlosen Tarif eines Anbieters zählt sie zum Limit.",
+      "address": "Senden an",
+      "submit": "Testmail senden",
+      "queued": "Testmail ist unterwegs"
+    }
+  },
+  "console": {
+    "title": "Admin-Konsole",
+    "lead": "{{instance}} · Version {{version}}",
+    "export": "Als CSV exportieren",
+    "groups": {
+      "overview": "Überblick",
+      "moderation": "Moderation",
+      "community": "Community",
+      "instance": "Instanz"
+    },
     "sections": {
+      "overview": "Überblick",
+      "reviews": "Prüfungen",
+      "reports": "Meldungen",
+      "users": "Nutzer",
+      "spaces": "Spaces",
+      "audit": "Audit-Log",
+      "announcements": "Ankündigungen",
+      "signup": "Registrierungsregeln",
+      "starter": "Start-Spaces",
+      "bots": "Bots",
       "general": "Allgemein",
       "registration": "Registrierung",
+      "email": "E-Mail",
+      "legal": "Rechtliches",
       "federation": "Föderation",
       "streaming": "Streaming",
       "storage": "Speicher",
-      "updates": "Updates",
-      "users": "Nutzer",
-      "telemetry": "Hallo sagen"
+      "system": "System"
+    },
+    "search": {
+      "label": "Konten und Spaces suchen",
+      "placeholder": "Konten und Spaces suchen…",
+      "accounts": "Konten",
+      "spaces": "Spaces",
+      "nothing": "Nichts gefunden für „{{query}}“."
+    },
+    "dashboard": {
+      "attention": "Wartet auf dich",
+      "caughtUp": "Gerade wartet nichts auf dich.",
+      "reports": "Meldungen warten auf eine Entscheidung",
+      "reviews": "Spaces warten auf eine Prüfung",
+      "alerts": "Probleme mit dem Server",
+      "today": "Heute",
+      "trends": "Die letzten 30 Tage",
+      "stats": {
+        "accounts": "Konten",
+        "online": "Jetzt online",
+        "active": "Heute aktiv",
+        "messages": "Nachrichten heute"
+      },
+      "newThisWeek": "{{n}} neu in 7 Tagen",
+      "onlineRightNow": "Gerade verbunden",
+      "delta": {
+        "up": "{{percent}} mehr als die 7 Tage davor",
+        "down": "{{percent}} weniger als die 7 Tage davor",
+        "same": "So viele wie die 7 Tage davor",
+        "new": "Keine in den 7 Tagen davor"
+      },
+      "charts": {
+        "messages": "Nachrichten pro Tag",
+        "active": "Aktive Konten pro Tag",
+        "signups": "Neue Konten pro Tag",
+        "mail": "Versendete Mails pro Tag"
+      },
+      "total30": "{{total}} in 30 Tagen",
+      "showTable": "Als Tabelle zeigen",
+      "showChart": "Als Diagramm zeigen",
+      "day": "Tag",
+      "value": "Anzahl",
+      "security": "Wie sicher die Konten sind",
+      "twoFactor": "Zwei-Faktor-Anmeldung",
+      "confirmedEmail": "Bestätigte Adresse",
+      "ofAccounts": "{{n}} von {{total}} Konten",
+      "standing": "Der aktuelle Stand",
+      "spacesTotal": "Spaces",
+      "spacesListed": "In Entdecken gelistet",
+      "spacesVerified": "Verifizierte Spaces",
+      "suspended": "Gesperrte Konten",
+      "admins": "Administratoren",
+      "toSystem": "Zum System"
+    },
+    "announcements": {
+      "description": "Eine Nachricht an alle Angemeldeten, als Banner über der App. Sie geht sofort raus, und jeder kann sie auf seinem Gerät ausblenden.",
+      "new": "Neue Ankündigung",
+      "message": "Nachricht",
+      "placeholder": "Heute Abend um 22:00 Uhr Wartung, etwa zehn Minuten.",
+      "tone": "Art",
+      "tones": {
+        "info": "Information",
+        "warning": "Warnung"
+      },
+      "duration": "Läuft",
+      "onStatusPage": "Auch auf der öffentlichen Statusseite",
+      "untilEnded": "Bis ich sie beende",
+      "send": "An alle senden",
+      "preview": "So sieht es aus",
+      "running": "Läuft gerade",
+      "noneRunning": "Gerade läuft nichts.",
+      "sinceOpen": "Seit {{date}}",
+      "sinceUntil": "Seit {{date}}, bis {{until}}",
+      "end": "Beenden",
+      "past": "Frühere"
+    },
+    "signup": {
+      "description": "Wer sich hier nicht registrieren kann. Das wird geprüft, wenn ein Konto entsteht und wenn eine Adresse gesetzt wird. Bestehende Konten behalten Namen und Adresse.",
+      "challenge": "Automatische Anmeldungen",
+      "challengeHint": "Bevor ein Konto entsteht, löst der Browser eine kleine Aufgabe. Das hält einfache Skripte ab, nichts verlässt diesen Server, und Menschen merken wenig davon. Für alle, die den Preis trotzdem zahlen, sind die Listen unten und bestätigte Adressen da.",
+      "challengeLevels": {
+        "off": "Aus",
+        "normal": "Normal",
+        "high": "Hoch"
+      },
+      "domains": "Gesperrte Mail-Domains",
+      "domainsHint": "Adressen dieser Domain und aller darunter werden abgelehnt.",
+      "domainPlaceholder": "example.com",
+      "usernames": "Reservierte Benutzernamen",
+      "usernamesHint": "Mit diesen Namen kann sich niemand registrieren, egal in welcher Groß- und Kleinschreibung.",
+      "usernamePlaceholder": "support",
+      "add": "Hinzufügen",
+      "addUsual": "Die üblichen Namen hinzufügen (admin, support, staff…)",
+      "empty": "Noch nichts eingetragen.",
+      "remove": "{{value}} entfernen"
+    },
+    "starter": {
+      "description": "Öffentliche Spaces, in denen jedes neue Konto dieses Servers startet, damit niemand zuerst eine leere App sieht. Das gilt für Konten ab jetzt und verschiebt niemanden, der schon da ist.",
+      "emptyTitle": "Keine Start-Spaces",
+      "emptyBody": "Neue Konten starten ohne Spaces.",
+      "add": "Öffentlichen Space hinzufügen",
+      "searchPlaceholder": "Öffentliche Spaces suchen…",
+      "noResults": "Kein öffentlicher Space mit diesem Namen.",
+      "full": "Das reicht: höchstens {{max}}.",
+      "remove": "Entfernen",
+      "notPublic": "Nicht mehr öffentlich: Neue Konten überspringen ihn, bis er es wieder ist."
+    },
+    "system": {
+      "description": "Wie es dem Server selbst geht, und ein Backup, wenn du vor einer großen Änderung eines möchtest.",
+      "version": "Version",
+      "uptime": "Läuft seit",
+      "memory": "Belegter Arbeitsspeicher",
+      "database": "Datenbank",
+      "socketPeople": "Verbundene Personen: {{n}}",
+      "sockets": "Offene Verbindungen",
+      "notYet": "Noch nicht",
+      "milliseconds": "{{n}} ms",
+      "eventLoopWorst": "{{n}} ms im schlimmsten Fall",
+      "eventLoop": "Verzögerung unter Last",
+      "disk": "Festplatte",
+      "diskFree": "{{free}} von {{total}} frei",
+      "services": "Dienste",
+      "mail": "E-Mail",
+      "mailStates": {
+        "off": "Aus",
+        "ok": "Läuft",
+        "held": "Zurückgehalten",
+        "blocked": "Blockiert"
+      },
+      "twoFactor": "Zwei-Faktor-Anmeldung",
+      "voice": "Sprache und Video",
+      "federation": "Föderation",
+      "on": "An",
+      "off": "Aus",
+      "backups": "Backups",
+      "backUpNow": "Jetzt sichern",
+      "backupDone": "Das Backup ist fertig.",
+      "backupsEvery": "Eines entsteht von selbst alle {{interval}}.",
+      "backupsManual": "Von selbst entsteht keines.",
+      "restoreHint": "Eines wiederherstellen geht auf dem Server, mit restore.sh.",
+      "noBackups": "Noch keine Backups.",
+      "reasons": {
+        "pre-migration": "Vor einem Update",
+        "scheduled": "Nach Plan",
+        "manual": "Von Hand",
+        "console": "Aus dieser Konsole"
+      },
+      "alerts": {
+        "title": "Probleme",
+        "since": "Seit {{date}}",
+        "disk_high": "Die Platte ist zu {{detail}} % voll. Ist sie ganz voll, stoppen Uploads, und die Datenbank kann beschädigt werden.",
+        "backup_failed": "Das letzte geplante Backup ist fehlgeschlagen: {{detail}}",
+        "backup_old": "Das neueste Backup ist {{detail}} Stunden alt.",
+        "offsite_failed": "Die Kopie auf einen anderen Rechner ist fehlgeschlagen: {{detail}}",
+        "restart_loop": "Der Server ist innerhalb einer Viertelstunde {{detail}}-mal gestartet. Schau in sein Log."
+      },
+      "translation": "Nachrichten übersetzen"
+    },
+    "account": {
+      "tabs": {
+        "overview": "Überblick",
+        "moderation": "Moderation",
+        "access": "Anmeldungen",
+        "notes": "Notizen",
+        "log": "Protokoll"
+      },
+      "storage": {
+        "title": "Dateien",
+        "used": "{{used}} von {{limit}} belegt",
+        "usedNoLimit": "{{used}} belegt, kein Limit",
+        "ownLimit": "Eigenes Limit in GB",
+        "instanceDefault": "Limit der Instanz",
+        "reset": "Zurück zum Limit der Instanz",
+        "hint": "0 bedeutet kein Limit. Was das Konto schon hat, bleibt, wenn du es senkst."
+      },
+      "sessions": "Wo dieses Konto angemeldet ist",
+      "noSessions": "Nirgends angemeldet.",
+      "unknownDevice": "Unbekanntes Gerät",
+      "lastActive": "Zuletzt aktiv {{date}}",
+      "end": "Abmelden",
+      "endAll": "Überall abmelden",
+      "endAllTitle": "Dieses Konto überall abmelden?",
+      "endAllBody": "Jedes Gerät muss sich neu anmelden. Die Person sieht das in ihrer Sicherheitsaktivität. Um sie fernzuhalten, sperre das Konto.",
+      "security": "Sicherheitsaktivität",
+      "noEvents": "Nichts aufgezeichnet.",
+      "notes": "Notizen für die Administratoren",
+      "notePlaceholder": "Was die anderen Administratoren wissen sollten.",
+      "notesHint": "Hier sehen sie nur Administratoren, und die Person kann sie in ihrer Datenauskunft lesen.",
+      "addNote": "Notiz anlegen",
+      "deleteNote": "Notiz löschen",
+      "warning": "Verwarnung",
+      "warningHint": "Ein Hinweis des Betreibers mit deiner Begründung und dem Weg zum Widerspruch. Am Konto ändert sie nichts.",
+      "ground": "Grundlage",
+      "grounds": {
+        "terms": "Die Nutzungsbedingungen",
+        "illegal": "Das Gesetz"
+      },
+      "warningReason": "Begründung, die Person sieht sie",
+      "warn": "Verwarnung senden",
+      "warnTitle": "Diese Verwarnung senden?",
+      "warnBody": "Die Person sieht sie in der App mit deiner Begründung.",
+      "warningSent": "Die Verwarnung wurde gesendet."
     }
+  },
+  "bots": {
+    "title": "Bots",
+    "switchTitle": "Bots auf dieser Instanz",
+    "switchDescription": "Standardmäßig aus. Ausgeschaltet stoppt jeder Bot sofort, und es lassen sich keine neuen anlegen.",
+    "switchLabel": "Bots erlauben",
+    "listTitle": "Wer was betreibt",
+    "empty": "Noch keine Bots.",
+    "owner": "Betrieben von {{name}}",
+    "neverUsed": "noch nie benutzt",
+    "lastUsed": "zuletzt benutzt: {{time}}",
+    "remove": "Bot löschen",
+    "removeTitle": "Diesen Bot löschen?",
+    "removeBody": "{{name}} verlässt jeden Space, und sein Token funktioniert nicht mehr. Was er geschrieben hat, bleibt.",
+    "spaces_one": "in {{formatted}} Space",
+    "spaces_other": "in {{formatted}} Spaces"
   }
 }

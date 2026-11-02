@@ -1,96 +1,109 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { BAR_BUTTON, BAR_TITLE } from '../layout/mobileClasses';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { User } from '@backspace/shared';
-import { friendEntryOf, isIncomingRequest, isOutgoingRequest, pendingRequestWith, useSocialStore, type TaggedFriend, type TaggedFriendRequest, type TaggedUser } from '../../stores/socialStore';
+import { friendEntryOf, isIncomingRequest, isOutgoingRequest, pendingRequestWith, useSocialStore, type TaggedFriend, type TaggedFriendRequest, type TaggedSearchResult } from '../../stores/socialStore';
 import { useAuthStore } from '../../stores/authStore';
-import { useDiscoverStore, type TaggedDiscoverUser } from '../../stores/discoverStore';
 import { useTranslation, Trans } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { describeError } from '../../i18n/errors';
 import { useInstanceStore } from '../../stores/instanceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useFederationStore } from '../../stores/federationStore';
+import { useFederationEnabled } from '../../hooks/useFederationEnabled';
 import { Avatar } from '../ui/Avatar';
 import { MemberListToggleButton } from '../layout/MemberListToggleButton';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import { getAvatarGradient } from '../../utils/gradients';
-import { Mascot } from '../ui/Mascot';
-import { useActivityStore, activitiesFor } from '../../stores/activityStore';
-import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
-import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
+import { Icon, type IconName } from '../ui/Icon';
+import { useFriendBuckets } from '../../hooks/useFriendBuckets';
+import { friendRowKey, type HomeFriend } from '../../utils/homeSummary';
+import { FRIENDS_VIEW_PARAM, isFriendsLinkView } from '../../utils/homeNav';
+import { friendProfileUser, useFriendDoing } from '../home/friendDoing';
+import { useUserContextMenu } from '../layout/userMenu/useUserContextMenu';
 import { parseFederatedUsername, isFederationGlobeApplicable, userDisplayName, type IdentityFields } from '../../utils/identity';
 import { openDirectMessage } from '../../utils/openDirectMessage';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { friendRequestTarget } from '../../utils/friendRequestTarget';
-import { replaceEmojiShortcodes, useEmojiShortcodeNames } from '../../utils/emojiShortcodes';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { presenceLabel } from '../../i18n/presence';
 
 type SocialT = TFunction<['social', 'common']>;
 
-function ActivityFriendItem({
-  friend,
-  isOffline,
-  activities,
-  isRichActivity,
-  accentClass,
-  mobile,
-  onMobileClick,
-  onDmClick,
-}: {
-  friend: TaggedFriend;
-  isOffline: boolean;
-  activities: import('@backspace/shared').Activity[];
-  isRichActivity: boolean;
-  accentClass: string;
-  mobile?: boolean;
-  onMobileClick: (friend: TaggedFriend) => void;
-  onDmClick: (person: IdentityFields, origin: string) => void;
-}) {
-  const canonical = useCanonicalUserView(friend as unknown as User, friend._instanceOrigin);
+/** An online friend in the phone's Activity tab: who, and what they are doing in words. */
+function ActivityFriendItem({ row, onOpen }: { row: HomeFriend; onOpen: (friend: TaggedFriend) => void }) {
+  const canonical = useCanonicalUserView(row.friend as unknown as User, row.friend._instanceOrigin);
   const friendDisplayName = userDisplayName(canonical);
-
-  const rowClass = isRichActivity
-    ? `flex items-center gap-3 px-4 py-2.5 rounded-[10px] mb-1 cursor-pointer transition-colors glass-pill border-l-2 ${accentClass}`
-    : 'flex items-center gap-3 px-4 py-2.5 rounded-[4px] hover:bg-interactive-hover cursor-pointer transition-colors active:bg-interactive-hover';
+  const doing = useFriendDoing(row, canonical);
+  const domain = isFederationGlobeApplicable(canonical) ? parseFederatedUsername(canonical.username).domain : null;
 
   return (
-    <div
-      onClick={() => {
-        if (mobile) {
-          onMobileClick(friend);
-        } else {
-          onDmClick(friend, friend._instanceOrigin);
-        }
-      }}
-      className={rowClass}
-    >
-      <Avatar
-        src={canonical.avatar}
-        name={friendDisplayName}
-        size={36}
-        status={isOffline ? 'offline' : canonical.status}
-        className={isOffline ? 'opacity-60' : undefined}
-        userId={canonical.homeUserId ?? canonical.id}
-        avatarColor={canonical.avatarColor}
-      />
-      <div className="flex-1 min-w-0">
-        <span className={`text-sm leading-[1.2] font-medium truncate ${isOffline ? 'text-txt-tertiary' : 'text-txt-primary'}`}>{friendDisplayName}</span>
-        {!isOffline && isFederationGlobeApplicable(canonical) && (
-          <div className="text-[10px] leading-[1.3] text-txt-tertiary truncate opacity-60">@{parseFederatedUsername(canonical.username).domain}</div>
-        )}
-        {!isOffline && (
-          <ActivityCard
-            activities={activities}
-            fallbackCustomStatus={canonical.customStatus}
-          />
-        )}
-      </div>
+    <li>
+      <button type="button" onClick={() => onOpen(row.friend)} className="list-row w-full items-start text-left">
+        <Avatar
+          src={canonical.avatar}
+          name={friendDisplayName}
+          size={32}
+          status={canonical.status}
+          userId={canonical.homeUserId ?? canonical.id}
+          avatarColor={canonical.avatarColor}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-baseline gap-1.5">
+            <span className="truncate text-body font-medium leading-5 text-txt-primary">{friendDisplayName}</span>
+            {domain && <span className="min-w-0 truncate font-mono text-label text-txt-tertiary">@{domain}</span>}
+          </span>
+          <span className={`block truncate text-meta leading-[18px] ${doing.busy ? 'text-txt-secondary' : 'text-txt-tertiary'}`}>{doing.line}</span>
+          {doing.detail && <span className="block truncate text-meta leading-4 text-txt-tertiary">{doing.detail}</span>}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+/**
+ * The phone's Activity tab: the friends who are online, on voice first, then
+ * those sharing an activity, then the rest (the desktop's "Active now"
+ * column, utils/homeSummary.ts). Its own component so the buckets are worked
+ * out only while the tab is open.
+ */
+function ActivityTab({ onOpen }: { onOpen: (friend: TaggedFriend) => void }) {
+  const { t } = useTranslation(['social', 'common']);
+  const buckets = useFriendBuckets();
+  const online = [...buckets.inVoice, ...buckets.active, ...buckets.around];
+  return (
+    <div className="flex-1 overflow-y-auto px-2 py-4">
+      {online.length === 0 ? (
+        <EmptyList icon="users">{t('social:empty.online')}</EmptyList>
+      ) : (
+        <>
+          <SectionLabel>{t('social:sections.online', { n: online.length })}</SectionLabel>
+          <ul className="space-y-px">
+            {online.map((row) => <ActivityFriendItem key={friendRowKey(row.friend)} row={row} onOpen={onOpen} />)}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
 
 type Tab = 'online' | 'all' | 'pending' | 'add' | 'activity';
+
+/** A list's heading: the mono label every column in the app uses, with its count. */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <h2 className="label-mono px-2.5 pb-1.5 pt-1">{children}</h2>;
+}
+
+/** What an empty list says: a sentence where the rows would be. */
+function EmptyList({ icon, children }: { icon: IconName; children: React.ReactNode }) {
+  return (
+    <div className="empty-state">
+      <span className="empty-state-icon" aria-hidden="true">
+        <Icon name={icon} size={18} />
+      </span>
+      <p className="empty-state-body">{children}</p>
+    </div>
+  );
+}
 
 function tabLabel(t: SocialT, tab: Tab): string {
   switch (tab) {
@@ -108,10 +121,25 @@ interface FriendsPageProps {
 
 export function FriendsPage({ mobile }: FriendsPageProps) {
   const { t } = useTranslation(['social', 'common']);
-  const [activeTab, setActiveTab] = useState<Tab>('online');
+  // `?view=add` and `?view=pending` open the page on that view (the Home page
+  // and the activity column link here so); the parameter is dropped once read,
+  // so a reload or a later visit opens on the online list.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedView = searchParams.get(FRIENDS_VIEW_PARAM);
+  const [activeTab, setActiveTab] = useState<Tab>(() => (isFriendsLinkView(linkedView) ? linkedView : 'online'));
   const [pendingUnfriend, setPendingUnfriend] = useState<{ friend: TaggedFriend; name: string } | null>(null);
   const navigate = useNavigate();
   const addToast = useUIStore((s) => s.addToast);
+  // The right-click menu of a person on the lists (profile, message, the friendship action, block).
+  const userMenu = useUserContextMenu();
+
+  useEffect(() => {
+    if (!isFriendsLinkView(linkedView)) return;
+    setActiveTab(linkedView);
+    const next = new URLSearchParams(searchParams);
+    next.delete(FRIENDS_VIEW_PARAM);
+    setSearchParams(next, { replace: true });
+  }, [linkedView, searchParams, setSearchParams]);
 
   // If the user clicked "Retry your friend request" in the Connections panel
   // and we just navigated here, the federation store carries the original
@@ -140,7 +168,6 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
     loadRequests();
   }, [loadFriends, loadRequests]);
 
-  const userActivities = useActivityStore((s) => s.userActivities);
   const pushMobileScreen = useUIStore((s) => s.pushMobileScreen);
 
   const onlineFriends = friends.filter(f => f.status !== 'offline');
@@ -166,65 +193,58 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
       );
     }
 
+    // The lists are as wide as a line of them reads well, not the whole window.
+    const listShell = (children: React.ReactNode) => (
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-[880px] px-2 py-4 desktop:px-4">{children}</div>
+      </div>
+    );
+
     switch (activeTab) {
       case 'online':
-        return (
-          <div className="flex-1 overflow-y-auto p-4">
-            <h2 className="text-xs font-bold text-txt-tertiary mb-4 tracking-wider px-2">
-              {t('social:sections.online', { n: onlineFriends.length })}
-            </h2>
+        return listShell(
+          <>
+            <SectionLabel>{t('social:sections.online', { n: onlineFriends.length })}</SectionLabel>
             {onlineFriends.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full opacity-80">
-                <Mascot state="idle" className="w-32 h-32 mb-4" />
-                <p className="text-txt-tertiary text-sm">{t('social:empty.online')}</p>
-              </div>
+              <EmptyList icon="moon">{t('social:empty.online')}</EmptyList>
             ) : (
-              <>
+              <ul className="space-y-px">
                 {onlineFriends.map(friend => (
-                  <FriendItem key={`${friend.id}:${friend._instanceOrigin}`} friend={friend} onRemove={() => setPendingUnfriend({ friend, name: userDisplayName(friend) })} onDm={() => handleOpenDm(friend, friend._instanceOrigin)} />
+                  <FriendItem key={`${friend.id}:${friend._instanceOrigin}`} friend={friend} onRemove={() => setPendingUnfriend({ friend, name: userDisplayName(friend) })} onDm={() => handleOpenDm(friend, friend._instanceOrigin)} onContextMenu={(event) => userMenu.open(event, friendProfileUser(friend), friend._instanceOrigin)} />
                 ))}
-              </>
+              </ul>
             )}
-          </div>
+          </>,
         );
       case 'all':
-        return (
-          <div className="flex-1 overflow-y-auto p-4">
-            <h2 className="text-xs font-bold text-txt-tertiary mb-4 tracking-wider px-2">
-              {t('social:sections.all', { n: friends.length })}
-            </h2>
+        return listShell(
+          <>
+            <SectionLabel>{t('social:sections.all', { n: friends.length })}</SectionLabel>
             {friends.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full opacity-80">
-                <Mascot state="lonely" className="w-32 h-32 mb-4" />
-                <p className="text-txt-tertiary text-sm">{t('social:empty.all')}</p>
-              </div>
+              <EmptyList icon="users">{t('social:empty.all')}</EmptyList>
             ) : (
-              <>
+              <ul className="space-y-px">
                 {friends.map(friend => (
-                  <FriendItem key={`${friend.id}:${friend._instanceOrigin}`} friend={friend} onRemove={() => setPendingUnfriend({ friend, name: userDisplayName(friend) })} onDm={() => handleOpenDm(friend, friend._instanceOrigin)} />
+                  <FriendItem key={`${friend.id}:${friend._instanceOrigin}`} friend={friend} onRemove={() => setPendingUnfriend({ friend, name: userDisplayName(friend) })} onDm={() => handleOpenDm(friend, friend._instanceOrigin)} onContextMenu={(event) => userMenu.open(event, friendProfileUser(friend), friend._instanceOrigin)} />
                 ))}
-              </>
+              </ul>
             )}
-          </div>
+          </>,
         );
       case 'pending':
-        return (
-          <div className="flex-1 overflow-y-auto p-4">
-            <h2 className="text-xs font-bold text-txt-tertiary mb-4 tracking-wider px-2">
-              {t('social:sections.pending', { n: pendingIncoming.length + pendingOutgoing.length })}
-            </h2>
+        return listShell(
+          <>
+            <SectionLabel>{t('social:sections.pending', { n: pendingIncoming.length + pendingOutgoing.length })}</SectionLabel>
             {[...pendingIncoming, ...pendingOutgoing].length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full opacity-80">
-                <Mascot state="sleeping" className="w-32 h-32 mb-4" />
-                <p className="text-txt-tertiary text-sm">{t('social:empty.pending')}</p>
-              </div>
+              <EmptyList icon="user-plus">{t('social:empty.pending')}</EmptyList>
             ) : (
-              <>
+              <ul className="space-y-px">
                 {pendingIncoming.map(req => (
                   <RequestItem
                     key={`${req.id}:${req._instanceOrigin}`}
                     request={req}
                     type="incoming"
+                    onContextMenu={(event) => { if (req.user) userMenu.open(event, req.user as unknown as User, req._instanceOrigin); }}
                     onAccept={() => updateFriendRequest(req.id, req._instanceOrigin, 'accepted')}
                     onDecline={() => updateFriendRequest(req.id, req._instanceOrigin, 'declined')}
                   />
@@ -234,12 +254,13 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
                     key={`${req.id}:${req._instanceOrigin}`}
                     request={req}
                     type="outgoing"
+                    onContextMenu={(event) => { if (req.user) userMenu.open(event, req.user as unknown as User, req._instanceOrigin); }}
                     onCancel={() => cancelFriendRequest(req.id, req._instanceOrigin)}
                   />
                 ))}
-              </>
+              </ul>
             )}
-          </div>
+          </>,
         );
       case 'add':
         return (
@@ -247,131 +268,59 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
             onOpenDm={handleOpenDm}
           />
         );
-      case 'activity': {
-        const activeFriends: TaggedFriend[] = [];
-        const idleFriends: TaggedFriend[] = [];
-        const offlineActivityFriends: TaggedFriend[] = [];
-        for (const f of friends) {
-          if (f.status === 'offline') {
-            offlineActivityFriends.push(f);
-            continue;
-          }
-          const acts = activitiesFor(userActivities, f, f._instanceOrigin);
-          const primary = getPrimaryActivity(acts);
-          if (primary && primary.type !== 'custom') {
-            activeFriends.push(f);
-          } else {
-            idleFriends.push(f);
-          }
-        }
-
-        const renderActivityFriend = (friend: TaggedFriend, isOffline = false) => {
-          const activities = activitiesFor(userActivities, friend, friend._instanceOrigin);
-          const isRichActivity = !isOffline && hasRichActivity(activities);
-          const primary = getPrimaryActivity(activities);
-          const accentClass = primary ? getActivityAccentClass(primary.type) : '';
-          return (
-            <ActivityFriendItem
-              key={friend.id}
-              friend={friend}
-              isOffline={isOffline}
-              activities={activities}
-              isRichActivity={isRichActivity}
-              accentClass={accentClass}
-              mobile={mobile}
-              onMobileClick={(person) => pushMobileScreen('user-profile', { userId: person.id, origin: person._instanceOrigin })}
-              onDmClick={handleOpenDm}
-            />
-          );
-        };
-
+      case 'activity':
         return (
-          <div className="flex-1 overflow-y-auto p-4">
-            {activeFriends.length === 0 && idleFriends.length === 0 && offlineActivityFriends.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Mascot state="sleeping" className="w-[100px] h-[100px]" />
-                <div className="text-sm text-txt-tertiary mt-4 max-w-[240px]">
-                  {t('social:empty.activity')}
-                </div>
-              </div>
-            ) : (
-              <>
-                {activeFriends.length > 0 && (
-                  <div className="mb-4">
-                    <h2 className="text-xs font-bold text-txt-tertiary mb-2 tracking-wider px-2">
-                      {t('social:sections.active', { n: activeFriends.length })}
-                    </h2>
-                    {activeFriends.map(f => renderActivityFriend(f))}
-                  </div>
-                )}
-                {idleFriends.length > 0 && (
-                  <div className="mb-4">
-                    <h2 className="text-xs font-bold text-txt-tertiary mb-2 tracking-wider px-2">
-                      {t('social:sections.online', { n: idleFriends.length })}
-                    </h2>
-                    {idleFriends.map(f => renderActivityFriend(f))}
-                  </div>
-                )}
-                {offlineActivityFriends.length > 0 && (
-                  <div>
-                    <h2 className="text-xs font-bold text-txt-tertiary mb-2 tracking-wider px-2">
-                      {t('social:sections.offline', { n: offlineActivityFriends.length })}
-                    </h2>
-                    {offlineActivityFriends.map(f => renderActivityFriend(f, true))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          <ActivityTab
+            onOpen={(friend) => {
+              if (mobile) pushMobileScreen('user-profile', { userId: friend.id, origin: friend._instanceOrigin });
+              else void handleOpenDm(friend, friend._instanceOrigin);
+            }}
+          />
         );
-      }
     }
   };
 
   const popMobileScreen = useUIStore((s) => s.popMobileScreen);
 
   return (
-    <div className="flex-1 flex flex-col bg-surface-chat h-full">
+    <div className="lit-phone flex-1 flex flex-col bg-surface-chat desktop:bg-transparent h-full">
       {/* Header */}
       {mobile ? (
-        <div className="h-12 px-3 flex items-center gap-2 border-b border-border-soft flex-shrink-0 z-10 bg-surface-base">
-          <button onClick={popMobileScreen} className="w-8 h-8 flex items-center justify-center text-txt-secondary hover:text-txt-primary">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
+        <header className="panel-bar flex h-12 items-center gap-1 bg-surface-base px-1">
+          <button type="button" onClick={popMobileScreen} aria-label={t('common:actions.back')} className={BAR_BUTTON}>
+            <Icon name="chevron-left" size={20} />
           </button>
-          <span className="font-semibold text-sm text-txt-primary">{t('common:labels.friends')}</span>
-        </div>
+          <h1 className={BAR_TITLE}>{t('common:labels.friends')}</h1>
+        </header>
       ) : (
-        <div className="h-12 px-4 flex items-center border-b border-border-hard flex-shrink-0 z-10 bg-surface-chat">
-          <div className="flex items-center gap-2 mr-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-            <span className="font-bold text-txt-primary">{t('common:labels.friends')}</span>
+        <div className="panel-bar px-4 flex items-stretch gap-4">
+          <div className="flex items-center gap-2">
+            <Icon name="users" size={17} className="text-txt-tertiary" />
+            <span className="text-lead font-semibold tracking-[-0.01em] text-txt-primary">{t('common:labels.friends')}</span>
           </div>
-          <div className="w-[1px] h-6 bg-surface-elevated mx-2" />
-          <div className="flex items-center gap-4 ml-2">
+          <div aria-hidden="true" className="my-auto h-4 w-px bg-border-soft" />
+          <div role="tablist" className="flex items-stretch gap-1">
             <TabButton active={activeTab === 'online'} onClick={() => setActiveTab('online')}>{t('common:states.online')}</TabButton>
             <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>{t('social:tabs.all')}</TabButton>
             <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
               {t('social:tabs.pending')}
               {(pendingIncoming.length > 0) && (
-                <span className="ml-2 px-1.5 py-0.5 bg-accent-rose text-white text-[10px] rounded-full leading-none">
-                  {pendingIncoming.length}
+                <span className="count-badge ml-1.5">
+                  {pendingIncoming.length > 99 ? '99+' : pendingIncoming.length}
                 </span>
               )}
             </TabButton>
-            <button
-              onClick={() => setActiveTab('add')}
-              className={`px-2 py-0.5 rounded text-[14px] font-medium transition-all ${
-                activeTab === 'add' ? 'text-status-online bg-transparent' : 'bg-status-online text-[#13131a] hover:bg-status-online/90'
-              }`}
-            >
-              {t('social:tabs.add')}
-            </button>
           </div>
           <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('add')}
+              aria-pressed={activeTab === 'add'}
+              className={activeTab === 'add' ? 'btn-quiet btn-sm bg-interactive-selected text-txt-primary' : 'btn-primary btn-sm'}
+            >
+              <Icon name="user-plus" size={14} />
+              {t('social:tabs.add')}
+            </button>
             <MemberListToggleButton />
           </div>
         </div>
@@ -379,12 +328,14 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
 
       {/* Mobile tab bar */}
       {mobile && (
-        <div className="flex border-b border-border-soft">
+        <div className="no-scrollbar flex flex-shrink-0 overflow-x-auto border-b border-border-hard">
           {(['online', 'all', 'pending', 'add', 'activity'] as Tab[]).map((tab) => (
             <button
               key={tab}
+              type="button"
+              aria-pressed={activeTab === tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 text-sm font-medium text-center border-b-2 transition-colors ${
+              className={`flex flex-auto flex-shrink-0 items-center justify-center whitespace-nowrap px-2.5 py-2.5 text-ui font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab
                   ? 'border-accent-primary text-txt-primary'
                   : 'border-transparent text-txt-secondary hover:text-txt-primary'
@@ -392,8 +343,8 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
             >
               {tabLabel(t, tab)}
               {tab === 'pending' && pendingIncoming.length > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-notification text-white rounded-full">
-                  {pendingIncoming.length}
+                <span className="count-badge ml-1">
+                  {pendingIncoming.length > 99 ? '99+' : pendingIncoming.length}
                 </span>
               )}
             </button>
@@ -417,11 +368,43 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
         confirmLabel={t('common:actions.remove')}
         variant="danger"
       />
+      {userMenu.dialogs}
     </div>
   );
 }
 
 // ─── Add Friend Tab ─────────────────────────────────────────────────────────
+
+/**
+ * What the add-friend field holds (social.md, "Finding people"): a username
+ * to look up, a handle of someone on another instance, or not enough yet.
+ * Nobody is listed before a search; a search needs a whole username's worth
+ * of letters, the same rule the instance applies.
+ */
+type AddQuery =
+  | { kind: 'empty' }
+  | { kind: 'short' }
+  | { kind: 'invalid' }
+  | { kind: 'search'; username: string }
+  | { kind: 'handle'; handle: string; host: string };
+
+const USERNAME_MIN_LENGTH = 3;
+const USERNAME_QUERY = /^[a-z0-9_]{3,32}$/;
+
+function addQueryOf(raw: string): AddQuery {
+  const trimmed = raw.trim().replace(/^@/, '');
+  if (trimmed.length === 0) return { kind: 'empty' };
+  const at = trimmed.lastIndexOf('@');
+  if (at > 0 && at < trimmed.length - 1) return { kind: 'handle', handle: trimmed, host: trimmed.slice(at + 1).toLowerCase() };
+  const name = trimmed.toLowerCase();
+  if (!/^[a-z0-9_]+$/.test(name)) return { kind: 'invalid' };
+  if (name.length < USERNAME_MIN_LENGTH) return { kind: 'short' };
+  return USERNAME_QUERY.test(name) ? { kind: 'search', username: name } : { kind: 'invalid' };
+}
+
+/** Where the viewer stands with a person a search found. */
+type SearchRelationship = 'none' | 'friends' | 'outbound_pending' | 'inbound_pending';
+type SearchRow = TaggedSearchResult & { relationship: SearchRelationship; requestId?: string };
 
 function AddFriendTab({
   onOpenDm,
@@ -436,11 +419,7 @@ function AddFriendTab({
   const currentUser = useAuthStore((s) => s.user);
   const instances = useInstanceStore((s) => s.instances);
   const addToast = useUIStore((s) => s.addToast);
-
-  const discoverUsers = useDiscoverStore((s) => s.users);
-  const discoverLoading = useDiscoverStore((s) => s.isLoading);
-  const fetchDiscoverUsers = useDiscoverStore((s) => s.fetchUsers);
-  const updateRelationship = useDiscoverStore((s) => s.updateRelationship);
+  const federationEnabled = useFederationEnabled();
 
   const [query, setQuery] = useState(() => {
     // Consume the federation store's pending friend-add prefill at mount so
@@ -449,35 +428,39 @@ function AddFriendTab({
     // so subsequent mounts (e.g. tab switching) start empty.
     return useFederationStore.getState().consumePendingFriendAddPrefill() ?? '';
   });
-  const [rawSearchResults, setRawSearchResults] = useState<TaggedUser[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [results, setResults] = useState<TaggedSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [directAddLoading, setDirectAddLoading] = useState(false);
 
-  // Fetch discover on mount
-  useEffect(() => {
-    fetchDiscoverUsers();
-  }, [fetchDiscoverUsers]);
+  const parsed = useMemo(() => addQueryOf(query), [query]);
+  const searchName = parsed.kind === 'search' ? parsed.username : null;
 
-  // Debounced search with race condition guard
+  // Debounced lookup with a race guard: only the newest answer is shown.
   useEffect(() => {
-    if (!query.trim()) {
-      setRawSearchResults([]);
-      setSearchLoading(false);
+    if (searchName === null) {
+      setResults([]);
+      setSearching(false);
+      setSearchError('');
       return;
     }
-    let isActive = true;
-    setSearchLoading(true);
-    const timer = setTimeout(async () => {
-      const results = await searchUsers(query.trim());
-      if (isActive) {
-        setRawSearchResults(results);
-        setSearchLoading(false);
-      }
+    let active = true;
+    setSearching(true);
+    setSearchError('');
+    const timer = setTimeout(() => {
+      searchUsers(searchName)
+        .then((found) => { if (active) setResults(found); })
+        .catch((err: unknown) => {
+          if (!active) return;
+          setResults([]);
+          setSearchError(describeError(err));
+        })
+        .finally(() => { if (active) setSearching(false); });
     }, 300);
-    return () => { isActive = false; clearTimeout(timer); };
-  }, [query, searchUsers]);
+    return () => { active = false; clearTimeout(timer); };
+  }, [searchName, searchUsers]);
 
-  // Self-exclusion set
+  // The viewer's own rows on every connected instance.
   const selfIds = useMemo(() => {
     const ids = new Set<string>();
     if (currentUser?.id) ids.add(`${currentUser.id}:`);
@@ -487,54 +470,37 @@ function AddFriendTab({
     return ids;
   }, [currentUser?.id, instances]);
 
-  const isSearchMode = query.trim().length > 0;
+  // Each result with where the viewer stands. A result and a list entry are
+  // the same person when their `userKey`s match, whichever instance's row
+  // each is shown by. A pending request's id is good only on the instance
+  // that holds it, so a row with a request is shown by that request's row.
+  const rows: SearchRow[] = useMemo(() => results
+    .filter((person) => !selfIds.has(`${person.id}:${person._instanceOrigin}`))
+    .map((person): SearchRow => {
+      if (friendEntryOf(friends, person, person._instanceOrigin)) return { ...person, relationship: 'friends' };
+      const pending = pendingRequestWith(requests, person, person._instanceOrigin);
+      if (pending?.user && (isOutgoingRequest(pending) || isIncomingRequest(pending))) {
+        const shownBy: TaggedSearchResult = pending._instanceOrigin === person._instanceOrigin
+          ? person
+          : { ...pending.user, _instanceOrigin: pending._instanceOrigin };
+        return {
+          ...shownBy,
+          relationship: isOutgoingRequest(pending) ? 'outbound_pending' : 'inbound_pending',
+          requestId: pending.id,
+        };
+      }
+      return { ...person, relationship: 'none' };
+    }), [results, friends, requests, selfIds]);
 
-  // Enrich search results with friend/request status at render time. A
-  // result and a list entry are the same person when their `userKey`s match,
-  // whichever instance's row each is shown by. A pending request's id is good
-  // only on the instance that holds it, so a card with a request is shown by
-  // that request's row of the person.
-  const enrichedSearchResults: TaggedDiscoverUser[] = useMemo(() => {
-    if (!isSearchMode) return [];
-    return rawSearchResults
-      .filter(u => !selfIds.has(`${u.id}:${u._instanceOrigin}`))
-      .map(user => {
-        if (friendEntryOf(friends, user, user._instanceOrigin)) {
-          return { ...user, relationship: 'friends' as const, mutualFriendCount: 0, mutualSpaceCount: 0 };
-        }
-        const pending = pendingRequestWith(requests, user, user._instanceOrigin);
-        if (pending?.user && (isOutgoingRequest(pending) || isIncomingRequest(pending))) {
-          const shownBy = pending._instanceOrigin === user._instanceOrigin
-            ? user
-            : { ...pending.user, _instanceOrigin: pending._instanceOrigin };
-          return {
-            ...shownBy,
-            relationship: isOutgoingRequest(pending) ? 'outbound_pending' as const : 'inbound_pending' as const,
-            requestId: pending.id,
-            mutualFriendCount: 0,
-            mutualSpaceCount: 0,
-          };
-        }
-        return { ...user, relationship: 'none' as const, mutualFriendCount: 0, mutualSpaceCount: 0 };
-      });
-  }, [rawSearchResults, friends, requests, selfIds, isSearchMode]);
+  // A handle on this instance needs no federation; one elsewhere does.
+  const ownHost = window.location.host.toLowerCase();
+  const handleAddable = parsed.kind === 'handle' && (parsed.host === ownHost || federationEnabled === true);
 
-  const trimmedQuery = query.trim();
-  const directAt = trimmedQuery.lastIndexOf('@');
-  // Allow bare handle (no @) or @ at non-edge position; hide @, @bob, bob@.
-  const showDirectAdd = trimmedQuery.length > 0
-    && (directAt === -1 || (directAt > 0 && directAt < trimmedQuery.length - 1));
-  // Bare handle gets the home host appended for display only — submission
-  // still uses the raw trimmed query.
-  const directAddDisplay = directAt === -1
-    ? `${trimmedQuery}@${window.location.host}`
-    : trimmedQuery;
-
-  // Direct Add handler
   const handleDirectAdd = async () => {
+    if (parsed.kind !== 'handle') return;
     setDirectAddLoading(true);
     try {
-      await sendFriendRequest({ username: query.trim() });
+      await sendFriendRequest({ username: parsed.handle });
       addToast(t('social:request.sent'), 'success');
       setQuery('');
     } catch (err) {
@@ -544,27 +510,46 @@ function AddFriendTab({
     }
   };
 
-  // No-op relationship change for search mode cards (useMemo re-derives from store)
-  const noopRelationshipChange = useCallback(() => {}, []);
-
-  // Determine which list to display
-  const displayUsers = isSearchMode ? enrichedSearchResults : discoverUsers;
-  const displayLoading = isSearchMode ? searchLoading : discoverLoading;
-  const emptyLabel = isSearchMode
-    ? t('social:add.noSearchResults')
-    : t('social:add.noDiscoverable');
+  const body = (() => {
+    switch (parsed.kind) {
+      case 'empty':
+        return <EmptyList icon="user-plus">{t('social:add.intro')}</EmptyList>;
+      case 'short':
+        return <p className="px-2.5 text-ui text-txt-tertiary">{t('social:add.tooShort', { min: USERNAME_MIN_LENGTH })}</p>;
+      case 'invalid':
+        return <p className="px-2.5 text-ui text-txt-tertiary">{t('social:add.invalidCharacters')}</p>;
+      case 'handle':
+        return handleAddable ? null : <p className="px-2.5 text-ui text-txt-tertiary">{t('social:add.federationOff')}</p>;
+      case 'search':
+        if (searching && rows.length === 0) {
+          return (
+            <div className="flex items-center justify-center h-24">
+              <LoadingSpinner />
+            </div>
+          );
+        }
+        if (searchError) {
+          return <p role="alert" className="px-2.5 text-ui text-txt-danger">{searchError}</p>;
+        }
+        if (rows.length === 0) return <EmptyList icon="search">{t('social:add.noSearchResults')}</EmptyList>;
+        return (
+          <div>
+            <div className="label-mono mb-1.5 px-2.5">{t('social:add.resultsLabel')}</div>
+            <ul className="space-y-px">
+              {rows.map((row) => (
+                <SearchResultRow key={`${row.id}:${row._instanceOrigin}`} row={row} onOpenDm={onOpenDm} />
+              ))}
+            </ul>
+          </div>
+        );
+    }
+  })();
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="p-6 pb-4">
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-2">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary">
-            <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-          </svg>
-          <h2 className="text-base font-bold text-txt-primary">{t('social:add.title')}</h2>
-        </div>
-        <p className="text-sm text-txt-tertiary mb-4">
+      <div className="mx-auto max-w-[720px] px-4 pt-6 pb-6 desktop:px-6">
+        <h2 className="page-title mb-1">{t('social:add.title')}</h2>
+        <p className="text-ui text-txt-tertiary mb-4">
           <Trans
             t={t}
             i18nKey="social:add.hint"
@@ -572,390 +557,251 @@ function AddFriendTab({
           />
         </p>
 
-        {/* Unified search input */}
         <div className="relative mb-4">
           <input
             type="text"
             placeholder={t('social:add.placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="input-search w-full px-4 py-3 rounded-lg"
+            maxLength={128}
+            autoComplete="off"
+            spellCheck={false}
+            aria-label={t('social:add.placeholder')}
+            className="input-search w-full h-10 pl-9 pr-9 rounded-md text-body"
           />
+          <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-txt-tertiary" />
           {query && (
             <button
+              type="button"
               onClick={() => setQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-txt-tertiary hover:text-txt-secondary"
+              aria-label={t('common:actions.clear')}
+              className="icon-btn absolute right-1.5 top-1/2 -translate-y-1/2"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-              </svg>
+              <Icon name="x" size={14} />
             </button>
           )}
         </div>
 
-        {/* Direct Add action row */}
-        {showDirectAdd && (
-          <div className="bg-surface-input rounded-lg p-3 mb-4 flex items-center gap-3">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary flex-shrink-0">
-              <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-            <div className="flex-1 min-w-0 text-sm text-txt-secondary">
+        {parsed.kind === 'handle' && handleAddable && (
+          <div className="surface-card rounded-lg px-3 py-2.5 mb-4 flex items-center gap-3">
+            <Icon name="user-plus" size={16} className="text-txt-tertiary flex-shrink-0" />
+            <div className="flex-1 min-w-0 text-ui text-txt-secondary">
               <Trans
                 t={t}
                 i18nKey="social:add.direct"
-                values={{ handle: directAddDisplay }}
+                values={{ handle: parsed.handle }}
                 components={{ handle: <span className="font-semibold text-txt-primary" /> }}
               />
             </div>
             <button
+              type="button"
               onClick={handleDirectAdd}
               disabled={directAddLoading}
-              className="px-3 py-1.5 rounded-md bg-accent-primary hover:bg-accent-primary-hover text-white text-sm font-medium transition-colors disabled:opacity-50 flex-shrink-0"
+              aria-busy={directAddLoading}
+              className="btn-primary btn-sm flex-shrink-0"
             >
               {directAddLoading ? t('social:request.sending') : t('social:add.sendRequest')}
             </button>
           </div>
         )}
+
+        {body}
       </div>
-
-      {/* Results grid */}
-      <div className="px-6 pb-6">
-        {!isSearchMode && (
-          <div className="flex items-center gap-2 mb-4">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5.5-2.5l7.51-3.49L17.5 6.5 9.99 9.99 6.5 17.5zm5.5-6.6c.61 0 1.1.49 1.1 1.1s-.49 1.1-1.1 1.1-1.1-.49-1.1-1.1.49-1.1 1.1-1.1z" />
-            </svg>
-            <span className="text-xs font-semibold tracking-wider text-txt-tertiary">{t('social:add.discover')}</span>
-          </div>
-        )}
-
-        {displayLoading && displayUsers.length === 0 ? (
-          <div className="flex items-center justify-center h-32">
-            <LoadingSpinner />
-          </div>
-        ) : displayUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 opacity-60">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" className="text-txt-tertiary mb-2">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-            <p className="text-txt-tertiary text-sm">{emptyLabel}</p>
-          </div>
-        ) : (
-          <div className="card-grid">
-            {isSearchMode
-              ? enrichedSearchResults.map((user) => (
-                  <UserDiscoverCard
-                    key={`${user.id}:${user._instanceOrigin}`}
-                    user={user}
-                    onOpenDm={onOpenDm}
-                    onRelationshipChange={noopRelationshipChange}
-                  />
-                ))
-              : discoverUsers.map((user) => (
-                  <UserDiscoverCard
-                    key={`${user.id}:${user._instanceOrigin}`}
-                    user={user}
-                    onOpenDm={onOpenDm}
-                    onRelationshipChange={updateRelationship}
-                  />
-                ))
-            }
-          </div>
-        )}
-      </div>
-
     </div>
   );
 }
 
-// ─── User Discover Card ─────────────────────────────────────────────────────
+// ─── Search Result Row ──────────────────────────────────────────────────────
 
-function UserDiscoverCard({
-  user,
+function SearchResultRow({
+  row,
   onOpenDm,
-  onRelationshipChange,
 }: {
-  user: TaggedDiscoverUser;
+  row: SearchRow;
   onOpenDm: (person: IdentityFields, origin: string) => void;
-  onRelationshipChange: (userId: string, origin: string, relationship: TaggedDiscoverUser['relationship'], requestId?: string) => void;
 }) {
-  useEmojiShortcodeNames();
   const { t } = useTranslation(['social', 'common']);
   const sendFriendRequest = useSocialStore((s) => s.sendFriendRequest);
   const updateFriendRequest = useSocialStore((s) => s.updateFriendRequest);
   const cancelFriendRequest = useSocialStore((s) => s.cancelFriendRequest);
   const openModal = useUIStore((s) => s.openModal);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const displayName = userDisplayName(user);
-  const gradient = getAvatarGradient(user.homeUserId ?? user.id, displayName, user.avatarColor);
-  const originLabel = user._instanceOrigin
-    ? (() => { try { return new URL(user._instanceOrigin).host; } catch { return user._instanceOrigin; } })()
+  const origin = row._instanceOrigin;
+  const displayName = userDisplayName(row);
+  const originLabel = origin
+    ? (() => { try { return new URL(origin).host; } catch { return origin; } })()
     : null;
 
-  const avatarUrl = user.avatar
-    ? (user.avatar.startsWith('http') || user.avatar.startsWith('/') ? user.avatar : `/api/uploads/${user.avatar}`)
-    : null;
-  const bannerUrl = user.banner
-    ? (user.banner.startsWith('http') || user.banner.startsWith('/') ? user.banner : `/api/uploads/${user.banner}`)
-    : null;
-
-  const handleSendRequest = async () => {
-    setActionLoading(true);
+  // The lists in the social store follow every answer, so the row's state
+  // moves by itself once an action went through.
+  const run = async (action: () => Promise<unknown>) => {
+    setBusy(true);
     setError('');
     try {
-      const requestId = await sendFriendRequest(friendRequestTarget(user, user._instanceOrigin));
-      onRelationshipChange(user.id, user._instanceOrigin, 'outbound_pending', requestId);
+      await action();
     } catch (err) {
       setError(describeError(err));
     } finally {
-      setActionLoading(false);
+      setBusy(false);
     }
   };
 
-  const handleAccept = async () => {
-    if (!user.requestId) return;
-    setActionLoading(true);
-    setError('');
-    try {
-      await updateFriendRequest(user.requestId, user._instanceOrigin, 'accepted', user);
-      onRelationshipChange(user.id, user._instanceOrigin, 'friends');
-    } catch (err) {
-      setError(describeError(err));
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const openProfile = () => openModal('userProfile', { userId: row.id, origin });
+  const requestId = row.requestId;
 
-  const handleDecline = async () => {
-    if (!user.requestId) return;
-    setActionLoading(true);
-    setError('');
-    try {
-      await updateFriendRequest(user.requestId, user._instanceOrigin, 'declined', user);
-      onRelationshipChange(user.id, user._instanceOrigin, 'none');
-    } catch (err) {
-      setError(describeError(err));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleCancelRequest = async () => {
-    if (!user.requestId) return;
-    setActionLoading(true);
-    setError('');
-    try {
-      await cancelFriendRequest(user.requestId, user._instanceOrigin, user);
-      onRelationshipChange(user.id, user._instanceOrigin, 'none');
-    } catch (err) {
-      setError(describeError(err));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleOpenProfile = () => {
-    openModal('userProfile', { userId: user.id, user, origin: user._instanceOrigin });
-  };
-
-  const handleMessage = () => {
-    onOpenDm(user, user._instanceOrigin);
-  };
+  const stateLabel = row.relationship === 'friends'
+    ? t('social:add.state.friends')
+    : row.relationship === 'outbound_pending'
+      ? t('social:add.state.outgoing')
+      : row.relationship === 'inbound_pending'
+        ? t('social:add.state.incoming')
+        : null;
 
   return (
-    <div className="bg-surface-channel rounded-lg border border-border-soft hover:border-border-hard overflow-hidden flex flex-col transition-colors">
-      {/* Banner area */}
-      <div className="h-24 relative overflow-hidden">
-        {bannerUrl ? (
-          <img src={bannerUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0" style={{ background: gradient.gradient }} />
-        )}
-        <div
-          className="absolute bottom-0 inset-x-0 h-12"
-          style={{ background: 'linear-gradient(to top, rgba(20,20,26,0.9), transparent)' }}
-        />
-        {originLabel && (
-          <div className="absolute top-2 right-2 z-[2]">
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur-sm bg-black/30 text-txt-secondary">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="opacity-60">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-              </svg>
-              {originLabel}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Overlapping avatar */}
-      <div className="relative px-4 -mt-7 z-10">
-        <button onClick={handleOpenProfile} className="block">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="w-12 h-12 rounded-full object-cover ring-[3px] ring-surface-channel shadow-lg"
-            />
-          ) : (
-            <div
-              className="w-12 h-12 rounded-full ring-[3px] ring-surface-channel shadow-lg flex items-center justify-center text-lg font-bold text-white/90"
-              style={{ background: gradient.gradient }}
-            >
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-          )}
+    <li className="list-row">
+      <button type="button" onClick={openProfile} className="flex-shrink-0 rounded-md" aria-label={displayName}>
+        <Avatar src={row.avatar} name={displayName} size={36} userId={row.homeUserId ?? row.id} avatarColor={row.avatarColor} />
+      </button>
+      <div className="min-w-0 flex-1">
+        <button type="button" onClick={openProfile} className="block max-w-full text-left">
+          <span className="block truncate text-body font-medium text-txt-primary">{displayName}</span>
+          <span className="block truncate font-mono text-label text-txt-tertiary">
+            @{row.username}{originLabel ? ` · ${originLabel}` : ''}
+          </span>
         </button>
+        {stateLabel && !error && <span className="mt-0.5 block truncate text-meta text-txt-secondary">{stateLabel}</span>}
+        {error && <span role="alert" className="mt-0.5 block truncate text-meta text-txt-danger">{error}</span>}
       </div>
-
-      {/* Content */}
-      <div className="px-4 pt-1.5 pb-3.5 flex flex-col flex-1">
-        <button onClick={handleOpenProfile} className="text-left group">
-          <h3 className="text-[14px] font-bold text-txt-primary truncate group-hover:underline">{displayName}</h3>
-          <p className="text-[12px] text-txt-tertiary truncate">@{user.username}</p>
-        </button>
-
-        {user.bio && (
-          <p className="text-[12px] text-txt-secondary line-clamp-2 mt-1.5 flex-1">{replaceEmojiShortcodes(user.bio)}</p>
-        )}
-        {!user.bio && <div className="flex-1" />}
-
-        {/* Mutuals */}
-        {(user.mutualFriendCount > 0 || user.mutualSpaceCount > 0) && (
-          <div className="flex items-center gap-2.5 text-[11px] text-txt-tertiary mt-2 mb-2.5">
-            {user.mutualFriendCount > 0 && (
-              <span>{t('social:mutuals.friends', { count: user.mutualFriendCount })}</span>
-            )}
-            {user.mutualFriendCount > 0 && user.mutualSpaceCount > 0 && (
-              <span className="text-txt-tertiary/40">·</span>
-            )}
-            {user.mutualSpaceCount > 0 && (
-              <span>{t('social:mutuals.spaces', { count: user.mutualSpaceCount })}</span>
-            )}
-          </div>
-        )}
-        {user.mutualFriendCount === 0 && user.mutualSpaceCount === 0 && <div className="mt-2" />}
-
-        {/* Error */}
-        {error && (
-          <div className="text-[11px] text-txt-danger mb-1.5 truncate">{error}</div>
-        )}
-
-        {/* Action button */}
-        {user.relationship === 'none' && (
+      <div className="flex flex-shrink-0 items-center gap-2">
+        {row.relationship === 'none' && (
           <button
-            onClick={handleSendRequest}
-            disabled={actionLoading}
-            className="w-full py-1.5 bg-accent-primary hover:bg-accent-primary-hover text-white text-[13px] font-medium rounded transition-colors disabled:opacity-50"
+            type="button"
+            disabled={busy}
+            aria-busy={busy}
+            onClick={() => run(() => sendFriendRequest(friendRequestTarget(row, origin)))}
+            className="btn-outline btn-sm"
           >
-            {actionLoading ? t('social:request.sending') : t('social:request.send')}
+            {busy ? t('social:request.sending') : t('social:add.sendRequest')}
           </button>
         )}
-        {user.relationship === 'outbound_pending' && (
+        {row.relationship === 'outbound_pending' && (
           <button
-            onClick={handleCancelRequest}
-            disabled={actionLoading || !user.requestId}
-            className="w-full py-1.5 bg-accent-amber/15 hover:bg-accent-amber/25 text-accent-amber text-[13px] font-medium rounded transition-colors disabled:opacity-50"
+            type="button"
+            disabled={busy || !requestId}
+            aria-busy={busy}
+            onClick={() => { if (requestId) void run(() => cancelFriendRequest(requestId, origin, row)); }}
+            className="btn-quiet btn-sm"
           >
-            {actionLoading ? t('social:request.cancelling') : t('social:request.pending')}
+            {busy ? t('social:request.cancelling') : t('social:request.cancel')}
           </button>
         )}
-        {user.relationship === 'inbound_pending' && (
-          <div className="flex gap-2">
+        {row.relationship === 'inbound_pending' && (
+          <>
             <button
-              onClick={handleAccept}
-              disabled={actionLoading}
-              className="flex-1 py-1.5 bg-status-online/20 hover:bg-status-online/30 text-status-online text-[13px] font-medium rounded transition-colors disabled:opacity-50"
+              type="button"
+              disabled={busy || !requestId}
+              onClick={() => { if (requestId) void run(() => updateFriendRequest(requestId, origin, 'accepted', row)); }}
+              className="btn-outline btn-sm"
             >
               {t('common:actions.accept')}
             </button>
             <button
-              onClick={handleDecline}
-              disabled={actionLoading}
-              className="flex-1 py-1.5 bg-accent-rose/15 hover:bg-accent-rose/25 text-accent-rose text-[13px] font-medium rounded transition-colors disabled:opacity-50"
+              type="button"
+              disabled={busy || !requestId}
+              onClick={() => { if (requestId) void run(() => updateFriendRequest(requestId, origin, 'declined', row)); }}
+              className="btn-quiet btn-sm"
             >
               {t('common:actions.decline')}
             </button>
-          </div>
+          </>
         )}
-        {user.relationship === 'friends' && (
-          <button
-            onClick={handleMessage}
-            className="w-full py-1.5 bg-accent-mint/15 hover:bg-accent-mint/25 text-accent-mint text-[13px] font-medium rounded transition-colors"
-          >
+        {row.relationship === 'friends' && (
+          <button type="button" onClick={() => onOpenDm(row, origin)} className="btn-outline btn-sm">
             {t('social:friend.message')}
           </button>
         )}
       </div>
-    </div>
+    </li>
   );
 }
 
 // ─── Shared Components ──────────────────────────────────────────────────────
 
+/** A header tab: plain text with the accent hairline under the open one. */
 function TabButton({ children, active, onClick }: { children: React.ReactNode, active: boolean, onClick: () => void }) {
   return (
     <button
+      type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
-      className={`px-2 py-0.5 rounded-[4px] text-[16px] font-medium transition-colors ${
-        active ? 'bg-interactive-selected text-white' : 'text-txt-tertiary hover:bg-interactive-hover hover:text-txt-secondary'
+      className={`relative flex items-center px-2 text-ui font-medium transition-colors ${
+        active ? 'text-txt-primary' : 'text-txt-tertiary hover:text-txt-secondary'
       }`}
     >
       {children}
+      {active && <span aria-hidden className="absolute inset-x-2 -bottom-px h-[2px] bg-accent-primary" />}
     </button>
   );
 }
 
-function FriendItem({ friend, onRemove, onDm }: { friend: TaggedFriend, onRemove: () => void, onDm: () => void }) {
+/** A row's quiet square action; a destructive one turns the danger colour on hover. */
+function RowAction({ title, onClick, tone = 'neutral', icon }: { title: string; onClick: () => void; tone?: 'neutral' | 'danger'; icon: 'message' | 'x' }) {
+  const hover = tone === 'danger' ? 'hover:!text-txt-danger' : '';
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className={`icon-btn icon-btn-lg ${hover}`}
+      title={title}
+      aria-label={title}
+    >
+      <Icon name={icon} size={16} />
+    </button>
+  );
+}
+
+function FriendItem({ friend, onRemove, onDm, onContextMenu }: {
+  friend: TaggedFriend;
+  onRemove: () => void;
+  onDm: () => void;
+  onContextMenu: (event: React.MouseEvent) => void;
+}) {
   const { t } = useTranslation(['social', 'common']);
   const canonical = useCanonicalUserView(friend as unknown as User, friend._instanceOrigin);
   const instanceLabel = friend._instanceOrigin ? (() => { try { return new URL(friend._instanceOrigin).host; } catch { return friend._instanceOrigin; } })() : '';
   const friendDisplayName = userDisplayName(canonical);
   return (
-    <div className="flex items-center justify-between px-3 h-[62px] rounded-[8px] hover:bg-interactive-hover group transition-colors border-t border-interactive-muted mx-2">
-      <div className="flex items-center gap-3">
+    <li className="list-row group justify-between" onContextMenu={onContextMenu}>
+      <div className="flex min-w-0 items-center gap-3">
         <Avatar src={canonical.avatar} name={friendDisplayName} size={32} status={canonical.status} userId={canonical.homeUserId ?? canonical.id} avatarColor={canonical.avatarColor} />
-        <div className="flex flex-col leading-tight">
-          <div className="flex items-center gap-1.5">
-            <span className="text-txt-primary font-semibold text-[15px]">{friendDisplayName}</span>
-            <span className="text-txt-tertiary text-[13px] opacity-60 group-hover:opacity-100 transition-opacity font-medium">@{friend.username}</span>
+        <div className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="truncate text-body font-medium leading-5 text-txt-primary">{friendDisplayName}</span>
+            <span className="truncate font-mono text-label text-txt-tertiary">@{friend.username}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[12px] text-txt-tertiary font-medium">{presenceLabel(t, friend.status)}</span>
+          <div className="flex min-w-0 items-center gap-1.5 text-meta leading-[18px] text-txt-tertiary">
+            <span className="flex-shrink-0">{presenceLabel(t, friend.status)}</span>
             {instanceLabel && (
-              <span className="text-[11px] text-txt-tertiary/60 font-medium">{t('social:friend.viaInstance', { host: instanceLabel })}</span>
+              <span className="truncate">· {t('social:friend.viaInstance', { host: instanceLabel })}</span>
             )}
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity pr-2">
-        <button
-          onClick={(e) => { e.stopPropagation(); onDm(); }}
-          className="w-9 h-9 flex items-center justify-center bg-surface-base rounded-full text-txt-tertiary hover:text-txt-primary transition-colors"
-          title={t('social:friend.message')}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-5H6V7h12v2z" />
-          </svg>
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="w-9 h-9 flex items-center justify-center bg-surface-base rounded-full text-txt-tertiary hover:text-txt-danger transition-colors"
-          title={t('social:friend.remove')}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-          </svg>
-        </button>
+      <div className="flex flex-shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+        <RowAction title={t('social:friend.message')} onClick={onDm} icon="message" />
+        <RowAction title={t('social:friend.remove')} onClick={onRemove} icon="x" tone="danger" />
       </div>
-    </div>
+    </li>
   );
 }
 
-function RequestItem({ request, type, onAccept, onDecline, onCancel }: {
+function RequestItem({ request, type, onAccept, onDecline, onCancel, onContextMenu }: {
   request: TaggedFriendRequest;
   type: 'incoming' | 'outgoing';
+  onContextMenu: (event: React.MouseEvent) => void;
   onAccept?: () => void;
   onDecline?: () => void;
   onCancel?: () => void;
@@ -970,56 +816,33 @@ function RequestItem({ request, type, onAccept, onDecline, onCancel }: {
   const reqDisplayName = userDisplayName(user);
 
   return (
-    <div className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-interactive-hover group transition-colors border-t border-interactive-muted mx-2">
-      <div className="flex items-center gap-3">
-        <Avatar src={user.avatar} name={reqDisplayName} size={32} status={user.status as any} userId={user.homeUserId ?? user.id} avatarColor={user.avatarColor} />
-        <div className="flex flex-col">
-          <div className="flex items-center gap-1.5">
-            <span className="text-txt-primary font-bold text-sm">{reqDisplayName}</span>
-            <span className="text-txt-tertiary text-xs">@{user.username}</span>
+    <li className="list-row group justify-between" onContextMenu={onContextMenu}>
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar src={user.avatar} name={reqDisplayName} size={32} status={user.status} userId={user.homeUserId ?? user.id} avatarColor={user.avatarColor} />
+        <div className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="truncate text-body font-medium leading-5 text-txt-primary">{reqDisplayName}</span>
+            <span className="truncate font-mono text-label text-txt-tertiary">@{user.username}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-txt-tertiary">{type === 'incoming' ? t('social:request.incoming') : t('social:request.outgoing')}</span>
+          <div className="flex min-w-0 items-center gap-1.5 text-meta leading-[18px] text-txt-tertiary">
+            <span className={`flex-shrink-0 ${type === 'incoming' ? 'text-txt-secondary' : ''}`}>{type === 'incoming' ? t('social:request.incoming') : t('social:request.outgoing')}</span>
             {instanceLabel && (
-              <span className="text-[11px] text-txt-tertiary/60 font-medium">{t('social:friend.viaInstance', { host: instanceLabel })}</span>
+              <span className="truncate">· {t('social:friend.viaInstance', { host: instanceLabel })}</span>
             )}
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      {/* In words, as on a search result: this is the one thing the row is for. */}
+      <div className="flex flex-shrink-0 items-center gap-1">
         {type === 'incoming' ? (
           <>
-            <button
-              onClick={() => onAccept?.()}
-              className="p-2 bg-surface-base rounded-full text-status-online hover:bg-status-online hover:text-white transition-all"
-              title={t('common:actions.accept')}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => onDecline?.()}
-              className="p-2 bg-surface-base rounded-full text-txt-danger hover:bg-accent-rose hover:text-white transition-all"
-              title={t('common:actions.decline')}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-              </svg>
-            </button>
+            <button type="button" onClick={() => onAccept?.()} className="btn-outline btn-sm">{t('common:actions.accept')}</button>
+            <button type="button" onClick={() => onDecline?.()} className="btn-quiet btn-sm">{t('common:actions.decline')}</button>
           </>
         ) : (
-          <button
-            onClick={() => onCancel?.()}
-            className="p-2 bg-surface-base rounded-full text-txt-tertiary hover:text-txt-danger transition-all"
-            title={t('social:request.cancel')}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-            </svg>
-          </button>
+          <button type="button" onClick={() => onCancel?.()} className="btn-quiet btn-sm">{t('social:request.cancel')}</button>
         )}
       </div>
-    </div>
+    </li>
   );
 }

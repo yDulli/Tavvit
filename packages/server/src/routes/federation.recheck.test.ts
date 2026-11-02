@@ -31,6 +31,7 @@ vi.mock('../config.js', () => ({
     jwtSecret: 'test-secret-12345678901234567890123456789012',
     maxUploadSize: 100 * 1024 * 1024,
     registrationOpen: true,
+    federation: { enabled: true, allowPrivatePeers: false },
   },
 }));
 

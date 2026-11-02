@@ -69,10 +69,13 @@ const LAST_PING_AT = Date.UTC(2026, 8, 21, 14, 19);
 const ADMIN_BASE: InstanceAdminSettings = {
   instanceName: 'Workbench',
   registrationOpen: true,
+  emojiPolicy: 'everyone',
   federatedRegistrationOpen: true,
   discoveryEnabled: true,
   gifEnabled: false,
   maxUploadSizeMb: 100,
+  storagePerAccountGb: 5,
+  spacesPerAccount: 25,
   federationRelayEnabled: true,
   federationRelayTtlDays: 30,
   defaultAutoRotateIntervalDays: 90,
@@ -82,7 +85,7 @@ const ADMIN_BASE: InstanceAdminSettings = {
   directoryLastPingAt: LAST_PING_AT,
   directoryLastError: null,
   directoryListedSpaceCount: 2,
-  supportCardEnabled: true,
+  accentColor: null,
 };
 
 const ADMIN_SCENES: Record<Extract<Scene, `admin-${string}`>, InstanceAdminSettings> = {
@@ -92,6 +95,7 @@ const ADMIN_SCENES: Record<Extract<Scene, `admin-${string}`>, InstanceAdminSetti
   'admin-unlisted': { ...ADMIN_BASE, directoryListedSpaceCount: 0 },
   'admin-closed': {
     ...ADMIN_BASE,
+    emojiPolicy: 'everyone',
     federatedRegistrationOpen: false,
     directoryListedSpaceCount: 0,
     directoryLastError: { at: LAST_PING_AT + 86_400_000, status: 'fetch', reason: 'unreachable' },
@@ -121,6 +125,7 @@ function stubInstanceInfo(scene: Scene): void {
     name: 'Workbench',
     version: '1.4.0',
     registrationOpen: true,
+    emojiPolicy: 'everyone',
     federatedRegistrationOpen: settings?.federatedRegistrationOpen ?? true,
     instanceId: '123e4567-e89b-12d3-a456-426614174000',
     sourceCodeUrl: 'https://github.com/TheZwiss/backspace',
@@ -130,7 +135,6 @@ function stubInstanceInfo(scene: Scene): void {
     // What the server computes from it: the endpoint and the setting together.
     directoryAvailable: !NO_ENDPOINT_SCENES.has(scene) && (settings?.directoryBrowseEnabled ?? true),
     directoryEnabled: settings?.directoryEnabled ?? false,
-    supportCardEnabled: settings?.supportCardEnabled ?? true,
   };
   const passThrough = window.fetch.bind(window);
   window.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {

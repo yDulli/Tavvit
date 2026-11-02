@@ -13,7 +13,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // and the two-instance harness passes a child instance its whole environment
 // explicitly, so under test everything comes from the process environment.
 if (process.env.NODE_ENV !== 'test') {
-  dotenvConfig({ path: resolve(__dirname, '../../../.env') });
+  // quiet: dotenv 17+ prints an "injected env" line on every boot, including
+  // when there is no .env file at all (Docker passes everything through env_file).
+  dotenvConfig({ path: resolve(__dirname, '../../../.env'), quiet: true });
 }
 
 function env(key: string, defaultValue?: string): string {
@@ -87,16 +89,27 @@ if (publicOrigin !== undefined) {
 
 // AGPL-3.0 § 13 "network-use source offer": users interacting over the network
 // must be able to obtain the Corresponding Source of the *running* version.
-// Operators who modify Backspace and self-host MUST point this at their own
-// fork's source so the offer stays accurate. Defaults to the upstream repo for
-// unmodified deployments.
+//
+// Tavvit is a modified version of Backspace, so the upstream repository is NOT
+// the source of what runs here: the operator must publish their own copy and
+// point TAVVIT_SOURCE_URL (or the older ORBIT_SOURCE_URL or BACKSPACE_SOURCE_URL) at it. Until they
+// do, the URL falls back to upstream so the link is never dead, but
+// `sourceCodeConfigured` is false and the admin UI and the boot log say that
+// the offer is incomplete. An install from a release archive needs none of
+// this: publish-source.sh serves the archive itself (utils/sourceOffer.ts).
+// See docs/tavvit/LICENSING.md.
 const UPSTREAM_SOURCE_URL = 'https://github.com/TheZwiss/backspace';
-const sourceCodeUrl = envOptional('BACKSPACE_SOURCE_URL') ?? UPSTREAM_SOURCE_URL;
+const configuredSourceUrl = envOptional('TAVVIT_SOURCE_URL') ?? envOptional('ORBIT_SOURCE_URL') ?? envOptional('BACKSPACE_SOURCE_URL');
+const sourceCodeUrl = configuredSourceUrl ?? UPSTREAM_SOURCE_URL;
 if (!/^https?:\/\//i.test(sourceCodeUrl)) {
   throw new Error(
-    `BACKSPACE_SOURCE_URL must start with http:// or https:// — got: ${sourceCodeUrl}`
+    `TAVVIT_SOURCE_URL must start with http:// or https:// — got: ${sourceCodeUrl}`
   );
 }
+// True only when the operator named a source location that is not upstream.
+const sourceCodeConfigured =
+  configuredSourceUrl !== undefined &&
+  configuredSourceUrl.replace(/\/+$/, '').toLowerCase() !== UPSTREAM_SOURCE_URL.toLowerCase();
 
 // Short git SHA/tag of the running build, injected at Docker build time via the
 // BACKSPACE_COMMIT build arg (see Dockerfile / deploy.sh). Null in local dev
@@ -232,6 +245,15 @@ const version = readPackageVersion();
 const passwordHashCost = process.env.NODE_ENV === 'test' ? 4 : 12;
 
 /**
+ * Argon2id: 64 MiB and 3 passes, RFC 9106's second recommended setting with one lane.
+ * The parameters are stored in each hash, so changing them here takes effect at each
+ * person's next login. The tests use the smallest there is, for the same reason as above.
+ */
+const passwordArgon2 = process.env.NODE_ENV === 'test'
+  ? { memoryKiB: 64, passes: 1 }
+  : { memoryKiB: 65_536, passes: 3 };
+
+/**
  * `FEDERATION_BACKOFF_DIVISOR`, test only. What it divides and why the harness
  * sets it: docs/systems/federation.md, "Retry backoff divisor (test only)".
  */
@@ -240,27 +262,131 @@ if (federationBackoffDivisor < 1) {
   throw new Error('Environment variable FEDERATION_BACKOFF_DIVISOR must be at least 1, got: 0');
 }
 
+/**
+ * Translating messages on request (docs/systems/translation.md). Off unless
+ * `TRANSLATION_PROVIDER` says otherwise, and then no word leaves the server. The address of
+ * a translator comes only from here, never from a request. A half-filled setting refuses to
+ * boot rather than running with a translator that cannot answer.
+ */
+function readTranslationConfig() {
+  const provider = (process.env.TRANSLATION_PROVIDER ?? '').trim() || 'none';
+  if (provider !== 'none' && provider !== 'deepl' && provider !== 'libretranslate') {
+    throw new Error(`TRANSLATION_PROVIDER must be none, deepl or libretranslate, got: ${JSON.stringify(provider)}`);
+  }
+  const deeplApiKey = envOptional('DEEPL_API_KEY') ?? '';
+  const libreUrl = envOptional('LIBRETRANSLATE_URL') ?? '';
+  if (provider === 'deepl' && !deeplApiKey) throw new Error('TRANSLATION_PROVIDER=deepl needs DEEPL_API_KEY.');
+  if (provider === 'libretranslate' && !/^https?:\/\/[^\s/]+/.test(libreUrl)) {
+    throw new Error('TRANSLATION_PROVIDER=libretranslate needs LIBRETRANSLATE_URL, for example: http://libretranslate:5000');
+  }
+  return { provider, deeplApiKey, libreUrl, libreApiKey: envOptional('LIBRETRANSLATE_API_KEY') ?? '' } as const;
+}
+
+/**
+ * Mail (docs/systems/email.md). Off unless `EMAIL_TRANSPORT` says otherwise: no worker, no
+ * webhook, no outbound connection, and the features that need mail disappear. A half-filled
+ * setting refuses to boot rather than running with mail that cannot go out.
+ */
+function readEmailConfig() {
+  const transport = (process.env.EMAIL_TRANSPORT ?? '').trim() || 'none';
+  if (transport !== 'none' && transport !== 'smtp' && transport !== 'resend') {
+    throw new Error(`EMAIL_TRANSPORT must be none, smtp or resend, got: ${JSON.stringify(transport)}`);
+  }
+  const from = envOptional('EMAIL_FROM');
+  const resendApiKey = envOptional('RESEND_API_KEY');
+  const smtpHost = envOptional('SMTP_HOST');
+  const baseUrl = (envOptional('APP_BASE_URL') ?? publicOrigin ?? (envOptional('DOMAIN') ? `https://${envOptional('DOMAIN')}` : '')).replace(/\/+$/, '');
+  if (transport !== 'none') {
+    if (!from) throw new Error(`EMAIL_TRANSPORT=${transport} needs EMAIL_FROM, for example: Tavvit <no-reply@example.com>`);
+    if (!/^https?:\/\//i.test(baseUrl)) {
+      throw new Error(`EMAIL_TRANSPORT=${transport} needs APP_BASE_URL or DOMAIN: the links in mail are built from it, never from a request.`);
+    }
+    if (transport === 'resend' && !resendApiKey) throw new Error('EMAIL_TRANSPORT=resend needs RESEND_API_KEY.');
+    if (transport === 'smtp' && !smtpHost) throw new Error('EMAIL_TRANSPORT=smtp needs SMTP_HOST.');
+  }
+  // Resend's free plan is the default for Resend. A relay's limits are the operator's to name; 0 means none.
+  return {
+    transport,
+    from: from ?? '',
+    replyTo: envOptional('EMAIL_REPLY_TO') ?? null,
+    baseUrl,
+    dailyLimit: envCount('EMAIL_DAILY_LIMIT', transport === 'resend' ? 100 : 0),
+    monthlyLimit: envCount('EMAIL_MONTHLY_LIMIT', transport === 'resend' ? 3000 : 0),
+    resend: {
+      apiKey: resendApiKey ?? '',
+      webhookSecret: envOptional('RESEND_WEBHOOK_SECRET') ?? null,
+    },
+    smtp: {
+      host: smtpHost ?? '',
+      port: envInt('SMTP_PORT', 587),
+      secure: envBool('SMTP_SECURE', false),
+      user: envOptional('SMTP_USER') ?? null,
+      pass: envOptional('SMTP_PASS') ?? null,
+    },
+  } as const;
+}
+
+/**
+ * What TOTP secrets are encrypted with: 32 bytes, as 64 hex characters or base64. Not in the
+ * database, and not derived from JWT_SECRET, so that rotating that does not lock anyone out.
+ * Unset: 2FA cannot be turned on, and an update never fails for it, because `update.sh` never
+ * writes `.env`. Mistyped: refused, because a wrong key would make every secret unreadable.
+ */
+function readTwoFactorKey(): Buffer | null {
+  const raw = envOptional('TOTP_ENCRYPTION_KEY');
+  if (!raw) return null;
+  const key = /^[0-9a-fA-F]{64}$/.test(raw) ? Buffer.from(raw, 'hex') : Buffer.from(raw, 'base64');
+  if (key.length !== 32) {
+    throw new Error('TOTP_ENCRYPTION_KEY must be 32 bytes, as 64 hex characters or base64. Generate one with: openssl rand -hex 32');
+  }
+  return key;
+}
+
 export const config = {
   port: envInt('PORT', 3000),
   host: env('HOST', '0.0.0.0'),
   jwtSecret: env('JWT_SECRET'),
   jwtExpiresIn: env('JWT_EXPIRES_IN', '30d'),
   passwordHashCost,
+  passwordArgon2,
   domain: envOptional('DOMAIN'),
   publicOrigin,
   version,
   sourceCodeUrl,
+  sourceCodeConfigured,
   commit,
 
   trustedProxyHops,
 
+  email: readEmailConfig(),
+  translation: readTranslationConfig(),
+  twoFactorKey: readTwoFactorKey(),
+
   livekit: {
     url: envOptional('LIVEKIT_URL'),
+    /** Where this server reaches LiveKit itself. The public address has a path its client would drop. */
+    apiUrl: envOptional('LIVEKIT_API_URL'),
     apiKey: envOptional('LIVEKIT_API_KEY'),
     apiSecret: envOptional('LIVEKIT_API_SECRET'),
   },
 
   federation: {
+    /**
+     * Master switch for server-to-server federation. OFF by default: Tavvit is a
+     * private space for one group of friends, and an instance that cannot be
+     * peered with cannot be reached by, or leak data to, any other instance.
+     *
+     * Off means: no `/api/federation/*` route is registered (peers get a plain
+     * 404), no federation worker runs, no request is ever sent to a peer (the
+     * outbound funnels `federationFetch` and `ensurePeered` refuse), federated
+     * account creation and the home-instance password check are refused, the
+     * web client hides its "Connections" surfaces, and the Content Security
+     * Policy no longer allows connections to arbitrary hosts.
+     *
+     * On restores the upstream behaviour unchanged. Existing peer rows and
+     * federated accounts are never deleted by flipping this switch.
+     */
+    enabled: envBool('FEDERATION_ENABLED', false),
     /**
      * Allow an origin that a stranger asserted to resolve to a private address.
      *
@@ -285,49 +411,50 @@ export const config = {
   tusStragglerSweepMs: envInt('TUS_STRAGGLER_SWEEP_HOURS', 48) * 60 * 60 * 1000,
   dbPath: env('DB_PATH', resolve(__dirname, '../../../data/backspace.db')),
   maxUploadSize: envInt('MAX_UPLOAD_SIZE', 104857600),
-  registrationOpen: envBool('REGISTRATION_OPEN', true),
+  /**
+   * Whether anyone who can reach the server may create an account. CLOSED by
+   * default: accounts come from admin invite links or from the `tavvit-admin`
+   * CLI. An admin can still switch it in Instance settings (the DB value wins
+   * over this one once set). The first administrator is created with the CLI,
+   * never through an open registration window: docs/tavvit/FIRST-ADMIN.md.
+   */
+  registrationOpen: envBool('REGISTRATION_OPEN', false),
 
-  updates: {
-    /**
-     * Whether the admin Updates panel may look up the newest release.
-     *
-     * There is no background poller anywhere in the server. The lookup happens
-     * only while a signed-in admin has that panel open and the cache is cold,
-     * so an instance whose admin never opens it never contacts github.com. This
-     * switch exists for airgapped deployments and for operators who want the
-     * guarantee rather than the behaviour.
-     */
-    checkEnabled: envBool('BACKSPACE_UPDATE_CHECK', true),
-    /**
-     * prebuilt | source | undefined. install.sh records this after its
-     * pull-or-build decision resolves. Undefined on installs that predate it,
-     * which the panel reports as unknown rather than guessing.
-     */
-    installChannel: envOptional('BACKSPACE_INSTALL_CHANNEL'),
+  /** What the operator is warned about (utils/operatorAlerts.ts). */
+  alerts: {
+    diskPercent: envInt('OPERATOR_ALERT_DISK_PERCENT', 85),
   },
-  telemetry: {
-    /** Receiver base URL for the opt-in daily ping. Tests and a future move override it. */
-    endpoint: envOptional('TELEMETRY_ENDPOINT') ?? 'https://hello.backspacechat.com',
-  },
+
+  /** Opens the routes `scripts/loadtest/run.mjs` needs, for administrators. Only for a test instance. */
+  loadtestAllowed: envBool('LOADTEST_ALLOWED', false),
+
   directory: {
     /**
-     * Hub base URL for the opt-in space directory. Unset means the project
-     * hub. Set to an empty string to disable the pinger and the proxy
-     * entirely (forks, air-gapped installs). Trailing slashes are dropped.
-     *
-     * Written out rather than through envOptional, which folds an empty
-     * value into unset and would hand an operator who set '' the hub.
+     * Hub base URL for the opt-in space directory. EMPTY by default, which
+     * disables the pinger and the Explore proxy entirely: a private instance
+     * neither lists its spaces anywhere nor contacts a public hub. Trailing
+     * slashes are dropped.
      */
-    endpoint: process.env.DIRECTORY_ENDPOINT === undefined
-      ? 'https://explore.backspacechat.com'
-      : process.env.DIRECTORY_ENDPOINT.trim().replace(/\/+$/, ''),
+    endpoint: (process.env.DIRECTORY_ENDPOINT ?? '').trim().replace(/\/+$/, ''),
   },
+  /**
+   * Where the desktop installers live: electron-builder's output (the
+   * installer, its .blockmap and latest.yml) copied in by hand, served at
+   * /downloads/desktop/ and described by GET /api/desktop/release. Beside the
+   * database by default, so it sits on the same mounted data volume.
+   */
+  // Not under downloadsDir: what is in there is served to anyone.
+  exportDir: envOptional('EXPORT_DIR') ?? resolve(dirname(env('DB_PATH', resolve(__dirname, '../../../data/backspace.db'))), 'exports'),
+  downloadsDir: envOptional('DOWNLOADS_DIR') ?? resolve(dirname(env('DB_PATH', resolve(__dirname, '../../../data/backspace.db'))), 'downloads'),
   backup: {
     dir: envOptional('BACKUP_DIR') ?? resolve(dirname(env('DB_PATH', resolve(__dirname, '../../../data/backspace.db'))), 'backups'),
     intervalHours: envInt('BACKUP_INTERVAL_HOURS', 24),
     keepScheduled: envInt('BACKUP_KEEP_SCHEDULED', 7),
     keepPreMigration: envInt('BACKUP_KEEP_PREMIGRATION', 5),
     keepManual: envInt('BACKUP_KEEP_MANUAL', 10),
+    keepConsole: envInt('BACKUP_KEEP_CONSOLE', 5),
+    /** What was made by hand is gone after this long, so that deleted data has an end there too. */
+    handMaxAgeDays: envInt('BACKUP_MAX_AGE_DAYS', 90),
     offsiteCmd: envOptional('BACKUP_OFFSITE_CMD'),
     disabled: envBool('BACKUP_DISABLED', false),
   },

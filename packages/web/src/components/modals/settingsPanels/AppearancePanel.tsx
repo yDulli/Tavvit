@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { LanguageSection } from './LanguageSection';
-import { InterfaceScaleSection } from './InterfaceScaleSection';
+import { ThemeSection } from './ThemeSection';
+import { AccentSection } from './AccentSection';
+import { MessagesSection, ShapeSection, TypefaceSection } from './LookSections';
+import { SettingsPage } from './_shared/SettingsControls';
 
 /**
  * Presentation preferences that belong to this browser or app rather than to
@@ -11,10 +13,12 @@ export function AppearancePanel() {
   const { t } = useTranslation(['settings']);
 
   return (
-    <div className="space-y-5">
-      <h2 className="text-lg font-semibold text-txt-primary mb-6">{t('settings:appearance.title')}</h2>
-      <LanguageSection />
-      <InterfaceScaleSection />
-    </div>
+    <SettingsPage title={t('settings:appearance.title')}>
+      <ThemeSection />
+      <AccentSection />
+      <MessagesSection />
+      <ShapeSection />
+      <TypefaceSection />
+    </SettingsPage>
   );
 }

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
+import Database from 'better-sqlite3';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -216,6 +217,29 @@ export async function spawnInstance(opts: SpawnInstanceOptions): Promise<Spawned
   );
 }
 
+/**
+ * A brand-new database is a private Tavvit instance: peering needs an admin's
+ * approval, federated accounts cannot be created, discovery is off. The
+ * federation suites test the upstream behaviour (auto-accepted peering, open
+ * federated sign-up), so once the instance is up they put those four settings
+ * back. Settings are read from the row on each request, so this takes effect
+ * before the harness hands the instance to a test. A second SQLite connection
+ * is fine: the server runs in WAL mode.
+ */
+function restoreUpstreamInstanceDefaults(dbPath: string): void {
+  const db = new Database(dbPath);
+  try {
+    db.prepare(
+      `UPDATE instance_settings
+          SET discovery_enabled = 1, federated_registration_open = 1, auto_accept_peering = 1,
+              directory_browse_enabled = 1
+        WHERE id = 1`,
+    ).run();
+  } finally {
+    db.close();
+  }
+}
+
 async function spawnOnPort(port: number, opts: SpawnInstanceOptions): Promise<SpawnedInstance> {
   const origin = `http://127.0.0.1:${port}`;
   const env: Record<string, string> = {
@@ -237,6 +261,11 @@ async function spawnOnPort(port: number, opts: SpawnInstanceOptions): Promise<Sp
     // address before this instance will send anything to it. Set here and only
     // here — the shipped default is off, and .env.example documents it that way.
     FEDERATION_ALLOW_PRIVATE_PEERS: 'true',
+    // Tavvit ships private: federation off, registration closed. This harness
+    // exists to exercise the federation code and registers its accounts over
+    // the API, so it opts back in. Set here and only here.
+    FEDERATION_ENABLED: 'true',
+    REGISTRATION_OPEN: 'true',
   };
   // Explicit in BOTH branches: `env` starts as a copy of `process.env`, so an
   // inherited DISABLE_FEDERATION_WORKERS would otherwise silently re-disable the
@@ -261,7 +290,12 @@ async function spawnOnPort(port: number, opts: SpawnInstanceOptions): Promise<Sp
   }
   // From packages/server/test/helpers → packages/server is up two levels.
   const serverDir = path.resolve(__dirname, '../../');
-  const proc = spawn('pnpm', ['exec', 'tsx', 'src/index.ts'], {
+  // `node --import tsx/esm`, which is exactly what `pnpm start` and the Docker
+  // image run. It used to be `spawn('pnpm', ['exec', 'tsx', ...])`: on Windows
+  // `pnpm` is a `.cmd` shim that cannot be spawned without a shell, so every
+  // instance failed to start and each suite sat out its 60 s ready timeout. It
+  // also kills cleanly, with no shell wrapper left holding the port.
+  const proc = spawn(process.execPath, ['--import', 'tsx/esm', 'src/index.ts'], {
     cwd: serverDir,
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -271,6 +305,7 @@ async function spawnOnPort(port: number, opts: SpawnInstanceOptions): Promise<Sp
   proc.stderr!.pipe(logStream);
   try {
     await waitForReady(origin, proc, opts.logPath);
+    restoreUpstreamInstanceDefaults(opts.dbPath);
   } catch (err) {
     // Never leave a half-booted child behind: a survivor holds its port and
     // makes the next allocation likelier to collide, and on CI it outlives the

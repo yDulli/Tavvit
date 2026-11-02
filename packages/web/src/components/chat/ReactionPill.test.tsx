@@ -16,6 +16,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
+import { useExternalMediaStore } from '../../stores/externalMediaStore';
 import { api, HttpError } from '../../api/client';
 
 function user(id: string, username: string, displayName: string | null = null, homeInstance: string | null = null): User {
@@ -35,6 +36,8 @@ beforeEach(() => {
   useAuthStore.setState({ user: ME });
   useUIStore.setState({ isMobile: false });
   useSpaceStore.setState({ userViews: new Map() });
+  // The stickers below live on other servers; the person has said yes to those two.
+  useExternalMediaStore.setState({ alwaysAllow: false, allowedHosts: ['chat.test', 'remote.test'] });
 });
 
 afterEach(() => {
@@ -176,6 +179,27 @@ it('shows a sticker preview with reactors and preserves toggle behavior', () => 
   expect(screen.getAllByRole('img')).toHaveLength(2);
   fireEvent.click(screen.getByRole('button'));
   expect(toggle).toHaveBeenCalledOnce();
+});
+
+it('fetches nothing for a sticker on a server nobody said yes to (the Reddit report)', () => {
+  const token = `sticker:https://tracker.example/api/stickers/assets/${'d'.repeat(64)}.webp`;
+  render(<ReactionPill emoji={token} origin="" reactions={[{ ...reaction(MIRA, 1), emoji: token }]} onToggle={vi.fn()} />);
+  expect(document.querySelector('img')).toBeNull();
+  expect(document.body.innerHTML).not.toContain('tracker.example/api');
+  // The pill still counts and toggles, and its menu offers nothing that would fetch the picture.
+  fireEvent.contextMenu(screen.getByRole('button'), { clientX: 1, clientY: 1 });
+  expect(useContextMenuStore.getState().menu).toBeNull();
+  fireEvent.mouseEnter(screen.getByRole('button'));
+  act(() => { vi.advanceTimersByTime(400); });
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Mira reacted');
+  expect(document.querySelector('img')).toBeNull();
+});
+
+it('shows a sticker of this page\'s own server at once', () => {
+  useExternalMediaStore.setState({ alwaysAllow: false, allowedHosts: [] });
+  const token = `sticker:${window.location.origin}/api/stickers/assets/${'e'.repeat(64)}.webp`;
+  render(<ReactionPill emoji={token} origin="" reactions={[{ ...reaction(MIRA, 1), emoji: token }]} onToggle={vi.fn()} />);
+  expect(screen.getByRole('img')).toHaveAttribute('src', token.slice('sticker:'.length));
 });
 
 describe('sticker reaction menu', () => {

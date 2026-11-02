@@ -1,5 +1,8 @@
 # ============================================================
-# Backspace — Multi-stage Docker build
+# Tavvit — Multi-stage Docker build
+#
+# Tavvit is a modified version of Backspace (Jannis Braun, AGPL-3.0). The
+# workspace packages keep their @backspace/* names; see NOTICE.
 # ============================================================
 
 # Stage 1: Production dependencies
@@ -132,8 +135,12 @@ RUN mkdir -p /app/data/uploads
 
 # Non-root hardening: copy the privilege-dropping entrypoint. It chowns the
 # data volume as root, then execs the CMD as the unprivileged `node` user.
+# The sed removes Windows line endings: a script with CRLF fails at the very
+# first line ("exec ... no such file or directory", because the interpreter is
+# read as "/bin/sh\r"), and a checkout edited or uploaded from Windows can have
+# them. Harmless on a file that already has LF.
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Set environment defaults
 ENV NODE_ENV=production
@@ -142,10 +149,10 @@ ENV HOST=0.0.0.0
 ENV DB_PATH=/app/data/backspace.db
 ENV UPLOAD_DIR=/app/data/uploads
 
-# AGPL-3.0 § 13 source offer: bake the running build's git commit into the image
-# so GET /api/instance/info can advertise the exact version. Passed via
-# --build-arg BACKSPACE_COMMIT=$(git rev-parse --short HEAD) (see deploy.sh /
-# docker-compose.yml). Empty when git is unavailable → server treats as null.
+# AGPL-3.0 § 13 source offer: bake the running build's id into the image so
+# GET /api/instance/info can advertise the exact version. Passed via
+# --build-arg BACKSPACE_COMMIT=<git commit, or the id of an uploaded release>
+# (see install.sh, update.sh and docker-compose.yml). Empty → server treats as null.
 ARG BACKSPACE_COMMIT=""
 ENV BACKSPACE_COMMIT=$BACKSPACE_COMMIT
 

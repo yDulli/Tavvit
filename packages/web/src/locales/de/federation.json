@@ -1,7 +1,7 @@
 {
   "connections": {
     "title": "Verbundene Instanzen",
-    "description": "Verknüpfe deine Konten über föderierte Backspace-Instanzen hinweg.",
+    "description": "Verknüpfe deine Konten über föderierte Tavvit-Instanzen hinweg.",
     "empty": "Keine entfernten Instanzen verbunden. Füge eine hinzu, um mit der Föderation zu starten.",
     "addButton": "+ Instanz hinzufügen",
     "home": {
@@ -336,7 +336,7 @@
         },
         "reset": {
           "title": "Peering zurücksetzen",
-          "description": "Peering mit {{name}} zurücksetzen? Löscht den lokalen Peer-Eintrag und alle ausstehenden Einträge im Postausgang. Nach dem Zurücksetzen musst du das Peering außerhalb von Backspace mit dem Admin der Gegenseite neu vereinbaren. Das lässt sich nicht rückgängig machen.",
+          "description": "Peering mit {{name}} zurücksetzen? Löscht den lokalen Peer-Eintrag und alle ausstehenden Einträge im Postausgang. Nach dem Zurücksetzen musst du das Peering außerhalb von Tavvit mit dem Admin der Gegenseite neu vereinbaren. Das lässt sich nicht rückgängig machen.",
           "confirm": "Zurücksetzen"
         }
       }

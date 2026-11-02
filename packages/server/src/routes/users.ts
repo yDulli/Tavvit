@@ -1,17 +1,32 @@
+import { isWeakPassword } from '../utils/passwordPolicy.js';
+import { suspendedNow } from '../utils/suspension.js';
+import { recordSecurityEvent } from '../security/events.js';
+import { refuseWithoutSecondFactor } from './twoFactor.js';
+import { notifyPasswordChanged } from '../email/account.js';
+import { noteSecurityChange } from '../security/notices.js';
+import { USERNAME_LIMITS, normalizeUsername, usernameChangeAllowedAt, usernameHeldUntil } from '@backspace/shared/src/usernames.js';
+import { usernameReserved } from '../utils/signupRules.js';
+import { usernameHeld, usernameShapeRefusal } from '../utils/usernames.js';
+import { isDmPolicy, isFriendRequestPolicy } from '../utils/contactPolicy.js';
 import type { FastifyInstance } from 'fastify';
 import { sendError, errorText } from '../utils/httpErrors';
-import { eq, or, and, inArray, isNull } from 'drizzle-orm';
+import { eq, or, and, inArray, isNull, lte, not, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { getDb, schema } from '../db/index.js';
-import { authenticate, verifyPassword, hashPassword, signJwt } from '../utils/auth.js';
+import { authenticate, verifyPassword, hashPassword, issueSessionToken } from '../utils/auth.js';
+import { endOtherSessions } from '../utils/sessions.js';
 import { connectionManager } from '../ws/handler.js';
-import type { UpdateUserRequest, VerifyPasswordRequest, VerifyPasswordResponse, ChangePasswordRequest, ChangePasswordResponse, DeleteAccountRequest, FederationCredentialRequest, FederationCredentialResponse, ReplicatedInstance, SpaceLayoutItem, SpaceFolder, FederationIdentityDeleteRequest, FederationIdentityDeleteResponse, FederationIdentityDeleteResult, FederationProfileUpdatePayload } from '@backspace/shared';
-import { AVATAR_COLORS, isChosenUserStatus, type ChosenUserStatus } from '@backspace/shared';
-import { PASSWORD_MIN_LENGTH } from '@backspace/shared/src/constants.js';
+import type { UpdateUserRequest, VerifyPasswordRequest, VerifyPasswordResponse, ChangePasswordRequest, ChangeUsernameRequest, ChangePasswordResponse, DeleteAccountRequest, FederationCredentialRequest, FederationCredentialResponse, ReplicatedInstance, SpaceLayoutItem, SpaceFolder, FederationIdentityDeleteRequest, FederationIdentityDeleteResponse, FederationIdentityDeleteResult, FederationProfileUpdatePayload } from '@backspace/shared';
+import { AVATAR_COLORS, PROFILE_LIMITS, isChosenUserStatus, isProfileLayout, type ChosenUserStatus } from '@backspace/shared';
+import { normalizePronouns, normalizeProfileLinks } from '@backspace/shared/src/profileFields.js';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@backspace/shared/src/constants.js';
 import { sanitizeUser } from '../utils/sanitize.js';
+import { isValidExpiryMinutes } from '../utils/customStatusExpiry.js';
 import { applyChosenStatus } from '../ws/presence.js';
 import { presenceUpdateFor } from '../ws/presenceEvent.js';
 import { deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
+import { pictureFileReleasable, profilePictureOf, uploadNameOf } from '../utils/profileImageRefs.js';
+import { mediaOriginsFor, shownPicture } from '../utils/remoteMedia.js';
 import { tombstoneUser, collectDeletionBroadcastTargets, collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
 import { queueOutboxEvent, isFederationRelayEnabled, appendMutationLog } from '../utils/federationOutbox.js';
 import { generateSnowflake } from '../utils/snowflake.js';
@@ -25,7 +40,7 @@ import path from 'path';
 /**
  * Canonicalize a caller-supplied remote instance origin to the single storage
  * form `https://host[:port]` (lowercased, no path, no trailing slash) so that
- * `orbit.test`, `orbit.test/`, and `https://Orbit.test` all resolve to the same
+ * `orbit.test`, `orbit.test/`, and `https://Tavvit.test` all resolve to the same
  * credential row instead of minting three unrelated secrets for one instance.
  * Returns null when the value is not a usable http(s) origin.
  */
@@ -56,8 +71,61 @@ export function isValidAssetUrl(url: string | null | undefined): boolean {
   return false;
 }
 
+type UserRow = typeof schema.users.$inferSelect;
+
+/**
+ * The new look of a profile for everyone who can see it. The account's own fields (when its
+ * status ends, its activity switch, its federation state) are its owner's business: everyone
+ * else gets the public view.
+ */
+function announceProfileChange(user: UserRow): void {
+  const own = { type: 'user_updated' as const, user: sanitizeUser(user, true) };
+  const others = { type: 'user_updated' as const, user: sanitizeUser(user) };
+  const targetUserIds = collectProfileBroadcastTargetIds(user.id);
+  targetUserIds.add(user.id); // Include self (for other tabs/connections)
+  for (const uid of targetUserIds) {
+    connectionManager.sendToUser(uid, uid === user.id ? own : others);
+  }
+}
+
+/**
+ * A picture as other instances get it: a file here by its full address, and never an address
+ * this instance would not show itself (utils/remoteMedia.ts).
+ */
+function relayedPicture(value: string | null, origin: string, homeInstance: string | null): string | null {
+  const picture = shownPicture(value, mediaOriginsFor(homeInstance));
+  if (!picture || /^https?:\/\//i.test(picture)) return picture;
+  return `${origin}/api/uploads/${picture.replace(/^\/api\/uploads\//, '')}`;
+}
+
+/** The new profile, to the other instances that hold a copy of this person. */
+function relayProfileUpdate(user: UserRow): void {
+  const origin = getOurOrigin();
+  const profilePayload: FederationProfileUpdatePayload = {
+    homeUserId: user.id,
+    homeInstance: origin,
+    profileUpdatedAt: user.profileUpdatedAt ?? Date.now(),
+    username: user.username,
+    displayName: user.displayName,
+    avatar: relayedPicture(user.avatar, origin, user.homeInstance),
+    banner: relayedPicture(user.banner, origin, user.homeInstance),
+    accentColor: user.accentColor,
+    avatarColor: user.avatarColor,
+    bio: user.bio,
+  };
+  appendMutationLog(user.id, user.id, 'profile_update', JSON.stringify({ profileUpdate: profilePayload }), 'profile');
+  queueOutboxEvent(
+    user.id,    // entityId — user's ID (queue `profile:<id>`: a newer edit replaces a queued one)
+    user.id,    // contextId — user-scoped
+    'profile_update',
+    JSON.stringify({ profileUpdate: profilePayload }),
+    undefined,  // targetPeerOrigins — broadcast to active and unreachable peers
+    'profile',  // contextType
+  );
+}
+
 export async function userRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/api/users/@me', { preHandler: authenticate }, async (request, reply) => {
+  app.get('/api/users/@me', { preHandler: authenticate, config: { botAllowed: true } }, async (request, reply) => {
     const db = getDb();
 
     const user = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
@@ -69,7 +137,11 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // POST /api/users/@me/verify-password — verify password matches current account
-  app.post<{ Body: VerifyPasswordRequest }>('/api/users/@me/verify-password', { preHandler: authenticate }, async (request, reply) => {
+  app.post<{ Body: VerifyPasswordRequest }>('/api/users/@me/verify-password', {
+    preHandler: authenticate,
+    // A stolen token must not make this a way to try passwords.
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
     const { password } = request.body;
 
     if (!password || typeof password !== 'string') {
@@ -88,6 +160,71 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // POST /api/users/@me/change-password — change account password
+  // POST /api/users/@me/username - Another name to sign in with and be found by
+  app.post<{ Body: ChangeUsernameRequest }>('/api/users/@me/username', {
+    preHandler: authenticate,
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
+  }, async (request, reply) => {
+    const db = getDb();
+    const user = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
+    if (!user) return sendError(reply, 404, 'user_not_found');
+
+    // `handle@home` is its home's to change, and a detached account keeps its login name.
+    if (user.homeInstance || user.federationHomeOrphaned === 1 || user.username.includes('@')) {
+      return sendError(reply, 403, 'username_change_home_only');
+    }
+    // Its accounts on other instances are named after this one and sign in under that name,
+    // so changing it here would leave them behind.
+    const connected = (user.replicatedInstances !== null && user.replicatedInstances !== '[]')
+      || db.select({ origin: schema.userFederationRegistry.origin }).from(schema.userFederationRegistry)
+        .where(eq(schema.userFederationRegistry.userId, user.id)).get() !== undefined;
+    if (connected) return sendError(reply, 409, 'username_change_connected');
+
+    const now = Date.now();
+    if (usernameChangeAllowedAt(user.usernameChangedAt) > now) {
+      return sendError(reply, 429, 'username_change_too_soon', { days: USERNAME_LIMITS.CHANGE_EVERY_DAYS });
+    }
+
+    const { username: wanted, password, twoFactorCode } = request.body ?? {};
+    if (typeof wanted !== 'string') return sendError(reply, 400, 'validation_failed', { field: 'username' });
+    const username = normalizeUsername(wanted);
+    const refusal = usernameShapeRefusal(username);
+    if (refusal) return sendError(reply, 400, refusal.code, refusal.details);
+    if (username === user.username) return sendError(reply, 400, 'username_same');
+
+    // It is what someone signs in with, so it takes what changing the password takes.
+    if (!password || typeof password !== 'string') return sendError(reply, 400, 'password_required');
+    if (!(await verifyPassword(password, user.passwordHash))) return sendError(reply, 403, 'current_password_incorrect');
+    const refused = refuseWithoutSecondFactor(user, twoFactorCode, request, reply);
+    if (refused) return refused;
+
+    if (usernameReserved(username)) return sendError(reply, 400, 'username_reserved');
+    const taken = db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.username, username)).get();
+    if (taken || usernameHeld(username, now)) return sendError(reply, 409, 'username_taken');
+
+    try {
+      db.transaction((tx) => {
+        tx.delete(schema.retiredUsernames).where(lte(schema.retiredUsernames.until, now)).run();
+        tx.insert(schema.retiredUsernames).values({ username: user.username, userId: user.id, until: usernameHeldUntil(now) })
+          .onConflictDoNothing().run();
+        tx.update(schema.users).set({ username, usernameChangedAt: now, profileUpdatedAt: now }).where(eq(schema.users.id, user.id)).run();
+      });
+    } catch (error) {
+      // Someone took it between the look above and this write: the unique index is the last word.
+      if (error instanceof Error && 'code' in error && String(error.code).startsWith('SQLITE_CONSTRAINT')) {
+        return sendError(reply, 409, 'username_taken');
+      }
+      throw error;
+    }
+
+    const updated = db.select().from(schema.users).where(eq(schema.users.id, user.id)).get();
+    if (!updated) return sendError(reply, 404, 'user_not_found');
+    noteSecurityChange(updated, 'username_changed', 'username_changed', request);
+    announceProfileChange(updated);
+    if (isFederationRelayEnabled()) relayProfileUpdate(updated);
+    return reply.code(200).send({ user: sanitizeUser(updated, true) });
+  });
+
   app.post<{ Body: ChangePasswordRequest }>('/api/users/@me/change-password', {
     preHandler: authenticate,
     config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
@@ -96,6 +233,9 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
 
     if (!newPassword || typeof newPassword !== 'string' || newPassword.length < PASSWORD_MIN_LENGTH) {
       return sendError(reply, 400, 'password_too_short', { min: PASSWORD_MIN_LENGTH });
+    }
+    if (newPassword.length > PASSWORD_MAX_LENGTH) {
+      return sendError(reply, 400, 'password_too_long', { max: PASSWORD_MAX_LENGTH });
     }
 
     const db = getDb();
@@ -119,11 +259,25 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
+    if ((!user.homeInstance || user.federationHomeOrphaned === 1) && isWeakPassword(newPassword, user.username)) {
+      return sendError(reply, 400, 'password_too_common');
+    }
+
+    const refused = refuseWithoutSecondFactor(user, request.body.twoFactorCode, request, reply);
+    if (refused) return refused;
+
     const newHash = await hashPassword(newPassword);
     db.update(schema.users).set({ passwordHash: newHash, passwordChangedAt: Date.now() }).where(eq(schema.users.id, request.userId)).run();
 
-    // Issue fresh JWT
-    const token = signJwt({ userId: user.id, username: user.username });
+    // Every session ends, this device's too: whoever had a copy of its token is exactly
+    // who a password change is meant to shut out. This device goes on with a new one.
+    // Other devices are told at once. This device's socket holds the old session until
+    // the client reconnects with the new token, which it does on this answer.
+    const ended = endOtherSessions(request.userId, null);
+    const { token } = issueSessionToken(user, request);
+    connectionManager.closeSessionSockets(new Set(ended.filter((id) => id !== request.sessionId)));
+    notifyPasswordChanged(user);
+    recordSecurityEvent(user.id, 'password_changed', request);
     const response: ChangePasswordResponse = { token };
     return reply.code(200).send(response);
   });
@@ -150,6 +304,14 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 400, 'username_confirmation_mismatch');
     }
 
+    // The same count as demoting one: an instance always keeps an admin who can act.
+    if (user.isAdmin === 1) {
+      const admins = db.select({ count: sql<number>`count(*)` }).from(schema.users)
+        .where(and(eq(schema.users.isAdmin, 1), eq(schema.users.isDeleted, 0), not(suspendedNow(Date.now()))))
+        .get();
+      if ((admins?.count ?? 0) <= 1) return sendError(reply, 400, 'last_admin_cannot_leave');
+    }
+
     // Native users must verify password; non-detached federated users rely on
     // JWT auth (their home instance already vouches for them). EXCEPTION:
     // detached accounts (federation_home_orphaned = 1) are sovereign local
@@ -165,6 +327,9 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
         return sendError(reply, 403, 'account_deletion_password_incorrect');
       }
     }
+
+    const refused = refuseWithoutSecondFactor(user, request.body.twoFactorCode, request, reply);
+    if (refused) return refused;
 
     // Check if user owns any spaces
     const ownedSpaces = db.select({ id: schema.spaces.id, name: schema.spaces.name })
@@ -218,7 +383,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch<{ Body: UpdateUserRequest }>('/api/users/@me', { preHandler: authenticate }, async (request, reply) => {
-    const { displayName, avatar, banner, accentColor, avatarColor, bio, customStatus, status, replicatedInstances, homeUserId, profileUpdatedAt, discoverable, showActivity } = request.body;
+    const { displayName, avatar, banner, accentColor, accentColorSecondary, avatarColor, bio, pronouns, profileLinks, profileLayout, customStatus, customStatusExpiresInMinutes, status, replicatedInstances, homeUserId, profileUpdatedAt, showActivity } = request.body;
     const db = getDb();
 
     const updateData: Record<string, string | null | undefined> = {};
@@ -258,6 +423,11 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     // Track old files for cleanup after update
     let oldAvatar: string | null = null;
     let oldBanner: string | null = null;
+    // Only an account that keeps its profile here gets this far (a replicated one is refused
+    // above), so an address may only name an upload of this instance: never another server, not
+    // even the home a detached account once had, whose domain may belong to someone else now
+    // (utils/remoteMedia.ts).
+    const pictureOrigins = mediaOriginsFor();
     if (avatar !== undefined || banner !== undefined) {
       const current = db.select({ avatar: schema.users.avatar, banner: schema.users.banner })
         .from(schema.users).where(eq(schema.users.id, request.userId)).get();
@@ -265,30 +435,29 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       oldBanner = current?.banner ?? null;
     }
 
+    // The pictures, checked once (utils/profileImageRefs.ts): a file here must
+    // be the person's own upload or the one they already show, since naming
+    // someone else's would resize it and, once replaced, delete it. Only the
+    // file a check passed is resized or has its upload record dropped below.
+    let avatarUpload: string | null = null;
+    let bannerUpload: string | null = null;
+
     if (avatar !== undefined) {
-      if (!isValidAssetUrl(avatar)) {
+      const picture = profilePictureOf(avatar, request.userId, oldAvatar, pictureOrigins);
+      if (!picture) {
         return sendError(reply, 400, 'avatar_url_invalid');
       }
-      updateData.avatar = avatar;
-      // Normalize to bare filename — callers may include /api/uploads/ prefix
-      if (typeof updateData.avatar === 'string' && updateData.avatar.startsWith('/api/uploads/')) {
-        updateData.avatar = updateData.avatar.slice('/api/uploads/'.length);
-      }
+      updateData.avatar = picture.stored;
+      avatarUpload = picture.upload;
     }
 
     if (banner !== undefined) {
-      if (!isValidAssetUrl(banner)) {
+      const picture = profilePictureOf(banner, request.userId, oldBanner, pictureOrigins);
+      if (!picture) {
         return sendError(reply, 400, 'banner_url_invalid');
       }
-      if (banner && typeof banner === 'string' && banner.trim().length > 0) {
-        updateData.banner = banner.trim();
-        // Normalize to bare filename — callers may include /api/uploads/ prefix
-        if (updateData.banner.startsWith('/api/uploads/')) {
-          updateData.banner = updateData.banner.slice('/api/uploads/'.length);
-        }
-      } else {
-        updateData.banner = null;
-      }
+      updateData.banner = picture.stored;
+      bannerUpload = picture.upload;
     }
 
     if (accentColor !== undefined) {
@@ -300,6 +469,21 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
         updateData.accentColor = hex;
       } else {
         updateData.accentColor = null;
+        // The second colour only means something next to the first.
+        if (accentColorSecondary === undefined) updateData.accentColorSecondary = null;
+      }
+    }
+
+    if (accentColorSecondary !== undefined) {
+      if ((accentColorSecondary as unknown) === null || (typeof accentColorSecondary === 'string' && accentColorSecondary.trim() === '')) {
+        updateData.accentColorSecondary = null;
+      } else {
+        // Anything else has to be a colour: a number or object is a mistake, not a request to clear.
+        const hex = typeof accentColorSecondary === 'string' ? accentColorSecondary.trim() : '';
+        if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
+          return sendError(reply, 400, 'accent_color_invalid');
+        }
+        updateData.accentColorSecondary = hex;
       }
     }
 
@@ -327,6 +511,29 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
+    // The profile card's own fields (shared/src/profileFields.ts). Kept on
+    // this instance like the profile theme: they are not relayed to peers.
+    if (pronouns !== undefined) {
+      const stored = normalizePronouns(pronouns);
+      if (stored === undefined) {
+        return sendError(reply, 400, 'pronouns_too_long', { max: PROFILE_LIMITS.MAX_PRONOUNS_LENGTH });
+      }
+      updateData.pronouns = stored;
+    }
+    if (profileLinks !== undefined) {
+      const stored = normalizeProfileLinks(profileLinks);
+      if (stored === undefined) {
+        return sendError(reply, 400, 'profile_links_invalid', { max: PROFILE_LIMITS.MAX_LINKS });
+      }
+      updateData.profileLinks = stored && stored.length > 0 ? JSON.stringify(stored) : null;
+    }
+    if (profileLayout !== undefined) {
+      if (profileLayout !== null && !isProfileLayout(profileLayout)) {
+        return sendError(reply, 400, 'profile_layout_invalid');
+      }
+      updateData.profileLayout = profileLayout === 'standard' ? null : profileLayout;
+    }
+
     if (customStatus !== undefined) {
       if (customStatus !== null && typeof customStatus === 'string') {
         const trimmed = customStatus.trim();
@@ -337,6 +544,21 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       } else {
         updateData.customStatus = null;
       }
+    }
+
+    // "Clear after ...": a duration counted from now on the server's clock. A
+    // status that is saved without one lasts until it is changed, and a status
+    // that is cleared has nothing left to expire.
+    if (customStatus !== undefined || customStatusExpiresInMinutes !== undefined) {
+      if (customStatusExpiresInMinutes !== undefined && customStatusExpiresInMinutes !== null
+        && !isValidExpiryMinutes(customStatusExpiresInMinutes)) {
+        return sendError(reply, 400, 'custom_status_expiry_invalid');
+      }
+      const effectiveStatus = customStatus !== undefined ? (updateData.customStatus ?? null) : (preUpdateUser.customStatus ?? null);
+      const expiresAt = effectiveStatus !== null && typeof customStatusExpiresInMinutes === 'number'
+        ? Date.now() + customStatusExpiresInMinutes * 60_000
+        : null;
+      (updateData as Record<string, unknown>).customStatusExpiresAt = expiresAt;
     }
 
     // A status is a choice among online/idle/dnd; 'offline' only ever means
@@ -407,12 +629,8 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
             profileUpdatedAt: preUpdateUser.profileUpdatedAt ?? Date.now(),
             username: preUpdateUser.username,
             displayName: preUpdateUser.displayName,
-            avatar: preUpdateUser.avatar && !preUpdateUser.avatar.startsWith('http')
-              ? `${origin}/api/uploads/${preUpdateUser.avatar}`
-              : preUpdateUser.avatar,
-            banner: preUpdateUser.banner && !preUpdateUser.banner.startsWith('http')
-              ? `${origin}/api/uploads/${preUpdateUser.banner}`
-              : preUpdateUser.banner,
+            avatar: relayedPicture(preUpdateUser.avatar, origin, preUpdateUser.homeInstance),
+            banner: relayedPicture(preUpdateUser.banner, origin, preUpdateUser.homeInstance),
             accentColor: preUpdateUser.accentColor,
             avatarColor: preUpdateUser.avatarColor,
             bio: preUpdateUser.bio,
@@ -447,11 +665,14 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
-    if (discoverable !== undefined) {
-      if (typeof discoverable !== 'boolean') {
-        return sendError(reply, 400, 'validation_failed', { field: 'discoverable', reason: 'must be a boolean' });
-      }
-      (updateData as Record<string, unknown>).discoverable = discoverable ? 1 : 0;
+    const { dmPolicy, friendRequestPolicy } = request.body;
+    if (dmPolicy !== undefined) {
+      if (!isDmPolicy(dmPolicy)) return sendError(reply, 400, 'validation_failed', { field: 'dmPolicy' });
+      updateData.dmPolicy = dmPolicy;
+    }
+    if (friendRequestPolicy !== undefined) {
+      if (!isFriendRequestPolicy(friendRequestPolicy)) return sendError(reply, 400, 'validation_failed', { field: 'friendRequestPolicy' });
+      updateData.friendRequestPolicy = friendRequestPolicy;
     }
 
     if (showActivity !== undefined) {
@@ -466,7 +687,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Detect profile changes and stamp timestamp
-    const hasProfileChange = ['displayName', 'avatar', 'banner', 'accentColor', 'avatarColor', 'bio', 'customStatus'].some(f => f in updateData);
+    const hasProfileChange = ['displayName', 'avatar', 'banner', 'accentColor', 'accentColorSecondary', 'avatarColor', 'bio', 'pronouns', 'profileLinks', 'profileLayout', 'customStatus', 'customStatusExpiresAt'].some(f => f in updateData);
     const hasDurableChange = DURABLE_PROFILE_FIELDS.some(f => f in updateData);
     if (hasDurableChange) {
       (updateData as Record<string, unknown>).profileUpdatedAt = Date.now();
@@ -485,8 +706,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       if (!showActivity) {
         connectionManager.clearUserActivities(request.userId);
         const clearPayload = presenceUpdateFor(request.userId, connectionManager.getUserStatus(request.userId), []);
-        const clearTargets = collectProfileBroadcastTargetIds(request.userId);
-        for (const uid of clearTargets) connectionManager.sendToUser(uid, clearPayload);
+        connectionManager.broadcastPresence(request.userId, clearPayload);
         connectionManager.sendToUser(request.userId, clearPayload);
 
         // S2S: broadcast the cleared-activities snapshot to peers (see queueOutboxEvent).
@@ -502,33 +722,27 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
-    // Clean up old avatar/banner files that were replaced
-    if (avatar !== undefined && oldAvatar && oldAvatar !== (avatar || null) && !oldAvatar.startsWith('http')) {
-      deleteUploadFile(oldAvatar);
-      deleteAttachmentByFilename(oldAvatar);
+    // A replaced picture goes once nothing shows it any more: not this
+    // account's other field, a space profile, a space or a group DM.
+    const replacedAvatar = avatar !== undefined ? uploadNameOf(oldAvatar) : null;
+    if (replacedAvatar && replacedAvatar !== uploadNameOf(updateData.avatar) && pictureFileReleasable(replacedAvatar)) {
+      deleteUploadFile(replacedAvatar);
+      deleteAttachmentByFilename(replacedAvatar);
     }
-    if (banner !== undefined && oldBanner && oldBanner !== (updateData.banner ?? null) && !oldBanner.startsWith('http')) {
-      deleteUploadFile(oldBanner);
-      deleteAttachmentByFilename(oldBanner);
+    const replacedBanner = banner !== undefined ? uploadNameOf(oldBanner) : null;
+    if (replacedBanner && replacedBanner !== uploadNameOf(updateData.banner) && pictureFileReleasable(replacedBanner)) {
+      deleteUploadFile(replacedBanner);
+      deleteAttachmentByFilename(replacedBanner);
     }
-    // Clean up attachment records for newly-set profile images — the reference
-    // now lives in the users table, so the attachment record is unnecessary
-    if (avatar && typeof avatar === 'string' && avatar.includes('/api/uploads/')) {
-      deleteAttachmentByFilename(avatar);
-    }
-    if (updateData.banner && typeof updateData.banner === 'string' && updateData.banner.includes('/api/uploads/')) {
-      deleteAttachmentByFilename(updateData.banner);
-    }
+    // A newly shown picture's upload record goes: the users table holds the
+    // file now, and the record would let it be put somewhere else as a fresh
+    // upload (ownProfileUploadOf).
+    if (avatarUpload) deleteAttachmentByFilename(avatarUpload);
+    if (bannerUpload) deleteAttachmentByFilename(bannerUpload);
 
     // Resize profile images to optimal dimensions (safety net for federation, API clients, etc.)
-    if (avatar && typeof avatar === 'string' && !avatar.startsWith('http')) {
-      const filePath = path.join(config.uploadDir, path.basename(avatar));
-      await resizeProfileImage(filePath, 'avatar');
-    }
-    if (updateData.banner && typeof updateData.banner === 'string' && !updateData.banner.startsWith('http')) {
-      const filePath = path.join(config.uploadDir, path.basename(updateData.banner));
-      await resizeProfileImage(filePath, 'banner');
-    }
+    if (avatarUpload) await resizeProfileImage(path.join(config.uploadDir, avatarUpload), 'avatar');
+    if (bannerUpload) await resizeProfileImage(path.join(config.uploadDir, bannerUpload), 'banner');
 
     const updatedUser = db.select().from(schema.users).where(eq(schema.users.id, request.userId)).get();
     if (!updatedUser) {
@@ -538,14 +752,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     const sanitized = sanitizeUser(updatedUser, true);
 
     // Broadcast user_updated for profile field changes
-    if (hasProfileChange) {
-      const userUpdatedEvent = { type: 'user_updated' as const, user: sanitized };
-      const targetUserIds = collectProfileBroadcastTargetIds(sanitized.id);
-      targetUserIds.add(sanitized.id); // Include self (for other tabs/connections)
-      for (const uid of targetUserIds) {
-        connectionManager.sendToUser(uid, userUpdatedEvent);
-      }
-    }
+    if (hasProfileChange) announceProfileChange(updatedUser);
 
     // S2S profile relay: queue profile_update to all peers when durable fields actually changed
     if (hasDurableChange && !preUpdateUser.homeInstance && isFederationRelayEnabled()) {
@@ -555,39 +762,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       );
 
       if (durableActuallyChanged) {
-        const origin = getOurOrigin();
-        const profilePayload: FederationProfileUpdatePayload = {
-          homeUserId: updatedUser!.id,
-          homeInstance: origin,
-          profileUpdatedAt: updatedUser!.profileUpdatedAt ?? Date.now(),
-          username: updatedUser!.username,
-          displayName: updatedUser!.displayName,
-          avatar: updatedUser!.avatar && !updatedUser!.avatar.startsWith('http')
-            ? `${origin}/api/uploads/${updatedUser!.avatar}`
-            : updatedUser!.avatar,
-          banner: updatedUser!.banner && !updatedUser!.banner.startsWith('http')
-            ? `${origin}/api/uploads/${updatedUser!.banner}`
-            : updatedUser!.banner,
-          accentColor: updatedUser!.accentColor,
-          avatarColor: updatedUser!.avatarColor,
-          bio: updatedUser!.bio,
-        };
-
-        appendMutationLog(
-          updatedUser!.id,
-          updatedUser!.id,
-          'profile_update',
-          JSON.stringify({ profileUpdate: profilePayload }),
-          'profile',
-        );
-        queueOutboxEvent(
-          updatedUser!.id,    // entityId — user's ID (queue `profile:<id>`: a newer edit replaces a queued one)
-          updatedUser!.id,    // contextId — user-scoped
-          'profile_update',
-          JSON.stringify({ profileUpdate: profilePayload }),
-          undefined,          // targetPeerOrigins — broadcast to active and unreachable peers
-          'profile',          // contextType
-        );
+        relayProfileUpdate(updatedUser!);
       }
     }
 
@@ -723,6 +898,9 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: FederationCredentialRequest }>('/api/users/@me/federation-credential', {
     preHandler: authenticate,
   }, async (request, reply) => {
+    if (!config.federation.enabled) {
+      return sendError(reply, 403, 'federation_disabled');
+    }
     const { origin, markProvisioned } = request.body ?? {};
 
     if (!origin || typeof origin !== 'string') {
@@ -791,6 +969,9 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
     config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
   }, async (request, reply) => {
+    if (!config.federation.enabled) {
+      return sendError(reply, 403, 'federation_disabled');
+    }
     const { origins, mode } = request.body;
 
     if (!mode || !['leave', 'soft', 'full'].includes(mode)) {

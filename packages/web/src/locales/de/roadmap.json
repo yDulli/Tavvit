@@ -1,0 +1,82 @@
+{
+  "title": "Roadmap",
+  "lead": "Was als Nächstes kommt und was wir danach vorhaben. Es gibt keine Termine, und Pläne können sich ändern.",
+  "sections": {
+    "next": {
+      "title": "Als Nächstes",
+      "items": {
+        "history": {
+          "title": "Bearbeitungsverlauf",
+          "text": "Sehen, was in einer Nachricht stand, bevor sie bearbeitet wurde, wenn du sie geschrieben hast oder dich um den Kanal kümmerst."
+        },
+        "scheduled": {
+          "title": "Geplante Nachrichten",
+          "text": "Jetzt schreiben und später senden lassen."
+        },
+        "notes": {
+          "title": "Private Notizen zu Personen",
+          "text": "Eine Notiz im Profil einer Person, die nur du siehst."
+        },
+        "altText": {
+          "title": "Bildbeschreibungen",
+          "text": "Ein Bild für Menschen beschreiben, die es nicht sehen können."
+        },
+        "ageRestricted": {
+          "title": "Altersbeschränkte Kanäle",
+          "text": "Ein Kanal, den du betrittst, nachdem du angegeben hast, alt genug zu sein. Nichts davon erscheint in der Suche oder in Benachrichtigungen."
+        },
+        "accounts": {
+          "title": "Mehrere Konten auf einem Gerät",
+          "text": "Zwischen bis zu fünf Konten wechseln, ohne dich abzumelden."
+        },
+        "passkeys": {
+          "title": "Passkeys",
+          "text": "Mit Fingerabdruck, Gesicht oder Sicherheitsschlüssel anmelden statt mit Passwort."
+        }
+      }
+    },
+    "after": {
+      "title": "Danach",
+      "items": {
+        "publicExplore": {
+          "title": "Entdecken ohne Konto",
+          "text": "Sehen, welche Spaces es gibt, bevor du dich anmeldest."
+        },
+        "spacePages": {
+          "title": "Eine Seite für jeden öffentlichen Space",
+          "text": "Eine Adresse zum Teilen, die zeigt, worum es in einem Space geht, mit einem Weg hinein."
+        },
+        "statistics": {
+          "title": "Statistiken für Space-Inhaber",
+          "text": "Wie viele Menschen beitreten, gehen und schreiben, als Zahlen, die niemanden nennen."
+        }
+      }
+    },
+    "later": {
+      "title": "Später",
+      "note": "Was wir gerne machen würden. Davon ist noch nichts versprochen.",
+      "items": {
+        "signIn": {
+          "title": "Mit Tavvit anmelden",
+          "text": "Mit deinem Konto bei anderen Websites und Apps anmelden."
+        },
+        "botButtons": {
+          "title": "Knöpfe und Menüs in Nachrichten",
+          "text": "Bots können Auswahlen zum Anklicken anbieten statt Befehle zum Tippen."
+        },
+        "blur": {
+          "title": "Hintergrund-Unschärfe in Videoanrufen",
+          "text": "Dein Zimmer bleibt vor der Kamera deine Sache."
+        },
+        "signedApp": {
+          "title": "Eine signierte Desktop-App",
+          "text": "Keine Warnung von Windows mehr beim Installieren der App."
+        }
+      }
+    }
+  },
+  "recent": {
+    "title": "Gerade fertig geworden",
+    "all": "Alles, was neu ist"
+  }
+}

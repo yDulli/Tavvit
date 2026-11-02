@@ -19,7 +19,7 @@ import { SYSTEM_AUDIO_NOTE_I18N_KEYS, systemAudioNote, useOwnAudioInSystemAudio 
  *
  * Shared by the two places a user tunes a stream: ScreenShareSetup before it
  * starts, and ScreenShareSettingsPopover while it is live. Presentation-only:
- * the pills show the effective config (`effectiveScreenShareConfig`, the saved
+ * the choices show the effective config (`effectiveScreenShareConfig`, the saved
  * choice fitted to the limits of the instance hosting the call, see
  * `utils/streamHostLimits.ts`), and only a click saves. The limits never write
  * into the saved config, so a strict host does not lower it for later streams.
@@ -68,7 +68,7 @@ export function StreamHostSubtitle({ className = '' }: { className?: string }) {
   const { origin } = useStreamHostLimits();
   if (!origin) return null;
   return (
-    <div className={`text-[11px] text-txt-tertiary break-all ${className}`}>
+    <div className={`text-label text-txt-tertiary break-all ${className}`}>
       {t('voice:streamSettings.hostLimits', { host: hostOf(origin) })}
     </div>
   );
@@ -80,7 +80,7 @@ export function StreamSummary({ className = '' }: { className?: string }) {
   const config = useVoiceStore((s) => s.screenShareConfig);
   const result = buildScreenShareOptions(config);
   return (
-    <span className={`text-[12px] text-txt-tertiary ${className}`}>
+    <span className={`tabular font-mono text-label text-txt-tertiary ${className}`}>
       {t('voice:streamSettings.summary', {
         bitrate: formatBitrate(result.publish.videoEncoding.maxBitrate),
         degradation: formatDegradation(result.overdrive.degradationPreference),
@@ -115,9 +115,36 @@ export function systemAudioSwitch(
   }
 }
 
-const pillBase = 'px-2.5 py-1.5 rounded-full text-[13px] font-medium transition-colors cursor-pointer select-none text-center';
-const pillSelected = 'bg-accent-primary text-white';
-const pillUnselected = 'bg-surface-elevated text-txt-secondary hover:bg-interactive-hover';
+/**
+ * One group of choices, drawn like Settings' `SegmentedControl`: a sunken strip
+ * whose chosen cell is a step lighter with a violet edge. With six groups on one
+ * panel a filled cell in each would turn the violet into decoration.
+ */
+function ChoiceStrip({ columns, children }: { columns: 2 | 3; children: React.ReactNode }) {
+  return (
+    <div className={`grid gap-0.5 rounded-md border border-border-soft bg-surface-input p-0.5 ${columns === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      {children}
+    </div>
+  );
+}
+
+function Choice({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`relative min-w-0 truncate rounded px-1.5 py-1 text-center text-ui font-medium select-none transition-colors duration-100 ${
+        selected
+          ? 'bg-surface-elevated text-txt-primary'
+          : 'text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary active:bg-interactive-active'
+      }`}
+    >
+      {children}
+      {selected && <span aria-hidden="true" className="absolute inset-x-2 bottom-0 h-[2px] rounded-t-[1px] bg-accent-primary" />}
+    </button>
+  );
+}
 
 export function StreamQualityControls() {
   const { t } = useTranslation(['voice', 'common']);
@@ -153,109 +180,92 @@ export function StreamQualityControls() {
     <div className="flex flex-col gap-3">
       {/* Resolution */}
       <div>
-        <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
+        <div className="label-mono mb-1.5">
           {t('voice:streamSettings.resolution')}
         </div>
-        <div className="grid grid-cols-3 gap-1.5">
+        <ChoiceStrip columns={3}>
           {RESOLUTIONS.map((r) => (
-            <button
+            <Choice
               key={String(r.value)}
+              selected={effective.height === r.value}
               onClick={() => setConfig({ height: r.value })}
-              aria-pressed={effective.height === r.value}
-              className={`${pillBase} ${effective.height === r.value ? pillSelected : pillUnselected}`}
             >
               {r.label}
-            </button>
+            </Choice>
           ))}
-        </div>
+        </ChoiceStrip>
       </div>
 
       {/* Frame Rate */}
       <div>
-        <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
+        <div className="label-mono mb-1.5">
           {t('voice:streamSettings.frameRate')}
         </div>
-        <div className="grid grid-cols-3 gap-1.5">
+        <ChoiceStrip columns={3}>
           {FRAME_RATES.map((f) => (
-            <button
+            <Choice
               key={f.value}
+              selected={effective.fps === f.value}
               onClick={() => setConfig({ fps: f.value })}
-              aria-pressed={effective.fps === f.value}
-              className={`${pillBase} ${effective.fps === f.value ? pillSelected : pillUnselected}`}
             >
               {f.label}
-            </button>
+            </Choice>
           ))}
-        </div>
+        </ChoiceStrip>
       </div>
 
       {/* Content Mode */}
       <div>
-        <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
+        <div className="label-mono mb-1.5">
           {t('voice:streamSettings.contentMode')}
         </div>
-        <div className="flex gap-1.5">
+        <ChoiceStrip columns={2}>
           {MODES.map((m) => (
-            <button
-              key={m.value}
-              onClick={() => setConfig({ mode: m.value })}
-              aria-pressed={config.mode === m.value}
-              className={`${pillBase} ${config.mode === m.value ? pillSelected : pillUnselected}`}
-            >
+            <Choice key={m.value} selected={config.mode === m.value} onClick={() => setConfig({ mode: m.value })}>
               {t(m.labelKey)}
-            </button>
+            </Choice>
           ))}
-        </div>
+        </ChoiceStrip>
       </div>
 
       {/* Codec */}
       <div>
-        <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
+        <div className="label-mono mb-1.5">
           {t('voice:streamSettings.codec')}
         </div>
-        <div className="flex gap-1.5">
-          {CODEC_OPTIONS.map((c) => {
-            const isSelected = config.codec === c.value;
-            return (
-              <button
-                key={c.value}
-                onClick={() => setConfig({ codec: c.value })}
-                aria-pressed={isSelected}
-                className={`${pillBase} ${isSelected ? pillSelected : pillUnselected}`}
-              >
-                {t(c.labelKey)}
-              </button>
-            );
-          })}
-        </div>
+        <ChoiceStrip columns={2}>
+          {CODEC_OPTIONS.map((c) => (
+            <Choice key={c.value} selected={config.codec === c.value} onClick={() => setConfig({ codec: c.value })}>
+              {t(c.labelKey)}
+            </Choice>
+          ))}
+        </ChoiceStrip>
       </div>
 
-      {/* Bitrate — Auto | Custom pills like every other row; the slider only exists in Custom */}
+      {/* Bitrate — Auto | Custom like every other row; the slider only exists in Custom */}
       <div>
-        <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider mb-1.5">
+        <div className="label-mono mb-1.5">
           {t('voice:streamSettings.bitrate')}
         </div>
         {hostLimits.allowCustomBitrate ? (
           <>
-            <div className="flex gap-1.5">
-              <button
+            <ChoiceStrip columns={2}>
+              <Choice
+                selected={effective.customBitrateKbps == null}
                 onClick={() => setConfig({ customBitrateKbps: null })}
-                aria-pressed={effective.customBitrateKbps == null}
-                className={`${pillBase} ${effective.customBitrateKbps == null ? pillSelected : pillUnselected}`}
               >
                 {t('voice:streamSettings.auto')}
-              </button>
-              <button
+              </Choice>
+              <Choice
+                selected={effective.customBitrateKbps != null}
                 onClick={() => {
                   // Start the slider where Auto currently sits so switching changes nothing yet
                   if (effective.customBitrateKbps == null) setConfig({ customBitrateKbps: autoKbps });
                 }}
-                aria-pressed={effective.customBitrateKbps != null}
-                className={`${pillBase} ${effective.customBitrateKbps != null ? pillSelected : pillUnselected}`}
               >
                 {t('voice:streamSettings.custom')}
-              </button>
-            </div>
+              </Choice>
+            </ChoiceStrip>
             {effective.customBitrateKbps != null && (
               <div className="flex items-center gap-2 mt-2">
                 <input
@@ -265,14 +275,10 @@ export function StreamQualityControls() {
                   step={hostLimits.bitrateStepKbps}
                   value={effective.customBitrateKbps}
                   onChange={(e) => setConfig({ customBitrateKbps: Number(e.target.value) })}
-                  className="flex-1 min-w-0 h-1.5 accent-accent-primary cursor-pointer appearance-none bg-interactive-muted rounded-full
-                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
-                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md
-                    [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-0
-                    [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full
-                    [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+                  aria-label={t('voice:streamSettings.bitrate')}
+                  className="flex-1 min-w-0 h-1 cursor-pointer accent-accent-primary"
                 />
-                <span className="text-[12px] font-medium text-txt-primary min-w-[64px] flex-shrink-0 text-right">
+                <span className="tabular font-mono text-label text-txt-primary min-w-[64px] flex-shrink-0 text-right">
                   {formatKbps(effective.customBitrateKbps)}
                 </span>
               </div>
@@ -280,10 +286,10 @@ export function StreamQualityControls() {
           </>
         ) : (
           <div>
-            <div className="text-[12px] text-txt-secondary font-medium">
+            <div className="tabular font-mono text-meta text-txt-secondary">
               {formatKbps(autoKbps)}
             </div>
-            <div className="text-[10px] text-txt-tertiary mt-0.5">
+            <div className="text-label leading-snug text-txt-tertiary mt-0.5">
               {hostOrigin
                 ? t('voice:streamSettings.customBitrateDisabledByHost', { host: hostOf(hostOrigin) })
                 : t('voice:streamSettings.customBitrateDisabled')}
@@ -295,23 +301,23 @@ export function StreamQualityControls() {
       {/* System Audio */}
       <div>
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1 pt-1">
-            <div className="text-[11px] text-txt-tertiary font-semibold uppercase tracking-wider">
+          <div className="min-w-0 flex-1 pt-[3px]">
+            <div className="label-mono">
               {t('voice:streamSettings.systemAudio')}
             </div>
             {audioSwitch.cannotAddLive && (
-              <div className="text-[10px] text-txt-tertiary mt-0.5">
+              <div className="text-label leading-snug text-txt-tertiary mt-1">
                 {t('voice:streamSettings.systemAudioLiveUnavailable')}
               </div>
             )}
             {audioSwitch.adding && (
-              <div className="text-[10px] text-txt-tertiary mt-0.5" role="status">
+              <div className="text-label leading-snug text-txt-tertiary mt-1" role="status">
                 {t('voice:streamSettings.systemAudioAdding')}
               </div>
             )}
             {audioNote && !audioSwitch.adding && (
               <div
-                className={`text-[10px] mt-0.5 ${audioNote.tone === 'warning' ? 'text-accent-amber/80' : 'text-txt-tertiary'}`}
+                className={`text-label leading-snug mt-1 ${audioNote.tone === 'warning' ? 'text-accent-amber' : 'text-txt-tertiary'}`}
               >
                 {t(SYSTEM_AUDIO_NOTE_I18N_KEYS[audioNote.key])}
               </div>

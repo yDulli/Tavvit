@@ -1,6 +1,6 @@
 import React from 'react';
 import type { User } from '@backspace/shared';
-import { Avatar } from './Avatar';
+import { Avatar, avatarRadius } from './Avatar';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { parseFederatedUsername } from '../../utils/identity';
 
@@ -127,8 +127,8 @@ function AvatarTile({
   return (
     <div
       data-avatar-stack-tile="true"
-      className={`absolute rounded-full overflow-hidden border-2 flex items-center justify-center ${borderClass} ${className}`}
-      style={{ width: size, height: size, ...style }}
+      className={`absolute overflow-hidden border-2 flex items-center justify-center ${borderClass} ${className}`}
+      style={{ width: size, height: size, borderRadius: avatarRadius(size), ...style }}
     >
       <Avatar
         src={canonical.avatar}
@@ -148,14 +148,14 @@ export function AvatarStack({ members, origin, size, border, iconUrl }: AvatarSt
   if (iconUrl) {
     return (
       <div
-        className="relative flex-shrink-0 rounded-full overflow-hidden"
-        style={{ width: size, height: size }}
+        className="relative flex-shrink-0 overflow-hidden"
+        style={{ width: size, height: size, borderRadius: avatarRadius(size) }}
       >
         <img
           src={resolveIconSrc(iconUrl)}
           alt=""
           loading="lazy"
-          className="w-full h-full rounded-full object-cover"
+          className="w-full h-full object-cover"
         />
       </div>
     );
@@ -176,7 +176,8 @@ export function AvatarStack({ members, origin, size, border, iconUrl }: AvatarSt
         <div
           // i18n-check: allow-literal: a data attribute for tests, not an input placeholder
           data-avatar-stack-placeholder="true"
-          className={`absolute inset-0 rounded-full bg-surface-input border-2 ${borderClass}`}
+          className={`absolute inset-0 bg-surface-input border-2 ${borderClass}`}
+          style={{ borderRadius: avatarRadius(size) }}
         />
         <div
           data-group-badge="true"

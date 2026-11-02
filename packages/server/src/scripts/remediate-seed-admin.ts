@@ -16,7 +16,7 @@ export async function remediateSeedAdmin(
 
   if (!admin) return { action: 'skipped-no-admin' };
 
-  const stillDefault = await verifyPassword('admin123', admin.password_hash);
+  const stillDefault = await verifyPassword('tests-only-admin-pass', admin.password_hash);
   if (!stillDefault) return { action: 'noop' };
 
   const newPassword = crypto.randomBytes(18).toString('base64url'); // 24-char strong password

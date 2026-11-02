@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { User } from '@backspace/shared';
-import type { HubUpdateState } from '../../stores/projectHubStore';
 
 // Stub AudioManager to avoid AudioWorkletNode reference error in jsdom.
 // Reached transitively via authStore -> voiceStore.
@@ -13,20 +12,13 @@ vi.mock('../../audio/AudioManager', () => ({
   },
 }));
 
-// The dot's source of truth has its own tests; here only what the You screen
-// does with each state matters.
-const hubState = vi.hoisted(() => ({ state: 'current' as HubUpdateState }));
-vi.mock('../../hooks/useHubUpdateState', () => ({
-  useHubUpdateState: () => ({ state: hubState.state, version: '1.2.0' }),
-}));
+const federation = vi.hoisted(() => ({ enabled: true as boolean | null }));
+vi.mock('../../hooks/useFederationEnabled', () => ({ useFederationEnabled: () => federation.enabled }));
 
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { useAuthStore } from '../../stores/authStore';
 import { useUIStore } from '../../stores/uiStore';
 import { MobileYouScreen } from './MobileYouScreen';
-import { HubUpdateDot } from '../projectHub/HubUpdateDot';
-
-const DOT = 'Backspace was updated';
 
 const self: User = {
   id: 'user-self',
@@ -49,13 +41,12 @@ const self: User = {
 const pushMobileScreen = vi.fn();
 const originalPush = useUIStore.getState().pushMobileScreen;
 
-/** The action row whose label starts with `label` (a dot adds to the name). */
 function row(label: string): HTMLElement {
   return screen.getByRole('button', { name: new RegExp(`^${label}`) });
 }
 
 beforeEach(() => {
-  hubState.state = 'current';
+  federation.enabled = true;
   pushMobileScreen.mockReset();
   useUIStore.setState({ pushMobileScreen });
   useAuthStore.setState({ user: self });
@@ -66,52 +57,38 @@ afterEach(() => {
   useAuthStore.setState({ user: null });
 });
 
-describe('MobileYouScreen: Backspace row', () => {
-  it('renders a Backspace row that pushes the backspace screen', () => {
+describe('MobileYouScreen: About row', () => {
+  it('renders an About row that pushes the about screen', () => {
     render(<MobileYouScreen />);
 
-    fireEvent.click(row('Backspace'));
+    fireEvent.click(row('About'));
 
     expect(pushMobileScreen).toHaveBeenCalledTimes(1);
-    expect(pushMobileScreen).toHaveBeenCalledWith('backspace');
+    expect(pushMobileScreen).toHaveBeenCalledWith('about');
   });
 
-  it('shows the updated dot on the Backspace row when the instance updated since the last visit', () => {
-    hubState.state = 'updated';
-
+  it('has no row for the upstream project page', () => {
     render(<MobileYouScreen />);
 
-    const dot = screen.getByRole('img', { name: DOT });
-    expect(row('Backspace')).toContainElement(dot);
-    expect(screen.getAllByRole('img', { name: DOT })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /^Backspace/ })).toBeNull();
+    expect(screen.queryByRole('img', { name: 'Backspace was updated' })).toBeNull();
   });
 
-  it('draws HubUpdateDot, the same informational dot as the desktop sidebar', () => {
-    hubState.state = 'updated';
-
-    render(<MobileYouScreen />);
-    const dot = screen.getByRole('img', { name: DOT });
-
-    const { container } = render(<HubUpdateDot />);
-    expect(dot.outerHTML).toBe(container.innerHTML);
-  });
-
-  it.each<HubUpdateState>(['unknown', 'first-run', 'current'])('shows no dot when the state is %s', (state) => {
-    hubState.state = state;
-
-    render(<MobileYouScreen />);
-
-    expect(screen.queryByRole('img', { name: DOT })).toBeNull();
-    expect(within(row('Backspace')).queryByRole('img')).toBeNull();
-  });
-
-  it('puts the dot on no other row', () => {
-    hubState.state = 'updated';
-
+  it('still lists the account rows', () => {
     render(<MobileYouScreen />);
 
     for (const label of ['Edit Profile', 'Friends', 'Connections', 'Voice']) {
-      expect(within(row(label)).queryByRole('img', { name: DOT })).toBeNull();
+      expect(row(label)).toBeInTheDocument();
+    }
+  });
+
+  it.each([false, null])('leaves out Connections while federation is %s: nothing behind it would answer', (state) => {
+    federation.enabled = state;
+    render(<MobileYouScreen />);
+
+    expect(screen.queryByRole('button', { name: /^Connections/ })).toBeNull();
+    for (const label of ['Edit Profile', 'Friends', 'Voice', 'About']) {
+      expect(row(label)).toBeInTheDocument();
     }
   });
 });

@@ -1,14 +1,14 @@
 /* Keep sticker controls on the same surface/accent tokens as the surrounding chat. */
 .sticker-primary-button, .sticker-secondary-button, .sticker-icon-button {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60 disabled:opacity-40 disabled:cursor-not-allowed;
+  @apply inline-flex h-7 items-center justify-center gap-1.5 rounded-md text-meta font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
 }
-.sticker-primary-button { @apply px-3 py-2 bg-accent-primary text-surface-base hover:bg-accent-primary-hover; }
-.sticker-secondary-button { @apply px-2.5 py-2 text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary; }
-.sticker-icon-button { @apply w-8 h-8 text-txt-tertiary hover:bg-interactive-hover hover:text-txt-primary; }
-.sticker-tile { @apply rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60; }
-.sticker-remove-button { @apply absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full border border-accent-rose/30 bg-surface-elevated text-txt-danger hover:bg-accent-rose/20 disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent-rose; }
-.sticker-edit-button { @apply absolute top-1 left-1 flex h-6 w-6 items-center justify-center rounded-full border border-border-soft bg-surface-elevated text-txt-secondary hover:text-txt-primary hover:bg-interactive-hover disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent-primary; }
-.sticker-dropzone { @apply w-full min-h-48 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border-hard bg-surface-input/40 p-4 transition-colors hover:border-accent-primary/60 hover:bg-accent-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/60 disabled:cursor-wait; }
+.sticker-primary-button { @apply px-2.5 bg-accent-primary text-white hover:bg-accent-primary-hover active:bg-accent-primary-active; }
+.sticker-secondary-button { @apply px-2.5 text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary active:bg-interactive-active; }
+.sticker-icon-button { @apply h-7 w-7 text-txt-tertiary hover:bg-interactive-hover hover:text-txt-primary active:bg-interactive-active; }
+.sticker-tile { @apply rounded-lg -outline-offset-2; }
+.sticker-remove-button { @apply absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-md text-txt-danger transition-colors hover:border-accent-rose/60 disabled:opacity-50; }
+.sticker-edit-button { @apply absolute top-1 left-1 flex h-6 w-6 items-center justify-center rounded-md text-txt-secondary transition-colors hover:border-interactive-muted hover:text-txt-primary disabled:opacity-50; }
+.sticker-dropzone { @apply w-full min-h-48 flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border-soft bg-surface-input/40 p-4 transition-colors hover:border-interactive-muted hover:bg-interactive-hover disabled:cursor-wait; }
 .sticker-dropzone-active { @apply border-accent-primary bg-accent-primary/10; }
 /* Subtle checks reveal transparent edges without changing the uploaded image. */
 .sticker-checkerboard {

@@ -1,5 +1,5 @@
 /**
- * Whether a system-audio screen share on this machine carries Backspace's own
+ * Whether a system-audio screen share on this machine carries Tavvit's own
  * playback (the voice chat, its sounds, in-app embeds) to the viewers. The
  * per-OS-build rule and the Chromium code it follows are stated in
  * docs/systems/voice.md ("System Audio Loopback"); this is that table as code.

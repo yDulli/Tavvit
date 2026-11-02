@@ -99,7 +99,7 @@
     "subtitle": "Pick what to share, tune the quality, then start.",
     "stageIdle": "Nothing selected yet",
     "stageReady": "Ready to go live",
-    "permissionHintMac": "macOS blocks screen capture until Backspace has Screen Recording permission. Grant it in System Settings → Privacy & Security → Screen Recording, then try again.",
+    "permissionHintMac": "macOS blocks screen capture until Tavvit has Screen Recording permission. Grant it in System Settings → Privacy & Security → Screen Recording, then try again.",
     "retrySources": "Try again",
     "kind": {
       "monitor": "Screen",
@@ -127,15 +127,15 @@
     "customBitrateDisabled": "Custom bitrate disabled by administrator",
     "customBitrateDisabledByHost": "Custom bitrate turned off by {{host}}",
     "systemAudio": "System Audio",
-    "chromeEchoNote": "Chrome can exclude Backspace audio when the capture type supports it",
+    "chromeEchoNote": "Chrome can exclude Tavvit audio when the capture type supports it",
     "electronWindowsAudioNote": "Windows loopback may capture call audio when restrictOwnAudio is unsupported",
     "electronMacAudioNote": "macOS 13+ requires Screen & System Audio Recording permission",
-    "electronLinuxAudioNote": "Linux requires PulseAudio compatibility; Backspace audio may also be captured",
+    "electronLinuxAudioNote": "Linux requires PulseAudio compatibility; Tavvit audio may also be captured",
     "systemAudioNote": {
-      "excluded": "Viewers hear your computer's sound, but not the voice chat or other Backspace audio.",
-      "excludedMac": "Viewers hear your Mac's sound, but not the voice chat or other Backspace audio. macOS asks for Screen & System Audio Recording permission.",
-      "includedWindows": "This Windows version shares all sound, the voice chat included: viewers will hear their own voices. On Windows 11, Backspace's own audio is left out.",
-      "includedMac": "This macOS version shares all sound, the voice chat included: viewers will hear their own voices. On macOS 14.2 and later, Backspace's own audio is left out. macOS asks for Screen & System Audio Recording permission.",
+      "excluded": "Viewers hear your computer's sound, but not the voice chat or other Tavvit audio.",
+      "excludedMac": "Viewers hear your Mac's sound, but not the voice chat or other Tavvit audio. macOS asks for Screen & System Audio Recording permission.",
+      "includedWindows": "This Windows version shares all sound, the voice chat included: viewers will hear their own voices. On Windows 11, Tavvit's own audio is left out.",
+      "includedMac": "This macOS version shares all sound, the voice chat included: viewers will hear their own voices. On macOS 14.2 and later, Tavvit's own audio is left out. macOS asks for Screen & System Audio Recording permission.",
       "includedLinux": "Linux shares all sound, the voice chat included: viewers will hear their own voices. Needs PulseAudio, or PipeWire with pipewire-pulse.",
       "unavailableMac": "System audio needs macOS 13 or later."
     },
@@ -270,5 +270,12 @@
     "stillDenied": "Microphone access is still denied. Allow it for this site in your browser or device settings.",
     "notFound": "No microphone detected.",
     "failed": "Could not access the microphone."
+  },
+  "soundboard": {
+    "title": "Soundboard",
+    "empty": "This space has no clips yet.",
+    "noRight": "You may not play clips here.",
+    "hear": "Hear clips",
+    "volume": "Volume"
   }
 }

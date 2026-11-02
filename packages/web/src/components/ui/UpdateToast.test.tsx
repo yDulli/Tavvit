@@ -64,7 +64,7 @@ describe('UpdateToast, ad-hoc signed macOS build', () => {
 
   it('offers Download and never a Restart button', async () => {
     render(<UpdateToast />);
-    expect(await screen.findByText('Backspace 1.0.4 is available')).toBeInTheDocument();
+    expect(await screen.findByText('Tavvit 1.0.4 is available')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Restart now' })).not.toBeInTheDocument();
   });
@@ -104,7 +104,9 @@ describe('UpdateToast, installable build', () => {
 
   it('does not truncate the body copy', async () => {
     render(<UpdateToast />);
-    const body = await screen.findByText(/is downloaded and ready to install/);
+    const body = await screen.findByText(
+      'Tavvit 1.0.4 is downloaded. It installs by itself when you are away, never during a call, or now with a restart.',
+    );
     expect(body.className).not.toContain('truncate');
   });
 
@@ -142,6 +144,8 @@ describe('UpdateToast, latest event wins', () => {
 
 describe('UpdateToast, dismissal', () => {
   it('reports the dismissal to the host and points at where the update lives', async () => {
+    // This build cannot install anything by itself, and the card just said so.
+    // Its update waits in Settings, Desktop, so that is what Later has to say.
     installHost({
       capability: 'manual',
       dismissedVersion: null,
@@ -153,6 +157,35 @@ describe('UpdateToast, dismissal', () => {
     expect(stubs.dismissUpdate).toHaveBeenCalledWith('1.0.4');
     expect(useUIStore.getState().toasts.map((t) => t.message))
       .toContain('You can install this later from Settings, Desktop');
+  });
+
+  it('says a dismissed update still installs by itself on a build that can', async () => {
+    installHost({
+      capability: 'auto',
+      dismissedVersion: null,
+      status: { phase: 'ready', version: '1.0.4' },
+    });
+    render(<UpdateToast />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Later' }));
+
+    expect(stubs.dismissUpdate).toHaveBeenCalledWith('1.0.4');
+    expect(useUIStore.getState().toasts.map((t) => t.message))
+      .toContain('It installs by itself the next time Tavvit is in the tray or you are away.');
+  });
+
+  it('does not promise a self-install after an install failed', async () => {
+    installHost({
+      capability: 'auto',
+      dismissedVersion: null,
+      status: { phase: 'failed', version: '1.0.4', message: 'Squirrel refused the update' },
+    });
+    render(<UpdateToast />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Later' }));
+
+    expect(stubs.dismissUpdate).toHaveBeenCalledWith('1.0.4');
+    // Exact, not toContain: a promise in any wording beside this hint must fail.
+    expect(useUIStore.getState().toasts.map((t) => t.message))
+      .toEqual(['You can install this later from Settings, Desktop']);
   });
 
   it('renders nothing for a version already dismissed', async () => {
@@ -173,7 +206,7 @@ describe('UpdateToast, dismissal', () => {
       status: { phase: 'available', version: '1.0.5' },
     });
     render(<UpdateToast />);
-    expect(await screen.findByText('Backspace 1.0.5 is available')).toBeInTheDocument();
+    expect(await screen.findByText('Tavvit 1.0.5 is available')).toBeInTheDocument();
   });
 });
 

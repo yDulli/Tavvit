@@ -81,13 +81,15 @@ function addMember(db: FixtureDb, spaceId: string, userId: string, roleId?: stri
  * category, where @everyone is denied VIEW_CHANNEL and the VIP role allowed it
  * (on the channel and on the category). And the request-only space
  * `REQUEST_SPACE_ID`, owned by the same owner, which only the owner belongs to.
+ * Both are listed in Discovery: an instance admin approved their listings,
+ * which is what lists a space on the Explore page (utils/discoveryListing.ts).
  */
 export function seedRolePayloadSpaces(db: FixtureDb): void {
   for (const id of Object.values(USERS)) addUser(db, id, id === USERS.instanceAdmin ? 1 : 0);
 
   db.insert(schema.spaces).values([
-    { id: SPACE_ID, name: 'Roles', ownerId: USERS.owner, inviteCode: 'inv-roles', visibility: 'public', createdAt: NOW },
-    { id: REQUEST_SPACE_ID, name: 'Ask first', ownerId: USERS.owner, inviteCode: 'inv-request', visibility: 'request', createdAt: NOW },
+    { id: SPACE_ID, name: 'Roles', ownerId: USERS.owner, inviteCode: 'inv-roles', visibility: 'public', discoveryStatus: 'approved', createdAt: NOW },
+    { id: REQUEST_SPACE_ID, name: 'Ask first', ownerId: USERS.owner, inviteCode: 'inv-request', visibility: 'request', discoveryStatus: 'approved', createdAt: NOW },
   ]).run();
 
   db.insert(schema.roles).values([

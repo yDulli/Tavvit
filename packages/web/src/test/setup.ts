@@ -135,7 +135,7 @@ if (!('ResizeObserver' in globalThis)) {
 // Components read their strings through i18next. Start it in English before
 // any test renders, so `t()` returns real text rather than keys. Tests that
 // exercise another language call `setLanguage` themselves.
-await initI18n({ browserLanguages: ['en'] });
+await initI18n();
 
 // main.tsx loads the emoji shortcode names before the first render; do the
 // same, so components render text the way the app shows it.

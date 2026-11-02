@@ -12,6 +12,7 @@ import { runFederationJanitor } from './storageJanitor.js';
 import { buildFederationHeaders, getOurOrigin, generateHmacSecret, ROTATION_GRACE_PERIOD_MS } from './federationAuth.js';
 import { evaluateAuthFailure, AUTH_FAILURE_THRESHOLD } from './federationAuthFailure.js';
 import { generateSnowflake } from './snowflake.js';
+import { storedUploadName } from './uploadNames.js';
 import { getDmMessageWithUser } from '../routes/dm.js';
 import { connectionManager } from '../ws/handler.js';
 import { generateThumbnail } from './thumbnail.js';
@@ -323,6 +324,7 @@ function buildRelayEvents(entries: OutboxEntry[]): FederationRelayEvent[] {
     if (parsed.message) evt.message = parsed.message;
     if (parsed.reactions) evt.reactions = parsed.reactions;
     if (parsed.reaction) evt.reaction = parsed.reaction;
+    if (parsed.pin) evt.pin = parsed.pin;
     if (parsed.target) evt.target = parsed.target;
     if (parsed.membership) evt.membership = parsed.membership;
     if (parsed.ownership) evt.ownership = parsed.ownership;
@@ -985,10 +987,11 @@ async function processFileQueueEntry(
       throw new Error(`HTTP ${response.status} downloading file from ${entry.sourceUrl}`);
     }
 
-    // Generate a unique local filename using the same pattern as the upload route
+    // A unique local filename by the rule of the upload route: a file of a DM is reached by its
+    // name alone, so the name cannot be guessed (utils/uploadNames.ts).
     const ext = path.extname(entry.originalName) || '';
     const localId = generateSnowflake();
-    const localFilename = `${localId}${ext}`;
+    const localFilename = storedUploadName(localId, ext);
     const localPath = path.join(config.uploadDir, localFilename);
 
     // Ensure upload directory exists
@@ -1364,6 +1367,15 @@ function scheduleJanitorTick(): void {
 // ─── Lifecycle ──────────────────────────────────────────────────────────────
 
 export function startFederationWorkers(): void {
+  if (!config.federation.enabled) {
+    // Nothing below talks to a peer, so none of it runs. The janitor is the
+    // exception: its name is historical, and besides the federation tables it
+    // expires abandoned tus uploads and sweeps orphaned files, which every
+    // instance needs. Its federation steps find empty tables and send nothing.
+    console.log('[federation-worker] Federation is disabled (FEDERATION_ENABLED); starting the storage janitor only');
+    scheduleJanitorTick();
+    return;
+  }
   console.log('[federation-worker] Federation workers started');
   scheduleOutboxTick();
   scheduleFileQueueTick();

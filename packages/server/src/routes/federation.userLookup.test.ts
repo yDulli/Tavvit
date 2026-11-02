@@ -63,7 +63,6 @@ function seedUser(opts: {
   id: string;
   username: string;
   isDeleted?: 0 | 1;
-  discoverable?: 0 | 1;
   homeInstance?: string | null;
   homeUserId?: string | null;
   displayName?: string | null;
@@ -84,7 +83,6 @@ function seedUser(opts: {
     status: 'offline',
     isAdmin: 0,
     isDeleted: opts.isDeleted ?? 0,
-    discoverable: opts.discoverable ?? 1,
     homeInstance: opts.homeInstance ?? null,
     homeUserId: opts.homeUserId ?? null,
     avatar: opts.avatar ?? null,
@@ -156,13 +154,6 @@ describe('POST /api/federation/users/lookup', () => {
     expect(body.user.profile.displayName).toBe('Alice');
     expect(body.user.profile.bio).toBe('hi');
     expect(body.user.profile.avatarColor).toBe('#ff0000');
-  });
-
-  it('returns 200 for a discoverable=0 user (exact-handle resolution must not regress)', async () => {
-    seedUser({ id: 'u1', username: 'alice', discoverable: 0 });
-    const res = await lookup(app, { username: 'alice' });
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body).found).toBe(true);
   });
 
   it('returns 404 for a tombstoned user', async () => {

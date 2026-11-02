@@ -34,6 +34,14 @@
         "voice": {
           "name": "Voz",
           "description": "Fique junto por voz e vídeo"
+        },
+        "announcement": {
+          "name": "Anúncios",
+          "description": "Só quem você permitir pode publicar, e outros espaços podem seguir"
+        },
+        "forum": {
+          "name": "Fórum",
+          "description": "Cada publicação é uma conversa própria, com título e tags"
         }
       },
       "nameLabel": "Nome do canal",
@@ -67,7 +75,66 @@
         "note": "Este canal fica oculto para membros sem acesso explícito. Usuários com a permissão de Administrador e os donos do espaço sempre podem ver todos os canais.",
         "unhideOnSave": "Ao salvar, este canal ficará visível para todos os membros."
       },
-      "deleteButton": "Excluir canal"
+      "deleteButton": "Excluir canal",
+      "slowmode": {
+        "label": "Modo lento",
+        "off": "Desativado",
+        "hint": "Quanto tempo os membros esperam entre duas mensagens. Quem pode gerenciar mensagens ou este canal não precisa esperar."
+      },
+      "webhooks": {
+        "title": "Webhooks",
+        "description": "Um endereço que permite a outro programa publicar neste canal. Quem o conhece pode escrever aqui, então trate-o como uma senha.",
+        "nameLabel": "Nome",
+        "create": "Criar",
+        "empty": "Ainda não há webhooks neste canal.",
+        "onlyOnce": "O endereço de {{name}}. Copie agora: ele não será mostrado novamente.",
+        "addressLabel": "Endereço do webhook",
+        "copied": "Copiado",
+        "howTo": "Envie JSON com um campo \"content\", por exemplo:",
+        "rename": "Renomear webhook",
+        "neverUsed": "Nunca usado",
+        "lastUsed": "Último uso: {{time}}",
+        "rotate": "Novo endereço",
+        "rotateTitle": "Dar um novo endereço?",
+        "rotateBody": "O endereço antigo de {{name}} para de funcionar imediatamente. Use isso quando ele tiver vazado.",
+        "remove": "Excluir webhook",
+        "removeTitle": "Excluir este webhook?",
+        "removeBody": "O endereço de {{name}} para de funcionar. O que foi publicado permanece."
+      },
+      "announcement": {
+        "label": "Canal de anúncios",
+        "hint": "Só quem você permitir em Permissões pode publicar, e outros espaços podem seguir."
+      },
+      "tags": {
+        "title": "Tags",
+        "intro": "As publicações podem ter estas tags, e a lista pode ser filtrada por elas. Até {{max}}.",
+        "empty": "Nenhuma tag ainda.",
+        "nameLabel": "Nome da tag",
+        "colorLabel": "Cor da tag",
+        "noColor": "Sem cor",
+        "add": "Adicionar tag",
+        "remove": "Remover tag"
+      },
+      "follows": {
+        "followersTitle": "Canais que seguem este",
+        "followersEmpty": "Nenhum canal segue este ainda.",
+        "followingTitle": "Canais que este segue",
+        "place": "#{{channel}} em {{space}}",
+        "remove": "Encerrar",
+        "removeTitle": "Encerrar este acompanhamento?",
+        "removeBody": "Novas publicações deixam de chegar lá. O que já chegou permanece."
+      },
+      "icon": {
+        "label": "Ícone",
+        "hint": "Substitui o ícone do tipo de canal onde quer que o canal apareça. Sem um, fica o ícone do tipo.",
+        "default": "Ícone do tipo de canal",
+        "emoji": "Emoji",
+        "useDefault": "Usar o ícone do tipo",
+        "tabs": {
+          "icons": "Ícones",
+          "emoji": "Emoji"
+        }
+      }
     },
     "delete": {
       "title": "Excluir #{{name}}?",
@@ -177,19 +244,17 @@
     "title": "Explorar",
     "searchPlaceholder": "Pesquisar espaços...",
     "discoveryOff": {
-      "member": "O administrador da sua instância desativou a descoberta de espaços. Aqui, só é possível entrar nos espaços por link de convite.",
       "admin": "A descoberta de espaços está desativada nesta instância. Aqui, só é possível entrar nos espaços por link de convite.",
       "enable": "Ativar descoberta de espaços",
       "failed": "Não foi possível alterar a configuração."
     },
     "browseOff": {
-      "member": "Os espaços de outras instâncias não aparecem aqui porque o administrador da sua instância desativou isso.",
       "admin": "Os espaços de outras instâncias não aparecem aqui.",
       "action": "Mostrar espaços globais em Explorar",
       "confirm": {
         "title": "Mostrar aqui espaços de outras instâncias?",
         "exposure": "Essas instâncias veem o endereço IP de cada navegador que carrega um desses espaços, e o administrador desta instância não as controla.",
-        "off": "Para parar de mostrá-los depois: Configurações, Instância, Geral, a opção de espaços globais em Explorar.",
+        "off": "Para parar de mostrá-los depois: Console de administração, Geral, a opção de espaços globais em Explorar.",
         "action": "Mostrar espaços globais"
       }
     },
@@ -198,13 +263,13 @@
       "action": "Listar espaços",
       "confirm": {
         "title": "Listar publicamente os espaços desta instância?",
-        "optIn": "Somente os espaços cujos donos ativarem a listagem são enviados, então esta opção não lista nenhum espaço por si só.",
-        "off": "Para parar de listar depois: Configurações, Instância, Geral, a opção de descoberta de espaços.",
+        "optIn": "Somente os espaços com listagem aprovada pelos administradores e cujos donos aderirem ao diretório são enviados, então esta opção não lista nenhum espaço por si só.",
+        "off": "Para parar de listar depois: Console de administração, Geral, a opção de descoberta de espaços.",
         "action": "Listar espaços"
       }
     },
     "noMatches": "Nenhum espaço corresponde à sua pesquisa.",
-    "empty": "Ainda não há espaços descobríveis.",
+    "empty": "Ainda não há espaços listados.",
     "joinedSection": "Participando",
     "notConnected": "Não conectado a {{host}}",
     "inner": {
@@ -217,8 +282,8 @@
     },
     "outer": {
       "title": "Espaço Externo",
-      "subtitle": "Comunidades de todo o Backspace",
-      "empty": "Ainda não há nada por lá. Os espaços que aderirem ao diretório aparecem aqui.",
+      "subtitle": "Comunidades de todo o Tavvit",
+      "empty": "Ainda não há nada por lá. Os espaços aprovados cujos donos aderirem ao diretório aparecem aqui.",
       "noMatches": "Nada no Espaço Externo corresponde à sua pesquisa.",
       "showMore": "Mostrar mais",
       "connectAndJoin": "Conectar e entrar",
@@ -262,7 +327,8 @@
       "pending": "Pendente",
       "request": "Solicitar",
       "sending": "Enviando…"
-    }
+    },
+    "lead": "Espaços em que você pode entrar: abertos a todos ou mediante pedido."
   },
   "settings": {
     "title": "Configurações do espaço",
@@ -272,9 +338,17 @@
       "management": "Gerenciamento",
       "tabs": {
         "overview": "Visão geral",
+        "welcome": "Boas-vindas e regras",
+        "sounds": "Soundboard",
         "discovery": "Descoberta",
         "roles": "Cargos",
-        "bans": "Banimentos"
+        "bans": "Banimentos",
+        "moderation": "Moderação",
+        "audit": "Registro de auditoria",
+        "verification": "Verificação",
+        "you": "Suas configurações",
+        "access": "Acesso",
+        "invites": "Convites"
       }
     },
     "discardChanges": "Descartar",
@@ -306,14 +380,20 @@
         "button": "Excluir espaço",
         "confirmAgain": "Clique novamente para confirmar a exclusão",
         "failed": "Falha ao excluir o espaço"
+      },
+      "notifications": {
+        "title": "Notificações",
+        "label": "Notificações padrão",
+        "description": "Os membros começam com este nível até escolherem o próprio. O padrão do Tavvit é apenas @menções.",
+        "builtIn": "Padrão do Tavvit"
       }
     },
     "discovery": {
       "title": "Descoberta",
-      "disabledNotice": "A descoberta de espaços está desativada pelo administrador da instância. Alterar a visibilidade não terá efeito até que a descoberta seja reativada.",
+      "disabledNotice": "A descoberta de espaços está desativada pelo administrador da instância. Uma listagem aprovada aparece em Explorar quando a descoberta for reativada.",
       "visibility": {
         "label": "Visibilidade",
-        "hint": "Controle quem pode descobrir este espaço e entrar nele.",
+        "hint": "Como as pessoas podem entrar neste espaço. A listagem em Explorar é solicitada à parte e aprovada pelos administradores.",
         "options": {
           "private": {
             "label": "Privado",
@@ -321,19 +401,18 @@
           },
           "request": {
             "label": "Solicitar entrada",
-            "description": "Visível em Explorar; as pessoas podem solicitar entrada"
+            "description": "As pessoas podem solicitar entrada; após aprovação, pode ser listado em Explorar"
           },
           "public": {
             "label": "Público",
-            "description": "Visível em Explorar; qualquer pessoa pode entrar na hora"
+            "description": "Qualquer pessoa pode entrar na hora; após aprovação, pode ser listado em Explorar"
           }
         }
       },
       "directory": {
-        "label": "Listar no diretório global do Backspace",
-        "hint": "Mostra este espaço no Espaço Externo de todas as instâncias do Backspace.",
+        "label": "Listar no diretório global do Tavvit",
+        "hint": "Mostra este espaço no Espaço Externo de todas as instâncias do Tavvit depois que a listagem dele for aprovada.",
         "notConfigured": "Esta instância não está configurada para acessar um diretório, então listar este espaço não chegaria a nenhum.",
-        "adminOff": "O administrador da sua instância precisa permitir a listagem global.",
         "adminOffSelf": "A listagem global não é permitida nesta instância.",
         "adminOffSelfAction": "Ativar",
         "adminOffSelfIntro": "Isso permite a listagem global para a instância inteira: os espaços daqui passam a ser descobríveis em Explorar, e a instância começa a se reportar ao diretório público.",
@@ -369,7 +448,344 @@
       "kickFailed": "Falha ao expulsar o membro",
       "banFailed": "Falha ao banir o membro",
       "rolesAboveYou": "Cargos iguais ou superiores ao seu cargo mais alto ficam bloqueados.",
-      "rolesUnheld": "Cargos com permissões que você não tem não podem ser concedidos."
+      "rolesUnheld": "Cargos com permissões que você não tem não podem ser concedidos.",
+      "listHeadingFiltered": "Membros ({{shown}} de {{total}})",
+      "searchPlaceholder": "Buscar membros",
+      "filterRole": "Filtrar por cargo",
+      "filterAll": "Todos os cargos",
+      "noMatch": "Nenhum membro corresponde ao filtro.",
+      "reason": {
+        "label": "Motivo (opcional)",
+        "hint": "Moderadores veem isso no registro de auditoria. A pessoa não é avisada."
+      },
+      "deleteMessages": {
+        "label": "Apagar também as mensagens",
+        "none": "Manter",
+        "hour": "Da última hora",
+        "day": "Das últimas 24 horas",
+        "week": "Dos últimos 7 dias"
+      }
+    },
+    "moderation": {
+      "title": "Moderação",
+      "intro": "Regras que este espaço aplica sozinho a cada mensagem. Uma mensagem que quebra alguma delas não é publicada, e o autor fica sabendo o motivo.",
+      "off": "Desativado",
+      "filter": {
+        "title": "Filtro de mensagens",
+        "description": "Verificado sempre que uma mensagem é enviada ou editada em um canal de texto."
+      },
+      "words": {
+        "label": "Palavras bloqueadas",
+        "empty": "Nenhuma palavra bloqueada ainda.",
+        "inputLabel": "Palavra ou expressão a bloquear",
+        "placeholder": "Adicionar palavra ou expressão",
+        "fullPlaceholder": "A lista está cheia",
+        "remove": "Remover {{word}}",
+        "full": "A lista comporta no máximo {{max}} itens.",
+        "duplicate": "“{{word}}” já está na lista.",
+        "hint": "Compara palavras inteiras, sem diferenciar maiúsculas e minúsculas. Um * no início ou no fim também encontra o termo dentro de palavras maiores, como em *spam*.",
+        "counter": "{{used}}/{{max}}",
+        "invalid": "Isso não pode ser bloqueado. Use caracteres visíveis em uma única linha."
+      },
+      "links": {
+        "label": "Bloquear links",
+        "description": "Recusar mensagens que contenham um link da web."
+      },
+      "invites": {
+        "label": "Bloquear convites",
+        "description": "Recusar mensagens que contenham um link de convite para um espaço."
+      },
+      "mentions": {
+        "label": "Máximo de menções",
+        "description": "Quantas pessoas e cargos uma mensagem pode mencionar no máximo."
+      },
+      "posting": {
+        "title": "Quem pode enviar mensagens",
+        "description": "Impede que contas muito novas e recém-chegados enviem mensagens até estarem por aqui há algum tempo."
+      },
+      "accountAge": {
+        "label": "Idade mínima da conta",
+        "description": "Quanto tempo uma conta precisa ter antes de poder enviar mensagens aqui."
+      },
+      "memberAge": {
+        "label": "Tempo mínimo como membro",
+        "description": "Há quanto tempo alguém precisa ser membro antes de poder enviar mensagens."
+      },
+      "exempt": "O dono, os administradores e os membros que podem gerenciar mensagens ou o espaço não estão sujeitos a nenhuma dessas regras.",
+      "slowmodeNote": "O modo lento é definido nas configurações de cada canal."
+    },
+    "audit": {
+      "title": "Registro de auditoria",
+      "intro": "Quem mudou o quê neste espaço, do mais recente ao mais antigo.",
+      "filters": {
+        "action": "Ação",
+        "allActions": "Todas as ações",
+        "actor": "Feito por",
+        "anyone": "Qualquer pessoa"
+      },
+      "loadOlder": "Carregar registros mais antigos",
+      "empty": {
+        "title": "Nada registrado ainda",
+        "body": "Mudanças no espaço, nos canais, nos cargos e nos membros aparecerão aqui."
+      },
+      "emptyFiltered": {
+        "title": "Nenhum registro encontrado",
+        "body": "Tente outra ação ou pessoa."
+      },
+      "reason": "Motivo: {{reason}}",
+      "showChanges_one": "Mostrar {{count}} alteração",
+      "showChanges_many": "Mostrar {{count}} alterações",
+      "showChanges_other": "Mostrar {{count}} alterações",
+      "hideChanges": "Ocultar alterações",
+      "unknownTarget": "(desconhecido)",
+      "actions": {
+        "spaceUpdate": "Espaço alterado",
+        "moderationUpdate": "Regras de moderação alteradas",
+        "inviteRegenerate": "Link de convite criado",
+        "channelCreate": "Canal criado",
+        "channelUpdate": "Canal alterado",
+        "channelDelete": "Canal excluído",
+        "categoryCreate": "Categoria criada",
+        "categoryUpdate": "Categoria alterada",
+        "categoryDelete": "Categoria excluída",
+        "overrideUpdate": "Substituição de permissões alterada",
+        "overrideDelete": "Substituição de permissões removida",
+        "roleCreate": "Cargo criado",
+        "roleUpdate": "Cargo alterado",
+        "roleDelete": "Cargo excluído",
+        "roleReorder": "Cargos reordenados",
+        "memberRolesUpdate": "Cargos de membro alterados",
+        "memberKick": "Membro expulso",
+        "memberBan": "Membro banido",
+        "memberUnban": "Banimento desfeito",
+        "memberTimeout": "Castigo aplicado",
+        "memberTimeoutRemove": "Castigo removido",
+        "messageDelete": "Mensagem excluída",
+        "threadCreate": "Tópico iniciado",
+        "threadUpdate": "Tópico renomeado",
+        "threadDelete": "Tópico excluído",
+        "welcomeUpdate": "Boas-vindas e regras alteradas",
+        "webhookDelete": "Webhook excluído",
+        "soundDelete": "Clipe removido",
+        "botAdd": "Bot adicionado",
+        "soundUpdate": "Clipe alterado",
+        "soundCreate": "Clipe adicionado",
+        "webhookUpdate": "Webhook alterado",
+        "webhookCreate": "Webhook criado",
+        "eventDelete": "Evento cancelado",
+        "eventUpdate": "Evento alterado",
+        "eventCreate": "Evento anunciado",
+        "messagePin": "Mensagem fixada",
+        "messageUnpin": "Mensagem desafixada",
+        "joinRequestApprove": "Solicitação de entrada aprovada",
+        "joinRequestDecline": "Solicitação de entrada recusada",
+        "ownershipTransfer": "Propriedade transferida",
+        "templateImport": "Modelo do Discord importado",
+        "inviteCreate": "Link de convite criado",
+        "inviteRevoke": "Link de convite revogado",
+        "messagesBulkDelete": "Mensagens removidas com um banimento",
+        "channelMessagesDelete": "Mensagens removidas",
+        "forumTagsUpdate": "Tags do fórum alteradas",
+        "channelFollowCreate": "Acompanhamento iniciado",
+        "channelFollowDelete": "Acompanhamento encerrado",
+        "vanityUpdate": "Endereço próprio alterado"
+      },
+      "sentences": {
+        "spaceUpdate": "{{actor}} alterou as configurações do espaço",
+        "moderationUpdate": "{{actor}} alterou as regras de moderação",
+        "inviteRegenerate": "{{actor}} criou o link de convite",
+        "channelCreate": "{{actor}} criou {{target}}",
+        "channelUpdate": "{{actor}} alterou {{target}}",
+        "channelDelete": "{{actor}} excluiu {{target}}",
+        "categoryCreate": "{{actor}} criou a categoria {{target}}",
+        "categoryUpdate": "{{actor}} alterou a categoria {{target}}",
+        "categoryDelete": "{{actor}} excluiu a categoria {{target}}",
+        "overrideUpdate": "{{actor}} alterou as permissões em {{target}}",
+        "overrideDelete": "{{actor}} removeu uma substituição de permissões em {{target}}",
+        "roleCreate": "{{actor}} criou o cargo {{target}}",
+        "roleUpdate": "{{actor}} alterou o cargo {{target}}",
+        "roleDelete": "{{actor}} excluiu o cargo {{target}}",
+        "roleReorder": "{{actor}} reordenou os cargos",
+        "memberRolesUpdate": "{{actor}} alterou os cargos de {{target}}",
+        "memberKick": "{{actor}} expulsou {{target}}",
+        "memberBan": "{{actor}} baniu {{target}}",
+        "memberUnban": "{{actor}} desfez o banimento de {{target}}",
+        "memberTimeout": "{{actor}} aplicou castigo a {{target}}",
+        "memberTimeoutRemove": "{{actor}} removeu o castigo de {{target}}",
+        "messageDelete": "{{actor}} excluiu uma mensagem de {{target}}",
+        "threadCreate": "{{actor}} iniciou o tópico {{target}}",
+        "threadUpdate": "{{actor}} renomeou o tópico {{target}}",
+        "threadDelete": "{{actor}} excluiu o tópico {{target}}",
+        "welcomeUpdate": "{{actor}} alterou as boas-vindas e as regras",
+        "webhookDelete": "{{actor}} excluiu o webhook {{target}}",
+        "soundDelete": "{{actor}} removeu o clipe {{target}}",
+        "botAdd": "{{actor}} adicionou o bot {{target}}",
+        "soundUpdate": "{{actor}} alterou o clipe {{target}}",
+        "soundCreate": "{{actor}} adicionou o clipe {{target}}",
+        "webhookUpdate": "{{actor}} alterou o webhook {{target}}",
+        "webhookCreate": "{{actor}} criou o webhook {{target}}",
+        "eventDelete": "{{actor}} cancelou o evento {{target}}",
+        "eventUpdate": "{{actor}} alterou o evento {{target}}",
+        "eventCreate": "{{actor}} anunciou o evento {{target}}",
+        "messagePin": "{{actor}} fixou uma mensagem de {{target}}",
+        "messageUnpin": "{{actor}} desafixou uma mensagem de {{target}}",
+        "joinRequestApprove": "{{actor}} aprovou a solicitação de entrada de {{target}}",
+        "joinRequestDecline": "{{actor}} recusou a solicitação de entrada de {{target}}",
+        "ownershipTransfer": "{{actor}} transferiu a propriedade para {{target}}",
+        "templateImport": "{{actor}} importou o modelo do Discord {{target}}",
+        "unknown": "{{actor}} fez uma alteração que esta versão ainda não conhece ({{action}})",
+        "inviteCreate": "{{actor}} criou um link de convite",
+        "inviteRevoke": "{{actor}} revogou um link de convite",
+        "messagesBulkDelete": "{{actor}} removeu as mensagens recentes de {{target}}",
+        "channelMessagesDelete": "{{actor}} excluiu várias mensagens em {{target}}",
+        "forumTagsUpdate": "{{actor}} alterou as tags de {{target}}",
+        "channelFollowCreate": "{{actor}} conectou {{target}} a um canal de outro espaço",
+        "channelFollowDelete": "{{actor}} encerrou a conexão de {{target}} com um canal de outro espaço",
+        "vanityUpdate": "{{actor}} alterou o endereço próprio do espaço"
+      },
+      "fields": {
+        "name": "Nome",
+        "topic": "Tópico",
+        "slowmodeSeconds": "Modo lento",
+        "permissions": "Permissões",
+        "allow": "Permitidas",
+        "deny": "Negadas",
+        "color": "Cor",
+        "visibility": "Visibilidade",
+        "roleAdded": "Cargo adicionado",
+        "roleRemoved": "Cargo removido",
+        "durationSeconds": "Duração",
+        "icon": "Ícone",
+        "banner": "Banner",
+        "avatarColor": "Cor do ícone",
+        "description": "Descrição",
+        "directoryListed": "Listado no diretório",
+        "defaultNotificationLevel": "Notificações padrão",
+        "ownerTitle": "Título do dono",
+        "position": "Posição",
+        "category": "Categoria",
+        "blockLinks": "Bloquear links",
+        "blockInvites": "Bloquear convites",
+        "maxMentions": "Máximo de menções",
+        "minAccountAgeMinutes": "Idade mínima da conta",
+        "minMemberAgeMinutes": "Tempo mínimo como membro",
+        "type": "Tipo",
+        "channel": "Canal",
+        "target": "Aplica-se a",
+        "owner": "Dono",
+        "inviteCode": "Código de convite",
+        "blockedWordAdded": "Palavra bloqueada",
+        "blockedWordRemoved": "Palavra desbloqueada",
+        "colorSecondary": "Segunda cor",
+        "hoist": "Mostrado separadamente",
+        "mentionable": "Mencionável por todos",
+        "ownerGroup": "Dono em grupo próprio",
+        "template": "Modelo",
+        "roles": "Cargos",
+        "categories": "Categorias",
+        "channels": "Canais",
+        "messages": "Mensagens",
+        "tags": "Tags",
+        "vanityCode": "Endereço"
+      }
+    },
+    "you": {
+      "notifications": "Notificações",
+      "profile": {
+        "title": "Seu perfil aqui",
+        "description": "Seu apelido, foto e bio neste espaço. Sua conta continua como está.",
+        "action": "Editar perfil do espaço"
+      },
+      "leave": {
+        "title": "Sair",
+        "description": "Você perde o acesso aos canais. Com um convite, pode voltar."
+      }
+    },
+    "invites": {
+      "intro": "Os links que levam a este espaço. Ao revogar um, ele para na hora; quem entrou por ele continua.",
+      "new": {
+        "title": "Novo link",
+        "expiry": {
+          "label": "Termina",
+          "never": "Nunca",
+          "minutes30": "Em 30 minutos",
+          "hour1": "Em 1 hora",
+          "hours6": "Em 6 horas",
+          "day1": "Em 1 dia",
+          "days7": "Em 7 dias",
+          "days30": "Em 30 dias"
+        },
+        "uses": {
+          "label": "Deixa entrar",
+          "noLimit": "Qualquer número de pessoas",
+          "people_one": "{{count}} pessoa",
+          "people_other": "{{count}} pessoas",
+          "people_many": "{{count}} pessoas"
+        },
+        "create": "Criar link"
+      },
+      "list": {
+        "title": "Links ativos",
+        "standing": "Link principal",
+        "uses_one": "Usado {{count}} vez",
+        "uses_other": "Usado {{count}} vezes",
+        "usesOf": "{{uses}} de {{max}} usados",
+        "noEnd": "Não termina",
+        "ends": "Termina em {{date}}",
+        "by": "Por {{name}}",
+        "revoke": "Revogar",
+        "copied": "Link de convite copiado",
+        "copyFailed": "Não foi possível copiar o link",
+        "empty": "Nenhum link ativo. Quem quiser entrar precisa de um novo.",
+        "uses_many": "Usado {{count}} vezes"
+      },
+      "revokeConfirm": {
+        "title": "Revogar este link?",
+        "description": "Ele para de funcionar na hora, onde quer que tenha sido compartilhado.",
+        "standing": "Ele para de funcionar na hora, onde quer que tenha sido compartilhado. Na próxima vez que abrirem o convite, este espaço recebe um novo link principal."
+      },
+      "vanity": {
+        "title": "Endereço próprio",
+        "intro": "Um link com palavras que deixa as pessoas entrarem como qualquer outro e nunca expira.",
+        "label": "Endereço",
+        "hint": "De {{min}} a {{max}} letras minúsculas, dígitos ou hifens.",
+        "copy": "Copiar link",
+        "copied": "Copiado",
+        "remove": "Abrir mão"
+      }
+    },
+    "welcome": {
+      "title": "Boas-vindas e regras",
+      "description": "O que alguém novo vê ao chegar a este espaço pela primeira vez.",
+      "messageTitle": "Mensagem de boas-vindas",
+      "messageDescription": "Algumas palavras sobre este lugar. A formatação funciona como em uma mensagem.",
+      "rulesTitle": "Regras",
+      "rulesDescription": "Aparecem abaixo das boas-vindas.",
+      "requiredLabel": "Membros precisam aceitar",
+      "requiredDescription": "Quem entrar a partir de agora só pode ler até aceitar. Quem já está aqui e quem pode gerenciar o espaço não é questionado.",
+      "rulesMissing": "Escreva as regras primeiro.",
+      "channelsTitle": "Canais para começar",
+      "channelsDescription": "Até {{max}}, oferecidos abaixo das boas-vindas.",
+      "saved": "Salvo."
+    },
+    "sounds": {
+      "title": "Soundboard",
+      "description": "Clipes curtos que qualquer pessoa em uma chamada aqui pode reproduzir. Até {{seconds}} segundos e {{size}} cada. Cada um pode abaixar ou desligar para si.",
+      "add": "Adicionar clipe",
+      "count": "{{used}} de {{max}}",
+      "emptyTitle": "Nenhum clipe ainda",
+      "emptyBody": "O Tavvit não traz nenhum. Adicione os seus, e só o que você pode compartilhar.",
+      "tooLarge": "Esse arquivo é maior que {{max}}.",
+      "tooLong": "Esse clipe tem mais de {{max}} segundos.",
+      "notAudio": "Isso não é um arquivo de áudio que este navegador consiga ler.",
+      "untitled": "Clipe",
+      "preview": "Ouvir {{name}}",
+      "rename": "Renomear clipe",
+      "nameLabel": "Nome do clipe",
+      "seconds": "{{seconds}} s",
+      "remove": "Remover {{name}}",
+      "removeTitle": "Remover este clipe?",
+      "removeBody": "{{name}} desaparece para todos neste espaço."
     }
   },
   "bans": {
@@ -410,9 +826,15 @@
     "nameEmpty": "O nome do cargo não pode ficar vazio",
     "nameDuplicate": "Já existe um cargo com esse nome",
     "groups": {
-      "general": "Geral",
-      "text": "Texto",
-      "voice": "Voz"
+      "voice": "Voz",
+      "space": "Espaço",
+      "roles": "Cargos",
+      "members": "Membros",
+      "moderation": "Moderação",
+      "channels": "Canais e categorias",
+      "invites": "Convites",
+      "messages": "Mensagens e arquivos",
+      "advanced": "Avançado"
     },
     "saved": "Cargo salvo",
     "copy": "Copiar cargo",
@@ -459,7 +881,15 @@
       "moveMembers": "Mover membros",
       "stream": "Transmitir",
       "disconnectMembers": "Desconectar membros",
-      "mentionEveryone": "Mencionar @everyone, @here e cargos"
+      "mentionEveryone": "Mencionar @everyone, @here e cargos",
+      "pinMessages": "Fixar mensagens",
+      "createThreads": "Criar tópicos",
+      "manageEvents": "Gerenciar eventos",
+      "manageWebhooks": "Gerenciar webhooks",
+      "useSoundboard": "Usar soundboard",
+      "manageSounds": "Gerenciar soundboard",
+      "moderateMembers": "Aplicar castigo a membros",
+      "viewAuditLog": "Ver registro de auditoria"
     },
     "tristate": {
       "deny": "Negar",
@@ -490,7 +920,11 @@
     "removeUnheldShort": "Somente quem tem estas permissões pode removê-la",
     "aboveYouRole": "Este cargo tem hierarquia igual ou superior ao seu cargo mais alto. Você pode ver a substituição dele, mas não alterá-la nem removê-la.",
     "aboveYouMember": "Este membro tem hierarquia igual ou superior à sua. Você pode ver a substituição dele, mas não alterá-la nem removê-la.",
-    "aboveYouShort": "Hierarquia igual ou superior ao seu cargo mais alto"
+    "aboveYouShort": "Hierarquia igual ou superior ao seu cargo mais alto",
+    "descriptions": {
+      "moderateMembers": "Impedir por um tempo que membros enviem mensagens, reajam e entrem em canais de voz. Só vale para membros abaixo do seu cargo.",
+      "viewAuditLog": "Ver quem mudou o quê nas configurações, nos cargos, nos canais e nos membros deste espaço."
+    }
   },
   "sidebar": {
     "directMessages": "Mensagens diretas",
@@ -612,7 +1046,10 @@
     "menu": {
       "profile": "Ver perfil",
       "nickname": "Alterar apelido no espaço…",
-      "roles": "Cargos"
+      "roles": "Cargos",
+      "timeout": "Aplicar castigo…",
+      "removeTimeout": "Remover castigo",
+      "spaceProfile": "Editar perfil do espaço"
     },
     "nickname": {
       "title": "Alterar apelido no espaço",
@@ -621,7 +1058,21 @@
       "descriptionOther": "Vale apenas neste espaço. O nome da conta de {{name}} não muda. Deixe em branco para mostrar o nome da conta.",
       "reset": "Restaurar nome da conta",
       "shownAs": "Apelido neste espaço: {{nickname}}"
-    }
+    },
+    "timeout": {
+      "title": "Aplicar castigo a {{name}}",
+      "description": "Durante o castigo, a pessoa ainda pode ler, mas não pode enviar mensagens, reagir nem entrar em canais de voz neste espaço.",
+      "duration": "Duração",
+      "ends": "Termina: {{time}}",
+      "reason": "Motivo (opcional)",
+      "reasonPlaceholder": "O que aconteceu?",
+      "reasonHint": "Fica guardado no registro de auditoria.",
+      "reasonCounter": "{{length}}/{{max}}",
+      "confirm": "Aplicar castigo",
+      "done": "{{name}} está de castigo até {{time}}",
+      "removed": "Castigo de {{name}} removido"
+    },
+    "timedOutUntil": "De castigo até {{time}}"
   },
   "mobile": {
     "addSheet": {
@@ -706,6 +1157,396 @@
     "suppressEveryone": "Suprimir @everyone e @here",
     "suppressRoles": "Suprimir menções a cargos",
     "massHeading": "Menções em grupo",
-    "massNote": "@here alcança os mesmos membros que @everyone. Menções diretas a você sempre notificam."
+    "massNote": "@here alcança os mesmos membros que @everyone. Menções diretas a você sempre notificam.",
+    "spaceDefaultNote": "Este é o nível padrão escolhido pelos moderadores deste espaço. Escolha outro para definir o seu."
+  },
+  "roleDisplay": {
+    "gradient": "Degradê",
+    "secondColor": "Segunda cor",
+    "preview": "Fica assim:",
+    "icon": "Ícone",
+    "removeIcon": "Remover ícone",
+    "description": "Descrição",
+    "descriptionPlaceholder": "Para que serve este cargo",
+    "hoist": "Mostrar membros separadamente",
+    "hoistHint": "Quem tem este como cargo exibido mais alto ganha um grupo próprio na lista de membros.",
+    "mentionable": "Todos podem mencionar este cargo",
+    "mentionableHint": "Sem isso, só quem pode mencionar @everyone consegue mencionar o cargo.",
+    "membersTitle_one": "{{count}} membro",
+    "membersTitle_many": "{{count}} membros",
+    "membersTitle_other": "{{count}} membros",
+    "membersEmpty": "Ninguém tem este cargo ainda.",
+    "removeMember": "Tirar o cargo de {{name}}",
+    "addMember": "Adicionar",
+    "addMemberPlaceholder": "Dar o cargo a…"
+  },
+  "ownerDisplay": {
+    "title": "Propriedade",
+    "ownGroup": "Mostrar o dono em um grupo próprio",
+    "ownGroupHint": "Desligado, você aparece sob os seus próprios cargos com uma coroa. Seus direitos vêm de ser dono do espaço, nunca de um cargo."
+  },
+  "import": {
+    "title": "Importar do Discord",
+    "titleInto": "Importar para {{space}}",
+    "intro": "Comece um espaço a partir de um modelo de servidor do Discord: cargos e permissões, categorias, canais e permissões de canal.",
+    "introInto": "Adicione a este espaço os cargos, categorias e canais de um modelo do Discord. Nada do que já existe aqui é alterado ou removido.",
+    "source": {
+      "linkLabel": "Link ou código do modelo",
+      "linkPlaceholder": "discord.new/… ou discord.com/template/…",
+      "linkInvalid": "Isso não é um link nem um código de modelo.",
+      "howTo": "No Discord: Configurações do servidor → Modelo do servidor → copiar o link.",
+      "load": "Carregar",
+      "loading": "Carregando…",
+      "or": "ou",
+      "file": "Importar um arquivo de modelo",
+      "fileHint": "Um arquivo .json com o modelo, por exemplo salvo de discord.com/api/v10/guilds/templates/CODE.",
+      "fileInvalid": "Esse arquivo não é um modelo.",
+      "fileTooLarge": "O arquivo tem mais de 2 MB."
+    },
+    "notTransferred": {
+      "title": "O que um modelo não contém",
+      "body": "Um modelo é um retrato da estrutura, não um backup. Mensagens, membros, bots, webhooks, emojis, figurinhas, o ícone do servidor, eventos, tópicos e integrações ficam no Discord."
+    },
+    "preview": {
+      "by": "por {{name}}",
+      "uses_one": "usado {{count}} vez",
+      "uses_many": "usado {{count}} vezes",
+      "uses_other": "usado {{count}} vezes",
+      "spaceName": "Nome do espaço",
+      "counts": {
+        "roles": "Cargos",
+        "categories": "Categorias",
+        "channels": "Canais",
+        "overrides": "Permissões de canal",
+        "skipped": "Ignorados"
+      },
+      "rolesTitle": "Cargos",
+      "rolesHint": "Do mais alto ao mais baixo. Permissões que o Tavvit não tem, ou que você não pode conceder aqui, são indicadas.",
+      "channelsTitle": "Categorias e canais",
+      "noCategory": "Sem categoria",
+      "action": {
+        "create": "novo",
+        "reuse": "existente",
+        "updateEveryone": "@everyone",
+        "keepEveryone": "inalterado",
+        "skip": "ignorado"
+      },
+      "converted": "convertido",
+      "unsupported_one": "{{count}} permissão que o Tavvit não tem",
+      "unsupported_many": "{{count}} permissões que o Tavvit não tem",
+      "unsupported_other": "{{count}} permissões que o Tavvit não tem",
+      "withheld_one": "{{count}} permissão que você não pode conceder",
+      "withheld_many": "{{count}} permissões que você não pode conceder",
+      "withheld_other": "{{count}} permissões que você não pode conceder",
+      "hoist": "mostrado separadamente",
+      "mentionable": "mencionável",
+      "notesTitle": "Bom saber",
+      "import": "Importar"
+    },
+    "notes": {
+      "channel_converted": "#{{subject}} era {{detail}} no Discord e vira um canal comum aqui.",
+      "channel_unsupported": "{{subject}} fica de fora: o Tavvit não tem um canal como o tipo {{detail}} do Discord.",
+      "channel_exists": "#{{subject}} já existe aqui e é ignorado.",
+      "category_reused": "A categoria {{subject}} já existe; seus canais vão para ela.",
+      "role_reused": "O cargo {{subject}} já existe e é usado como está.",
+      "role_renamed": "Um segundo cargo chamado {{detail}} passa a se chamar {{subject}}.",
+      "role_icon_dropped": "O ícone de {{subject}} não pode ser importado; um emoji pode ser definido depois.",
+      "everyone_kept": "@everyone mantém as permissões deste espaço.",
+      "roles_below_existing": "Os novos cargos ficam abaixo dos cargos que este espaço já tem.",
+      "permissions_per_channel": "Os canais em {{subject}} mantêm as próprias permissões, como no Discord.",
+      "member_overwrite_dropped": "Permissões de membros individuais em {{subject}} não podem ser importadas.",
+      "reference_missing": "{{subject}} se refere a um cargo ou categoria que o modelo não contém.",
+      "slowmode_adjusted": "O modo lento em #{{subject}} passa a ser de {{detail}}, o passo mais próximo que o Tavvit tem.",
+      "topic_shortened": "O tópico de #{{subject}} foi encurtado.",
+      "name_changed": "{{detail}} se chama #{{subject}} aqui.",
+      "nsfw_dropped": "#{{subject}} tinha restrição de idade no Discord; o Tavvit não tem essa configuração.",
+      "slowmode_off": "O modo lento em #{{subject}} fica desligado: o Tavvit não tem um passo tão curto.",
+      "override_withheld": "Em {{subject}} você não pode definir {{detail}}, porque não tem essas permissões; elas ficam de fora.",
+      "override_hierarchy": "As permissões de {{detail}} em {{subject}} ficam de fora: esses cargos não estão abaixo do seu cargo mais alto."
+    },
+    "importing": "Importando…",
+    "done": {
+      "title": "Importado",
+      "adjustedTitle": "Permissões ajustadas",
+      "followUpTitle": "Próximos passos",
+      "followUp": {
+        "invite": "Convide seus membros: ninguém se muda sozinho.",
+        "permissions": "Revise os cargos que perderam permissões que o Tavvit não tem.",
+        "bots": "Bots, webhooks e integrações precisam ser configurados de novo."
+      },
+      "open": "Abrir espaço"
+    },
+    "entry": {
+      "title": "Importar do Discord",
+      "action": "Importar modelo",
+      "hint": "Adicione os cargos, categorias e canais de um modelo de servidor do Discord. Nada do que já existe aqui é alterado ou removido.",
+      "createSpace": "Importar do Discord",
+      "createSpaceHint": "Começar a partir de um modelo de servidor do Discord"
+    },
+    "discordTypes": {
+      "stage": "um canal de palco",
+      "media": "um canal de mídia"
+    }
+  },
+  "spaceProfile": {
+    "title": "Seu perfil em {{space}}",
+    "titlePlain": "Seu perfil do espaço",
+    "intro": "Aparece só neste espaço. O que você deixar vazio vem do perfil da sua conta.",
+    "notLoaded": "Abra o espaço primeiro para editar seu perfil nele.",
+    "avatar": "Foto",
+    "banner": "Banner",
+    "bio": "Sobre mim",
+    "bioPlaceholder": "O que as pessoas deste espaço devem saber",
+    "bioCounter": "{{used}}/{{max}}",
+    "fromAccount": "da sua conta",
+    "uploadAvatar": "Enviar foto",
+    "uploadBanner": "Enviar banner",
+    "useAccountAvatar": "Usar foto da conta",
+    "useAccountBanner": "Usar banner da conta",
+    "useAccountBio": "Usar texto da conta",
+    "uploading": "Enviando…",
+    "uploadFailed": "Não foi possível enviar a imagem.",
+    "saved": "Perfil do espaço salvo",
+    "cropAvatar": "Recortar foto",
+    "cropBanner": "Recortar banner"
+  },
+  "verification": {
+    "title": "Verificação",
+    "ownerOnly": "Somente o dono deste espaço pode solicitar a verificação.",
+    "intro": "A verificação coloca um selo ao lado do nome do espaço em Explorar e no perfil dele. Isso indica que os administradores desta instância conferiram quem está por trás do espaço. Informe dados públicos e verificáveis; nunca envie documentos de identidade nem outros documentos pessoais.",
+    "statusLabel": "Status",
+    "adminNote": "Observação da equipe de análise",
+    "sentAt": "Solicitação enviada em {{date}}",
+    "withdraw": "Retirar solicitação",
+    "sent": "Solicitação de verificação enviada",
+    "status": {
+      "none": "Este espaço não está verificado e não há nenhuma solicitação aberta.",
+      "pending": "Sua solicitação está aguardando os administradores. Você receberá um aviso quando houver uma decisão.",
+      "needs_info": "A equipe de análise precisa de mais informações. Leia a observação e envie a solicitação de novo.",
+      "verified": "Este espaço está verificado. O selo aparece em todos os lugares onde o espaço é exibido.",
+      "rejected": "A solicitação não foi aprovada. Você pode enviar uma nova com informações melhores.",
+      "revoked": "A verificação foi revogada. Você pode enviar uma nova solicitação."
+    },
+    "form": {
+      "title": "Solicitação",
+      "privacy": "Somente os administradores desta instância leem o que você envia aqui.",
+      "identity": "Nome e descrição",
+      "noDescription": "Nenhuma descrição ainda.",
+      "identityHint": "Do jeito que estão agora no espaço. Altere-os em Visão geral ou Descoberta antes de enviar.",
+      "category": "Categoria",
+      "website": "Site (opcional)",
+      "profiles": "Perfis públicos (opcional, até {{max}})",
+      "profileAria": "Perfil público {{index}}",
+      "addProfile": "Adicionar perfil",
+      "reason": "Por que este espaço deve ser verificado?",
+      "reasonPlaceholder": "Quem está por trás do espaço, para quem ele é e por que o selo de verificação ajuda as pessoas.",
+      "counter": "{{length}} de {{min}}–{{max}} caracteres",
+      "proof": "Como a equipe de análise pode conferir isso?",
+      "proofPlaceholder": "Por exemplo, uma página ou publicação pública do site ou da conta oficial que mencione este espaço.",
+      "send": "Enviar solicitação",
+      "sendAgain": "Enviar de novo",
+      "urlPlaceholder": "https://…"
+    },
+    "withdrawDialog": {
+      "title": "Retirar a solicitação de verificação?",
+      "description": "A solicitação sai da fila de análise. Você pode enviar uma nova depois."
+    }
+  },
+  "listing": {
+    "title": "Listagem em Explorar",
+    "ownerOnly": "O dono deste espaço solicita a listagem em Explorar; os administradores desta instância a aprovam.",
+    "intro": "A visibilidade só define como as pessoas entram. Um espaço aparece em Explorar depois que os administradores desta instância aprovam a listagem dele. Alterar o nome, a descrição, o ícone ou o banner de um espaço listado o envia de volta para análise.",
+    "statusLabel": "Status",
+    "adminNote": "Observação da equipe de análise",
+    "sentAt": "Solicitação enviada em {{date}}",
+    "preview": "Como a listagem vai ficar",
+    "criteria": {
+      "title": "O que a equipe de análise avalia",
+      "visibility": "O espaço é público ou aceita solicitações de entrada",
+      "description": "Tem uma descrição",
+      "icon": "Tem um ícone (recomendado)",
+      "honest": "O nome e a descrição dizem com honestidade do que se trata",
+      "rules": "Segue as regras desta instância"
+    },
+    "category": "Categoria",
+    "needsVisibility": "Primeiro, torne o espaço público ou aberto a solicitações de entrada.",
+    "needsDescription": "Primeiro, dê uma descrição ao espaço.",
+    "send": "Solicitar listagem",
+    "sendAgain": "Enviar de novo",
+    "unlist": "Tirar de Explorar",
+    "withdraw": "Retirar solicitação",
+    "sent": "Solicitação de listagem enviada",
+    "status": {
+      "none": "Este espaço não está listado em Explorar.",
+      "pending": "Sua solicitação está aguardando os administradores. O espaço fica oculto até a aprovação.",
+      "changes_requested": "A equipe de análise pediu alterações. Faça as alterações e envie a solicitação de novo.",
+      "approved": "Este espaço está listado em Explorar.",
+      "rejected": "A listagem não foi aprovada. Você pode enviar uma nova solicitação.",
+      "withdrawn": "A listagem foi retirada. Você pode enviar uma nova solicitação."
+    },
+    "withdrawDialog": {
+      "title": "Retirar a listagem?",
+      "description": "O espaço sai de Explorar, ou a solicitação sai da fila de análise. Uma nova solicitação passa pela análise de novo."
+    },
+    "resubmitDialog": {
+      "title": "Enviar a listagem de novo?",
+      "description": "O espaço sai de Explorar até a administração aprovar a nova categoria."
+    }
+  },
+  "roleIcons": {
+    "none": "Sem ícone",
+    "fromBefore": "Um emoji de antes",
+    "groups": {
+      "rank": "Posição",
+      "power": "Poder",
+      "play": "Jogar e criar",
+      "make": "Construir",
+      "nature": "Natureza",
+      "life": "Vida"
+    },
+    "names": {
+      "crown": "Coroa",
+      "crownb": "Coroa simples",
+      "shield": "Escudo",
+      "shieldstar": "Escudo com estrela",
+      "shieldok": "Escudo com visto",
+      "trophy": "Troféu",
+      "medal": "Medalha",
+      "star": "Estrela",
+      "star4": "Estrela de quatro pontas",
+      "sparkle": "Brilho",
+      "diamond": "Diamante",
+      "key": "Chave",
+      "flag": "Bandeira",
+      "banner": "Estandarte",
+      "sword": "Espada",
+      "bolt": "Raio",
+      "fire": "Fogo",
+      "skull": "Caveira",
+      "wand": "Varinha mágica",
+      "target": "Alvo",
+      "hammer": "Martelo",
+      "ghost": "Fantasma",
+      "alien": "Alienígena",
+      "robot": "Robô",
+      "mask": "Máscara",
+      "eye": "Olho",
+      "gamepad": "Controle de jogo",
+      "joystick": "Alavanca de jogo",
+      "dice": "Dado",
+      "puzzle": "Peça de quebra-cabeça",
+      "music": "Música",
+      "headset": "Fones de ouvido",
+      "mic": "Microfone",
+      "guitar": "Guitarra",
+      "film": "Claquete",
+      "camera": "Câmera",
+      "brush": "Pincel",
+      "palette": "Paleta",
+      "pen": "Caneta",
+      "book": "Livro",
+      "gradcap": "Capelo",
+      "code": "Código",
+      "terminal": "Console",
+      "bug": "Inseto",
+      "chip": "Processador",
+      "flask": "Frasco",
+      "atom": "Átomo",
+      "rocket": "Foguete",
+      "planet": "Planeta",
+      "compass": "Bússola",
+      "wrench": "Chave inglesa",
+      "megaphone": "Megafone",
+      "handshake": "Aperto de mãos",
+      "leaf": "Folha",
+      "tree": "Árvore",
+      "lotus": "Lótus",
+      "moon": "Lua",
+      "sun": "Sol",
+      "snow": "Floco de neve",
+      "waves": "Ondas",
+      "mountain": "Montanhas",
+      "storm": "Tempestade",
+      "paw": "Pata",
+      "bird": "Pássaro",
+      "cat": "Gato",
+      "butterfly": "Borboleta",
+      "feather": "Pena",
+      "fish": "Peixe",
+      "heart": "Coração",
+      "coffee": "Café",
+      "pizza": "Fatia de pizza",
+      "cake": "Bolo",
+      "gift": "Presente",
+      "beer": "Cerveja",
+      "handheart": "Mão que cuida",
+      "anchor": "Âncora",
+      "globe": "Globo",
+      "infinity": "Infinito",
+      "hourglass": "Ampulheta",
+      "bell": "Sino"
+    }
+  },
+  "events": {
+    "title": "Eventos",
+    "intro": "O que vem por aí neste espaço.",
+    "create": "Novo evento",
+    "emptyTitle": "Nada planejado ainda",
+    "emptyBody": "Quando algo for planejado aqui, você encontrará nesta página.",
+    "emptyManage": "Anuncie uma noite de jogos, uma reunião ou qualquer outra coisa.",
+    "pastHeading": "Terminou há pouco",
+    "ended": "Terminou",
+    "range": "{{start}} até {{end}}",
+    "going": "Vou",
+    "iAmGoing": "Eu vou",
+    "nobodyYet": "Ninguém ainda.",
+    "joinVoice": "Entrar em {{channel}}",
+    "openChannel": "Abrir {{channel}}",
+    "addToCalendar": "Adicionar ao calendário",
+    "remove": "Cancelar evento",
+    "removeTitle": "Cancelar este evento?",
+    "removeBody": "{{title}} desaparece para todos, junto com quem ia.",
+    "reminder": "{{title}} começa em breve",
+    "startsSoon": "Começa em breve",
+    "form": {
+      "title": "Novo evento",
+      "editTitle": "Alterar evento",
+      "name": "Nome",
+      "start": "Início",
+      "end": "Fim (opcional)",
+      "startPast": "O evento precisa começar no futuro.",
+      "endBeforeStart": "O fim precisa ser depois do início.",
+      "channel": "Canal",
+      "noChannel": "Nenhum",
+      "location": "Local (opcional)",
+      "description": "Do que se trata (opcional)",
+      "create": "Anunciar"
+    },
+    "goingCount_one": "{{formatted}} vai",
+    "goingCount_many": "{{formatted}} vão",
+    "goingCount_other": "{{formatted}} vão",
+    "upcomingCount_one": "{{formatted}} evento futuro",
+    "upcomingCount_many": "{{formatted}} eventos futuros",
+    "upcomingCount_other": "{{formatted}} eventos futuros"
+  },
+  "welcome": {
+    "title": "Boas-vindas a {{space}}",
+    "rules": "Regras",
+    "startHere": "Comece aqui",
+    "mustAccept": "Você pode ler, mas para escrever, reagir ou entrar em chamadas precisa aceitar estas regras.",
+    "later": "Depois",
+    "agree": "Eu aceito",
+    "gotIt": "Entendi"
+  },
+  "botInvite": {
+    "title": "Adicionar bot",
+    "runBy": "Operado por {{name}}",
+    "warning": "Um bot é um programa operado pelo dono, não por esta instância. Ele vê o que seu cargo permite e pode repassar. Adicione apenas os que você confia.",
+    "spaceLabel": "Espaço",
+    "spacePick": "Escolha um espaço",
+    "noSpaces": "Você não gerencia nenhum espaço nesta instância.",
+    "permissionsLabel": "O que ele pede",
+    "noPermissions": "Nada além do que todo membro pode fazer.",
+    "add": "Adicionar ao espaço"
   }
 }

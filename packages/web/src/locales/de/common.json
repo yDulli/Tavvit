@@ -1,5 +1,5 @@
 {
-  "appName": "Backspace",
+  "appName": "Tavvit",
   "actions": {
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -82,7 +82,8 @@
     "searchMembers": "Mitglieder suchen…",
     "noMembersFound": "Keine Mitglieder gefunden",
     "or": "oder",
-    "nameAZ": "Name (A bis Z)"
+    "nameAZ": "Name (A bis Z)",
+    "adminConsole": "Admin-Konsole"
   },
   "time": {
     "today": "Heute um {{time}}",
@@ -111,7 +112,12 @@
   },
   "language": {
     "label": "Sprache",
-    "description": "Menüs, Schaltflächen und Systemmeldungen erscheinen in dieser Sprache. Nachrichten anderer Personen bleiben, wie sie geschrieben wurden."
+    "description": "Menüs, Schaltflächen und Systemmeldungen erscheinen in dieser Sprache. Nachrichten anderer Personen bleiben, wie sie geschrieben wurden.",
+    "translate": {
+      "label": "Nachrichten übersetzen in",
+      "same": "Sprache der App",
+      "hint": "Rechtsklick auf eine Nachricht, am Handy gedrückt halten, dann Übersetzen wählen."
+    }
   },
   "crash": {
     "title": "Etwas ist schiefgelaufen",
@@ -119,19 +125,185 @@
     "details": "Fehlerdetails"
   },
   "app": {
-    "loading": "Backspace wird geladen"
+    "loading": "Tavvit wird geladen"
   },
   "chrome": {
     "toggleMemberList": "Mitgliederliste ein- oder ausblenden",
     "closeSettings": "Einstellungen schließen"
   },
-  "sourceCode": {
-    "label": "Quellcode (AGPL)",
-    "labelWithBuild": "Quellcode (AGPL) · {{build}}",
-    "title": "Den Quellcode der Version ansehen, die auf dieser Instanz läuft (AGPL-3.0)"
-  },
   "devices": {
     "newAudioInput": "{{label}} erkannt. Wähle es in den Sprach-Einstellungen aus, um zu wechseln.",
     "unnamedAudioInput": "Neues Audiogerät"
+  },
+  "connection": {
+    "lost": "Verbindung unterbrochen. Verbinde neu…"
+  },
+  "switcher": {
+    "title": "Schnellwechsler",
+    "placeholder": "Springe zu einer Unterhaltung, einem Freund, Space oder Kanal…",
+    "noResults": "Nichts passt zu „{{query}}“.",
+    "hint": "↑ ↓ zum Auswählen, Enter zum Öffnen, Esc zum Schließen",
+    "kind": {
+      "dm": "Unterhaltung",
+      "friend": "Freund",
+      "space": "Space",
+      "channel": "Kanal",
+      "page": "Seite"
+    }
+  },
+  "activity": {
+    "line": {
+      "playing": "Spielt {{name}}",
+      "listening": "Hört {{name}}",
+      "watching": "Schaut {{name}}",
+      "streaming": "Streamt {{name}}"
+    }
+  },
+  "contextMenu": {
+    "cut": "Ausschneiden",
+    "paste": "Einfügen",
+    "selectAll": "Alles auswählen",
+    "noSuggestions": "Keine Vorschläge",
+    "addToDictionary": "Zum Wörterbuch hinzufügen",
+    "pasteBlocked": "Der Browser lässt Tavvit nicht auf die Zwischenablage zugreifen. Füge mit {{shortcut}} ein.",
+    "clipboardFailed": "Kopieren in die Zwischenablage hat nicht geklappt.",
+    "copyUsername": "Benutzernamen kopieren",
+    "usernameCopied": "Benutzername kopiert",
+    "editChannel": "Kanal bearbeiten",
+    "markRead": "Als gelesen markieren",
+    "markReadFailed": "Konnte nicht als gelesen markiert werden. Versuch es noch mal.",
+    "jumpToMessage": "Zur Nachricht springen",
+    "copyMessageLink": "Nachrichtenlink kopieren"
+  },
+  "badges": {
+    "staff": {
+      "name": "Team",
+      "description": "Betreibt diese Instanz als Teil ihres Admin-Teams"
+    },
+    "bot": {
+      "name": "Bot",
+      "description": "Ein Programm, das eine Person betreibt"
+    },
+    "server_owner": {
+      "name": "Space-Owner",
+      "description": "Besitzt diesen Space"
+    },
+    "administrator": {
+      "name": "Administration",
+      "description": "Hat in diesem Space das Recht „Administrator“"
+    },
+    "moderator": {
+      "name": "Moderation",
+      "description": "Kann in diesem Space Mitglieder und Nachrichten moderieren"
+    },
+    "helper": {
+      "name": "Hilfe",
+      "description": "Hilft anderen, sich auf dieser Instanz zurechtzufinden"
+    },
+    "founder": {
+      "name": "Gründungsmitglied",
+      "description": "War dabei, als diese Instanz startete"
+    },
+    "early_supporter": {
+      "name": "Früh dabei",
+      "description": "Hat diese Instanz früh unterstützt"
+    },
+    "bug_hunter": {
+      "name": "Bug-Jagd",
+      "description": "Hat einen Fehler gefunden und gemeldet"
+    },
+    "developer": {
+      "name": "Entwicklung",
+      "description": "Arbeitet an Tavvit oder an dieser Instanz"
+    },
+    "creator": {
+      "name": "Kreativ",
+      "description": "Erschafft Dinge, die die Community mag"
+    },
+    "event_participant": {
+      "name": "Event-Teilnahme",
+      "description": "Hat an einem Event dieser Instanz teilgenommen"
+    },
+    "community_contributor": {
+      "name": "Community-Beitrag",
+      "description": "Hilft der Community zu wachsen"
+    },
+    "beta_tester": {
+      "name": "Beta-Test",
+      "description": "Hat neue Funktionen vor allen anderen ausprobiert"
+    },
+    "verified": {
+      "name": "Verifiziert",
+      "description": "Die Admins dieser Instanz haben geprüft, wer diesen Space betreibt"
+    },
+    "partner": {
+      "name": "Partnerschaft",
+      "description": "Eine Community, mit der diese Instanz zusammenarbeitet"
+    }
+  },
+  "review": {
+    "verification": {
+      "none": "Nicht beantragt",
+      "pending": "In Prüfung",
+      "needs_info": "Mehr Angaben nötig",
+      "verified": "Verifiziert",
+      "rejected": "Abgelehnt",
+      "revoked": "Entzogen"
+    },
+    "discovery": {
+      "none": "Nicht eingereicht",
+      "pending": "In Prüfung",
+      "changes_requested": "Änderungen erbeten",
+      "approved": "Gelistet",
+      "rejected": "Abgelehnt",
+      "withdrawn": "Zurückgezogen"
+    },
+    "categories": {
+      "gaming": "Gaming",
+      "music": "Musik",
+      "art": "Kunst & Design",
+      "technology": "Technik",
+      "education": "Bildung",
+      "science": "Wissenschaft",
+      "entertainment": "Unterhaltung",
+      "sports": "Sport",
+      "community": "Gemeinschaft",
+      "other": "Sonstiges"
+    },
+    "actions": {
+      "submit": "Antrag gesendet",
+      "withdraw": "Antrag zurückgezogen",
+      "approve": "Angenommen",
+      "reject": "Abgelehnt",
+      "request_info": "Mehr Angaben erbeten",
+      "request_changes": "Änderungen erbeten",
+      "revoke": "Verifizierung entzogen",
+      "admin_withdraw": "Eintrag entfernt",
+      "changed": "Nach einer Änderung wieder in Prüfung",
+      "migrated": "In die Prüfung übernommen"
+    },
+    "toast": {
+      "verification": "Verifizierung von {{space}}: {{status}}",
+      "discovery": "Eintrag von {{space}} unter „Entdecken“: {{status}}"
+    },
+    "history": "Verlauf",
+    "noHistory": "Bisher ist nichts passiert.",
+    "unknownActor": "Ein entferntes Konto",
+    "noDescription": "Noch keine Beschreibung.",
+    "members_one": "{{count}} Mitglied",
+    "members_other": "{{count}} Mitglieder"
+  },
+  "notFound": {
+    "title": "Hier ist nichts",
+    "body": "Diese Adresse führt nirgendwohin. Vielleicht ist der Link alt oder falsch geschrieben.",
+    "toApp": "Zurück zur App",
+    "toHome": "Zur Startseite"
+  },
+  "emailPrompt": {
+    "unconfirmed": "Deine Adresse {{address}} ist noch nicht bestätigt. Schau nach unserer Mail oder prüfe sie in den Einstellungen.",
+    "missing": "Füge eine E-Mail-Adresse hinzu, damit du wieder hineinkommst, wenn du dein Passwort vergisst.",
+    "required": "Bestätige deine E-Mail-Adresse, um Spaces zu erstellen und Gespräche mit Leuten zu beginnen, die nicht deine Freunde sind.",
+    "open": "Einstellungen öffnen",
+    "dismiss": "Nicht jetzt"
   }
 }

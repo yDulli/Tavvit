@@ -46,7 +46,15 @@ export function UpdateToast() {
     dismiss();
     // The prompt is gone but the update is not lost, and the user has no way to
     // know that unless they are told once, at the moment they need to know it.
-    addToast(t('desktop:update.laterHint'), 'info', 5000);
+    // Only the ready card of a build that installs in place can promise that the
+    // update goes on by itself. A manual build installs nothing ("This build
+    // cannot update itself"), and after a failure another attempt may fail the
+    // same way. Those cards point at Settings, where the update stays reachable.
+    addToast(
+      canRestart ? t('desktop:update.laterHint') : t('desktop:update.laterHintSettings'),
+      'info',
+      5000,
+    );
   };
 
   let title: string;
@@ -66,11 +74,11 @@ export function UpdateToast() {
 
   return (
     <div className="fixed bottom-6 left-6 z-[300] animate-slide-up max-w-[calc(calc(100*var(--app-vw))-3rem)]">
-      <div className="glass-bubble rounded-2xl p-4 w-[380px] max-w-full">
+      <div className="glass-bubble rounded-lg shadow-elevation-high p-4 w-[380px] max-w-full">
         <div className="flex items-start gap-3">
           <div
-            className={`shrink-0 mt-0.5 w-8 h-8 rounded-full flex items-center justify-center ${
-              failed ? 'bg-accent-rose/15 text-accent-rose' : 'bg-accent-primary/15 text-accent-primary'
+            className={`shrink-0 mt-0.5 w-8 h-8 rounded-md flex items-center justify-center ${
+              failed ? 'bg-accent-rose/15 text-accent-rose' : 'bg-accent-primary/15 text-accent-soft'
             }`}
             aria-hidden="true"
           >
@@ -86,16 +94,18 @@ export function UpdateToast() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-txt-primary">{title}</p>
+            <p className="text-ui font-semibold text-txt-primary">{title}</p>
             {/* Deliberately wraps. The previous version truncated this line
                 mid-word inside a fixed-width pill. */}
             <p className="text-xs text-txt-secondary mt-1 leading-relaxed">{body}</p>
           </div>
 
           <button
+            type="button"
             onClick={handleLater}
-            className="shrink-0 -mt-1 -mr-1 p-1.5 rounded-lg text-txt-tertiary hover:text-txt-secondary hover:bg-white/[0.06] transition-colors"
+            className="icon-btn -mt-1 -mr-1"
             aria-label={t('desktop:update.dismiss')}
+            title={t('desktop:update.dismiss')}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -106,22 +116,25 @@ export function UpdateToast() {
         <div className="flex items-center gap-2 mt-3.5 pl-11">
           {canRestart ? (
             <button
+              type="button"
               onClick={install}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary hover:bg-accent-primary/80 text-white transition-colors"
+              className="btn-primary btn-sm"
             >
               {t('desktop:update.restartNow')}
             </button>
           ) : (
             <button
+              type="button"
               onClick={openDownloadPage}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-primary hover:bg-accent-primary/80 text-white transition-colors"
+              className="btn-primary btn-sm"
             >
               {t('desktop:update.download')}
             </button>
           )}
           <button
+            type="button"
             onClick={handleLater}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg text-txt-secondary hover:text-txt-primary hover:bg-white/[0.06] transition-colors"
+            className="btn-quiet btn-sm"
           >
             {t('desktop:update.later')}
           </button>

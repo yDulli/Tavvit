@@ -97,7 +97,6 @@ function seedUser(u: UserSeed): void {
     status: 'offline',
     isAdmin: 0,
     isDeleted: 0,
-    discoverable: 1,
     homeInstance: u.homeInstance ?? null,
     homeUserId: u.homeUserId ?? null,
     createdAt: Date.now(),

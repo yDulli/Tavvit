@@ -1,0 +1,35 @@
+{
+  "title": "状态",
+  "lead": "这里现在是否一切正常。",
+  "checking": "正在检查…",
+  "unreachable": "服务器没有响应。请稍后再试。",
+  "allGood": "一切正常。",
+  "someDown": "有部分服务未运行。",
+  "services": {
+    "chat": "消息和账号",
+    "uploads": "上传文件",
+    "voice": "语音和视频",
+    "mail": "邮件"
+  },
+  "states": {
+    "ok": "运行中",
+    "down": "未运行",
+    "off": "此处未设置"
+  },
+  "notes": "来自本服务器运营者",
+  "noteOngoing": "自 {{date}} 起",
+  "noteEnded": "{{date}} 至 {{until}}",
+  "limit": "此页面运行在同一台服务器上。如果整台服务器宕机，此页面也无法访问。",
+  "frame": {
+    "home": "首页",
+    "help": "帮助",
+    "changelog": "更新内容",
+    "status": "状态",
+    "terms": "使用条款",
+    "privacy": "隐私政策",
+    "imprint": "法律声明",
+    "report": "举报内容",
+    "developers": "开发者",
+    "roadmap": "路线图"
+  }
+}

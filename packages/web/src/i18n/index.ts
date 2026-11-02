@@ -21,7 +21,7 @@ function readStoredLanguage(): string | null {
   try {
     return window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
   } catch {
-    // Storage can be disabled by browser privacy settings; detection continues without it.
+    // Storage can be disabled by browser privacy settings; the app then starts in English.
     return null;
   }
 }
@@ -32,12 +32,6 @@ function writeStoredLanguage(language: SupportedLanguage): void {
   } catch {
     // The in-memory selection still applies for this session.
   }
-}
-
-function browserLanguages(): readonly string[] {
-  if (typeof navigator === 'undefined') return [];
-  if (navigator.languages && navigator.languages.length > 0) return navigator.languages;
-  return navigator.language ? [navigator.language] : [];
 }
 
 function applyDocumentLanguage(language: SupportedLanguage): void {
@@ -52,24 +46,22 @@ function notifyDesktop(language: SupportedLanguage): void {
 }
 
 export interface InitI18nOptions {
-  /** Overrides `navigator.languages`; used by tests and by the desktop shell. */
-  browserLanguages?: readonly string[];
-  /** Overrides the set of languages detection may pick; tests use it to reach unreleased ones. */
+  /** Overrides the set of languages a stored choice may name; tests use it to reach unreleased ones. */
   releasedLanguages?: ReadonlySet<string>;
   /** A language to show regardless of release state, not persisted; `?lang=` fills it in development. */
   previewLanguage?: SupportedLanguage | null;
 }
 
 /**
- * Initialise i18next in the detected language and resolve once that
- * language's catalogs are loaded, so the first render is already
- * translated. Safe to call more than once: later calls only re-run detection.
+ * Initialise i18next in the stored language, or in English, and resolve once
+ * that language's catalogs are loaded, so the first render is already
+ * translated. Safe to call more than once: later calls read the choice again.
  */
 export async function initI18n(options: InitI18nOptions = {}): Promise<typeof i18n> {
   const preview = options.previewLanguage !== undefined
     ? options.previewLanguage
     : readPreviewLanguage(typeof window === 'undefined' ? '' : window.location.search, import.meta.env.DEV);
-  const language = preview ?? pickLanguage(readStoredLanguage(), options.browserLanguages ?? browserLanguages(), options.releasedLanguages);
+  const language = preview ?? pickLanguage(readStoredLanguage(), options.releasedLanguages);
 
   if (i18n.isInitialized) {
     await i18n.changeLanguage(language);

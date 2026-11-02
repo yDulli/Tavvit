@@ -23,7 +23,7 @@ import { PermissionBits, permissionsToString } from '../../../utils/permissions'
 // optimistic move and its rollback, and the instance the move goes to.
 
 const SPACE_ID = 'space-1';
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 
 function space(origin: string): TaggedSpace {
   return {
@@ -291,15 +291,15 @@ describe('a space on another instance', () => {
   it('ranks the viewer by their id there and sends the move to that instance', async () => {
     // Home id "moderator" is not a member of the orbit space; the replicated
     // user "moderator-local" is, and holds Moderators there.
-    seed('moderator', ORBIT);
+    seed('moderator', TAVVIT);
     useSpaceStore.setState({
       members: [member('owner', []), member('moderator-local', [MODS]), member('regular', [REGULARS])],
     });
-    useAuthStore.getState().recordMyRow(ORBIT, 'moderator-local');
+    useAuthStore.getState().recordMyRow(TAVVIT, 'moderator-local');
     const remoteUpdate = vi.fn(async () => ({ ...GUESTS, position: 2 }));
     const remote = { roles: { update: remoteUpdate } } as unknown as BackspaceApiClient;
     const homeUpdate = vi.spyOn(api.roles, 'update');
-    setApiForOriginResolver((origin) => (origin === ORBIT ? remote : api));
+    setApiForOriginResolver((origin) => (origin === TAVVIT ? remote : api));
 
     render(<RolesPanel spaceId={SPACE_ID} />);
     expect(screen.queryByRole('button', { name: 'Move Moderators' })).toBeNull();

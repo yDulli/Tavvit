@@ -138,15 +138,15 @@ describe('TypingIndicator', () => {
   });
 
   describe("leaves out the viewer by the viewer's id on the channel's instance", () => {
-    const ORBIT = 'https://orbit.example';
+    const TAVVIT = 'https://orbit.example';
     const meOnOrbit = makeUser('me-orbit', 'alice@home.example', 'Alice');
-    // Orbit issued this row an id that happens to equal the viewer's home id.
+    // Tavvit issued this row an id that happens to equal the viewer's home id.
     const sameIdOnOrbit = makeUser(me.id, 'mira', 'Mira');
     const orbitDm = { id: 'dm-orbit', ownerId: null, createdAt: 1, members: [meOnOrbit, sameIdOnOrbit], lastMessage: null } as unknown as DmChannel;
 
     beforeEach(() => {
-      useAuthStore.getState().recordMyRow(ORBIT, meOnOrbit.id);
-      useSpaceStore.setState({ dmChannels: [orbitDm], channelOriginMap: new Map([[orbitDm.id, ORBIT]]) });
+      useAuthStore.getState().recordMyRow(TAVVIT, meOnOrbit.id);
+      useSpaceStore.setState({ dmChannels: [orbitDm], channelOriginMap: new Map([[orbitDm.id, TAVVIT]]) });
     });
 
     it("hides the viewer's own typing on a channel another instance serves", () => {

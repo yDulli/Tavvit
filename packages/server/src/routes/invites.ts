@@ -12,6 +12,7 @@ import {
   InviteStateConflictError,
   InviteValidationError,
 } from '../utils/inviteService.js';
+import { recordPlatformAudit } from '../utils/platformAudit.js';
 import type {
   CreateInviteRequest,
   UpdateInviteRequest,
@@ -40,6 +41,7 @@ export async function invitesRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     try {
       const invite = createInvite(request.body, request.userId);
+      recordPlatformAudit({ actorId: request.userId, action: 'invite_create', targetType: 'instance', targetId: invite.id, targetLabel: invite.name });
       return reply.code(201).send(invite);
     } catch (err) {
       if (err instanceof InviteValidationError) {
@@ -62,6 +64,7 @@ export async function invitesRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     try {
       const invite = patchInvite(request.params.id, request.body ?? {});
+      recordPlatformAudit({ actorId: request.userId, action: 'invite_update', targetType: 'instance', targetId: invite.id, targetLabel: invite.name });
       return reply.code(200).send(invite);
     } catch (err) {
       if (err instanceof InviteNotFoundError) {
@@ -82,6 +85,7 @@ export async function invitesRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     try {
       const invite = revokeInvite(request.params.id);
+      recordPlatformAudit({ actorId: request.userId, action: 'invite_revoke', targetType: 'instance', targetId: invite.id, targetLabel: invite.name });
       return reply.code(200).send({ invite });
     } catch (err) {
       if (err instanceof InviteNotFoundError) {
@@ -99,6 +103,10 @@ export async function invitesRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     try {
       const result = reinstateInvite(request.params.id, request.body ?? {});
+      recordPlatformAudit({
+        actorId: request.userId, action: 'invite_reinstate', targetType: 'instance', targetId: result.invite.id,
+        targetLabel: result.invite.name, details: { tokenRotated: result.tokenRotated },
+      });
       return reply.code(200).send(result);
     } catch (err) {
       if (err instanceof InviteNotFoundError) {
@@ -119,6 +127,7 @@ export async function invitesRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     try {
       deleteInvite(request.params.id);
+      recordPlatformAudit({ actorId: request.userId, action: 'invite_delete', targetType: 'instance', targetId: request.params.id });
       return reply.code(200).send({ success: true });
     } catch (err) {
       if (err instanceof InviteNotFoundError) {

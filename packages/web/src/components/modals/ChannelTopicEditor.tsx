@@ -57,7 +57,7 @@ export function ChannelTopicEditor({ topic, canEdit, onSave }: ChannelTopicEdito
   if (!canEdit) {
     return (
       <div>
-        <span className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+        <span className="field-label">
           {t('spaces:channel.settings.topic.label')}
         </span>
         {topic ? (
@@ -107,7 +107,7 @@ export function ChannelTopicEditor({ topic, canEdit, onSave }: ChannelTopicEdito
 
   return (
     <form onSubmit={handleSubmit}>
-      <label htmlFor={fieldId} className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+      <label htmlFor={fieldId} className="field-label">
         {t('spaces:channel.settings.topic.label')}
       </label>
       <textarea
@@ -127,7 +127,7 @@ export function ChannelTopicEditor({ topic, canEdit, onSave }: ChannelTopicEdito
         <p id={hintId} className="text-xs text-txt-tertiary">
           {t('spaces:channel.settings.topic.hint')}
         </p>
-        <span className={`flex-shrink-0 text-[11px] tabular-nums ${tooLong ? 'text-txt-danger' : 'text-txt-tertiary'}`}>
+        <span className={`flex-shrink-0 text-label tabular-nums ${tooLong ? 'text-txt-danger' : 'text-txt-tertiary'}`}>
           {t('spaces:channel.settings.topic.counter', { used: length, max: CHANNEL_TOPIC_MAX_LENGTH })}
         </span>
       </div>

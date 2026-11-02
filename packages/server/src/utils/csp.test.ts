@@ -107,3 +107,50 @@ describe('buildCspHeaderValue', () => {
     }
   });
 });
+
+describe('buildCspDirectives with federation switched off', () => {
+  it('limits connect-src to this instance, blob: and data:', () => {
+    const d = buildCspDirectives({ federationEnabled: false });
+    expect(d['connect-src']).toEqual(["'self'", 'blob:', 'data:']);
+  });
+
+  it('no longer allows connections to arbitrary hosts or schemes', () => {
+    const connect = buildCspDirectives({ federationEnabled: false })['connect-src']!;
+    for (const wildcard of ['https:', 'http:', 'wss:', 'ws:', '*']) {
+      expect(connect).not.toContain(wildcard);
+    }
+  });
+
+  it('still lets the browser reach LiveKit, over both its WebSocket and its HTTPS probe', () => {
+    const connect = buildCspDirectives({
+      federationEnabled: false,
+      livekitUrl: 'wss://chat.example.org/livekit',
+    })['connect-src']!;
+    expect(connect).toContain('wss://chat.example.org');
+    expect(connect).toContain('https://chat.example.org');
+  });
+
+  it('lists the plain-HTTP twin of an unencrypted LAN LiveKit', () => {
+    const connect = buildCspDirectives({
+      federationEnabled: false,
+      livekitUrl: 'ws://192.168.1.50:7880',
+    })['connect-src']!;
+    expect(connect).toContain('ws://192.168.1.50:7880');
+    expect(connect).toContain('http://192.168.1.50:7880');
+  });
+
+  it('leaves every other directive exactly as it is with federation on', () => {
+    const withoutConnect = (directives: ReturnType<typeof buildCspDirectives>) =>
+      Object.fromEntries(Object.entries(directives).filter(([name]) => name !== 'connect-src'));
+    const off = withoutConnect(buildCspDirectives({ federationEnabled: false }));
+    const on = withoutConnect(buildCspDirectives({ federationEnabled: true }));
+    expect(off).toEqual(on);
+  });
+
+  it('keeps the permissive policy when federation is on or unspecified', () => {
+    for (const federationEnabled of [true, undefined]) {
+      const connect = buildCspDirectives({ federationEnabled })['connect-src']!;
+      for (const scheme of ['https:', 'http:', 'wss:', 'ws:']) expect(connect).toContain(scheme);
+    }
+  });
+});

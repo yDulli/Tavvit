@@ -86,7 +86,6 @@
     },
     "title": "Voice & Video",
     "volume": {
-      "sectionTitle": "Volume",
       "soundEffects": {
         "label": "Sound Effects Volume"
       },
@@ -129,14 +128,176 @@
       "privacy": "Privacy",
       "connections": "Connections",
       "keybinds": "Keybinds",
+      "developers": "Developers",
       "desktop": "Desktop",
-      "instance": "Instance"
+      "instance": "Admin console",
+      "emoji": "Emoji",
+      "games": "Games",
+      "notifications": "Notifications",
+      "accessibility": "Accessibility",
+      "language": "Language",
+      "security": "Security"
     },
     "logOut": "Log Out",
     "backToMenu": "Back to settings menu"
   },
   "appearance": {
-    "title": "Appearance"
+    "title": "Appearance",
+    "theme": {
+      "title": "Theme",
+      "description": "The colours of the app's surfaces. Kept on this device.",
+      "name": {
+        "carbon": "Carbon",
+        "slate": "Slate",
+        "ink": "Ink",
+        "moss": "Lichen",
+        "clay": "Clay",
+        "harbor": "Harbour",
+        "plum": "Plum",
+        "custom": "Your own"
+      },
+      "custom": {
+        "hue": "Hue",
+        "strength": "Colour",
+        "depth": "Depth",
+        "reset": "Back to Carbon"
+      }
+    },
+    "accent": {
+      "title": "Accent colour",
+      "description": "The colour of buttons and highlights. Without one of your own, the colour this server chose is used.",
+      "useInstance": "Use the server's colour",
+      "hex": "Your own colour (hex)",
+      "problem": {
+        "too_light": "Too light: white text on buttons would be hard to read.",
+        "too_dark": "Too dark: it would disappear on the dark panels."
+      },
+      "name": {
+        "vermilion": "Vermilion",
+        "violet": "Tavvit violet",
+        "blue": "Blue",
+        "sky": "Sky",
+        "teal": "Teal",
+        "lime": "Moss",
+        "amber": "Amber",
+        "orange": "Orange",
+        "crimson": "Crimson",
+        "rose": "Rose",
+        "orchid": "Orchid"
+      }
+    },
+    "reading": {
+      "title": "Reading",
+      "textSize": {
+        "label": "Chat text size",
+        "description": "How large message text is drawn in chats."
+      },
+      "reduceMotion": {
+        "label": "Reduce motion",
+        "description": "Switches off animations such as sliding panels. Animated pictures keep moving."
+      },
+      "light": {
+        "label": "Ambient light",
+        "description": "A soft light in the colour of the place you are in."
+      }
+    },
+    "shape": {
+      "title": "Shape",
+      "corners": {
+        "label": "Corners",
+        "description": "How square or round buttons, cards and fields are.",
+        "options": {
+          "sharp": "Sharp",
+          "standard": "Standard",
+          "round": "Round"
+        }
+      },
+      "avatars": {
+        "label": "Profile pictures",
+        "description": "The shape every profile picture is cut to.",
+        "options": {
+          "rounded": "Rounded",
+          "circle": "Circle",
+          "square": "Square"
+        }
+      },
+      "sidebar": {
+        "label": "Sidebar width",
+        "description": "How wide the list of channels and conversations is.",
+        "options": {
+          "narrow": "Narrow",
+          "standard": "Standard",
+          "wide": "Wide"
+        }
+      }
+    },
+    "messages": {
+      "title": "Messages",
+      "style": {
+        "label": "Style",
+        "description": "How messages are laid out in every chat.",
+        "options": {
+          "bubbles": {
+            "label": "Bubbles",
+            "description": "Each message on a card; yours on the right."
+          },
+          "rows": {
+            "label": "Rows",
+            "description": "Picture, name and text in open rows."
+          },
+          "lines": {
+            "label": "Log",
+            "description": "Time, name and text on a single line."
+          }
+        }
+      },
+      "density": {
+        "label": "Spacing",
+        "description": "How much room there is between messages.",
+        "options": {
+          "compact": "Compact",
+          "cozy": "Cozy",
+          "spacious": "Spacious"
+        }
+      },
+      "clock": {
+        "label": "Clock",
+        "description": "How times of day are written.",
+        "options": {
+          "auto": "As the language does",
+          "12h": "12-hour",
+          "24h": "24-hour"
+        }
+      },
+      "underlineLinks": {
+        "label": "Underline links",
+        "description": "Links are underlined, not only coloured."
+      }
+    },
+    "typeface": {
+      "title": "Typography",
+      "label": "Typeface",
+      "description": "The type the whole app is set in. Chinese text always uses the system's.",
+      "options": {
+        "geist": "Geist",
+        "plexSans": "Plex",
+        "inter": "Inter",
+        "grotesk": "Grotesk",
+        "mono": "Mono",
+        "system": "System"
+      }
+    },
+    "access": {
+      "title": "Accessibility",
+      "contrast": {
+        "label": "Higher contrast",
+        "description": "Brighter secondary text and clearer edges."
+      },
+      "status": {
+        "label": "Colour-blind friendly status",
+        "description": "Online, idle and busy use colours that are easy to tell apart."
+      }
+    }
   },
   "account": {
     "title": "My Account",
@@ -176,6 +337,51 @@
         "label": "About Me",
         "placeholder": "Tell the world about yourself…",
         "counter": "{{used}}/{{max}}"
+      },
+      "image": {
+        "animationTooLarge": "Animated pictures can be at most {{max}} MB. Choose a smaller one."
+      },
+      "theme": {
+        "label": "Profile theme",
+        "hint": "Two colours that paint your banner and tint your profile card.",
+        "presets": "Ready-made themes",
+        "preset": {
+          "nebula": "Nebula",
+          "ember": "Ember",
+          "tide": "Tide",
+          "moss": "Moss",
+          "dusk": "Dusk",
+          "sol": "Sol",
+          "slate": "Slate"
+        },
+        "first": "First colour",
+        "second": "Second colour",
+        "picker": "{{name}}: colour picker",
+        "hex": "{{name}}: hex code",
+        "preview": "How your profile card will look"
+      },
+      "pronouns": {
+        "label": "Pronouns",
+        "placeholder": "e.g. she/her, they/them",
+        "counter": "{{used}}/{{max}}"
+      },
+      "links": {
+        "label": "Links",
+        "hint": "Up to {{max}} web addresses on your profile card, each with an optional label.",
+        "url": "Link address",
+        "urlPlaceholder": "https://…",
+        "labelField": "Link label",
+        "labelPlaceholder": "Label (optional)",
+        "add": "Add link",
+        "remove": "Remove link",
+        "invalid": "Enter a web address that starts with https:// or http://, at most {{max}} characters long."
+      },
+      "layout": {
+        "label": "Card layout",
+        "hint": "How the top of your profile card is arranged.",
+        "standard": "Standard",
+        "centered": "Centered",
+        "compact": "Compact"
       }
     },
     "details": {
@@ -186,7 +392,19 @@
       },
       "customStatus": {
         "label": "Custom Status",
-        "placeholder": "What are you up to?"
+        "placeholder": "What are you up to?",
+        "expiry": {
+          "label": "Clear after",
+          "keep": "Keep current end ({{time}})",
+          "choice": {
+            "30": "30 minutes",
+            "60": "1 hour",
+            "240": "4 hours",
+            "10080": "7 days",
+            "never": "Don't clear",
+            "today": "Today"
+          }
+        }
       }
     },
     "password": {
@@ -256,42 +474,84 @@
         "spacesFailed": "Failed to process spaces",
         "deleteFailed": "Failed to delete account"
       }
+    },
+    "dataExport": {
+      "title": "A copy of your data",
+      "description": "Everything this server holds about your account: your profile, what you wrote, your files. It takes a moment to prepare and stays ready for a week.",
+      "pending": "Your copy is being prepared. You can close this; it will be here when you come back.",
+      "ready": "Your copy is ready until {{date}}.",
+      "download": "Download",
+      "failed": "The copy could not be made. Please try again.",
+      "password": "Your password",
+      "request": "Request a copy"
+    },
+    "storage": {
+      "title": "Your files",
+      "description": "What you sent counts here, each file once, also when you forwarded it. Deleting the messages it is in makes room again.",
+      "used": "{{used}} of {{limit}} used",
+      "usedNoLimit": "{{used}} used"
+    },
+    "username": {
+      "change": "Change",
+      "newLabel": "New username",
+      "hint": "{{min}} to {{max}} small letters, digits or underscores.",
+      "warning": "You sign in with the new name from then on. You can change it again after {{days}} days, and your old name stays reserved for that long, so nobody can pose as you.",
+      "submit": "Change username",
+      "changed": "You are now @{{username}}",
+      "nextChange": "You can change it again on {{date}}.",
+      "homeOnly": "This name is set on the server your account comes from.",
+      "connected": "This account is connected to other servers, which know it by this name, so it cannot be changed for now."
     }
   },
   "privacy": {
     "title": "Privacy",
-    "discovery": {
-      "sectionTitle": "Discovery",
-      "label": "Allow others to find my profile",
-      "description": "When enabled, your profile appears in Discover People. Others can always add you by exact username."
-    },
     "activity": {
       "sectionTitle": "Activity Status",
       "label": "Share Activity Status",
       "description": "Allow others to see what you're up to, like games you're playing or music you're listening to."
+    },
+    "blocked": {
+      "sectionTitle": "Blocked people",
+      "description": "People you block cannot message you or send you friend requests, and their messages in shared spaces and groups are hidden. They are not told.",
+      "empty": "You have not blocked anyone.",
+      "loading": "Loading…",
+      "loadFailed": "Could not load your blocked people.",
+      "retry": "Try again",
+      "unblock": "Unblock",
+      "since": "Blocked {{date}}"
+    },
+    "contact": {
+      "title": "Who can reach you",
+      "dm": {
+        "label": "Who can start a conversation with you",
+        "description": "Conversations you already have stay open. To end one, block the person.",
+        "options": {
+          "anyone": "Anyone",
+          "friendsAndSpaces": "Friends and people in a space with you",
+          "friends": "Friends only",
+          "nobody": "Nobody"
+        }
+      },
+      "requests": {
+        "label": "Who can send you friend requests",
+        "description": "Anyone else does not find you when searching by name.",
+        "options": {
+          "anyone": "Anyone",
+          "sharedSpaces": "People in a space with you",
+          "nobody": "Nobody"
+        }
+      }
     }
   },
   "connections": {
     "title": "Connections"
   },
-  "instance": {
-    "tabs": {
-      "general": "General",
-      "registration": "Registration",
-      "federation": "Federation",
-      "streaming": "Streaming",
-      "storage": "Storage",
-      "users": "Users",
-      "updates": "Updates",
-      "telemetry": "Say hi"
-    }
-  },
   "keybinds": {
     "portal": {
-      "description": "On Wayland, the desktop manages all Backspace shortcuts. Assign, change or remove keys in the system's keyboard shortcut settings, under Backspace. Local browser/X11 bindings are not used here.",
+      "description": "On Wayland, the desktop manages all Tavvit shortcuts. Assign, change or remove keys in the system's keyboard shortcut settings, under Tavvit. Local browser/X11 bindings are not used here.",
       "idle": "Preparing first-time registration of all available actions.",
       "pending": "Connecting to the desktop portal. If a system dialog appears, choose shortcuts for the actions you want to use.",
-      "ready": "Backspace is registered. Open your system's keyboard shortcut settings to change or remove assignments. The list below is read-only and refreshes when you return to Backspace.",
+      "ready": "Tavvit is registered. Open your system's keyboard shortcut settings to change or remove assignments. The list below is read-only and refreshes when you return to Tavvit.",
       "unavailable": "The portal is unavailable, permission was denied, or the session ended. A Global Shortcuts portal backend is required. Local bindings are disabled on Wayland.",
       "retry": "Register or reconnect shortcuts",
       "assigned": "System shortcut: {{shortcut}}",
@@ -333,7 +593,7 @@
     },
     "accessibility": {
       "title": "Accessibility Permission Required",
-      "description": "Backspace needs Accessibility permission for global shortcuts to work outside the app.",
+      "description": "Tavvit needs Accessibility permission for global shortcuts to work outside the app.",
       "grant": "Grant Permission"
     },
     "hookError": {
@@ -343,6 +603,10 @@
     "conflict": {
       "message": "<strong>{{combo}}</strong> is already bound to <strong>{{action}}</strong>. Overwrite?",
       "overwrite": "Overwrite"
+    },
+    "typingKey": {
+      "title": "This shortcut needs Ctrl, Alt or the system key",
+      "description": "Letters, digits, Space, Enter, Tab and Backspace only work together with Ctrl, Alt or the system key. On their own, the app would hear everything you type in other programs, so it does not listen for them. Function keys, mouse buttons and keys like Caps Lock work alone."
     }
   },
   "desktop": {
@@ -350,7 +614,7 @@
     "autoLaunch": {
       "openAtLogin": {
         "label": "Start at boot",
-        "description": "Automatically launch Backspace when you log in"
+        "description": "Automatically launch Tavvit when you log in"
       },
       "startMinimized": {
         "label": "Start minimized",
@@ -358,7 +622,7 @@
       }
     },
     "updates": {
-      "appName": "Backspace Desktop",
+      "appName": "Tavvit Desktop",
       "versionLabel": "Version {{version}}",
       "checking": "Checking for updates…",
       "checkingShort": "Checking…",
@@ -376,58 +640,292 @@
       "external": "Updates are installed through your Flatpak software manager",
       "download": "Download",
       "restart": "Restart",
-      "manualNote": "This build cannot install updates itself, so new versions are downloaded from GitHub and replace the app by hand. See the release notes for the steps on your platform.",
-      "externalNote": "Flatpak applies updates atomically outside the app. Use your software manager or the <code>flatpak update</code> command to update Backspace."
-    },
-    "instance": {
-      "current": "Currently connected instance",
-      "change": "Change Instance"
+      "manualNote": "This build cannot install updates itself, so new versions are downloaded from this server's download page and installed by hand.",
+      "externalNote": "Flatpak applies updates atomically outside the app. Use your software manager or the <code>flatpak update</code> command to update Tavvit.",
+      "autoNote": "Updates download and install by themselves: Tavvit restarts when it is in the tray or nobody has used the computer for a few minutes, never during a call."
     }
   },
-  "desktopDownload": {
-    "title": "Desktop",
-    "intro": "Global keybinds, start at boot and a system tray icon.",
-    "unsupported": "The desktop app runs on Windows, Linux and macOS.",
-    "name": {
-      "windows": "Windows",
-      "mac": "macOS",
-      "linux": "Linux"
+  "emoji": {
+    "title": "Emoji",
+    "intro": "A shared library of pictures for everyone on this server. Use them in any chat: type :name: or pick one from the emoji menu.",
+    "add": {
+      "title": "Add an emoji",
+      "choose": "Choose a picture",
+      "change": "Choose another picture",
+      "hint": "PNG, JPEG, WebP or GIF, up to {{max}} MB. It is shrunk to fit 128 pixels, and an animated GIF keeps moving.",
+      "name": "Name",
+      "namePlaceholder": "party_parrot",
+      "submit": "Add emoji",
+      "submitting": "Adding…",
+      "tooLarge": "That file is larger than {{max}} MB.",
+      "unreadable": "That file could not be read.",
+      "counter": "You have added {{used}} of {{max}}.",
+      "added": "Added :{{name}}:"
     },
-    "tag": {
-      "windows": "This PC",
-      "mac": "This Mac",
-      "linux": "This machine"
+    "library": {
+      "title": "Library",
+      "count_one": "{{count}} emoji",
+      "count_other": "{{count}} emoji",
+      "search": "Search emoji",
+      "empty": "No emoji yet. Add the first one.",
+      "noMatches": "No emoji match your search.",
+      "loadFailed": "Could not load the emoji.",
+      "retry": "Try again"
     },
-    "covers": {
-      "windows": "x64 or arm64",
-      "mac": "Runs on Apple Silicon and Intel Macs",
-      "linux": "AppImage or deb package, x64 or arm64"
+    "row": {
+      "rename": "Rename",
+      "save": "Save",
+      "delete": "Delete",
+      "yours": "Yours",
+      "renamed": "Renamed to :{{name}}:",
+      "removed": "Removed :{{name}}:",
+      "nameLabel": "Name of :{{name}}:",
+      "deleteConfirm": {
+        "title": "Delete :{{name}}:?",
+        "body": "It disappears from reactions, and old messages that use it show :{{name}}: instead.",
+        "action": "Delete"
+      }
     },
-    "download": {
-      "windows": "Download for Windows",
-      "mac": "Download for macOS",
-      "linux": "Download for Linux"
+    "adminsOnly": "On this server, administrators add emoji. Everything in the library is for everyone to use."
+  },
+  "games": {
+    "title": "Game activity",
+    "intro": "Show your friends what you are playing, the way the desktop app sees it on this computer.",
+    "browserOnly": "A browser cannot see which programs are running, so game detection works in the Tavvit desktop app. Everything else works here as usual.",
+    "getDesktop": "Get the desktop app",
+    "detect": {
+      "label": "Detect what I play",
+      "description": "On until you turn it off. Every 15 seconds Tavvit looks at what is running on this computer: games started from Steam, Epic Games or GOG, and a list of well-known games. Only the game's name is shared, and only while sharing is on under Privacy."
     },
-    "picker": {
-      "architecture": "Architecture",
-      "format": "Package format"
+    "now": {
+      "title": "Detected now",
+      "playing": "Playing {{name}}",
+      "none": "No game running that Tavvit knows."
     },
-    "arch": {
-      "appleSilicon": "Apple Silicon",
-      "intel": "Intel",
-      "x64": "x64",
-      "arm64": "arm64"
+    "sharingOff": "Sharing your activity is off under Privacy, so friends do not see this.",
+    "mine": {
+      "title": "My games",
+      "description": "You added these yourself earlier. They are still detected until you remove them.",
+      "remove": "Remove {{name}}"
     },
-    "kind": {
-      "appimage": "AppImage",
-      "deb": "deb"
+    "updateApp": "This version of the Tavvit desktop app cannot detect games yet. Download and install the newest version once; from then on it keeps itself up to date."
+  },
+  "notifications": {
+    "device": {
+      "title": "On this device",
+      "app": "The desktop app shows notifications while its window is in the background.",
+      "granted": "Notifications are on. You get one when something is for you and this tab is in the background.",
+      "default": "Notifications are off. Your browser will ask you once.",
+      "denied": "Your browser blocks notifications for this site. Allow them in its site settings, then reload the page.",
+      "unsupported": "This browser does not offer notifications.",
+      "turnOn": "Turn on notifications",
+      "test": "Send a test notification",
+      "testBody": "This is what a notification looks like."
     },
-    "archGuessed": {
-      "windows": "Your browser did not say which processor this PC has, so x64 is preselected.",
-      "mac": "Your browser did not say which chip this Mac has, so Apple Silicon is preselected.",
-      "linux": "Your browser did not say which processor this machine has, so x64 is preselected."
+    "content": {
+      "title": "What they say",
+      "showText": {
+        "label": "Show the message text",
+        "description": "Off: a notification only says who wrote, so nobody reads along on your screen."
+      },
+      "directMessages": {
+        "label": "Direct messages",
+        "description": "Off: no sound and no notification for direct messages and group chats. They still show as unread."
+      },
+      "appBadge": {
+        "label": "Unread count on the app icon"
+      }
     },
-    "version": "Version {{version}}",
-    "allReleases": "All releases on GitHub"
+    "sounds": {
+      "title": "Sounds",
+      "messageSound": {
+        "label": "Sound for new messages",
+        "description": "For a message that would notify you."
+      },
+      "callSound": {
+        "label": "Ringtone for calls",
+        "description": "Off: an incoming call only shows on screen."
+      }
+    },
+    "spaces": {
+      "title": "Spaces",
+      "description": "How much each space may tell you. This follows your account to your other devices.",
+      "muted": "Muted",
+      "empty": "You are not in any space yet."
+    },
+    "push": {
+      "title": "Push on this device",
+      "toggle": "Notify me while the app is closed",
+      "toggleHint": "Goes through your browser's push service. It can only read when something arrives, not what it says.",
+      "installFirst": "On an iPhone or iPad this works once Tavvit is on your Home Screen: tap Share, then Add to Home Screen, and open it from there.",
+      "denied": "Your browser was told not to show notifications from Tavvit. You can change that in its settings for this site."
+    },
+    "keywords": {
+      "title": "Keywords",
+      "description": "A message with one of these words alerts you like a mention, in channels set to mentions. Only you see them.",
+      "placeholder": "Add a word",
+      "add": "Add",
+      "remove": "Remove {{word}}",
+      "limit": "{{used}} of {{max}}"
+    }
+  },
+  "security": {
+    "sessions": {
+      "title": "Where you are signed in",
+      "description": "Every device signed in to this server. If you do not recognise one, sign it out and change your password.",
+      "loading": "Loading…",
+      "unknownDevice": "Unknown device",
+      "thisDevice": "This device",
+      "lastActive": "Active {{date}}",
+      "signOut": "Sign out",
+      "signOutOthers": "Sign out everywhere else",
+      "signOutOthersConfirm": {
+        "title": "Sign out everywhere else?",
+        "description": "Every other device is signed out at once, and needs your password to come back."
+      },
+      "signedIn": "Signed in {{date}}",
+      "signOutAll": "Sign out everywhere",
+      "signOutAllConfirm": {
+        "title": "Sign out everywhere?",
+        "description": "Every device is signed out, this one too. You sign in again with your password."
+      }
+    },
+    "email": {
+      "title": "Email address",
+      "description": "To confirm it is you and to reset a forgotten password. Other people never see it.",
+      "none": "No address yet. Without a confirmed one, only an administrator can reset a forgotten password.",
+      "confirmed": "Confirmed",
+      "unconfirmed": "Not confirmed",
+      "pending": "Waiting for confirmation: {{address}}. Your current address stays in force until then.",
+      "waiting": "We sent a link to {{address}}. It works for 24 hours. Look in your spam folder too.",
+      "undeliverable": "Mail to this address could not be delivered, so nothing more is sent there. Use another address.",
+      "sendFailed": "The last confirmation mail could not be sent. Try again in a while.",
+      "sent": "Link sent",
+      "resend": "Send the link again",
+      "cancel": "Cancel the change",
+      "change": "Change",
+      "remove": "Remove",
+      "newAddress": "New email address",
+      "submit": "Send confirmation link",
+      "removeConfirm": {
+        "title": "Remove your email address?",
+        "description": "Without a confirmed address, only an administrator can reset a forgotten password."
+      }
+    },
+    "passwordRecovery": {
+      "confirmed": "If you forget your password, we send a link to {{address}}.",
+      "none": "If you forget your password, only an administrator can reset it until you have a confirmed address.",
+      "noMail": "This server does not send email. If you forget your password, only an administrator can reset it."
+    },
+    "overview": {
+      "title": "Overview",
+      "none": "None yet",
+      "on": "On",
+      "off": "Off",
+      "changed": "Changed {{date}}",
+      "neverChanged": "Not changed since you signed up",
+      "devices_one": "{{count}} device",
+      "devices_other": "{{count}} devices"
+    },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "description": "Signing in also takes a code from an authenticator app such as Aegis, Google Authenticator, Microsoft Authenticator or 1Password. Someone who gets your password still cannot get in.",
+      "off": "Off. Signing in takes only your password.",
+      "unavailable": "Not available on this server: its operator has not set it up.",
+      "enable": "Turn on",
+      "disable": "Turn off",
+      "regenerate": "Make new recovery codes",
+      "activate": "Turn on",
+      "confirmPassword": "Enter your password to begin.",
+      "scan": "Scan this with your authenticator app, then enter the code it shows.",
+      "qrLabel": "QR code for your authenticator app",
+      "manual": "Cannot scan? Enter this key in the app:",
+      "firstCode": "Code from the app",
+      "codeLabel": "Code from your app, or a recovery code",
+      "codeHint": "This account has two-factor authentication on.",
+      "enabledSince": "On since {{date}}.",
+      "codesLeft_one": "{{count}} recovery code left.",
+      "codesLeft_other": "{{count}} recovery codes left.",
+      "codesLow": "You are running out of recovery codes. Make new ones while you can still sign in.",
+      "disableIntro": "Signing in will take only your password again. Enter your password and a code to confirm.",
+      "regenerateIntro": "Your old recovery codes stop working. Enter your password and a code to confirm.",
+      "recovery": {
+        "intro": "Keep these somewhere safe, away from your phone. Each gets you in once if you lose it. They are shown only now.",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyFailed": "Could not copy",
+        "download": "Download",
+        "saved": "I have put them somewhere safe",
+        "done": "Done"
+      }
+    },
+    "activity": {
+      "title": "Security activity",
+      "description": "What happened to this account in the last 90 days.",
+      "empty": "Nothing yet.",
+      "kinds": {
+        "login": "Signed in",
+        "login_new_device": "Signed in from a new device",
+        "login_failed": "Failed sign-in",
+        "mfa_failed": "Wrong code after the right password",
+        "password_changed": "Password changed",
+        "username_changed": "Username changed",
+        "password_reset": "Password reset",
+        "email_added": "Email address confirmed",
+        "email_changed": "Email address changed",
+        "email_removed": "Email address removed",
+        "two_factor_on": "Two-factor authentication turned on",
+        "two_factor_off": "Two-factor authentication turned off",
+        "two_factor_reset": "Two-factor authentication reset by the operator",
+        "recovery_regenerated": "New recovery codes made",
+        "recovery_used": "Recovery code used",
+        "session_revoked": "A device was signed out",
+        "sessions_ended": "Devices were signed out",
+        "sessions_ended_by_admin": "An administrator signed you out"
+      }
+    }
+  },
+  "developers": {
+    "title": "Bots",
+    "description": "A bot is a program you run yourself, with an account of its own. You answer for what it does. Up to {{max}}.",
+    "open": "Open the developer portal",
+    "docs": "Read the docs",
+    "disabled": "The operator of this instance has not turned bots on.",
+    "nameLabel": "Bot name",
+    "create": "Create",
+    "tokenTitle": "The token of {{name}}",
+    "tokenDescription": "Copy it now: it is not shown again. Whoever has it acts as this bot, so treat it like a password.",
+    "tokenLabel": "Bot token",
+    "copy": "Copy",
+    "copied": "Copied",
+    "listTitle": "Your bots",
+    "neverUsed": "Never used",
+    "lastUsed": "Last used {{time}}",
+    "inviteLabel": "Address to bring it into a space",
+    "rotate": "New token",
+    "rotateTitle": "Give it a new token?",
+    "rotateBody": "The old token of {{name}} stops working at once, and a running bot is disconnected.",
+    "remove": "Delete bot",
+    "removeTitle": "Delete this bot?",
+    "removeBody": "{{name}} leaves every space and its token stops working. What it wrote stays.",
+    "portal": {
+      "title": "Developer portal",
+      "backToApp": "Back to Tavvit",
+      "allBots": "All bots",
+      "profile": "Profile",
+      "descriptionLabel": "What it does",
+      "pictureChange": "Change picture",
+      "pictureRemove": "Remove picture",
+      "cropTitle": "Crop the picture",
+      "saved": "Saved",
+      "tokenHint": "The token is shown once, when it is made. A new one stops the old one at once.",
+      "inviteDescription": "Whoever opens this address and may manage a space chooses the space and sees what the bot asks for. It can only get rights that person holds, and never administrator.",
+      "inviteRights": "What it asks for",
+      "commands": "Commands",
+      "commandsHint": "What your program registered, the last time it told the instance.",
+      "noCommands": "None yet.",
+      "spaces": "Spaces",
+      "noSpaces": "It is in no space yet."
+    }
   }
 }

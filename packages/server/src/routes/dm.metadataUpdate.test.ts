@@ -477,7 +477,7 @@ describe('PATCH /api/dm/:id — group metadata update', () => {
     expect(res.json().error).toMatch(/MB/i);
   });
 
-  it('icon absolute URL accepted (no attachment lookup attempted)', async () => {
+  it('icon absolute URL of an upload here accepted (no attachment lookup attempted)', async () => {
     seedGroupDm({
       id: 'dm-10',
       ownerId: 'owner-A',
@@ -489,12 +489,34 @@ describe('PATCH /api/dm/:id — group metadata update', () => {
     const res = await app.inject({
       method: 'PATCH',
       url: '/api/dm/dm-10',
-      payload: { icon: 'https://remote.test/api/uploads/icon999.png' },
+      payload: { icon: 'https://local.test/api/uploads/icon999.png' },
     });
     expect(res.statusCode).toBe(200);
 
     const updated = testDb.select().from(schema.dmChannels).where(eq(schema.dmChannels.id, 'dm-10')).get();
-    expect(updated?.icon).toBe('https://remote.test/api/uploads/icon999.png');
+    expect(updated?.icon).toBe('https://local.test/api/uploads/icon999.png');
+  });
+
+  it('icon absolute URL on any other server refused: every member would fetch it by themselves', async () => {
+    seedGroupDm({
+      id: 'dm-11',
+      ownerId: 'owner-A',
+      members: ['owner-A', 'member-B'],
+      federatedId: 'fed-abc-11',
+    });
+
+    for (const icon of [
+      'https://remote.test/api/uploads/icon999.png', // a server the owner does not live on
+      'https://tracker.example/pixel.png',
+      'http://local.test/api/uploads/icon999.png',   // this instance by the wrong scheme
+      'https://local.test/api/uploads/icon999.png?who=bob',
+    ]) {
+      const res = await app.inject({ method: 'PATCH', url: '/api/dm/dm-11', payload: { icon } });
+      expect(res.statusCode, icon).toBe(400);
+      expect(res.json().code, icon).toBe('icon_url_invalid');
+    }
+    const updated = testDb.select().from(schema.dmChannels).where(eq(schema.dmChannels.id, 'dm-11')).get();
+    expect(updated?.icon).toBeNull();
   });
 
   it('no-op (same name + same icon) → 200, no system messages, no broadcast, no outbox row', async () => {

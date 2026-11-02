@@ -511,11 +511,11 @@ describe('InviteModal', () => {
     const user = userEvent.setup();
     mockSpaceInvite.mockResolvedValue({});
     setUpStore({
-      friends: [makeFriend({ id: 'orbit-native-id', displayName: 'Orbit Native', _instanceOrigin: 'https://orbit.ddns.net' })],
+      friends: [makeFriend({ id: 'orbit-native-id', displayName: 'Tavvit Native', _instanceOrigin: 'https://orbit.ddns.net' })],
     });
 
     render(<InviteModal />);
-    await user.click(await screen.findByRole('button', { name: /Orbit Native/ }));
+    await user.click(await screen.findByRole('button', { name: /Tavvit Native/ }));
     await user.click(screen.getByRole('button', { name: /Send 1 Invite/ }));
 
     await waitFor(() => expect(mockSpaceInvite).toHaveBeenCalledTimes(1));

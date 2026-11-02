@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-const { homeSendRequest, homeRequests, orbitSendRequest, friendsHome, ORBIT } = vi.hoisted(() => ({
+const { homeSendRequest, homeRequests, orbitSendRequest, friendsHome, TAVVIT } = vi.hoisted(() => ({
   homeSendRequest: vi.fn<(...args: unknown[]) => Promise<{ success: boolean; requestId: string }>>(async () => ({ success: true, requestId: 'req-1' })),
   homeRequests: vi.fn(async () => []),
   orbitSendRequest: vi.fn<(...args: unknown[]) => Promise<{ success: boolean; requestId: string }>>(async () => ({ success: true, requestId: 'req-orbit' })),
   // The origin `getFriendsHomeOrigin` answers: '' for a native account.
   friendsHome: { origin: '' },
-  ORBIT: 'https://orbit.tld',
+  TAVVIT: 'https://orbit.tld',
 }));
 
 vi.mock('../api/client', () => ({
@@ -27,7 +27,7 @@ vi.mock('../utils/assetUrls', () => ({
 vi.mock('./instanceStore', () => ({
   useInstanceStore: {
     getState: () => ({
-      instances: [{ origin: ORBIT, status: 'connecting', api: { social: { sendRequest: orbitSendRequest } } }],
+      instances: [{ origin: TAVVIT, status: 'connecting', api: { social: { sendRequest: orbitSendRequest } } }],
       _autoConnectDone: true,
     }),
     subscribe: () => () => {},
@@ -85,7 +85,7 @@ describe('socialStore.sendFriendRequest from a federated account', () => {
     homeSendRequest.mockClear();
     orbitSendRequest.mockClear();
     // The page is signed in with a federated account whose home is orbit.
-    friendsHome.origin = ORBIT;
+    friendsHome.origin = TAVVIT;
   });
 
   it("sends to the user's home, not the page's instance, which refuses it", async () => {

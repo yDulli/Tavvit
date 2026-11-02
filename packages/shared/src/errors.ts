@@ -32,6 +32,16 @@ export const ERROR_CODES = [
   'username_taken',
   'password_too_short',
   'password_too_long',
+  'password_too_common',
+  'cannot_delete_admin',
+  'last_admin_cannot_leave',
+  'email_domain_blocked',
+  'username_reserved',
+  'announcement_limit',
+  'backup_too_soon',
+  'starter_spaces_limit',
+  'signup_rule_invalid',
+  'signup_rule_limit',
   'invalid_credentials',
   'registration_closed',
   'invite_required',
@@ -41,9 +51,31 @@ export const ERROR_CODES = [
   'display_name_too_long',
   'bio_too_long',
   'custom_status_too_long',
+  'custom_status_expiry_invalid',
   'profile_managed_by_home',
   'account_deletion_blocked_owned_spaces',
   'account_deletion_password_incorrect',
+
+  // Mail (docs/systems/email.md)
+  'email_not_configured',
+  'email_unavailable',
+  'email_invalid',
+  'email_required',
+  'email_undeliverable',
+  'email_token_invalid',
+  'email_address_in_use',
+  'email_nothing_to_confirm',
+  'email_verification_required',
+
+  // Two-factor authentication
+  'mfa_required',
+  'mfa_code_required',
+  'mfa_code_invalid',
+  'mfa_ticket_invalid',
+  'mfa_locked',
+  'two_factor_unavailable',
+  'two_factor_already_enabled',
+  'two_factor_not_enabled',
 
   // Social
   'cannot_friend_self',
@@ -53,6 +85,90 @@ export const ERROR_CODES = [
   'invalid_target_domain',
   'lookup_rate_limited',
   'not_authoritative_for_sender',
+
+  // Blocking
+  'blocked_by_you',
+  'interaction_unavailable',
+  'cannot_block_self',
+
+  // Platform administration (platform.ts): suspensions, badges, reviews, finding people
+  // details: { reason, until? }
+  'account_suspended',
+  'cannot_suspend_self',
+  'cannot_suspend_admin',
+  // details: { min, max }
+  'suspension_reason_invalid',
+  // details: { max }
+  'suspension_duration_invalid',
+  'user_not_suspended',
+  'badge_invalid',
+  'review_category_invalid',
+  // details: { min, max }
+  'review_reason_invalid',
+  // details: { min, max }
+  'review_proof_invalid',
+  // details: { max }
+  'review_url_invalid',
+  // details: { max }
+  'review_too_many_profiles',
+  'review_note_required',
+  // details: { max }
+  'review_note_too_long',
+  'review_status_conflict',
+  'review_already_verified',
+  'review_decision_invalid',
+  'discovery_requires_listable_visibility',
+  'discovery_requires_description',
+  'discovery_requires_uploaded_pictures',
+  // details: { min, max }
+  'user_search_query_invalid',
+
+  // Legal documents, reports and notices (legal.ts)
+  'terms_not_accepted',
+  'age_not_confirmed',
+  'dm_not_accepted',
+  'friend_request_not_accepted',
+  'emoji_admins_only',
+  'invite_options_invalid',
+  'invite_limit_reached',
+  'moderation_reason_too_long',
+  'ban_delete_window_invalid',
+  'session_ended',
+  'data_export_too_soon',
+  'data_export_not_ready',
+  'terms_version_invalid',
+  'legal_operator_invalid',
+  'legal_operator_required',
+  'legal_document_invalid',
+  'legal_document_too_long',
+  'legal_document_not_found',
+  'legal_effective_date_invalid',
+  'legal_changes_required',
+  'report_category_invalid',
+  'report_explanation_invalid',
+  'report_good_faith_required',
+  'report_target_invalid',
+  'report_target_not_found',
+  'report_contact_required',
+  'report_duplicate',
+  'report_not_found',
+  'report_already_decided',
+  'report_decision_invalid',
+  'report_note_required',
+  'report_ground_required',
+  'notice_not_found',
+
+  // Profile images
+  'profile_image_invalid',
+  'profile_image_too_large',
+
+  // Custom emoji
+  'emoji_name_invalid',
+  'emoji_name_taken',
+  'emoji_image_invalid',
+  'emoji_image_too_large',
+  'emoji_limit_reached',
+  'emoji_not_found',
 
   // Federation and peering
   'peer_rejected',
@@ -71,6 +187,7 @@ export const ERROR_CODES = [
   'username_length_invalid',
   'username_characters_invalid',
   'home_instance_invalid',
+  'home_instance_unproven',
   'username_local_part_invalid',
   'username_domain_part_invalid',
   'replicated_username_format_required',
@@ -136,6 +253,15 @@ export const ERROR_CODES = [
   'instance_settings_reload_failed',
   'instance_name_length',
   'upload_limit_out_of_range',
+  'account_limit_out_of_range',
+  'storage_limit_reached',
+  'upload_too_large',
+  'cards_invalid',
+  'cards_not_allowed',
+  'interaction_not_found',
+  'command_option_invalid',
+  'space_limit_reached',
+  'disk_full',
   'relay_ttl_out_of_range',
   'rotation_interval_out_of_range',
   'streaming_max_bitrate_out_of_range',
@@ -253,6 +379,36 @@ export const ERROR_CODES = [
   'system_message_immutable',
   'message_edit_not_author',
   'message_delete_forbidden',
+  'pin_limit_reached',
+  'poll_ended',
+  'poll_not_editable',
+  'thread_not_allowed',
+  'bots_disabled',
+  'bot_token_invalid',
+  'bot_owner_suspended',
+  'bot_route_forbidden',
+  'bot_not_found',
+  'bot_limit_reached',
+  'bot_banned',
+  'bot_already_member',
+  'bot_admin_forbidden',
+  'bot_command_not_found',
+  'bot_offline',
+  'sound_not_found',
+  'sound_limit_reached',
+  'sound_too_large',
+  'sound_too_long',
+  'sound_invalid',
+  'sound_not_in_call',
+  'saved_limit_reached',
+  'keyword_limit_reached',
+  'webhook_not_found',
+  'webhook_not_allowed',
+  'webhook_limit_reached',
+  'event_not_found',
+  'event_limit_reached',
+  'rules_not_accepted',
+  'signup_challenge_failed',
   'poke_target_no_access',
   'paging_cursor_conflict',
   'internal_error',
@@ -273,8 +429,101 @@ export const ERROR_CODES = [
   'sticker_invalid_image',
   'sticker_not_local',
   'sticker_not_found',
+  'sticker_elsewhere',
   'sticker_collection_full',
   'sticker_name_invalid',
+
+  // Tavvit
+  'federation_disabled',
+  'accent_color_low_contrast',
+  'login_throttled',
+
+  // Space moderation (Server settings → Moderation; docs/systems/spaces.md)
+  'automod_blocked_word',
+  'automod_link_blocked',
+  'automod_invite_blocked',
+  // details: { max }
+  'automod_too_many_mentions',
+  'account_too_new',
+  'membership_too_new',
+  // details: { until } (epoch ms, the server's clock)
+  'member_timed_out',
+  // details: { retryAfterSeconds }
+  'slowmode_active',
+  'slowmode_invalid',
+  'timeout_duration_invalid',
+  // details: { max }
+  'timeout_reason_too_long',
+  // details: { field }
+  'moderation_settings_invalid',
+  'notification_level_invalid',
+
+  // Roles (docs/systems/permissions.md, "Role display")
+  'role_color_invalid',
+  // details: { max }
+  'role_description_too_long',
+  'role_icon_invalid',
+  // details: { max }
+  'role_name_too_long',
+  'role_name_invalid',
+
+  // Profile cards
+  // details: { max }
+  'pronouns_too_long',
+  // details: { max }
+  'profile_links_invalid',
+  'profile_layout_invalid',
+
+  // Discord template import (docs/systems/spaces.md, "Importing a Discord template")
+  'discord_template_code_invalid',
+  'discord_template_not_found',
+  // details: { retryAfterSeconds }
+  'discord_rate_limited',
+  'discord_unreachable',
+  // details: { field }
+  'discord_template_invalid',
+  // details: { max } (megabytes)
+  'discord_template_too_large',
+  // details: { max }
+  'discord_template_too_many_roles',
+  // details: { max }
+  'discord_template_too_many_channels',
+  // details: { max }
+  'discord_template_too_many_overwrites',
+  'import_target_forbidden',
+  // A forum holds posts, not messages of its own.
+  'forum_takes_posts',
+  'forum_required',
+  // details: { max }
+  'forum_tag_limit_reached',
+  // details: { max }
+  'forum_tag_name_length',
+  'forum_tag_duplicate',
+  'forum_tag_unknown',
+  // details: { max }
+  'forum_post_tag_limit',
+  'forum_post_title_invalid',
+  'announcement_channel_required',
+  'follow_target_invalid',
+  'follow_source_private',
+  'follow_exists',
+  'follow_not_found',
+  // details: { max }
+  'follow_limit_reached',
+  'channel_type_change_invalid',
+  // details: { min, max }
+  'vanity_code_invalid',
+  'vanity_code_taken',
+  'vanity_code_reserved',
+  'vanity_code_not_found',
+  'translation_unavailable',
+  'translation_failed',
+  'translation_limit_reached',
+  'username_same',
+  'username_change_home_only',
+  'username_change_connected',
+  'username_change_too_soon',
+  'channel_icon_invalid',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

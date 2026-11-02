@@ -123,7 +123,7 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
         .all();
     }
 
-    const results = hydrateChannelMessages(id, messageRows);
+    const results = hydrateChannelMessages(id, messageRows, request.userId);
     return reply.code(200).send({ results, totalCount });
   });
 
@@ -286,7 +286,7 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
       return true;
     });
 
-    return reply.code(200).send(hydrateChannelMessages(id, uniqueRows));
+    return reply.code(200).send(hydrateChannelMessages(id, uniqueRows, request.userId));
   });
 
   // GET /api/dm/:id/messages/around — Load DM messages around a target message

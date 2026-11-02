@@ -339,9 +339,11 @@ export function applyHomeHandle(
  *     which moves to an earlier free name (the handle itself once its holder
  *     is gone) and otherwise keeps its name.
  * Every other row, and every `username` that is not handle-shaped, is
- * returned unchanged (the same object). Home usernames never change, so a
- * row's name only ever moves toward its handle, and no other row is touched:
- * the rename cannot loop between two rows.
+ * returned unchanged (the same object). A hint says nothing about when it was
+ * written, so it never renames a row that has its handle already: a person's new
+ * name comes with a versioned `profile_update`. A row's name only
+ * ever moves toward its handle, and no other row is touched: the rename cannot
+ * loop between two rows.
  *
  * When another row already holds the name, the row takes the first free
  * suffixed name (`firstFreeUsername`), as creation does.

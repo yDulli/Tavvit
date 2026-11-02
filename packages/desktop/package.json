@@ -1,21 +1,19 @@
 {
   "name": "@backspace/desktop",
-  "version": "1.11.0",
+  "version": "1.32.5",
   "private": true,
   "license": "AGPL-3.0-only",
-  "description": "Backspace",
+  "description": "Tavvit",
   "author": {
-    "name": "Jannis Braun",
-    "email": "backspace@backspace.chat"
+    "name": "Tavvit"
   },
-  "homepage": "https://github.com/TheZwiss/backspace",
+  "homepage": "https://tavvit.com",
   "main": "dist/main.js",
-  "desktopName": "io.github.TheZwiss.backspace.desktop",
+  "desktopName": "de.hashhive.orbit.desktop",
   "scripts": {
     "build:ts": "tsc",
     "dev": "tsc && electron .",
-    "build": "tsc && electron-builder",
-    "build:all": "tsc && electron-builder --mac --win --linux --arm64 --x64",
+    "build": "tsc && electron-builder --win --x64",
     "clean": "rm -rf dist dist-electron",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -9,25 +9,60 @@ Source: `packages/server/src/ws/handler.ts`, `packages/server/src/ws/events.ts`
 ## Auth Flow
 
 1. Client connects to `/ws`
-2. Client sends `{ type: 'auth', token: '<jwt>', client?: 'web' | 'desktop' | 'mobile' }` within 10 seconds. `client` is optional; a missing or unrecognised value is read as `web`. The wire type is the `auth` variant of `ClientEvent` in `packages/shared/src/types.ts`, where the field is typed `ClientKind`
-3. Server validates token (rejects deleted users, tokens issued before `passwordChangedAt`)
-4. Server responds with `ready` event containing full client state
+2. Client sends `{ type: 'auth', token: '<jwt>', client?: 'web' | 'desktop' | 'mobile', batch?: true }` within 10 seconds, which it has done once the server has read it, however long `ready` then takes. With `batch: true` it says it reads `batch` events (below). `client` is optional and the server no longer records it (it fed the removed usage reporting); clients may keep sending it. The wire type is the `auth` variant of `ClientEvent` in `packages/shared/src/types.ts`, where the field is typed `ClientKind`
+3. Server validates token with the same check as REST (`verifyAccessToken`: a deleted account, an ended session, a token older than the last password change, a suspended account; see "Refused sockets")
+4. Server responds with `ready` event containing full client state, one socket to a turn of the event loop (operations.md). A `ping` before that is answered, and anything else waits, up to 32 frames, and is acted on once the socket is let in
 5. Server sets the user's live status to their chosen status (`users.chosen_status` for an account that owns its choice, native or detached; for a replicated user the home instance's last projection, or `online` if there is none) and carries it in the `ready` payload's `user.status`, broadcasts `presence_update` to friends + DM co-members + space co-members (via `collectProfileBroadcastTargetIds`); for native users, also queues a S2S `presence_update` relay to all active peers
 6. Heartbeat: server pings every 30s (RFC 6455 ping frames), dead connections detected after ~65s
-7. Activity: the auth message writes `users.last_client` (from `client`) and `users.last_active_day`; the first heartbeat pong of each UTC day per connection writes `users.last_active_day` alone, so a client left open for days keeps the day current. Both are day precision (UTC `YYYY-MM-DD`) and the write is skipped once the stored day already equals today, so a user's row is touched at most once per day
+
+### Refused sockets
+
+A first message that is not `auth` gets an error and a close. A token that does not open the account gets the check's code, `{ type: 'error', message, code, details? }`, then close 4001: `unauthorized`, `session_ended`, `account_deleted`, `account_suspended`. The client signs out on these instead of reconnecting (auth.md, "Sockets"). `session_ended` also comes to an open socket when its session ends, and the 30-second sweep checks every open socket again.
+
+```typescript
+{ type: 'error', message: 'This account is suspended', code: 'account_suspended', details: { reason, until? } }
+```
+
+`until` (epoch ms) is there only when the suspension has an end. The socket then closes with code 4001, reason `Account suspended`; no presence is published and no `ready` is sent. The web client, on that error from its home instance, signs out (`handleUnauthorized`: the token goes and `/login` opens, which tells the reason once the password is given) instead of reconnecting. From another instance the error shows as the coded error's toast and the connection keeps retrying with its backoff (see "Known limits" under "Platform administration").
+
+### Forced disconnects
+
+`ConnectionManager.forceDisconnectUser(userId, { reason?, endPresence? })` ends every session of a user on this instance at once: it cancels a pending offline grace, leaves the voice room they are in (as a leave like any other: a DM call it empties ends and the end reaches the peers; a call hosted on a peer is left as if they hung up), ends the DM calls they are ringing as the caller, drops their activities, and closes each socket with code 4001 and `reason` as the close reason (default `Account deleted`). It sends no `error` first. With `endPresence` it also ends the presence those sessions held, as a last disconnect would (`finalizeDisconnect`): `offline` written and sent to the profile audience and relayed to peers, or, for a replicated row, its home's last projection shown again (`offline` when none is known) without a relay. Without it nothing about presence is sent.
+
+| Caller | Options | Presence |
+|--------|---------|----------|
+| Account deletion: `DELETE /users/@me`, `DELETE /admin/users/:id`, the S2S identity delete | none | the tombstone's `user_updated` (anonymized, `status: 'offline'`), sent before the call |
+| `POST /admin/users/:id/reset-password` | `{ reason: 'Password reset', endPresence: true }` | ended by the call |
+| `POST /admin/users/:id/suspend` | `{ reason: 'Account suspended', endPresence: true }` | ended by the call |
+
+The client reconnects after any close it did not ask for; the reconnect is then refused at auth: as deleted after a deletion, as revoked after a password reset (the old token predates the new `passwordChangedAt`), as `account_suspended` after a suspension (above).
 
 ---
+
+## Several events in one frame
+
+To a socket that said `batch: true` at `auth`, the server may send `{ type: 'batch', events: [...] }`, which is those events, in that order, as if they had come alone. A new message and its `channel_unread_count` go this way, and presence with 100 or more people connected, after waiting up to half a second (operations.md). A client from before this, and a bot, gets each in a frame of its own. Frames of 32 KB and more go compressed (`permessage-deflate`), which every WebSocket client does by itself.
 
 ## Client → Server
 
 ### Messages
 | type | fields | notes |
 |------|--------|-------|
-| `message_create` | channelId, content, replyToId? | SEND_MESSAGES perm; MENTION_EVERYONE for content with `@everyone`, `@here` or a role token (permissions.md, "Mass mentions"); `replyToId` must name a message a member wrote in the same channel |
-| `message_edit` | messageId, content | author only; MENTION_EVERYONE when the edit adds a mass mention the message did not have; a system message cannot be edited (`error` with `system_message_immutable`) |
-| `message_delete` | messageId | author or MANAGE_MESSAGES |
-| `channel_poke` | channelId, targetUserId | VIEW_CHANNEL and SEND_MESSAGES; 5 a minute per actor. See "Channel pokes" |
+| `message_create` | channelId, content, replyToId? | SEND_MESSAGES perm; MENTION_EVERYONE for content with `@everyone`, `@here` or a role token (permissions.md, "Mass mentions"); `replyToId` must name a message a member wrote in the same channel; then the space's moderation, as on REST (see below) |
+| `message_edit` | messageId, content | author only; MENTION_EVERYONE when the edit adds a mass mention the message did not have; a system message cannot be edited (`error` with `system_message_immutable`); then the space's moderation, slow mode excepted |
+| `message_delete` | messageId | author or MANAGE_MESSAGES; a delete by someone other than the author is recorded in the audit log |
+| `channel_poke` | channelId, targetUserId | VIEW_CHANNEL and SEND_MESSAGES; not while timed out; 5 a minute per actor. See "Channel pokes" |
 | `typing_start` | channelId | 5s auto-expire |
+
+`message_create` and `message_edit` run the same moderation checks as
+`POST /channels/:id/messages` and `PATCH /messages/:id`, in the same order
+(`spaceMessageRefusal`; spaces.md, "Moderation"): a refusal is an `error` with
+the REST route's code and details (`member_timed_out` with `until`,
+`account_too_new`, `membership_too_new`, `slowmode_active` with
+`retryAfterSeconds` on a new message, `automod_blocked_word`,
+`automod_invite_blocked`, `automod_link_blocked`, `automod_too_many_mentions`
+with `max`), sent to the user's sessions as the mass mention refusal is, and
+nothing is stored or broadcast.
 
 ### DM Messages
 | type | fields | notes |
@@ -42,7 +77,7 @@ Source: `packages/server/src/ws/handler.ts`, `packages/server/src/ws/events.ts`
 ### Reactions (space + DM, auto-detected)
 | type | fields | notes |
 |------|--------|-------|
-| `reaction_add` | messageId, emoji | ADD_REACTIONS perm (space). `emoji` is a native emoji or a sticker token (`sticker:<asset URL>`, uploads.md "Personal stickers"); the server stores and relays either as the same string. One reaction per user and emoji: a repeat stores nothing, sends no `reaction_added` and queues no relay. The client does not send one either (`chatStore.addReaction` skips a reaction the user holds or has an add in flight for) |
+| `reaction_add` | messageId, emoji | ADD_REACTIONS perm (space); refused with an `error` coded `member_timed_out` (`until`) while the user is timed out in the space. `emoji` is a native emoji or a sticker token (`sticker:<asset URL>`, uploads.md "Personal stickers"); the server stores and relays either as the same string. One reaction per user and emoji: a repeat stores nothing, sends no `reaction_added` and queues no relay. The client does not send one either (`chatStore.addReaction` skips a reaction the user holds or has an add in flight for) |
 | `reaction_remove` | messageId, emoji | own reactions only |
 
 ### Read State
@@ -60,7 +95,7 @@ Source: `packages/server/src/ws/handler.ts`, `packages/server/src/ws/events.ts`
 ### Voice (Space Channels)
 | type | fields | notes |
 |------|--------|-------|
-| `voice_join` | channelId | one room per user enforced |
+| `voice_join` | channelId | one room per user enforced; while the user is timed out in the space, refused with an `error` coded `member_timed_out` (`until`) and `voice_disconnected` with reason `rejected`, a resume included |
 | `voice_leave` | (none) | leaves the voice the user holds on this instance: a voice channel or DM call hosted here, or a call hosted on a peer that they joined through here (relayed to the host as their leave in a group call). A client joining voice on another instance sends it to the instance its DM call goes through (voice.md, "Client-Side Call Routing") |
 | `voice_status` | isMuted, isDeafened, isCameraOn, isScreenSharing | server enforces space/permission mute |
 
@@ -82,6 +117,10 @@ All four also need the actor to outrank the target (permissions.md, "Role hierar
 | `dm_call_reject` | dmChannelId?, federatedCallId? | 1-on-1: ends the call. Group: stops only the sender's ring; ends the call only when it still rings and every member but the caller has declined. Ignored from the caller or a participant |
 | `dm_call_end` | dmChannelId?, federatedCallId? | 1-on-1: ends the call. Group: takes only the sender out; the caller of a call nobody joined ends it; the call ends with its last participant. Ignored from a member who is not in the call |
 
+### Window focus
+
+`client_focus` `{ focused }`: whether this socket's window is in front of someone, at `ready` and when it changes. A person looking at the app gets no push (push.md).
+
 ### System
 | type | fields |
 |------|--------|
@@ -97,7 +136,7 @@ All four also need the actor to outrank the target (permissions.md, "Role hierar
 |------|--------|-------|
 | `ready` | (see Ready Payload below) | user |
 | `pong` | — | user |
-| `error` | message, code?, details?, dmChannelId? | user; `details` fills the code's placeholders, as in an HTTP error body (`content_too_long` carries `max`); a refused `dm_call_start` or `dm_call_accept` goes to the sending socket only and names its `dmChannelId`; a refused `dm_message_create`, `dm_message_edit`, `dm_message_delete` or `channel_poke` goes to the sending socket only |
+| `error` | message, code?, details?, dmChannelId? | user; `details` fills the code's placeholders, as in an HTTP error body (`content_too_long` carries `max`); a refused `dm_call_start` or `dm_call_accept` goes to the sending socket only and names its `dmChannelId`; a refused `dm_message_create`, `dm_message_edit`, `dm_message_delete` or `channel_poke` goes to the sending socket only; the auth refusal of a suspended account carries `code: 'account_suspended'` and `details: { reason, until? }`, on that socket before it closes (see "Refused sockets") |
 
 ### Messages
 | type | fields | scope |
@@ -105,6 +144,7 @@ All four also need the actor to outrank the target (permissions.md, "Role hierar
 | `message_created` | message: MessageWithUser | channel (VIEW_CHANNEL). The message carries `mentionEveryone` and `mentionRoleIds`, the mass mentions the space allowed (permissions.md, "Mass mentions"); clients alert on mass mentions from these alone |
 | `message_updated` | message: MessageWithUser | channel (VIEW_CHANNEL) |
 | `message_deleted` | messageId, channelId | channel (VIEW_CHANNEL) |
+| `messages_deleted` | messageIds (at most 500), channelId | channel (VIEW_CHANNEL): a ban that took someone's recent messages with it, in batches per channel |
 | `typing` | channelId, userId, username | channel (VIEW_CHANNEL, excludes sender) |
 | `reaction_added` | messageId, reaction (includes user) | channel (VIEW_CHANNEL) |
 | `reaction_removed` | messageId, userId, emoji | channel (VIEW_CHANNEL) |
@@ -141,6 +181,7 @@ sending socket only, storing and sending nothing:
 | `channelId` or `targetUserId` is not a string | `validation_failed` |
 | no such channel, or the actor lacks VIEW_CHANNEL there | `channel_not_found` |
 | the actor lacks SEND_MESSAGES there | `missing_permission` (`details.permission` = `SEND_MESSAGES`) |
+| the actor is timed out in the space (spaces.md, "Moderation") | `member_timed_out` (`details.until`) |
 | the target has no member row in the space (an instance admin who never joined included) | `member_not_found` |
 | the target lacks VIEW_CHANNEL there | `poke_target_no_access` |
 | the actor poked 5 times in the last minute | `rate_limited` |
@@ -192,6 +233,30 @@ channel on that origin, the target's newest avatar in the message list
 motion, nor, unless the viewer is the actor, in DND or in a channel that is
 muted or set to `nothing`. Loading history never plays it. An older client
 shows a stored poke as "System message" when it loads history.
+
+### Pins and polls
+
+| Event | Fields | Audience |
+|-------|--------|----------|
+| `message_pin_changed` | `channelId` (a conversation's id for a DM), `messageId`, `pinnedAt`, `pinnedBy` | The channel, or the conversation's members |
+| `poll_updated` | `channelId`, `messageId`, `poll` | The channel, with no `myVotes`; the voter also gets one with `myVotes`, which the client keeps when a later one has none |
+| `thread_updated` | `parentChannelId`, `starterMessageId`, `thread` | The parent channel, when a thread's count or last activity changes |
+| `forum_tags_updated` | `channelId`, `tags` | Who can see the forum, when its tags change ([forums.md](forums.md)) |
+| `thread_deleted` | `parentChannelId`, `threadId`, `starterMessageId` | The parent channel |
+| `thread_followed` | `thread` | The account that now follows it |
+| `thread_unfollowed` | `threadId` | The account |
+| `event_updated` | `event` | The space, with no `amGoing`, which each client keeps |
+| `event_deleted` | `eventId`, `spaceId` | The space |
+| `event_reminder` | `eventId`, `spaceId`, `title`, `startsAt` | Those going, once, shortly before it starts |
+| `space_welcome_changed` | `spaceId` | The space: fetch the welcome again, since who must agree may have changed |
+| `saved_changed` | `messageId`, `saved` | The account's other devices |
+| `saved_reminder` | `item`, `preview` | The account, once, when it is due |
+| `soundboard_play` | `channelId`, `spaceId`, `soundId`, `userId` | Those in the call |
+| `space_sounds_changed` | `spaceId` | The space: fetch the clips again |
+| `command_invoked` | `name`, `args`, `options`, `interactionId`, `channelId`, `spaceId`, `user` | The bot asked |
+| `command_reply` | `id`, `channelId`, `spaceId`, `botId`, `botName`, `botAvatar`, `content`, `cards?`, `createdAt` | The person who asked, alone. Stored nowhere ([bots.md](bots.md), "Commands") |
+
+A pin's line and a poll are ordinary `message_created`. A pin's line is `type: 'system'`, so it raises no unread count, sound or notification.
 
 ### DM Messages
 | type | fields | scope |
@@ -315,10 +380,53 @@ when each instance's `ready` arrives; the `ready` payload itself does not
 carry it. Mixed versions: an old client ignores the event; a new client on an
 old server gets a 404 from the list route, logs it and uses the defaults.
 
+**Moderation fields.** No event type is new for space moderation
+(spaces.md, "Moderation"); the payloads carry it. Every `MemberWithUser`
+(`member_joined`, `member_updated`, the space detail, `ready`) has
+`timedOutUntil`: the end of a running timeout (epoch ms, the hosting server's
+clock), null otherwise, so an ended one is never sent as in force and no event
+marks its end. Every `Channel` (`channel_created`, `channel_updated`,
+`channel_layout_updated`, the space detail, `ready`) has `slowmodeSeconds`, 0
+when off. Every `Space` (`space_updated`, join answers, the space detail,
+`ready`, `join_request_accepted`) has `defaultNotificationLevel`, `'all'`,
+`'mentions'` or null. All three are built by `utils/spaceWire.ts`. A host that
+predates them sends none of the three. Every `Channel` also has `icon`, its
+own icon or null (spaces.md, "Channel icons"); a host before 1.32.3 sends
+none, which the client shows as the type's icon.
+
+**Roles and profiles.** No event type is new for role display, owner listing
+or space profiles either. Every `Role` (the space detail, `ready`, member rows)
+carries `description`, `colorSecondary`, `icon`, `hoist` and `mentionable`;
+every `Space` carries `ownerGroup`; every `MemberWithUser` carries `avatar`,
+`banner` and `bio` (the member's space profile, null when unset), and
+`member_updated` follows `PATCH /spaces/:id/members/@me/profile` like any other
+member change (spaces.md, "Space profiles"). A Discord template import into an
+existing space ends with `space_access_changed` to every member (spaces.md,
+"Importing a Discord template"). Every `User` carries `pronouns`,
+`profileLinks` and `profileLayout` (auth.md, "Profile fields").
+
+**Badges.** No event type is new for badges either (registry:
+`packages/shared/src/badges.ts`; api.md, "Users" and "Spaces"). Every `User`
+carries `badges`: `staff` for an instance admin, then the badges an admin
+granted. Every `Space` carries `badges`: `verified` while its verification
+stands, then the granted ones. Every `MemberWithUser` of the space detail,
+`ready` and `member_updated` carries `badges`, `administrator` or `moderator`
+from the member's role bits, which the hosting server works out because
+members cannot see them (`memberStaffBadges`, `utils/spaceWire.ts`); a
+`member_joined` member carries `[]`. Changes reach clients through the events
+that carry those objects: a change to a person's granted badges sends
+`user_updated` to them and to everyone who sees their profile
+(`collectProfileBroadcastTargetIds`), a change to a space's granted badges and
+every verification step send `space_updated` to the space (`announceSpaceUpdate`,
+`utils/reviewNotify.ts`). `PATCH /admin/users/:id/role` sends `user_updated`
+to the target only, so other clients see a changed `staff` badge the next time
+they load that user. Hosts that predate badges send none of these fields.
+
 `member_updated` follows every successful `PATCH /spaces/:id/members/:uid`
-(a nickname, a role set or both) and carries the member row the route
-answered: `nickname`, and `roles` with display fields only (permissions.md,
-"Who receives role and override data"). The client applies it only when the
+(a nickname, a role set or both) and every `PUT` or `DELETE
+/spaces/:id/members/:uid/timeout` that changed the member, and carries the
+member row the route answered: `nickname`, `timedOutUntil`, and `roles` with
+display fields only (permissions.md, "Who receives role and override data"). The client applies it only when the
 space with that id and the origin of the socket that delivered it is the
 loaded space (`applySpaceMemberUpdate` in `stores/spaceMemberUpdates.ts`), and
 takes only `nickname` and `roles` from it; the user row and presence have
@@ -359,12 +467,16 @@ and misses live role changes in that space until it reconnects; a new client
 connected to an old server still gets the old `ready` push.
 
 An `error` that carries a `code` is the refusal of something the user just
-did (`role_hierarchy` from the voice moderation events, `dm_call_in_progress`,
+did (`role_hierarchy` from the voice moderation events, the moderation refusals
+of `message_create`, `message_edit`, `reaction_add`, `voice_join` and
+`channel_poke` (see "Messages" above), `dm_call_in_progress`,
 `not_dm_member` and `validation_failed` from `dm_call_start`, `dm_call_not_found`,
 `not_dm_member` and `validation_failed` from `dm_call_accept`, and the DM
 message events (see "DM Messages")); the client shows it as a warning
-toast in the user's language (`describeErrorCode`, with the event's `details`). An `error` without a code
-is only logged. An `error` with a `dmChannelId` equal to the DM the client is
+toast in the user's language (`describeErrorCode`, with the event's `details`). The exception is
+`account_suspended` from the home instance, the refusal of the socket itself:
+it signs the client out instead of showing a toast (see "Refused sockets").
+An `error` without a code is only logged. An `error` with a `dmChannelId` equal to the DM the client is
 calling, from the instance that serves that DM, also clears the calling state
 (`outgoingCall`), which stops the outgoing ring. A `dm_call_not_found` or
 `not_dm_member` naming the call the client is in, from that call's instance,
@@ -382,11 +494,11 @@ takes the client out of it (`teardownDmCall`).
 ### Voice
 | type | fields | scope |
 |------|--------|-------|
-| `voice_state_update` | channelId, userId, action: join/leave, channelElapsedSeconds? | space |
-| `voice_status_update` | userId, channelId, isMuted, isDeafened, isCameraOn, isScreenSharing | room |
+| `voice_state_update` | channelId, userId, action: join/leave, channelElapsedSeconds? | space members who can see the channel (`sendToChannel`; a hidden voice channel's comings and goings, and that it exists, are nobody else's business, as in `buildSpaceVoiceState`) |
+| `voice_status_update` | userId, channelId, isMuted, isDeafened, isCameraOn, isScreenSharing | room: for a space, its members who can see the channel; for a DM call, its members |
 | `space_voice_state` | spaceId, voiceStates, voiceChannelElapsedSeconds, voiceUserStates, spaceVoiceStates | the joining user, or a member whose access changed. Scoped per-space voice-presence snapshot pushed when a user joins a space mid-session, after `space_access_changed` (see below), and to each member who can see a voice channel after an override on it or its category changed or it moved to another category (spaces.md, "Channel/Category Permission Overrides"). |
-| `voice_space_muted` | userId, channelId, spaceId, muted | space |
-| `voice_space_deafened` | userId, channelId, spaceId, deafened | space |
+| `voice_space_muted` | userId, channelId, spaceId, muted | space members who can see the channel |
+| `voice_space_deafened` | userId, channelId, spaceId, deafened | space members who can see the channel |
 | `voice_permission_muted` | userId, spaceId, muted | space |
 | `voice_moved` | userId, oldChannelId, newChannelId | user (target) |
 | `voice_disconnected` | userId, channelId, reason? | user (target) |
@@ -409,6 +521,7 @@ reason: `'displaced'` (new tab) | `'session_closed'`
 | `friend_request_declined` | requestId, userId | user (requester) |
 | `friend_request_cancelled` | requestId, userId | user (target) |
 | `friend_removed` | userId | user |
+| `blocks_updated` | blockedUserIds: string[] | the blocker only; the whole current set after every block or unblock, home instance only |
 
 ### Discovery
 | type | fields | scope |
@@ -416,6 +529,47 @@ reason: `'displaced'` (new tab) | `'session_closed'`
 | `join_request_received` | request | space (managers) |
 | `join_request_accepted` | request, space | user (requester) |
 | `join_request_declined` | request | user (requester) |
+
+### Platform administration
+| type | fields | scope |
+|------|--------|-------|
+| `space_review_updated` | spaceId, spaceName, process, action, status, note | user: the space's owner (`spaces.owner_id`, the owner's row on this instance), all of their sockets here |
+| `review_queue_count` | verificationOpen, discoveryOpen | every connected instance admin (`sendToAdmins`) |
+
+Both follow every step of a space's two reviews, Verification and Discovery
+approval (api.md, "Reviews" and "Platform administration"), sent by
+`announceReviewStep` (`utils/reviewNotify.ts`): an owner's request or
+withdrawal (`routes/spaceReview.ts`), an admin's decision
+(`routes/platformAdmin.ts`), and an edit that moved the Discovery status
+(`PATCH /api/spaces/:id`, action `changed`, whoever made the edit). The
+payload types are `SpaceReviewUpdatedPayload` and `ReviewQueueCountPayload`
+in `packages/shared/src/platform.ts`.
+
+`space_review_updated` tells the owner what moved: `process` is
+`verification` or `discovery`, `action` one of `REVIEW_ACTIONS` (`submit`,
+`withdraw`, `approve`, `reject`, `request_info`, `request_changes`, `revoke`,
+`admin_withdraw`, `changed`), `status` the status the step left (null for a
+withdrawn verification request), `note` the admin's reason (null for every
+other step), and `spaceName` the name at the time. `review_queue_count`
+carries the open requests after the step (`openReviewCounts`: verifications
+`pending` or `needs_info`, Discovery requests `pending` or `changes_requested`),
+the same counts the `ready` payload carries as `reviewQueueCount`. A
+verification step is also followed by `space_updated` to the space, so the
+verified badge shows or goes at once; a Discovery step of a space opted in to
+the directory marks the directory dirty instead (directory.md).
+
+**Client.** `space_review_updated` moves the space's revision in
+`stores/reviewStore.ts`, so an open Discovery or Verification panel of that
+space reloads its review state, and shows a toast naming the space and its new
+status (`common:review.toast.verification` / `.discovery`). The open-request
+count comes from the home instance only: `ready.reviewQueueCount` and
+`review_queue_count` from another origin are ignored, and `reviewStore.queue`
+stays null for anyone but the home instance's admins.
+
+**Known limits.** Deleting a space with an open request sends no
+`review_queue_count`; the admins' count catches up at their next `ready`. A
+socket to another instance that refuses the account as suspended is retried
+with the client's reconnect backoff, and each refusal shows its toast again.
 
 ### Federation
 | type | fields | scope |
@@ -455,7 +609,8 @@ reason: `'displaced'` (new tab) | `'session_closed'`
   userActivityIdentities?: Record<userId, { homeUserId: string | null, homeInstance: string | null }>,  // identity of each userActivities key; null pair = native row
   rejectedPeerOrigins: string[],         // origins with status 'rejected'; used for DM unreachable indicators
   awaitingApprovalPeerOrigins: string[], // origins with status 'awaiting_approval'
-  pendingApprovalCount: number           // count of peer_approval_requests rows; only non-zero for admins
+  pendingApprovalCount: number,          // count of peer_approval_requests rows; only non-zero for admins
+  reviewQueueCount: { verificationOpen: number, discoveryOpen: number } | null  // open review requests (see "Platform administration"); null for anyone but an instance admin, absent from hosts that predate it
 }
 ```
 
@@ -472,3 +627,20 @@ reason: `'displaced'` (new tab) | `'session_closed'`
 The `ready` payload is the **only** carrier of voice presence at connect time. When a user joins a space *mid-session* (invite, public join, or join-request approval) without reloading, they would otherwise see empty voice channels until a refresh, because `member_joined` carries no voice state and `GET /api/spaces/:id` (the channel-sidebar hydrator) has none either.
 
 To close this, `ConnectionManager.addUserSpace(userId, spaceId)` — the single chokepoint every join path funnels through, and which is **not** used on reconnect (that path uses `setUserSpaces`) — calls `pushSpaceVoiceState(userId, spaceId)`, which builds the same per-space snapshot via `buildSpaceVoiceState` and pushes it to the user as a `space_voice_state` event. Delivery rides the same ordered WebSocket as the `voice_state_update` deltas, so there is no snapshot-vs-stream race. The push is skipped when the user has no connection, or the space has no active voice and no restrictions (e.g. space creation). The client applies it scoped to `spaceId` (`utils/voiceStateSync.applySpaceVoiceState`): it merges occupants/statuses and rebuilds only that space's restriction keys, never disturbing voice state in other spaces.
+
+## Legal events
+
+| Event | To | Fields | Means |
+|-------|----|--------|-------|
+| `report_queue_count` | admins | `open` | How many reports wait; also `reportQueueCount` in `ready` |
+| `legal_updated` | everyone | none | Operator details or a document changed: reload `GET /api/legal` |
+| `user_notice` | one person | `notice: UserNotice` | What the operator decided about them ([legal.md](legal.md)) |
+| `announcements_changed` | everyone connected | none | What the operator says to everyone changed: ask `GET /api/announcements` again ([admin.md](admin.md), "The console") |
+
+## Threads on the wire
+
+A message in a thread goes only to those who follow it or have it open. The client says what it has open with the client event `thread_watch` (`{ threadId }`, or `null` when it closes it). `ready` carries `followedThreads`, those not gone quiet. See [threads.md](threads.md).
+
+## A bot on the socket
+
+`{ type: 'auth', token: 'Bot <token>' }` opens a socket for a bot. It may then send only `BOT_SOCKET_EVENTS` (`typing_start`, `reaction_add`, `reaction_remove`) and the ping; anything else answers `{ type: 'error', code: 'bot_route_forbidden' }`. `revalidateSockets` checks a bot's socket by what stops a bot ([bots.md](bots.md)).

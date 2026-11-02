@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { getDb, schema } from '../../../db/index.js';
 import { authenticate, requireAdmin } from '../../../utils/auth.js';
+import { recordPeerTrust } from '../../../utils/platformAudit.js';
 import { buildFederationHeaders, getOurOrigin } from '../../../utils/federationAuth.js';
 import { claimAdminHandshake, releaseAdminHandshake } from '../../../utils/federationPeering.js';
 import { insertPeer, readPeerStateByOrigin, transitionPeer } from '../../../utils/federationPeerState.js';
@@ -470,6 +471,7 @@ export function registerApprovalRoutes(app: FastifyInstance): void {
       if (!approvalReq) {
         return reply.code(404).send({ error: 'Approval request not found', statusCode: 404 });
       }
+      recordPeerTrust(request.userId, approvalReq, 'approved');
 
       if (approvalReq.direction === 'outbound') {
         return await handleOutboundApprove(approvalReq, reply);
@@ -499,6 +501,7 @@ export function registerApprovalRoutes(app: FastifyInstance): void {
       if (!approvalReq) {
         return reply.code(404).send({ error: 'Approval request not found', statusCode: 404 });
       }
+      recordPeerTrust(request.userId, approvalReq, 'denied');
 
       if (approvalReq.direction === 'outbound') {
         return await handleOutboundDeny(approvalReq, reply);

@@ -189,8 +189,16 @@ describe('space member nickname and roles', () => {
   });
 
   it('keeps self/owner role protections and fails for absent members', async () => {
-    expect((await update({ roleIds: [] }, 'owner')).statusCode).toBe(400);
+    // Owning the space, not a role, carries the owner's rights, so the owner
+    // may set their own roles (spaces.md, "Ownership and roles").
+    const own = await update({ roleIds: ['mod-role'] }, 'owner');
+    expect(own.statusCode).toBe(200);
+    expect(own.json()).toMatchObject({ userId: 'owner', roles: [{ id: 'mod-role' }] });
     currentUserId = 'moderator';
+    // Nobody else may change their own roles or the owner's.
+    const self = await update({ roleIds: [] }, 'moderator');
+    expect(self.statusCode).toBe(400);
+    expect(self.json().code).toBe('cannot_change_own_roles');
     expect((await update({ roleIds: [] }, 'owner')).statusCode).toBe(403);
     expect((await update({ roleIds: [] }, 'outsider')).statusCode).toBe(404);
   });

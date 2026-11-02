@@ -32,7 +32,7 @@ import { useAuthStore } from './authStore';
  * n-1; orbit knows them as row o-7.
  */
 
-const ORBIT = 'https://orbit.example';
+const TAVVIT = 'https://orbit.example';
 const CHANNEL = 'orbit-chan';
 const MESSAGE = 'msg-1';
 
@@ -61,8 +61,8 @@ function reactionsHeld(): Reaction[] {
 
 beforeEach(() => {
   vi.mocked(wsSend).mockClear();
-  useAuthStore.setState({ user: me, myRowIds: new Map([[ORBIT, 'o-7']]) });
-  useSpaceStore.setState({ channelOriginMap: new Map([[CHANNEL, ORBIT]]) });
+  useAuthStore.setState({ user: me, myRowIds: new Map([[TAVVIT, 'o-7']]) });
+  useSpaceStore.setState({ channelOriginMap: new Map([[CHANNEL, TAVVIT]]) });
   useChatStore.setState({
     messages: new Map([[CHANNEL, [message()]]]),
     detachedChannels: new Map(),
@@ -83,7 +83,7 @@ describe('addReaction', () => {
     addReaction(MESSAGE, '👍');
     addReaction(MESSAGE, '👍');
     addReaction(MESSAGE, '👍');
-    expect(sent('reaction_add')).toEqual([[{ type: 'reaction_add', messageId: MESSAGE, emoji: '👍' }, ORBIT]]);
+    expect(sent('reaction_add')).toEqual([[{ type: 'reaction_add', messageId: MESSAGE, emoji: '👍' }, TAVVIT]]);
   });
 
   it('sends nothing for a reaction the user already has stored', () => {
@@ -170,7 +170,7 @@ describe('hasOwnReaction', () => {
     expect(useChatStore.getState().hasOwnReaction(MESSAGE, '👍')).toBe(false);
     useChatStore.getState().addReaction(MESSAGE, '👍');
     expect(sent('reaction_add')).toHaveLength(2);
-    expect(sent('reaction_remove')).toEqual([[{ type: 'reaction_remove', messageId: MESSAGE, emoji: '👍' }, ORBIT]]);
+    expect(sent('reaction_remove')).toEqual([[{ type: 'reaction_remove', messageId: MESSAGE, emoji: '👍' }, TAVVIT]]);
   });
 
   it('reads a message held by a detached window', () => {

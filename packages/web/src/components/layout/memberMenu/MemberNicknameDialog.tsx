@@ -61,20 +61,20 @@ export function MemberNicknameDialog({ target, nickname, accountName, self, onCl
   return (
     <Modal isOpen onClose={close} title={t('spaces:members.nickname.title')} mobileStyle="sheet">
       <form onSubmit={handleSubmit}>
-        <p className="mb-4 text-sm text-txt-secondary">
+        <p className="mb-4 text-body text-txt-secondary">
           {self
             ? t('spaces:members.nickname.descriptionSelf')
             : t('spaces:members.nickname.descriptionOther', { name: accountName })}
         </p>
 
         {error && (
-          <div role="alert" className="mb-3 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">
+          <div role="alert" className="mb-3 p-2 bg-accent-rose/10 border border-accent-rose/30 rounded-md text-txt-danger text-ui">
             {error}
           </div>
         )}
 
         <div className="mb-4">
-          <label htmlFor="member-nickname-input" className="block text-xs font-bold text-txt-secondary uppercase mb-2">
+          <label htmlFor="member-nickname-input" className="field-label">
             {t('spaces:members.nickname.label')}
           </label>
           <input
@@ -91,14 +91,14 @@ export function MemberNicknameDialog({ target, nickname, accountName, self, onCl
         </div>
 
         <div className="sticky bottom-0 z-10 pointer-events-none">
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="glass-bubble rounded-full px-3 py-2 flex items-center gap-3 pointer-events-auto">
+          <div className="flex justify-end pt-3 pb-1">
+            <div className="action-bar pointer-events-auto">
               {nickname !== null && (
                 <button
                   type="button"
                   onClick={() => void save(null)}
                   disabled={saving}
-                  className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors disabled:opacity-50"
+                  className="btn-quiet disabled:opacity-50"
                 >
                   {t('spaces:members.nickname.reset')}
                 </button>
@@ -107,14 +107,14 @@ export function MemberNicknameDialog({ target, nickname, accountName, self, onCl
                 type="button"
                 onClick={close}
                 disabled={saving}
-                className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors disabled:opacity-50"
+                className="btn-quiet disabled:opacity-50"
               >
                 {t('common:actions.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                className="btn-primary disabled:opacity-50"
               >
                 {saving ? t('common:states.pleaseWait') : t('common:actions.save')}
               </button>

@@ -16,6 +16,8 @@ let testDb: TestDb;
 const sentToUserCalls: Array<{ userId: string; payload: any }> = [];
 const retainedActivities = new Map<string, unknown[]>();
 
+import { collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
+
 vi.mock('../db/index.js', () => ({
   getDb: () => testDb,
   getRawDb: () => sqlite,
@@ -25,6 +27,10 @@ vi.mock('../db/index.js', () => ({
 vi.mock('../ws/handler.js', () => ({
   connectionManager: {
     sendToUser: vi.fn((uid: string, p: any) => sentToUserCalls.push({ userId: uid, payload: p })),
+    // Who hears it, as the real one has it, without having to connect them all.
+    broadcastPresence: vi.fn((uid: string, p: unknown) => {
+      for (const target of collectProfileBroadcastTargetIds(uid)) sentToUserCalls.push({ userId: target, payload: p });
+    }),
     sendToSpace: vi.fn(),
     sendToDmMembers: vi.fn(),
     sendToAdmins: vi.fn(),

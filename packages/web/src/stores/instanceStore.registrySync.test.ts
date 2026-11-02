@@ -86,7 +86,7 @@ describe('instanceStore registry sync gating', () => {
     getFederationRegistry.mockResolvedValueOnce({
       registry: [{
         origin: 'https://orbit.example',
-        label: 'Orbit',
+        label: 'Tavvit',
         username: 'erin@nova.example',
         remoteUserId: 'remote-1',
         status: 'auth_expired',

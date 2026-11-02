@@ -4,8 +4,8 @@ import { config } from '../config.js';
 import { getRawDb } from '../db/index.js';
 import { getInstanceId } from '../utils/federationEpoch.js';
 import { resolveLocalOrigin } from '../routes/federation/origin.js';
-import { pingUrl, slotMinute } from '../telemetry/reporter.js';
-import { utcDay } from '../telemetry/day.js';
+import { pingUrl, slotMinute } from './schedule.js';
+import { utcDay } from '../utils/utcDay.js';
 import {
   clearDirectoryDirty, getDocumentVersion, isDirectoryPingReason, onDirectoryDirty, readDirectoryState,
   recordDirectoryPingFailure, recordDirectoryPingSuccess, type DirectoryPingReason,
@@ -17,7 +17,7 @@ export interface PingerDeps {
   endpoint: string;
   /** This instance's public origin, the only thing the ping carries. */
   origin: string;
-  /** Spreads the daily slot the way the telemetry reporter spreads its own. */
+  /** Spreads the daily slot across instances (schedule.ts). */
   instanceId: string;
   fetch: typeof fetch;
   now: () => Date;

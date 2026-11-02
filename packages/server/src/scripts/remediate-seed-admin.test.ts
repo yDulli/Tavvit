@@ -18,13 +18,13 @@ async function freshDbWithUser(opts: {
 }
 
 describe('remediateSeedAdmin', () => {
-  it('rotates the password when admin still uses admin123', async () => {
-    const db = await freshDbWithUser({ username: 'admin', password: 'admin123', isAdmin: 1, homeInstance: null });
+  it('rotates the password when admin still uses tests-only-admin-pass', async () => {
+    const db = await freshDbWithUser({ username: 'admin', password: 'tests-only-admin-pass', isAdmin: 1, homeInstance: null });
     const result = await remediateSeedAdmin(db);
     expect(result.action).toBe('rotated');
     expect(result.newPassword).toBeTruthy();
     const row = db.prepare("SELECT password_hash FROM users WHERE username = 'admin'").get() as { password_hash: string };
-    expect(await verifyPassword('admin123', row.password_hash)).toBe(false);
+    expect(await verifyPassword('tests-only-admin-pass', row.password_hash)).toBe(false);
     expect(await verifyPassword(result.newPassword!, row.password_hash)).toBe(true);
   });
 
@@ -35,7 +35,7 @@ describe('remediateSeedAdmin', () => {
   });
 
   it('ignores a federated user named admin', async () => {
-    const db = await freshDbWithUser({ username: 'admin', password: 'admin123', isAdmin: 0, homeInstance: 'other.example' });
+    const db = await freshDbWithUser({ username: 'admin', password: 'tests-only-admin-pass', isAdmin: 0, homeInstance: 'other.example' });
     const result = await remediateSeedAdmin(db);
     expect(result.action).toBe('skipped-no-admin');
   });

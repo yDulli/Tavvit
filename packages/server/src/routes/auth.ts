@@ -1,8 +1,30 @@
+import { homeIdentityProven } from '../utils/federationAttach.js';
+import { PASSWORD_MAX_LENGTH } from '@backspace/shared/src/constants.js';
+import type { SessionsResponse } from '@backspace/shared';
+import { LEGAL_LIMITS } from '@backspace/shared/src/legal.js';
+import { currentDocument, readOperator } from '../utils/legal.js';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { eq, or, lt } from 'drizzle-orm';
+import { and, eq, isNotNull, or, lt } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { getDb, schema } from '../db/index.js';
-import { hashPassword, verifyPassword, signJwt, authenticate } from '../utils/auth.js';
+import { hashPassword, verifyPassword, passwordNeedsRehash, issueSessionToken, authenticate } from '../utils/auth.js';
+import { normalizeEmail } from '../email/address.js';
+import { isMailLocale } from '../email/copy.js';
+import { mailLocaleOf, sendConfirmationLink } from '../email/account.js';
+import { emailRequiredSince } from '../email/gate.js';
+import { emailEnabled } from '../email/service.js';
+import { addressAccepted } from './email.js';
+import { isWeakPassword } from '../utils/passwordPolicy.js';
+import { isDeviceId, recordSecurityEvent } from '../security/events.js';
+import { noteFailedPassword, noteSignIn } from '../security/notices.js';
+import { issueMfaTicket, twoFactorAvailable } from '../security/twoFactor.js';
+import { endOtherSessions, endSession, listSessions } from '../utils/sessions.js';
+import { emailDomainBlocked, usernameReserved } from '../utils/signupRules.js';
+import { USERNAME_LIMITS } from '@backspace/shared/src/usernames.js';
+import { usernameHeld, usernameShapeRefusal } from '../utils/usernames.js';
+import { acceptSignupChallenge, createSignupChallenge, signupChallengeLevel } from '../utils/signupChallenge.js';
+import { joinStarterSpaces } from '../utils/spaceJoin.js';
+import { connectionManager } from '../ws/handler.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { config } from '../config.js';
 import type { RegisterRequest, LoginRequest, AuthResponse } from '@backspace/shared';
@@ -13,12 +35,31 @@ import { extractDomain } from './federation.js';
 import { fetchPeerEpoch } from '../utils/federationEpoch.js';
 import { stripTrailingSlashes } from '../utils/federationAuth.js';
 import { getInviteByToken, inviteStatus, redeemInvite, InviteUnavailableError } from '../utils/inviteService.js';
-import { sendError, errorText } from '../utils/httpErrors.js';
+import { sendError, errorText, errorBody } from '../utils/httpErrors.js';
+import { loginThrottle, loginThrottleKey, loginThrottleDisabled, loginWait } from '../utils/loginThrottle.js';
+import { activeSuspension, suspensionDetails } from '../utils/suspension.js';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
 
-const USERNAME_MIN = 3;
-const USERNAME_MAX = 32;
+const USERNAME_MIN = USERNAME_LIMITS.MIN_LENGTH;
+const USERNAME_MAX = USERNAME_LIMITS.MAX_LENGTH;
 const FEDERATED_USERNAME_MAX = 100;
+const DISPLAY_NAME_MAX = 32;
+
+/** How long a flood of attempts on one name is told to wait, in seconds. */
+const THROTTLE_RETRY_SECONDS = 5;
+
+/**
+ * A bcrypt hash of a random string nobody knows, made once on first use at the
+ * production cost. Comparing a typed password against it costs exactly what a
+ * comparison against a real account costs, which is what lets the login route
+ * answer an unknown username as slowly as a known one. Lazy so that importing
+ * this module does not spend a quarter of a second hashing at start-up.
+ */
+let dummyHash: Promise<string> | null = null;
+function dummyPasswordHash(): Promise<string> {
+  dummyHash ??= hashPassword(randomBytes(24).toString('base64url'));
+  return dummyHash;
+}
 
 /**
  * The availability check answers `{ available, reason }` rather than the
@@ -53,7 +94,30 @@ function isSameHomeAccount(
   return account.id === homeUserId || account.homeUserId === homeUserId;
 }
 
+/**
+ * The account a sign-in names: by username, and on an instance that sends mail also by a
+ * confirmed address. A username with an `@` is a replicated row's, and it is looked at first.
+ */
+function accountNamed(identifier: string) {
+  const db = getDb();
+  const name = identifier.trim().toLowerCase();
+  const byName = db.select().from(schema.users).where(and(eq(schema.users.username, name), eq(schema.users.accountKind, 'person'))).get();
+  if (byName || !emailEnabled() || !name.includes('@')) return byName;
+  return db.select().from(schema.users).where(and(eq(schema.users.email, name), isNotNull(schema.users.emailVerifiedAt))).get();
+}
+
 export async function authRoutes(app: FastifyInstance): Promise<void> {
+  // GET /api/auth/challenge - What this instance asks of a new account
+  app.get('/api/auth/challenge', {
+    config: {
+      rateLimit: {
+        max: 30,
+        timeWindow: '1 minute',
+        keyGenerator: (request: FastifyRequest) => request.ip,
+      },
+    },
+  }, async (_request, reply) => reply.code(200).send(createSignupChallenge(signupChallengeLevel())));
+
   app.post<{ Body: RegisterRequest }>('/api/auth/register', {
     config: {
       rateLimit: {
@@ -63,7 +127,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       },
     },
   }, async (request, reply) => {
-    const { username, password, displayName, avatarColor: requestedAvatarColor, homeInstance, homeUserId } = request.body;
+    // Before anything is read or looked up, so a script without a browser learns nothing here.
+    if (!acceptSignupChallenge(request.body?.challenge, signupChallengeLevel())) {
+      return sendError(reply, 400, 'signup_challenge_failed');
+    }
+
+    const { username, password, displayName, avatarColor: requestedAvatarColor, homeInstance, homeUserId, attachProof, acceptedTermsVersion, ageConfirmed } = request.body;
 
     if (!username || typeof username !== 'string') {
       return sendError(reply, 400, 'username_required');
@@ -71,6 +140,19 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     if (!password || typeof password !== 'string') {
       return sendError(reply, 400, 'password_required');
+    }
+
+    // Once the instance has published terms, a local account starts by agreeing
+    // to them and confirming the minimum age (docs/systems/legal.md). A
+    // replicated row is created by the person's home instance, not by a sign-up.
+    const termsInForce = homeInstance ? undefined : currentDocument('terms');
+    if (termsInForce) {
+      if (acceptedTermsVersion !== termsInForce.version) {
+        return sendError(reply, 400, 'terms_not_accepted', { version: termsInForce.version });
+      }
+      if (ageConfirmed !== true) {
+        return sendError(reply, 400, 'age_not_confirmed', { age: readOperator()?.minimumAge ?? LEGAL_LIMITS.MIN_AGE_DEFAULT });
+      }
     }
 
     const trimmedUsername = username.trim().toLowerCase();
@@ -105,16 +187,38 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
     } else {
       // Local registration — strict validation
-      if (trimmedUsername.length < USERNAME_MIN || trimmedUsername.length > USERNAME_MAX) {
-        return sendError(reply, 400, 'username_length_invalid', { min: USERNAME_MIN, max: USERNAME_MAX });
-      }
-      if (!/^[a-z0-9_]+$/.test(trimmedUsername)) {
-        return sendError(reply, 400, 'username_characters_invalid');
-      }
+      const refusal = usernameShapeRefusal(trimmedUsername);
+      if (refusal) return sendError(reply, 400, refusal.code, refusal.details);
     }
 
     if (password.length < PASSWORD_MIN_LENGTH) {
       return sendError(reply, 400, 'password_too_short', { min: PASSWORD_MIN_LENGTH });
+    }
+    if (password.length > PASSWORD_MAX_LENGTH) {
+      return sendError(reply, 400, 'password_too_long', { max: PASSWORD_MAX_LENGTH });
+    }
+    // The same limit as changing it later: this name goes out to whoever is in the starter spaces.
+    if (displayName !== undefined && displayName !== null) {
+      if (typeof displayName !== 'string') return sendError(reply, 400, 'validation_failed', { field: 'displayName' });
+      if (displayName.trim().length > DISPLAY_NAME_MAX) return sendError(reply, 400, 'display_name_too_long', { max: DISPLAY_NAME_MAX });
+    }
+
+    // A replicated row's password is a secret its home made up, not something anyone chose.
+    if (!homeInstance && isWeakPassword(password, trimmedUsername)) {
+      return sendError(reply, 400, 'password_too_common');
+    }
+
+    // An address is for local accounts, on an instance that sends mail. Without either it is
+    // not looked at, so nothing that registers without one changes.
+    const wantsAddress = !homeInstance && emailEnabled();
+    let address: string | null = null;
+    if (wantsAddress) {
+      if (request.body.email) {
+        address = normalizeEmail(request.body.email);
+        if (!address) return sendError(reply, 400, 'email_invalid');
+      } else if (emailRequiredSince() !== null) {
+        return sendError(reply, 400, 'email_required');
+      }
     }
 
     const db = getDb();
@@ -144,8 +248,17 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     if (homeInstance) {
       // Federated path: token IGNORED entirely. Gate is federatedRegistrationOpen.
+      // With federation switched off at deployment level there is no home
+      // instance to be replicated from, whatever the DB flag says.
+      if (!config.federation.enabled) {
+        return sendError(reply, 403, 'federation_disabled');
+      }
       if (!federatedRegistrationOpen) {
         return sendError(reply, 403, 'federated_registration_closed');
+      }
+      // Anyone can say they are someone elsewhere. Asked of their home below.
+      if (typeof attachProof !== 'string' || typeof homeUserId !== 'string') {
+        return sendError(reply, 403, 'home_instance_unproven');
       }
       // Falls through to the normal create-a-new-row path below. A federated
       // registration NEVER binds credentials to a pre-existing row.
@@ -168,6 +281,14 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       // no consumption (spec §5.7).
     }
 
+    // Behind the door above, so that a closed instance does not answer what is on its lists.
+    if (!homeInstance && usernameReserved(trimmedUsername)) {
+      return sendError(reply, 400, 'username_reserved');
+    }
+    if (address && emailDomainBlocked(address)) return sendError(reply, 400, 'email_domain_blocked');
+
+    if (address && !(await addressAccepted(address))) return sendError(reply, 400, 'email_undeliverable');
+
     const passwordHash = await hashPassword(password);
 
     // --- Registration always creates a NEW row ---
@@ -184,16 +305,19 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     // reattach flow: POST /api/users/@me/reattach, which requires an
     // attach-proof token minted by the home instance.
     const existing = db.select().from(schema.users).where(eq(schema.users.username, trimmedUsername)).get();
-    if (existing) {
+    if (existing || usernameHeld(trimmedUsername)) {
       return sendError(reply, 409, 'username_taken');
+    }
+
+    // Only an instance this one already trusts is asked, so that registering
+    // cannot make this server call an address a stranger names. The proof is
+    // spent by asking, which is why this comes after everything else that can fail.
+    if (homeInstance && !(await homeIdentityProven(homeInstance, homeUserId as string, trimmedUsername, attachProof as string))) {
+      return sendError(reply, 403, 'home_instance_unproven');
     }
 
     const userId = generateSnowflake();
     const now = Date.now();
-
-    // First registered user becomes instance admin (replicated users are never admins)
-    const userCount = db.select().from(schema.users).all().length;
-    const isFirstUser = userCount === 0 && !homeInstance;
 
     const avatarColor = (requestedAvatarColor && (AVATAR_COLORS as readonly string[]).includes(requestedAvatarColor))
       ? requestedAvatarColor
@@ -212,11 +336,16 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       username: trimmedUsername,
       displayName: displayName?.trim() || null,
       passwordHash,
-      isAdmin: isFirstUser ? 1 : 0,
+      // Nobody becomes an administrator by registering, however early: that is `tavvit-admin`'s.
+      isAdmin: 0,
       homeInstance: homeInstance || null,
       homeUserId: (homeInstance && homeUserId && typeof homeUserId === 'string') ? homeUserId : null,
       avatarColor,
       createdAt: now,
+      termsVersion: termsInForce?.version ?? null,
+      termsAcceptedAt: termsInForce ? now : null,
+      email: address,
+      locale: !homeInstance && isMailLocale(request.body.locale) ? request.body.locale : null,
     };
 
     // Only the LOCAL-CLOSED-WITH-VALID-TOKEN path consumes an invite. The
@@ -252,7 +381,19 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 500, 'user_create_failed');
     }
 
-    const token = signJwt({ userId: user.id, username: user.username });
+    if (!homeInstance) joinStarterSpaces(user.id, now);
+
+    const { token } = issueSessionToken(user, request);
+
+    // The account exists whatever happens to this mail: the person can ask for it again
+    // in settings, and it confirms nothing until its link is used.
+    if (address) {
+      try {
+        sendConfirmationLink(user, address, 'verify_email', mailLocaleOf(user));
+      } catch (error) {
+        console.error('[email] could not queue a confirmation:', error instanceof Error ? error.name : 'unknown error');
+      }
+    }
 
     const response: AuthResponse = {
       token,
@@ -279,12 +420,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const trimmed = raw.trim().toLowerCase();
 
     // Format validation (same rules as registration)
-    if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX) {
-      return unavailable(reply, 200, 'username_length_invalid', { min: USERNAME_MIN, max: USERNAME_MAX });
-    }
-    if (!/^[a-z0-9_]+$/.test(trimmed)) {
-      return unavailable(reply, 200, 'username_characters_invalid');
-    }
+    const refusal = usernameShapeRefusal(trimmed);
+    if (refusal) return unavailable(reply, 200, refusal.code, refusal.details);
 
     // Check registration is open
     const db = getDb();
@@ -295,9 +432,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!registrationOpen) {
       return unavailable(reply, 403, 'registration_closed');
     }
+    if (usernameReserved(trimmed)) {
+      return unavailable(reply, 200, 'username_reserved');
+    }
 
     const existing = db.select().from(schema.users).where(eq(schema.users.username, trimmed)).get();
-    return reply.code(200).send({ available: !existing });
+    return reply.code(200).send({ available: !existing && !usernameHeld(trimmed) });
   });
 
   // Public — used by RegisterPage to debounce-validate invite tokens during
@@ -351,7 +491,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       },
     },
   }, async (request, reply) => {
-    const { username, password } = request.body;
+    const { username, password, deviceId: rawDeviceId } = request.body ?? {};
+    const deviceId = isDeviceId(rawDeviceId) ? rawDeviceId : null;
 
     if (!username || typeof username !== 'string') {
       return sendError(reply, 400, 'username_required');
@@ -361,14 +502,43 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 400, 'password_required');
     }
 
+    // One answer for every way a credential can be wrong, and every one of them
+    // counts against the name. A password longer than any can be is one of them.
+    // The count is the account's however it is named, or two spellings would mean twice the guesses.
+    const user = accountNamed(username);
+    const throttleKey = loginThrottleKey(user?.username ?? username);
+    const throttleActive = !loginThrottleDisabled();
+    if (throttleActive && !loginThrottle.enter(throttleKey)) {
+      reply.header('Retry-After', String(THROTTLE_RETRY_SECONDS));
+      return reply.code(429).send({
+        ...errorBody(429, 'login_throttled', { minutes: 1 }),
+        retryAfter: THROTTLE_RETRY_SECONDS,
+      });
+    }
+    const rejectCredentials = (): FastifyReply => {
+      if (throttleActive) loginThrottle.recordFailure(throttleKey, request.ip);
+      if (user && user.isDeleted !== 1) noteFailedPassword(user, request);
+      return sendError(reply, 401, 'invalid_credentials');
+    };
+
+    try {
+    // Earlier failures make this one wait, before any database or hashing work
+    // (utils/loginThrottle.ts). The right password is never refused, only delayed.
+    if (throttleActive) await loginWait.sleep(loginThrottle.waitFor(throttleKey, request.ip));
+
+    if (password.length > PASSWORD_MAX_LENGTH) return rejectCredentials();
+
     const db = getDb();
 
-    const user = db.select().from(schema.users).where(eq(schema.users.username, username.trim().toLowerCase())).get();
     if (!user) {
-      return sendError(reply, 401, 'invalid_credentials');
+      // Spend the same time a real comparison costs, so the response time does
+      // not tell a guesser which usernames exist.
+      await verifyPassword(password, await dummyPasswordHash());
+      return rejectCredentials();
     }
 
     if (user.isDeleted) {
+      await verifyPassword(password, await dummyPasswordHash());
       return sendError(reply, 401, 'account_deleted');
     }
 
@@ -376,7 +546,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!validPassword) {
       // For federated users, try verifying against the home instance.
       // If the password is valid there but stale here, self-heal the local hash.
-      if (user.homeInstance) {
+      // With federation off, a row that still names a home instance never
+      // triggers a request to it: the self-heal below POSTs the password to that
+      // host, and nothing may leave the server for a host while the switch is off.
+      if (user.homeInstance && config.federation.enabled) {
         // Detached account (§6.3b detach): its home domain now belongs to a
         // DIFFERENT incarnation — there is no trusted home to consult. The
         // self-heal path is permanently disabled: re-hashing on the new
@@ -385,7 +558,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         // way in — the hash was only ever written by the owner's registration
         // or an epoch-gated self-heal against the OLD incarnation.
         if (user.federationHomeOrphaned === 1) {
-          return sendError(reply, 401, 'invalid_credentials');
+          return rejectCredentials();
         }
         try {
           const homeUsername = user.username.includes('@')
@@ -416,7 +589,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
               { user?: { id?: unknown; homeUserId?: unknown } } | null;
             if (!isSameHomeAccount(homeAccount?.user, user.homeUserId)) {
               app.log.warn(`Refused self-heal for ${user.username}: the home signed in a different account`);
-              return sendError(reply, 401, 'invalid_credentials');
+              return rejectCredentials();
             }
 
             // §6.3a epoch guard: self-heal (re-hashing the local password because
@@ -447,7 +620,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
                 app.log.warn(
                   `Refused self-heal for ${user.username}: home epoch ${currentEpoch ?? 'unknown'} != baseline ${peer.peerInstanceId}`,
                 );
-                return sendError(reply, 401, 'invalid_credentials');
+                return rejectCredentials();
               }
             }
             // No peer row / null baseline → legacy allow (fall through to self-heal).
@@ -464,14 +637,14 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
             app.log.info(`Self-healed password hash for federated user ${user.username} via ${user.homeInstance}`);
           } else {
             // Home instance also rejected — password is genuinely wrong
-            return sendError(reply, 401, 'invalid_credentials');
+            return rejectCredentials();
           }
         } catch {
           // Home instance unreachable — fall back to local-only rejection
-          return sendError(reply, 401, 'invalid_credentials');
+          return rejectCredentials();
         }
       } else {
-        return sendError(reply, 401, 'invalid_credentials');
+        return rejectCredentials();
       }
     }
 
@@ -482,13 +655,71 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     // produce a permanently stuck-online row that no disconnect timer can
     // clean up. The user's reported status remains whatever it was; the WS
     // handshake will flip it to 'online' once a real socket attaches.
-    const token = signJwt({ userId: user.id, username: user.username });
+
+    // A hash from before Argon2id, or from other settings, is replaced now that the
+    // password is at hand. Not a password change: nothing is stamped, no session ends.
+    if (passwordNeedsRehash(user.passwordHash) && await verifyPassword(password, user.passwordHash)) {
+      db.update(schema.users).set({ passwordHash: await hashPassword(password) }).where(eq(schema.users.id, user.id)).run();
+    }
+
+    // The password was right and a second factor is due. No session and no token: a JWT
+    // with a user id is a login to everything here, so the answer is a ticket only the
+    // second step reads, and a refusal to anything that does not know what that is. A
+    // server that lost its key must not skip the step, so it fails closed.
+    if (user.twoFactorEnabledAt !== null) {
+      if (!twoFactorAvailable()) return sendError(reply, 503, 'two_factor_unavailable');
+      return reply.code(401).send({ ...errorBody(401, 'mfa_required'), ticket: issueMfaTicket(user.id, deviceId) });
+    }
+
+    if (throttleActive) loginThrottle.recordSuccess(throttleKey, request.ip);
+
+    // A suspended account is told so only now, with the password right: the
+    // reason is for its owner, not for whoever knows the username.
+    const suspension = activeSuspension(user);
+    if (suspension) return sendError(reply, 403, 'account_suspended', suspensionDetails(suspension));
+
+    const { token } = issueSessionToken(user, request);
+    noteSignIn(user, request, deviceId);
 
     const response: AuthResponse = {
       token,
       user: sanitizeUser(user, true),
     };
 
+    return reply.code(200).send(response);
+    } finally {
+      if (throttleActive) loginThrottle.leave(throttleKey);
+    }
+  });
+
+  // ─── Sessions (docs/systems/auth.md, "Sessions") ─────
+  // A person's own sessions, on this instance. Nobody else's can be named here: every
+  // query carries the user id the token proved.
+  app.post('/api/auth/logout', { preHandler: authenticate }, async (request, reply) => {
+    if (request.sessionId) {
+      endSession(request.userId, request.sessionId);
+      connectionManager.closeSessionSockets(new Set([request.sessionId]));
+    }
+    return reply.code(200).send({ success: true });
+  });
+
+  app.get('/api/auth/sessions', { preHandler: authenticate }, async (request, reply) => {
+    const response: SessionsResponse = { sessions: listSessions(request.userId, request.sessionId ?? null) };
+    return reply.code(200).send(response);
+  });
+
+  app.delete<{ Params: { id: string } }>('/api/auth/sessions/:id', { preHandler: authenticate }, async (request, reply) => {
+    if (!endSession(request.userId, request.params.id)) return sendError(reply, 404, 'not_found');
+    connectionManager.closeSessionSockets(new Set([request.params.id]));
+    recordSecurityEvent(request.userId, 'session_revoked', request);
+    const response: SessionsResponse = { sessions: listSessions(request.userId, request.sessionId ?? null) };
+    return reply.code(200).send(response);
+  });
+
+  app.post('/api/auth/sessions/end-others', { preHandler: authenticate }, async (request, reply) => {
+    connectionManager.closeSessionSockets(new Set(endOtherSessions(request.userId, request.sessionId ?? null)));
+    recordSecurityEvent(request.userId, 'sessions_ended', request);
+    const response: SessionsResponse = { sessions: listSessions(request.userId, request.sessionId ?? null) };
     return reply.code(200).send(response);
   });
 

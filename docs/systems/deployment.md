@@ -18,14 +18,25 @@ Source files:
 - `packages/server/src/utils/backupWorker.ts` -- scheduled-snapshot interval worker
 - `packages/server/src/db/index.ts` -- pre-migration snapshot trigger + WAL-checkpointing shutdown
 - `packages/server/src/db/pendingMigrations.ts` -- `hasPendingMigrations` (gating predicate)
-- `packages/server/src/db/migrate.ts` -- `ensureDefaults` (admin recovery net)
-- `packages/server/src/routes/auth.ts` -- first-user-becomes-admin bootstrap
+- `packages/server/src/db/migrate.ts` -- `ensureDefaults`
 - `packages/server/src/scripts/snapshot.ts` -- manual snapshot CLI entrypoint
 - `packages/server/src/scripts/remediate-seed-admin.ts` -- legacy seed-admin password rotation
 
 **Out of scope:** voice/LiveKit operational tuning (see `docs/systems/voice.md`), upload/storage janitor (see `docs/systems/uploads.md`), and federation peering/replication (see `docs/systems/federation.md`).
 
 ---
+
+## Two-factor authentication
+
+`TOTP_ENCRYPTION_KEY` in `.env`, 32 bytes: `echo "TOTP_ENCRYPTION_KEY=$(openssl rand -hex 32)" >> .env`, then `docker compose up -d`. `install.sh` writes it on a new install; `update.sh` never writes `.env`, so an existing one adds it by hand. Without it nobody can turn 2FA on. **Keep it with your backups:** a restored database without its key leaves everyone with 2FA locked out until `./tavvit-admin.sh reset-2fa <username>`. There is no rotation: changing it has the same effect.
+
+## Translating messages
+
+Nothing to do for the browser's own translator and the link to Google. For a server-side translator, set `TRANSLATION_PROVIDER` and what it needs in `.env` and restart; LibreTranslate on this server is a service with the profile `translate`: [translation.md](translation.md). `update.sh` never writes `.env`. Then publish the privacy draft again, as it names the provider.
+
+## Mail
+
+Off until `EMAIL_TRANSPORT` is set in `.env`. `update.sh` never writes `.env`, so an update changes nothing here, and after changing it `docker compose up -d` starts the app with it. Setup, DNS and the provider's steps: email.md. `doctor.sh` checks what it can see.
 
 ## 1. Pipeline Overview
 
@@ -55,14 +66,16 @@ One installer, three modes, recorded as `DEPLOY_MODE` in `.env`. `install.sh` au
 
 **`COMPOSE_FILE` wiring.** In proxy/tunnel mode install.sh writes `COMPOSE_FILE=docker-compose.yml:docker-compose.proxy.yml` into `.env`. Docker Compose reads `COMPOSE_FILE` from `.env`, so **every** later `docker compose …` command in the directory transparently uses both files — the operator (and the update commands) never need `-f` flags. All-in-One leaves `COMPOSE_FILE` unset (defaults to `docker-compose.yml`).
 
-**Server proxy-awareness.** The server sets Fastify `trustProxy` to a count of trusted hops (`TRUSTED_PROXY_HOPS`, default 1, see below), so it trusts `X-Forwarded-*` from the fronting proxy/tunnel but not from anything beyond it. `getOurOrigin()` returns `https://${DOMAIN}` (federation/public identity) whenever `DOMAIN` is set and `PUBLIC_ORIGIN` is unset — correct in all three modes, since the public URL is `https://DOMAIN` regardless of which layer terminates TLS. No `PUBLIC_ORIGIN` is needed for a normal proxy/tunnel deployment.
+**Server proxy-awareness.** The server sets Fastify `trustProxy` from a count of trusted hops (`TRUSTED_PROXY_HOPS`, default 1, see below), so it trusts `X-Forwarded-*` from the fronting proxy/tunnel but not from anything beyond it. Since 1.32.5 (Fastify 5) the count goes through `trustProxyFor` (`utils/trustProxy.ts`): the address that connects to the app must also be private (loopback, the Docker network, RFC 1918, link-local, CGNAT, IPv6 ULA) before any forwarded hop is believed, so a client that reaches the app directly from outside cannot claim another address by sending the header itself. Every bundled and documented setup connects from a private address (Caddy on the Docker network, a local nginx, a tunnel daemon); a reverse proxy that reached the app over a public address would be treated as the client. `getOurOrigin()` returns `https://${DOMAIN}` (federation/public identity) whenever `DOMAIN` is set and `PUBLIC_ORIGIN` is unset — correct in all three modes, since the public URL is `https://DOMAIN` regardless of which layer terminates TLS. No `PUBLIC_ORIGIN` is needed for a normal proxy/tunnel deployment.
 
 **The trusted hop count (`TRUSTED_PROXY_HOPS`).** `trustProxy` is not `true`; it is a count of the proxies in front of the app that are trusted to have written `X-Forwarded-For`. It is set in `.env` like every other deployment fact, defaults to **1**, and is read and validated in `packages/server/src/config.ts`; `install.sh` writes the line into a generated `.env`, commented out at the default, and preserves an explicit value across re-runs. A set value that is not a non-negative integer stops the server at boot rather than quietly becoming 1, and so does anything above 4 (a CDN in front of your own proxy in front of a tunnel is 3, so a larger number is a typo, and a typo like 11 would trust the whole forwarded chain again). A blank line reads as unset and gives you the default. What the refusal actually says, and why the ceiling is 4, is in [web-security.md](web-security.md) section 9. `docker-compose.yml` passes `.env` to the container wholesale (`env_file`), so setting it there is all it takes. `request.ip` is therefore the address the nearest proxy appended, not the left-most thing in the header, so a client cannot choose the address its rate limits are counted under. Every rate limit in the app keys on that address (see [api.md](api.md), "Rate limiting"), as does the unauthenticated federation peer-accept limiter, and it is what the request log records.
 
 One is correct for all three modes as shipped: the bundled Caddy, an operator's reverse proxy and a tunnel daemon are each one hop. Two deployments need a different number, and the app cannot detect either of them for itself:
 
 - **A CDN in front of your own reverse proxy** is two hops. Left at 1, the app sees the CDN's address and everyone behind it shares a rate-limit bucket. Set `TRUSTED_PROXY_HOPS=2` **if your inner proxy appends to `X-Forwarded-For`**, which nginx configured with the snippet above does. If the inner proxy is the bundled Caddy, the number on its own does nothing: Caddy discards the CDN's entry unless its `trusted_proxies` names the CDN, so the app is handed the CDN's address whatever the count. Configure `trusted_proxies` in the Caddyfile first, then set 2. See [web-security.md](web-security.md) section 9.
-- **No proxy at all**, the app exposed directly on its port, is zero hops. Left at 1, the app believes an `X-Forwarded-For` header a client sends, because from inside the process one proxy and one lying client look the same. Set `TRUSTED_PROXY_HOPS=0`, which ignores the header and uses the socket address.
+- **No proxy at all**, the app exposed directly on its port, is zero hops. Set `TRUSTED_PROXY_HOPS=0`, which ignores the header and uses the socket address. Left at 1, a client connecting from a public address is still not believed (see above), but one on the same private network would be.
+
+**`DISABLE_RATE_LIMITS`** is for tests and local load runs only. Since 1.32.5 a server with `NODE_ENV=production` (the Docker image) ignores it and says so in its boot log (`utils/rateLimitSwitch.ts`); remove the line from `.env` if the warning shows.
 
 Too low costs a shared bucket; too high hands the key back to the client. **Your proxy config needs no change for this:** appending to `X-Forwarded-For` (nginx's `$proxy_add_x_forwarded_for`, which the snippet this installer prints uses) is exactly what the hop count expects, and Caddy's overwrite is fine too. An evaded rate limit was never an authentication bypass, since every route still authenticates and authorizes; what it cost was the brake on brute force and flooding. See [web-security.md](web-security.md) section 9.
 
@@ -86,7 +99,7 @@ Too low costs a shared bucket; too high hands the key back to the client. **Your
 
 **Why the image carries no C toolchain.** `better-sqlite3` 13.x is an N-API addon (`NAPI_VERSION=10`, which is why it declares `engines.node: >=22`) and publishes its prebuilt binaries inside the npm package itself: `prebuilds/linux-x64.node`, `linux-arm64.node`, the musl pair, darwin and win32. The binary is not tied to one Node ABI, so a Node major bump within the supported range needs no new asset, and the install downloads nothing beyond the package. That is why the `deps` stage installs neither `python3`, `make` nor `g++`, and it is also why the root `package.json` lists `better-sqlite3` under `pnpm.ignoredBuiltDependencies` rather than `onlyBuiltDependencies`: the package still carries a `binding.gyp`, and pnpm runs `node-gyp rebuild` on sight of one regardless of the package's `gypfile: false`, which on an image with no Python fails the build. Ignoring the build script is the correct call because there is nothing to build. Before changing the base again, confirm the `better-sqlite3` release still ships `prebuilds/linux-x64.node` and `prebuilds/linux-arm64.node` (`npm pack better-sqlite3@<version>` and list the tarball) and that its `engines.node` still admits the new major. If a future version drops a prebuild, the build fails at import time inside the container rather than falling back to a compile, and the toolchain has to come back together with the `onlyBuiltDependencies` entry.
 
-Node 20 is no longer a supported runtime: `engines.node` is `>=22.12.0`, which is the floor every dependency in the tree declares (`better-sqlite3` 13 needs 22, `wrangler` and `miniflare` need 22, `@electron/rebuild` and `@electron/fuses` need 22.12), and CI tests 22 and 24.
+Passwords are hashed with Node's built-in Argon2id, which needs Node 24.7, so `engines.node` is `>=24.7.0` and CI runs on 24 alone. Node 20 is no longer a supported runtime: the floor was `>=22.12.0`, which is the floor every dependency in the tree declares (`better-sqlite3` 13 needs 22, `wrangler` and `miniflare` need 22, `@electron/rebuild` and `@electron/fuses` need 22.12), and CI tests 22 and 24.
 
 **All three `FROM` lines are pinned by digest.** The digest is the one for the multi-arch index, not for a single platform's manifest, so the same pin resolves on `linux/amd64` and `linux/arm64`. The human-readable tag stays in the reference (`node:24-slim@sha256:...`) and the exact Node version is recorded in the comment above each stage. Renewing the pin means resolving the index digest again, `docker buildx imagetools inspect node:24-slim --format '{{.Manifest.Digest}}'`, and confirming the new image's Node major is still inside `better-sqlite3`'s `engines.node` range.
 
@@ -105,7 +118,13 @@ The frontend's service worker (vite-plugin-pwa, `generateSW`) precaches the whol
 
 `scripts/check-precache-size.mjs` runs in CI's build job right after `pnpm build`. It reads the limit and the file types from that module (through Vite's `runnerImport`), lists the precached files from `packages/web/dist/sw.js`, adds any file under `dist/assets/` of a precached type that the manifest is missing (which is where a file over the limit ends up; a font or image was never a candidate, so it is not counted), and fails when any of them is larger than 90% of the limit. Run it locally the same way after a web build.
 
-The settings panels (user settings, instance administration, space settings, and their mobile screens) are loaded on demand from `components/modals/lazySettingsPanels.tsx` and render inside its `SettingsPanelSuspense`. Their chunks are ordinary `.js` build assets, so the precache patterns cover them and they open offline. emoji-mart's data set is split out the same way (`utils/emojiData.ts`), but it is needed for the first render: `src/build/startupChunks.ts` adds a `modulepreload` link for it and for Discord's shortcode table to the built `index.html`, so both download alongside the main chunk, and `main.tsx` waits for them for at most one second before rendering. Past that, text shows shortcodes as written and converts when the names arrive (`useEmojiShortcodeNames` in `utils/emojiShortcodes.ts`). Voice stays in the startup bundle on purpose: joining a call or accepting one must not wait on a chunk fetch. When the check fails, split another surface that the first screen does not need the same way.
+The settings panels (user settings, instance administration, space settings, and their mobile screens) are loaded on demand from `components/modals/lazySettingsPanels.tsx` and render inside its `SettingsPanelSuspense`. Their chunks are ordinary `.js` build assets, so the precache patterns cover them and they open offline. emoji-mart's data set is split out the same way (`utils/emojiData.ts`), but it is needed for the first render: `main.tsx` requests it and Discord's shortcode table together with `appBoot` (only on the app's path, so a visitor at the product page does not pay for them; see [landing.md](landing.md)), and `appBoot.tsx` waits for them for at most one second before rendering. Past that, text shows shortcodes as written and converts when the names arrive (`useEmojiShortcodeNames` in `utils/emojiShortcodes.ts`). Voice stays in the startup bundle on purpose: joining a call or accepting one must not wait on a chunk fetch. When the check fails, split another surface that the first screen does not need the same way.
+
+### Compression and caching
+
+The bundled Caddy compresses what it sends (`encode zstd gzip` in the `Caddyfile`) except `/api/*`, `/ws`, `/livekit/*`, `/downloads/*` and `/fonts/*`: API answers mix secrets with what a person typed, the shape a compression side channel needs, the updater wants the installers' exact bytes and ranges, and a `.woff2` is compressed already. A changed `Caddyfile` takes effect with `docker compose up -d` after the update, `update.sh` restarts only the app. Behind your own reverse proxy (`docker-compose.proxy.yml`) compression is that proxy's job.
+
+The app sets the cache lifetimes (`packages/server/src/index.ts`): files under `/assets/` are named by their content and stay for a year (`immutable`), typefaces for a week, the page and the manifest are revalidated on every load (`no-cache`).
 
 ### Container hardening (non-root)
 
@@ -181,12 +200,7 @@ Caddy provisions and renews TLS certificates automatically for `DOMAIN`; the per
 - It polls `curl -fsS --resolve DOMAIN:443:127.0.0.1 https://DOMAIN/api/health` for ~30 s. Using `--resolve` connects to the **local** Caddy while presenting the real SNI/Host and performing full certificate verification, so a pass proves a valid public cert is installed *and* the app answers over TLS. This is deliberately **hairpin-safe**: many self-hosted boxes cannot reach their own public address (router NAT hairpin), so a plain external self-request would false-negative even when the site is fine for everyone else.
 - **Live** → the summary shows `HTTPS: Live`. **Not live yet** → `HTTPS: Not live yet` plus guidance (point DNS here, open/forward ports 80/443, watch `docker compose logs -f caddy`); Caddy keeps retrying and HTTPS comes up automatically once both are in place.
 
-**Telemetry environment.** Two variables, neither required. Full detail in [telemetry.md](telemetry.md).
-
-| Var | Default | Meaning |
-|-----|---------|---------|
-| `TELEMETRY` | _(unset)_ | Read by `install.sh` only, for unattended installs. `on` or `off` runs the same transition the admin route runs (`setTelemetryEnabled` in `packages/server/src/telemetry/state.ts`), written into the running container after the health check the same way the instance name is; `on` for an instance that is already on keeps its id and its last reported day. Any other value prints an error and changes nothing. Unset, the installer writes nothing and the admin panel asks after the first login. The running server never reads it. |
-| `TELEMETRY_ENDPOINT` | `https://hello.backspacechat.com` | Receiver base URL for the daily ping, read by the server and by the metrics collector. Point it at a local `wrangler dev` to test end to end. |
+**Desktop downloads.** `DOWNLOADS_DIR` (default `downloads/` beside the database, so `data/downloads` in Docker) holds the desktop release the server serves at `/downloads/desktop/` and describes at `GET /api/desktop/release`. Publishing one is extracting the archive `scripts/package-desktop.mjs` writes into `data/`; see [desktop.md](desktop.md), "Releases". There is no usage reporting and no release lookup: Tavvit removed both.
 
 **Space directory environment.** One variable, not required. Full detail in [directory.md](directory.md).
 
@@ -242,36 +256,21 @@ Two shell traps this script exists on the far side of, worth knowing before edit
 
 ---
 
+
+## Checking a release
+
+Two scripts, each printing only what failed:
+
+- `node scripts/release-check.mjs`: types, catalogs, lint on the files changed since the last commit, every test once, the web build. `--only <step>` runs one of them.
+- `node scripts/release-check-browser.mjs <seed.json>`: against a demo instance on a production build (`scripts/landing-shots/README.md` has the setup; build first and start the server after, since it reads the built page once). Who lands where on the way in, signing in and up from the product page, what a visitor downloads, the headers of the page and of an invite link, an unknown address, changing language in place. Then it takes the main states and names only a picture that changed by more than 3 percent since its last run, in `dist/release-check/`. `--doors-only` leaves the pictures out.
+
+They do not cover what needs the real server: LiveKit, Caddy's compression, updating an installed desktop app.
+
 ## 2. Admin Bootstrap
 
-**There is no default/seed admin account.** A fresh instance starts with zero users. Admin is granted by registration order, with a recovery net for the case where every admin is later deleted.
+**There is no default/seed admin account, and registering makes nobody an administrator.** A fresh instance starts with zero users. `install.sh` asks for the first administrator and creates it with `tavvit-admin`; by hand it is `./tavvit-admin.sh create <username> --admin` (docs/tavvit/FIRST-ADMIN.md). The startup summary names this as the next step for as long as there is no administrator.
 
-### First registered user becomes admin
-
-In `packages/server/src/routes/auth.ts`, registration computes:
-
-```ts
-const userCount = db.select().from(schema.users).all().length;
-const isFirstUser = userCount === 0 && !homeInstance;
-// ...
-isAdmin: isFirstUser ? 1 : 0,
-```
-
-The very first **locally-registered** user (`userCount === 0` **and** `!homeInstance`) is created with `isAdmin = 1`. The `!homeInstance` guard is a federation invariant: a replicated user (one whose identity is homed on another instance) is never an admin of *this* instance, even if they happen to be the first row written. This means the operator simply registers the first account after install to obtain admin rights — no credentials are printed, shipped, or stored anywhere.
-
-### Recovery net: `ensureDefaults` re-promotes the earliest user
-
-`ensureDefaults` (`packages/server/src/db/migrate.ts`) runs on **every boot**, after migrations. Among its idempotent invariants:
-
-```ts
-const anyAdmin = db.prepare('SELECT id FROM users WHERE is_admin = 1 LIMIT 1').get();
-if (!anyAdmin) {
-  const firstUser = db.prepare('SELECT id FROM users ORDER BY created_at ASC LIMIT 1').get();
-  if (firstUser) db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(firstUser.id);
-}
-```
-
-If the instance ever ends up with **no admins** (e.g. the sole admin deleted their account), the next restart promotes the earliest-registered remaining user back to admin. This guarantees an instance can never become permanently un-administerable. It does **not** run when an admin already exists, so it never overrides the operator's chosen admin set during normal operation.
+Until 1.31.0 the first to register on an instance with open registration became an administrator, and `ensureDefaults` promoted the earliest account at each start when none was left: on an open instance, either was a way in for a stranger. Both are gone. An instance whose last administrator is gone gets a new one the same way.
 
 ### Seed-admin remediation (legacy instances only)
 
@@ -464,3 +463,11 @@ These are accepted constraints of the current deploy model, documented so operat
 | Restore a snapshot | `./restore.sh <snapshot-filename>` |
 | Rotate legacy seed admin | `docker exec -w /app/packages/server backspace node --import tsx/esm src/scripts/remediate-seed-admin.ts` |
 | Grant first admin (fresh instance) | Register the first account; it becomes admin automatically. |
+
+## Legal setup before going public
+
+After the first start, in the admin console (the shield in the top bar) → Legal: fill in who runs the server, then insert the drafts, read and adjust them, have them checked and publish them ([legal.md](legal.md)). `publish-source.sh` makes the source archive the app links to; `update.sh` and `install.sh` run it, and an install updated by an older `update.sh` runs it once by hand.
+
+## Extra domains
+
+`Caddyfile` ends with `import /etc/caddy/sites/*.caddy`, and compose mounts `data/caddy-sites` there read-only. An operator's redirects live in that folder, which `update.sh` never touches, so they survive the updates that replace `Caddyfile`. A glob that matches nothing is only a warning in Caddy, so an empty folder is fine; a non-glob path that is missing would stop it from starting, so keep the `*`. `update.sh` restarts only the app, so a changed `Caddyfile` or a new file there takes effect after `docker compose up -d caddy` or `restart caddy`. Steps: [DEPLOYMENT.md](../tavvit/DEPLOYMENT.md), "More domains".

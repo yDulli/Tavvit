@@ -5,6 +5,7 @@ import { useSpaceStore } from '../../stores/spaceStore';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
 import { useDragToClose } from '../../hooks/useDragToClose';
 import { getSpaceGradient } from '../../utils/gradients';
+import { SHEET_HANDLE } from './mobileClasses';
 
 const FOLDER_COLORS = [
   { name: 'Mint', value: 'rgb(var(--accent-mint))' },
@@ -57,16 +58,18 @@ export function MobileFolderSheet({ folder, onClose, onSelectSpace, onUpdateFold
         type: 'custom',
         render: () => (
           <div className="px-5 py-3">
-            <p className="text-[11px] text-txt-tertiary mb-2">{t('spaces:sidebar.folder.color')}</p>
-            <div className="flex gap-2">
+            <p className="field-label">{t('spaces:sidebar.folder.color')}</p>
+            <div className="flex flex-wrap gap-2">
               <button
-                className={`w-6 h-6 rounded-full border-2 ${!folder.color ? 'border-white/40' : 'border-transparent'} bg-white/10`}
+                type="button"
+                className={`h-8 w-8 rounded border-2 ${!folder.color ? 'border-txt-primary' : 'border-transparent'} bg-white/10`}
                 onClick={() => { onUpdateFolder(folder.id, { color: null }); useContextMenuStore.getState().close(); }}
               />
               {FOLDER_COLORS.map(c => (
                 <button
                   key={c.name}
-                  className={`w-6 h-6 rounded-full border-2 ${folder.color === c.value ? 'border-white/40' : 'border-transparent'}`}
+                  type="button"
+                  className={`h-8 w-8 rounded border-2 ${folder.color === c.value ? 'border-txt-primary' : 'border-transparent'}`}
                   style={{ background: c.value }}
                   onClick={() => { onUpdateFolder(folder.id, { color: c.value }); useContextMenuStore.getState().close(); }}
                 />
@@ -96,9 +99,9 @@ export function MobileFolderSheet({ folder, onClose, onSelectSpace, onUpdateFold
 
   return (
     <>
-      <div className="fixed inset-0 z-[300] bg-black/50" onClick={onClose} />
+      <div className="modal-scrim fixed inset-0 z-[300]" onClick={onClose} />
       <div
-        className={`fixed bottom-0 left-0 right-0 z-[301] rounded-t-2xl glass-modal max-h-[calc(60*var(--app-vh))] flex flex-col ${
+        className={`fixed bottom-0 left-0 right-0 z-[301] rounded-t-lg glass-modal max-h-[calc(60*var(--app-vh))] flex flex-col ${
           hasInteracted ? '' : 'animate-slide-up-sheet'
         }`}
         style={{ paddingBottom: 'var(--safe-bottom)', ...dragStyle }}
@@ -108,29 +111,29 @@ export function MobileFolderSheet({ folder, onClose, onSelectSpace, onUpdateFold
             (`onContextMenu`); only vertical drag past the dead-zone is
             captured by the gesture. */}
         <div {...dragHandleProps} className="shrink-0 touch-none">
-          <div className="w-10 h-1 bg-txt-tertiary/30 rounded-full mx-auto mt-2 mb-1" />
+          <div aria-hidden="true" className={SHEET_HANDLE} />
 
         {/* Folder header */}
-        <div className="px-4 py-2 flex items-center gap-2" data-context-menu onContextMenu={handleFolderContextMenu}>
+        <div className="flex min-h-11 items-center gap-2 border-b border-border-hard px-4 py-2" data-context-menu onContextMenu={handleFolderContextMenu}>
           <div
-            className="w-5 h-5 rounded"
+            className="h-5 w-5 flex-shrink-0 rounded"
             style={{ background: folder.color || 'rgb(var(--text-tertiary))' }}
           />
           {isRenaming ? (
             <input
               autoFocus
-              className="input-embedded text-sm font-semibold text-txt-primary flex-1 bg-transparent"
+              className="input-embedded min-w-0 flex-1 bg-transparent font-semibold text-txt-primary"
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onBlur={handleRename}
               onKeyDown={(e) => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') setIsRenaming(false); }}
             />
           ) : (
-            <h3 className="text-sm font-semibold text-txt-primary flex-1 truncate">
+            <h3 className="min-w-0 flex-1 truncate text-lead font-semibold tracking-[-0.01em] text-txt-primary">
               {folder.name || t('spaces:sidebar.folder.unnamed')}
             </h3>
           )}
-          <span className="text-xs text-txt-tertiary">{t('spaces:sidebar.folder.spaceCount', { count: folderSpaces.length })}</span>
+          <span className="flex-shrink-0 text-meta text-txt-tertiary">{t('spaces:sidebar.folder.spaceCount', { count: folderSpaces.length })}</span>
         </div>
         </div>
 
@@ -145,19 +148,19 @@ export function MobileFolderSheet({ folder, onClose, onSelectSpace, onUpdateFold
               <button
                 key={space.id}
                 onClick={() => { onSelectSpace(space.id); onClose(); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-interactive-hover text-left transition-colors"
+                className="list-row min-h-11 w-full px-2 py-1.5"
               >
                 <div
-                  className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0"
+                  className="h-8 w-8 shrink-0 overflow-hidden rounded-md flex items-center justify-center"
                   style={!iconUrl ? { background: grad.gradient } : undefined}
                 >
                   {iconUrl ? (
                     <img src={iconUrl} alt={space.name} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-xs font-bold text-white">{space.name.charAt(0).toUpperCase()}</span>
+                    <span className="font-mono text-meta font-semibold text-white">{space.name.charAt(0).toUpperCase()}</span>
                   )}
                 </div>
-                <span className="text-sm text-txt-primary truncate">{space.name}</span>
+                <span className="min-w-0 truncate text-body text-txt-primary">{space.name}</span>
               </button>
             );
           })}

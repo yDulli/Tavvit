@@ -1,3 +1,5 @@
+import { rateLimitsDisabled } from './rateLimitSwitch.js';
+
 /**
  * A fixed-window counter for limits on WebSocket events, which the HTTP rate
  * limiter (`@fastify/rate-limit`) does not see: a window starts at a key's
@@ -11,13 +13,10 @@
 export interface FixedWindowLimit {
   /** Count one event for `key`. True when it is within the limit, false when it is refused. */
   consume(key: string, now?: number): boolean;
+  /** What is left of `key`'s window, and when the next one starts. */
+  state(key: string, now?: number): { remaining: number; resetInSeconds: number };
   /** Tests only: forget every window. */
   reset(): void;
-}
-
-function rateLimitsDisabled(): boolean {
-  const value = process.env.DISABLE_RATE_LIMITS;
-  return value === '1' || value === 'true';
 }
 
 export function createFixedWindowLimit(limit: { readonly max: number; readonly windowMs: number }): FixedWindowLimit {
@@ -43,6 +42,16 @@ export function createFixedWindowLimit(limit: { readonly max: number; readonly w
       }
       window.count += 1;
       return window.count <= limit.max;
+    },
+    state(key: string, now: number = Date.now()): { remaining: number; resetInSeconds: number } {
+      const window = windows.get(key);
+      if (rateLimitsDisabled() || !window || now - window.startedAt >= limit.windowMs) {
+        return { remaining: limit.max, resetInSeconds: Math.ceil(limit.windowMs / 1000) };
+      }
+      return {
+        remaining: Math.max(0, limit.max - window.count),
+        resetInSeconds: Math.max(1, Math.ceil((window.startedAt + limit.windowMs - now) / 1000)),
+      };
     },
     reset(): void {
       windows.clear();

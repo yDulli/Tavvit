@@ -11,8 +11,6 @@ vi.mock('../audio/AudioManager', () => ({
     }),
   },
 }));
-vi.mock('../hooks/useMascotAnimation', () => ({ useMascotAnimation: vi.fn() }));
-
 /** A socket the real handler talks to; the test plays the server through `deliver`. */
 class FakeWebSocket {
   static readonly CONNECTING = 0;

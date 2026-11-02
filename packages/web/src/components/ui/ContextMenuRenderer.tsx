@@ -1,7 +1,8 @@
 import { layoutRect, layoutPixels } from '../../platform/interfaceScale';
-import React, { useEffect, useLayoutEffect, useRef, useCallback, useState, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useCallback, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { Icon } from './Icon';
 import {
   useContextMenuStore,
   filterMenuItems,
@@ -12,21 +13,55 @@ import {
 } from '../../stores/contextMenuStore';
 import { useUIStore } from '../../stores/uiStore';
 import { usePortalContainer } from '../../hooks/usePortalContainer';
+import { useGlobalContextMenu } from './globalContextMenu';
+import { SHEET_HANDLE, SHEET_ROW } from '../layout/mobileClasses';
 
 // ── Desktop item button ──────────────────────────────────────────────────────
 
-// An item the arrow keys moved to looks like a hovered one.
+// One row geometry for every item: 32px, a 5px corner, 13px medium text. An
+// item the arrow keys moved to looks like a hovered one.
+const ITEM_BASE = 'group/item w-full min-h-8 text-left px-2 py-1.5 mx-1 text-ui font-medium leading-snug rounded-md flex items-center gap-2.5';
 const ITEM_CLASS =
-  'w-full text-left px-2 py-1.5 mx-1.5 text-sm rounded-sm flex items-center gap-2 text-txt-secondary hover:bg-accent-primary hover:text-white outline-none focus-visible:bg-accent-primary focus-visible:text-white';
+  `${ITEM_BASE} text-txt-secondary transition-colors hover:bg-interactive-selected hover:text-txt-primary active:bg-interactive-active outline-none focus-visible:bg-interactive-selected focus-visible:text-txt-primary`;
 const ITEM_DANGER_CLASS =
-  'w-full text-left px-2 py-1.5 mx-1.5 text-sm rounded-sm flex items-center gap-2 text-txt-danger hover:bg-accent-rose hover:text-white outline-none focus-visible:bg-accent-rose focus-visible:text-white';
+  `${ITEM_BASE} text-txt-danger transition-colors hover:bg-accent-rose/15 hover:text-accent-rose active:bg-accent-rose/25 outline-none focus-visible:bg-accent-rose/15 focus-visible:text-accent-rose`;
 const ITEM_DISABLED_CLASS =
-  'w-full text-left px-2 py-1.5 mx-1.5 text-sm rounded-sm flex items-center gap-2 text-txt-secondary opacity-50 cursor-default';
-const ITEM_STYLE: React.CSSProperties = { width: 'calc(100% - 12px)' };
+  `${ITEM_BASE} text-txt-secondary opacity-50 cursor-not-allowed`;
+const ITEM_STYLE: React.CSSProperties = { width: 'calc(100% - 8px)' };
+
+/** Whether the menu being drawn has an icon on any row: then every row keeps the column, so its labels start at one x. */
+const MenuHasIcons = createContext(false);
+
+function menuHasIcons(items: readonly ContextMenuItem[]): boolean {
+  return items.some((item) => (item.type === 'action' || item.type === 'submenu') && !!item.icon);
+}
+
+/**
+ * A row's icon column: quiet at rest, the row's own colour under the pointer or
+ * the arrow keys. A destructive row's icon is in the danger colour from the
+ * start, with its text; a disabled row's does not answer the pointer.
+ */
+function ItemIcon({ icon, danger = false, still = false }: { icon?: React.ReactNode; danger?: boolean; still?: boolean }) {
+  const hasIcons = useContext(MenuHasIcons);
+  if (!icon && !hasIcons) return null;
+  const tone = danger
+    ? ''
+    : still
+      ? 'text-txt-tertiary'
+      : 'text-txt-tertiary group-hover/item:text-txt-primary group-focus-visible/item:text-txt-primary';
+  return <span aria-hidden="true" className={`flex h-4 w-4 flex-shrink-0 items-center justify-center ${tone}`}>{icon}</span>;
+}
 
 // ── Mobile item button ───────────────────────────────────────────────────────
 
-const MOBILE_ITEM_CLASS = 'w-full text-left px-5 py-3 text-sm flex items-center gap-3';
+const MOBILE_ITEM_CLASS = SHEET_ROW;
+
+/** The same rule as `ItemIcon` at the sheet's size. There is no pointer to answer, so the tone holds. */
+function MobileItemIcon({ icon, danger = false }: { icon?: React.ReactNode; danger?: boolean }) {
+  const hasIcons = useContext(MenuHasIcons);
+  if (!icon && !hasIcons) return null;
+  return <span aria-hidden="true" className={`flex h-5 w-5 flex-shrink-0 items-center justify-center ${danger ? '' : 'text-txt-secondary'}`}>{icon}</span>;
+}
 
 // ── Checkbox indicator ───────────────────────────────────────────────────────
 
@@ -60,7 +95,7 @@ function ReactiveCheckboxItem({ item, isMobile }: ReactiveCheckboxItemProps) {
   const disabled = useSyncExternalStore(item.subscribe, item.getDisabled ?? checkboxEnabled);
 
   const className = isMobile
-    ? `${MOBILE_ITEM_CLASS} text-txt-primary disabled:opacity-50`
+    ? `${MOBILE_ITEM_CLASS} text-txt-primary`
     : disabled ? ITEM_DISABLED_CLASS : ITEM_CLASS;
 
   return (
@@ -76,7 +111,8 @@ function ReactiveCheckboxItem({ item, isMobile }: ReactiveCheckboxItemProps) {
         item.onChange(!checked);
       }}
     >
-      <span className="flex-1">{item.label}</span>
+      {isMobile ? <MobileItemIcon /> : <ItemIcon still={disabled} />}
+      <span className="min-w-0 flex-1">{item.label}</span>
       <CheckboxIndicator checked={checked} />
     </button>
   );
@@ -181,15 +217,17 @@ function SubmenuFlyout({ submenu, triggerRef, onMouseEnter, onMouseLeave, close 
       aria-label={submenu.label}
       onKeyDown={handleKeyDown}
       onContextMenu={suppressNativeMenu}
-      className="fixed z-[210] glass rounded-md py-1.5 min-w-[160px] overflow-y-auto scrollbar-thin animate-fade-in"
+      className="fixed z-[210] glass rounded-lg py-1 min-w-[180px] max-w-[320px] overflow-y-auto scrollbar-thin animate-slide-up"
       style={{ left: -9999, top: -9999 }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {filteredChildren.map((child) => (
-        <DesktopLeafItem key={child.key} item={child} close={close} />
-      ))}
+      <MenuHasIcons.Provider value={menuHasIcons(filteredChildren)}>
+        {filteredChildren.map((child) => (
+          <DesktopLeafItem key={child.key} item={child} close={close} />
+        ))}
+      </MenuHasIcons.Provider>
     </div>,
     portalContainer,
   );
@@ -205,7 +243,7 @@ interface DesktopLeafItemProps {
 function DesktopLeafItem({ item, close }: DesktopLeafItemProps) {
   switch (item.type) {
     case 'separator':
-      return <div role="separator" className="h-px bg-white/[0.06] my-1 mx-1.5" />; // i18n-check: allow-literal (the check reads the following `case` as JSX text)
+      return <div role="separator" className="my-1 h-px bg-border-hard" />; // i18n-check: allow-literal (the check reads the following `case` as JSX text)
 
     case 'custom':
       return <div role="group">{item.render(close)}</div>; // i18n-check: allow-literal (the check reads the following `case` as JSX text)
@@ -233,7 +271,7 @@ function DesktopLeafItem({ item, close }: DesktopLeafItemProps) {
             close();
           }}
         >
-          {item.icon && <span className="w-4 h-4">{item.icon}</span>}
+          <ItemIcon icon={item.icon} danger={!!item.danger && !item.disabled} still={!!item.disabled} />
           {item.label}
         </button>
       );
@@ -318,9 +356,9 @@ function DesktopSubmenuItem({ item, close }: DesktopSubmenuItemProps) {
         onMouseEnter={handleTriggerEnter}
         onMouseLeave={handleTriggerLeave}
       >
-        {item.icon && <span className="w-4 h-4">{item.icon}</span>}
+        <ItemIcon icon={item.icon} />
         <span className="flex-1">{item.label}</span>
-        <span className="text-txt-tertiary text-xs ml-auto">{'\u203A'}</span>
+        <Icon name="chevron-right" size={14} className="ml-auto flex-shrink-0 text-txt-tertiary" />
       </button>
       {isOpen && (
         <SubmenuFlyout
@@ -438,15 +476,17 @@ function DesktopMenu({ items, position, close, closeGuard }: DesktopMenuProps) {
         ref={menuRef}
         role="menu"
         tabIndex={-1}
-        className="fixed z-[200] min-w-[180px] py-1.5 glass rounded-md animate-fade-in max-h-[calc(calc(100*var(--app-vh))-16px)] overflow-y-auto scrollbar-thin outline-none"
+        className="fixed z-[200] min-w-[200px] max-w-[320px] py-1 glass rounded-lg animate-slide-up max-h-[calc(calc(100*var(--app-vh))-16px)] overflow-y-auto scrollbar-thin outline-none"
         style={{ left: position.x, top: position.y }}
         onKeyDown={handleKeyDown}
         onContextMenu={suppressNativeMenu}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {items.map((item) => (
-          <DesktopMenuItem key={item.key} item={item} close={close} />
-        ))}
+        <MenuHasIcons.Provider value={menuHasIcons(items)}>
+          {items.map((item) => (
+            <DesktopMenuItem key={item.key} item={item} close={close} />
+          ))}
+        </MenuHasIcons.Provider>
       </div>
     </>,
     portalContainer,
@@ -463,7 +503,7 @@ interface MobileLeafItemProps {
 function MobileLeafItem({ item, close }: MobileLeafItemProps) {
   switch (item.type) {
     case 'separator':
-      return <div role="separator" className="h-px bg-white/[0.06] my-1 mx-1.5" />; // i18n-check: allow-literal (the check reads the following `case` as JSX text)
+      return <div role="separator" className="my-1 h-px bg-border-hard" />; // i18n-check: allow-literal (the check reads the following `case` as JSX text)
 
     case 'custom':
       return <div role="group">{item.render(close)}</div>; // i18n-check: allow-literal (the check reads the following `case` as JSX text)
@@ -472,12 +512,12 @@ function MobileLeafItem({ item, close }: MobileLeafItemProps) {
       return <ReactiveCheckboxItem item={item} isMobile />;
 
     case 'action': {
-      const colorClass = item.danger ? 'text-txt-danger' : 'text-txt-primary';
+      const colorClass = item.danger ? 'text-txt-danger hover:bg-accent-rose/10 active:bg-accent-rose/15' : 'text-txt-primary';
       return (
         <button
           type="button"
           role="menuitem"
-          className={`${MOBILE_ITEM_CLASS} ${colorClass} ${item.disabled ? 'opacity-50' : ''}`}
+          className={`${MOBILE_ITEM_CLASS} ${colorClass}`}
           disabled={item.disabled}
           onClick={(e) => {
             e.stopPropagation();
@@ -486,8 +526,8 @@ function MobileLeafItem({ item, close }: MobileLeafItemProps) {
             close();
           }}
         >
-          {item.icon && <span className="w-5 h-5">{item.icon}</span>}
-          {item.label}
+          <MobileItemIcon icon={item.icon} danger={item.danger} />
+          <span className="min-w-0 flex-1 truncate">{item.label}</span>
         </button>
       );
     }
@@ -505,14 +545,19 @@ function MobileMenu({ items, close }: MobileMenuProps) {
   const { t } = useTranslation('common');
   const [submenuStack, setSubmenuStack] = useState<ContextMenuSubmenu | null>(null);
   const portalContainer = usePortalContainer();
+  const sheetRef = useRef<HTMLDivElement>(null);
 
-  // Dismiss on scroll/resize
+  // Dismiss on scroll/resize; scrolling a long menu inside the sheet is not a dismissal.
   useEffect(() => {
     const dismiss = () => close();
-    window.addEventListener('scroll', dismiss, true);
+    const dismissOnScroll = (event: Event) => {
+      if (event.target instanceof Node && sheetRef.current?.contains(event.target)) return;
+      close();
+    };
+    window.addEventListener('scroll', dismissOnScroll, true);
     window.addEventListener('resize', dismiss);
     return () => {
-      window.removeEventListener('scroll', dismiss, true);
+      window.removeEventListener('scroll', dismissOnScroll, true);
       window.removeEventListener('resize', dismiss);
     };
   }, [close]);
@@ -525,30 +570,32 @@ function MobileMenu({ items, close }: MobileMenuProps) {
   return createPortal(
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-[300] bg-black/50" onClick={close} />
+      <div className="modal-scrim fixed inset-0 z-[300]" onClick={close} />
       {/* Bottom sheet */}
       <div
+        ref={sheetRef}
         role="menu"
         aria-label={submenuStack?.label}
-        className="fixed bottom-0 left-0 right-0 z-[301] rounded-t-2xl glass-bubble animate-slide-up-sheet"
+        className="fixed bottom-0 left-0 right-0 z-[301] flex max-h-[calc(85*var(--app-vh))] flex-col rounded-t-lg glass-modal animate-slide-up-sheet"
         style={{ paddingBottom: 'var(--safe-bottom)' }}
       >
-        <div aria-hidden="true" className="w-10 h-1 bg-txt-tertiary/30 rounded-full mx-auto mt-2 mb-1" />
+        <div aria-hidden="true" className={`${SHEET_HANDLE} flex-shrink-0`} />
         {/* Back button for submenu */}
         {submenuStack && (
           <button
             type="button"
             role="menuitem"
-            className={`${MOBILE_ITEM_CLASS} text-txt-secondary`}
+            className={`${MOBILE_ITEM_CLASS} flex-shrink-0 border-b border-border-hard text-txt-secondary`}
             onClick={() => setSubmenuStack(null)}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="flex-shrink-0" aria-hidden="true">
               <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
             </svg>
             <span>{t('actions.back')}</span>
           </button>
         )}
-        <div role="none" className="py-1">
+        <div role="none" className="min-h-0 overflow-y-auto py-1 scrollbar-thin">
+          <MenuHasIcons.Provider value={menuHasIcons(currentItems)}>
           {currentItems.map((item) => {
             if (item.type === 'submenu') {
               // Render submenu trigger as a button that switches sheet content
@@ -565,14 +612,15 @@ function MobileMenu({ items, close }: MobileMenuProps) {
                     setSubmenuStack(item);
                   }}
                 >
-                  {item.icon && <span className="w-5 h-5">{item.icon}</span>}
-                  <span className="flex-1">{item.label}</span>
-                  <span className="text-txt-tertiary text-sm">{'\u203A'}</span>
+                  <MobileItemIcon icon={item.icon} />
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  <Icon name="chevron-right" size={16} className="flex-shrink-0 text-txt-tertiary" />
                 </button>
               );
             }
             return <MobileLeafItem key={item.key} item={item as ContextMenuLeafItem} close={close} />;
           })}
+          </MenuHasIcons.Provider>
         </div>
       </div>
     </>,
@@ -685,6 +733,8 @@ export function ContextMenuRenderer() {
 
   // Global long-press detection — enables context menus on all touch targets
   useGlobalLongPress(isMobile);
+  // The right click everywhere: never the browser's menu, a fitting one of ours.
+  useGlobalContextMenu(isMobile);
 
   if (!menu) return null;
 

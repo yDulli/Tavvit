@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# A stand-in for the `docker` CLI, just faithful enough for update.sh and
+# backup.sh to run against. test/update-script.test.ts puts it first on PATH and
+# drives it through files in $FAKE_DOCKER_STATE, so each scenario (a good update,
+# a failed build, an unhealthy new image, a container that is not recreated) is a
+# few lines of setup rather than a real daemon.
+#
+# State files, all under $FAKE_DOCKER_STATE:
+#   running_image        image ID the container runs now
+#   tag.<ref>            image ID a reference (e.g. tavvit:local) points at
+#   next_image           image ID `compose build` produces
+#   build_mode           ok (default) | fail | noop
+#   up_mode              recreate (default) | stale: `up -d` leaves the old container running
+#   bad_image            an image ID whose container never becomes healthy
+#   snapshot_mode        ok (default) | fail: the database snapshot fails
+#   container_running    true (default) | false
+#   container_health     healthy (default) | starting | unhealthy
+#   info_json            what /api/instance/info answers (doctor.sh)
+#   version.<imageid>    what that build reports from /api/instance/info
+#   calls.log            every invocation, for assertions
+set -u
+S="${FAKE_DOCKER_STATE:?FAKE_DOCKER_STATE must be set}"
+# State keys such as "tag.tavvit:local" contain a colon, which Windows file systems
+# reserve, so every key is stored with ":" turned into "_".
+key() { printf '%s' "${1//:/_}"; }
+rd() { local f; f="$S/$(key "$1")"; if [[ -f "$f" ]]; then cat "$f"; fi; }
+wr() { printf '%s' "$2" > "$S/$(key "$1")"; }
+norm() { local id="$1"; [[ "$id" == sha256:* ]] || id="sha256:$id"; printf '%s' "$id"; }
+printf '%s\n' "docker $*" >> "$S/calls.log"
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  info) exit 0 ;;
+
+  ps) printf 'backspace\ncaddy\n' ;;
+
+  compose)
+    sub="${1:-}"; shift || true
+    case "$sub" in
+      version) echo "2.29.0" ;;
+      config)
+        if [[ "$*" == *--services* ]]; then printf 'backspace\ncaddy\n'
+        elif [[ "$*" == *--images* ]]; then echo "tavvit:local"
+        fi ;;
+      build)
+        case "$(rd build_mode)" in
+          fail) echo "ERROR: build failed" >&2; exit 1 ;;
+          noop) : ;;
+          *) wr "tag.tavvit:local" "$(rd next_image)" ;;
+        esac ;;
+      pull) : ;;
+      up)
+        if [[ "$(rd up_mode)" != "stale" ]]; then wr running_image "$(rd tag.tavvit:local)"; fi ;;
+      logs) echo "fake service log line" ;;
+      *) : ;;
+    esac ;;
+
+  tag) wr "tag.${2:-}" "$(norm "${1:-}")" ;;
+
+  image)
+    # docker image inspect --format '{{.Id}}' <ref>
+    ref="${*: -1}"
+    rd "tag.${ref}"
+    echo ;;
+
+  inspect)
+    fmt=""
+    while [[ $# -gt 0 ]]; do
+      if [[ "$1" == "--format" || "$1" == "-f" ]]; then fmt="$2"; shift; fi
+      shift
+    done
+    case "$fmt" in
+      '{{.Image}}') rd running_image; echo ;;
+      '{{.Config.Image}}') echo "tavvit:local" ;;
+      '{{.State.Running}}')
+        if [[ "$(rd container_running)" == "false" ]]; then echo false; else echo true; fi ;;
+      *'.State.Health.Status'*)
+        if [[ -n "$(rd container_health)" ]]; then rd container_health; echo
+        elif [[ "$(rd running_image)" == "$(rd bad_image)" && -n "$(rd bad_image)" ]]; then echo unhealthy
+        else echo healthy; fi ;;
+      *'.State.Status'*) echo "running (exit code 0)" ;;
+      *'.State.Health.Log'*) echo "fake probe output" ;;
+      *) : ;;
+    esac ;;
+
+  exec)
+    args="$*"
+    if [[ "$args" == *"process.stdin"* ]]; then
+      # doctor.sh's field extractor reads JSON on stdin: run the real thing.
+      script=""; extra=(); seen=0
+      for a in "$@"; do
+        if [[ $seen -eq 1 && -z "$script" ]]; then script="$a"; continue; fi
+        if [[ $seen -eq 1 ]]; then extra+=("$a"); fi
+        if [[ "$a" == "-e" ]]; then seen=1; fi
+      done
+      node -e "$script" "${extra[@]}"
+    elif [[ "$args" == *"process.stdout.write(t)"* ]]; then
+      # doctor.sh asking the app for /api/instance/info
+      if [[ -f "$S/info_json" ]]; then rd info_json; else exit 1; fi
+    elif [[ "$args" == *"node -e"* ]]; then
+      # update.sh's running_version(): what the running build reports
+      rd "version.$(rd running_image)"
+    elif [[ "$args" == *"snapshot.ts"* ]]; then
+      if [[ "$(rd snapshot_mode)" == "fail" ]]; then echo "disk full" >&2; exit 1; fi
+      echo "Manual snapshot written: /app/data/backups/backspace-fake-manual.db"
+    fi ;;
+
+  *) : ;;
+esac
+exit 0

@@ -9,14 +9,15 @@ Source files:
 - `packages/web/src/components/layout/ActivityPanel.tsx` — Friends activity sidebar (DM home view)
 - `packages/web/src/components/layout/MemberSidebar.tsx` — Space member list with activity display
 - `packages/web/src/components/ui/ActivityCard.tsx` — Activity display component, accent color helpers
+- `packages/web/src/components/ui/ProfileActivity.tsx` — The activity on the profile card and the full profile
 - `packages/web/src/components/modals/settingsPanels/PrivacyPanel.tsx` — showActivity toggle UI
 - `packages/server/src/ws/handler.ts` — ConnectionManager (in-memory activity state, rate limiting, disconnect cleanup)
 - `packages/server/src/ws/events.ts` — handlePresenceUpdate, handleActivityUpdate, validateActivities
 - `packages/server/src/utils/presenceBoot.ts` — boot-time reset of orphaned `users.status` rows (federation-safe)
 - `packages/server/src/routes/users.ts` — REST showActivity toggle with server-side activity clear
-- `packages/desktop/src/activityDetector.ts` — Process polling, game dictionary matching (boundary: see Desktop section)
+- `packages/desktop/src/activityDetector.ts`, `gameMatching.ts`, `gameLibraries.ts` — Asking the launchers, process polling, the game list (boundary: see Desktop section)
 - `packages/desktop/src/preload.ts` — IPC channel exposure (activity-detected, get-current-activity)
-- `packages/desktop/src/main.ts` — startActivityDetection call, IPC handler registration
+- `packages/desktop/src/main.ts` — game detection, on unless the person turned it off in Settings → Games (the choice in `gameDetectionSettings.ts`), IPC handler registration (desktop.md, "Activity Detection"). Activities come from the desktop app's detection only; there is no hand-set activity.
 
 ---
 
@@ -223,7 +224,7 @@ Desktop Process Scanner (15s poll)
             → Sends 'presence_update' to the user's profile audience (see Presence Broadcast Scope)
               → Client useWebSocket handler
                 → activityStore.setUserActivities()
-                  → UI re-renders (ActivityCard, MemberSidebar, ActivityPanel)
+                  → UI re-renders (MemberSidebar, ActivityPanel, ProfileActivity)
 ```
 
 ### Server-Side In-Memory State (`ws/handler.ts:ConnectionManager`)
@@ -311,7 +312,9 @@ function handleActivityUpdate(event, userId) {
 
 ## Desktop Activity Detection (Boundary)
 
-This spec covers how detected activities enter the broadcast pipeline. The detection internals (process scanning, game dictionary matching, dictionary sync) belong to a future `desktop.md` spec.
+This spec covers how detected activities enter the broadcast pipeline. The detection internals (asking Steam, Epic Games and GOG, process scanning, the game list and its sync) are in [desktop.md](desktop.md), "Activity Detection".
+
+**Detection is on by default.** The desktop app looks for games from its first start, until the person turns detection off in Settings → Games; a choice they saved stands. Detecting is not sharing: what the app finds reaches the instance, and from there anyone else, only while `showActivity` is on ("Visibility Control" below), which the client checks before it pushes and the server checks again on receipt.
 
 ### Summary of Detection Interface
 
@@ -319,9 +322,9 @@ This spec covers how detected activities enter the broadcast pipeline. The detec
 |-----------|------|
 | `activityDetector.ts:startActivityDetection(callback)` | Starts 15s polling loop; calls `callback` with `Activity \| null` on change |
 | `activityDetector.ts:getCurrentActivity()` | Returns current detected `Activity` or `null` (synchronous) |
-| `main.ts:810-812` | Starts detection on app ready; forwards changes via IPC `activity-detected` |
-| `main.ts:814` | Registers `get-current-activity` IPC handler |
-| `preload.ts:73-78` | Exposes `onActivityDetected` (subscription) and `getCurrentActivity` (invoke) to renderer |
+| `main.ts` (`app.whenReady`) | Starts detection unless the person turned it off (`game-detection.json`); forwards changes via IPC `activity-detected`. `game-detection-set-enabled` starts and stops it, and stopping sends `activity-detected` null |
+| `main.ts` (`get-current-activity`) | Registers the IPC handler; it answers null while detection is off |
+| `preload.ts` | Exposes `onActivityDetected` (subscription) and `getCurrentActivity` (invoke) to renderer |
 
 ### Bridge to Activity Store
 
@@ -366,7 +369,7 @@ Every instance delivers presence under its own row id: the viewer's home names a
 
 - **Key:** `userKey(subject, origin)`, the person's home identity, the one keying rule for people on the client (client-federation.md section 5). `userViews` uses the same key, so `updateMemberPresence` finds a person's cached view directly.
 - **Writers:** the `presence_update` handler builds the subject with `presenceSubjectOf(event, origin)` and the ready handler with `readyActivityEntries(event)` (`utils/presenceSubject.ts`). `socialStore.updateFriendPresence(subject, origin, status)` matches friends by the same key, and `spaceStore.updateMemberPresence(subject, origin, status)` matches roster rows (each keyed with its space's `_instanceOrigin`) and the `userViews` entry under the same key.
-- **Readers:** `activitiesFor(map, user, origin)` (`stores/activityStore.ts`). FriendsPage and ActivityPanel pass the friend and its `_instanceOrigin`; MemberSidebar and MobileMembersScreen pass `member.user` and the space's `_instanceOrigin`. Nothing looks an entry up by a raw id.
+- **Readers:** `activitiesFor(map, user, origin)` (`stores/activityStore.ts`). FriendsPage and ActivityPanel pass the friend and its `_instanceOrigin`; MemberSidebar and MobileMembersScreen pass `member.user` and the space's `_instanceOrigin`; ProfileActivity passes the profile's user and the origin the profile was opened with. Nothing looks an entry up by a raw id.
 - **Older servers.** A server without the identity fields sends only its row id. `presenceSubjectOf` then takes the identity from a row the client already holds for that (id, origin): a friend, a member of the loaded space from that origin, a DM member from that origin, or a member that origin's last `ready` listed in any of its spaces (`originRows`); an unknown id is taken as native to the delivering instance. `readyActivityEntries` without `userActivityIdentities` takes it from the space and DM members of the same payload. Without `originRows`, a member of a space that is not open was keyed as native on live updates, so the end of a game landed on another key than the ready snapshot's and the game stayed.
 - **Limit:** a native user of the page's instance is keyed by the hostname of `window.location.host`, and a replicated row of that user elsewhere by its `homeInstance` (the hostname of the instance's `DOMAIN`). `userKey` compares hosts without the port (client-federation.md §5, "One hostname, one identity host"), so the two agree whenever the page is opened at `DOMAIN`'s hostname, on any port, the Vite dev server included. They do not when the page is opened by a LAN IP or another host alias. Then that user's deliveries through their own home and through a peer land on two keys; deliveries through the home still reach the friends views.
 
@@ -380,7 +383,7 @@ The 5s debounce timer is stored as a module-level `let pushTimer` variable (not 
 
 ### ActivityCard (`ui/ActivityCard.tsx`)
 
-Renders the primary activity for a user. Used inside both `ActivityPanel` and `MemberSidebar`.
+Renders the primary activity for a user. Used inside `MemberSidebar`, `MobileMembersScreen` and `ProfileActivity`.
 
 **Props:** `{ activities: Activity[], fallbackCustomStatus?: string | null }`
 
@@ -409,27 +412,51 @@ Renders the primary activity for a user. Used inside both `ActivityPanel` and `M
 | `streaming` | `border-l-accent-rose` | Rose |
 | `custom` | (none) | No accent |
 
+### ProfileActivity (`ui/ProfileActivity.tsx`)
+
+What a person is doing now, on their profile card (`UserProfilePopout`) and
+their full profile (`UserProfileModal`), under the name, the badges and the
+custom status. One's own profile shows what this client reports
+(`myActivities`, when it is set); anyone else's shows the entry
+`activitiesFor(userActivities, user, origin)` holds, the activities their
+instance relayed, keyed as under "Keying" above. It renders only when at least
+one of the activities is not `custom`, since the profile shows the custom
+status itself: an "Activity" label over an `ActivityCard` of the activities,
+which draws the primary one ("Playing X", the details line, the elapsed time).
+A game the desktop app detected therefore shows on the profile the same way it
+shows in the member list.
+
 ### Row Rendering Pattern
 
-Both `ActivityPanel` and `MemberSidebar` use the same row rendering logic:
-- **Rich activity** (non-custom primary): `glass-pill` container with `border-l-2` accent + rounded corners (10px)
-- **No rich activity**: Standard flat row with hover state
+`MemberSidebar` renders every member as a flat `.list-row` with a hover state; a
+member with a rich activity (non-custom primary) adds a straight `border-l-2`
+accent on its left edge and no fill of its own. `ActivityPanel` no longer uses
+`ActivityCard` or the accent rows: its rows are plain `.list-row`s that say
+what the friend is doing in words (below).
 
 ---
 
 ## ActivityPanel (`layout/ActivityPanel.tsx`)
 
-Displayed in the DM home view (right sidebar, 240px wide). Shows friends grouped by activity status.
+"Active now": the right column beside the DM side of the app. It is not shown
+on the Home dashboard, which lists who is online itself (`RightPanel` returns
+null while `showsHomeDashboard` in `utils/homeNav.ts` is true), so the same
+friends never appear twice.
 
-### Friend Categorization
+### Who is listed
 
-Friends are sorted into three groups using `useMemo`:
+Only friends who are online, from `useFriendBuckets()` (`bucketFriends`):
+friends on voice first, then friends sharing a non-custom activity, then the
+rest, each group sorted by name. Offline friends are not listed at all. The
+header is "Active now" with the online count.
 
-| Group | Criteria | Display |
-|-------|----------|---------|
-| `activeFriends` | Not offline AND primary activity is non-custom | Shown first, no header |
-| `onlineFriends` | Not offline AND (no primary OR primary is custom) | Header: "ONLINE -- {count}" |
-| `offlineFriends` | Status is `offline` | Header: "OFFLINE -- {count}" |
+### Rows
+
+Each row is a `.list-row` with the avatar and its presence glyph, the name,
+`@domain` for a federated friend, and what the friend is doing in words from
+`useFriendDoing` (`components/home/friendDoing.ts`): "In voice · {space}",
+"Playing X" with a details line, the custom status, or the presence label.
+Pressing a row opens the profile card to the left.
 
 ### User ID Resolution
 
@@ -437,7 +464,9 @@ Activities are read with `activitiesFor(userActivities, friend, friend._instance
 
 ### Empty State
 
-When all three groups are empty, displays: "It's quiet for now..." with explanatory text.
+An `.empty-state`: "Nobody is around right now", with a different line when
+there are no friends at all, and an "Add friends" button that `RightPanel`
+supplies through `onAddFriends`; it opens `/friends?view=add`.
 
 ---
 

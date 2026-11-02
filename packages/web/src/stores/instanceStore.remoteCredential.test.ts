@@ -25,7 +25,7 @@ const ensurePeered = vi.fn(async () => ({ peeringStatus: 'active' }));
 // ── Target-instance API (built by `createApiClient`) ────────────────────────
 const remoteRegister = vi.fn();
 const remoteLogin = vi.fn();
-const remoteInfo = vi.fn(async () => ({ name: 'Orbit' }));
+const remoteInfo = vi.fn(async () => ({ name: 'Tavvit' }));
 
 // Keep the real exports: HttpError is what the store inspects on a failed
 // remote registration.
@@ -281,7 +281,7 @@ describe('ensureRemoteCredential (legacy connection migration)', () => {
     const changePassword = vi.fn(async () => ({ token: 'rotated-token' }));
     return {
       origin: REMOTE,
-      label: 'Orbit',
+      label: 'Tavvit',
       token: 'old-token',
       username: 'erin@nova.example',
       status: 'connected',
@@ -446,7 +446,7 @@ describe('every path that establishes a remote session reconciles the credential
     const changePassword = vi.fn(async () => ({ token: 'rotated-token' }));
     const legacy: ConnectedInstance = {
       origin: REMOTE,
-      label: 'Orbit',
+      label: 'Tavvit',
       token: 'still-valid-token',
       username: 'erin@nova.example',
       status: 'error',
@@ -480,7 +480,7 @@ describe('a re-authentication keeps the origin in the instance list', () => {
   function placeholder(status: ConnectedInstance['status']): ConnectedInstance {
     return {
       origin: REMOTE,
-      label: 'Orbit',
+      label: 'Tavvit',
       token: '',
       username: 'erin@nova.example',
       status,

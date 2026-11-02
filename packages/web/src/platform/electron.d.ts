@@ -78,6 +78,36 @@ interface DesktopUpdateSnapshot {
   status: DesktopUpdateStatus;
 }
 
+/** A program the person added to game detection (desktop gameDetectionSettings.ts). */
+interface DetectedGameEntry {
+  name: string;
+  process: string;
+}
+
+/** Game detection as the desktop app reports it: off until turned on, the person's own programs, what is detected now. */
+interface GameDetectionState {
+  enabled: boolean;
+  userGames: DetectedGameEntry[];
+  current: unknown;
+}
+
+/**
+ * A right click in a text field as the desktop app saw it (desktop editMenu.ts):
+ * the misspelled word under the pointer with the dictionary's suggestions, and
+ * which edit commands apply there.
+ */
+interface DesktopEditMenuParams {
+  misspelledWord: string;
+  suggestions: string[];
+  canCut: boolean;
+  canCopy: boolean;
+  canPaste: boolean;
+  canSelectAll: boolean;
+}
+
+/** The edit commands the desktop app runs in the focused field. */
+type DesktopEditCommand = 'cut' | 'copy' | 'paste' | 'selectAll';
+
 interface BackspaceElectronAPI {
   // Platform info
   platform: NodeJS.Platform;
@@ -157,14 +187,21 @@ interface BackspaceElectronAPI {
   >;
   stopSystemAudio?: () => Promise<void>;
 
-  // Instance URL management
-  getInstanceUrl: () => Promise<string | null>;
-  setInstanceUrl: (url: string) => Promise<void>;
-  clearInstanceUrl: () => Promise<void>;
+  // Right click in a text field (editMenu.ts in the desktop app). Optional:
+  // shells from before it report nothing, and the page then offers its own
+  // edit menu without spelling suggestions (globalContextMenu.ts).
+  onEditContextMenu?: (callback: (params: DesktopEditMenuParams) => void) => () => void;
+  editCommand?: (command: DesktopEditCommand) => void;
+  replaceMisspelling?: (word: string) => void;
+  addToDictionary?: (word: string) => void;
 
   // Language: the renderer owns the choice; main relabels its tray and menus.
   // Optional because an older desktop app does not expose it.
   setLanguage?: (language: string) => void;
+
+  // The colour of the page's frame, which the window's own buttons sit on.
+  // Optional because an older desktop app does not expose it.
+  setFrameColor?: (color: string) => void;
 
   // Auto-launch settings
   getAutoLaunchSettings: () => Promise<{ openAtLogin: boolean; startMinimized: boolean }>;
@@ -174,6 +211,13 @@ interface BackspaceElectronAPI {
   // Activity detection (game/app process scanning)
   onActivityDetected: (callback: (activity: unknown) => void) => (() => void);
   getCurrentActivity: () => Promise<unknown>;
+  // Whether a voice session is open, so a downloaded update never restarts
+  // the app mid-call. Optional: shells before automatic installs lack it.
+  setCallActive?: (active: boolean) => void;
+  // Game detection settings. Optional: shells from before game detection lack them.
+  getGameDetection?: () => Promise<GameDetectionState>;
+  setGameDetectionEnabled?: (enabled: boolean) => Promise<GameDetectionState>;
+  removeDetectedGame?: (process: string) => Promise<GameDetectionState>;
 
   // Keybind support
   getKeybindPortalStatus?: () => Promise<KeybindPortalStatus | null>;

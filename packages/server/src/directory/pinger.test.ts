@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureDefaults } from '../db/migrate.js';
-import { slotMinute } from '../telemetry/reporter.js';
+import { slotMinute } from './schedule.js';
 import { readDirectoryState, markDirectoryDirty, getDocumentVersion, recordDirectoryPingSuccess, _resetDirectoryStateForTests } from './state.js';
 import {
   sendDirectoryPing, pingerTick, createPingerMemory, changePingDelay, createChangePingScheduler,

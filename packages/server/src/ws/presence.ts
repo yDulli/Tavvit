@@ -2,7 +2,6 @@ import { eq } from 'drizzle-orm';
 import { ownsChosenStatus, type Activity, type ChosenUserStatus } from '@backspace/shared';
 import { getDb, schema } from '../db/index.js';
 import { connectionManager } from './handler.js';
-import { collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
 import { presenceUpdateEvent, presenceUpdateFor, snapshotActivities } from './presenceEvent.js';
 import { showReplicaChoice } from './replicaPresence.js';
 
@@ -49,7 +48,7 @@ export function applyChosenStatus(userId: string, status: ChosenUserStatus): voi
   connectionManager.setUserStatus(userId, status);
   const activities: Activity[] = connectionManager.getUserActivities(userId);
   const payload = presenceUpdateFor(userId, status, activities.length > 0 ? activities : undefined);
-  for (const uid of collectProfileBroadcastTargetIds(userId)) connectionManager.sendToUser(uid, payload);
+  connectionManager.broadcastPresence(userId, payload);
   connectionManager.sendToUser(userId, payload);
 
   void import('../utils/federationPresence.js').then(({ queuePresenceRelay }) => {

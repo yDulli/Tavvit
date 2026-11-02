@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../../../api/client';
 import { Toggle } from '../../ui/Toggle';
 import { DirectoryListingHint } from './DirectoryListingHint';
+import { AccentColorField } from './AccentColorField';
 import { useSettingsStore } from '../../../stores/settingsStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { describeError } from '../../../i18n/errors';
 import { useFormatters } from '../../../i18n/formatters';
 import { invalidateHomeInstanceInfo } from '../../../hooks/useHomeInstanceInfo';
-import type { DirectoryPingError, InstanceAdminSettings } from '@backspace/shared';
+import type { DirectoryPingError, InstanceAdminSettings, InstanceEmojiPolicy } from '@backspace/shared';
+import { ToggleRow } from '../settingsPanels/_shared/SettingsControls';
 
 const INSTANCE_NAME_MAX_LENGTH = 32;
 
@@ -22,28 +24,32 @@ export const INSTANCE_SETTINGS_REFRESH_MS = 10_000;
 /** The fields this panel edits; everything else is read live from the store. */
 interface InstanceDraft {
   instanceName: string;
+  emojiPolicy: InstanceEmojiPolicy;
   discoveryEnabled: boolean;
   directoryEnabled: boolean;
   directoryBrowseEnabled: boolean;
-  supportCardEnabled: boolean;
+  /** `#rrggbb`, or null for the built-in colour. */
+  accentColor: string | null;
 }
 
 function draftFrom(settings: InstanceAdminSettings): InstanceDraft {
   return {
     instanceName: settings.instanceName,
+    emojiPolicy: settings.emojiPolicy,
     discoveryEnabled: settings.discoveryEnabled,
     directoryEnabled: settings.directoryEnabled,
     directoryBrowseEnabled: settings.directoryBrowseEnabled,
-    supportCardEnabled: settings.supportCardEnabled,
+    accentColor: settings.accentColor,
   };
 }
 
 function sameDraft(a: InstanceDraft, b: InstanceDraft): boolean {
   return a.instanceName === b.instanceName
+    && a.emojiPolicy === b.emojiPolicy
     && a.discoveryEnabled === b.discoveryEnabled
     && a.directoryEnabled === b.directoryEnabled
     && a.directoryBrowseEnabled === b.directoryBrowseEnabled
-    && a.supportCardEnabled === b.supportCardEnabled;
+    && a.accentColor === b.accentColor;
 }
 
 type PingReasonKey =
@@ -124,6 +130,9 @@ export function GeneralPanel() {
   const [gifKeyDirty, setGifKeyDirty] = useState(false);
   const [gifKeyDraft, setGifKeyDraft] = useState('');
   const [openingRegistration, setOpeningRegistration] = useState(false);
+  // Bumped when the draft is replaced from outside (reset, save), so the colour
+  // field drops what was typed in it and shows the new value.
+  const [accentKey, setAccentKey] = useState(0);
 
   // Whether the operator gave this instance a DIRECTORY_ENDPOINT, or null
   // while the answer has not arrived. Reported on its own by the public
@@ -183,7 +192,7 @@ export function GeneralPanel() {
   }, [fetchInstanceSettings]);
 
   if (!draft || !instanceSettings) {
-    return <div className="text-sm text-txt-tertiary">{t('common:states.loadingSettings')}</div>;
+    return <div className="text-ui text-txt-tertiary">{t('common:states.loadingSettings')}</div>;
   }
 
   const hasChanges = gifKeyDirty || !sameDraft(draft, draftFrom(instanceSettings));
@@ -195,18 +204,19 @@ export function GeneralPanel() {
     try {
       const payload: Partial<InstanceAdminSettings> = {
         instanceName: draft.instanceName,
+        emojiPolicy: draft.emojiPolicy,
         discoveryEnabled: draft.discoveryEnabled,
         directoryEnabled: draft.directoryEnabled,
         directoryBrowseEnabled: draft.directoryBrowseEnabled,
-        supportCardEnabled: draft.supportCardEnabled,
+        accentColor: draft.accentColor,
       };
       if (gifKeyDirty) {
         payload.gifApiKey = gifKeyDraft;
       }
       await updateInstanceSettings(payload);
-      // The Backspace page reads the instance name and the Support card
-      // switch from its own cached copy of the public info; reread it so the
-      // change shows there without a reload.
+      // The tab title, the About page and the accent colour all read the
+      // instance name and accent from a cached copy of the public info; reread
+      // it so the change shows everywhere without a reload.
       invalidateHomeInstanceInfo();
       // The server's answer is the new baseline, whatever it normalised. A
       // poll dispatched before the save and answered after it can reseed the
@@ -216,6 +226,7 @@ export function GeneralPanel() {
         const next = draftFrom(saved);
         seededFrom.current = next;
         setDraft(next);
+        setAccentKey((n) => n + 1);
       }
       setGifKeyDirty(false);
       setGifKeyDraft('');
@@ -273,6 +284,7 @@ export function GeneralPanel() {
     const next = draftFrom(instanceSettings);
     seededFrom.current = next;
     setDraft(next);
+    setAccentKey((n) => n + 1);
     setGifKeyDirty(false);
     setGifKeyDraft('');
     setSaveError('');
@@ -280,16 +292,16 @@ export function GeneralPanel() {
 
   return (
     <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-      <h2 className="text-lg font-semibold text-txt-primary">{t('admin:general.title')}</h2>
-      <div className="text-xs text-txt-tertiary">
-        {t('admin:general.description')}
+      <div>
+        <h2 className="page-title">{t('admin:general.title')}</h2>
+        <p className="mt-1 text-meta leading-snug text-txt-tertiary">{t('admin:general.description')}</p>
       </div>
 
       {/* Instance Name */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('admin:general.instanceName.label')}</div>
-        <p className="text-xs text-txt-tertiary mb-2">{t('admin:general.instanceName.description')}</p>
-        <div className="rounded-lg bg-white/[0.02] p-3.5">
+        <div className="label-mono mb-1.5">{t('admin:general.instanceName.label')}</div>
+        <p className="text-meta text-txt-tertiary mb-2">{t('admin:general.instanceName.description')}</p>
+        <div className="surface-card rounded-lg p-4">
           <input
             type="text"
             value={draft.instanceName}
@@ -298,7 +310,7 @@ export function GeneralPanel() {
             aria-label={t('admin:general.instanceName.label')}
             className="input-standard w-full"
           />
-          <div className="text-[11px] text-txt-tertiary text-right mt-1">
+          <div className="tabular mt-1 text-right font-mono text-label text-txt-tertiary">
             {t('admin:general.instanceName.counter', { length: draft.instanceName.length, max: INSTANCE_NAME_MAX_LENGTH })}
           </div>
         </div>
@@ -306,16 +318,16 @@ export function GeneralPanel() {
 
       {/* Space discovery: one ladder, three rungs */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('admin:general.discovery.label')}</div>
-        <p className="text-xs text-txt-tertiary mb-2">{t('admin:general.discovery.description')}</p>
-        <div className="rounded-lg bg-white/[0.02] p-3.5">
+        <div className="label-mono mb-1.5">{t('admin:general.discovery.label')}</div>
+        <p className="text-meta text-txt-tertiary mb-2">{t('admin:general.discovery.description')}</p>
+        <div className="surface-card rounded-lg p-1.5">
           {/*
             The group owns the three rungs and nothing else: a `radiogroup` may
             own only radios, so what hangs under the global rung is a sibling of
             the fieldset, indented to line up under it. `global` is the last
             rung, so this renders exactly where it reads.
           */}
-          <fieldset role="radiogroup" aria-label={t('admin:general.discovery.label')} className="min-w-0 space-y-1.5">
+          <fieldset role="radiogroup" aria-label={t('admin:general.discovery.label')} className="min-w-0 space-y-0.5">
             {DISCOVERY_LEVELS.map((option) => {
               /*
                 The global rung promises the public directory, which needs a
@@ -344,7 +356,7 @@ export function GeneralPanel() {
               return (
               <label
                 key={option.level}
-                className={`flex items-start gap-3 p-2.5 rounded transition-colors ${
+                className={`flex items-start gap-3 rounded-md p-2.5 transition-colors duration-100 ${
                   dead ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
                 } ${level === option.level ? 'bg-interactive-selected' : dead ? '' : 'hover:bg-interactive-hover'}`}
               >
@@ -357,11 +369,11 @@ export function GeneralPanel() {
                   onChange={() => selectLevel(option.level)}
                   aria-label={t(option.labelKey)}
                   aria-describedby={`discovery-level-${option.level}-description`}
-                  className="mt-0.5 accent-accent-primary"
+                  className="mt-0.5"
                 />
-                <div>
-                  <div className="text-sm font-medium text-txt-primary">{t(option.labelKey)}</div>
-                  <div id={`discovery-level-${option.level}-description`} className="text-xs text-txt-tertiary">
+                <div className="min-w-0">
+                  <div className="text-ui font-medium text-txt-primary">{t(option.labelKey)}</div>
+                  <div id={`discovery-level-${option.level}-description`} className="mt-0.5 text-meta leading-snug text-txt-tertiary">
                     {dead ? t('admin:general.discovery.unconfigured') : t(option.descriptionKey)}
                   </div>
                 </div>
@@ -370,7 +382,7 @@ export function GeneralPanel() {
             })}
           </fieldset>
           {level === 'global' && (
-            <div className="ml-9 mr-2.5 mt-1.5 mb-1 space-y-3">
+            <div className="mb-1.5 ml-[38px] mr-2.5 mt-1.5 space-y-3">
               {/*
                 Gated on the endpoint for the same reason the rung above it
                 is. The note warns that listed spaces will show as closed to
@@ -395,35 +407,36 @@ export function GeneralPanel() {
                 <DirectoryListingHint saveFirst={hasChanges ? handleSave : null} saving={saving} />
               )}
               {!instanceSettings.federatedRegistrationOpen && !noDirectoryEndpoint && (
-                <div className="p-2.5 bg-accent-amber/10 border border-accent-amber/30 rounded text-[13px] text-accent-amber space-y-2">
+                <div className="space-y-2 rounded-md border border-accent-amber/30 bg-accent-amber/10 px-3 py-2.5 text-ui text-accent-amber">
                   <p>{t('admin:general.directory.registrationClosed')}</p>
                   <button
                     type="button"
                     onClick={handleOpenFederatedRegistration}
                     disabled={openingRegistration}
-                    className="px-2.5 py-1 rounded bg-accent-amber/20 hover:bg-accent-amber/30 text-[13px] font-medium transition-colors disabled:opacity-50"
+                    aria-busy={openingRegistration}
+                    className="btn-outline btn-sm border-accent-amber/40 text-accent-amber hover:border-accent-amber/70"
                   >
                     {t('admin:general.directory.openFederatedRegistration')}
                   </button>
                 </div>
               )}
-              {/* What the pinger last did, the same shape as the telemetry panel's line */}
-              <div className="rounded-lg bg-white/[0.03] border border-white/[0.04] p-3 space-y-1">
-                <div className="text-xs text-txt-tertiary">{pingLabel}</div>
+              {/* What the pinger last did */}
+              <div className="surface-card space-y-1 rounded-lg px-3 py-2.5">
+                <div className="text-meta text-txt-tertiary">{pingLabel}</div>
                 {instanceSettings.directoryListedSpaceCount > 0 && (
-                  <div className="text-xs text-txt-tertiary">
+                  <div className="text-meta text-txt-tertiary">
                     {t('admin:general.directory.listedCount', { count: instanceSettings.directoryListedSpaceCount })}
                   </div>
                 )}
                 {lastError !== null && (
-                  <div className="text-xs text-txt-danger">
+                  <div className="text-meta text-txt-danger">
                     {t('admin:general.directory.status.lastError', {
                       status: lastErrorReasonKey === null ? lastError.status : t(lastErrorReasonKey),
                     })}
                   </div>
                 )}
               </div>
-              <p className="text-xs text-txt-tertiary">{t('admin:general.directory.disclosure')}</p>
+              <p className="text-meta text-txt-tertiary">{t('admin:general.directory.disclosure')}</p>
             </div>
           )}
           {/*
@@ -432,11 +445,11 @@ export function GeneralPanel() {
             so it reads as its own row under a rule rather than as a fourth
             rung of a ladder it does not belong to.
           */}
-          <div className="mt-3 pt-3 border-t border-white/[0.04]">
-            <label className={`flex items-center justify-between gap-3 ${noDirectoryEndpoint ? '' : 'cursor-pointer'}`}>
+          <div className="mx-2.5 mb-1.5 mt-1.5 border-t border-border-hard pt-3">
+            <label className={`flex items-center justify-between gap-4 ${noDirectoryEndpoint ? '' : 'cursor-pointer'}`}>
               <div className="min-w-0">
-                <div className="text-sm font-medium text-txt-primary">{t('admin:general.browse.toggleLabel')}</div>
-                <div className="text-xs text-txt-tertiary mt-0.5">{t('admin:general.browse.toggleDescription')}</div>
+                <div className="text-ui font-medium text-txt-primary">{t('admin:general.browse.toggleLabel')}</div>
+                <div className="mt-0.5 text-meta leading-snug text-txt-tertiary">{t('admin:general.browse.toggleDescription')}</div>
               </div>
               {/*
                 The switch shows the effective state, not the stored column.
@@ -457,7 +470,7 @@ export function GeneralPanel() {
               />
             </label>
             {noDirectoryEndpoint && (
-              <p className="mt-2 text-xs text-txt-tertiary">{t('admin:general.browse.unavailable')}</p>
+              <p className="mt-2 text-meta leading-snug text-txt-tertiary">{t('admin:general.browse.unavailable')}</p>
             )}
           </div>
         </div>
@@ -465,11 +478,11 @@ export function GeneralPanel() {
 
       {/* GIF Search */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('admin:general.gif.label')}</div>
-        <p className="text-xs text-txt-tertiary mb-2">
+        <div className="label-mono mb-1.5">{t('admin:general.gif.label')}</div>
+        <p className="text-meta text-txt-tertiary mb-2">
           {t('admin:general.gif.description')}
         </p>
-        <div className="rounded-lg bg-white/[0.02] p-3.5 space-y-2">
+        <div className="surface-card rounded-lg p-4 space-y-2">
           <input
             type="password"
             value={gifKeyDirty ? gifKeyDraft : ''}
@@ -479,15 +492,16 @@ export function GeneralPanel() {
             autoComplete="off"
           />
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded ${
-              instanceSettings.gifEnabled ? 'bg-status-online/15 text-status-online' : 'bg-white/5 text-txt-tertiary'
+            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-label font-medium ${
+              instanceSettings.gifEnabled ? 'bg-status-online/15 text-txt-positive' : 'bg-white/[0.06] text-txt-secondary'
             }`}>
               {instanceSettings.gifEnabled ? t('admin:general.gif.enabled') : t('admin:general.gif.notConfigured')}
             </span>
             {instanceSettings.gifEnabled && !gifKeyDirty && (
               <button
+                type="button"
                 onClick={() => { setGifKeyDraft(''); setGifKeyDirty(true); }}
-                className="text-[11px] text-txt-tertiary hover:text-txt-danger transition-colors"
+                className="btn-quiet btn-sm hover:bg-accent-rose/10 hover:text-txt-danger"
               >
                 {t('admin:general.gif.clearKey')}
               </button>
@@ -496,46 +510,52 @@ export function GeneralPanel() {
         </div>
       </div>
 
-      {/*
-        The Support card on the Backspace page. Hides only that card: the
-        page's other links stay.
-      */}
+      {/* Accent colour: buttons and highlights for everyone on this server */}
       <div>
-        <div className="text-[11px] font-semibold text-txt-tertiary uppercase tracking-wider mb-1.5">{t('admin:general.supportCard.label')}</div>
-        <div className="rounded-lg bg-white/[0.02] p-3.5">
-          <label className="flex items-center justify-between gap-3 cursor-pointer">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-txt-primary">{t('admin:general.supportCard.toggleLabel')}</div>
-              <div className="text-xs text-txt-tertiary mt-0.5">{t('admin:general.supportCard.toggleDescription')}</div>
-            </div>
-            <Toggle
-              enabled={draft.supportCardEnabled}
-              onChange={(value) => setDraft({ ...draft, supportCardEnabled: value })}
-              ariaLabel={t('admin:general.supportCard.toggleLabel')}
-            />
-          </label>
+        <div className="label-mono mb-1.5">{t('admin:general.accent.label')}</div>
+        <p className="text-meta text-txt-tertiary mb-2">{t('admin:general.accent.description')}</p>
+        <div className="surface-card rounded-lg p-4">
+          <AccentColorField
+            key={accentKey}
+            value={draft.accentColor}
+            onChange={(accentColor) => setDraft({ ...draft, accentColor })}
+          />
+        </div>
+      </div>
+
+      <div>
+        <div className="label-mono mb-1.5">{t('admin:general.emoji.title')}</div>
+        <div className="surface-card rounded-lg p-4">
+          <ToggleRow
+            label={t('admin:general.emoji.label')}
+            description={t('admin:general.emoji.description')}
+            enabled={draft.emojiPolicy === 'everyone'}
+            onChange={(everyone) => setDraft({ ...draft, emojiPolicy: everyone ? 'everyone' : 'admins' })}
+          />
         </div>
       </div>
 
       {/* Status messages */}
       {saveError && (
-        <div className="p-2 bg-accent-rose/10 border border-accent-rose/30 rounded text-txt-danger text-sm">{saveError}</div>
+        <div className="rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">{saveError}</div>
       )}
       {/* Save / Reset bar */}
       {hasChanges && (
         <div className="sticky bottom-0 z-10 pointer-events-none">
           <div className="flex justify-center pt-3 pb-1">
-            <div className="glass-bubble rounded-full px-4 py-2 flex items-center gap-2 animate-slide-up pointer-events-auto">
+            <div className="action-bar animate-slide-up pointer-events-auto">
               <button
+                type="button"
                 onClick={handleReset}
-                className="px-3 py-1 text-sm text-txt-tertiary hover:text-txt-secondary transition-colors"
+                className="btn-quiet"
               >
                 {t('common:actions.reset')}
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-3 py-1.5 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                aria-busy={saving}
+                className="btn-primary"
               >
                 {saving ? t('common:states.saving') : t('common:actions.save')}
               </button>

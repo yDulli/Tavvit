@@ -278,6 +278,7 @@ export function syncSubjectKey(event: FederationRelayEvent): string {
     case 'delete':
     case 'reaction_add':
     case 'reaction_remove':
+    case 'pin_set':
       // The peer's id of the message, the same on every event about it.
       return JSON.stringify(['message', event.messageId]);
     case 'file_rejected':
@@ -307,7 +308,7 @@ export function syncSubjectKey(event: FederationRelayEvent): string {
   }
 }
 
-/** The message a pulled `update` or `reaction_add` names, in its home's coordinates. */
+/** The message a pulled `update`, `reaction_add` or `pin_set` names, in its home's coordinates. */
 function namedMessage(event: FederationRelayEvent, peerOrigin: string): { messageId: string; homeInstance: string } | null {
   if (event.eventType === 'update') {
     // Without a target, an older server names its own message by its id.
@@ -319,6 +320,9 @@ function namedMessage(event: FederationRelayEvent, peerOrigin: string): { messag
       messageId: event.reaction.messageId ?? event.messageId,
       homeInstance: event.reaction.messageHomeInstance || peerOrigin,
     };
+  }
+  if (event.eventType === 'pin_set' && event.pin) {
+    return { messageId: event.pin.messageId, homeInstance: event.pin.messageHomeInstance || peerOrigin };
   }
   return null;
 }

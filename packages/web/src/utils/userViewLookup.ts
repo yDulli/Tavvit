@@ -1,4 +1,4 @@
-import type { User } from '@backspace/shared';
+import type { User, UserSearchResult } from '@backspace/shared';
 import { useSpaceStore, type UserViewEntry } from '../stores/spaceStore';
 import { userKey } from './identity';
 
@@ -73,4 +73,38 @@ export function canonicalUserViewIn(
 export function useCanonicalUserView(row: User, origin: string): User {
   const entry = useSpaceStore((state) => state.userViews.get(userKey(row, origin)));
   return viewOf(row, entry);
+}
+
+/** What a picker row shows of a person a username search found. */
+export interface SearchResultView {
+  username: string;
+  displayName: string | null;
+  avatar: string | null;
+  avatarColor: string | null;
+  /** Known only from a view the client already holds. */
+  status: User['status'] | undefined;
+}
+
+/**
+ * How a username search result looks at its best (social.md, "Finding
+ * people"): the cached view of the same person when the client holds one,
+ * for their status and current picture, else the result's own fields. A
+ * result is narrower than a user, so it is read against the cache and never
+ * written into it.
+ */
+export function useSearchResultView(result: UserSearchResult, origin: string): SearchResultView {
+  const entry = useSpaceStore((state) => state.userViews.get(userKey(result, origin)));
+  return {
+    username: entry?.user.username ?? result.username,
+    displayName: entry?.user.displayName ?? result.displayName,
+    avatar: entry?.user.avatar ?? result.avatar,
+    avatarColor: entry?.user.avatarColor ?? result.avatarColor,
+    status: entry?.user.status,
+  };
+}
+
+/** A username a person can be searched by: what the instance accepts as a query (3 to 32 of a-z, 0-9, _). */
+export function usernameQueryOf(value: string): string | null {
+  const name = value.trim().replace(/^@/, '').toLowerCase();
+  return /^[a-z0-9_]{3,32}$/.test(name) ? name : null;
 }

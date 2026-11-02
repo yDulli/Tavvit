@@ -42,7 +42,6 @@ function makeUser(extras: Partial<User> & Pick<User, 'id' | 'username'>): User {
     banner: null,
     isAdmin: false,
     isDeleted: false,
-    discoverable: true,
     showActivity: true,
     createdAt: 0,
     ...extras,
