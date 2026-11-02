@@ -139,7 +139,7 @@ Not concerned: accounts older than the switch, administrators, replicated accoun
 
 ## Resend's reports
 
-`POST /api/email/webhooks/resend` exists only with `EMAIL_TRANSPORT=resend` and a secret. It has its own parser for the raw body in its own plugin scope, because the signature covers the exact bytes; re-stringifying would break it. HMAC-SHA-256 per Svix, constant-time, five minutes of tolerance. `email.bounced` (not `Transient`), `email.suppressed` and `email.complained` suppress; everything else is ignored.
+`POST /api/email/webhooks/resend` exists only with `EMAIL_TRANSPORT=resend` and a secret. It has its own parser for the raw body in its own plugin scope, because the signature covers the exact bytes; re-stringifying would break it. That parser comes from `registerRawJsonBodyParser` (`utils/jsonBody.ts`), which first removes the JSON parser the scope inherited from the root: Fastify 5 refuses a second one under a custom root parser, and 1.32.5, which added it directly, did not start where this route exists. `scripts/release-check.mjs --only boot` starts the server with this route registered. HMAC-SHA-256 per Svix, constant-time, five minutes of tolerance. `email.bounced` (not `Transient`), `email.suppressed` and `email.complained` suppress; everything else is ignored.
 
 ---
 

@@ -261,7 +261,7 @@ Two shell traps this script exists on the far side of, worth knowing before edit
 
 Two scripts, each printing only what failed:
 
-- `node scripts/release-check.mjs`: types, catalogs, lint on the files changed since the last commit, every test once, the web build. `--only <step>` runs one of them.
+- `node scripts/release-check.mjs`: types, catalogs, lint on the files changed since the last commit, every test once, the web build, and a boot: the server started as the image starts it (`NODE_ENV=production`, `node --import tsx/esm src/index.ts`) with every optional part configured (Resend and its webhook, LiveKit, two-factor, DeepL, federation, the directory), until `/api/health`, the webhook's address and the product page answer. Its keys are made up for the run and every address points at the machine itself. A route that exists only when its part is configured is covered by nothing else; 1.32.5 passed every test and did not start with Resend. `--only <step>` runs one of them.
 - `node scripts/release-check-browser.mjs <seed.json>`: against a demo instance on a production build (`scripts/landing-shots/README.md` has the setup; build first and start the server after, since it reads the built page once). Who lands where on the way in, signing in and up from the product page, what a visitor downloads, the headers of the page and of an invite link, an unknown address, changing language in place. Then it takes the main states and names only a picture that changed by more than 3 percent since its last run, in `dist/release-check/`. `--doors-only` leaves the pictures out.
 
 They do not cover what needs the real server: LiveKit, Caddy's compression, updating an installed desktop app.

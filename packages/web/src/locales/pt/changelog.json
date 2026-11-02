@@ -4,6 +4,12 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.32.6": {
+      "title": "Uma correção na inicialização",
+      "items": {
+        "start": "A 1.32.5 não iniciava em servidores que enviam e-mails pelo Resend. A 1.32.6 inicia, e agora cada versão é iniciada uma vez assim antes de ser publicada."
+      }
+    },
     "1.32.5": {
       "title": "Mais trabalho de segurança",
       "items": {

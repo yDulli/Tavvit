@@ -10,6 +10,7 @@ import { getDb, schema } from '../db/index.js';
 import { config } from '../config.js';
 import { authenticate, hashPassword, requireAdmin, verifyPassword } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
+import { registerRawJsonBodyParser } from '../utils/jsonBody.js';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { endOtherSessions } from '../utils/sessions.js';
 import { loginThrottle, loginThrottleKey } from '../utils/loginThrottle.js';
@@ -299,9 +300,7 @@ export function applyResendEvent(event: unknown): void {
 
 /** The route, with its own parser for the raw body. In a plugin scope of its own, so nothing else gets that parser. */
 export async function registerResendWebhook(app: FastifyInstance, secret: string): Promise<void> {
-  app.addContentTypeParser('application/json', { parseAs: 'string', bodyLimit: 256 * 1024 }, (_request, body, done) => {
-    done(null, body);
-  });
+  registerRawJsonBodyParser(app, 256 * 1024);
   app.post('/api/email/webhooks/resend', {
     config: { rateLimit: { max: 300, timeWindow: '1 minute' } },
   }, async (request, reply) => {

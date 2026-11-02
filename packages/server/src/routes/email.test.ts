@@ -790,10 +790,16 @@ describe('a report from Resend', () => {
   };
   const suppressions = () => testDb.select().from(schema.emailSuppressions).all();
 
+  // Set up as index.ts does it: the root's JSON parser first, then the route in a scope of its
+  // own. Without the root parser this passed while the server would not start (1.32.5).
   beforeEach(async () => {
     const { registerResendWebhook } = await import('./email.js');
+    const { registerJsonBodyParser } = await import('../utils/jsonBody.js');
     hook = Fastify();
+    registerJsonBodyParser(hook);
     await hook.register(async (scope) => { await registerResendWebhook(scope, SECRET); });
+    hook.delete('/elsewhere', async (request) => ({ body: request.body ?? null }));
+    hook.post('/elsewhere', async (request) => ({ body: request.body ?? null }));
     await hook.ready();
   });
   afterEach(async () => { await hook.close(); });
@@ -825,5 +831,13 @@ describe('a report from Resend', () => {
     const res = await hook.inject({ method: 'POST', url: '/api/email/webhooks/resend', headers: { 'content-type': 'application/json' }, payload: body });
     expect(res.statusCode).toBe(401);
     expect(suppressions()).toHaveLength(0);
+  });
+
+  it('keeps its raw body to itself: every other route still reads JSON with the root parser', async () => {
+    const res = await hook.inject({ method: 'DELETE', url: '/elsewhere', headers: { 'content-type': 'application/json' } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ body: null });
+    const parsed = await hook.inject({ method: 'POST', url: '/elsewhere', payload: { a: 1 } });
+    expect(parsed.json()).toEqual({ body: { a: 1 } });
   });
 });

@@ -19,3 +19,16 @@ export function registerJsonBodyParser(app: FastifyInstance): void {
     jsonParser(request, text, done);
   });
 }
+
+/**
+ * A JSON body as it came, as a string, for a route that checks a signature over the exact bytes.
+ * Fastify 5 refuses to add a JSON parser where the inherited one is not its default, and the
+ * root's is the one above, so the inherited one goes first. Call it only inside `app.register`:
+ * the removal, and this parser, stay in that scope.
+ */
+export function registerRawJsonBodyParser(scope: FastifyInstance, bodyLimit: number): void {
+  scope.removeContentTypeParser('application/json');
+  scope.addContentTypeParser('application/json', { parseAs: 'string', bodyLimit }, (_request, body, done) => {
+    done(null, body);
+  });
+}

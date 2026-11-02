@@ -137,7 +137,7 @@ Data: `data/` at the repository root (backspace.db + uploads/ + backups/), mount
 
 **Lint:** `pnpm lint` (ESLint flat config in `eslint.config.js`; violations that predate the lint step are counted in `eslint-suppressions.json`, so new ones fail the run)
 
-**Checking a release:** `node scripts/release-check.mjs` (types, catalogs, lint on changed files, tests once, build) prints only what failed. `node scripts/release-check-browser.mjs <seed.json>` does the same in a browser against a demo instance: who lands where, the headers, and only the pictures that changed. Use these and not a walkthrough or a swarm of agents.
+**Checking a release:** `node scripts/release-check.mjs` (types, catalogs, lint on changed files, tests once, build, and a boot as in production with every optional part configured) prints only what failed. `node scripts/release-check-browser.mjs <seed.json>` does the same in a browser against a demo instance: who lands where, the headers, and only the pictures that changed. Use these and not a walkthrough or a swarm of agents.
 
 **Deployment:**
 - Docker Compose: `backspace` + `caddy` (auto-HTTPS) + `livekit` (optional)

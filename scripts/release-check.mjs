@@ -3,7 +3,7 @@
  * Everything a new version has to pass, in one run that prints only what failed.
  *
  *   node scripts/release-check.mjs               all steps
- *   node scripts/release-check.mjs --only tests  one step: types, catalogs, lint, tests or build
+ *   node scripts/release-check.mjs --only tests  one step: types, catalogs, lint, tests, build or boot
  *
  * Why it exists: checking a release must not take a person, or an expensive tool,
  * reading through pages of green output. Each step keeps its output to itself and
@@ -15,11 +15,21 @@
  * counted in eslint-suppressions.json, and linting the whole repository takes minutes.
  * With nothing changed there is nothing to lint.
  *
+ * Boot starts the server the way the Docker image does, with NODE_ENV=production and
+ * every optional part switched on: mail through Resend with its webhook, voice,
+ * two-factor sign-in, translation, federation and the directory. It waits for
+ * /api/health and asks the product page and the webhook's address. What a route
+ * registers only when its part is configured is tested nowhere else: 1.32.5 passed
+ * every test and did not start where mail went through Resend. The keys are made up
+ * for the run and every address points at this machine, so nothing leaves it.
+ *
  * The browser check is its own script, because it needs a running demo instance
  * (scripts/release-check-browser.mjs).
  */
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -154,7 +164,108 @@ function build() {
   return { ok, detail: ok ? '' : tail(output) };
 }
 
-const STEPS = { types, catalogs, lint, tests, build };
+const BOOT_TIMEOUT_MS = 120_000;
+/** What a process needs from the shell around it to run at all; nothing the server reads as its configuration. */
+const SYSTEM_KEYS = new Set(['PATH', 'PATHEXT', 'SYSTEMROOT', 'WINDIR', 'COMSPEC', 'TEMP', 'TMP', 'TMPDIR', 'HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PROGRAMDATA']);
+
+const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+/** A port on the loopback address that the system just handed out and took back. */
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+/** Every optional part on. Port 9 on this machine is where nothing answers. */
+function productionLikeEnv(folder, port) {
+  const nowhere = 'http://127.0.0.1:9';
+  const system = Object.entries(process.env).filter(([key]) => SYSTEM_KEYS.has(key.toUpperCase()));
+  return {
+    ...Object.fromEntries(system),
+    NODE_ENV: 'production',
+    HOST: '127.0.0.1',
+    PORT: String(port),
+    DOMAIN: 'release-check.localhost',
+    APP_BASE_URL: `http://127.0.0.1:${port}`,
+    JWT_SECRET: randomBytes(32).toString('hex'),
+    DB_PATH: path.join(folder, 'boot.db'),
+    UPLOAD_DIR: path.join(folder, 'uploads'),
+    BACKUP_DIR: path.join(folder, 'backups'),
+    DOWNLOADS_DIR: path.join(folder, 'downloads'),
+    EXPORT_DIR: path.join(folder, 'exports'),
+    FEDERATION_ENABLED: 'true',
+    TOTP_ENCRYPTION_KEY: randomBytes(32).toString('hex'),
+    EMAIL_TRANSPORT: 'resend',
+    EMAIL_FROM: 'Tavvit <no-reply@release-check.localhost>',
+    RESEND_API_KEY: `re_${randomBytes(16).toString('hex')}`,
+    RESEND_WEBHOOK_SECRET: `whsec_${randomBytes(24).toString('base64')}`,
+    TRANSLATION_PROVIDER: 'deepl',
+    DEEPL_API_KEY: `${randomBytes(16).toString('hex')}:fx`,
+    LIVEKIT_URL: 'ws://127.0.0.1:9',
+    LIVEKIT_API_URL: nowhere,
+    LIVEKIT_API_KEY: 'release-check',
+    LIVEKIT_API_SECRET: randomBytes(32).toString('hex'),
+    DIRECTORY_ENDPOINT: nowhere,
+  };
+}
+
+async function statusOf(port, urlPath, init = {}) {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}${urlPath}`, { ...init, signal: AbortSignal.timeout(5_000) });
+    return { status: res.status, type: res.headers.get('content-type') ?? '' };
+  } catch {
+    return null;
+  }
+}
+
+async function boot() {
+  const folder = mkdtempSync(path.join(tmpdir(), 'release-check-boot-'));
+  const port = await freePort();
+  const output = [];
+  const child = spawn(process.execPath, ['--import', 'tsx/esm', 'src/index.ts'], {
+    cwd: path.join(ROOT, 'packages', 'server'),
+    env: productionLikeEnv(folder, port),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let exited = false;
+  const gone = new Promise((resolve) => { child.once('exit', () => { exited = true; resolve(); }); });
+  child.stdout.on('data', (chunk) => output.push(String(chunk)));
+  child.stderr.on('data', (chunk) => output.push(String(chunk)));
+  const failed = (why) => ({ ok: false, detail: `${why}\n${tail(output.join('').trim())}` });
+
+  try {
+    const deadline = Date.now() + BOOT_TIMEOUT_MS;
+    let health = null;
+    while (!exited && Date.now() < deadline) {
+      health = await statusOf(port, '/api/health');
+      if (health?.status === 200) break;
+      await sleep(250);
+    }
+    if (exited) return failed('The server stopped while starting.');
+    if (health?.status !== 200) return failed(`No answer from /api/health within ${BOOT_TIMEOUT_MS / 1000}s.`);
+
+    const unsigned = await statusOf(port, '/api/email/webhooks/resend', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    if (unsigned?.status !== 401) return failed(`The Resend webhook answered ${unsigned?.status ?? 'nothing'} to an unsigned report, not 401.`);
+    const info = await statusOf(port, '/api/instance/info');
+    if (info?.status !== 200) return failed(`/api/instance/info answered ${info?.status ?? 'nothing'}.`);
+    if (!existsSync(path.join(ROOT, 'packages', 'web', 'dist', 'index.html'))) return { ok: true, note: 'no web build, the page was not asked' };
+    const page = await statusOf(port, '/');
+    if (page?.status !== 200 || !page.type.startsWith('text/html')) return failed(`The product page answered ${page?.status ?? 'nothing'} (${page?.type ?? ''}).`);
+    return { ok: true };
+  } finally {
+    if (!exited) child.kill();
+    await Promise.race([gone, sleep(10_000)]);
+    rmSync(folder, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  }
+}
+
+const STEPS = { types, catalogs, lint, tests, build, boot };
 
 const onlyAt = process.argv.indexOf('--only');
 const only = onlyAt === -1 ? null : process.argv[onlyAt + 1];
@@ -167,7 +278,7 @@ let failedSteps = 0;
 for (const [name, step] of Object.entries(STEPS)) {
   if (only && only !== name) continue;
   const started = Date.now();
-  const { ok, detail, note } = step();
+  const { ok, detail, note } = await step();
   const seconds = Math.round((Date.now() - started) / 1000);
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${name} (${seconds}s${note ? `, ${note}` : ''})`);
   if (!ok) {
