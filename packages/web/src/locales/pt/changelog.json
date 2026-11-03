@@ -4,6 +4,15 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.33.0": {
+      "title": "Assistir juntos",
+      "items": {
+        "watch": "Assistam juntos a um vídeo do YouTube ou do Vimeo ou a um arquivo de vídeo num canal de voz. Todos veem o mesmo momento, e qualquer pessoa na chamada pode pausar, pular ou colocar algo na fila.",
+        "steer": "Quem começa pode escolher controlar sozinho, e o vídeo fica mais baixo enquanto alguém fala.",
+        "reactions": "Reações sobem sobre a imagem, e a lista de canais mostra o que um canal de voz está assistindo.",
+        "privacy": "Um vídeo do YouTube ou do Vimeo só carrega no seu dispositivo depois do seu sim, e nada do que vocês assistem fica guardado."
+      }
+    },
     "1.32.8": {
       "title": "Contas, chamadas e conexões entre servidores mais seguras",
       "items": {

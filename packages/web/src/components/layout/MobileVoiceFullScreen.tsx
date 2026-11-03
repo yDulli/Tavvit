@@ -1,4 +1,5 @@
 import { SoundboardButton } from '../voice/SoundboardButton';
+import { WatchButton } from '../voice/WatchButton';
 import { layoutRect, layoutPixels } from '../../platform/interfaceScale';
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -544,6 +545,7 @@ export function MobileVoiceFullScreen() {
 
         {/* The soundboard belongs to a space: a call between two people has none. */}
         {!activeDmCall && currentVoiceChannelId && <SoundboardButton channelId={currentVoiceChannelId} className={callControlClass(false, 'mint')} />}
+        {!activeDmCall && currentVoiceChannelId && <WatchButton channelId={currentVoiceChannelId} className={callControlClass(false, 'mint')} />}
 
         {/* Disconnect */}
         <button

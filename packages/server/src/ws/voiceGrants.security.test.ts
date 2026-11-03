@@ -200,3 +200,18 @@ describe('a role losing SPEAK while its members are in a call', () => {
     expect(livekit.silenced.map((entry) => entry.sid)).toContain('TR_mic');
   });
 });
+
+describe('a member losing the right to see or enter the channel while in its call', () => {
+  it('is taken out of the call, as voice_disconnect would', async () => {
+    const { handleClientEvent, checkVoicePermissions } = await import('./events.js');
+    const { connectionManager } = await import('./handler.js');
+    const member = await connect('member');
+    handleClientEvent({ type: 'voice_join', channelId: VOICE }, 'member', 'member', member as never, false);
+    expect(connectionManager.getRoom(VOICE)?.participants.has('member')).toBe(true);
+    testDb.update(schema.roles).set({ permissions: permissionsToString(DEFAULT_EVERYONE_PERMISSIONS & ~PermissionBits.CONNECT) }).run();
+    checkVoicePermissions(SPACE);
+    await settle();
+    expect(connectionManager.getRoom(VOICE)?.participants.has('member') ?? false).toBe(false);
+    expect(member.send.mock.calls.some(([text]) => (JSON.parse(text as string) as { type: string }).type === 'voice_disconnected')).toBe(true);
+  });
+});

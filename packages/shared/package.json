@@ -1,6 +1,6 @@
 {
   "name": "@backspace/shared",
-  "version": "1.32.8",
+  "version": "1.33.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Jannis Braun",
@@ -37,6 +37,8 @@
     "./src/bots.js": "./src/bots.ts",
     "./src/soundboard": "./src/soundboard.ts",
     "./src/soundboard.js": "./src/soundboard.ts",
+    "./src/watch": "./src/watch.ts",
+    "./src/watch.js": "./src/watch.ts",
     "./src/saved": "./src/saved.ts",
     "./src/saved.js": "./src/saved.ts",
     "./src/cards": "./src/cards.ts",

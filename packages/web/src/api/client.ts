@@ -2,6 +2,13 @@ import type { TranslateMessageResponse, TranslationTarget } from '@backspace/sha
 import type { StorageUsage } from '@backspace/shared/src/accountLimits';
 import type { AdminBotInfo, BotDetail, BotInfo, BotPublicInfo, BotsResponse, BotWithToken, ChannelCommand, CommandOptionValue } from '@backspace/shared/src/bots';
 import type { SpaceSound, SpaceSoundRequest } from '@backspace/shared/src/soundboard';
+import type { WatchAction, WatchReaction, WatchSession } from '@backspace/shared/src/watch';
+
+/** A session as a watch route answers it: where it stands now, and the server's clock then. */
+export interface WatchStateResponse {
+  session: WatchSession | null;
+  serverNow: number;
+}
 import type { SavedItem, SavedKind, SavedListResponse } from '@backspace/shared/src/saved';
 import type { WebhookInfo, WebhookWithToken } from '@backspace/shared/src/webhooks';
 import type { SpaceEvent, SpaceEventRequest } from '@backspace/shared/src/events';
@@ -507,6 +514,14 @@ export class BackspaceApiClient {
     audio: (id: string) => Promise<Blob>;
     play: (channelId: string, soundId: string) => Promise<{ success: boolean }>;
   };
+  /** Watching together in a voice channel's call (docs/systems/watch-together.md). */
+  readonly watch: {
+    get: (channelId: string) => Promise<WatchStateResponse>;
+    add: (channelId: string, url: string) => Promise<WatchStateResponse>;
+    change: (channelId: string, action: WatchAction) => Promise<WatchStateResponse>;
+    end: (channelId: string) => Promise<WatchStateResponse>;
+    react: (channelId: string, reaction: WatchReaction) => Promise<{ success: boolean }>;
+  };
   readonly saved: {
     list: (before?: string) => Promise<SavedListResponse>;
     ids: () => Promise<{ messageIds: string[] }>;
@@ -936,6 +951,14 @@ export class BackspaceApiClient {
       remove: (id) => request<{ success: boolean }>('DELETE', `/sounds/${id}`),
       audio: async (id) => (await send('GET', `/sounds/${id}/audio`)).blob(),
       play: (channelId, soundId) => request<{ success: boolean }>('POST', `/channels/${channelId}/soundboard/${soundId}/play`),
+    };
+
+    this.watch = {
+      get: (channelId) => request<WatchStateResponse>('GET', `/channels/${channelId}/watch`),
+      add: (channelId, url) => request<WatchStateResponse>('POST', `/channels/${channelId}/watch`, { url }),
+      change: (channelId, action) => request<WatchStateResponse>('POST', `/channels/${channelId}/watch/state`, action),
+      end: (channelId) => request<WatchStateResponse>('DELETE', `/channels/${channelId}/watch`),
+      react: (channelId, reaction) => request<{ success: boolean }>('POST', `/channels/${channelId}/watch/react`, { reaction }),
     };
 
     const savedPath = (kind: SavedKind, messageId: string) => `/saved/${kind === 'channel' ? 'messages' : 'dm-messages'}/${messageId}`;

@@ -2118,6 +2118,95 @@
   html[data-viewport="desktop"] .card-grid {
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   }
+
+  /* ── Watching together ──
+   * The video of a call (docs/systems/watch-together.md). On the stage its
+   * bars sit above and below the picture, clear of what the provider draws in
+   * it. Floating, its two buttons show while the pointer is over it, while it
+   * is paused, and always on a touch screen, which has no hover. The video
+   * itself is not reached.
+   */
+  .watch-frame .watch-chrome {
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .watch-frame:hover .watch-chrome,
+  .watch-frame:focus-within .watch-chrome,
+  .watch-frame[data-paused] .watch-chrome {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    .watch-frame .watch-chrome { opacity: 1; }
+  }
+  .watch-chrome-btn {
+    position: relative;
+    display: inline-flex;
+    height: 1.75rem;
+    min-width: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    border-radius: calc(5px * var(--radius-scale));
+    padding: 0 0.375rem;
+    color: rgb(255 255 255 / 0.85);
+    background-color: rgb(0 0 0 / 0.45);
+    transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  }
+  .watch-chrome-btn:hover:where(:not(:disabled)) {
+    color: #fff;
+    background-color: rgb(0 0 0 / 0.7);
+  }
+  .watch-chrome-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .watch-reaction-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    height: 28px;
+    width: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(5px * var(--radius-scale));
+    font-size: 16px;
+    line-height: 1;
+    transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-spring);
+  }
+  .watch-reaction-btn:hover {
+    background-color: var(--interactive-hover);
+    transform: translateY(-1px) scale(1.08);
+  }
+  .watch-reaction-btn:active {
+    background-color: var(--interactive-active);
+    transform: scale(0.94);
+  }
+  /* A reaction rises over the picture and fades out (REACTION_FLIGHT_MS in
+     stores/watchStore.ts lasts as long). With less motion it stands still. */
+  @keyframes watchReactionRise {
+    0% { transform: translateY(0) scale(0.6); opacity: 0; }
+    12% { transform: translateY(-14px) scale(1.12); opacity: 1; }
+    100% { transform: translateY(-180px) scale(1); opacity: 0; }
+  }
+  .watch-reaction {
+    position: absolute;
+    bottom: 0.75rem;
+    font-size: 28px;
+    line-height: 1;
+    animation: watchReactionRise 2400ms var(--ease-out) forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .watch-reaction { animation: none; }
+    .watch-reaction-btn:hover,
+    .watch-reaction-btn:active { transform: none; }
+  }
+}
+
+html[data-motion='reduce'] .watch-reaction {
+  animation: none;
+}
+html[data-motion='reduce'] .watch-reaction-btn:hover,
+html[data-motion='reduce'] .watch-reaction-btn:active {
+  transform: none;
 }
 
 @layer utilities {

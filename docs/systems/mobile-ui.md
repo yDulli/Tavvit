@@ -527,6 +527,8 @@ interface MobileScreenHeaderProps {
 
 **Mobile is the sole owner of voice overlay chrome.** `<PictureInPicture />` is a desktop-only component; `AppLayout`'s mobile branch does NOT mount it. The mobile equivalents are `MobileVoiceMiniBar` (always-visible call-active overlay between the screen stack and bottom nav) and `MobileVoiceFullScreen` (pushed-screen full takeover). Mounting PiP on mobile would render its 320×180 floating box on top of the mobile shell whenever `currentVoiceChannelId` was set but `voice-full` was not on the stack — the symptom that triggered this split was a "PiP-style grey view" appearing immediately after `MobileVoiceJoinSheet`'s Join button (compounded by a misnamed screen key — see "Voice Join Flow" below).
 
+The video of watching together keeps to this too: on the phone it never floats. It lies over the stage in `MobileVoiceFullScreen`'s grid while that screen is on top and plays on unseen otherwise (`WatchPlayerHost`, watch-together.md "The view").
+
 ### Voice Join Flow (Mobile)
 
 `MobileSpacesScreen.handleVoiceJoin` is the single entry point on mobile:

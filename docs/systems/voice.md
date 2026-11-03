@@ -5,6 +5,7 @@ Source files:
 - Client: `hooks/useLiveKit.ts`, `stores/voiceStore.ts`, `utils/voice.ts`, `utils/voiceActions.ts`, `utils/screenShare.ts`
 - Shared: `packages/shared/src/constants.ts` (bitrate matrix, resolutions)
 - Audio: `audio/AudioManager.ts`, `audio/SpeakingDetector.ts`
+- Watching together in a call: [watch-together.md](watch-together.md)
 
 ---
 
@@ -591,6 +592,12 @@ Viewers: `TrackPublished` subscribes a `ScreenShareAudio` publication when the v
 **Failure handling.** When loopback is not supported, Chromium rejects the entire `getDisplayMedia` request — the source-picker selection has already been consumed, so silently retrying without audio would re-prompt the picker. `stageScreenCapture` (`utils/screenShare.ts`) instead surfaces a warning toast directing the user to turn off system audio if their system does not support loopback. We do **not** auto-mutate the user's `shareAudio` preference.
 
 ---
+
+## Watching together
+
+A space's voice call can watch a video together. The button sits in the call's controls beside the screen share and the soundboard (`WatchButton`, also in `MobileVoiceFullScreen`), and needs STREAM, as showing a screen does. While the call watches, the grid gives its stage to the video (`WatchStage`) and puts the tiles in a strip under it; "Hide the video" stops it for this person and gives the stage back. Outside the call's view the video floats where `PictureInPicture` would, which steps aside for it; both take their place from `pipBounds.ts`. The video's sound is softened while someone speaks by the same setting that softens a stream (`streamAttenuationEnabled`), and is silent while deafened. Its session lives on the room (`VoiceRoom.watch`) and ends with the call. Not in DM calls. Everything else is in [watch-together.md](watch-together.md).
+
+**Rights taken away mid-call** (1.33.0): `checkVoicePermissions(spaceId)`, which runs after every role and override change, takes a participant who no longer holds VIEW_CHANNEL and CONNECT on the channel out of the call as `voice_disconnect` would (`disconnectFromSpaceVoice`: the leave is announced, the room, the voice socket and the status are cleared, `voice_disconnected` goes to the person, LiveKit evicts them). Before, such a person kept the call's audio and whatever ran in it; the room's membership is now something the routes can rest on.
 
 ## Mobile Voice Rendering
 

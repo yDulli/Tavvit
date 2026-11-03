@@ -47,12 +47,24 @@ import { applySpaceVoiceGrant, applyVoiceGrants, spaceVoiceGrant, type VoiceGran
  * permissionMutedUsers Set and broadcasts voice_permission_muted events.
  * LiveKit is told what each of them may now do (utils/livekitGrants.ts):
  * a role that lost SPEAK or STREAM loses it there too, not only in the client.
+ * Someone who may no longer see or connect to the channel (VIEW_CHANNEL,
+ * CONNECT: what `voice_join` asks) is taken out of the call as `voice_disconnect`
+ * would: a call, and anything in it (a session of watching together), is for
+ * those allowed in it now, not for those who were when they came.
  */
 export function checkVoicePermissions(spaceId: string): void {
   for (const [roomId, room] of connectionManager.getAllRooms()) {
     if (room.roomType !== 'space') continue;
     const meta = room.metadata as SpaceRoomMeta;
     if (meta.spaceId !== spaceId) continue;
+
+    for (const userId of [...room.participants]) {
+      if (!hasPermission(userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.CONNECT, roomId)) {
+        disconnectFromSpaceVoice(spaceId, roomId, userId);
+      }
+    }
+    // The room may be gone with its last participant.
+    if (!connectionManager.getRoom(roomId)) continue;
 
     const grants = new Map<string, VoiceGrant>();
     for (const userId of room.participants) {
@@ -778,6 +790,11 @@ function handleVoiceJoin(event: Record<string, unknown>, userId: string, ws: Web
     action: 'join',
     channelElapsedSeconds: joinedRoom ? getVoiceRoomElapsedSeconds(joinedRoom) : undefined,
   });
+
+  // Someone who comes into a call gets what it watches together, and plays along; a call that
+  // watches nothing says so, so nothing of an earlier call of theirs plays on
+  // (docs/systems/watch-together.md).
+  connectionManager.sendToUser(userId, { type: 'watch_state', channelId, session: joinedRoom?.watch ?? null, serverNow: Date.now() });
 
   // Also broadcast current voice status if it exists (persisted during moves)
   const status = connectionManager.getVoiceUserStatus(userId);
@@ -2537,6 +2554,9 @@ function handleVoiceMove(event: Record<string, unknown>, userId: string): void {
     oldChannelId,
     newChannelId: targetChannelId,
   });
+  // What the call watches together, or that it watches nothing: the one moved in plays along
+  // (docs/systems/watch-together.md).
+  connectionManager.sendToUser(targetUserId, { type: 'watch_state', channelId: targetChannelId, session: targetRoom?.watch ?? null, serverNow: Date.now() });
 
   // Preserve voice user status during move
   const status = connectionManager.getVoiceUserStatus(targetUserId);

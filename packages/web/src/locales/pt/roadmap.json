@@ -5,6 +5,35 @@
     "next": {
       "title": "A seguir",
       "items": {
+        "spaceEmoji": {
+          "title": "Emojis e figurinhas para cada espaço",
+          "text": "Cada espaço ganha seus próprios emojis e figurinhas, e os membros podem usá-los em todo o servidor, de graça."
+        },
+        "discordMove": {
+          "title": "Traga seu servidor do Discord",
+          "text": "Canais, cargos, emojis e figurinhas em poucos minutos, e um convite que dá as boas-vindas a quem vier depois."
+        },
+        "cameraEffects": {
+          "title": "Desfoque e troca de fundo",
+          "text": "Desfoque o seu ambiente na câmera ou coloque uma imagem atrás de você, calculado no seu próprio dispositivo."
+        },
+        "streamerMode": {
+          "title": "Modo streamer",
+          "text": "Esconde endereços, convites e outros dados privados enquanto você transmite, e liga sozinho quando o app para computador reconhece seu programa de transmissão."
+        },
+        "profileDecor": {
+          "title": "Decorações de perfil",
+          "text": "Molduras para sua foto, efeitos para seu perfil e plaquinhas de nome, de graça para todos."
+        },
+        "themeStudio": {
+          "title": "Estúdio de temas",
+          "text": "Crie seu próprio visual, compartilhe por link ou ofereça ao seu espaço."
+        }
+      }
+    },
+    "after": {
+      "title": "Depois disso",
+      "items": {
         "history": {
           "title": "Histórico de edições",
           "text": "Veja o que uma mensagem dizia antes de ser editada, se você a escreveu ou cuida do canal."
@@ -32,12 +61,7 @@
         "passkeys": {
           "title": "Chaves de acesso",
           "text": "Entre com sua digital, seu rosto ou uma chave de segurança em vez de uma senha."
-        }
-      }
-    },
-    "after": {
-      "title": "Depois disso",
-      "items": {
+        },
         "publicExplore": {
           "title": "Explorar sem uma conta",
           "text": "Veja quais espaços existem antes de se cadastrar."
@@ -64,13 +88,13 @@
           "title": "Botões e menus em mensagens",
           "text": "Bots podem oferecer opções para clicar em vez de comandos para digitar."
         },
-        "blur": {
-          "title": "Fundo desfocado em chamadas de vídeo",
-          "text": "Mantenha seu ambiente só para você diante da câmera."
-        },
         "signedApp": {
           "title": "Um aplicativo de desktop assinado",
           "text": "Sem mais aviso do Windows ao instalar o aplicativo."
+        },
+        "watchDm": {
+          "title": "Assistir juntos em chamadas diretas",
+          "text": "Assista junto também em chamadas com amigos, não só no canal de voz de um espaço."
         }
       }
     }

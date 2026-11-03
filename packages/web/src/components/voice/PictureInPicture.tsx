@@ -1,4 +1,4 @@
-import { layoutRect, layoutPixels, MOBILE_LAYOUT_BREAKPOINT } from '../../platform/interfaceScale';
+import { layoutPixels } from '../../platform/interfaceScale';
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,7 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
+import { useWatchStore, videoOutsideStage } from '../../stores/watchStore';
 import { Avatar, avatarRadius } from '../ui/Avatar';
 import { ChannelIcon } from '../ui/ChannelIcon';
 import { Icon } from '../ui/Icon';
@@ -15,6 +16,7 @@ import type { ParticipantInfo } from '../../hooks/useLiveKit';
 import { useVoiceParticipantMeta } from '../../hooks/useVoiceParticipantMeta';
 import { useActiveDmCall } from '../../hooks/useActiveDmCall';
 import { dmCallRoomKey } from '../../utils/dmCall';
+import { getPipBounds, PIP_HEIGHT, PIP_MARGIN, PIP_WIDTH, restingPipPosition } from './pipBounds';
 
 /** Stable fallback for useVoiceParticipantMeta when no participant exists */
 const EMPTY_PARTICIPANT: ParticipantInfo = {
@@ -25,53 +27,7 @@ const EMPTY_PARTICIPANT: ParticipantInfo = {
   cachedUser: null,
 };
 
-const PIP_WIDTH = 320;
-const PIP_HEIGHT = 180;
-const PIP_MARGIN = 16;
 const DRAG_THRESHOLD = 5;
-
-/**
- * Computes PiP boundary box by measuring actual DOM obstacles.
- * Obstacle elements declare themselves with data-pip-obstacle="top"|"left"|"bottom".
- * PiP queries them at boundary-check time — no hardcoded layout values.
- *
- * On mobile (<768px) there are no fixed side/bottom UI obstacles.
- */
-function getPipBounds(pipX: number): {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-} {
-  const vw = layoutPixels(window.innerWidth);
-  const vh = layoutPixels(window.innerHeight);
-  let minX = PIP_MARGIN;
-  const maxX = vw - PIP_WIDTH - PIP_MARGIN;
-  let minY = PIP_MARGIN;
-  let maxY = vh - PIP_HEIGHT - PIP_MARGIN;
-
-  if (vw < MOBILE_LAYOUT_BREAKPOINT) return { minX, maxX, minY, maxY };
-
-  const obstacles = document.querySelectorAll<HTMLElement>('[data-pip-obstacle]');
-  for (const el of obstacles) {
-    const rect = layoutRect(el.getBoundingClientRect());
-    if (rect.width === 0 || rect.height === 0) continue;
-
-    const direction = el.dataset.pipObstacle;
-    if (direction === 'top') {
-      minY = Math.max(minY, rect.bottom + PIP_MARGIN);
-    } else if (direction === 'left') {
-      minX = Math.max(minX, rect.right + PIP_MARGIN);
-    } else if (direction === 'bottom') {
-      const pipRight = pipX + PIP_WIDTH;
-      if (pipX < rect.right && pipRight > rect.left) {
-        maxY = Math.min(maxY, rect.top - PIP_HEIGHT - PIP_MARGIN);
-      }
-    }
-  }
-
-  return { minX, maxX, minY, maxY };
-}
 
 interface SelectedStream {
   participant: ParticipantInfo;
@@ -173,7 +129,10 @@ export function PictureInPicture() {
   const isInServerVoice = currentVoiceChannelId !== null && currentChannelId !== currentVoiceChannelId;
   const isInDmCall = activeDmCall !== null && currentChannelId !== dmCallChannel;
   const wouldShow = (isInServerVoice || isInDmCall) && !voiceFullscreen && pipEnabled;
-  const shouldShow = wouldShow && !pipCollapsed;
+  // The video the call watches together floats in this window's place, and this one steps aside
+  // for it (docs/systems/watch-together.md).
+  const watchVideoFloats = useWatchStore((s) => videoOutsideStage(s, currentVoiceChannelId));
+  const shouldShow = wouldShow && !pipCollapsed && !watchVideoFloats;
 
   // Reset pipCollapsed when wouldShow transitions false → true
   // (user navigated away from voice channel view → PiP reappears)
@@ -282,9 +241,7 @@ export function PictureInPicture() {
   // Initialize position to bottom-right
   useEffect(() => {
     if (shouldShow && position.x === -1) {
-      const initX = layoutPixels(window.innerWidth) - PIP_WIDTH - PIP_MARGIN;
-      const { maxY } = getPipBounds(initX);
-      setPosition({ x: initX, y: maxY });
+      setPosition(restingPipPosition());
     }
   }, [shouldShow, position.x]);
 

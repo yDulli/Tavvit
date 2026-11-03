@@ -4,6 +4,15 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.33.0": {
+      "title": "Watch together",
+      "items": {
+        "watch": "Watch a YouTube or Vimeo video or a video file together in a voice channel. Everyone sees the same moment, and anyone in the call can pause, skip or add to the queue.",
+        "steer": "Whoever starts can choose to steer alone, and the video gets quieter while someone speaks.",
+        "reactions": "Reactions rise over the picture, and the channel list shows what a voice channel is watching.",
+        "privacy": "A video from YouTube or Vimeo loads on your device only after your yes, and nothing of what you watch is stored."
+      }
+    },
     "1.32.8": {
       "title": "Safer accounts, calls and links between servers",
       "items": {

@@ -152,6 +152,11 @@ export const ICONS = {
   play: ['M7.5 4.5v15l12-7.5-12-7.5Z'],
   pause: ['M8.5 5v14M15.5 5v14'],
   alert: [circle(12, 12, 9), 'M12 7.5v5', { dot: [12, 16] }],
+  // Watching together: the screen with a play mark in it.
+  watch: ['M5 4h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z', 'M8 20h8M12 16v4', 'M10.5 7.5v5l4-2.5-4-2.5Z'],
+  skip: ['M6 5.5v13l9.5-6.5L6 5.5Z', 'M18.5 5.5v13'],
+  list: ['M9 6.5h11M9 12h11M9 17.5h11', { dot: [4.5, 6.5] }, { dot: [4.5, 12] }, { dot: [4.5, 17.5] }],
+  maximize: ['M4 9V5a1 1 0 0 1 1-1h4', 'M15 4h4a1 1 0 0 1 1 1v4', 'M20 15v4a1 1 0 0 1-1 1h-4', 'M9 20H5a1 1 0 0 1-1-1v-4'],
 } as const satisfies Record<string, readonly Part[]>;
 
 export type IconName = keyof typeof ICONS;

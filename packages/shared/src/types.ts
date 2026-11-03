@@ -11,6 +11,7 @@ import type { SavedItem } from './saved.js';
 import type { ThreadInfo, ThreadSummary } from './threads.js';
 import type { ForumTag } from './forums.js';
 import type { SignupChallengeSolution } from './signupChallenge.js';
+import type { WatchPosition, WatchPresence, WatchReaction, WatchSession } from './watch.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -1169,7 +1170,7 @@ export type ServerEvent =
   /** Several events in one frame, for a client that said at `auth` that it reads them (`batch: true`). */
   | { type: 'batch'; events: ServerEvent[] }
   | { type: 'channel_poke'; message: MessageWithUser }
-  | { type: 'ready'; user: User; spaces: SpaceWithChannelsAndMembers[]; dmChannels: DmChannel[]; followedThreads?: ThreadInfo[]; folders?: SpaceFolder[]; spaceLayout?: SpaceLayoutItem[] | null; layoutUpdatedAt?: number; voiceStates?: Record<string, string[]>; voiceChannelElapsedSeconds?: Record<string, number>; voiceUserStates?: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }>; supportsPoke?: boolean; unreadCounts?: Record<string, number>; readStates?: ReadState[]; activeCalls?: ActiveCallInfo[]; spaceVoiceStates?: Record<string, { spaceMuted: boolean; spaceDeafened: boolean }>; userActivities?: Record<string, Activity[]>; userActivityIdentities?: Record<string, PresenceIdentity>; rejectedPeerOrigins?: string[]; awaitingApprovalPeerOrigins?: string[]; activePeerOrigins?: string[]; pendingApprovalCount?: number; reportQueueCount?: number | null; reviewQueueCount?: ReviewQueueCountPayload | null }
+  | { type: 'ready'; user: User; spaces: SpaceWithChannelsAndMembers[]; dmChannels: DmChannel[]; followedThreads?: ThreadInfo[]; folders?: SpaceFolder[]; spaceLayout?: SpaceLayoutItem[] | null; layoutUpdatedAt?: number; voiceStates?: Record<string, string[]>; voiceChannelElapsedSeconds?: Record<string, number>; voiceUserStates?: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }>; supportsPoke?: boolean; unreadCounts?: Record<string, number>; readStates?: ReadState[]; activeCalls?: ActiveCallInfo[]; spaceVoiceStates?: Record<string, { spaceMuted: boolean; spaceDeafened: boolean }>; userActivities?: Record<string, Activity[]>; userActivityIdentities?: Record<string, PresenceIdentity>; rejectedPeerOrigins?: string[]; awaitingApprovalPeerOrigins?: string[]; activePeerOrigins?: string[]; pendingApprovalCount?: number; reportQueueCount?: number | null; reviewQueueCount?: ReviewQueueCountPayload | null; watching?: Record<string, WatchPresence> }
   | { type: 'channel_unread_count'; counts: Record<string, number> }
   | { type: 'message_created'; message: MessageWithUser }
   | { type: 'message_updated'; message: MessageWithUser }
@@ -1190,6 +1191,12 @@ export type ServerEvent =
   }
   | ({ type: 'command_reply' } & CommandReply)
   | { type: 'soundboard_play'; channelId: string; spaceId: string; soundId: string; userId: string }
+  /** A voice channel's session as it is now, to those in the call; null once it ended (docs/systems/watch-together.md). */
+  | { type: 'watch_state'; channelId: string; session: WatchSession | null; serverNow: number }
+  /** What the channel list shows of it, to everyone who can see the channel; null once it ended. */
+  | { type: 'watch_presence'; spaceId: string; channelId: string; presence: WatchPresence | null }
+  | { type: 'watch_position'; channelId: string; position: WatchPosition; serverNow: number }
+  | { type: 'watch_reaction'; channelId: string; reaction: WatchReaction }
   | { type: 'space_sounds_changed'; spaceId: string }
   | { type: 'saved_changed'; messageId: string; saved: boolean }
   | { type: 'saved_reminder'; item: SavedItem; preview: string }
@@ -1233,7 +1240,7 @@ export type ServerEvent =
   | { type: 'dm_call_ended'; dmChannelId: string | null; federatedCallId?: string }
   | { type: 'dm_call_undeliverable'; dmChannelId: string | null; federatedCallId: string; terminal: boolean; phase: DmCallPhase; failures: DmCallUndeliverableFailure[] }
   | { type: 'voice_status_update'; userId: string; channelId: string; isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }
-  | { type: 'space_voice_state'; spaceId: string; voiceStates: Record<string, string[]>; voiceChannelElapsedSeconds: Record<string, number>; voiceUserStates: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }>; spaceVoiceStates: Record<string, { spaceMuted: boolean; spaceDeafened: boolean; permissionMuted: boolean }> }
+  | { type: 'space_voice_state'; spaceId: string; voiceStates: Record<string, string[]>; voiceChannelElapsedSeconds: Record<string, number>; voiceUserStates: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }>; spaceVoiceStates: Record<string, { spaceMuted: boolean; spaceDeafened: boolean; permissionMuted: boolean }>; watching?: Record<string, WatchPresence> }
   | { type: 'dm_channel_created'; dmChannel: DmChannel }
   | { type: 'dm_channel_closed'; dmChannelId: string }
   | { type: 'dm_channel_updated'; dmChannelId: string; name: string | null; icon: string | null }

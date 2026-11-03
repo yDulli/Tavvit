@@ -1,5 +1,6 @@
 import { DISCORD_IMPORT_LIMITS } from '@backspace/shared/src/discordImport.js';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors.js';
+import { readCapped } from './cappedBody.js';
 
 // Reads a server template from Discord (docs/systems/spaces.md, "Importing a
 // Discord template"). The one request this instance makes for an import goes
@@ -31,24 +32,6 @@ function remember(code: string, data: unknown, now: number): void {
   }
 }
 
-/** A body read up to `max` bytes: its text, or that it was longer. A failed read throws. */
-async function readCapped(response: Response, max: number): Promise<{ text: string } | { tooLarge: true }> {
-  if (!response.body) return { text: '' };
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > max) {
-      await reader.cancel();
-      return { tooLarge: true };
-    }
-    chunks.push(value);
-  }
-  return { text: new TextDecoder().decode(Buffer.concat(chunks)) };
-}
 
 /** Discord's own wait, in whole seconds, from a 429's body or header; 5 when it names none. */
 function retryAfterOf(body: unknown, header: string | null): number {

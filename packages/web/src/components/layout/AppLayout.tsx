@@ -43,6 +43,7 @@ import { IncomingCallModal } from '../voice/IncomingCallModal';
 import { PictureInPicture } from '../voice/PictureInPicture';
 import { SoundController } from '../voice/SoundController';
 import { GlobalAudioRenderer } from '../voice/GlobalAudioRenderer';
+import { WatchPlayerHost } from '../voice/WatchPlayerHost';
 import { NotificationController } from '../NotificationController';
 import { PushController } from '../PushController';
 import { UserProfilePopoutLayer } from '../ui/UserProfilePopoutLayer';
@@ -489,6 +490,7 @@ export function AppLayout() {
             the root). */}
         <SoundController />
         <GlobalAudioRenderer />
+        <WatchPlayerHost />
         <NotificationController />
         <PushController />
         <SpaceWelcomeGate />
@@ -553,6 +555,7 @@ export function AppLayout() {
       <PictureInPicture />
       <SoundController />
       <GlobalAudioRenderer />
+      <WatchPlayerHost />
       <NotificationController />
       <PushController />
       <SpaceWelcomeGate />

@@ -29,6 +29,7 @@ import { webhookRoutes } from './routes/webhooks.js';
 import { savedRoutes } from './routes/saved.js';
 import { botRoutes } from './routes/bots.js';
 import { soundboardRoutes } from './routes/soundboard.js';
+import { watchRoutes } from './routes/watch.js';
 import { removeUnusedSoundFiles } from './utils/soundFiles.js';
 import { keywordRoutes } from './routes/keywords.js';
 import { startSavedReminderSweeper } from './utils/savedReminders.js';
@@ -348,6 +349,7 @@ async function main(): Promise<void> {
   await app.register(webhookRoutes);
   await app.register(savedRoutes);
   await app.register(soundboardRoutes);
+  await app.register(watchRoutes);
   await app.register(botRoutes);
   await app.register(keywordRoutes);
   await app.register(welcomeRoutes);

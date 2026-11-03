@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
 import { useVoiceStore, type VoiceChannelElapsed } from '../../stores/voiceStore';
 import { useSpaceStore } from '../../stores/spaceStore';
+import { useWatchStore } from '../../stores/watchStore';
+import { watchProviderName } from '../../utils/watchTitle';
 import { useSelfIdInChannel } from '../../utils/channelUser';
 import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextMenuStore';
 import { buildVoiceModMenuItems, VolumeSliderItem } from './voiceMenuItems';
@@ -73,6 +75,7 @@ export function VoiceChannel({ channelId, channelName, channelIcon, onClick, loc
   const participants = useVoiceStore((s) => s.participants);
   const isLiveKitConnected = useVoiceStore((s) => s.isLiveKitConnected);
   const channelElapsedSeconds = useVoiceStore((s) => s.voiceChannelElapsedSeconds.get(channelId) ?? null);
+  const watching = useWatchStore((s) => s.presence.get(channelId) ?? null);
 
   // For OUR channel: LiveKit participants are the single source of truth.
   // For other channels: use server-provided voiceUsers (only available source).
@@ -193,6 +196,14 @@ export function VoiceChannel({ channelId, channelName, channelIcon, onClick, loc
           )}
         </span>
       </button>
+
+      {/* What the call watches together, so whoever sees the channel can come and watch along. */}
+      {watching && voiceUsers.length > 0 && (
+        <div className="ml-7 mt-0.5 flex min-w-0 items-center gap-1.5 px-2 text-meta text-txt-tertiary" title={watching.title}>
+          <Icon name="watch" size={13} className="flex-shrink-0 text-accent-soft" />
+          <span className="truncate">{t('watch.sidebar', { title: watching.title || t('watch.untitled', { provider: watchProviderName(watching.provider) }) })}</span>
+        </div>
+      )}
 
       {/* Connected users */}
       {voiceUsers.length > 0 && (

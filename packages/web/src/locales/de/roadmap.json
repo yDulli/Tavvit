@@ -5,6 +5,35 @@
     "next": {
       "title": "Als Nächstes",
       "items": {
+        "spaceEmoji": {
+          "title": "Emojis und Sticker für jeden Space",
+          "text": "Jeder Space bekommt eigene Emojis und Sticker, und seine Mitglieder nutzen sie überall auf dem Server, gratis."
+        },
+        "discordMove": {
+          "title": "Deinen Discord-Server mitnehmen",
+          "text": "Kanäle, Rollen, Emojis und Sticker in wenigen Minuten, dazu eine Einladung, die alle willkommen heißt, die nachkommen."
+        },
+        "cameraEffects": {
+          "title": "Hintergrund weich oder ersetzt",
+          "text": "Zeichne deinen Raum vor der Kamera weich oder setz ein Bild hinter dich, berechnet auf deinem eigenen Gerät."
+        },
+        "streamerMode": {
+          "title": "Streamer-Modus",
+          "text": "Verbirgt Adressen, Einladungen und andere private Angaben, während du streamst, und schaltet sich von selbst ein, wenn die Desktop-App dein Streaming-Programm erkennt."
+        },
+        "profileDecor": {
+          "title": "Profil-Deko",
+          "text": "Rahmen für dein Bild, Effekte für dein Profil und Namensschilder, gratis für alle."
+        },
+        "themeStudio": {
+          "title": "Theme-Studio",
+          "text": "Gestalte dein eigenes Aussehen, teile es per Link oder biete es deinem Space an."
+        }
+      }
+    },
+    "after": {
+      "title": "Danach",
+      "items": {
         "history": {
           "title": "Bearbeitungsverlauf",
           "text": "Sehen, was in einer Nachricht stand, bevor sie bearbeitet wurde, wenn du sie geschrieben hast oder dich um den Kanal kümmerst."
@@ -32,12 +61,7 @@
         "passkeys": {
           "title": "Passkeys",
           "text": "Mit Fingerabdruck, Gesicht oder Sicherheitsschlüssel anmelden statt mit Passwort."
-        }
-      }
-    },
-    "after": {
-      "title": "Danach",
-      "items": {
+        },
         "publicExplore": {
           "title": "Entdecken ohne Konto",
           "text": "Sehen, welche Spaces es gibt, bevor du dich anmeldest."
@@ -64,13 +88,13 @@
           "title": "Knöpfe und Menüs in Nachrichten",
           "text": "Bots können Auswahlen zum Anklicken anbieten statt Befehle zum Tippen."
         },
-        "blur": {
-          "title": "Hintergrund-Unschärfe in Videoanrufen",
-          "text": "Dein Zimmer bleibt vor der Kamera deine Sache."
-        },
         "signedApp": {
           "title": "Eine signierte Desktop-App",
           "text": "Keine Warnung von Windows mehr beim Installieren der App."
+        },
+        "watchDm": {
+          "title": "Gemeinsam schauen in Direktanrufen",
+          "text": "Auch in Anrufen mit Freunden gemeinsam schauen, nicht nur im Sprachkanal eines Space."
         }
       }
     }

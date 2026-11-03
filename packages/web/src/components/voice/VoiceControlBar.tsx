@@ -1,4 +1,5 @@
 import { SoundboardButton } from './SoundboardButton';
+import { WatchButton } from './WatchButton';
 import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVoiceStore } from '../../stores/voiceStore';
@@ -211,6 +212,7 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
 
         {/* The soundboard belongs to a space: a call between two people has none. */}
         {!isDmCall && currentVoiceChannelId && <SoundboardButton channelId={currentVoiceChannelId} className={btnDefault} />}
+        {!isDmCall && currentVoiceChannelId && <WatchButton channelId={currentVoiceChannelId} className={btnDefault} />}
 
         {/* Fullscreen Toggle */}
         <button

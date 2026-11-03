@@ -599,6 +599,18 @@ See [sounds.md](sounds.md), "Soundboard".
 | GET | `/api/sounds/:id/audio` | Members. |
 | POST | `/api/channels/:id/soundboard/:soundId/play` | In the call, USE_SOUNDBOARD, not held back. |
 
+## Watching together (`routes/watch.ts`) — auth required
+
+See [watch-together.md](watch-together.md). Every route: the channel is a space's voice channel (`404 channel_not_found`), the caller is in its call and still holds VIEW_CHANNEL and CONNECT there (`403 watch_not_in_call`), and `memberActionRefusal` lets them act. Closed to bots. A changing answer is `{ session: WatchSession | null, serverNow }`.
+
+| Method | Path | Rule |
+|--------|------|------|
+| GET | `/api/channels/:id/watch` | Where the call's session stands. |
+| POST | `/api/channels/:id/watch` | STREAM. `{ url }` (`400 watch_link_unsupported`). Starts a session or adds to its queue (`409 watch_queue_full`, `details.max`, by count or by size). Everything is checked again after the title lookup. 20 a minute. |
+| POST | `/api/channels/:id/watch/state` | `{ action: 'play' \| 'pause' \| 'seek' \| 'next' \| 'remove' \| 'control', positionMs?, itemId?, control? }`. `403 watch_not_controller`, `404 watch_not_found`. 60 a minute. |
+| DELETE | `/api/channels/:id/watch` | The starter, anyone while everyone steers, or MOVE_MEMBERS. |
+| POST | `/api/channels/:id/watch/react` | `{ reaction }`, one of `WATCH_REACTIONS`; the call is not told who. 8 in 10 seconds. |
+
 ## Status (`routes/publicStatus.ts`) — public
 
 `GET /api/status` → `PublicStatus`: whether `chat`, `uploads`, `voice` and `mail` are `ok`, `down` or `off`, and the operator's notes. No counts, versions or addresses. Remembered for 30 seconds; 60 requests a minute. See operations.md.

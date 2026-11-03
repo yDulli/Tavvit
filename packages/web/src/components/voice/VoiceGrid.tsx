@@ -7,6 +7,8 @@ import { deriveGridTiles } from '../../hooks/useLiveKit';
 import { useGridLayout } from '../../hooks/useGridLayout';
 import type { ParticipantInfo, GridTile } from '../../hooks/useLiveKit';
 import { useTrackStats } from '../../hooks/useTrackStats';
+import { useWatchStore } from '../../stores/watchStore';
+import { WatchStage } from './WatchStage';
 import { Icon } from '../ui/Icon';
 
 interface VoiceGridProps {
@@ -29,6 +31,10 @@ export function VoiceGrid({ participants }: VoiceGridProps) {
   const focusedParticipantId = useVoiceStore((s) => s.focusedParticipantId);
   const setFocusedParticipant = useVoiceStore((s) => s.setFocusedParticipant);
   const watchingStreams = useVoiceStore((s) => s.watchingStreams);
+  const currentVoiceChannelId = useVoiceStore((s) => s.currentVoiceChannelId);
+  // The call watches something together (docs/systems/watch-together.md): its video takes the stage.
+  const watching = useWatchStore((s) => (currentVoiceChannelId ? s.sessions.get(currentVoiceChannelId)?.session.current != null : false));
+  const videoHidden = useWatchStore((s) => s.videoHiddenFor !== null && s.videoHiddenFor === currentVoiceChannelId);
   const [stripHidden, setStripHidden] = useState(false);
 
   const tiles = useMemo(() => deriveGridTiles(participants), [participants]);
@@ -67,9 +73,49 @@ export function VoiceGrid({ participants }: VoiceGridProps) {
     }
   }, [tiles, focusedParticipantId, setFocusedParticipant]);
 
+  // Render a single tile polymorphically
+  const renderTile = (tile: GridTile, size: { large?: boolean; compact?: boolean }) =>
+    tile.kind === 'user' ? (
+      <VoiceUser tile={tile} {...size} />
+    ) : (
+      <StreamTile tile={tile} {...size} stats={streamStats} />
+    );
+
+  // Watching together: the video on the stage, everyone in the call in a strip under it.
+  if (watching && !videoHidden) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 min-h-0 p-2">
+          <WatchStage className="h-full w-full rounded-lg bg-black/40" />
+        </div>
+        {tiles.length > 0 && (
+          <div className="h-[120px] max-h-[calc(20*var(--app-vh))] min-h-[80px] flex-shrink-0 flex items-center gap-2 p-2 overflow-x-auto no-scrollbar">
+            {tiles.map((tile) => (
+              <div key={tile.key} className="h-full aspect-video flex-shrink-0 rounded-lg first:ml-auto last:mr-auto">
+                {renderTile(tile, { compact: true })}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const showWatch = watching && videoHidden && (
+    <button
+      type="button"
+      onClick={() => { if (currentVoiceChannelId) useWatchStore.getState().setVideoHidden(currentVoiceChannelId, false); }}
+      className="absolute left-4 top-4 z-10 btn-quiet btn-sm"
+    >
+      <Icon name="watch" size={14} />
+      {t('voice:watch.show')}
+    </button>
+  );
+
   if (tiles.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center relative">
+        {showWatch}
         <div className="empty-state">
           <div className="empty-state-icon">
             <Icon name="volume" size={18} />
@@ -86,19 +132,12 @@ export function VoiceGrid({ participants }: VoiceGridProps) {
     ? tiles.find((t) => t.key === focusedParticipantId)
     : null;
 
-  // Render a single tile polymorphically
-  const renderTile = (tile: GridTile, size: { large?: boolean; compact?: boolean }) =>
-    tile.kind === 'user' ? (
-      <VoiceUser tile={tile} {...size} />
-    ) : (
-      <StreamTile tile={tile} {...size} stats={streamStats} />
-    );
-
   // Focus mode: one large tile + bottom strip
   if (focusedTile) {
     const otherTiles = tiles.filter((t) => t.key !== focusedParticipantId);
     return (
       <div className="flex-1 flex flex-col overflow-hidden relative">
+        {showWatch}
         {/* Main focused view */}
         <div
           className="flex-1 p-2 min-h-0 cursor-pointer relative"
@@ -162,7 +201,8 @@ export function VoiceGrid({ participants }: VoiceGridProps) {
 
   // Default grid mode — container-aware layout via ResizeObserver
   return (
-    <div ref={gridRef} className="flex-1 overflow-hidden min-h-0">
+    <div ref={gridRef} className="flex-1 overflow-hidden min-h-0 relative">
+      {showWatch}
       <div
         className="grid h-full w-full"
         style={{

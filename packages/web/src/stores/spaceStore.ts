@@ -488,7 +488,8 @@ interface SpaceState {
    */
   upsertChannel: (channel: Channel, spaceId: string, origin: string) => void;
   /** A space channel the user can no longer see (deleted, or hidden by an override): forgotten everywhere. */
-  removeChannel: (channelId: string) => void;
+  /** `origin` says which instance asks: an id held under another is left alone (spaceChannels.ts). */
+  removeChannel: (channelId: string, origin?: string) => void;
   /**
    * The complete visible channel and category set of `spaceId` on `origin`
    * (`channel_layout_updated`): the space's index entries become exactly these.
@@ -1039,12 +1040,18 @@ export const useSpaceStore = create<SpaceState>((set, get) => ({
     });
   },
 
-  removeChannel: (channelId: string) => {
+  removeChannel: (channelId: string, origin?: string) => {
+    // An id one instance issued is not another's to drop (spaceChannels.ts): an event from
+    // elsewhere that names it changes nothing.
+    if (origin !== undefined) {
+      const held = get().spaceChannelIndex.get(channelId);
+      if (held && held.origin !== origin) return;
+    }
     set((state) => {
       const channels = state.channels.some(c => c.id === channelId)
         ? state.channels.filter(c => c.id !== channelId)
         : state.channels;
-      return { ...channelTableFields(state, dropChannels(channelTablesOf(state), [channelId])), channels };
+      return { ...channelTableFields(state, dropChannels(channelTablesOf(state), [channelId], origin)), channels };
     });
     useChatStore.getState().removeChannelStates(new Set([channelId]));
   },

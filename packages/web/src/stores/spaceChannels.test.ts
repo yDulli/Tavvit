@@ -48,3 +48,16 @@ describe("a channel's icon in the index", () => {
     expect(after.index.get('c1')?.icon).toBeUndefined();
   });
 });
+
+describe('an id one instance issued', () => {
+  it('is not another instance\'s to write or drop', () => {
+    const held = putChannels(empty, 's1', 'https://nova.example', [channel('c1', { type: 'voice' })]);
+    const written = putChannels(held, 's1', 'https://other.example', [channel('c1', { type: 'text' }), channel('c9')]);
+    expect(written.index.get('c1')).toMatchObject({ origin: 'https://nova.example', type: 'voice' });
+    expect(written.index.get('c9')?.origin).toBe('https://other.example');
+    expect(idsOf(dropChannels(written, ['c1'], 'https://other.example'))).toEqual(['c1', 'c9']);
+    expect(idsOf(dropChannels(written, ['c1'], 'https://nova.example'))).toEqual(['c9']);
+    // Without a word on who asks, as the store's own actions drop.
+    expect(idsOf(dropChannels(written, ['c1']))).toEqual(['c9']);
+  });
+});

@@ -262,6 +262,10 @@ shows a stored poke as "System message" when it loads history.
 | `saved_changed` | `messageId`, `saved` | The account's other devices |
 | `saved_reminder` | `item`, `preview` | The account, once, when it is due |
 | `soundboard_play` | `channelId`, `spaceId`, `soundId`, `userId` | Those in the call |
+| `watch_state` | `channelId`, `session` (`WatchSession`, or null once it ended), `serverNow` | Those in the call when what plays, the queue or who steers changed; also to everyone joining or moving into a call, null when it watches nothing ([watch-together.md](watch-together.md)) |
+| `watch_position` | `channelId`, `position` (`itemId`, `playing`, `positionMs`, `stateAt`), `serverNow` | Those in the call, for a play, pause or seek |
+| `watch_presence` | `spaceId`, `channelId`, `presence` (`{ title, provider }` or null) | Who can see the voice channel, for the line under it in the channel list |
+| `watch_reaction` | `channelId`, `reaction` | Those in the call; nobody is named |
 | `space_sounds_changed` | `spaceId` | The space: fetch the clips again |
 | `command_invoked` | `name`, `args`, `options`, `interactionId`, `channelId`, `spaceId`, `user` | The bot asked |
 | `command_reply` | `id`, `channelId`, `spaceId`, `botId`, `botName`, `botAvatar`, `content`, `cards?`, `createdAt` | The person who asked, alone. Stored nowhere ([bots.md](bots.md), "Commands") |
@@ -611,6 +615,7 @@ with the client's reconnect backoff, and each refusal shows its toast again.
   voiceChannelElapsedSeconds?: Record<channelId, number>,
   voiceUserStates?: Record<string, { isMuted, isDeafened, isCameraOn, isScreenSharing }>,
   spaceVoiceStates?: Record<string, { spaceMuted, spaceDeafened, permissionMuted }>,
+  watching?: Record<channelId, { title, provider }>, // what each voice call watches together (watch-together.md)
   readStates?: ReadState[],
   supportsPoke?: boolean,          // true from an instance that handles channel_poke (see "Channel pokes"); absent before
   unreadCounts?: Record<channelId, number>, // unread messages per countable space channel and open DM, capped at 100 (see "Unread counts")
@@ -628,7 +633,7 @@ with the client's reconnect backoff, and each refusal shows its toast again.
 
 **Federated users:** When the connecting user is federated (`homeInstance` is set), the ready payload carries their DMs on this instance like anyone else's: `dmChannels` (this instance's copies, each with its `federatedId`, which is how the client shows a conversation it also gets from the user's home once) and `activeCalls` for those memberships. `readStates` is filtered to the space channels and DMs in the payload, and a DM with messages but no read state yet gets one at its newest message, so conversations mirrored here before the user first connected do not show as unread.
 
-**Voice-state assembly:** `voiceStates` / `voiceChannelElapsedSeconds` / `voiceUserStates` / `spaceVoiceStates` for each of the user's spaces are produced by `ConnectionManager.buildSpaceVoiceState(spaceId, userId)` — the single source of truth shared with the mid-session join push (see below). `voiceChannelElapsedSeconds` is a whole-second duration computed from the in-memory `VoiceRoom.startedAt`; clients advance that duration from receipt time, so server/client clock skew cannot change the value. It disappears when the room becomes empty. Because rooms are intentionally in-memory, a server restart clears both occupancy and its duration until participants reconnect; this is not persisted to the database. Voice presence is VIEW_CHANNEL-filtered per `computePermissions`: a user is never told who occupies a voice channel they cannot see.
+**Voice-state assembly:** `voiceStates` / `voiceChannelElapsedSeconds` / `voiceUserStates` / `spaceVoiceStates` / `watching` for each of the user's spaces are produced by `ConnectionManager.buildSpaceVoiceState(spaceId, userId)` — the single source of truth shared with the mid-session join push (see below). `voiceChannelElapsedSeconds` is a whole-second duration computed from the in-memory `VoiceRoom.startedAt`; clients advance that duration from receipt time, so server/client clock skew cannot change the value. It disappears when the room becomes empty. Because rooms are intentionally in-memory, a server restart clears both occupancy and its duration until participants reconnect; this is not persisted to the database. Voice presence is VIEW_CHANNEL-filtered per `computePermissions`: a user is never told who occupies a voice channel they cannot see.
 
 ### Mid-session space join — `space_voice_state` push
 

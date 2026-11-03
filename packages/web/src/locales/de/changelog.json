@@ -4,6 +4,15 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.33.0": {
+      "title": "Gemeinsam schauen",
+      "items": {
+        "watch": "Schaut in einem Sprachkanal gemeinsam ein YouTube- oder Vimeo-Video oder eine Videodatei. Alle sehen denselben Moment, und jeder im Anruf kann pausieren, überspringen oder etwas in die Warteschlange stellen.",
+        "steer": "Wer startet, kann allein steuern, und das Video wird leiser, während jemand spricht.",
+        "reactions": "Reaktionen steigen über dem Bild auf, und die Kanalliste zeigt, was in einem Sprachkanal läuft.",
+        "privacy": "Ein Video von YouTube oder Vimeo lädt auf deinem Gerät erst nach deinem Ja, und von dem, was ihr schaut, wird nichts gespeichert."
+      }
+    },
     "1.32.8": {
       "title": "Sicherere Konten, Anrufe und Verbindungen zwischen Servern",
       "items": {

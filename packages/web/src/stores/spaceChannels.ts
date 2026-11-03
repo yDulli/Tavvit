@@ -44,7 +44,10 @@ export interface SpaceChannelTables {
 /**
  * Add or replace `channels` of `spaceId` on `origin`. A channel without
  * `myPermissions` or `lastMessageId` keeps the value the tables already hold:
- * events that omit a field do not know it, they do not clear it.
+ * events that omit a field do not know it, they do not clear it. An id the
+ * index holds under another origin is left as it is: an instance speaks for the
+ * channels it issued, and could otherwise claim another's (its calls, what they
+ * watch) by naming the id in an event of its own.
  */
 export function putChannels(
   tables: SpaceChannelTables,
@@ -67,6 +70,8 @@ export function putSpaceListings(
   const lastMessageIds = new Map(tables.lastMessageIds);
   for (const space of spaces) {
     for (const channel of space.channels) {
+      const held = tables.index.get(channel.id);
+      if (held && held.origin !== origin) continue;
       index.set(channel.id, {
         spaceId: space.id,
         origin,
@@ -83,9 +88,15 @@ export function putSpaceListings(
   return { index, permissions, lastMessageIds };
 }
 
-/** Forget `channelIds`, with their threads, in every table. Ids the index does not hold are ignored. */
-export function dropChannels(tables: SpaceChannelTables, channelIds: Iterable<string>): SpaceChannelTables {
-  const known = new Set([...channelIds].filter((id) => tables.index.has(id)));
+/**
+ * Forget `channelIds`, with their threads, in every table. Ids the index does not hold are ignored,
+ * and so, when `origin` says who asks, are ids it holds under another origin.
+ */
+export function dropChannels(tables: SpaceChannelTables, channelIds: Iterable<string>, origin?: string): SpaceChannelTables {
+  const known = new Set([...channelIds].filter((id) => {
+    const held = tables.index.get(id);
+    return held !== undefined && (origin === undefined || held.origin === origin);
+  }));
   const threads = channelIdsWhere(tables.index, (entry) => entry.parentChannelId !== undefined && known.has(entry.parentChannelId));
   const ids = [...known, ...threads];
   if (ids.length === 0) return tables;

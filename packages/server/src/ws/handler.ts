@@ -9,6 +9,7 @@ import type { WebSocket } from 'ws';
 import { AuthError, verifyAccessToken } from '../utils/auth.js';
 import { openReviewCounts } from '../utils/spaceReview.js';
 import type { ReviewQueueCountPayload } from '@backspace/shared/src/platform.js';
+import type { WatchPresence, WatchSession } from '@backspace/shared/src/watch.js';
 import { openReportCount } from '../utils/reportCount.js';
 import { getDb, schema } from '../db/index.js';
 import { eq, and, or, inArray, desc, sql, ne } from 'drizzle-orm';
@@ -131,6 +132,17 @@ export interface VoiceRoom {
   participants: Set<string>;
   metadata: SpaceRoomMeta | DmRoomMeta;
   startedAt: number;
+  /**
+   * What the call watches together (docs/systems/watch-together.md, utils/watchSessions.ts). It
+   * lives with the room: a space room is dropped once nobody is in it, and the session with it.
+   */
+  watch?: WatchSession;
+}
+
+/** What the channel list shows of a room's session: its video's title, or null when nothing plays. */
+export function watchPresenceOf(room: VoiceRoom | undefined): WatchPresence | null {
+  const current = room?.watch?.current;
+  return current ? { title: current.title, provider: current.provider } : null;
 }
 
 /** Whole occupied seconds for the wire protocol; never exposes a server clock timestamp. */
@@ -164,6 +176,8 @@ const PRESENCE_BATCH_MS = 500;
 
 /** The most sockets one account keeps open at once: every tab, the desktop app and phones, with room to spare. */
 const MOST_SOCKETS_PER_ACCOUNT = 10;
+/** Unsent bytes a socket may hold before it is taken as not draining and ended (`deliver`). */
+const MOST_BUFFERED_BYTES = 16 * 1024 * 1024;
 
 class ConnectionManager implements ReplicaSessionHost {
   // What each socket authenticated with (see `closeSessionSockets`, `revalidateSockets`).
@@ -548,6 +562,7 @@ class ConnectionManager implements ReplicaSessionHost {
       voiceChannelElapsedSeconds: snapshot.voiceChannelElapsedSeconds,
       voiceUserStates: snapshot.voiceUserStates,
       spaceVoiceStates: snapshot.spaceVoiceStates,
+      watching: snapshot.watching,
     });
   }
 
@@ -607,9 +622,11 @@ class ConnectionManager implements ReplicaSessionHost {
     voiceChannelElapsedSeconds: Record<string, number>;
     voiceUserStates: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }>;
     spaceVoiceStates: Record<string, { spaceMuted: boolean; spaceDeafened: boolean; permissionMuted: boolean }>;
+    watching: Record<string, WatchPresence>;
   } {
     const db = getDb();
     const voiceStates: Record<string, string[]> = {};
+    const watching: Record<string, WatchPresence> = {};
     const voiceChannelElapsedSeconds: Record<string, number> = {};
     const voiceUserStates: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }> = {};
     const spaceVoiceStates: Record<string, { spaceMuted: boolean; spaceDeafened: boolean; permissionMuted: boolean }> = {};
@@ -629,6 +646,8 @@ class ConnectionManager implements ReplicaSessionHost {
         const ids = Array.from(room.participants);
         voiceStates[ch.id] = ids;
         voiceChannelElapsedSeconds[ch.id] = getVoiceRoomElapsedSeconds(room);
+        const presence = watchPresenceOf(room);
+        if (presence) watching[ch.id] = presence;
         for (const uid of ids) {
           const status = this.getVoiceUserStatus(uid);
           if (status) voiceUserStates[uid] = status;
@@ -670,7 +689,7 @@ class ConnectionManager implements ReplicaSessionHost {
       }
     }
 
-    return { voiceStates, voiceChannelElapsedSeconds, voiceUserStates, spaceVoiceStates };
+    return { voiceStates, voiceChannelElapsedSeconds, voiceUserStates, spaceVoiceStates, watching };
   }
 
   // ─── Unified VoiceRoom API ─────────────────────────────────────────────────
@@ -1128,9 +1147,7 @@ class ConnectionManager implements ReplicaSessionHost {
       const oldRoom = this.voiceRooms.get(currentRoomId);
       if (oldRoom) {
         oldRoom.participants.delete(userId);
-        if (oldRoom.participants.size === 0 && oldRoom.roomType === 'space') {
-          this.voiceRooms.delete(currentRoomId);
-        }
+        this.afterParticipantLeft(oldRoom, userId);
       }
     }
 
@@ -1152,12 +1169,31 @@ class ConnectionManager implements ReplicaSessionHost {
       this.clearSpaceVoiceState(meta.spaceId, userId);
     }
 
-    // Auto-cleanup empty space rooms (they're lazy-created)
-    if (room.participants.size === 0 && room.roomType === 'space') {
-      this.voiceRooms.delete(roomId);
-    }
-
+    this.afterParticipantLeft(room, userId);
     return room;
+  }
+
+  /**
+   * After `userId` left `room`: an empty space room is dropped (they are lazy-created), its session
+   * with it, and the channel list hears that nothing plays there any more. Otherwise a session only
+   * its starter controlled goes to everyone, once the starter is gone (a session nobody may steer
+   * helps no one).
+   */
+  private afterParticipantLeft(room: VoiceRoom, userId: string): void {
+    if (room.roomType !== 'space') return;
+    const meta = room.metadata as SpaceRoomMeta;
+    if (room.participants.size === 0) {
+      const watched = room.watch !== undefined;
+      this.voiceRooms.delete(room.roomId);
+      if (watched) {
+        this.sendToChannel(meta.spaceId, room.roomId, { type: 'watch_presence', spaceId: meta.spaceId, channelId: room.roomId, presence: null });
+      }
+      return;
+    }
+    if (room.watch && room.watch.control === 'starter' && room.watch.starterId === userId) {
+      room.watch.control = 'everyone';
+      this.sendToUsers(room.participants, { type: 'watch_state', channelId: room.roomId, session: room.watch, serverNow: Date.now() });
+    }
   }
 
   /** Leave whatever room the user is in. Returns { roomId, room } or null. */
@@ -1380,17 +1416,24 @@ class ConnectionManager implements ReplicaSessionHost {
     }
   }
 
-  /** `sendToUser` with the event already serialized, for fan-outs that serialize it once. */
+  /**
+   * `sendToUser` with the event already serialized, for fan-outs that serialize it once. A socket
+   * that holds `MOST_BUFFERED_BYTES` unsent is not draining (a client that opened sockets and reads
+   * none of them): it is ended rather than fed more, and a client that is only slow reconnects.
+   */
   private deliver(userId: string, event: ServerEvent, message: string, channelPerms?: bigint): void {
     const connections = this.getUserConnections(userId);
     if (connections.size === 0) return;
     const followUp = unreadCountFollowUp(userId, event, channelPerms);
     const followUpMessage = followUp ? JSON.stringify(followUp) : null;
     for (const ws of connections) {
-      if (ws.readyState === 1) { // WebSocket.OPEN
-        ws.send(message);
-        if (followUpMessage) ws.send(followUpMessage);
+      if (ws.readyState !== 1) continue; // WebSocket.OPEN
+      if (ws.bufferedAmount > MOST_BUFFERED_BYTES) {
+        ws.terminate();
+        continue;
       }
+      ws.send(message);
+      if (followUpMessage) ws.send(followUpMessage);
     }
   }
 
@@ -1791,6 +1834,8 @@ export function buildReadyPayload(userId: string): {
   voiceChannelElapsedSeconds: Record<string, number>;
   voiceUserStates: Record<string, { isMuted: boolean; isDeafened: boolean; isCameraOn: boolean; isScreenSharing: boolean }>;
   spaceVoiceStates: Record<string, { spaceMuted: boolean; spaceDeafened: boolean; permissionMuted: boolean }>;
+  /** What plays in each voice channel the user can see (docs/systems/watch-together.md). */
+  watching: Record<string, WatchPresence>;
   supportsPoke: boolean;
   followedThreads: ThreadInfo[];
   unreadCounts: Record<string, number>;
@@ -2077,11 +2122,13 @@ export function buildReadyPayload(userId: string): {
   const voiceStates: Record<string, string[]> = {};
   const voiceChannelElapsedSeconds: Record<string, number> = {};
   const spaceVoiceStates: Record<string, { spaceMuted: boolean; spaceDeafened: boolean; permissionMuted: boolean }> = {};
+  const watching: Record<string, WatchPresence> = {};
   for (const space of spaces) {
     const snap = connectionManager.buildSpaceVoiceState(space.id, userId);
     Object.assign(voiceStates, snap.voiceStates);
     Object.assign(voiceChannelElapsedSeconds, snap.voiceChannelElapsedSeconds);
     Object.assign(spaceVoiceStates, snap.spaceVoiceStates);
+    Object.assign(watching, snap.watching);
   }
 
   // Build active calls from user's DM memberships
@@ -2274,7 +2321,7 @@ export function buildReadyPayload(userId: string): {
     dmChannels.map(dm => dm.id),
     new Map(readStateRows.map(rs => [rs.channelId, rs.lastReadMessageId])),
   );
-  return { supportsPoke: true, followedThreads, unreadCounts, user, spaces, dmChannels, folders, spaceLayout, layoutUpdatedAt, voiceStates, voiceChannelElapsedSeconds, voiceUserStates, spaceVoiceStates, readStates, activeCalls, userActivities, userActivityIdentities, rejectedPeerOrigins, awaitingApprovalPeerOrigins, activePeerOrigins, pendingApprovalCount, reviewQueueCount, reportQueueCount };
+  return { supportsPoke: true, followedThreads, unreadCounts, user, spaces, dmChannels, folders, spaceLayout, layoutUpdatedAt, voiceStates, voiceChannelElapsedSeconds, voiceUserStates, spaceVoiceStates, watching, readStates, activeCalls, userActivities, userActivityIdentities, rejectedPeerOrigins, awaitingApprovalPeerOrigins, activePeerOrigins, pendingApprovalCount, reviewQueueCount, reportQueueCount };
 }
 
 /**

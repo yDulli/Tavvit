@@ -1,5 +1,6 @@
 import { useCommandReplyStore } from '../stores/commandReplyStore';
 import { useSoundboardStore } from '../stores/soundboardStore';
+import { channelOfOrigin, channelOfSpace, useWatchStore } from '../stores/watchStore';
 import { useKeywordStore } from '../stores/keywordStore';
 import { useSavedStore } from '../stores/savedStore';
 import { sendNotification } from '../platform/notifications';
@@ -491,6 +492,8 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
           setVoiceChannelElapsedSeconds(channelId, elapsedSeconds);
         }
       }
+      // What plays in this origin's voice channels, for the channel list.
+      useWatchStore.getState().applyPresenceSnapshot(channelOfOrigin(origin), event.watching);
       // Activity data from the ready payload: this origin's full snapshot,
       // replacing whatever it reported before the reconnect.
       {
@@ -771,6 +774,40 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       void useSoundboardStore.getState().hear(origin, event.channelId, event.soundId);
       break;
 
+    // Watching together (docs/systems/watch-together.md): only the instance a channel lives on
+    // speaks for its call, so another instance this client is connected to can put no video into it.
+    // The session is followed only for the call this client is in; a late word about a call it
+    // left changes nothing but the channel list.
+    case 'watch_state':
+      if (getChannelOrigin(event.channelId) !== origin) break;
+      if (useVoiceStore.getState().currentVoiceChannelId === event.channelId) {
+        useWatchStore.getState().applyState(event.channelId, event.session, event.serverNow);
+      } else {
+        useWatchStore.getState().applyPresence(event.channelId, event.session?.current
+          ? { title: event.session.current.title, provider: event.session.current.provider }
+          : null);
+      }
+      break;
+
+    case 'watch_presence':
+      if (getChannelOrigin(event.channelId) !== origin) break;
+      useWatchStore.getState().applyPresence(event.channelId, event.presence);
+      break;
+
+    case 'watch_position':
+      if (getChannelOrigin(event.channelId) !== origin) break;
+      if (useVoiceStore.getState().currentVoiceChannelId === event.channelId) {
+        useWatchStore.getState().applyPosition(event.channelId, event.position, event.serverNow);
+      }
+      break;
+
+    case 'watch_reaction':
+      if (getChannelOrigin(event.channelId) !== origin) break;
+      if (useVoiceStore.getState().currentVoiceChannelId === event.channelId) {
+        useWatchStore.getState().addReaction(event.channelId, event.reaction);
+      }
+      break;
+
     case 'space_sounds_changed':
       if (useSpaceStore.getState().currentSpaceId === event.spaceId) {
         useSoundboardStore.getState().load(origin, event.spaceId).catch(() => undefined);
@@ -832,7 +869,7 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
     case 'thread_deleted':
       if (event.starterMessageId) useChatStore.getState().applyThreadSummary(event.parentChannelId, event.starterMessageId, null);
       useThreadStore.getState().markGone(event.threadId);
-      useSpaceStore.getState().removeChannel(event.threadId);
+      useSpaceStore.getState().removeChannel(event.threadId, origin);
       useForumStore.getState().removePost(event.parentChannelId, event.threadId);
       break;
 
@@ -954,6 +991,7 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       // member's channel sidebar shows empty voice channels until a reload.
       // Scoped to event.spaceId; never disturbs other spaces' live voice state.
       applySpaceVoiceState(event);
+      useWatchStore.getState().applyPresenceSnapshot(channelOfSpace(event.spaceId, origin), event.watching);
       break;
 
     case 'voice_space_muted': {
@@ -1491,7 +1529,7 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
 
     case 'channel_deleted': {
       // Deleted, or hidden from this user by an override change.
-      useSpaceStore.getState().removeChannel(event.channelId);
+      useSpaceStore.getState().removeChannel(event.channelId, origin);
       useThreadStore.getState().dropChannel(event.channelId);
       if (useChatStore.getState().currentChannelId === event.channelId) {
         useChatStore.getState().setCurrentChannel(null);

@@ -360,6 +360,8 @@ wsSendAll(event)         // Broadcast to all instances
 
 All incoming WS events pass through `handleEvent(origin, event)`. The `origin` parameter identifies which instance sent the event, enabling origin-aware state updates.
 
+An event about a channel is taken only from the socket of the instance that channel lives on wherever another instance could otherwise act in it: watching together's `watch_state`, `watch_position`, `watch_presence` and `watch_reaction` check `getChannelOrigin(channelId) === origin`, and a snapshot of what plays is applied only to the channels its sender hosts (`channelOfOrigin`, `channelOfSpace(spaceId, origin)`; watch-together.md "Federation"). For that to hold, the channel index itself answers for its origins: `putSpaceListings` leaves an id the index holds under another origin as it is, and `dropChannels`, given the origin that asks (`removeChannel(channelId, origin)` from `channel_deleted` and `thread_deleted`), drops nothing another origin issued. An instance speaks for the channels it issued, and no event of its own can move another's.
+
 ### Ready Event Processing
 
 When a WS connection opens and authenticates, the server sends a `ready` event containing spaces, DM channels, voice states, etc. The client processes this via `populateFromReady()`:

@@ -6,6 +6,7 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
+import { useWatchStore } from '../../stores/watchStore';
 import type { DmChannel } from '@backspace/shared';
 
 // AudioManager loads an AudioWorklet module that jsdom cannot evaluate.
@@ -35,6 +36,7 @@ beforeEach(() => {
   });
   useChatStore.setState({ currentChannelId: 'text-1' });
   useUIStore.setState({ voiceFullscreen: false, pipCollapsed: false });
+  useWatchStore.setState({ sessions: new Map(), slot: null, videoHiddenFor: null });
 });
 
 afterEach(() => {
@@ -80,6 +82,31 @@ describe('PictureInPicture and the floating window setting', () => {
 
     // Viewing the key as if it were a conversation is viewing something else.
     useChatStore.setState({ currentChannelId: 'key-1' });
+    expect(renderPip().container).not.toBeEmptyDOMElement();
+  });
+});
+
+describe('PictureInPicture while the call watches something together', () => {
+  beforeEach(() => {
+    useWatchStore.getState().applyState('voice-1', {
+      channelId: 'voice-1',
+      spaceId: 'space-1',
+      current: { id: 'item-1', provider: 'youtube', ref: 'dQw4w9WgXcQ', startMs: 0, url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title: 'Night sky' },
+      queue: [],
+      playing: true,
+      positionMs: 0,
+      stateAt: Date.now(),
+      control: 'everyone',
+      starterId: 'ada',
+    }, Date.now());
+  });
+
+  it('steps aside for the video, which floats in its place', () => {
+    expect(renderPip().container).toBeEmptyDOMElement();
+  });
+
+  it('comes back once the video is put away', () => {
+    useWatchStore.setState({ videoHiddenFor: 'voice-1' });
     expect(renderPip().container).not.toBeEmptyDOMElement();
   });
 });

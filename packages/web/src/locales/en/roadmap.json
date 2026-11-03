@@ -5,6 +5,35 @@
     "next": {
       "title": "Next",
       "items": {
+        "spaceEmoji": {
+          "title": "Emojis and stickers for each space",
+          "text": "Every space gets its own emojis and stickers, and its members can use them everywhere on the server, free."
+        },
+        "discordMove": {
+          "title": "Bring your Discord server along",
+          "text": "Its channels, roles, emojis and stickers in a few minutes, and an invite that welcomes everyone who follows."
+        },
+        "cameraEffects": {
+          "title": "Background blur and backgrounds",
+          "text": "Blur your room on camera or put a picture behind you, worked out on your own device."
+        },
+        "streamerMode": {
+          "title": "Streamer mode",
+          "text": "Hides addresses, invites and other private details while you stream, and turns on by itself when the desktop app sees your streaming program."
+        },
+        "profileDecor": {
+          "title": "Profile decorations",
+          "text": "Frames for your picture, effects for your profile and nameplates, free for everyone."
+        },
+        "themeStudio": {
+          "title": "Theme studio",
+          "text": "Make your own look, share it with a link, or offer one to your space."
+        }
+      }
+    },
+    "after": {
+      "title": "After that",
+      "items": {
         "history": {
           "title": "Edit history",
           "text": "See what a message said before it was edited, if you wrote it or look after the channel."
@@ -32,12 +61,7 @@
         "passkeys": {
           "title": "Passkeys",
           "text": "Sign in with your fingerprint, your face or a security key instead of a password."
-        }
-      }
-    },
-    "after": {
-      "title": "After that",
-      "items": {
+        },
         "publicExplore": {
           "title": "Explore without an account",
           "text": "See what spaces there are before you sign up."
@@ -64,13 +88,13 @@
           "title": "Buttons and menus in messages",
           "text": "Bots can offer choices to click on instead of commands to type."
         },
-        "blur": {
-          "title": "Background blur in video calls",
-          "text": "Keep your room to yourself on camera."
-        },
         "signedApp": {
           "title": "A signed desktop app",
           "text": "No more warning from Windows when you install the app."
+        },
+        "watchDm": {
+          "title": "Watching together in direct calls",
+          "text": "Watch together in calls with friends too, not only in a space's voice channel."
         }
       }
     }
