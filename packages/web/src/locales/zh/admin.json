@@ -402,7 +402,10 @@
       "description": "确定永久删除 <strong>{{username}}</strong> 吗？这将把他们从所有空间、私信和好友列表中移除。此操作无法撤销。",
       "confirm": "删除用户",
       "reason": "原因（记入审计日志）",
-      "password": "你的密码，用于确认是你本人"
+      "password": "你的密码，用于确认是你本人",
+      "ownedSpaces_one": "此账号拥有 {{count}} 个空间：{{names}}",
+      "ownedSpaces_other": "此账号拥有 {{count}} 个空间：{{names}}",
+      "deleteSpaces": "连同账号一起删除这些空间。其中的一切对所有成员都将消失，且无法撤销。"
     }
   },
   "platform": {
@@ -548,6 +551,7 @@
         "user_role": "管理员角色已更改",
         "user_password_reset": "密码已重置",
         "user_delete": "账号已删除",
+        "space_delete": "随所有者账号一并删除了空间",
         "user_badges": "账号徽章已更改",
         "space_badges": "空间徽章已更改",
         "verification_approve": "空间已认证",

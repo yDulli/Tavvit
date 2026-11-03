@@ -398,6 +398,24 @@ describe('error codes on the admin routes', () => {
     });
   });
 
+  it('takes the spaces an owner has with the account when asked to, each on the record', async () => {
+    const { hashPassword } = await import('../utils/auth.js');
+    testDb.update(schema.users).set({ passwordHash: await hashPassword('tests-only-passphrase') }).where(eq(schema.users.id, ADMIN_ID)).run();
+    testDb.insert(schema.spaces).values({ id: 'space-1', name: 'Owned', ownerId: USER_ID, createdAt: Date.now() }).run();
+    testDb.insert(schema.spaceMembers).values({ spaceId: 'space-1', userId: USER_ID, joinedAt: Date.now() }).run();
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/admin/users/${USER_ID}`,
+      headers: { Authorization: `Bearer ${adminToken()}` },
+      payload: { reason: 'Spam account', password: 'tests-only-passphrase', deleteSpaces: true },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(testDb.select().from(schema.spaces).where(eq(schema.spaces.id, 'space-1')).get()).toBeUndefined();
+    expect(testDb.select().from(schema.users).where(eq(schema.users.id, USER_ID)).get()?.isDeleted).toBe(1);
+    const actions = testDb.select({ action: schema.platformAuditLog.action }).from(schema.platformAuditLog).all().map((entry) => entry.action).sort();
+    expect(actions).toEqual(['space_delete', 'user_delete']);
+  });
+
   it('rejects a bad maxAgeDays with cleanup_age_invalid', async () => {
     const res = await app.inject({
       method: 'POST',

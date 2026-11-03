@@ -4,6 +4,12 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.33.1": {
+      "title": "Excluir uma conta que possui espaços",
+      "items": {
+        "admin": "Administradores podem excluir uma conta junto com os espaços que ela possui, por um nome que ninguém deveria usar ou uma conta criada para spam. Cada espaço fica registrado."
+      }
+    },
     "1.33.0": {
       "title": "Assistir juntos",
       "items": {

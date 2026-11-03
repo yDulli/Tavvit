@@ -522,7 +522,7 @@ The temporary password is shown exactly once in the admin UI -- the UsersPanel d
 2. Target must exist (404)
 3. Target must not be already deleted (400)
 4. Target must not be an administrator (400 `cannot_delete_admin`): demote first, so a team cannot delete itself
-5. Target must not own any spaces (400 "User owns spaces -- transfer ownership first", response includes `ownedSpaces` array with id/name)
+5. Target must not own any spaces, unless the body says `deleteSpaces: true` (400 `user_owns_spaces` otherwise, response includes `ownedSpaces` array with id/name). With it, every space the account owns is deleted first, after the credentials below are checked, the one way a space goes (`deleteSpaceCompletely`, `utils/spaceDeletion.ts`, which `DELETE /api/spaces/:id` takes too), and each is recorded as `space_delete` in the platform audit log with the deletion's reason. The console's dialog offers this once the refusal named the spaces: an account made for spam or a name nobody should carry seldom owns a space anyone wants to keep.
 6. For an account of this instance, the body brings `reason` (3 to 500 characters, kept in the audit log), `password` and, where the acting admin has one, `twoFactorCode`: the acting admin's own, checked as deleting one's own account checks them (`current_password_incorrect`, `mfa_code_required`, `mfa_code_invalid`). Deleting cannot be undone, and a stolen session alone must not be able to do it. A replicated row (`homeInstance` set) is a copy of an account homed elsewhere and needs none of this; `FederationPanel` cleans those up in bulk.
 
 **Process:**
@@ -799,6 +799,7 @@ No foreign keys: an entry outlives its actor and its target. No retention: unlik
 | `user_role` | `PATCH /api/admin/users/:id/role`, when the flag changed | user | -- | `{ isAdmin }` |
 | `user_password_reset` | `POST /api/admin/users/:id/reset-password` | user | -- | -- |
 | `user_delete` | `DELETE /api/admin/users/:id` | user | -- | -- |
+| `space_delete` | `DELETE /api/admin/users/:id` with `deleteSpaces` | space | -- | -- |
 | `user_badges` | `PUT /api/admin/users/:id/badges`, when the list changed | user | optional | `{ added, removed }` |
 | `space_badges` | `PUT /api/admin/spaces/:id/badges`, when the list changed | space | optional | `{ added, removed }` |
 | `verification_approve`, `verification_reject`, `verification_request_info`, `verification_revoke` | `POST /api/admin/spaces/:id/verification/:decision` | space | the decision's note | `{ status }` |

@@ -417,7 +417,10 @@
       "description": "<strong>{{username}}</strong> endgültig löschen? Die Person wird aus allen Spaces, Direktnachrichten und Freundeslisten entfernt. Das lässt sich nicht rückgängig machen.",
       "confirm": "Nutzer löschen",
       "reason": "Warum (für das Audit-Log)",
-      "password": "Dein Passwort, zur Bestätigung, dass du es bist"
+      "password": "Dein Passwort, zur Bestätigung, dass du es bist",
+      "ownedSpaces_one": "Dieses Konto besitzt {{count}} Space: {{names}}",
+      "ownedSpaces_other": "Dieses Konto besitzt {{count}} Spaces: {{names}}",
+      "deleteSpaces": "Diese Spaces mit dem Konto löschen. Alles darin ist für alle Mitglieder weg, und das lässt sich nicht rückgängig machen."
     }
   },
   "platform": {
@@ -564,6 +567,7 @@
         "user_role": "Admin-Rolle geändert",
         "user_password_reset": "Passwort zurückgesetzt",
         "user_delete": "Konto gelöscht",
+        "space_delete": "Space mit dem Konto des Besitzers gelöscht",
         "user_badges": "Abzeichen eines Kontos geändert",
         "space_badges": "Abzeichen eines Space geändert",
         "verification_approve": "Space verifiziert",

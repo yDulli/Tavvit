@@ -432,7 +432,10 @@
       "description": "Excluir permanentemente <strong>{{username}}</strong>? Isso removerá a pessoa de todos os espaços, DMs e listas de amigos. Isso não pode ser desfeito.",
       "confirm": "Excluir usuário",
       "reason": "Por quê (para o registro de auditoria)",
-      "password": "Sua senha, para confirmar que é você"
+      "password": "Sua senha, para confirmar que é você",
+      "ownedSpaces_one": "Esta conta possui {{count}} espaço: {{names}}",
+      "ownedSpaces_other": "Esta conta possui {{count}} espaços: {{names}}",
+      "deleteSpaces": "Excluir esses espaços junto com a conta. Tudo neles some para todos os membros, e isso não pode ser desfeito."
     }
   },
   "platform": {
@@ -580,6 +583,7 @@
         "user_role": "Função de administrador alterada",
         "user_password_reset": "Senha redefinida",
         "user_delete": "Conta excluída",
+        "space_delete": "Excluiu um espaço junto com a conta do dono",
         "user_badges": "Insígnias de uma conta alteradas",
         "space_badges": "Insígnias de um espaço alteradas",
         "verification_approve": "Espaço verificado",

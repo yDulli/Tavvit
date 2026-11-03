@@ -279,6 +279,8 @@ export const PLATFORM_AUDIT_ACTIONS = [
   'user_role',
   'user_password_reset',
   'user_delete',
+  /** A space deleted with its owner's account (`DELETE /api/admin/users/:id` with `deleteSpaces`). */
+  'space_delete',
   'user_badges',
   'space_badges',
   'verification_approve',

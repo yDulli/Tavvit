@@ -4,7 +4,7 @@ import { SUSPENSION_LIMITS } from '@backspace/shared/src/platform';
 import { useTranslation, Trans } from 'react-i18next';
 import { useFormatters } from '../../../i18n/formatters';
 import { describeError } from '../../../i18n/errors';
-import { api } from '../../../api/client';
+import { api, HttpError } from '../../../api/client';
 import { Icon } from '../../ui/Icon';
 import { saveBlob } from '../../../utils/saveBlob';
 import { Avatar } from '../../ui/Avatar';
@@ -13,7 +13,12 @@ import { useAuthStore } from '../../../stores/authStore';
 import type { AdminUser, AdminUserListResponse } from '@backspace/shared';
 import { AdminUserDetailModal } from './AdminUserDetailModal';
 
-const EMPTY_DELETE_FORM = { reason: '', password: '', code: '', error: '' };
+/** What the dialog holds; `ownedSpaces` is what the server named when it refused an owner. */
+const EMPTY_DELETE_FORM = {
+  reason: '', password: '', code: '', error: '',
+  ownedSpaces: [] as { id: string; name: string }[],
+  deleteSpaces: false,
+};
 
 export function UsersPanel() {
   const { t } = useTranslation(['admin', 'common']);
@@ -149,12 +154,13 @@ export function UsersPanel() {
         await api.admin.setUserRole(confirmAction.user.id, false);
       } else if (confirmAction.user.homeInstance) {
         // A copy of an account homed elsewhere, which this instance only cleans up.
-        await api.admin.deleteUser(confirmAction.user.id);
+        await api.admin.deleteUser(confirmAction.user.id, deleteForm.deleteSpaces ? { deleteSpaces: true } : undefined);
       } else {
         await api.admin.deleteUser(confirmAction.user.id, {
           reason: deleteForm.reason.trim(),
           password: deleteForm.password,
           twoFactorCode: deleteForm.code.trim() || undefined,
+          deleteSpaces: deleteForm.deleteSpaces || undefined,
         });
       }
       setConfirmAction(null);
@@ -162,9 +168,17 @@ export function UsersPanel() {
       fetchUsers(query, page, showDeleted, filtersRef.current);
     } catch (err) {
       const message = err instanceof Error ? describeError(err) : t('admin:users.actionFailed');
+      // An owner of spaces: the dialog names them and offers to take them with the account.
+      const owned = err instanceof HttpError && err.code === 'user_owns_spaces'
+        ? (err.body as { ownedSpaces?: { id: string; name: string }[] } | undefined)?.ownedSpaces ?? []
+        : [];
       // A wrong password or code is corrected in the dialog, with what was typed still there.
-      if (confirmAction.type === 'delete' && !confirmAction.user.homeInstance) {
-        setDeleteForm((current) => ({ ...current, error: message }));
+      if (confirmAction.type === 'delete' && (!confirmAction.user.homeInstance || owned.length > 0)) {
+        setDeleteForm((current) => ({
+          ...current,
+          error: owned.length > 0 ? '' : message,
+          ownedSpaces: owned.length > 0 ? owned : current.ownedSpaces,
+        }));
       } else {
         setError(message);
         setConfirmAction(null);
@@ -557,6 +571,25 @@ export function UsersPanel() {
               values={{ username: confirmAction?.user.username ?? '' }}
               components={{ strong: <strong /> }}
             />
+            {deleteForm.ownedSpaces.length > 0 && (
+              <div className="mt-3 space-y-2 rounded-md border border-border-hard bg-surface-base px-3 py-2.5">
+                <p className="text-ui text-txt-secondary">
+                  {t('admin:users.deleteDialog.ownedSpaces', {
+                    count: deleteForm.ownedSpaces.length,
+                    names: deleteForm.ownedSpaces.map((space) => space.name).join(', '),
+                  })}
+                </p>
+                <label className="flex items-start gap-2 text-ui text-txt-primary">
+                  <input
+                    type="checkbox"
+                    checked={deleteForm.deleteSpaces}
+                    onChange={(e) => setDeleteForm((current) => ({ ...current, deleteSpaces: e.target.checked, error: '' }))}
+                    className="mt-0.5 accent-accent-primary"
+                  />
+                  <span>{t('admin:users.deleteDialog.deleteSpaces')}</span>
+                </label>
+              </div>
+            )}
             {confirmAction && !confirmAction.user.homeInstance && (
               <div className="mt-3 space-y-3">
                 <div>
@@ -594,8 +627,9 @@ export function UsersPanel() {
         variant="danger"
         loading={actionLoading}
         confirmDisabled={Boolean(
-          confirmAction && !confirmAction.user.homeInstance
-          && (deleteForm.reason.trim().length < SUSPENSION_LIMITS.REASON_MIN_LENGTH || !deleteForm.password),
+          (confirmAction && !confirmAction.user.homeInstance
+            && (deleteForm.reason.trim().length < SUSPENSION_LIMITS.REASON_MIN_LENGTH || !deleteForm.password))
+          || (deleteForm.ownedSpaces.length > 0 && !deleteForm.deleteSpaces),
         )}
       />
     </div>

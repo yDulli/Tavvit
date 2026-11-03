@@ -4,6 +4,12 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.33.1": {
+      "title": "Ein Konto löschen, das Spaces besitzt",
+      "items": {
+        "admin": "Administratoren können ein Konto zusammen mit den Spaces löschen, die es besitzt, etwa bei einem Namen, den niemand tragen sollte, oder einem Konto nur für Werbung. Jeder Space steht im Protokoll."
+      }
+    },
     "1.33.0": {
       "title": "Gemeinsam schauen",
       "items": {

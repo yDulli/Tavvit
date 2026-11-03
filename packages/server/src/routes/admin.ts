@@ -6,13 +6,14 @@ import { notifyPasswordChanged } from '../email/account.js';
 import { endOtherSessions } from '../utils/sessions.js';
 import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
-import { eq, like, or, and, ne, not, sql, isNull, isNotNull, gte, lte, asc, desc } from 'drizzle-orm';
+import { eq, like, or, and, not, sql, isNull, isNotNull, gte, lte, asc, desc } from 'drizzle-orm';
 import { authenticate, requireAdmin, hashPassword } from '../utils/auth.js';
 import { getStorageStats, getOrphanedFiles, cleanupStorage, cleanupOldMedia, cleanupStaleTusSessions } from '../utils/storageJanitor.js';
 import { getDb, schema } from '../db/index.js';
 import { connectionManager } from '../ws/handler.js';
 import { checkVoicePermissions } from '../ws/events.js';
 import { tombstoneUser, collectDeletionBroadcastTargets } from '../utils/userDeletion.js';
+import { deleteSpaceCompletely } from '../utils/spaceDeletion.js';
 import { deleteUploadFile } from '../utils/fileCleanup.js';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { sendError, ERROR_MESSAGES } from '../utils/httpErrors.js';
@@ -351,7 +352,11 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   // second factor, as deleting one's own does; a stolen session alone cannot do it. An
   // administrator is demoted first, so a team cannot delete itself. A replicated row is a
   // copy of an account homed elsewhere, and is cleaned up without that (FederationPanel).
-  app.delete<{ Params: { id: string }; Body: { reason?: unknown; password?: unknown; twoFactorCode?: unknown } | undefined }>(
+  // An owner of spaces is refused with the list of them, unless `deleteSpaces` is true: then
+  // the spaces go with the account, each as its owner's own delete would take it, and each
+  // is in the platform audit log (an account made for spam or a name nobody should carry
+  // seldom owns a space anyone wants to keep).
+  app.delete<{ Params: { id: string }; Body: { reason?: unknown; password?: unknown; twoFactorCode?: unknown; deleteSpaces?: unknown } | undefined }>(
     '/api/admin/users/:id',
     { preHandler: [authenticate, requireAdmin], config: { rateLimit: { max: 20, timeWindow: '15 minutes' } } },
     async (request, reply) => {
@@ -374,18 +379,16 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       }
 
       // Check if user owns any spaces
-      const ownedSpaces = db.select({ id: schema.spaces.id, name: schema.spaces.name })
-        .from(schema.spaces)
-        .where(eq(schema.spaces.ownerId, targetId))
-        .all();
-      if (ownedSpaces.length > 0) {
+      const ownedSpaces = db.select().from(schema.spaces).where(eq(schema.spaces.ownerId, targetId)).all();
+      const deleteSpaces = request.body?.deleteSpaces === true;
+      if (ownedSpaces.length > 0 && !deleteSpaces) {
         // Carries the list of spaces on top of the shared error shape, so the
         // panel can name them; sendError has no slot for extra fields.
         return reply.code(400).send({
           error: ERROR_MESSAGES.user_owns_spaces,
           code: 'user_owns_spaces',
           statusCode: 400,
-          ownedSpaces,
+          ownedSpaces: ownedSpaces.map((space) => ({ id: space.id, name: space.name })),
         });
       }
 
@@ -407,6 +410,15 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         // Last, so that nothing above can use up a code and then refuse.
         const refused = refuseWithoutSecondFactor(actor, body.twoFactorCode, request, reply);
         if (refused) return refused;
+      }
+
+      // The spaces the account owns go first, once the admin has proven who they are: each as
+      // its owner's own delete would take it, and each on the record.
+      for (const space of ownedSpaces) {
+        deleteSpaceCompletely(space);
+        recordPlatformAudit({
+          actorId: request.userId, action: 'space_delete', targetType: 'space', targetId: space.id, targetLabel: space.name, reason,
+        });
       }
 
       // Collect broadcast targets BEFORE tombstone deletes DB rows

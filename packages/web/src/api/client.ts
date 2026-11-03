@@ -776,7 +776,8 @@ export class BackspaceApiClient {
     setUserRole: (userId: string, isAdmin: boolean) => Promise<AdminUser>;
     resetUserPassword: (userId: string) => Promise<AdminResetPasswordResponse>;
     /** An account of this instance asks for the reason and the acting admin's password and second factor. */
-    deleteUser: (userId: string, body?: { reason: string; password: string; twoFactorCode?: string }) => Promise<{ success: boolean }>;
+    /** `deleteSpaces` takes the spaces the account owns with it; without it an owner is refused with `user_owns_spaces` and the list. */
+    deleteUser: (userId: string, body?: { reason?: string; password?: string; twoFactorCode?: string; deleteSpaces?: boolean }) => Promise<{ success: boolean }>;
     // The console's own (admin.md, "The console").
     dashboard: () => Promise<AdminDashboard>;
     system: () => Promise<AdminSystemInfo>;

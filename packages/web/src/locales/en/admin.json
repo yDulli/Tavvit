@@ -417,7 +417,10 @@
       "description": "Permanently delete <strong>{{username}}</strong>? This will remove them from all spaces, DMs, and friends lists. This cannot be undone.",
       "confirm": "Delete User",
       "reason": "Why (for the audit log)",
-      "password": "Your password, to confirm it is you"
+      "password": "Your password, to confirm it is you",
+      "ownedSpaces_one": "This account owns {{count}} space: {{names}}",
+      "ownedSpaces_other": "This account owns {{count}} spaces: {{names}}",
+      "deleteSpaces": "Delete these spaces with the account. Everything in them is gone for every member, and this cannot be undone."
     }
   },
   "platform": {
@@ -564,6 +567,7 @@
         "user_role": "Changed the administrator role",
         "user_password_reset": "Reset a password",
         "user_delete": "Deleted an account",
+        "space_delete": "Deleted a space with its owner's account",
         "user_badges": "Changed the badges of an account",
         "space_badges": "Changed the badges of a space",
         "verification_approve": "Verified a space",

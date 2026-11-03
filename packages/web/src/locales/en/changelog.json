@@ -4,6 +4,12 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.33.1": {
+      "title": "Deleting an account that owns spaces",
+      "items": {
+        "admin": "Administrators can delete an account together with the spaces it owns, for a name nobody should carry or an account made for spam. Each space goes on the record."
+      }
+    },
     "1.33.0": {
       "title": "Watch together",
       "items": {

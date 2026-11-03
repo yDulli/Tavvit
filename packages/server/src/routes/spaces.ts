@@ -11,21 +11,18 @@ import { authenticate } from '../utils/auth.js';
 import { markDirectoryDirty } from '../directory/state.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { isMember, isSpaceOwner, isBanned, hasPermission, computePermissions, PermissionBits } from '../utils/permissions.js';
-import { DEFAULT_EVERYONE_PERMISSIONS, ALL_PERMISSIONS, permissionsToString, stringToPermissions, parsePermissionString, roleBitsChangeRefusal, idsHiddenFromEveryone, rolePermissionsVersion, type HeldBitsRefusal } from '@backspace/shared/src/permissions.js';
+import { DEFAULT_EVERYONE_PERMISSIONS, permissionsToString, stringToPermissions, parsePermissionString, roleBitsChangeRefusal, idsHiddenFromEveryone, rolePermissionsVersion, type HeldBitsRefusal } from '@backspace/shared/src/permissions.js';
 import { connectionManager } from '../ws/handler.js';
 import { deleteAttachmentFiles, deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
 import { pictureFileReleasable, profilePictureOf, releaseMemberPictures, uploadNameOf } from '../utils/profileImageRefs.js';
-import { removeSoundFiles } from '../utils/soundFiles.js';
 import { resizeProfileImage } from '../utils/thumbnail.js';
 import {
-  discoveryStatusOf,
-  isOpenReview,
   recordEditSteps,
   reviewsAfterEdit,
   reviewsAfterTransfer,
-  verificationStatusOf,
 } from '../utils/spaceReview.js';
-import { announceReviewQueue, announceReviewStep } from '../utils/reviewNotify.js';
+import { announceReviewStep } from '../utils/reviewNotify.js';
+import { deleteSpaceCompletely } from '../utils/spaceDeletion.js';
 import { config } from '../config.js';
 import type {
   AuditLogValue,
@@ -845,63 +842,9 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 403, 'space_owner_only');
     }
 
-    // Collect all attachment files before cascade-deleting DB records
-    const channelIds = db.select({ id: schema.channels.id })
-      .from(schema.channels).where(eq(schema.channels.spaceId, id)).all().map(c => c.id);
-
-    let attachmentRows: { filename: string }[] = [];
-    if (channelIds.length > 0) {
-      const messageIds = db.select({ id: schema.messages.id })
-        .from(schema.messages).where(inArray(schema.messages.channelId, channelIds)).all().map(m => m.id);
-      if (messageIds.length > 0) {
-        attachmentRows = db.select({ filename: schema.attachments.filename })
-          .from(schema.attachments).where(inArray(schema.attachments.messageId, messageIds)).all();
-      }
-    }
-
-    // Capture space icon/banner before deletion
-    const spaceIcon = server.icon;
-    const spaceBanner = server.banner;
-    const hadOpenReview = isOpenReview(verificationStatusOf(server), discoveryStatusOf(server));
-
-    const memberPictures = db.select({ userId: schema.spaceMembers.userId, avatar: schema.spaceMembers.avatar, banner: schema.spaceMembers.banner })
-      .from(schema.spaceMembers).where(eq(schema.spaceMembers.spaceId, id)).all();
-    // The soundboard's rows go with the space; their files are removed here, not left for a restart.
-    const soundIds = db.select({ id: schema.spaceSounds.id }).from(schema.spaceSounds)
-      .where(eq(schema.spaceSounds.spaceId, id)).all().map((sound) => sound.id);
-
-    // Delete all channels (messages cascade), members, folder refs, read states, then space atomically
-    db.transaction((tx) => {
-      // Clean up read_states for all channels in this space (no FK cascade — channelId is plain text)
-      if (channelIds.length > 0) {
-        tx.delete(schema.readStates).where(inArray(schema.readStates.channelId, channelIds)).run();
-      }
-      tx.delete(schema.channels).where(eq(schema.channels.spaceId, id)).run();
-      tx.delete(schema.spaceMembers).where(eq(schema.spaceMembers.spaceId, id)).run();
-      tx.delete(schema.spaceFolderMembers).where(eq(schema.spaceFolderMembers.spaceId, id)).run();
-      tx.delete(schema.spaces).where(eq(schema.spaces.id, id)).run();
-    });
-
-    // A listed space just left the served document.
-    if (server.directoryListed === 1) {
-      markDirectoryDirty(getRawDb());
-    }
-    if (hadOpenReview) announceReviewQueue();
-
-    // Clean up all attachment files from disk
-    deleteAttachmentFiles(attachmentRows);
-    removeSoundFiles(soundIds);
-
-    // Clean up space icon/banner files nothing else shows, and the members' own pictures.
-    for (const picture of [uploadNameOf(spaceIcon), uploadNameOf(spaceBanner)]) {
-      if (picture && pictureFileReleasable(picture)) deleteUploadFile(picture);
-    }
-    releaseMemberPictures(memberPictures);
-    // Nobody is in its voice or told about it any more.
-    for (const member of memberPictures) {
-      disconnectMemberFromSpaceVoice(id, member.userId);
-      connectionManager.removeUserSpace(member.userId, id);
-    }
+    // Everything in it goes with it (utils/spaceDeletion.ts); an administrator deleting the
+    // owner's account takes the same way.
+    deleteSpaceCompletely(server);
 
     return reply.code(200).send({ success: true });
   });
