@@ -434,6 +434,7 @@
       "reason": "Por quê (para o registro de auditoria)",
       "password": "Sua senha, para confirmar que é você",
       "ownedSpaces_one": "Esta conta possui {{count}} espaço: {{names}}",
+      "ownedSpaces_many": "Esta conta possui {{count}} espaços: {{names}}",
       "ownedSpaces_other": "Esta conta possui {{count}} espaços: {{names}}",
       "deleteSpaces": "Excluir esses espaços junto com a conta. Tudo neles some para todos os membros, e isso não pode ser desfeito."
     }
