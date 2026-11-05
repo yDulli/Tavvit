@@ -1,25 +1,39 @@
 /**
- * The two documents a browser fetches before any script runs: the page itself
- * and the web app manifest. Both are built once by Vite with the product name
- * in them; the server rewrites that name to the instance's own on the way out,
- * so the tab title, the iOS home-screen label and the installed app's name are
- * the administrator's choice from the first byte, not after the app has loaded.
+ * The documents a browser fetches before any script runs: the app's page, the
+ * web app manifest and the public website's pages. The app's page and the
+ * manifest are built once by Vite with the product name in them; the server
+ * rewrites that name to the instance's own on the way out, so the tab title,
+ * the iOS home-screen label and the installed app's name are the administrator's
+ * choice from the first byte, not after the app has loaded.
  *
- * Only the name changes, and on an invite link the preview a chat app shows.
+ * The website's pages (`/`, `/status`, `/help`, `/changelog`, `/roadmap`) are
+ * rendered by Astro when the web package is built (docs/systems/landing.md) and
+ * say Tavvit, as the product page always has; the server only writes its own
+ * public origin where the build left `SITE_ORIGIN_TOKEN`, so their canonical
+ * address and the whole address of their preview picture are this server's.
+ *
  * Nothing here reads who is asking, so a response is the same for everyone and
  * can be cached by the browser.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import type { FastifyInstance, FastifyReply } from 'fastify';
+import {
+  SITE_DOCUMENT_DIR,
+  SITE_DOCUMENT_FILES,
+  SITE_ORIGIN_TOKEN,
+  SITE_PATHS,
+  sitePathOf,
+  type SitePath,
+} from '@backspace/shared/src/site.js';
 
 const MAX_SHORT_NAME = 12;
 
 /** The longest space description a link preview carries. */
 const MAX_PREVIEW_DESCRIPTION = 160;
 
-/** The folders of the built page: files from disk, the same for everyone. */
-const STATIC_ASSET_PREFIXES = ['/assets/', '/fonts/', '/icons/', '/sounds/', '/developers/assets/'];
+/** The folders of the built page: files from disk, the same for everyone. `/_astro/` is the website's. */
+const STATIC_ASSET_PREFIXES = ['/assets/', '/_astro/', '/fonts/', '/icons/', '/sounds/', '/developers/assets/'];
 
 /** True for a request path (with or without a query) inside one of those folders. */
 export function isStaticAssetPath(url: string): boolean {
@@ -51,9 +65,19 @@ export function renderIndexHtml(template: string, name: string, origin?: string)
     );
   if (!origin) return page;
   return page.replace(
-    /(<meta\s+property="og:image"\s+content=")(\/[^"]*)(")/,
+    /(<meta\s+(?:property="og:image"|name="twitter:image")\s+content=")(\/[^"]*)(")/g,
     (_match, open: string, path: string, close: string) => `${open}${escapeHtml(origin)}${path}${close}`,
   );
+}
+
+/**
+ * A page of the website with this server's origin where the build left
+ * `SITE_ORIGIN_TOKEN`: its canonical address, the preview's picture, the
+ * example a bot would send. Without a known origin they become paths, which a
+ * browser still resolves; only a link preview then lacks its picture.
+ */
+export function renderSiteHtml(template: string, origin?: string): string {
+  return template.split(SITE_ORIGIN_TOKEN).join(origin ? escapeHtml(origin) : '');
 }
 
 /** What a link preview says about the space behind an invite. */
@@ -69,6 +93,11 @@ export interface InviteCard {
 function withMeta(page: string, attribute: 'name' | 'property', key: string, value: string): string {
   const tag = new RegExp(`(<meta\\s+${attribute}="${key}"\\s+content=")[^"]*(")`);
   return page.replace(tag, (_match, open: string, close: string) => `${open}${escapeHtml(value)}${close}`);
+}
+
+/** Leaves one `<meta>` tag out of the template, with the line it stood on. */
+function withoutMeta(page: string, attribute: 'name' | 'property', key: string): string {
+  return page.replace(new RegExp(`[ \\t]*<meta\\s+${attribute}="${key}"\\s+content="[^"]*"\\s*/?>\\r?\\n?`), '');
 }
 
 /** One line for the preview: the space's own words when it has some, and how many people are in it. */
@@ -93,8 +122,16 @@ export function renderInviteHtml(template: string, instanceName: string, card: I
   page = withMeta(page, 'name', 'description', description);
   page = withMeta(page, 'property', 'og:title', card.spaceName);
   page = withMeta(page, 'property', 'og:description', description);
+  page = withMeta(page, 'name', 'twitter:title', card.spaceName);
+  page = withMeta(page, 'name', 'twitter:description', description);
   if (origin && card.iconPath) {
-    page = withMeta(page, 'property', 'og:image', `${origin}${card.iconPath}`);
+    const icon = `${origin}${card.iconPath}`;
+    page = withMeta(page, 'property', 'og:image', icon);
+    page = withMeta(page, 'name', 'twitter:image', icon);
+    page = withMeta(page, 'property', 'og:image:alt', card.spaceName);
+    page = withMeta(page, 'name', 'twitter:image:alt', card.spaceName);
+    // The size and kind the template names are the product's picture's, not the icon's.
+    for (const key of ['og:image:type', 'og:image:width', 'og:image:height']) page = withoutMeta(page, 'property', key);
     // A square icon: the large card would stretch it across the preview.
     page = withMeta(page, 'name', 'twitter:card', 'summary');
   }
@@ -112,6 +149,8 @@ export function renderManifest(template: string, name: string): string {
 export interface WebDocuments {
   /** The page for `name`, or null when the build has no index.html. */
   index(name: string): string | null;
+  /** A page of the website, or null when the build did not render it (a build from before 1.34.1, or `vite build` alone). */
+  site(path: SitePath): string | null;
   /** The page for an invite link, or null when the build has no index.html. */
   invite(name: string, card: InviteCard): string | null;
   /** The manifest for `name`, or null when the build produced none. */
@@ -126,8 +165,15 @@ export function createWebDocuments(distPath: string, origin?: string): WebDocume
   };
   const indexTemplate = read('index.html');
   const manifestTemplate = read('manifest.webmanifest');
+  // The website's pages hold nothing that changes while the server runs: filled in once.
+  const sitePages = new Map<SitePath, string>();
+  for (const sitePath of SITE_PATHS) {
+    const template = read(path.join(SITE_DOCUMENT_DIR, SITE_DOCUMENT_FILES[sitePath]));
+    if (template !== null) sitePages.set(sitePath, renderSiteHtml(template, origin));
+  }
   return {
     index: (name) => (indexTemplate === null ? null : renderIndexHtml(indexTemplate, name, origin)),
+    site: (sitePath) => sitePages.get(sitePath) ?? null,
     invite: (name, card) => (indexTemplate === null ? null : renderInviteHtml(indexTemplate, name, card, origin)),
     manifest: (name) => {
       if (manifestTemplate === null) return null;
@@ -149,10 +195,19 @@ export function sendIndex(reply: FastifyReply, html: string): FastifyReply {
 }
 
 /**
- * Answers `/`, `/index.html` and `/manifest.webmanifest` with the instance's
- * own name in them. Registered before the static handler, which would otherwise
- * send those files exactly as the build wrote them. Anything else, and any
- * method other than GET and HEAD, falls through untouched.
+ * Answers the website's pages (`/`, `/status`, `/help`, `/changelog`, `/roadmap`)
+ * as the build rendered them, and `/index.html` and `/manifest.webmanifest`
+ * with the instance's own name in them. Registered before the static handler,
+ * which would otherwise send those files exactly as the build wrote them.
+ * Anything else, and any method other than GET and HEAD, falls through untouched.
+ *
+ * `/` is the product page; the app's own people never stay on it, because its
+ * first script (`public/landing-gate.js`) sends them on to the app before
+ * anything is drawn. `/index.html` stays the app's page: the service worker
+ * keeps it as the shell every other address of the app opens in. Without a
+ * rendered website (a build of the app alone) `/` is the app's page as before,
+ * whose script shows the same product page, and the public pages fall through
+ * to it as every address of the app does.
  *
  * `/join/:code` is a route and not part of the hook: it looks up whatever code it
  * is asked for, so it counts against the rate limit like the API route that answers
@@ -169,7 +224,12 @@ export function registerWebDocumentRoutes(
 ): void {
   app.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET' && request.method !== 'HEAD') return;
-    const pathname = request.url.split('?')[0];
+    const pathname = request.url.split('?')[0] ?? request.url;
+    const sitePath = sitePathOf(pathname);
+    if (sitePath !== null) {
+      const page = documents.site(sitePath);
+      if (page !== null) return sendIndex(reply, page);
+    }
     if (pathname === '/' || pathname === '/index.html') {
       const html = documents.index(instanceName());
       if (html === null) return;

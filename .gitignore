@@ -7,6 +7,8 @@ dist/
 dist-electron/
 installers/
 packages/web/dist/
+packages/web/dist-site/
+packages/web/.astro/
 packages/server/dist/
 packages/shared/dist/
 packages/desktop/dist/

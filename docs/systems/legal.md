@@ -190,7 +190,7 @@ Art. 15 and 20 GDPR, self-service: Settings → Account → "A copy of your data
 
 ## The product page
 
-The public page at `/` tells visitors "no ads, no trackers" and that pictures from other websites load only after a click. Those are statements about this code; whoever adds an advert, an analytics script or content that loads by itself changes the page as well as the privacy draft ([landing.md](landing.md)). The page itself loads nothing from another server and stores nothing except the language a visitor picks in its footer.
+The public page at `/` tells visitors "no ads, no trackers" and that pictures from other websites load only after a click. Those are statements about this code; whoever adds an advert, an analytics script or content that loads by itself changes the page as well as the privacy draft ([landing.md](landing.md)). The page itself loads nothing from another server and stores nothing except the language a visitor picks in its footer. Since 1.34.1 it is rendered to HTML when the web package is built (Astro, with its usage reporting switched off, so the build sends nothing either); what a visitor's browser gets and stores is the same as before. Its head carries the usual tags for link previews and search engines, which make no request of their own, and its first script reads only what the app already keeps (`backspace_token`, to send someone signed in to the app) and the user agent (to show the Windows download), and writes nothing.
 
 ## Changing a username
 

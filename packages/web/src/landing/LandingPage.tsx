@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { InstanceInfoResponse } from '@backspace/shared';
 import type { PublicStatus, ServiceState } from '@backspace/shared/src/publicStatus.js';
 import { PRODUCT_NAME } from '@backspace/shared/src/constants.js';
+import { SITE_ORIGIN_TOKEN } from '@backspace/shared/src/site.js';
 import { availableLanguages, isSupportedLanguage } from '../i18n/languages';
 import { DemoChat } from './DemoChat';
 import { EXAMPLE_ROUTE, exampleRequest } from './example';
@@ -31,8 +32,12 @@ const CHANGELOGS = import.meta.glob<{ versions: Record<string, { title: string }
 /** The keys of the switcher's shortcut: the same in every language. */
 const SWITCHER_KEYS = ['Ctrl', 'K'];
 
-/** The keys that open the page's switcher, as the app's: Ctrl and K, or Command and K on an Apple device. */
-const JUMP_KEYS: readonly string[] = /Mac|iPhone|iPad/.test(navigator.userAgent) ? ['⌘', 'K'] : SWITCHER_KEYS;
+/**
+ * The keys that open the page's switcher on an Apple device; everywhere else they are the app's Ctrl
+ * and K. Both are in the page and the stylesheet shows one (`data-lp-os`, set before the first paint),
+ * because the page's HTML is written before anyone's device is known (`landingPlatform`).
+ */
+const APPLE_JUMP_KEYS: readonly string[] = ['⌘', 'K'];
 /** The keys the switcher's foot names, the same in every language. */
 const JUMP_HINTS = { move: ['↑', '↓'], go: ['Enter'], close: ['Esc'] } as const;
 
@@ -258,11 +263,21 @@ function useFitHeadings(root: React.RefObject<HTMLDivElement>, language: string)
  * Lets each part of a chapter arrive once, when it first comes into view: the stylesheet holds a
  * `[data-arrive]` element at the first frame of its animation until `data-in` lets it play, and
  * only while the page says it can watch the viewport, so nothing is ever hidden for good.
+ *
+ * A page rendered ahead of time (`prerendered`) was on screen before this ran: what the visitor
+ * already sees, or has scrolled past, stays where it is (`data-in="shown"`, no animation) instead of
+ * vanishing and arriving again. Only the parts further down arrive.
  */
-function useArrivals(root: React.RefObject<HTMLDivElement>): void {
+function useArrivals(root: React.RefObject<HTMLDivElement>, prerendered: boolean): void {
   useEffect(() => {
     const element = root.current;
     if (!element || typeof IntersectionObserver === 'undefined') return undefined;
+    if (prerendered) {
+      const fold = window.innerHeight;
+      for (const part of element.querySelectorAll<HTMLElement>('[data-arrive]')) {
+        if (part.getBoundingClientRect().top < fold) part.setAttribute('data-in', 'shown');
+      }
+    }
     element.setAttribute('data-arrivals', 'on');
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
@@ -284,7 +299,7 @@ function useArrivals(root: React.RefObject<HTMLDivElement>): void {
       observer.disconnect();
       element.removeAttribute('data-arrivals');
     };
-  }, [root]);
+  }, [root, prerendered]);
 }
 
 /**
@@ -444,8 +459,6 @@ function Points({ points, className = '' }: { points: readonly { key: string; ti
 
 function Hero({ registrationOpen }: { registrationOpen: boolean }): React.JSX.Element {
   const { t } = useTranslation('landing');
-  // The one desktop app there is. Everyone else is offered a look around instead.
-  const onWindows = /Windows/i.test(navigator.userAgent);
   // The part of the window pointed at, and where its light stands: it keeps its place while it fades.
   const [lit, setLit] = useState<WindowKey | null>(null);
   const [spot, setSpot] = useState<WindowPart>(WINDOW_KEYS[2].part);
@@ -474,9 +487,10 @@ function Hero({ registrationOpen }: { registrationOpen: boolean }): React.JSX.El
             <p className="lp-lead">{t('hero.lead')}</p>
             <div className="lp-actions">
               <MainButton href={registrationOpen ? '/register' : '/login'}>{registrationOpen ? t('nav.register') : t('nav.login')}</MainButton>
-              {onWindows
-                ? <a className="lp-btn lp-btn-quiet lp-btn-lg" href="/download"><Glyph name="download" />{t('anywhere.desktop.link')}</a>
-                : <a className="lp-btn lp-btn-quiet lp-btn-lg" href="#features"><Glyph name="down" />{t('hero.explore')}</a>}
+              {/* The one desktop app there is, on Windows; everyone else is offered a look around. Both are
+                  in the page's HTML and the stylesheet shows one (`data-lp-os`, set before the first paint). */}
+              <a className="lp-btn lp-btn-quiet lp-btn-lg lp-for-windows" href="/download"><Glyph name="download" />{t('anywhere.desktop.link')}</a>
+              <a className="lp-btn lp-btn-quiet lp-btn-lg lp-not-windows" href="#features"><Glyph name="down" />{t('hero.explore')}</a>
             </div>
           </div>
         </div>
@@ -824,8 +838,25 @@ function ExampleCode({ code }: { code: string }): React.JSX.Element {
   );
 }
 
+/**
+ * The address this page was opened at, for the example a bot would send. A page rendered ahead of
+ * time has no address yet: its HTML carries `SITE_ORIGIN_TOKEN`, which the server replaces with its
+ * own origin and also writes into `<html data-origin>`, so the first render here says the same as the
+ * HTML it takes over. A visitor who came in by another address sees theirs a moment later.
+ */
+function usePageOrigin(): string {
+  const [origin, setOrigin] = useState(() => (typeof window === 'undefined'
+    ? SITE_ORIGIN_TOKEN
+    : document.documentElement.dataset.origin ?? window.location.origin));
+  useEffect(() => {
+    if (origin !== window.location.origin) setOrigin(window.location.origin);
+  }, [origin]);
+  return origin;
+}
+
 function Developers(): React.JSX.Element {
   const { t } = useTranslation('landing');
+  const origin = usePageOrigin();
   const points = [
     { key: 'api', title: t('developers.points.api.title'), body: t('developers.points.api.body') },
     { key: 'commands', title: t('developers.points.commands.title'), body: t('developers.points.commands.body') },
@@ -839,7 +870,7 @@ function Developers(): React.JSX.Element {
             <span className="lp-code-method">{EXAMPLE_ROUTE.method}</span>
             {EXAMPLE_ROUTE.path}
           </figcaption>
-          <pre><ExampleCode code={exampleRequest(window.location.origin)} /></pre>
+          <pre><ExampleCode code={exampleRequest(origin)} /></pre>
         </figure>
         <div className="lp-frame lp-dev-card" data-arrive="" style={{ '--i': 1 } as CssVars}><Img image={LANDING_IMAGES.botCard} alt={t('developers.alt')} /></div>
       </div>
@@ -1314,7 +1345,8 @@ function Rail({ open, read, unread, chat, version, onJump }: RailProps): React.J
         <button type="button" className="lp-rail-jump" aria-haspopup="dialog" onClick={onJump}>
           <Glyph name="search" />
           <span className="lp-rail-grow">{t('jump.open')}</span>
-          <span className="lp-rail-keys" aria-hidden="true">{JUMP_KEYS.map((key) => <kbd key={key} className="kbd">{key}</kbd>)}</span>
+          <span className="lp-rail-keys lp-not-apple" aria-hidden="true">{SWITCHER_KEYS.map((key) => <kbd key={key} className="kbd">{key}</kbd>)}</span>
+          <span className="lp-rail-keys lp-for-apple" aria-hidden="true">{APPLE_JUMP_KEYS.map((key) => <kbd key={key} className="kbd">{key}</kbd>)}</span>
         </button>
         <a
           className="nav-item"
@@ -1429,14 +1461,18 @@ function Wayfinding({ registrationOpen, chat, version }: { registrationOpen: boo
   );
 }
 
-export function LandingPage(): React.JSX.Element {
+/**
+ * The product page. `prerendered`: this render takes over HTML the website's build wrote
+ * (site/pages/index.astro), so it must start from what that HTML says.
+ */
+export function LandingPage({ prerendered = false }: { prerendered?: boolean }): React.JSX.Element {
   const { t, i18n } = useTranslation('landing');
   const [info, setInfo] = useState<InstanceInfoResponse | null>(null);
   const root = useRef<HTMLDivElement>(null);
   // Asked once, for the footer and the rail.
   const chat = useChatState();
   useFitHeadings(root, i18n.resolvedLanguage ?? i18n.language);
-  useArrivals(root);
+  useArrivals(root, prerendered);
 
   useEffect(() => {
     document.title = t('meta.title');

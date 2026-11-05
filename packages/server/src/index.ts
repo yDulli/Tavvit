@@ -297,9 +297,11 @@ async function main(): Promise<void> {
     return row?.instanceName?.trim() || DEFAULT_INSTANCE_NAME;
   };
   if (webDocuments) {
-    // The page and the manifest carry the instance's own name (see
-    // utils/webDocument.ts), so they are answered ahead of the static handler
-    // that would send the files exactly as Vite wrote them.
+    // The app's page and the manifest carry the instance's own name, and the
+    // website's pages its origin (see utils/webDocument.ts), so they are answered
+    // ahead of the static handler that would send the files as the build wrote
+    // them. The website's pages sit in dist/.site, which this handler leaves alone
+    // because it serves no dot files.
     registerWebDocumentRoutes(app, webDocuments, currentInstanceName, inviteCardFor);
     registerDeveloperDocs(app, webDistPath);
     await app.register(fastifyStatic, {
@@ -308,9 +310,10 @@ async function main(): Promise<void> {
       wildcard: false,
       setHeaders: (reply, filePath) => {
         const served = path.relative(webDistPath, filePath);
-        // Vite names these by their content, so a copy can never go stale. A
-        // typeface's file changes name when it changes. The rest is revalidated.
-        if (served.startsWith(`assets${path.sep}`)) reply.header('Cache-Control', 'public, max-age=31536000, immutable');
+        // Vite (assets/) and the website's build (_astro/) name these by their
+        // content, so a copy can never go stale. A typeface's file changes name
+        // when it changes. The rest is revalidated.
+        if (served.startsWith(`assets${path.sep}`) || served.startsWith(`_astro${path.sep}`)) reply.header('Cache-Control', 'public, max-age=31536000, immutable');
         else if (served.startsWith(`fonts${path.sep}`)) reply.header('Cache-Control', 'public, max-age=604800');
       },
     });

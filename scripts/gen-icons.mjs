@@ -60,6 +60,7 @@ const SRC = {
 const DESKTOP_BUILD = join(ROOT, 'packages/desktop/build');
 const DESKTOP_RES   = join(ROOT, 'packages/desktop/resources');
 const WEB_ICONS      = join(ROOT, 'packages/web/public/icons');
+const WEB_PUBLIC     = join(ROOT, 'packages/web/public');
 const BRAND          = join(ROOT, 'assets/brand');
 
 // The ground the Tavvit mark sits on: the app's frame colour, the same flat fill
@@ -459,6 +460,16 @@ async function main() {
 
   await writePng(join(WEB_ICONS, 'favicon-32.png'), appIconSmall, 32);
   await trace('favicon-32', join(WEB_ICONS, 'favicon-32.png'), '32 (app-icon-small)');
+
+  // favicon.ico at the root, where browsers, link previews and search engines ask for
+  // it without being told: 16 and 32 from the small tile, 48 from the app icon, the
+  // smallest size Google's results take. The same rule as the Windows .ico.
+  const faviconIcoMeasured = await writeAppIconIco(join(WEB_PUBLIC, 'favicon.ico'), icons, [16, 32, 48]);
+  await trace('favicon-ico', join(WEB_PUBLIC, 'favicon.ico'), '16, 32, 48', faviconIcoMeasured);
+
+  // The same small tile as a vector, for a browser tab at any density.
+  copyFileSync(SRC.appIconSmall, join(WEB_ICONS, 'favicon.svg'));
+  await trace('favicon-svg', join(WEB_ICONS, 'favicon.svg'), 'copy of app-icon-small.svg');
 
   await writeAppleTouchIcon(join(WEB_ICONS, 'apple-touch-icon.png'), markIcon, 180, 0.6);
   await trace('apple-touch', join(WEB_ICONS, 'apple-touch-icon.png'), '180 (mark on ground, opaque)');

@@ -1,0 +1,69 @@
+---
+/**
+ * The document every page of the website shares: everything a tab, a search engine and a chat app's
+ * link preview read before any script runs (docs/systems/landing.md, "Search and previews").
+ *
+ * Whole addresses carry `SITE_ORIGIN_TOKEN`; the server writes its own origin over it when it sends
+ * the page (server/src/utils/webDocument.ts), so one build serves every instance at its own address.
+ */
+import { PRODUCT_NAME } from '@backspace/shared/src/constants.js';
+import { SITE_ORIGIN_TOKEN } from '@backspace/shared/src/site.js';
+import { SOCIAL_IMAGE, type SiteMeta } from '../seo';
+
+interface Props {
+  meta: SiteMeta;
+  /** The product page's gate (public/landing-gate.js): the app's own people go to the app. */
+  gate?: boolean;
+  /** schema.org data for the page, already JSON. */
+  structuredData?: string;
+}
+
+const { meta, gate = false, structuredData } = Astro.props;
+---
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="orbit" data-page="landing" data-origin={SITE_ORIGIN_TOKEN}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="color-scheme" content="dark" />
+    {gate && <script is:inline src="/landing-gate.js"></script>}
+    <!-- Defence in depth only, as in index.html: the server sends the whole policy as a header. -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'" />
+    <title>{meta.title}</title>
+    <meta name="description" content={meta.description} />
+    <link rel="canonical" href={meta.url} />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={PRODUCT_NAME} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content={meta.url} />
+    <meta property="og:title" content={meta.title} />
+    <meta property="og:description" content={meta.description} />
+    <meta property="og:image" content={SOCIAL_IMAGE.url} />
+    <meta property="og:image:type" content={SOCIAL_IMAGE.type} />
+    <meta property="og:image:width" content={String(SOCIAL_IMAGE.width)} />
+    <meta property="og:image:height" content={String(SOCIAL_IMAGE.height)} />
+    <meta property="og:image:alt" content={SOCIAL_IMAGE.alt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={meta.title} />
+    <meta name="twitter:description" content={meta.description} />
+    <meta name="twitter:image" content={SOCIAL_IMAGE.url} />
+    <meta name="twitter:image:alt" content={SOCIAL_IMAGE.alt} />
+
+    <meta name="theme-color" content="#0d0e11" />
+    <meta name="application-name" content={PRODUCT_NAME} />
+    <meta name="apple-mobile-web-app-title" content={PRODUCT_NAME} />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preload" href="/fonts/Geist-Latin.woff2" as="font" type="font/woff2" crossorigin />
+    {structuredData && <script type="application/ld+json" is:inline set:html={structuredData} />}
+  </head>
+  <body class="bg-surface-base text-txt-primary">
+    <slot />
+  </body>
+</html>

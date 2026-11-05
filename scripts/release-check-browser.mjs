@@ -193,18 +193,35 @@ for (const url of ['/', '/login']) {
 // ── Headers ──────────────────────────────────────────────────────────────────
 {
   const html = await fetch(WEB + '/').then((r) => r.text());
-  const script = html.match(/src="(\/assets\/[^"]+\.js)"/)?.[1];
+  const script = html.match(/src="(\/(?:assets|_astro)\/[^"]+\.js)"/)?.[1];
   const res = await fetch(WEB + script);
   check('a hashed file is cached for a year', /max-age=31536000/.test(res.headers.get('cache-control') ?? ''), res.headers.get('cache-control'));
+  const app = await fetch(WEB + '/index.html').then((r) => r.text());
+  const appScript = app.match(/src="(\/assets\/[^"]+\.js)"/)?.[1];
+  check('  and the app\'s too', appScript !== undefined && /max-age=31536000/.test((await fetch(WEB + appScript)).headers.get('cache-control') ?? ''), appScript);
   const font = await fetch(WEB + '/fonts/Geist-Latin.woff2');
   check('a typeface is cached for a week', /max-age=604800/.test(font.headers.get('cache-control') ?? ''), font.headers.get('cache-control'));
   const doc = await fetch(WEB + '/');
   check('the page itself is revalidated', /no-cache/.test(doc.headers.get('cache-control') ?? ''), doc.headers.get('cache-control'));
-  check('the preview picture has a whole address', /og:image" content="https?:\/\/[^"]+\/og-image\.jpg"/.test(html), html.match(/og:image" content="[^"]*"/)?.[0]);
+  check('the preview picture has a whole address', /og:image" content="https?:\/\/[^"]+\/social-card\.jpg"/.test(html), html.match(/og:image" content="[^"]*"/)?.[0]);
+  check('  and X is told the same', /twitter:image" content="https?:\/\/[^"]+\/social-card\.jpg"/.test(html) && /twitter:card" content="summary_large_image"/.test(html));
+  check('  with its size and what it shows', /og:image:width" content="1200"/.test(html) && /og:image:height" content="630"/.test(html) && /og:image:alt" content="[^"]+"/.test(html));
+  check('the page names its own whole address', /rel="canonical" href="https?:\/\/[^"]+\/"/.test(html) && /og:url" content="https?:\/\/[^"]+\/"/.test(html), html.match(/rel="canonical" href="[^"]*"/)?.[0]);
+  check('  and the build\'s token is gone everywhere', !html.includes('%%TAVVIT_ORIGIN%%'));
+  check('the page is in its HTML, for a preview, a search engine and a reader without a script', /<h1[^>]*>Where your group talks\.<\/h1>/.test(html) && html.includes('id="lp"'));
+  check('  with the site\'s name for search engines', /"@type":"WebSite"/.test(html));
+  for (const path of ['/status', '/help', '/changelog', '/roadmap']) {
+    const page = await fetch(WEB + path).then((r) => r.text());
+    check(`${path} is prerendered, with its own title and address`, page.includes('<div id="root"><div') && new RegExp(`rel="canonical" href="https?://[^"]+${path}"`).test(page) && / · Tavvit<\/title>/.test(page), page.match(/<title>[^<]*<\/title>/)?.[0]);
+  }
+  const hidden = await fetch(WEB + '/.site/index.html').then((r) => r.text());
+  check('the build\'s own copy of a page is not served', !hidden.includes('%%TAVVIT_ORIGIN%%'));
   const robots = await fetch(WEB + '/robots.txt');
   check('robots.txt is served', robots.ok && (await robots.text()).includes('Disallow: /api/'));
-  const og = await fetch(WEB + '/og-image.jpg');
-  check('the preview picture is served', og.ok, `${og.headers.get('content-type')}`);
+  const og = await fetch(WEB + '/social-card.jpg');
+  check('the preview picture is served', og.ok && og.headers.get('content-type') === 'image/jpeg' && Number(og.headers.get('content-length') ?? 0) < 300 * 1024, `${og.headers.get('content-type')} ${og.headers.get('content-length')}`);
+  const icon = await fetch(WEB + '/favicon.ico');
+  check('/favicon.ico is an icon, not a page', icon.ok && /image\/(x-icon|vnd\.microsoft\.icon)/.test(icon.headers.get('content-type') ?? ''), icon.headers.get('content-type'));
 }
 
 

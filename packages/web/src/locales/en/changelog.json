@@ -4,6 +4,14 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.34.1": {
+      "title": "A proper card for shared links",
+      "items": {
+        "preview": "A link to Tavvit now shows a proper card in chats and on social sites: the logo, what Tavvit is and a look at the app.",
+        "pages": "The product page and the Help, Status, Roadmap and What's new pages arrive ready to read before any script has loaded, so they open faster and search engines can read them.",
+        "icon": "Browser tabs, bookmarks and search results show Tavvit's icon at every size."
+      }
+    },
     "1.34.0": {
       "title": "Move over from Discord",
       "items": {

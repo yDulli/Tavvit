@@ -1,4 +1,4 @@
-import i18next from 'i18next';
+import i18next, { type i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from '../locales/en/landing.json';
 import {
@@ -60,6 +60,42 @@ export async function chooseLandingLanguage(language: SupportedLanguage): Promis
   await i18next.changeLanguage(shown);
   document.documentElement.lang = shown;
   document.documentElement.dir = getLanguageDirection(shown);
+}
+
+/**
+ * English, at once, in `instance`: for the HTML the website's build renders (site/render.ts) and for
+ * the first render that takes that HTML over (site/client/landing.tsx), which must say exactly what
+ * the HTML says. The visitor's own language follows once the page is theirs
+ * (`applyStoredLandingLanguage`).
+ */
+export function initLandingI18nEnglish(instance: i18n = i18next): void {
+  if (instance.isInitialized) return;
+  void instance.use(initReactI18next).init({
+    lng: DEFAULT_LANGUAGE,
+    fallbackLng: DEFAULT_LANGUAGE,
+    defaultNS: 'landing',
+    ns: ['landing'],
+    resources: { en: { landing: en } },
+    initAsync: false,
+    returnNull: false,
+    interpolation: { escapeValue: false },
+    react: { useSuspense: false },
+  });
+}
+
+/**
+ * The language this visitor chose before, on the page rendered ahead of time, after it has been
+ * taken over in English. Nothing is written: the choice is already stored.
+ */
+export async function applyStoredLandingLanguage(): Promise<void> {
+  const wanted = pickLanguage(readStoredLanguage());
+  if (wanted === DEFAULT_LANGUAGE) return;
+  const catalog = await loadCatalog(wanted);
+  if (!catalog) return;
+  i18next.addResourceBundle(wanted, 'landing', catalog, true, true);
+  await i18next.changeLanguage(wanted);
+  document.documentElement.lang = wanted;
+  document.documentElement.dir = getLanguageDirection(wanted);
 }
 
 /**

@@ -10,7 +10,9 @@ import { isStaticAssetPath,
   renderIndexHtml,
   renderInviteHtml,
   renderManifest,
+  renderSiteHtml,
 } from '../src/utils/webDocument.js';
+import { SITE_DOCUMENT_DIR, SITE_DOCUMENT_FILES, SITE_ORIGIN_TOKEN, SITE_PATHS } from '@backspace/shared/src/site.js';
 
 // The page and manifest are the first thing a browser gets, before any script:
 // they must wear the instance's name, and they must not let a name become markup.
@@ -28,7 +30,7 @@ const MANIFEST = JSON.stringify({ name: 'Tavvit', short_name: 'Tavvit', display:
 
 describe('isStaticAssetPath', () => {
   it('knows the folders of the built page', () => {
-    for (const path of ['/assets/index-abc.js', '/fonts/Geist-Latin.woff2', '/icons/mark.svg', '/sounds/join.ogg', '/assets/a.js?v=1']) {
+    for (const path of ['/assets/index-abc.js', '/_astro/index.abc.js', '/fonts/Geist-Latin.woff2', '/icons/mark.svg', '/sounds/join.ogg', '/assets/a.js?v=1']) {
       expect(isStaticAssetPath(path)).toBe(true);
     }
   });
@@ -77,6 +79,44 @@ describe('renderIndexHtml', () => {
   });
 });
 
+describe('renderIndexHtml and the preview picture', () => {
+  const page = `<head>
+<meta property="og:image" content="/social-card.jpg" />
+<meta name="twitter:image" content="/social-card.jpg" />
+<title>Tavvit</title>
+</head>`;
+
+  it('gives both preview pictures a whole address', () => {
+    const html = renderIndexHtml(page, 'Tavvit', 'https://chat.example');
+    expect(html).toContain('<meta property="og:image" content="https://chat.example/social-card.jpg" />');
+    expect(html).toContain('<meta name="twitter:image" content="https://chat.example/social-card.jpg" />');
+  });
+
+  it('leaves them as paths when the server does not know its address', () => {
+    expect(renderIndexHtml(page, 'Tavvit')).toContain('<meta name="twitter:image" content="/social-card.jpg" />');
+  });
+});
+
+describe('renderSiteHtml', () => {
+  const page = `<html data-origin="${SITE_ORIGIN_TOKEN}"><head><link rel="canonical" href="${SITE_ORIGIN_TOKEN}/" />`
+    + `<meta property="og:image" content="${SITE_ORIGIN_TOKEN}/social-card.jpg" /></head>`
+    + `<body><pre>curl ${SITE_ORIGIN_TOKEN}/api/bots</pre></body></html>`;
+
+  it('puts the server\'s origin wherever the build left the token', () => {
+    const html = renderSiteHtml(page, 'https://tavvit.com');
+    expect(html).not.toContain(SITE_ORIGIN_TOKEN);
+    expect(html).toContain('data-origin="https://tavvit.com"');
+    expect(html).toContain('<link rel="canonical" href="https://tavvit.com/" />');
+    expect(html).toContain('content="https://tavvit.com/social-card.jpg"');
+    expect(html).toContain('curl https://tavvit.com/api/bots');
+  });
+
+  it('leaves paths when the origin is not known, and an origin cannot become markup', () => {
+    expect(renderSiteHtml(page)).toContain('<link rel="canonical" href="/" />');
+    expect(renderSiteHtml(page, 'https://x"><script>')).not.toContain('<script>');
+  });
+});
+
 describe('renderManifest', () => {
   it('sets the name and a short name', () => {
     const manifest = JSON.parse(renderManifest(MANIFEST, 'Friend Club'));
@@ -119,6 +159,20 @@ describe('createWebDocuments', () => {
     const docs = createWebDocuments(dist({}));
     expect(docs.index('A')).toBeNull();
     expect(docs.manifest('A')).toBeNull();
+    for (const sitePath of SITE_PATHS) expect(docs.site(sitePath)).toBeNull();
+  });
+
+  it('reads the website\'s pages from the hidden folder and fills in the origin', () => {
+    const dir = dist({ 'index.html': TEMPLATE });
+    fs.mkdirSync(path.join(dir, SITE_DOCUMENT_DIR));
+    fs.writeFileSync(path.join(dir, SITE_DOCUMENT_DIR, SITE_DOCUMENT_FILES['/']), `<link rel="canonical" href="${SITE_ORIGIN_TOKEN}/" />`);
+    fs.writeFileSync(path.join(dir, SITE_DOCUMENT_DIR, SITE_DOCUMENT_FILES['/help']), 'Help');
+    const docs = createWebDocuments(dir, 'https://tavvit.com');
+    expect(docs.site('/')).toBe('<link rel="canonical" href="https://tavvit.com/" />');
+    expect(docs.site('/help')).toBe('Help');
+    expect(docs.site('/status')).toBeNull();
+    // The app's page is still the app's.
+    expect(docs.index('A')).toContain('<title>A</title>');
   });
 
   it('serves a manifest that does not parse as built, and says so', () => {
@@ -141,8 +195,16 @@ const INVITE_TEMPLATE = `<!DOCTYPE html>
 <meta name="apple-mobile-web-app-title" content="Tavvit" />
 <meta property="og:title" content="Tavvit" />
 <meta property="og:description" content="The product." />
-<meta property="og:image" content="/og-image.jpg" />
+<meta property="og:image" content="/social-card.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="The product." />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Tavvit" />
+<meta name="twitter:description" content="The product." />
+<meta name="twitter:image" content="/social-card.jpg" />
+<meta name="twitter:image:alt" content="The product." />
 <title>Tavvit</title>
 </head><body></body></html>`;
 
@@ -158,12 +220,21 @@ describe('renderInviteHtml', () => {
     expect(page).toContain('<meta property="og:image" content="https://tavvit.com/api/uploads/icon.webp" />');
     expect(page).toContain('<meta name="twitter:card" content="summary" />');
     expect(page).toContain('<meta name="apple-mobile-web-app-title" content="Tavvit" />');
+    // X reads its own tags first: they say the same, and the icon's size is not the product picture's.
+    expect(page).toContain('<meta name="twitter:title" content="Night Shift" />');
+    expect(page).toContain('<meta name="twitter:image" content="https://tavvit.com/api/uploads/icon.webp" />');
+    expect(page).toContain('<meta property="og:image:alt" content="Night Shift" />');
+    expect(page).not.toContain('og:image:width');
+    expect(page).not.toContain('og:image:height');
+    expect(page).not.toContain('og:image:type');
   });
 
   it('keeps the product picture for a space without an icon, and says how many are in one without a description', () => {
     const page = renderInviteHtml(INVITE_TEMPLATE, 'Tavvit', { ...CARD, description: null, memberCount: 1, iconPath: null }, 'https://tavvit.com');
     expect(page).toContain('<meta property="og:description" content="1 member on Tavvit" />');
-    expect(page).toContain('<meta property="og:image" content="https://tavvit.com/og-image.jpg" />');
+    expect(page).toContain('<meta property="og:image" content="https://tavvit.com/social-card.jpg" />');
+    expect(page).toContain('<meta name="twitter:image" content="https://tavvit.com/social-card.jpg" />');
+    expect(page).toContain('<meta property="og:image:width" content="1200" />');
     expect(page).toContain('<meta name="twitter:card" content="summary_large_image" />');
   });
 
@@ -273,6 +344,47 @@ describe('registerWebDocumentRoutes', () => {
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/html');
       expect(res.headers['cache-control']).toBe('no-cache');
+    } finally {
+      await instance.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('answers the website\'s pages as the build rendered them, and keeps /index.html the app\'s', async () => {
+    const { instance, dir } = await app(() => 'Friend Club');
+    fs.mkdirSync(path.join(dir, SITE_DOCUMENT_DIR));
+    for (const sitePath of SITE_PATHS) {
+      fs.writeFileSync(path.join(dir, SITE_DOCUMENT_DIR, SITE_DOCUMENT_FILES[sitePath]), `<p>page ${sitePath}</p><a href="${SITE_ORIGIN_TOKEN}${sitePath}">`);
+    }
+    // The documents are read when the server starts.
+    const site = Fastify();
+    registerWebDocumentRoutes(site, createWebDocuments(dir, 'https://tavvit.com'), () => 'Friend Club', () => null);
+    await site.ready();
+    try {
+      for (const [url, sitePath] of [['/', '/'], ['/?ref=x', '/'], ['/status', '/status'], ['/help/', '/help'], ['/changelog?x=1', '/changelog'], ['/roadmap', '/roadmap']] as const) {
+        const res = await site.inject({ method: 'GET', url });
+        expect(res.statusCode, url).toBe(200);
+        expect(res.headers['content-type'], url).toContain('text/html');
+        expect(res.headers['cache-control'], url).toBe('no-cache');
+        expect(res.body, url).toBe(`<p>page ${sitePath}</p><a href="https://tavvit.com${sitePath}">`);
+      }
+      // The service worker keeps /index.html as the app's shell: it must stay the app's page.
+      const shell = await site.inject({ method: 'GET', url: '/index.html' });
+      expect(shell.body).toContain('<title>Friend Club</title>');
+      // Only the pages themselves: a path below one is the app's to answer.
+      expect((await site.inject({ method: 'GET', url: '/status/x' })).statusCode).toBe(404);
+    } finally {
+      await site.close();
+      await instance.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('answers / with the app\'s page and leaves the public pages to the app when the build has no website', async () => {
+    const { instance, dir } = await app(() => 'Friend Club');
+    try {
+      expect((await instance.inject({ method: 'GET', url: '/' })).body).toContain('<title>Friend Club</title>');
+      expect((await instance.inject({ method: 'GET', url: '/status' })).statusCode).toBe(404);
     } finally {
       await instance.close();
       fs.rmSync(dir, { recursive: true, force: true });

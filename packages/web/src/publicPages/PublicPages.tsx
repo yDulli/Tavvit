@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PRODUCT_NAME } from '@backspace/shared/src/constants.js';
 import { PUBLIC_SERVICES, type PublicStatus, type ServiceState } from '@backspace/shared/src/publicStatus';
 import { createFormatters } from '../i18n/createFormatters';
 import type { PublicPagePath } from './entry';
@@ -12,7 +13,8 @@ const LEGAL_LINKS = ['terms', 'privacy', 'imprint', 'report', 'developers'] as c
 
 function PageFrame({ current, title, lead, children }: { current: PublicPagePath; title: string; lead: string; children: ReactNode }) {
   const { t } = useTranslation('status');
-  useEffect(() => { document.title = title; }, [title]);
+  // The page's name with the product's, as the website's HTML has it (site/seo.ts).
+  useEffect(() => { document.title = `${title} · ${PRODUCT_NAME}`; }, [title]);
   return (
     <div className="flex min-h-screen flex-col bg-surface-base text-txt-primary">
       <header className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border-soft px-4 py-3 desktop:px-6">

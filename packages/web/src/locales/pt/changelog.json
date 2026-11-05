@@ -4,6 +4,14 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.34.1": {
+      "title": "Um cartão de verdade para links compartilhados",
+      "items": {
+        "preview": "Um link para o Tavvit agora mostra um cartão de verdade em chats e redes sociais: o logo, o que é o Tavvit e uma olhada no app.",
+        "pages": "A página do produto e as páginas Ajuda, Status, Roteiro e Novidades chegam prontas para ler antes de qualquer script carregar, então abrem mais rápido e os buscadores conseguem lê-las.",
+        "icon": "Abas do navegador, favoritos e resultados de busca mostram o ícone do Tavvit em qualquer tamanho."
+      }
+    },
     "1.34.0": {
       "title": "Mudança do Discord",
       "items": {

@@ -4,6 +4,14 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.34.1": {
+      "title": "Eine richtige Karte für geteilte Links",
+      "items": {
+        "preview": "Ein Link zu Tavvit zeigt in Chats und sozialen Netzwerken jetzt eine richtige Karte: das Logo, was Tavvit ist, und einen Blick in die App.",
+        "pages": "Die Produktseite und die Seiten Hilfe, Status, Roadmap und Neuigkeiten kommen fertig zum Lesen an, bevor ein Skript geladen ist. So öffnen sie schneller, und Suchmaschinen können sie lesen.",
+        "icon": "Browser-Tabs, Lesezeichen und Suchergebnisse zeigen das Tavvit-Symbol in jeder Größe."
+      }
+    },
     "1.34.0": {
       "title": "Umzug von Discord",
       "items": {

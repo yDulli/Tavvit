@@ -108,7 +108,7 @@ describe('the pages', () => {
     render(<PublicPage path="/changelog" />);
     const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(headings).toEqual(Object.values(changelog.versions).map((entry) => entry.title));
-    expect(Object.keys(changelog.versions)[0]).toBe('1.34.0');
+    expect(Object.keys(changelog.versions)[0]).toBe('1.34.1');
   });
 
   it('roadmap: shows what comes, in its sections, and what was just finished', () => {
@@ -131,6 +131,6 @@ describe('the pages', () => {
 
   it('names the tab after the page', async () => {
     render(<PublicPage path="/changelog" />);
-    await waitFor(() => expect(document.title).toBe("What's new"));
+    await waitFor(() => expect(document.title).toBe("What's new · Tavvit"));
   });
 });

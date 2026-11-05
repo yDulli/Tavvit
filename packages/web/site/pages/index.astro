@@ -1,0 +1,17 @@
+---
+// The product page (docs/systems/landing.md), prerendered: src/landing/LandingPage.tsx in English,
+// then taken over by site/client/landing.tsx. landing-gate.js sends the app's own people on.
+import '../../src/styles/globals.css';
+import '../../src/landing/landing.css';
+import SiteDocument from '../layouts/SiteDocument.astro';
+import { renderLanding } from '../render';
+import { siteMeta, websiteStructuredData } from '../seo';
+
+const html = renderLanding();
+---
+<SiteDocument meta={siteMeta('/')} gate structuredData={websiteStructuredData()}>
+  <div id="root" set:html={html}></div>
+  <script>
+    import '../client/landing';
+  </script>
+</SiteDocument>

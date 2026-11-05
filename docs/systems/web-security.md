@@ -610,6 +610,17 @@ It is defence in depth for the case where a response reaches a browser without
 the server's header, which is what happens when the SPA is served by something
 other than the Fastify static handler.
 
+The website's prerendered pages (`/`, `/status`, `/help`, `/changelog`,
+`/roadmap`; [landing.md](landing.md)) carry the same tag
+(`site/layouts/SiteDocument.astro`) and get the same header, since the server
+sends them through the same document hook. They hold no script written into the
+page: the product page's first script is a file, `/landing-gate.js`, and each
+page's own module is a file under `/_astro/`. `site/build.mjs` fails the build
+when a page holds an inline script, so the policy never needs a hash or
+`'unsafe-inline'` for them. The one `<script>` with content is the schema.org
+data on `/` (`type="application/ld+json"`), a data block the browser does not
+run.
+
 **It enforces immediately.** There is no report-only form of a meta policy. So
 while the server policy blocks nothing today, these four directives do block,
 on every page load, in every deployment. Treat any change to this tag as a

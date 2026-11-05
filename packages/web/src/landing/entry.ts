@@ -16,7 +16,7 @@ import { isElectron } from '../platform/platform';
 export const SESSION_TOKEN_KEY = 'backspace_token';
 
 /** Every way a browser shows a web app that was installed, as opposed to a tab. */
-const INSTALLED_DISPLAY_MODES = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'] as const;
+export const INSTALLED_DISPLAY_MODES = ['standalone', 'fullscreen', 'minimal-ui', 'window-controls-overlay'] as const;
 
 export function hasStoredSession(): boolean {
   try {
@@ -31,6 +31,20 @@ function isInstalledWebApp(): boolean {
   const matchesMode = INSTALLED_DISPLAY_MODES.some((mode) => window.matchMedia(`(display-mode: ${mode})`).matches);
   // iOS Safari reports an app on the home screen only through this flag.
   return matchesMode || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+}
+
+/**
+ * What the page offers by device: the Windows download in the opening and Apple's Command key on the
+ * switcher, or the general choice. The page's HTML holds both and the stylesheet shows one by
+ * `data-lp-os` on `<html>`; `public/landing-gate.js` sets it on the prerendered page, before the first
+ * paint, with the same rules (landing/gate.test.ts).
+ */
+export type LandingPlatform = 'windows' | 'apple' | 'other';
+
+export function landingPlatform(userAgent: string): LandingPlatform {
+  if (/Windows/i.test(userAgent)) return 'windows';
+  if (/Mac|iPhone|iPad/.test(userAgent)) return 'apple';
+  return 'other';
 }
 
 /** True when this page load is a visitor at the front door. */

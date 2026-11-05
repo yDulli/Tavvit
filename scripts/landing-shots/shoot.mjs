@@ -13,6 +13,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { drawSocialCard } from './card.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const ASSETS = join(ROOT, 'packages/web/src/landing/assets');
@@ -149,12 +150,12 @@ for (const shot of SHOTS) {
   sizes[shot.name] = { width: meta.width, height: meta.height };
   total += file.length;
   console.log(`${shot.name.padEnd(18)} ${String(meta.width).padStart(5)}x${String(meta.height).padEnd(5)} ${(file.length / 1024).toFixed(0).padStart(5)} KB`);
-  if (shot.name === 'window') {
-    // The link preview: 1200x630, and a format every service understands.
-    const preview = await sharp(raw).resize(1200, 630, { fit: 'cover', position: 'left top' }).jpeg({ quality: 78, mozjpeg: true }).toBuffer();
-    writeFileSync(join(ROOT, 'packages/web/public/og-image.jpg'), preview);
-  }
   await context.close();
+}
+// The link preview shows the window just taken, with the product's name and headline (card.mjs).
+if (!only || only === 'window') {
+  const bytes = await drawSocialCard(browser);
+  console.log(`${'social-card'.padEnd(18)}  1200x630  ${(bytes / 1024).toFixed(0).padStart(5)} KB`);
 }
 await browser.close();
 

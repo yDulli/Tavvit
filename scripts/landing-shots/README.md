@@ -3,8 +3,11 @@
 `shoot.mjs` takes the pictures of the page at `/` (`packages/web/src/landing/`) from
 the running app, with invented people in it, and writes them optimised to
 `packages/web/src/landing/assets/`, their sizes to `imageSizes.ts` and the link
-preview to `packages/web/public/og-image.jpg`. Retake them when the app's look
-changes, or the page shows an app that no longer exists.
+preview to `packages/web/public/social-card.jpg` (`card.mjs`: the window just taken
+beside the logo and the headline, from `social-card.html`). Retake them when the
+app's look changes, or the page shows an app that no longer exists. To redraw only
+the card from the window there is:
+`PLAYWRIGHT_PREFIX=/tmp/landing-shots node scripts/landing-shots/card.mjs`.
 
 Nothing here touches a real server: it needs a scratch database of its own.
 

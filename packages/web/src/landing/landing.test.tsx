@@ -11,7 +11,7 @@ import en from '../locales/en/landing.json';
 import { BOT_ROUTES } from '@backspace/shared/src/bots.js';
 import { MAX_MESSAGE_LENGTH } from '@backspace/shared';
 import { THEME_IDS } from '../utils/appTheme';
-import { SESSION_TOKEN_KEY, showsLanding } from './entry';
+import { SESSION_TOKEN_KEY, landingPlatform, showsLanding } from './entry';
 import { EXAMPLE_ROUTE, exampleRequest } from './example';
 import { LANDING_FIGURES } from './figures';
 import { initLandingI18n } from './i18n';
@@ -320,17 +320,28 @@ describe('the page', () => {
   });
 
   it('offers the download to someone on Windows, and a look around to everyone else', async () => {
+    // Both stand in the page, because its HTML is written before anyone's device is known; the
+    // stylesheet shows the one that fits by `data-lp-os`, which says nothing until it is set.
     answerInfo({ registrationOpen: true, sourceCodeUrl: null });
-    const userAgent = vi.spyOn(window.navigator, 'userAgent', 'get');
-    userAgent.mockReturnValue('Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
-    const { unmount } = render(<LandingPage />);
+    const { container } = render(<LandingPage />);
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    expect(screen.queryByRole('link', { name: en.hero.explore })).not.toBeInTheDocument();
-    unmount();
-    userAgent.mockReturnValue('Mozilla/5.0 (X11; Linux x86_64)');
-    render(<LandingPage />);
-    expect(screen.getByRole('link', { name: en.hero.explore })).toHaveAttribute('href', '#features');
-    userAgent.mockRestore();
+    const opening = container.querySelector('.lp-hero') as HTMLElement;
+    expect(opening.querySelector('a.lp-for-windows')).toHaveAttribute('href', '/download');
+    expect(opening.querySelector('a.lp-not-windows')).toHaveAttribute('href', '#features');
+    const css = readFileSync(join(here, 'landing.css'), 'utf8');
+    expect(css).toMatch(/:root:not\(\[data-lp-os='windows'\]\) #lp \.lp-for-windows,/);
+    expect(css).toMatch(/:root\[data-lp-os='windows'\] #lp \.lp-not-windows,/);
+    expect(landingPlatform('Mozilla/5.0 (Windows NT 10.0; Win64; x64)')).toBe('windows');
+    expect(landingPlatform('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5)')).toBe('apple');
+    expect(landingPlatform('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)')).toBe('apple');
+    expect(landingPlatform('Mozilla/5.0 (X11; Linux x86_64)')).toBe('other');
+  });
+
+  it('says the switcher\'s keys as an Apple keyboard has them there, and as the app does elsewhere', () => {
+    answerInfo({ registrationOpen: true, sourceCodeUrl: null });
+    const { container } = render(<LandingPage />);
+    expect(container.querySelector('.lp-rail-keys.lp-not-apple')?.textContent).toBe('CtrlK');
+    expect(container.querySelector('.lp-rail-keys.lp-for-apple')?.textContent).toBe('⌘K');
   });
 
   it('keeps every way out of the page', async () => {

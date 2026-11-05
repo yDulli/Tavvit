@@ -1,0 +1,21 @@
+---
+// The pages anyone can read (docs/systems/operations.md): /status, /help, /changelog and /roadmap,
+// prerendered from src/publicPages/PublicPages.tsx and taken over by site/client/public.tsx.
+import '../../src/styles/globals.css';
+import type { GetStaticPaths } from 'astro';
+import { SITE_PUBLIC_PATHS, type SitePublicPath } from '@backspace/shared/src/site.js';
+import SiteDocument from '../layouts/SiteDocument.astro';
+import { renderPublicPage } from '../render';
+import { siteMeta } from '../seo';
+
+export const getStaticPaths = (() => SITE_PUBLIC_PATHS.map((path) => ({ params: { page: path.slice(1) } }))) satisfies GetStaticPaths;
+
+const path = `/${Astro.params.page}` as SitePublicPath;
+const html = renderPublicPage(path);
+---
+<SiteDocument meta={siteMeta(path)}>
+  <div id="root" set:html={html}></div>
+  <script>
+    import '../client/public';
+  </script>
+</SiteDocument>

@@ -1,6 +1,6 @@
 {
   "name": "@backspace/shared",
-  "version": "1.34.0",
+  "version": "1.34.1",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Jannis Braun",
@@ -98,7 +98,9 @@
     "./src/profileImage": "./src/profileImage.ts",
     "./src/profileImage.js": "./src/profileImage.ts",
     "./src/customEmoji": "./src/customEmoji.ts",
-    "./src/customEmoji.js": "./src/customEmoji.ts"
+    "./src/customEmoji.js": "./src/customEmoji.ts",
+    "./src/site": "./src/site.ts",
+    "./src/site.js": "./src/site.ts"
   },
   "scripts": {
     "build": "tsc",

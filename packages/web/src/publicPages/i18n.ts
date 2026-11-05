@@ -1,4 +1,4 @@
-import i18next from 'i18next';
+import i18next, { type i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import enChangelog from '../locales/en/changelog.json';
 import enHelp from '../locales/en/help.json';
@@ -51,6 +51,40 @@ async function loadCatalogs(language: string): Promise<Record<Namespace, Record<
     console.error('[pages] Could not load the language, showing English:', error);
     return null;
   }
+}
+
+/**
+ * English, at once, in `instance`: for the HTML the website's build renders (site/render.ts) and for
+ * the first render that takes it over (site/client/public.tsx), which must say what the HTML says.
+ * The visitor's own language follows (`applyStoredPublicLanguage`).
+ */
+export function initPublicPagesI18nEnglish(instance: i18n = i18next): void {
+  if (instance.isInitialized) return;
+  void instance.use(initReactI18next).init({
+    lng: DEFAULT_LANGUAGE,
+    fallbackLng: DEFAULT_LANGUAGE,
+    defaultNS: 'status',
+    ns: [...NAMESPACES],
+    resources: { en: { help: enHelp, changelog: enChangelog, status: enStatus, roadmap: enRoadmap } },
+    initAsync: false,
+    returnNull: false,
+    interpolation: { escapeValue: false },
+    react: { useSuspense: false },
+  });
+}
+
+/** The language this visitor chose before, once the page rendered ahead of time is theirs. */
+export async function applyStoredPublicLanguage(): Promise<void> {
+  const wanted = pickLanguage(readStoredLanguage());
+  if (wanted === DEFAULT_LANGUAGE) return;
+  const translated = await loadCatalogs(wanted);
+  if (!translated) return;
+  for (const [namespace, catalog] of Object.entries(translated)) {
+    i18next.addResourceBundle(wanted, namespace, catalog, true, true);
+  }
+  await i18next.changeLanguage(wanted);
+  document.documentElement.lang = wanted;
+  document.documentElement.dir = getLanguageDirection(wanted);
 }
 
 export async function initPublicPagesI18n(): Promise<void> {

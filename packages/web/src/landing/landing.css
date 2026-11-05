@@ -61,6 +61,14 @@
 /* Russian and Portuguese headlines run longer: a step down keeps the opening at two lines. */
 :root:lang(ru) .lp-display, :root:lang(pt) .lp-display { font-size: min(var(--fit, 5.25rem), clamp(2.5rem, calc(5.6 * var(--app-vw)), 5.25rem)); }
 
+/* ── One of two, by device: the page's HTML is written before anyone's device is known, so both
+   stand in it and `data-lp-os` (landingPlatform, set before the first paint) shows the one that
+   fits. Without it, as for a reader with no script, the general one stays. ── */
+:root:not([data-lp-os='windows']) #lp .lp-for-windows,
+:root[data-lp-os='windows'] #lp .lp-not-windows,
+:root:not([data-lp-os='apple']) #lp .lp-for-apple,
+:root[data-lp-os='apple'] #lp .lp-not-apple { display: none !important; }
+
 /* ── Buttons: the app's geometry, larger. White for the one action of an opening, a hairline for the rest ── */
 .lp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 32px; }
 .lp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: var(--radius); font-size: 14px; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease, box-shadow var(--dur-base) ease, transform var(--dur-base) var(--ease-out); }
@@ -430,6 +438,9 @@ html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-c
      less motion all see everything in place. */
   #lp[data-arrivals='on'] [data-arrive] { animation: lp-arrive .7s var(--ease-out) both paused; animation-delay: calc(var(--i, 0) * 70ms); }
   #lp[data-arrivals='on'] [data-arrive][data-in='true'] { animation-play-state: running; }
+  /* A page rendered ahead of time was on screen before the script came: what was already in sight
+     stays where it is rather than vanishing and arriving again. */
+  #lp[data-arrivals='on'] [data-arrive][data-in='shown'] { animation: none; }
   @keyframes lp-arrive { from { opacity: 0; translate: 0 18px; } to { opacity: 1; translate: 0 0; } }
   /* The window's light moves to the part pointed at; the pill rises into place once. */
   .lp-spot { transition: opacity var(--dur-base) ease, left var(--dur-slow) var(--ease-out), top var(--dur-slow) var(--ease-out), width var(--dur-slow) var(--ease-out), height var(--dur-slow) var(--ease-out); }
