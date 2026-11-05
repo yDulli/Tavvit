@@ -53,13 +53,24 @@ export const LANDING_IMAGES = {
   window: { src: windowShot, ...LANDING_IMAGE_SIZES.window },
 } as const satisfies Record<string, LandingImage>;
 
-/** The fan of looks: the same conversation in one theme each, the plain one in front. */
-export const LOOKS: readonly { position: number; image: LandingImage }[] = [
-  { position: -3, image: { src: lookA1, ...LANDING_IMAGE_SIZES['look-a1'] } },
-  { position: 3, image: { src: lookA2, ...LANDING_IMAGE_SIZES['look-a2'] } },
-  { position: -2, image: { src: lookA4, ...LANDING_IMAGE_SIZES['look-a4'] } },
-  { position: 2, image: { src: lookA6, ...LANDING_IMAGE_SIZES['look-a6'] } },
-  { position: -1, image: { src: lookA5, ...LANDING_IMAGE_SIZES['look-a5'] } },
-  { position: 1, image: { src: lookA3, ...LANDING_IMAGE_SIZES['look-a3'] } },
-  { position: 0, image: { src: lookA0, ...LANDING_IMAGE_SIZES['look-a0'] } },
+/** One look of the app: the theme the picture was taken in (`scripts/landing-shots/shoot.mjs`). */
+export interface Look {
+  /** The theme's id in the app (`utils/appTheme.ts`), and the key of its name in the catalog. */
+  key: 'carbon' | 'moss' | 'clay' | 'plum' | 'harbor' | 'custom' | 'ink';
+  /** The accent the picture was taken with: the colour the chapter is lit in while this look is chosen. */
+  accent: string;
+  /** The theme's page surface, read from the picture, for its swatch. */
+  surface: string;
+  image: LandingImage;
+}
+
+/** The looks the visitor can pick, the plain one first: the same conversation in each. */
+export const LOOKS: readonly Look[] = [
+  { key: 'carbon', accent: '#7466e8', surface: '#191b1f', image: { src: lookA0, ...LANDING_IMAGE_SIZES['look-a0'] } },
+  { key: 'moss', accent: '#5a8f1c', surface: '#181b16', image: { src: lookA1, ...LANDING_IMAGE_SIZES['look-a1'] } },
+  { key: 'clay', accent: '#e0501f', surface: '#201a18', image: { src: lookA2, ...LANDING_IMAGE_SIZES['look-a2'] } },
+  { key: 'plum', accent: '#a23fd0', surface: '#1e191c', image: { src: lookA3, ...LANDING_IMAGE_SIZES['look-a3'] } },
+  { key: 'harbor', accent: '#0f7fc4', surface: '#14191e', image: { src: lookA4, ...LANDING_IMAGE_SIZES['look-a4'] } },
+  { key: 'custom', accent: '#d4376b', surface: '#26151b', image: { src: lookA5, ...LANDING_IMAGE_SIZES['look-a5'] } },
+  { key: 'ink', accent: '#0e8f7e', surface: '#111111', image: { src: lookA6, ...LANDING_IMAGE_SIZES['look-a6'] } },
 ];

@@ -427,6 +427,7 @@ export function PictureInPicture() {
 
       {/* Close button */}
       <button
+        data-tooltip=""
         data-pip-action="close"
         onClick={handleClose}
         aria-label={t('common:actions.close')}

@@ -304,10 +304,10 @@ export function SwatchButton({ label, background, selected, wide = false, onClic
 }): React.JSX.Element {
   return (
     <button
+      data-tooltip=""
       type="button"
       aria-pressed={selected}
       aria-label={label}
-      title={label}
       onClick={onClick}
       className={`block h-7 rounded ring-offset-2 ring-offset-surface-chat transition-shadow duration-100 ${wide ? 'w-9' : 'w-7'} ${
         selected ? 'ring-2 ring-txt-primary' : 'hover:ring-1 hover:ring-interactive-muted'

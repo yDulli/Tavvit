@@ -127,6 +127,7 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
       <div className="pointer-events-auto flex items-center gap-1 rounded-lg p-1.5 glass-bubble">
         {/* Mute */}
         <button
+          data-tooltip=""
           onClick={handleMute}
           aria-pressed={isMuted || isDeafened || isSpaceMuted || isSpaceDeafened}
           aria-label={muteLabel}
@@ -136,13 +137,13 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
               ? btnOff
               : btnDefault
           }
-          title={muteLabel}
         >
           <Icon name={isMuted || isDeafened || isSpaceMuted || isSpaceDeafened ? 'mic-off' : 'mic'} size={20} />
         </button>
 
         {/* Deafen */}
         <button
+          data-tooltip=""
           onClick={handleDeafen}
           aria-pressed={isDeafened || isSpaceDeafened}
           aria-label={deafenLabel}
@@ -152,7 +153,6 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
               ? btnOff
               : btnDefault
           }
-          title={deafenLabel}
         >
           <Icon name={isDeafened || isSpaceDeafened ? 'headphones-off' : 'headphones'} size={20} />
         </button>
@@ -174,6 +174,7 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
         {canStream && (
           <>
             <button
+              data-tooltip=""
               ref={shareBtnRef}
               onClick={handleScreenShare}
               // Idle the button starts a share; live it toggles a menu, so it
@@ -182,7 +183,6 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
               aria-expanded={isScreenSharing ? shareMenuOpen : undefined}
               aria-label={isScreenSharing ? t('voice:controls.shareOptions') : t('voice:controls.shareScreen')}
               className={isScreenSharing ? btnOn : btnDefault}
-              title={isScreenSharing ? t('voice:controls.shareOptions') : t('voice:controls.shareScreen')}
             >
               <VoiceIcon name="screen-share" size={20} />
             </button>
@@ -200,12 +200,12 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
 
         {/* Chat Toggle */}
         <button
+          data-tooltip=""
           onClick={toggleVoiceChat}
           data-active={voiceChatOpen ? 'true' : undefined}
           aria-pressed={voiceChatOpen}
           aria-label={t('voice:controls.toggleChat')}
           className={btnDefault}
-          title={t('voice:controls.toggleChat')}
         >
           <Icon name="message" size={20} />
         </button>
@@ -216,11 +216,11 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
 
         {/* Fullscreen Toggle */}
         <button
+          data-tooltip=""
           onClick={handleFullscreen}
           data-active={voiceFullscreen ? 'true' : undefined}
           aria-label={voiceFullscreen ? t('voice:controls.exitFullscreen') : t('voice:controls.fullscreen')}
           className={btnDefault}
-          title={voiceFullscreen ? t('voice:controls.exitFullscreen') : t('voice:controls.fullscreen')}
         >
           <VoiceIcon name={voiceFullscreen ? 'minimize' : 'maximize'} size={20} />
         </button>
@@ -230,10 +230,10 @@ export function VoiceControlBar({ revealed = false }: { revealed?: boolean }) {
 
         {/* Disconnect */}
         <button
+          data-tooltip=""
           onClick={handleDisconnect}
           aria-label={t('voice:controls.disconnect')}
           className="btn-danger h-10 w-10 p-0"
-          title={t('voice:controls.disconnect')}
         >
           <Icon name="phone" size={20} className="rotate-[135deg]" />
         </button>

@@ -113,7 +113,6 @@ export function ImageCropModal({
             onClick={onClose}
             className="icon-btn icon-btn-lg"
             aria-label={t('common:actions.close')}
-            title={t('common:actions.close')}
           >
             <Icon name="x" size={17} />
           </button>

@@ -99,7 +99,6 @@ export function VoiceRecorderBar({ held, onSend, onClose, onUnavailable }: Voice
           onClick={onClose}
           className="icon-btn h-10 w-10 flex-shrink-0 desktop:h-8 desktop:w-8"
           aria-label={t('voiceMessage.discard')}
-          title={t('voiceMessage.discard')}
         >
           <Icon name="trash" size={16} />
         </button>
@@ -107,11 +106,11 @@ export function VoiceRecorderBar({ held, onSend, onClose, onUnavailable }: Voice
           <VoiceMessagePlayer url={previewUrl} bars={recording.bars} duration={recording.durationSeconds} />
         </div>
         <button
+          data-tooltip=""
           type="button"
           onClick={() => onSend(recording)}
           className="btn-primary h-10 w-10 flex-shrink-0 p-0 desktop:h-8 desktop:w-8"
           aria-label={t('voiceMessage.send')}
-          title={t('voiceMessage.send')}
         >
           <Icon name="send" size={16} />
         </button>
@@ -126,7 +125,6 @@ export function VoiceRecorderBar({ held, onSend, onClose, onUnavailable }: Voice
         onClick={onClose}
         className="icon-btn h-10 w-10 flex-shrink-0 desktop:h-8 desktop:w-8"
         aria-label={t('voiceMessage.discard')}
-        title={t('voiceMessage.discard')}
       >
         <Icon name="trash" size={16} />
       </button>

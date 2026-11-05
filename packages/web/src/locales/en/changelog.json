@@ -4,6 +4,17 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.33.2": {
+      "title": "A new product page, banners and tooltips",
+      "items": {
+        "landing": "The product page is new. It reads like a space: its chapters stand in a column of their own and turn read as you go, Ctrl K jumps between them, and pointing at the app's window lights the part it names.",
+        "banners": "A space's banner now heads its channel list, on the desktop and on the phone, and its card on Home.",
+        "home": "Your spaces come first on Home, as large cards with their banner, what is new in them and who is talking.",
+        "sidebar": "Explore and About fold under More in Home's column, and a space has one Create row for channels and categories.",
+        "tooltips": "Every button that shows only an icon names itself as soon as the pointer rests on it or the keyboard reaches it.",
+        "search": "Home has no second search field any more: the one in the top bar opens the same."
+      }
+    },
     "1.33.1": {
       "title": "Deleting an account that owns spaces",
       "items": {

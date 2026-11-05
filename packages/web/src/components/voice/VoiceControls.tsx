@@ -120,7 +120,6 @@ export function VoiceControls() {
           aria-expanded={showConnectionInfo}
           aria-label={t('voice:controls.connectionInfo')}
           className={`icon-btn icon-btn-lg ${qualityColor}`}
-          title={t('voice:controls.connectionInfo')}
         >
           <VoiceIcon name="signal" size={18} />
         </button>
@@ -144,7 +143,6 @@ export function VoiceControls() {
             onClick={handleDisconnect}
             aria-label={t('voice:controls.disconnect')}
             className="icon-btn icon-btn-lg text-txt-secondary hover:bg-accent-rose/15 hover:text-txt-danger active:bg-accent-rose/25"
-            title={t('voice:controls.disconnect')}
           >
             <Icon name="phone" size={18} className="rotate-[135deg]" />
           </button>
@@ -174,6 +172,7 @@ export function VoiceControls() {
 
         {canStream && (
           <button
+            data-tooltip=""
             ref={shareBtnRef}
             onClick={handleScreenShare}
             // Idle the button starts a share; live it toggles a menu, so it
@@ -182,7 +181,6 @@ export function VoiceControls() {
             aria-expanded={isScreenSharing ? showShareMenu : undefined}
             aria-label={isScreenSharing ? t('voice:controls.shareOptions') : t('voice:controls.shareScreen')}
             className={isScreenSharing ? toggleOn : toggleOff}
-            title={isScreenSharing ? t('voice:controls.shareOptions') : t('voice:controls.shareScreen')}
           >
             <VoiceIcon name="screen-share" size={18} />
           </button>
@@ -190,11 +188,11 @@ export function VoiceControls() {
 
         {/* AI Noise Suppression (RNNoise) */}
         <button
+          data-tooltip=""
           onClick={() => setRnnoiseEnabled(!rnnoiseEnabled)}
           aria-pressed={rnnoiseEnabled}
           aria-label={rnnoiseEnabled ? t('voice:controls.noiseSuppressionOff') : t('voice:controls.noiseSuppressionOn')}
           className={rnnoiseEnabled ? toggleOn : toggleOff}
-          title={rnnoiseEnabled ? t('voice:controls.noiseSuppressionOff') : t('voice:controls.noiseSuppressionOn')}
         >
           <VoiceIcon name={rnnoiseEnabled ? 'waves' : 'waves-off'} size={18} />
         </button>

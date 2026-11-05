@@ -140,7 +140,6 @@ export function ProfileDetailsEditor({ pronouns, onPronouns, links, onLinks, inv
                       type="button"
                       onClick={() => onLinks(links.filter((other) => other.id !== link.id))}
                       aria-label={t('settings:account.profile.links.remove')}
-                      title={t('settings:account.profile.links.remove')}
                       className="icon-btn flex-shrink-0"
                     >
                       <Icon name="x" size={14} />

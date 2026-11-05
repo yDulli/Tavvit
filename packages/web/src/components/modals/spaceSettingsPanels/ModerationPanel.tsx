@@ -120,11 +120,11 @@ function BlockedWordsEditor({ labelledBy, words, disabled, onChange }: {
             >
               <span className="truncate">{word}</span>
               <button
+                data-tooltip=""
                 type="button"
                 onClick={() => onChange(words.filter((existing) => existing !== word))}
                 disabled={disabled}
                 aria-label={t('spaces:settings.moderation.words.remove', { word })}
-                title={t('spaces:settings.moderation.words.remove', { word })}
                 className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-txt-tertiary transition-colors hover:bg-interactive-hover hover:text-txt-primary disabled:opacity-50"
               >
                 <Icon name="x" size={13} />

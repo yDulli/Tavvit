@@ -13,7 +13,8 @@
       "discard": "Discard"
     },
     "actions": {
-      "confirmDelete": "Confirm delete"
+      "confirmDelete": "Confirm delete",
+      "reactWith": "React with {{emoji}}"
     },
     "reply": {
       "jump": "Jump to the original message"
@@ -83,11 +84,9 @@
     "failedCount_one": "{{count}} failed",
     "failedCount_other": "{{count}} failed",
     "failedHint": "Remove or retry the failed attachment to send",
-    "gif": "GIF",
     "gifPicker": "GIF picker",
     "emoji": "Emoji",
     "emojiPicker": "Emoji picker",
-    "send": "Send",
     "sendMessage": "Send message",
     "uploadFailed": "Failed to upload {{file}}: {{reason}}",
     "uploadFailedReason": "Upload failed",

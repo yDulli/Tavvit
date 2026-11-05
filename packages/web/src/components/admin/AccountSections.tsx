@@ -290,7 +290,6 @@ export function AccountNotesSection({ userId, isDeleted, onChanged }: { userId: 
                 type="button"
                 onClick={() => void remove(note.id)}
                 aria-label={t('admin:console.account.deleteNote')}
-                title={t('admin:console.account.deleteNote')}
                 className="icon-btn flex-shrink-0"
               >
                 <Icon name="trash" size={14} />

@@ -59,6 +59,9 @@ export interface UIState {
   sidebarOpen: boolean;
   /** The people column's persisted state in a wide window. */
   memberListOpen: boolean;
+  /** Whether Home's "More" group (Explore, About) stands open in the column; remembered on this device. */
+  homeNavMoreOpen: boolean;
+  setHomeNavMoreOpen: (open: boolean) => void;
   /** The window is compact (platform/interfaceScale.ts): the people column floats. */
   isCompact: boolean;
   /** The floating people column's state. Not persisted: a compact window
@@ -124,6 +127,8 @@ export const useUIStore = create<UIState>()(
     (set, get) => ({
       sidebarOpen: true,
       memberListOpen: true,
+      homeNavMoreOpen: false,
+      setHomeNavMoreOpen: (open) => set({ homeNavMoreOpen: open }),
       isCompact: false,
       compactPanelOpen: false,
       activeModal: null,
@@ -247,6 +252,7 @@ export const useUIStore = create<UIState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         memberListOpen: state.memberListOpen,
+        homeNavMoreOpen: state.homeNavMoreOpen,
         lastChannelPerSpace: state.lastChannelPerSpace,
       }),
     }

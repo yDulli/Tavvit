@@ -175,10 +175,10 @@ export function EmojiPicker({ onEmojiSelect, customAs = 'text', mobile = false, 
             {t('composer.emoji')}
           </button>
           <button
+            data-tooltip=""
             type="button"
             aria-pressed={showStickers}
             aria-label={t('stickers.title')}
-            title={t('stickers.title')}
             onClick={() => setShowStickers(true)}
             className={`flex h-7 w-8 items-center justify-center rounded-md transition-colors ${
               showStickers

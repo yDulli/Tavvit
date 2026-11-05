@@ -41,13 +41,12 @@ export function RoleIconPicker({ value, onChange, color, colorSecondary }: {
                 const isChosen = selected === id;
                 const name = t(`spaces:roleIcons.names.${id}`);
                 return (
-                  <button
+                  <button data-tooltip=""
                     key={id}
                     type="button"
                     onClick={() => onChange(roleGlyphValue(id))}
                     aria-pressed={isChosen}
                     aria-label={name}
-                    title={name}
                     className="role-glyph-option"
                     style={isChosen ? { backgroundColor: `${color}26`, boxShadow: `inset 0 0 0 1px ${color}99` } : undefined}
                   >

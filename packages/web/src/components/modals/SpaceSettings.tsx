@@ -670,7 +670,6 @@ function JoinRequestsSection({ spaceId, origin, onCountChange }: { spaceId: stri
                     type="button"
                     onClick={() => handleDecide(req.id, 'accept')}
                     className="icon-btn text-txt-positive hover:bg-status-online/15 hover:text-txt-positive"
-                    title={t('common:actions.accept')}
                     aria-label={t('common:actions.accept')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -681,7 +680,6 @@ function JoinRequestsSection({ spaceId, origin, onCountChange }: { spaceId: stri
                     type="button"
                     onClick={() => handleDecide(req.id, 'decline')}
                     className="icon-btn hover:bg-accent-rose/10 hover:text-txt-danger"
-                    title={t('common:actions.decline')}
                     aria-label={t('common:actions.decline')}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

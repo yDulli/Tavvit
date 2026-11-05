@@ -111,7 +111,7 @@ describe.each([
   it('sends one add and closes the menu', () => {
     renderMessage();
     openMenu();
-    fireEvent.click(screen.getByRole('button', { name: '👍' }));
+    fireEvent.click(screen.getByRole('button', { name: 'React with 👍' }));
 
     expect(sent('reaction_add')).toEqual([[{ type: 'reaction_add', messageId: message.id, emoji: '👍' }, '']]);
     expect(useContextMenuStore.getState().menu).toBeNull();
@@ -120,10 +120,10 @@ describe.each([
   it('sends nothing for a second tap while the add is in flight, neither an add nor a remove', () => {
     renderMessage();
     openMenu();
-    fireEvent.click(screen.getByRole('button', { name: '👍' }));
+    fireEvent.click(screen.getByRole('button', { name: 'React with 👍' }));
     // No answer yet: no pill shows the reaction, so the second tap is an add.
     openMenu();
-    fireEvent.click(screen.getByRole('button', { name: '👍' }));
+    fireEvent.click(screen.getByRole('button', { name: 'React with 👍' }));
 
     expect(sent('reaction_add')).toHaveLength(1);
     expect(sent('reaction_remove')).toEqual([]);
@@ -135,7 +135,7 @@ describe.each([
     // The user's reaction arrives while the menu is open (added from another
     // device, say); the menu's items were built before it.
     act(() => useChatStore.getState().onReactionAdded(message.id, ownReaction()));
-    fireEvent.click(screen.getByRole('button', { name: '👍' }));
+    fireEvent.click(screen.getByRole('button', { name: 'React with 👍' }));
 
     expect(sent('reaction_add')).toEqual([]);
     expect(sent('reaction_remove')).toHaveLength(1);
@@ -152,7 +152,7 @@ describe.each([
 
   function openPickerFromMenu(): void {
     openMenu();
-    const plus = screen.getAllByRole('button').find(b => b.getAttribute('title') === 'Add reaction');
+    const plus = screen.getAllByRole('button').find(b => b.getAttribute('aria-label') === 'Add reaction');
     fireEvent.click(plus!);
   }
 
@@ -194,7 +194,7 @@ describe('the picker the mobile long-press sheet opens', () => {
 
   function openPickerFromSheet(): void {
     openMenu();
-    const plus = screen.getAllByRole('button').find(b => b.getAttribute('title') === 'Add reaction');
+    const plus = screen.getAllByRole('button').find(b => b.getAttribute('aria-label') === 'Add reaction');
     fireEvent.click(plus!);
   }
 
@@ -250,7 +250,7 @@ describe('the picker the desktop context menu opens', () => {
   it('is the popover with the desktop picker, not a sheet', () => {
     renderMessage();
     openMenu();
-    const plus = screen.getAllByRole('button').find(b => b.getAttribute('title') === 'Add reaction');
+    const plus = screen.getAllByRole('button').find(b => b.getAttribute('aria-label') === 'Add reaction');
     fireEvent.click(plus!);
     // The desktop popover is now labelled too, but is not a modal sheet.
     expect(screen.getByRole('dialog', { name: 'Add reaction' })).not.toHaveAttribute('aria-modal', 'true');
@@ -262,7 +262,7 @@ describe('the picker the desktop context menu opens', () => {
 describe('a quick reaction in the desktop hover bar', () => {
   function quick(emoji: string): HTMLElement {
     fireEvent.mouseEnter(document.getElementById(`msg-${message.id}`)!);
-    return screen.getByRole('button', { name: emoji });
+    return screen.getByRole('button', { name: `React with ${emoji}` });
   }
 
   it('sends one add for a double click, and no remove', () => {
@@ -287,7 +287,7 @@ describe('the "+" in the desktop hover bar', () => {
   it('opens the picker and closes it again', () => {
     renderMessage();
     fireEvent.mouseEnter(document.getElementById(`msg-${message.id}`)!);
-    const plus = () => screen.getAllByRole('button').find(b => b.getAttribute('title') === 'Add reaction')!;
+    const plus = () => screen.getAllByRole('button').find(b => b.getAttribute('aria-label') === 'Add reaction')!;
     fireEvent.click(plus());
     expect(screen.getByTestId('emoji-picker')).toBeTruthy();
     fireEvent.click(plus());

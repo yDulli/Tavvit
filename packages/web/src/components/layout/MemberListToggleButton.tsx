@@ -17,7 +17,6 @@ export function MemberListToggleButton() {
       data-people-toggle
       data-active={memberListOpen}
       className="icon-btn icon-btn-lg"
-      title={t('chrome.toggleMemberList')}
       aria-label={t('chrome.toggleMemberList')}
       aria-pressed={memberListOpen}
     >

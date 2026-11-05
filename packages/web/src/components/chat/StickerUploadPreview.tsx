@@ -189,6 +189,7 @@ export function StickerUploadPreview({
                     {item.error && <p className="mt-1 text-label leading-4 text-txt-danger">{item.error}</p>}
                   </div>
                   <button
+                    data-tooltip=""
                     type="button"
                     disabled={busy}
                     onClick={() => removeItem(item.id)}

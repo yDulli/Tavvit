@@ -38,13 +38,13 @@ export function TriStateToggle({
 
   const button = (v: TriState, glyph: string, next: TriState) => (
     <button
+      data-tooltip=""
       type="button"
       className={btnClass(v, value === v)}
       onClick={() => !disabled && onChange(next)}
       disabled={disabled}
       aria-pressed={value === v}
       aria-label={names[v]}
-      title={names[v]}
     >
       {glyph}
     </button>

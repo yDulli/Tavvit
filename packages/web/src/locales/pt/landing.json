@@ -13,34 +13,76 @@
     "help": "Ajuda"
   },
   "hero": {
-    "title": "Puxa uma cadeira.",
-    "lead": "Chat em grupo para seus amigos e comunidades: canais, mensagens diretas, voz e compartilhamento de tela. Sem anúncios, sem rastreadores.",
+    "title": "Onde o seu grupo conversa.",
+    "lead": "Canais, mensagens diretas, voz e compartilhamento de tela para seus amigos e comunidades, em um app rápido e tranquilo. Sem anúncios, sem rastreadores.",
     "explore": "Ver os recursos",
-    "alt": "O app Tavvit: os canais de um espaço à esquerda, uma conversa no meio e os membros à direita."
+    "alt": "O app Tavvit: os canais de um espaço à esquerda, uma conversa no meio e os membros à direita.",
+    "keys": {
+      "spaces": {
+        "title": "Espaços",
+        "body": "Os lugares em que você está, como abas com nome."
+      },
+      "channels": {
+        "title": "Canais",
+        "body": "Os canais de um espaço, organizados em categorias."
+      },
+      "conversation": {
+        "title": "A conversa",
+        "body": "Código, respostas que mostram o que respondem, menções e reações."
+      },
+      "members": {
+        "title": "Membros",
+        "body": "Todos sob o seu cargo, e quem está online."
+      }
+    }
   },
   "news": {
     "label": "Novo"
   },
-  "eyebrow": {
-    "demo": "experimente um lugar",
-    "messages": "à mesa",
-    "spaces": "uma sala só sua",
-    "crowds": "a lista de convidados",
-    "voice": "a sala dos fundos",
-    "conversations": "o seu lugar de sempre",
-    "around": "o quadro de avisos",
-    "people": "os de sempre",
-    "themes": "pinte as paredes",
-    "community": "a rua inteira",
-    "moving": "as chaves",
-    "developers": "atrás do balcão",
-    "privacy": "regras da casa",
-    "anywhere": "para viagem",
-    "features": "tudo isso",
-    "questions": "pergunte no balcão",
-    "cta": "a porta está aberta"
+  "chapters": {
+    "demo": "Experimente",
+    "spaces": "Espaços",
+    "messages": "Conversas",
+    "around": "Em volta da conversa",
+    "voice": "Voz",
+    "people": "Pessoas",
+    "looks": "Do seu jeito",
+    "community": "Comunidade",
+    "developers": "Desenvolvedores",
+    "privacy": "Privacidade",
+    "anywhere": "Onde funciona",
+    "features": "Tudo",
+    "questions": "Perguntas"
+  },
+  "contents": {
+    "label": "Nesta página"
+  },
+  "rail": {
+    "welcome": "Boas-vindas",
+    "unread_one": "{{count}} capítulo não lido",
+    "unread_many": "{{count}} capítulos não lidos",
+    "unread_other": "{{count}} capítulos não lidos"
+  },
+  "jump": {
+    "open": "Ir para…",
+    "placeholder": "Para onde?",
+    "none": "Nada aqui se chama “{{query}}”.",
+    "page": "Página",
+    "move": "para escolher",
+    "go": "para abrir",
+    "close": "para fechar"
   },
   "statement": "Tudo o que o seu grupo precisa em um só lugar, e nada seguindo você por aí. Rápido de abrir, tranquilo de usar e do seu jeito.",
+  "figures": {
+    "value": "{{value, number}}",
+    "ads": "anúncios",
+    "trackers": "rastreadores",
+    "languages": "idiomas",
+    "themes": "temas, ou as suas cores",
+    "group": "pessoas em uma mensagem em grupo",
+    "characters": "caracteres por mensagem",
+    "note": "Todo recurso nesta página existe no app, e todo número é o do próprio app."
+  },
   "demo": {
     "label": "Um canal de demonstração",
     "title": "Vai,\ndiz alguma coisa.",
@@ -68,20 +110,10 @@
       "end": "Você pegou o jeito. No app de verdade tem canais de voz, tópicos e muito mais."
     }
   },
-  "messages": {
-    "title": "Conversas que\ncontinuam legíveis.",
-    "body": "As respostas mostram o que estão respondendo. As reações ficam pequenas. Código, links e arquivos ficam no lugar certo, e uma mensagem que menciona você é fácil de notar.",
-    "alt": "Uma conversa com respostas, um bloco de código, menções e reações."
-  },
   "spaces": {
     "title": "Um espaço para cada grupo.",
     "body": "O time da raid, o clube do livro, as pessoas com quem você constrói coisas. Cada grupo tem o próprio espaço, com canais organizados em categorias e uma lista de membros que mostra quem faz o quê.",
-    "alt": "A lista de canais de um espaço ao lado da lista de membros, agrupada por cargos coloridos.",
-    "layers": {
-      "channels": "Canais",
-      "conversation": "Conversa",
-      "members": "Membros e cargos"
-    }
+    "alt": "A lista de canais de um espaço ao lado da lista de membros, agrupada por cargos coloridos."
   },
   "crowds": {
     "title": "Quem senta à sua mesa?",
@@ -96,10 +128,28 @@
       "books": "O espaço de um clube do livro: uma conversa sobre o livro do mês."
     }
   },
-  "conversations": {
-    "title": "De volta de onde\nvocê parou.",
-    "body": "Os canais não lidos se destacam, a caixa de entrada reúne o que está esperando por você, e Ctrl+K leva você a qualquer canal ou conversa em poucas teclas.",
-    "alt": "O seletor rápido sobre o app: a busca por um canal e o resultado."
+  "messages": {
+    "title": "Conversas que\ncontinuam legíveis.",
+    "body": "Um canal que você lê de manhã e ainda consegue acompanhar. Nada pula, nada grita, e uma mensagem que menciona você é fácil de notar.",
+    "alt": "Uma conversa com respostas, um bloco de código, menções e reações.",
+    "marks": {
+      "replies": {
+        "title": "As respostas mostram o que estão respondendo",
+        "body": "Uma resposta traz uma linha da mensagem que ela responde, então você nunca precisa rolar para trás para descobrir."
+      },
+      "reactions": {
+        "title": "As reações ficam pequenas",
+        "body": "Uma fileira de contagens pequenas embaixo da mensagem, nunca uma parede delas."
+      },
+      "content": {
+        "title": "Código, links e arquivos ficam no lugar certo",
+        "body": "Um bloco de código mantém as cores, um link mostra uma prévia, e um arquivo mostra o que ele é."
+      },
+      "switcher": {
+        "title": "De volta de onde você parou",
+        "body": "Os canais não lidos se destacam, a caixa de entrada reúne o que está esperando por você, e Ctrl+K leva você a qualquer canal ou conversa em poucas teclas."
+      }
+    }
   },
   "around": {
     "title": "Tudo em volta da conversa.",
@@ -151,7 +201,21 @@
   "voice": {
     "title": "Fale quando digitar\nfor lento demais.",
     "body": "Entre em um canal de voz, ligue a câmera, compartilhe a tela ou ligue direto para um amigo. A supressão de ruído filtra o seu teclado, e o aperte para falar está a uma configuração de distância.",
-    "alt": "Um canal de voz com várias pessoas e os controles da chamada embaixo."
+    "alt": "Um canal de voz com várias pessoas e os controles da chamada embaixo.",
+    "points": {
+      "screen": {
+        "title": "Compartilhamento de tela",
+        "body": "Mostre o jogo, os slides ou o bug, na qualidade que você escolher."
+      },
+      "noise": {
+        "title": "Supressão de ruído",
+        "body": "Seu teclado, seu ventilador e a rua ficam fora da chamada."
+      },
+      "calls": {
+        "title": "Chamadas em mensagens diretas",
+        "body": "Ligue para uma pessoa ou um grupo, com vídeo se quiser."
+      }
+    }
   },
   "features": {
     "title": "O cardápio.",
@@ -258,7 +322,7 @@
     }
   },
   "moving": {
-    "title": "A mudança leva três passos.",
+    "title": "Abrir o seu leva três passos.",
     "one": {
       "title": "Arrume o seu lugar",
       "body": "Comece um espaço novo ou cole um modelo de servidor do Discord e receba os cargos, categorias e canais."
@@ -317,7 +381,17 @@
   "themes": {
     "title": "Suas cores,\nsua densidade.",
     "body": "Sete temas ou as suas próprias cores, três estilos de mensagem, cantos retos ou arredondados e o tamanho de texto que você lê melhor. O Tavvit não atrapalha, seja qual for o visual.",
-    "alt": "A mesma conversa em sete temas de cores diferentes."
+    "alt": "A mesma conversa no tema {{name}}.",
+    "pick": "Escolha um tema",
+    "names": {
+      "carbon": "Carbono",
+      "moss": "Líquen",
+      "clay": "Argila",
+      "plum": "Ameixa",
+      "harbor": "Porto",
+      "custom": "Personalizado",
+      "ink": "Tinta"
+    }
   },
   "anywhere": {
     "title": "No computador.\nNo celular.",

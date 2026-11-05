@@ -23,6 +23,18 @@ export const HOME_ROUTES = {
   about: '/about',
 } as const satisfies Record<HomeNavItem, string>;
 
+/**
+ * Home's rows that fold under "More" in the column: seldom needed, carrying no count, and reachable
+ * elsewhere (Explore is the top bar's compass, both are in Ctrl K). One list, read by the column and by
+ * what opens the group when one of them is reached another way.
+ */
+export const HOME_NAV_MORE = ['explore', 'about'] as const satisfies readonly HomeNavItem[];
+
+/** Whether a row of Home's navigation is one of those under "More". */
+export function isHomeNavMoreItem(item: HomeNavItem | null): boolean {
+  return item !== null && (HOME_NAV_MORE as readonly HomeNavItem[]).includes(item);
+}
+
 export function activeHomeNavItem(pathname: string, currentChannelId: string | null): HomeNavItem | null {
   if (pathname === HOME_ROUTES.inbox) return 'inbox';
   if (pathname === HOME_ROUTES.friends) return 'friends';

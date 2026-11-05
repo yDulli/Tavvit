@@ -76,7 +76,6 @@ function RuleList({ kind, rules, onChange, children }: {
                 type="button"
                 onClick={() => void remove(rule)}
                 aria-label={t('console.signup.remove', { value: rule.value })}
-                title={t('console.signup.remove', { value: rule.value })}
                 className="icon-btn h-5 w-5"
               >
                 <Icon name="x" size={12} />

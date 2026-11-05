@@ -69,7 +69,7 @@ interface VoiceChannelProps {
 
 /** Wrapper component for the volume slider so it can use hooks (useState). */
 export function VoiceChannel({ channelId, channelName, channelIcon, onClick, locked, canManage, onSettingsClick, voiceUserHandlers, dropZone }: VoiceChannelProps) {
-  const { t } = useTranslation(['voice', 'common']);
+  const { t } = useTranslation(['voice', 'common', 'spaces']);
   const serverVoiceUsers = useVoiceStore((s) => s.voiceUsers.get(channelId)) ?? EMPTY_VOICE_USERS;
   const currentVoiceChannel = useVoiceStore((s) => s.currentVoiceChannelId);
   const participants = useVoiceStore((s) => s.participants);
@@ -182,6 +182,7 @@ export function VoiceChannel({ channelId, channelName, channelIcon, onClick, loc
             <span
               data-testid="voice-channel-settings"
               aria-hidden="true"
+              data-tooltip={t('spaces:channels.settings')}
               className="pointer-events-none absolute right-full mr-1 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 text-txt-tertiary hover:text-txt-primary transition-opacity"
               onClick={(e) => {
                 e.stopPropagation();

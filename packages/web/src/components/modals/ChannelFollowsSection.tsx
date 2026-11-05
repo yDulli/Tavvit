@@ -56,7 +56,6 @@ export function ChannelFollowsSection({ channelId, isAnnouncement }: { channelId
         type="button"
         onClick={() => setEnding(follow)}
         className="icon-btn"
-        title={t('spaces:channel.settings.follows.remove')}
         aria-label={t('spaces:channel.settings.follows.remove')}
       >
         <Icon name="trash" size={14} />

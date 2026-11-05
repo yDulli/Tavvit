@@ -13,7 +13,8 @@
       "discard": "Отменить отправку"
     },
     "actions": {
-      "confirmDelete": "Подтвердить удаление"
+      "confirmDelete": "Подтвердить удаление",
+      "reactWith": "Отреагировать: {{emoji}}"
     },
     "reply": {
       "jump": "Перейти к исходному сообщению"
@@ -87,11 +88,9 @@
     "failedCount_many": "{{count}} с ошибкой",
     "failedCount_other": "{{count}} с ошибкой",
     "failedHint": "Удалите вложение с ошибкой или повторите загрузку, чтобы отправить сообщение",
-    "gif": "GIF-анимации",
     "gifPicker": "Выбор GIF",
     "emoji": "Эмодзи",
     "emojiPicker": "Выбор эмодзи",
-    "send": "Отправить",
     "sendMessage": "Отправить сообщение",
     "uploadFailed": "Не удалось загрузить {{file}}: {{reason}}",
     "uploadFailedReason": "Ошибка загрузки",

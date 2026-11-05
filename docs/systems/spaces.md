@@ -109,6 +109,8 @@ Every field is checked before anything is written. A body with `ownerTitle` from
 
 Each change records a `changed` event in the review history, with the editor as its actor (`recordEditSteps`), and is announced like every review step ("Discovery approval", "Who hears of a step"). Transferring ownership treats a `verified`, `pending` or `needs_info` verification the same way (`reviewsAfterTransfer`): it is reviewed again under the new owner.
 
+**The banner** is set in the space's settings (Overview), cropped to 16:9, and shown where members are: at the head of the space's channel column on the desktop and over its channel list on the phone (`layout/SpaceBannerHeader.tsx`: the column's bar lies over the picture's top on a shade, and the picture scrolls away under it), and across the space's card on Home (`ui/SpaceBand.tsx`), as on its card in Explore. Every one of these goes through the gate for pictures from other servers (`useSpaceBanner`, legal.md "Content from other servers"); without a banner, or one that may not load, nothing is painted in its place. The settings' preview has the column's width and shape.
+
 **Side effects:**
 - Old icon/banner files deleted from disk when replaced
 - New icon/banner resized via `resizeProfileImage`

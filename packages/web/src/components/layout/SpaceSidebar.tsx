@@ -1,3 +1,4 @@
+import { useCanOpenSpace } from '../../hooks/useCanOpenSpace';
 import { useDmUnreadCount } from './DmUnreadBadge';
 import { useSpaceUnreadCount } from './SpaceUnreadBadge';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
@@ -147,7 +148,6 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
         <button
           type="button"
           onClick={onClick}
-          title={name}
           aria-label={name}
           aria-current={active ? 'page' : undefined}
           data-active={active}
@@ -566,7 +566,6 @@ export function SpaceSidebar() {
   const showDms = useUIStore((s) => s.showDms);
   const setShowDms = useUIStore((s) => s.setShowDms);
   const openModal = useUIStore((s) => s.openModal);
-  const addToast = useUIStore((s) => s.addToast);
   const currentChannelId = useChatStore((s) => s.currentChannelId);
   const setCurrentChannel = useChatStore((s) => s.setCurrentChannel);
   const unreadChannels = useChatStore((s) => s.unreadChannels);
@@ -635,18 +634,14 @@ export function SpaceSidebar() {
     return false;
   }, [unreadChannels, dmChannels]);
 
+  const canOpenSpace = useCanOpenSpace();
   const handleSpaceClick = useCallback((spaceId: string) => {
     const space = spaceMap.get(spaceId);
-    const origin = space?._instanceOrigin;
-    if (origin && disconnectedOrigins.has(origin)) {
-      const inst = instances.find(i => i.origin === origin);
-      addToast(t('spaces:sidebar.space.reconnecting', { instance: inst?.label || t('spaces:sidebar.space.remoteInstance') }), 'warning', 4000);
-      return;
-    }
+    if (space && !canOpenSpace(space)) return;
     setCurrentSpace(spaceId);
     setShowDms(false);
     navigate(`/channels/${spaceId}`);
-  }, [spaceMap, disconnectedOrigins, instances, addToast, setCurrentSpace, setShowDms, navigate, t]);
+  }, [spaceMap, canOpenSpace, setCurrentSpace, setShowDms, navigate]);
 
   const handleDmClick = () => {
     setShowDms(true);
@@ -1070,15 +1065,16 @@ export function SpaceSidebar() {
                       <p className="label-mono mb-1.5">{t('spaces:sidebar.folder.color')}</p>
                       <div className="flex gap-1.5">
                         <button
+                          data-tooltip=""
                           type="button"
                           aria-pressed={!folderRef.color}
                           aria-label={t('common:states.default')}
                           className={`h-5 w-5 rounded border-2 bg-white/10 ${!folderRef.color ? 'border-txt-primary' : 'border-transparent hover:border-white/30'}`}
                           onClick={() => { handleFolderColorChange(folderRef.id, null); useContextMenuStore.getState().close(); }}
-                          title={t('common:states.default')}
                         />
                         {FOLDER_COLORS.map((c) => (
                           <button
+                            data-tooltip=""
                             key={c.name}
                             type="button"
                             aria-pressed={folderRef.color === c.value}
@@ -1086,7 +1082,6 @@ export function SpaceSidebar() {
                             className={`h-5 w-5 rounded border-2 ${folderRef.color === c.value ? 'border-txt-primary' : 'border-transparent hover:border-white/30'}`}
                             style={{ background: c.value }}
                             onClick={() => { handleFolderColorChange(folderRef.id, c.value); useContextMenuStore.getState().close(); }}
-                            title={t(c.labelKey)}
                           />
                         ))}
                       </div>

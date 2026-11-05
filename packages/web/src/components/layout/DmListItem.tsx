@@ -153,7 +153,6 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
       <button
         type="button"
         onClick={handleClose}
-        title={closeLabel}
         aria-label={closeLabel}
         className={`icon-btn absolute right-1.5 top-1 h-5 w-5 transition-opacity ${
           isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100'

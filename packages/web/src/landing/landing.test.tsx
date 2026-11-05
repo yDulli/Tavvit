@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,8 +9,11 @@ import { LANGUAGE_STORAGE_KEY, availableLanguages } from '../i18n/languages';
 import de from '../locales/de/landing.json';
 import en from '../locales/en/landing.json';
 import { BOT_ROUTES } from '@backspace/shared/src/bots.js';
+import { MAX_MESSAGE_LENGTH } from '@backspace/shared';
+import { THEME_IDS } from '../utils/appTheme';
 import { SESSION_TOKEN_KEY, showsLanding } from './entry';
 import { EXAMPLE_ROUTE, exampleRequest } from './example';
+import { LANDING_FIGURES } from './figures';
 import { initLandingI18n } from './i18n';
 import { LandingPage } from './LandingPage';
 
@@ -75,6 +78,14 @@ describe('who sees the product page', () => {
   it('reads the key the sign-in writes', () => {
     const store = readFileSync(join(here, '..', 'stores', 'authStore.ts'), 'utf8');
     expect(store).toContain(`localStorage.setItem('${SESSION_TOKEN_KEY}'`);
+  });
+
+  // The page states these numbers without importing their modules (figures.ts says why).
+  it('states the figures the app really has', () => {
+    expect(LANDING_FIGURES.themes).toBe(THEME_IDS.length);
+    expect(LANDING_FIGURES.characters).toBe(MAX_MESSAGE_LENGTH);
+    const limits = readFileSync(join(here, '..', '..', '..', 'server', 'src', 'utils', 'groupDmLimits.ts'), 'utf8');
+    expect(limits).toMatch(new RegExp(`GROUP_DM_MAX_MEMBERS\\s*=\\s*${LANDING_FIGURES.group}\\b`));
   });
 });
 
@@ -340,6 +351,22 @@ describe('the page', () => {
     expect(exampleRequest('https://chat.example')).toContain('https://chat.example/api/channels/<channel id>/messages');
     expect(container.querySelector('.lp-code code')?.textContent).toBe(exampleRequest(window.location.origin));
   });
+
+  // The page reads as a space, and Ctrl K opens its switcher as it does in the app.
+  it('opens its own switcher with Ctrl K, narrows it by typing and closes it with Escape', async () => {
+    answerInfo({ registrationOpen: true, sourceCodeUrl: null });
+    render(<LandingPage />);
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    const dialog = await screen.findByRole('dialog', { name: en.jump.open });
+    const field = within(dialog).getByRole('combobox');
+    await waitFor(() => expect(field).toHaveFocus());
+    fireEvent.change(field, { target: { value: en.chapters.voice } });
+    expect(within(dialog).getAllByRole('option').map((option) => option.textContent)).toEqual([expect.stringContaining(en.chapters.voice)]);
+    fireEvent.change(field, { target: { value: 'nothing by this name' } });
+    expect(within(dialog).getByRole('status')).toHaveTextContent('nothing by this name');
+    fireEvent.keyDown(field, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
 
 describe('what a shared link and the page say about Tavvit', () => {
@@ -409,6 +436,27 @@ describe('the footer\'s language picker', () => {
     render(<LandingPage />);
     expect(screen.getByRole('heading', { level: 1, name: en.hero.title })).toBeInTheDocument();
     expect(picker()).toHaveValue('en');
+  });
+
+  // A change of language mounts what it translates anew; a part nobody watched would stay at the
+  // first frame of its arrival, an empty cell, for the rest of the visit.
+  it('keeps watching every part that arrives, after the language has changed', async () => {
+    const observed = new Set<Element>();
+    class Watching {
+      observe(target: Element) { observed.add(target); }
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('IntersectionObserver', Watching);
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'en');
+    await initLandingI18n();
+    const { container } = render(<LandingPage />);
+    expect(container.querySelectorAll('[data-arrive]').length).toBeGreaterThan(20);
+    fireEvent.change(picker(), { target: { value: 'de' } });
+    await waitFor(() => expect(picker()).toHaveValue('de'));
+    await waitFor(() => {
+      for (const part of container.querySelectorAll('[data-arrive]')) expect(observed.has(part)).toBe(true);
+    });
   });
 
   it.each([['de', 'en'], ['en', 'de']])('from %s, picking %s stores it and shows it where the page stands', async (from, to) => {

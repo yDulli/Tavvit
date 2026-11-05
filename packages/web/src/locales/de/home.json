@@ -2,6 +2,7 @@
   "nav": {
     "home": "Start",
     "about": "Info",
+    "more": "Mehr",
     "inbox": "Posteingang",
     "requestsLabel_one": "{{count}} Freundschaftsanfrage wartet",
     "requestsLabel_other": "{{count}} Freundschaftsanfragen warten"
@@ -43,8 +44,12 @@
     "join": "Mit Einladung beitreten",
     "inVoice_one": "{{count}} Freund im Sprachchat",
     "inVoice_other": "{{count}} Freunde im Sprachchat",
+    "peopleInVoice_one": "{{count}} Person im Sprachchat",
+    "peopleInVoice_other": "{{count}} Personen im Sprachchat",
     "mentions_one": "{{count}} ungelesene Erwähnung",
-    "mentions_other": "{{count}} ungelesene Erwähnungen"
+    "mentions_other": "{{count}} ungelesene Erwähnungen",
+    "showAll": "Alle anzeigen",
+    "showFewer": "Weniger anzeigen"
   },
   "about": {
     "title": "Über Tavvit",
@@ -132,9 +137,6 @@
     "viewAll": "Alle anzeigen",
     "nobodyTitle": "Gerade ist niemand online",
     "noFriendsTitle": "Noch keine Freunde"
-  },
-  "jump": {
-    "label": "Zu einer Unterhaltung springen…"
   },
   "onboarding": {
     "friends": {

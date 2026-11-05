@@ -13,34 +13,75 @@
     "help": "Hilfe"
   },
   "hero": {
-    "title": "Setz dich dazu.",
-    "lead": "Gruppenchat für deine Freunde und Communitys: Kanäle, Direktnachrichten, Sprachchat und Bildschirmfreigabe. Ohne Werbung, ohne Tracker.",
+    "title": "Hier redet deine Gruppe.",
+    "lead": "Kanäle, Direktnachrichten, Sprachchat und Bildschirmfreigabe für deine Freunde und Communitys, in einer schnellen, ruhigen App. Ohne Werbung, ohne Tracker.",
     "explore": "Funktionen ansehen",
-    "alt": "Die Tavvit-App: links die Kanäle eines Space, in der Mitte ein Gespräch, rechts die Mitglieder."
+    "alt": "Die Tavvit-App: links die Kanäle eines Space, in der Mitte ein Gespräch, rechts die Mitglieder.",
+    "keys": {
+      "spaces": {
+        "title": "Spaces",
+        "body": "Die Orte, an denen du bist, als benannte Tabs."
+      },
+      "channels": {
+        "title": "Kanäle",
+        "body": "Die Kanäle eines Space, in Kategorien sortiert."
+      },
+      "conversation": {
+        "title": "Das Gespräch",
+        "body": "Code, Antworten, die zeigen, worauf sie antworten, Erwähnungen und Reaktionen."
+      },
+      "members": {
+        "title": "Mitglieder",
+        "body": "Alle unter ihrer Rolle, und wer gerade online ist."
+      }
+    }
   },
   "news": {
     "label": "Neu"
   },
-  "eyebrow": {
-    "demo": "zum Probesitzen",
-    "messages": "am Tisch",
-    "spaces": "dein eigener Raum",
-    "crowds": "die Gästeliste",
-    "voice": "das Hinterzimmer",
-    "conversations": "dein Stammplatz",
-    "around": "das schwarze Brett",
-    "people": "die Stammgäste",
-    "themes": "streich die Wände",
-    "community": "die ganze Straße",
-    "moving": "die Schlüssel",
-    "developers": "hinter dem Tresen",
-    "privacy": "Hausregeln",
-    "anywhere": "zum Mitnehmen",
-    "features": "alles drauf",
-    "questions": "frag am Tresen",
-    "cta": "die Tür ist offen"
+  "chapters": {
+    "demo": "Ausprobieren",
+    "spaces": "Spaces",
+    "messages": "Gespräche",
+    "around": "Rund ums Gespräch",
+    "voice": "Sprachchat",
+    "people": "Leute",
+    "looks": "Nach deinem Geschmack",
+    "community": "Gemeinschaft",
+    "developers": "Entwickler",
+    "privacy": "Privatsphäre",
+    "anywhere": "Wo es läuft",
+    "features": "Alles",
+    "questions": "Fragen"
+  },
+  "contents": {
+    "label": "Auf dieser Seite"
+  },
+  "rail": {
+    "welcome": "Willkommen",
+    "unread_one": "{{count}} Kapitel ungelesen",
+    "unread_other": "{{count}} Kapitel ungelesen"
+  },
+  "jump": {
+    "open": "Springen zu …",
+    "placeholder": "Wohin?",
+    "none": "Hier heißt nichts „{{query}}“.",
+    "page": "Seite",
+    "move": "zum Wählen",
+    "go": "zum Öffnen",
+    "close": "zum Schließen"
   },
   "statement": "Alles, was deine Gruppe braucht, an einem Ort, und nichts, das dir hinterherläuft. Schnell geöffnet, ruhig im Alltag und ganz nach deinem Geschmack.",
+  "figures": {
+    "value": "{{value, number}}",
+    "ads": "Anzeigen",
+    "trackers": "Tracker",
+    "languages": "Sprachen",
+    "themes": "Themes, oder eigene Farben",
+    "group": "Leute in einer Gruppennachricht",
+    "characters": "Zeichen pro Nachricht",
+    "note": "Jede Funktion auf dieser Seite gibt es in der App, und jede Zahl ist die der App."
+  },
   "demo": {
     "label": "Ein Demo-Kanal",
     "title": "Na los,\nsag was.",
@@ -68,20 +109,10 @@
       "end": "Du hast den Dreh raus. In echt gibt es dazu Sprachkanäle, Threads und noch viel mehr."
     }
   },
-  "messages": {
-    "title": "Gespräche,\ndie lesbar bleiben.",
-    "body": "Antworten zeigen, worauf sie sich beziehen. Reaktionen bleiben klein. Code, Links und Dateien sitzen an der richtigen Stelle, und eine Nachricht, die dich erwähnt, fällt sofort auf.",
-    "alt": "Ein Gespräch mit Antworten, einem Codeblock, Erwähnungen und Reaktionen."
-  },
   "spaces": {
     "title": "Ein Space für jede Gruppe.",
     "body": "Das Raid-Team, der Buchclub, die Leute, mit denen du Dinge baust. Jede Gruppe bekommt ihren eigenen Space, mit Kanälen in Kategorien und einer Mitgliederliste, die zeigt, wer was macht.",
-    "alt": "Die Kanalliste eines Space neben der Mitgliederliste, gruppiert nach farbigen Rollen.",
-    "layers": {
-      "channels": "Kanäle",
-      "conversation": "Gespräch",
-      "members": "Mitglieder und Rollen"
-    }
+    "alt": "Die Kanalliste eines Space neben der Mitgliederliste, gruppiert nach farbigen Rollen."
   },
   "crowds": {
     "title": "Wer sitzt an deinem Tisch?",
@@ -96,10 +127,28 @@
       "books": "Der Space eines Buchclubs: ein Gespräch über das Buch des Monats."
     }
   },
-  "conversations": {
-    "title": "Zurück, wo du\naufgehört hast.",
-    "body": "Ungelesene Kanäle fallen auf, der Posteingang sammelt, was auf dich wartet, und Strg+K bringt dich mit wenigen Tasten zu jedem Kanal und jedem Gespräch.",
-    "alt": "Der Schnellwechsler über der App: die Suche nach einem Kanal und der Treffer."
+  "messages": {
+    "title": "Gespräche,\ndie lesbar bleiben.",
+    "body": "Ein Kanal, den du am Morgen nachliest, ohne den Faden zu verlieren. Nichts springt, nichts schreit, und eine Nachricht, die dich erwähnt, fällt sofort auf.",
+    "alt": "Ein Gespräch mit Antworten, einem Codeblock, Erwähnungen und Reaktionen.",
+    "marks": {
+      "replies": {
+        "title": "Antworten zeigen, worauf sie sich beziehen",
+        "body": "Eine Antwort nimmt eine Zeile der Nachricht mit, auf die sie sich bezieht, du musst also nie zurückscrollen, um nachzusehen."
+      },
+      "reactions": {
+        "title": "Reaktionen bleiben klein",
+        "body": "Eine Reihe kleiner Zahlen unter der Nachricht, nie eine ganze Wand davon."
+      },
+      "content": {
+        "title": "Code, Links und Dateien sitzen an der richtigen Stelle",
+        "body": "Ein Codeblock behält seine Farben, ein Link zeigt eine Vorschau, und eine Datei zeigt, was sie ist."
+      },
+      "switcher": {
+        "title": "Zurück, wo du aufgehört hast",
+        "body": "Ungelesene Kanäle fallen auf, der Posteingang sammelt, was auf dich wartet, und Ctrl+K bringt dich mit wenigen Tasten zu jedem Kanal und jedem Gespräch."
+      }
+    }
   },
   "around": {
     "title": "Alles rund ums Gespräch.",
@@ -151,7 +200,21 @@
   "voice": {
     "title": "Reden, wenn Tippen\nzu langsam ist.",
     "body": "Spring in einen Sprachkanal, schalte die Kamera ein, teile deinen Bildschirm oder ruf direkt einen Freund an. Die Rauschunterdrückung filtert deine Tastatur heraus, und Push-to-Talk ist nur eine Einstellung entfernt.",
-    "alt": "Ein Sprachkanal mit mehreren Personen und den Anrufsteuerungen darunter."
+    "alt": "Ein Sprachkanal mit mehreren Personen und den Anrufsteuerungen darunter.",
+    "points": {
+      "screen": {
+        "title": "Bildschirmfreigabe",
+        "body": "Zeig das Spiel, die Folien oder den Bug, in der Qualität, die du wählst."
+      },
+      "noise": {
+        "title": "Rauschunterdrückung",
+        "body": "Deine Tastatur, dein Lüfter und die Straße halten sich aus dem Gespräch raus."
+      },
+      "calls": {
+        "title": "Anrufe in Direktnachrichten",
+        "body": "Ruf eine Person oder eine Gruppe an, mit Video, wenn du magst."
+      }
+    }
   },
   "features": {
     "title": "Die Karte.",
@@ -258,7 +321,7 @@
     }
   },
   "moving": {
-    "title": "Einzug in drei Schritten.",
+    "title": "Einen eigenen eröffnest du in drei Schritten.",
     "one": {
       "title": "Richte dich ein",
       "body": "Starte einen neuen Space oder füge eine Discord-Servervorlage ein und bekomm ihre Rollen, Kategorien und Kanäle."
@@ -317,7 +380,17 @@
   "themes": {
     "title": "Deine Farben,\ndeine Dichte.",
     "body": "Sieben Themes oder eigene Farben, drei Nachrichtenstile, scharfe oder runde Ecken und die Textgröße, die du am besten liest. Tavvit bleibt im Hintergrund, in jedem Look.",
-    "alt": "Dasselbe Gespräch in sieben verschiedenen Farbthemes."
+    "alt": "Dasselbe Gespräch im Theme {{name}}.",
+    "pick": "Theme wählen",
+    "names": {
+      "carbon": "Karbon",
+      "moss": "Flechte",
+      "clay": "Ton",
+      "plum": "Pflaume",
+      "harbor": "Hafen",
+      "custom": "Eigenes",
+      "ink": "Tinte"
+    }
   },
   "anywhere": {
     "title": "Auf dem Desktop.\nAuf dem Handy.",

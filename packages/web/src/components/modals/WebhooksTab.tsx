@@ -178,7 +178,6 @@ export function WebhooksTab({ channelId, isAnnouncement = false }: { channelId: 
                 type="button"
                 onClick={() => setAsking({ action: 'remove', webhook })}
                 className="icon-btn"
-                title={t('spaces:channel.settings.webhooks.remove')}
                 aria-label={t('spaces:channel.settings.webhooks.remove')}
               >
                 <Icon name="trash" size={14} />

@@ -357,10 +357,10 @@ export function MobileDmsScreen() {
       {/* FAB — New DM. Anchored to this screen rather than the viewport, so it
           clears the bottom navigation, the safe area and the voice mini bar. */}
       <button
+        data-tooltip=""
         type="button"
         onClick={() => openModal('newDm')}
         aria-label={t('dm:newDm.title')}
-        title={t('dm:newDm.title')}
         className="btn-primary absolute bottom-4 right-4 z-20 h-12 w-12 p-0 shadow-elevation-high"
       >
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">

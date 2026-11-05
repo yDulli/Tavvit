@@ -133,7 +133,6 @@ export function SoundsPanel({ spaceId }: { spaceId: string }) {
                 onClick={() => void preview(sound)}
                 className="icon-btn flex-shrink-0"
                 aria-label={t('spaces:settings.sounds.preview', { name: sound.name })}
-                title={t('spaces:settings.sounds.preview', { name: sound.name })}
               >
                 <Icon name="play" size={14} />
               </button>
@@ -157,7 +156,6 @@ export function SoundsPanel({ spaceId }: { spaceId: string }) {
                 onClick={() => setRemoving(sound)}
                 className="icon-btn flex-shrink-0"
                 aria-label={t('spaces:settings.sounds.remove', { name: sound.name })}
-                title={t('spaces:settings.sounds.remove', { name: sound.name })}
               >
                 <Icon name="trash" size={14} />
               </button>

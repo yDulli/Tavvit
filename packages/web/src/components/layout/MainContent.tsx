@@ -405,7 +405,7 @@ export function MainContent() {
               <button
                 onClick={() => openModal('groupDmSettings', { dmChannelId: currentChannelId, initialTab: 'overview' })}
                 className="icon-btn flex-shrink-0"
-                title={t('spaces:main.dm.groupSettings')}
+                aria-label={t('spaces:main.dm.groupSettings')}
               >
                 <Icon name="settings" size={16} />
               </button>
@@ -419,7 +419,7 @@ export function MainContent() {
                   onClick={() => handleStartCall(false)}
                   disabled={!canStartCall}
                   className={`icon-btn icon-btn-lg ${dmCallRunning ? 'text-accent-mint hover:text-accent-mint/80' : ''}`}
-                  title={dmCallRunning ? t('spaces:main.dm.joinCall') : t('spaces:main.dm.startVoiceCall')}
+                  aria-label={dmCallRunning ? t('spaces:main.dm.joinCall') : t('spaces:main.dm.startVoiceCall')}
                 >
                   <Icon name="phone" size={18} />
                 </button>
@@ -427,7 +427,7 @@ export function MainContent() {
                   onClick={() => handleStartCall(true)}
                   disabled={!canStartCall}
                   className={`icon-btn icon-btn-lg ${dmCallRunning ? 'text-accent-mint hover:text-accent-mint/80' : ''}`}
-                  title={dmCallRunning ? t('spaces:main.dm.joinCall') : t('spaces:main.dm.startVideoCall')}
+                  aria-label={dmCallRunning ? t('spaces:main.dm.joinCall') : t('spaces:main.dm.startVideoCall')}
                 >
                   <Icon name="video" size={18} />
                 </button>
@@ -436,7 +436,7 @@ export function MainContent() {
             <button
               onClick={() => openModal('addDmMember', { dmChannelId: currentChannelId })}
               className="icon-btn icon-btn-lg"
-              title={t('spaces:main.dm.addFriends')}
+              aria-label={t('spaces:main.dm.addFriends')}
             >
               <Icon name="user-plus" size={18} />
             </button>
@@ -445,7 +445,6 @@ export function MainContent() {
               onClick={() => setPinsOpen(!pinsOpen)}
               data-active={pinsOpen ? 'true' : undefined}
               className="icon-btn icon-btn-lg"
-              title={t('chat:pins.title')}
               aria-label={t('chat:pins.title')}
             >
               <Icon name="pin" size={18} />
@@ -455,7 +454,7 @@ export function MainContent() {
               onClick={() => setSearchOpen(!searchOpen)}
               data-active={searchOpen ? 'true' : undefined}
               className="icon-btn icon-btn-lg"
-              title={t('common:actions.search')}
+              aria-label={t('common:actions.search')}
             >
               <Icon name="search" size={18} />
             </button>
@@ -635,7 +634,6 @@ export function MainContent() {
             onClick={() => setPinsOpen(!pinsOpen)}
             data-active={pinsOpen ? 'true' : undefined}
             className="icon-btn icon-btn-lg"
-            title={t('chat:pins.title')}
             aria-label={t('chat:pins.title')}
           >
             <Icon name="pin" size={18} />
@@ -645,7 +643,6 @@ export function MainContent() {
             onClick={() => setThreadsOpen(!threadsOpen)}
             data-active={threadsOpen ? 'true' : undefined}
             className="icon-btn icon-btn-lg"
-            title={t('chat:thread.listTitle')}
             aria-label={t('chat:thread.listTitle')}
           >
             <Icon name="thread" size={18} />
@@ -655,7 +652,7 @@ export function MainContent() {
             onClick={() => setSearchOpen(!searchOpen)}
             data-active={searchOpen ? 'true' : undefined}
             className="icon-btn icon-btn-lg"
-            title={t('common:actions.search')}
+            aria-label={t('common:actions.search')}
           >
             <Icon name="search" size={18} />
           </button>

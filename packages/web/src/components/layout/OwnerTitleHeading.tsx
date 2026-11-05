@@ -151,7 +151,7 @@ export function OwnerTitleHeading({ space, count, touch = false }: { space: Tagg
           {title} — {formatNumber(count)}
         </h3>
         {canEdit && (
-          <button type="button" onClick={() => setEditing(true)} aria-label={t('members.ownerTitle.edit')} title={t('members.ownerTitle.edit')} className={`icon-btn ${touch ? '-my-4 h-11 w-11' : '-my-1 h-5 w-5'}`}>
+          <button type="button" onClick={() => setEditing(true)} aria-label={t('members.ownerTitle.edit')} className={`icon-btn ${touch ? '-my-4 h-11 w-11' : '-my-1 h-5 w-5'}`}>
             <Icon name="edit" size={12} strokeWidth={2} />
           </button>
         )}

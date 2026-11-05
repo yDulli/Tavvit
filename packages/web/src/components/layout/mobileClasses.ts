@@ -7,6 +7,9 @@
 /** A button in a phone's bar: the shared icon button at the touch size. */
 export const BAR_BUTTON = 'icon-btn h-10 w-10 text-txt-secondary';
 
+/** The same button where the bar lies over a picture (a space's banner): drawn in the primary colour. */
+export const BAR_BUTTON_ON_PICTURE = 'icon-btn h-10 w-10 text-txt-primary';
+
 /** The title in a phone's bar, set like a dialog's. */
 export const BAR_TITLE = 'min-w-0 flex-1 truncate text-lead font-semibold tracking-[-0.01em] text-txt-primary';
 

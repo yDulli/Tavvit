@@ -13,34 +13,75 @@
     "help": "Help"
   },
   "hero": {
-    "title": "Pull up a chair.",
-    "lead": "Group chat for your friends and communities: channels, direct messages, voice and screen sharing. No ads, no trackers.",
+    "title": "Where your group talks.",
+    "lead": "Channels, direct messages, voice and screen sharing for your friends and communities, in one quick, quiet app. No ads, no trackers.",
     "explore": "Explore features",
-    "alt": "The Tavvit app: a space's channels on the left, a conversation in the middle and its members on the right."
+    "alt": "The Tavvit app: a space's channels on the left, a conversation in the middle and its members on the right.",
+    "keys": {
+      "spaces": {
+        "title": "Spaces",
+        "body": "The places you are in, as named tabs."
+      },
+      "channels": {
+        "title": "Channels",
+        "body": "A space's channels, sorted into categories."
+      },
+      "conversation": {
+        "title": "The conversation",
+        "body": "Code, replies that show what they answer, mentions and reactions."
+      },
+      "members": {
+        "title": "Members",
+        "body": "Everyone under their role, and who is online."
+      }
+    }
   },
   "news": {
     "label": "New"
   },
-  "eyebrow": {
-    "demo": "try a seat",
-    "messages": "at the table",
-    "spaces": "a room of your own",
-    "crowds": "the guest list",
-    "voice": "the back room",
-    "conversations": "your usual spot",
-    "around": "the notice board",
-    "people": "the regulars",
-    "themes": "paint the walls",
-    "community": "the whole street",
-    "moving": "the keys",
-    "developers": "behind the bar",
-    "privacy": "house rules",
-    "anywhere": "to go",
-    "features": "all of it",
-    "questions": "ask at the bar",
-    "cta": "the door is open"
+  "chapters": {
+    "demo": "Try it",
+    "spaces": "Spaces",
+    "messages": "Conversations",
+    "around": "Around the conversation",
+    "voice": "Voice",
+    "people": "People",
+    "looks": "Your way",
+    "community": "Community",
+    "developers": "Developers",
+    "privacy": "Privacy",
+    "anywhere": "Where it runs",
+    "features": "Everything",
+    "questions": "Questions"
+  },
+  "contents": {
+    "label": "In this page"
+  },
+  "rail": {
+    "welcome": "Welcome",
+    "unread_one": "{{count}} chapter unread",
+    "unread_other": "{{count}} chapters unread"
+  },
+  "jump": {
+    "open": "Jump to…",
+    "placeholder": "Where to?",
+    "none": "Nothing here is called “{{query}}”.",
+    "page": "Page",
+    "move": "to choose",
+    "go": "to open",
+    "close": "to close"
   },
   "statement": "Everything your group needs in one place, and nothing that follows you around. Quick to open, quiet to live in, and yours to shape.",
+  "figures": {
+    "value": "{{value, number}}",
+    "ads": "ads",
+    "trackers": "trackers",
+    "languages": "languages",
+    "themes": "themes, or your own colours",
+    "group": "people in a group message",
+    "characters": "characters per message",
+    "note": "Every feature on this page is in the app, and every number is the app's own."
+  },
   "demo": {
     "label": "A demo channel",
     "title": "Go on,\nsay something.",
@@ -68,20 +109,10 @@
       "end": "You are getting the hang of this. The real thing has voice, threads and a lot more."
     }
   },
-  "messages": {
-    "title": "Conversations\nthat stay readable.",
-    "body": "Replies show what they answer. Reactions stay small. Code, links and files sit where they belong, and a message that mentions you is easy to spot.",
-    "alt": "A conversation with replies, a code block, mentions and reactions."
-  },
   "spaces": {
     "title": "A space for every group.",
     "body": "The raid team, the book club, the people you build things with. Each gets its own space, with channels sorted into categories and a member list that shows who does what.",
-    "alt": "A space's channel list next to its member list, grouped by coloured roles.",
-    "layers": {
-      "channels": "Channels",
-      "conversation": "Conversation",
-      "members": "Members and roles"
-    }
+    "alt": "A space's channel list next to its member list, grouped by coloured roles."
   },
   "crowds": {
     "title": "Who's at your table?",
@@ -96,10 +127,28 @@
       "books": "A book club's space: a conversation about this month's book."
     }
   },
-  "conversations": {
-    "title": "Back to where\nyou left off.",
-    "body": "Unread channels stand out, the inbox gathers what is waiting for you, and Ctrl+K takes you to any channel or conversation in a few keystrokes.",
-    "alt": "The switcher over the app: a search for a channel and what it found."
+  "messages": {
+    "title": "Conversations\nthat stay readable.",
+    "body": "A channel you can read in the morning and still follow. Nothing jumps, nothing shouts, and a message that mentions you is easy to spot.",
+    "alt": "A conversation with replies, a code block, mentions and reactions.",
+    "marks": {
+      "replies": {
+        "title": "Replies show what they answer",
+        "body": "A reply carries a line of the message it answers, so you never scroll back to find out."
+      },
+      "reactions": {
+        "title": "Reactions stay small",
+        "body": "A row of small counts under a message, never a wall of them."
+      },
+      "content": {
+        "title": "Code, links and files sit where they belong",
+        "body": "A code block keeps its colours, a link shows a preview, and a file shows what it is."
+      },
+      "switcher": {
+        "title": "Back to where you left off",
+        "body": "Unread channels stand out, the inbox gathers what is waiting for you, and Ctrl+K takes you to any channel or conversation in a few keystrokes."
+      }
+    }
   },
   "around": {
     "title": "Everything around the conversation.",
@@ -151,7 +200,21 @@
   "voice": {
     "title": "Talk when typing\nis too slow.",
     "body": "Drop into a voice channel, turn on your camera, share your screen or ring a friend directly. Noise suppression filters out your keyboard, and push to talk is one setting away.",
-    "alt": "A voice channel with several people in it and the call controls below."
+    "alt": "A voice channel with several people in it and the call controls below.",
+    "points": {
+      "screen": {
+        "title": "Screen sharing",
+        "body": "Show the game, the slides or the bug, at the quality you choose."
+      },
+      "noise": {
+        "title": "Noise suppression",
+        "body": "Your keyboard, your fan and the street stay out of the call."
+      },
+      "calls": {
+        "title": "Calls in direct messages",
+        "body": "Ring one person or a group, with video if you like."
+      }
+    }
   },
   "features": {
     "title": "The menu.",
@@ -258,7 +321,7 @@
     }
   },
   "moving": {
-    "title": "Moving in takes three steps.",
+    "title": "Opening your own takes three steps.",
     "one": {
       "title": "Set up your place",
       "body": "Start a new space, or paste a Discord server template and get its roles, categories and channels."
@@ -317,7 +380,17 @@
   "themes": {
     "title": "Your colours,\nyour density.",
     "body": "Seven themes or your own colours, three message styles, sharp or round corners, and the text size you read best. Tavvit stays out of the way, in whichever look you like.",
-    "alt": "The same conversation in seven different colour themes."
+    "alt": "The same conversation in the {{name}} theme.",
+    "pick": "Pick a theme",
+    "names": {
+      "carbon": "Carbon",
+      "moss": "Lichen",
+      "clay": "Clay",
+      "plum": "Plum",
+      "harbor": "Harbour",
+      "custom": "Your own",
+      "ink": "Ink"
+    }
   },
   "anywhere": {
     "title": "On your desktop.\nOn your phone.",

@@ -503,6 +503,7 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
               <div className="flex items-center gap-2 flex-wrap">
                 {PRESET_COLORS.map((c) => (
                   <button
+                    data-tooltip=""
                     key={c}
                     type="button"
                     onClick={() => setDraftColor(c)}

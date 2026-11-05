@@ -19,6 +19,7 @@ import { SwAutoUpdate } from './components/ui/SwUpdatePrompt';
 import { InstanceBranding } from './components/ui/InstanceBranding';
 import { AppearanceController } from './components/ui/AppearanceController';
 import { ScreenShareSetup } from './components/voice/ScreenShareSetup';
+import { TooltipLayer } from './components/ui/TooltipLayer';
 import { ContextMenuRenderer } from './components/ui/ContextMenuRenderer';
 import { useAuthStore } from './stores/authStore';
 import { isElectron } from './platform/platform';
@@ -76,6 +77,8 @@ export function App() {
         {/* One menu for the whole app, signed in or not, so a right click
             never falls through to the browser's own (globalContextMenu.ts). */}
         <ContextMenuRenderer />
+        {/* One tooltip for the whole app: the name of every icon-only control (ui/TooltipLayer.tsx). */}
+        <TooltipLayer />
         <LegalController />
         <MailLanguageController />
         <MfaPromptDialog />

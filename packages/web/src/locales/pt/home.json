@@ -2,6 +2,7 @@
   "nav": {
     "home": "Início",
     "about": "Sobre",
+    "more": "Mais",
     "inbox": "Caixa de entrada",
     "requestsLabel_one": "{{count}} pedido de amizade aguardando",
     "requestsLabel_many": "{{count}} pedidos de amizade aguardando",
@@ -45,9 +46,14 @@
     "inVoice_one": "{{count}} amigo na voz",
     "inVoice_many": "{{count}} amigos na voz",
     "inVoice_other": "{{count}} amigos na voz",
+    "peopleInVoice_one": "{{count}} pessoa na voz",
+    "peopleInVoice_many": "{{count}} pessoas na voz",
+    "peopleInVoice_other": "{{count}} pessoas na voz",
     "mentions_one": "{{count}} menção não lida",
     "mentions_many": "{{count}} menções não lidas",
-    "mentions_other": "{{count}} menções não lidas"
+    "mentions_other": "{{count}} menções não lidas",
+    "showAll": "Mostrar todos",
+    "showFewer": "Mostrar menos"
   },
   "about": {
     "title": "Sobre o Tavvit",
@@ -140,9 +146,6 @@
     "viewAll": "Ver todos",
     "nobodyTitle": "Ninguém está online",
     "noFriendsTitle": "Nenhum amigo ainda"
-  },
-  "jump": {
-    "label": "Ir para uma conversa…"
   },
   "onboarding": {
     "friends": {

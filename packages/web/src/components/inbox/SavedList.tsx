@@ -73,7 +73,6 @@ function SavedRow({ entry }: { entry: SavedEntry }) {
         type="button"
         onClick={() => void remove()}
         className="icon-btn mr-1.5 mt-2 flex-shrink-0"
-        title={t('saved.remove')}
         aria-label={t('saved.remove')}
       >
         <Icon name="x" size={14} />

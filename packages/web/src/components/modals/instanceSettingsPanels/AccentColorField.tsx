@@ -69,6 +69,7 @@ export function AccentColorField({ value, onChange }: AccentColorFieldProps) {
           const selected = effective.toLowerCase() === hex && text === null;
           return (
             <button
+              data-tooltip=""
               key={hex}
               type="button"
               aria-pressed={selected}

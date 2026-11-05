@@ -759,6 +759,7 @@ export function RegisterPage() {
                   const entry = AVATAR_GRADIENT_MAP[key];
                   return (
                     <button
+                      data-tooltip=""
                       key={key}
                       type="button"
                       onClick={() => setAvatarColor(key)}
@@ -771,7 +772,6 @@ export function RegisterPage() {
                       // `key` is the closed AvatarColor union; the catalog lists every member:
                       // common:colors.{mint,sky,lavender,coral,rose,teal,amber}
                       aria-label={t(`common:colors.${key}`)}
-                      title={t(`common:colors.${key}`)}
                     />
                   );
                 })}

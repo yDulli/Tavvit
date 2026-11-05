@@ -464,6 +464,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
               const entry = SPACE_GRADIENT_MAP[key];
               return (
                 <button
+                  data-tooltip=""
                   key={key}
                   type="button"
                   onClick={() => canManageSpace && setAvatarColorState(key)}
@@ -475,7 +476,6 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
                     background: entry.gradient,
                     borderColor: avatarColorState === key ? 'white' : 'transparent',
                   }}
-                  title={colorNames[key]}
                 />
               );
             })}
@@ -492,7 +492,7 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
               type="button"
               onClick={() => canManageSpace && bannerFileInputRef.current?.click()}
               disabled={!canManageSpace || uploadingBanner}
-              className={`relative w-full h-24 rounded-lg bg-surface-input border border-dashed border-border-soft flex items-center justify-center overflow-hidden group ${
+              className={`relative aspect-video w-full max-w-[var(--sidebar-width)] rounded-lg bg-surface-input border border-dashed border-border-soft flex items-center justify-center overflow-hidden group ${
                 canManageSpace ? 'hover:border-interactive-muted cursor-pointer' : 'cursor-default'
               } transition-colors duration-100`}
             >
@@ -525,6 +525,8 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
                 </div>
               )}
             </button>
+            {/* As members see it: the shape and width of the top of the channel list. */}
+            <p className="text-meta text-txt-tertiary">{t('spaces:settings.overview.bannerHint')}</p>
             <input
               ref={bannerFileInputRef}
               type="file"

@@ -94,7 +94,7 @@ export function FollowChannelButton({ channelId, channelName, compact = false, c
   return (
     <>
       {compact ? (
-        <button type="button" onClick={() => setOpen(true)} className={className} aria-label={t('follow.button')} title={t('follow.button')}>
+        <button data-tooltip="" type="button" onClick={() => setOpen(true)} className={className} aria-label={t('follow.button')}>
           <Icon name="megaphone" size={20} />
         </button>
       ) : (

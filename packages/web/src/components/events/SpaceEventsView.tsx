@@ -148,11 +148,11 @@ function EventCard({ event, origin, canManage, past, onEdit }: EventCardProps) {
         {canManage && (
           <span className="ml-auto flex items-center gap-1">
             {!past && (
-              <button type="button" onClick={() => onEdit(event)} className="icon-btn" title={t('common:actions.edit')} aria-label={t('common:actions.edit')}>
+              <button type="button" onClick={() => onEdit(event)} className="icon-btn" aria-label={t('common:actions.edit')}>
                 <Icon name="edit" size={14} />
               </button>
             )}
-            <button type="button" onClick={() => setConfirming(true)} className="icon-btn" title={t('spaces:events.remove')} aria-label={t('spaces:events.remove')}>
+            <button type="button" onClick={() => setConfirming(true)} className="icon-btn" aria-label={t('spaces:events.remove')}>
               <Icon name="trash" size={14} />
             </button>
           </span>

@@ -296,6 +296,7 @@ export function UserProfileModal() {
         {look.banner && <ProfileBanner className={`${look.banner} flex-shrink-0`} src={bannerSrc} fallback={bannerFallback} />}
         {/* Over a banner, which can be any picture, the close control carries its own dark ground. */}
         <button
+          data-tooltip=""
           type="button"
           onClick={closeModal}
           aria-label={t('common:actions.close')}

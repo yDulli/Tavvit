@@ -7,7 +7,8 @@
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 
-const API = 'http://localhost:3005/api';
+// Another scratch server (one beside a server in use) is named by API_URL, as shoot.mjs takes WEB_URL.
+const API = process.env.API_URL ?? 'http://localhost:3005/api';
 const OUT = process.argv[2];
 if (!OUT) throw new Error('Usage: seed.mjs <seed.json to write>');
 const DB_PATH = process.env.DB_PATH;
@@ -86,6 +87,57 @@ const bookshelf = await space(users.lena, 'Bookshelf', 'peach', 'One book a mont
 ], [me, users.noor]);
 
 await call('PATCH', `/spaces/${nightShift.id}`, me.token, { description: 'A late-night crew for co-op games, ranked grinds and bad movies. New players welcome.' });
+
+// ── Night Shift's banner ───────────────────────────────────────────────────
+// Painted here (a night sky over hills, in the space's lavender), so no picture of
+// it lives in the repository, and sent as the app sends one: a tus upload, then
+// the space's settings. It heads the space's channel column and its card on Home.
+const sharp = require('sharp');
+const stars = Array.from({ length: 70 }, (_, i) => {
+  const x = (i * 137.5) % 960;
+  const y = (i * 61.8) % 300;
+  return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i % 5 === 0 ? 1.6 : 0.9}" fill="#fff" opacity="${(0.25 + (i % 7) / 14).toFixed(2)}"/>`;
+}).join('');
+const bannerSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b1640"/><stop offset="0.55" stop-color="#3a2a78"/><stop offset="1" stop-color="#d46b5a"/></linearGradient>
+    <radialGradient id="moon" cx="0.78" cy="0.28" r="0.18"><stop offset="0" stop-color="#fff6e0" stop-opacity="0.95"/><stop offset="0.35" stop-color="#ffd9a8" stop-opacity="0.35"/><stop offset="1" stop-color="#ffd9a8" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#sky)"/>${stars}<rect width="960" height="540" fill="url(#moon)"/>
+  <circle cx="749" cy="151" r="34" fill="#fff3da"/>
+  <path d="M0 430 L120 360 L210 410 L330 320 L450 400 L560 340 L690 420 L800 350 L960 430 L960 540 L0 540 Z" fill="#1a1433"/>
+  <path d="M0 470 L160 420 L300 460 L420 410 L590 470 L740 430 L960 480 L960 540 L0 540 Z" fill="#0f0c22"/>
+</svg>`;
+const bannerPng = await sharp(Buffer.from(bannerSvg)).png().toBuffer();
+
+/** A file sent as the app sends one (tus): a creation, then the bytes; the answer is its attachment. */
+async function upload(token, name, bytes) {
+  const created = await fetch(API.replace(/\/api$/, '') + '/api/files', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Tus-Resumable': '1.0.0',
+      'Upload-Length': String(bytes.length),
+      'Upload-Metadata': `filename ${Buffer.from(name).toString('base64')}`,
+    },
+  });
+  if (created.status !== 201) throw new Error(`upload create -> ${created.status} ${await created.text()}`);
+  const location = new URL(created.headers.get('location'), API).href;
+  const sent = await fetch(location, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Tus-Resumable': '1.0.0',
+      'Upload-Offset': '0',
+      'Content-Type': 'application/offset+octet-stream',
+    },
+    body: bytes,
+  });
+  if (!sent.ok) throw new Error(`upload bytes -> ${sent.status} ${await sent.text()}`);
+  return sent.json();
+}
+const banner = await upload(me.token, 'night-shift-banner.png', bannerPng);
+await call('PATCH', `/spaces/${nightShift.id}`, me.token, { banner: banner.filename });
 
 // ── Roles, with colours and a gradient ──────────────────────────────────────
 async function role(space, name, color, colorSecondary, members, extra = {}) {

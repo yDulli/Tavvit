@@ -608,7 +608,6 @@ export function AuditLogPanel({ spaceId }: { spaceId: string }) {
           disabled={loading}
           className="icon-btn flex-shrink-0"
           aria-label={t('common:actions.refresh')}
-          title={t('common:actions.refresh')}
         >
           <Icon name="refresh" size={16} />
         </button>

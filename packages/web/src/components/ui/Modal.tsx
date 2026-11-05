@@ -85,7 +85,6 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
               onClick={onClose}
               className="icon-btn h-10 w-10"
               aria-label={closeLabel}
-              title={closeLabel}
             >
               <Icon name="x" size={17} />
             </button>
@@ -117,7 +116,6 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
                 onClick={onClose}
                 className="icon-btn h-10 w-10"
                 aria-label={closeLabel}
-                title={closeLabel}
               >
                 <Icon name="x" size={17} />
               </button>
@@ -148,7 +146,6 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
             onClick={onClose}
             className="icon-btn icon-btn-lg absolute right-3 top-3 z-10 border border-border-soft bg-surface-elevated"
             aria-label={closeLabel}
-            title={closeLabel}
           >
             <Icon name="x" size={16} strokeWidth={2} />
           </button>
@@ -176,7 +173,6 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
               onClick={onClose}
               className="icon-btn icon-btn-lg"
               aria-label={closeLabel}
-              title={closeLabel}
             >
               <Icon name="x" size={17} />
             </button>

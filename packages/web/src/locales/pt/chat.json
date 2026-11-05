@@ -13,7 +13,8 @@
       "discard": "Descartar"
     },
     "actions": {
-      "confirmDelete": "Confirmar exclusão"
+      "confirmDelete": "Confirmar exclusão",
+      "reactWith": "Reagir com {{emoji}}"
     },
     "reply": {
       "jump": "Ir para a mensagem original"
@@ -85,11 +86,9 @@
     "failedCount_many": "{{count}} falharam",
     "failedCount_other": "{{count}} falharam",
     "failedHint": "Remova o anexo que falhou ou tente enviá-lo de novo para poder enviar a mensagem",
-    "gif": "GIF",
     "gifPicker": "Seletor de GIF",
     "emoji": "Emoji",
     "emojiPicker": "Seletor de emoji",
-    "send": "Enviar",
     "sendMessage": "Enviar mensagem",
     "uploadFailed": "Falha ao enviar {{file}}: {{reason}}",
     "uploadFailedReason": "Falha no envio",

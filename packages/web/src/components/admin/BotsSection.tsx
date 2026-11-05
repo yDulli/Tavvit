@@ -79,7 +79,6 @@ export function BotsSection() {
                   type="button"
                   onClick={() => setRemoving(bot)}
                   className="icon-btn flex-shrink-0"
-                  title={t('bots.remove')}
                   aria-label={t('bots.remove')}
                 >
                   <Icon name="trash" size={14} />

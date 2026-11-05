@@ -72,13 +72,13 @@ export function SoundboardButton({ channelId, className }: { channelId: string; 
   return (
     <>
       <button
+        data-tooltip=""
         ref={anchorRef}
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={t('voice:soundboard.title')}
-        title={t('voice:soundboard.title')}
         className={className}
       >
         <Icon name="music" size={20} />

@@ -4,6 +4,7 @@ import { useFloatingPosition } from '../../hooks/useFloatingPosition';
 import { usePortalContainer } from '../../hooks/usePortalContainer';
 import { useUIStore } from '../../stores/uiStore';
 import { useDismissOnEscape } from '../../hooks/useDismissOnEscape';
+import { TooltipBubble } from './TooltipBubble';
 
 interface TooltipProps {
   content: string;
@@ -14,6 +15,12 @@ interface TooltipProps {
   disabled?: boolean;
 }
 
+/**
+ * A tooltip of its own, for a mark that is not a control and whose words are not its accessible name:
+ * a federation globe, a status, the owner's crown, a badge, a federated space tab. An icon-only
+ * control needs none of this: `TooltipLayer` shows its `aria-label`. Whatever stands inside one of
+ * these is left to it by the layer (`data-tooltip-owner`), so nothing gets two.
+ */
 export function Tooltip({ content, children, position = 'right', delay = 200, disabled = false }: TooltipProps) {
   const isMobile = useUIStore((s) => s.isMobile);
 
@@ -21,7 +28,7 @@ export function Tooltip({ content, children, position = 'right', delay = 200, di
   // A show is scheduled but its delay has not run out yet.
   const [isPending, setIsPending] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
-  const anchorRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLSpanElement>(null);
   const floatingRef = useRef<HTMLDivElement>(null);
   const portalContainer = usePortalContainer();
 
@@ -63,8 +70,10 @@ export function Tooltip({ content, children, position = 'right', delay = 200, di
   if (isMobile) return <>{children}</>;
 
   return (
-    <div
+    // A span, so that it may stand inside a button, as a badge in the space's header does.
+    <span
       ref={anchorRef}
+      data-tooltip-owner=""
       className="relative inline-flex"
       onMouseEnter={show}
       onMouseLeave={hide}
@@ -74,16 +83,9 @@ export function Tooltip({ content, children, position = 'right', delay = 200, di
     >
       {children}
       {isVisible && !disabled && createPortal(
-        <div
-          ref={floatingRef}
-          role="tooltip"
-          style={style}
-          className="px-2 py-1 text-meta font-medium leading-snug text-txt-primary glass rounded-md whitespace-nowrap pointer-events-none animate-fade-in"
-        >
-          {content}
-        </div>,
+        <TooltipBubble ref={floatingRef} style={style}>{content}</TooltipBubble>,
         portalContainer,
       )}
-    </div>
+    </span>
   );
 }

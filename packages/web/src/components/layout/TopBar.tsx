@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useInboxCount } from '../../hooks/useInboxCount';
@@ -5,7 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { openReviewTotal, useReviewStore } from '../../stores/reviewStore';
 import { HOME_ROUTES } from '../../utils/homeNav';
 import { useQuickSwitcherStore } from '../../stores/quickSwitcherStore';
-import { switcherShortcut } from '../../utils/quickSwitcher';
+import { switcherKeyShortcuts, switcherShortcut } from '../../utils/quickSwitcher';
 import { CountBadge } from '../ui/CountBadge';
 import { Icon } from '../ui/Icon';
 import { SpaceSidebar } from './SpaceSidebar';
@@ -33,10 +34,13 @@ export function TopBar() {
   const isAdmin = useAuthStore((s) => s.user?.isAdmin === true);
   const onAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
   const adminCount = useReviewStore((s) => openReviewTotal(s.queue) + (s.reportsOpen ?? 0));
+  const inboxCountId = useId();
 
   return (
     <header
       data-pip-obstacle="top"
+      // Its tooltips open below it: above is the edge of the window.
+      data-tooltip-side="bottom"
       className="lit relative z-[60] flex h-[var(--topbar-height)] flex-shrink-0 items-stretch border-b border-border-hard bg-surface-base"
     >
       <div className="flex flex-shrink-0 items-center gap-2 pl-4 pr-3 compact:pl-3 compact:pr-2">
@@ -52,7 +56,10 @@ export function TopBar() {
           type="button"
           onClick={() => openSwitcher(true)}
           aria-label={t('common:actions.search')}
-          title={t('common:actions.search')}
+          aria-keyshortcuts={switcherKeyShortcuts()}
+          // In a compact window only the glass shows: its tooltip names it, with the shortcut.
+          data-tooltip=""
+          data-tooltip-keys={switcherShortcut()}
           className="mr-1 flex h-8 w-[148px] items-center gap-2 rounded-md border border-border-soft bg-surface-input pl-2.5 pr-1.5 text-left text-ui text-txt-tertiary transition-colors hover:border-interactive-muted hover:text-txt-secondary active:bg-interactive-hover compact:mr-0 compact:w-8 compact:justify-center compact:px-0"
         >
           <Icon name="search" size={15} className="flex-shrink-0" />
@@ -64,12 +71,14 @@ export function TopBar() {
           onClick={() => navigate(HOME_ROUTES.inbox)}
           data-active={onInbox}
           aria-current={onInbox ? 'page' : undefined}
-          aria-label={inboxCount > 0 ? t('home:inbox.navLabel', { count: inboxCount }) : t('home:nav.inbox')}
-          title={t('home:nav.inbox')}
+          aria-label={t('home:nav.inbox')}
+          aria-describedby={inboxCount > 0 ? inboxCountId : undefined}
           className="icon-btn icon-btn-lg relative"
         >
           <Icon name="bell" size={18} />
           {inboxCount > 0 && <CountBadge count={inboxCount} placement="corner" />}
+          {/* What is waiting: read after the name, and the tooltip's second line. */}
+          {inboxCount > 0 && <span id={inboxCountId} className="sr-only">{t('home:inbox.navLabel', { count: inboxCount })}</span>}
         </button>
         {isAdmin && (
           <button
@@ -78,7 +87,6 @@ export function TopBar() {
             data-active={onAdmin}
             aria-current={onAdmin ? 'page' : undefined}
             aria-label={t('common:labels.adminConsole')}
-            title={t('common:labels.adminConsole')}
             className="icon-btn icon-btn-lg relative"
           >
             <Icon name="shield" size={18} />

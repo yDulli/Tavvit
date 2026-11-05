@@ -189,7 +189,6 @@ export function ThreadActions({ opened, onRenamed, onDeleted }: {
         type="button"
         onClick={() => void toggleFollow()}
         aria-pressed={following}
-        title={following ? t('chat:thread.unfollow') : t('chat:thread.follow')}
         aria-label={following ? t('chat:thread.unfollow') : t('chat:thread.follow')}
         data-active={following ? 'true' : undefined}
         className="icon-btn"
@@ -199,10 +198,10 @@ export function ThreadActions({ opened, onRenamed, onDeleted }: {
       {canManage && isForumPost && <ForumPostTagsButton thread={thread} />}
       {canManage && (
         <>
-          <button type="button" onClick={() => setEditing(true)} title={t('chat:thread.rename')} aria-label={t('chat:thread.rename')} className="icon-btn">
+          <button type="button" onClick={() => setEditing(true)} aria-label={t('chat:thread.rename')} className="icon-btn">
             <Icon name="edit" size={15} />
           </button>
-          <button type="button" onClick={() => setConfirming(true)} title={t('chat:thread.delete')} aria-label={t('chat:thread.delete')} className="icon-btn">
+          <button type="button" onClick={() => setConfirming(true)} aria-label={t('chat:thread.delete')} className="icon-btn">
             <Icon name="trash" size={15} />
           </button>
         </>
@@ -246,7 +245,7 @@ export function ThreadPanel() {
         <Icon name="thread" size={16} className="flex-shrink-0 text-txt-tertiary" />
         <span className="min-w-0 flex-1 truncate text-ui font-semibold text-txt-primary">{title}</span>
         {opened && <ThreadActions opened={opened} onRenamed={setTitle} onDeleted={closeThread} />}
-        <button type="button" onClick={closeThread} title={t('thread.close')} aria-label={t('thread.close')} className="icon-btn flex-shrink-0">
+        <button type="button" onClick={closeThread} aria-label={t('thread.close')} className="icon-btn flex-shrink-0">
           <Icon name="x" size={16} />
         </button>
       </div>

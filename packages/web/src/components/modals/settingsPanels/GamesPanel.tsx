@@ -132,7 +132,6 @@ export function GamesPanel() {
                   type="button"
                   onClick={() => { void remove(game.process); }}
                   aria-label={t('settings:games.mine.remove', { name: game.name })}
-                  title={t('settings:games.mine.remove', { name: game.name })}
                   className="icon-btn flex-shrink-0 hover:bg-accent-rose/10 hover:text-txt-danger"
                 >
                   <Icon name="x" size={15} />

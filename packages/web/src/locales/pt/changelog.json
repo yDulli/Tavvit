@@ -4,6 +4,17 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.33.2": {
+      "title": "Uma nova página do produto, banners e dicas",
+      "items": {
+        "landing": "A página do produto é nova. Ela se lê como um espaço: seus capítulos ficam numa coluna própria e ficam lidos conforme você avança, Ctrl K pula entre eles, e apontar para a janela do app ilumina a parte que ela nomeia.",
+        "banners": "O banner de um espaço agora fica no topo da lista de canais, no computador e no celular, e no cartão dele no Início.",
+        "home": "Seus espaços vêm primeiro no Início, como cartões grandes com o banner, o que há de novo e quem está falando.",
+        "sidebar": "Explorar e Sobre ficam em Mais na coluna do Início, e um espaço tem uma única linha Criar para canais e categorias.",
+        "tooltips": "Todo botão que mostra só um ícone diz o próprio nome assim que o ponteiro para sobre ele ou o teclado chega até ele.",
+        "search": "O Início não tem mais um segundo campo de busca: o da barra superior abre o mesmo."
+      }
+    },
     "1.33.1": {
       "title": "Excluir uma conta que possui espaços",
       "items": {

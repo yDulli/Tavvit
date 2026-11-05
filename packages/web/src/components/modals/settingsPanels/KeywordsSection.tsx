@@ -68,7 +68,6 @@ export function KeywordsSection() {
                   onClick={() => void store(words.filter((other) => other !== item))}
                   className="icon-btn h-5 w-5"
                   aria-label={t('notifications.keywords.remove', { word: item })}
-                  title={t('notifications.keywords.remove', { word: item })}
                 >
                   <Icon name="x" size={12} />
                 </button>

@@ -23,7 +23,6 @@ function RevealButton({ shown, onToggle }: { shown: boolean; onToggle: () => voi
       type="button"
       onClick={onToggle}
       aria-label={label}
-      title={label}
       className="icon-btn absolute right-[5px] top-1/2 -translate-y-1/2"
     >
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden="true">

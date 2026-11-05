@@ -13,7 +13,8 @@
       "discard": "Verwerfen"
     },
     "actions": {
-      "confirmDelete": "Löschen bestätigen"
+      "confirmDelete": "Löschen bestätigen",
+      "reactWith": "Mit {{emoji}} reagieren"
     },
     "reply": {
       "jump": "Zur ursprünglichen Nachricht springen"
@@ -83,11 +84,9 @@
     "failedCount_one": "{{count}} fehlgeschlagen",
     "failedCount_other": "{{count}} fehlgeschlagen",
     "failedHint": "Entferne den fehlgeschlagenen Anhang oder versuche es erneut, um zu senden",
-    "gif": "GIFs",
     "gifPicker": "GIF-Auswahl",
     "emoji": "Emojis",
     "emojiPicker": "Emoji-Auswahl",
-    "send": "Senden",
     "sendMessage": "Nachricht senden",
     "uploadFailed": "{{file}} konnte nicht hochgeladen werden: {{reason}}",
     "uploadFailedReason": "Upload fehlgeschlagen",

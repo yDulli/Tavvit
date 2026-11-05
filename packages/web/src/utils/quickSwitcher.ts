@@ -133,3 +133,8 @@ export function rankSwitcherItems(items: readonly SwitcherItem[], query: string,
 export function switcherShortcut(platform: string = typeof navigator === 'undefined' ? '' : navigator.platform): string {
   return /Mac|iPhone|iPad|iPod/i.test(platform) ? '⌘ K' : 'Ctrl K';
 }
+
+/** The same shortcut as `aria-keyshortcuts` names it: "Meta+K" on a Mac, "Control+K" elsewhere. */
+export function switcherKeyShortcuts(platform: string = typeof navigator === 'undefined' ? '' : navigator.platform): string {
+  return /Mac|iPhone|iPad|iPod/i.test(platform) ? 'Meta+K' : 'Control+K';
+}

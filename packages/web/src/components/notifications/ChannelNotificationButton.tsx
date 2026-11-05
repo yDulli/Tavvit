@@ -33,7 +33,7 @@ export function ChannelNotificationButton({ channelId, channelName }: { channelI
         aria-expanded={open}
         data-active={open}
         className="icon-btn icon-btn-lg"
-        title={muted ? `${t('spaces:main.notificationSettings')} (${t('spaces:notifications.mutedIndicator')})` : t('spaces:main.notificationSettings')}
+        aria-label={muted ? `${t('spaces:main.notificationSettings')} (${t('spaces:notifications.mutedIndicator')})` : t('spaces:main.notificationSettings')}
       >
         {muted ? <BellOffIcon size={18} /> : <Icon name="bell" size={18} />}
       </button>

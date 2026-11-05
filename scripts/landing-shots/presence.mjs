@@ -6,7 +6,7 @@ const seed = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const ONLINE = ['jonas', 'noor', 'theo', 'yuki', 'sam', 'lena'];
 
 function connect(name) {
-  const socket = new WebSocket('ws://localhost:3005/ws');
+  const socket = new WebSocket(process.env.WS_URL ?? 'ws://localhost:3005/ws');
   socket.addEventListener('open', () => socket.send(JSON.stringify({ type: 'auth', token: seed.users[name].token })));
   socket.addEventListener('close', () => setTimeout(() => connect(name), 2000));
   socket.addEventListener('error', () => {});

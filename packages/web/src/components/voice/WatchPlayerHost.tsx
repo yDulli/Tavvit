@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { WATCH_LIMITS, WATCH_REACTIONS, type WatchAction, type WatchProvider, type WatchReaction } from '@backspace/shared/src/watch';
@@ -157,6 +157,8 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
   const [, setTick] = useState(0);
 
   const mayControl = session.control === 'everyone' || session.starterId === myId;
+  // Why the controls do nothing for this viewer: read after their names, and their tooltips' second line.
+  const controlledHintId = useId();
   const mayEnd = mayControl || hasPermissionBit(permissions, PermissionBits.MOVE_MEMBERS);
   const mayAdd = hasPermissionBit(permissions, PermissionBits.STREAM);
   const isStarter = session.starterId === myId;
@@ -287,6 +289,7 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
       }`}
       style={{ top: box.top, left: box.left, width: box.width, height: box.height }}
     >
+      {!mayControl && <span id={controlledHintId} className="sr-only">{t('voice:watch.controlledByStarter')}</span>}
       {/* What plays, and how the frame sits. Above the picture, where the provider draws nothing of its own. */}
       {staged && (
         <div className="flex h-10 flex-shrink-0 items-center gap-2 border-b border-border-hard pl-3 pr-1.5">
@@ -297,13 +300,12 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
               type="button"
               onClick={toggleFullscreen}
               className="icon-btn"
-              title={fullscreen ? t('voice:watch.exitFullscreen') : t('voice:watch.fullscreen')}
               aria-label={fullscreen ? t('voice:watch.exitFullscreen') : t('voice:watch.fullscreen')}
             >
               <Icon name="maximize" size={16} />
             </button>
           )}
-          <button type="button" onClick={putAway} className="icon-btn" title={t('voice:watch.hide')} aria-label={t('voice:watch.hide')}>
+          <button type="button" onClick={putAway} className="icon-btn" aria-label={t('voice:watch.hide')}>
             <Icon name="eye-off" size={16} />
           </button>
         </div>
@@ -344,10 +346,10 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
               provider's own marks at the top left stay readable. */}
           {!staged && (
             <div className="watch-chrome absolute right-1.5 top-1.5 flex gap-1">
-              <button type="button" onClick={backToCall} className="watch-chrome-btn" title={t('voice:watch.backToCall')} aria-label={t('voice:watch.backToCall')}>
+              <button data-tooltip="" type="button" onClick={backToCall} className="watch-chrome-btn" aria-label={t('voice:watch.backToCall')}>
                 <Icon name="chevron-up" size={16} />
               </button>
-              <button type="button" onClick={putAway} className="watch-chrome-btn" title={t('voice:watch.hide')} aria-label={t('voice:watch.hide')}>
+              <button data-tooltip="" type="button" onClick={putAway} className="watch-chrome-btn" aria-label={t('voice:watch.hide')}>
                 <Icon name="x" size={16} />
               </button>
             </div>
@@ -362,7 +364,7 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
           >
             <div className="flex h-9 flex-shrink-0 items-center justify-between pl-3 pr-1.5">
               <h2 className="label-mono">{t('voice:watch.queue')}</h2>
-              <button type="button" onClick={() => setQueueOpen(false)} className="icon-btn" title={t('common:actions.close')} aria-label={t('common:actions.close')}>
+              <button type="button" onClick={() => setQueueOpen(false)} className="icon-btn" aria-label={t('common:actions.close')}>
                 <Icon name="x" size={14} />
               </button>
             </div>
@@ -376,7 +378,7 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
                   <li key={item.id} className="list-row flex items-center gap-2 rounded-md px-1.5 py-1">
                     <span className="min-w-0 flex-1 truncate text-ui text-txt-secondary" title={titleOf(item)}>{titleOf(item)}</span>
                     {mayControl && (
-                      <button type="button" onClick={() => act({ action: 'remove', itemId: item.id })} className="icon-btn" title={t('voice:watch.remove')} aria-label={t('voice:watch.remove')}>
+                      <button type="button" onClick={() => act({ action: 'remove', itemId: item.id })} className="icon-btn" aria-label={t('voice:watch.remove')}>
                         <Icon name="trash" size={14} />
                       </button>
                     )}
@@ -428,8 +430,8 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
               disabled={!mayControl}
               onClick={() => act({ action: session.playing ? 'pause' : 'play' })}
               className="icon-btn icon-btn-lg"
-              title={mayControl ? (session.playing ? t('voice:watch.pause') : t('voice:watch.play')) : t('voice:watch.controlledByStarter')}
               aria-label={session.playing ? t('voice:watch.pause') : t('voice:watch.play')}
+              aria-describedby={mayControl ? undefined : controlledHintId}
             >
               <Icon name={session.playing ? 'pause' : 'play'} size={18} />
             </button>
@@ -438,8 +440,8 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
               disabled={!mayControl}
               onClick={() => act({ action: 'next', itemId: current.id })}
               className="icon-btn"
-              title={mayControl ? t('voice:watch.next') : t('voice:watch.controlledByStarter')}
               aria-label={t('voice:watch.next')}
+              aria-describedby={mayControl ? undefined : controlledHintId}
             >
               <Icon name="skip" size={16} />
             </button>
@@ -450,11 +452,11 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
             <div className="mx-auto flex min-w-0 items-center gap-0.5 overflow-x-auto px-2 no-scrollbar" role="group" aria-label={t('voice:watch.reactions')}>
               {WATCH_REACTIONS.map((reaction) => (
                 <button
+                  data-tooltip=""
                   key={reaction}
                   type="button"
                   onClick={() => react(reaction)}
                   className="watch-reaction-btn"
-                  title={t('voice:watch.react', { reaction })}
                   aria-label={t('voice:watch.react', { reaction })}
                 >
                   {reaction}
@@ -482,7 +484,6 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
               aria-expanded={queueOpen}
               data-active={queueOpen ? 'true' : undefined}
               className="icon-btn relative"
-              title={t('voice:watch.queue')}
               aria-label={t('voice:watch.queue')}
             >
               <Icon name="list" size={16} />

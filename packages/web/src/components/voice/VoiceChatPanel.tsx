@@ -25,7 +25,6 @@ export function VoiceChatPanel({ channelId, channelName }: VoiceChatPanelProps) 
         <button
           onClick={toggleVoiceChat}
           className="icon-btn"
-          title={t('voice:chatPanel.close')}
           aria-label={t('voice:chatPanel.close')}
         >
           <Icon name="x" size={16} />

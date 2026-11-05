@@ -32,7 +32,9 @@ import { ChannelMutedIndicator } from '../notifications/ChannelMutedIndicator';
 import { NotificationSettingsModal, type NotificationSettingsModalTarget } from '../notifications/NotificationSettingsModal';
 import { describeCodedError } from '../../i18n/errors';
 import { Icon } from '../ui/Icon';
-import { BAR_BUTTON, BAR_TITLE, SHEET_HANDLE, SHEET_ROW } from './mobileClasses';
+import { BAR_BUTTON, BAR_BUTTON_ON_PICTURE, BAR_TITLE, SHEET_HANDLE, SHEET_ROW } from './mobileClasses';
+import { useSpaceBanner } from '../../hooks/useSpaceBanner';
+import { SpaceBannerHeader } from './SpaceBannerHeader';
 
 /** One tab of the space strip: the same steps as a tab of the desktop's top bar. */
 function stripTabClass(isSelected: boolean, hasUnread: boolean): string {
@@ -42,6 +44,53 @@ function stripTabClass(isSelected: boolean, hasUnread: boolean): string {
       ? 'font-semibold text-txt-primary hover:bg-interactive-hover'
       : 'text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary';
   return `flex h-9 items-center gap-2 rounded-md px-2.5 text-ui font-medium transition-colors active:bg-interactive-active ${tone}`;
+}
+
+/**
+ * The bar over a space's channel list: its name, the invite button and, for whoever may manage it,
+ * the settings. Over the space's banner the buttons are drawn in the primary colour, which keeps its
+ * contrast on a picture under the bar's shade.
+ */
+function MobileSpaceBar({ spaceId, name, canInvite, canManageSpace, overBanner }: {
+  spaceId: string;
+  name: string;
+  canInvite: boolean;
+  canManageSpace: boolean;
+  overBanner: boolean;
+}) {
+  const { t } = useTranslation(['spaces', 'common']);
+  const openModal = useUIStore((s) => s.openModal);
+  const button = overBanner ? BAR_BUTTON_ON_PICTURE : BAR_BUTTON;
+  return (
+    <>
+      <h1 className={BAR_TITLE}>{name}</h1>
+      {canInvite && (
+        <button
+          type="button"
+          onClick={() => openModal('invite', { spaceId })}
+          aria-label={t('common:actions.invitePeople')}
+          className={button}
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+          </svg>
+        </button>
+      )}
+      {canManageSpace && (
+        <button
+          type="button"
+          onClick={() => openModal('spaceSettings', { spaceId })}
+          aria-label={t('common:labels.settings')}
+          className={button}
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      )}
+    </>
+  );
 }
 
 export function MobileSpacesScreen() {
@@ -544,6 +593,9 @@ export function MobileSpacesScreen() {
   const myPerms = selectedSpaceId ? spacePermissions.get(selectedSpaceId) : undefined;
   const canInvite = hasPermissionBit(myPerms, PermissionBits.CREATE_INVITE);
   const canManageSpace = hasPermissionBit(myPerms, PermissionBits.MANAGE_SPACE);
+  // The space's banner heads its channel list when it has one the page may show (docs/systems/spaces.md).
+  const banner = useSpaceBanner(selectedSpace?.banner);
+  const channelListRef = useRef<HTMLDivElement>(null);
 
   // Show skeleton while the selected space's channels/members are being fetched.
   // Mirrors desktop ChannelSidebar's `showChannelSkeleton` (gated by
@@ -810,42 +862,27 @@ export function MobileSpacesScreen() {
           </div>
         )}
 
-        {/* Space header */}
-        {selectedSpace && (
+        {/* Space header. With a banner it lies over the picture, inside the channel list (below). */}
+        {selectedSpace && !banner.src && (
           <header className="panel-bar flex h-12 items-center gap-1 pl-4 pr-1">
-            <h1 className={BAR_TITLE}>
-              {selectedSpace.name}
-            </h1>
-            {canInvite && (
-              <button
-                type="button"
-                onClick={() => openModal('invite', { spaceId: selectedSpaceId })}
-                aria-label={t('common:actions.invitePeople')}
-                className={BAR_BUTTON}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
-                </svg>
-              </button>
-            )}
-            {canManageSpace && (
-              <button
-                type="button"
-                onClick={() => openModal('spaceSettings', { spaceId: selectedSpaceId })}
-                aria-label={t('common:labels.settings')}
-                className={BAR_BUTTON}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-            )}
+            <MobileSpaceBar spaceId={selectedSpace.id} name={selectedSpace.name} canInvite={canInvite} canManageSpace={canManageSpace} overBanner={false} />
           </header>
         )}
 
         {/* Channel list */}
-        <div className="flex-1 overflow-y-auto px-2 py-2">
+        <div ref={channelListRef} className={`flex-1 overflow-y-auto px-2 pb-2 ${banner.src ? 'scroll-pt-12' : 'pt-2'}`}>
+          {selectedSpace && banner.src && (
+            <SpaceBannerHeader
+              key={selectedSpace.id}
+              src={banner.src}
+              onError={banner.onError}
+              scrollRef={channelListRef}
+              barClassName="lit -mx-2 flex h-12 items-center gap-1 pl-4 pr-1"
+              bandClassName="-mx-2 mb-2 max-h-[220px]"
+            >
+              {(over) => <MobileSpaceBar spaceId={selectedSpace.id} name={selectedSpace.name} canInvite={canInvite} canManageSpace={canManageSpace} overBanner={over} />}
+            </SpaceBannerHeader>
+          )}
           {showChannelSkeleton ? (
             <div role="status" aria-label={t('spaces:channels.loading')}>
               {/* Uncategorized group — 3 channel rows. Sized to match the real

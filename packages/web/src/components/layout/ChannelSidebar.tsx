@@ -3,11 +3,11 @@ import { ChannelIcon } from '../ui/ChannelIcon';
 import { SpaceEventsRow } from '../events/SpaceEventsRow';
 import { FollowedThreadRows } from './FollowedThreadRows';
 import { useInboxCount } from '../../hooks/useInboxCount';
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { Channel } from '@backspace/shared';
-import { useSpaceStore, getChannelOrigin } from '../../stores/spaceStore';
+import { useSpaceStore, getChannelOrigin, type TaggedSpace } from '../../stores/spaceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -31,7 +31,9 @@ import { DmSearchBar } from './DmSearchBar';
 import { DmListItem } from './DmListItem';
 import { useDragManager, type DropTarget, type LayoutItem } from '../../hooks/useDragManager';
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
-import { activeHomeNavItem, HOME_ROUTES } from '../../utils/homeNav';
+import { activeHomeNavItem, HOME_ROUTES, isHomeNavMoreItem } from '../../utils/homeNav';
+import { useSpaceBanner } from '../../hooks/useSpaceBanner';
+import { SpaceBannerHeader } from './SpaceBannerHeader';
 import { ChannelMutedIndicator } from '../notifications/ChannelMutedIndicator';
 
 /**
@@ -61,6 +63,63 @@ function HomeNavRow({ active, label, icon, onClick, count = 0, countLabel }: {
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {count > 0 && <CountBadge count={count} label={countLabel} />}
     </button>
+  );
+}
+
+/**
+ * The column's bar in a space: its name with its badges and instance, which opens the space's
+ * settings, and the invite button. Over the space's banner every word and mark is drawn in the
+ * primary colour, the one that keeps its contrast on a picture under the bar's shade.
+ */
+function SpaceHeaderRow({ space, instanceLabel, canCreateInvite, overBanner }: {
+  space: TaggedSpace;
+  instanceLabel: string | null;
+  canCreateInvite: boolean;
+  overBanner: boolean;
+}) {
+  const { t } = useTranslation(['spaces', 'common']);
+  const openModal = useUIStore((s) => s.openModal);
+  const quiet = overBanner ? 'text-txt-primary' : 'text-txt-tertiary';
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => openModal('spaceSettings')}
+        className="flex-1 h-9 px-2 flex items-center justify-between gap-2 rounded-md hover:bg-interactive-hover active:bg-interactive-active transition-colors min-w-0"
+      >
+        <div className="min-w-0 text-left">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="min-w-0 font-semibold text-lead tracking-[-0.01em] text-txt-primary truncate leading-tight">{space.name}</span>
+            <BadgeList badges={space.badges ?? []} size="sm" />
+          </span>
+          {instanceLabel && (
+            <span className={`font-mono text-label ${quiet} truncate block leading-tight`}>
+              {instanceLabel}
+            </span>
+          )}
+        </div>
+        <Icon name="chevron-down" size={16} className={`${quiet} flex-shrink-0`} />
+      </button>
+      {canCreateInvite && (
+        <button
+          type="button"
+          onClick={() => openModal('invite')}
+          className={`icon-btn icon-btn-lg flex-shrink-0 ${overBanner ? 'text-txt-primary' : ''}`}
+          aria-label={t('common:actions.invitePeople')}
+        >
+          <Icon name="user-plus" size={17} />
+        </button>
+      )}
+    </>
+  );
+}
+
+/** The mark of a category in a menu: an outlined folder. */
+function FolderGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 18a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h4.5l2 3H19a2 2 0 012 2z" />
+    </svg>
   );
 }
 
@@ -98,6 +157,8 @@ export function ChannelSidebar() {
 
   const spacePermissions = useSpaceStore((s) => s.spacePermissions);
   const space = spaces.find(s => s.id === currentSpaceId);
+  // The space's banner heads its column when it has one the page may show (docs/systems/spaces.md).
+  const banner = useSpaceBanner(space?.banner);
   const mySpacePerms = currentSpaceId ? spacePermissions.get(currentSpaceId) : undefined;
   const isLoadingSpace = !!loadingSpaceId && loadingSpaceId === currentSpaceId;
   const showChannelSkeleton = useDelayedLoading(isLoadingSpace);
@@ -123,6 +184,45 @@ export function ChannelSidebar() {
 
   // Centralized context menu
   const openContextMenu = useContextMenuStore((s) => s.open);
+
+  // Each space opens at the top of its column, where its banner and its first channels are.
+  useEffect(() => {
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+  }, [currentSpaceId]);
+
+  // Home's rows that are seldom needed and reachable elsewhere (Explore is also the top bar's
+  // compass, both are in Ctrl K) fold under "More", open or closed as this device last left it.
+  // Arriving at one of them some other way opens the group, so the selected row is in sight.
+  const homeMoreOpen = useUIStore((s) => s.homeNavMoreOpen);
+  const setHomeMoreOpen = useUIStore((s) => s.setHomeNavMoreOpen);
+  const homeMoreId = useId();
+  useEffect(() => {
+    if (isHomeNavMoreItem(activeHomeItem)) setHomeMoreOpen(true);
+  }, [activeHomeItem, setHomeMoreOpen]);
+
+  // What can be made in a space, in one menu: the column's Create row opens it, and the right-click
+  // menu of the column starts with the same two, so the two can never drift apart.
+  const createItems = useMemo<ContextMenuItem[]>(() => [
+    {
+      key: 'create-channel',
+      type: 'action',
+      label: t('spaces:channels.create'),
+      icon: <Icon name="hash" size={16} />,
+      onClick: () => openModal('createChannel'),
+    },
+    {
+      key: 'create-category',
+      type: 'action',
+      label: t('spaces:channels.createCategory'),
+      icon: <FolderGlyph />,
+      onClick: () => openModal('createCategory'),
+    },
+  ], [openModal, t]);
+  const createMenuOpen = useContextMenuStore((s) => s.menu?.items === createItems);
+  const openCreateMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    openContextMenu({ x: box.left, y: box.bottom + 4 }, createItems);
+  };
 
   // Collapse state — persisted in localStorage
   const collapseKey = `backspace:collapsed-categories:${currentSpaceId}`;
@@ -331,26 +431,7 @@ export function ChannelSidebar() {
     e.preventDefault();
     e.stopPropagation();
     const items: ContextMenuItem[] = [];
-    if (canManageChannels) {
-      items.push({
-        key: 'create-channel',
-        type: 'action',
-        label: t('spaces:channels.create'),
-        icon: <Icon name="hash" size={16} />,
-        onClick: () => openModal('createChannel'),
-      });
-      items.push({
-        key: 'create-category',
-        type: 'action',
-        label: t('spaces:channels.createCategory'),
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 18a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h4.5l2 3H19a2 2 0 012 2z" />
-          </svg>
-        ),
-        onClick: () => openModal('createCategory'),
-      });
-    }
+    if (canManageChannels) items.push(...createItems);
     if (canCreateInvite) {
       items.push({
         key: 'invite',
@@ -377,7 +458,7 @@ export function ChannelSidebar() {
       onClick: () => openModal('spaceSettings'),
     });
     openContextMenu({ x: e.clientX, y: e.clientY }, items);
-  }, [canManageChannels, canCreateInvite, currentSpaceId, openModal, openContextMenu, t]);
+  }, [canManageChannels, canCreateInvite, createItems, currentSpaceId, openModal, openContextMenu, t]);
 
   const handleChannelClick = (channelId: string) => {
     setCurrentChannel(channelId);
@@ -464,19 +545,41 @@ export function ChannelSidebar() {
               onClick={() => navigate(HOME_ROUTES.friends)}
             />
 
-            <HomeNavRow
-              active={activeHomeItem === 'explore'}
-              label={t('spaces:sidebar.dmList.explore')}
-              icon="compass"
-              onClick={() => navigate(HOME_ROUTES.explore)}
-            />
+            <button
+              type="button"
+              onClick={() => setHomeMoreOpen(!homeMoreOpen)}
+              aria-expanded={homeMoreOpen}
+              aria-controls={homeMoreOpen ? homeMoreId : undefined}
+              className="nav-item group w-full text-left"
+            >
+              <Icon name="more" size={16} className="flex-shrink-0 text-txt-tertiary group-hover:text-txt-secondary" />
+              <span className="min-w-0 flex-1 truncate">{t('home:nav.more')}</span>
+              <Icon
+                name="chevron-down"
+                size={12}
+                strokeWidth={2.4}
+                className={`flex-shrink-0 text-txt-tertiary transition-transform duration-150 ${homeMoreOpen ? '' : '-rotate-90'}`}
+              />
+            </button>
 
-            <HomeNavRow
-              active={activeHomeItem === 'about'}
-              label={t('home:nav.about')}
-              icon="info"
-              onClick={() => navigate(HOME_ROUTES.about)}
-            />
+            {/* Rendered only when open: the sliding mark measures rows again when rows come and go. */}
+            {homeMoreOpen && (
+              <div id={homeMoreId} className="space-y-px">
+                <HomeNavRow
+                  active={activeHomeItem === 'explore'}
+                  label={t('spaces:sidebar.dmList.explore')}
+                  icon="compass"
+                  onClick={() => navigate(HOME_ROUTES.explore)}
+                />
+
+                <HomeNavRow
+                  active={activeHomeItem === 'about'}
+                  label={t('home:nav.about')}
+                  icon="info"
+                  onClick={() => navigate(HOME_ROUTES.about)}
+                />
+              </div>
+            )}
           </nav>
 
           <section aria-label={t('spaces:sidebar.directMessages')} className="mt-3 border-t border-border-hard pt-3">
@@ -486,7 +589,6 @@ export function ChannelSidebar() {
                 type="button"
                 onClick={() => openModal('newDm')}
                 className="icon-btn flex-shrink-0"
-                title={t('spaces:sidebar.dmList.newDm')}
                 aria-label={t('spaces:sidebar.dmList.newDm')}
               >
                 <Icon name="plus" size={15} strokeWidth={2} />
@@ -548,42 +650,28 @@ export function ChannelSidebar() {
   return (
     <>
     <div className="lit relative w-[var(--sidebar-width)] flex flex-col flex-shrink-0 select-none border-r border-border-hard bg-surface-channel">
-      {/* Space header */}
-      <div className="panel-bar flex items-center gap-1 px-2 group/header">
-        <button
-          type="button"
-          onClick={() => openModal('spaceSettings')}
-          className="flex-1 h-9 px-2 flex items-center justify-between gap-2 rounded-md hover:bg-interactive-hover active:bg-interactive-active transition-colors min-w-0"
-        >
-          <div className="min-w-0 text-left">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span className="min-w-0 font-semibold text-lead tracking-[-0.01em] text-txt-primary truncate leading-tight">{space.name}</span>
-              <BadgeList badges={space.badges ?? []} size="sm" />
-            </span>
-            {instanceLabel && (
-              <span className="font-mono text-label text-txt-tertiary truncate block leading-tight">
-                {instanceLabel}
-              </span>
-            )}
-          </div>
-          <Icon name="chevron-down" size={16} className="text-txt-tertiary flex-shrink-0" />
-        </button>
-        {canCreateInvite && (
-          <button
-            type="button"
-            onClick={() => openModal('invite')}
-            className="icon-btn icon-btn-lg flex-shrink-0"
-            title={t('common:actions.invitePeople')}
-            aria-label={t('common:actions.invitePeople')}
-          >
-            <Icon name="user-plus" size={17} />
-          </button>
-        )}
-      </div>
+      {/* The column's bar. With a banner it lies over the picture, inside what scrolls (below). */}
+      {!banner.src && (
+        <div className="panel-bar flex items-center gap-1 px-2 group/header">
+          <SpaceHeaderRow space={space} instanceLabel={instanceLabel} canCreateInvite={canCreateInvite} overBanner={false} />
+        </div>
+      )}
 
       {/* Channels — dynamic category layout */}
-      <div ref={scrollContainerRef} className="sliding-list flex-1 overflow-y-auto pt-2.5 pb-4 px-2 no-scrollbar" onDrop={containerHandlers.onDrop} onDragOver={containerHandlers.onDragOver} onContextMenu={handleSidebarContextMenu}>
+      <div ref={scrollContainerRef} className={`sliding-list flex-1 overflow-y-auto pb-4 px-2 no-scrollbar ${banner.src ? 'scroll-pt-[var(--topbar-height)]' : 'pt-2.5'}`} onDrop={containerHandlers.onDrop} onDragOver={containerHandlers.onDragOver} onContextMenu={handleSidebarContextMenu}>
         <SlidingMark variant="row" />
+        {banner.src && (
+          <SpaceBannerHeader
+            key={space.id}
+            src={banner.src}
+            onError={banner.onError}
+            scrollRef={scrollContainerRef}
+            barClassName="lit -mx-2 flex items-center gap-1 px-2 group/header"
+            bandClassName="-mx-2 mb-2.5"
+          >
+            {(over) => <SpaceHeaderRow space={space} instanceLabel={instanceLabel} canCreateInvite={canCreateInvite} overBanner={over} />}
+          </SpaceBannerHeader>
+        )}
         {showChannelSkeleton ? (
           <div role="status" aria-label={t('spaces:channels.loading')}>
             {/* The real rows' geometry, so nothing moves when the channels arrive. */}
@@ -611,19 +699,6 @@ export function ChannelSidebar() {
         {/* Uncategorized channels */}
         {uncategorizedChannels.length > 0 && (
           <div className="mb-4">
-            {canManageChannels && sortedCategories.length === 0 && (
-              <div className="mb-0.5 flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => openModal('createChannel')}
-                  className="icon-btn h-6 w-6"
-                  title={t('spaces:channels.create')}
-                  aria-label={t('spaces:channels.create')}
-                >
-                  <Icon name="plus" size={14} strokeWidth={2.2} />
-                </button>
-              </div>
-            )}
             <div className="space-y-px">
               {uncategorizedChannels.map((channel) => (
                 <ChannelItem
@@ -698,7 +773,6 @@ export function ChannelSidebar() {
                         openModal('createChannel', { categoryId: category.id });
                       }}
                       className="icon-btn h-6 w-6 flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                      title={t('spaces:channels.create')}
                       aria-label={t('spaces:channels.create')}
                     >
                       <Icon name="plus" size={14} strokeWidth={2.2} />
@@ -770,26 +844,20 @@ export function ChannelSidebar() {
           );
         })}
 
-        {/* Create channel / category buttons */}
+        {/* One row for everything that can be made here: it opens the menu of the two. */}
         {canManageChannels && (
-          <div className="mt-4 space-y-px border-t border-border-hard pt-3">
-            {sortedCategories.length > 0 && (
-              <button
-                type="button"
-                onClick={() => openModal('createChannel')}
-                className="nav-item h-7 w-full text-left text-meta text-txt-tertiary hover:text-txt-primary"
-              >
-                <Icon name="plus" size={14} className="flex-shrink-0" />
-                <span className="truncate">{t('spaces:channels.create')}</span>
-              </button>
-            )}
+          <div className="mt-4 border-t border-border-hard pt-3">
             <button
               type="button"
-              onClick={() => openModal('createCategory')}
+              onClick={openCreateMenu}
+              aria-haspopup="menu"
+              aria-expanded={createMenuOpen}
+              aria-label={t('spaces:channels.createMenuLabel')}
               className="nav-item h-7 w-full text-left text-meta text-txt-tertiary hover:text-txt-primary"
             >
               <Icon name="plus" size={14} className="flex-shrink-0" />
-              <span className="truncate">{t('spaces:channels.createCategory')}</span>
+              <span className="min-w-0 flex-1 truncate">{t('spaces:channels.createMenu')}</span>
+              <Icon name="chevron-down" size={12} className="flex-shrink-0" />
             </button>
           </div>
         )}
@@ -874,7 +942,7 @@ function ChannelItem({
   channelPermissions: ReadonlyMap<string, string>;
   handleVoiceJoin: (channelId: string) => void;
 }) {
-  const { t } = useTranslation('home');
+  const { t } = useTranslation(['home', 'spaces']);
   const chPerms = channelPermissions.get(channel.id);
   // Editing and deleting a channel check MANAGE_CHANNELS with its overrides,
   // so the settings gear reads this channel's permissions, not the space's.
@@ -944,6 +1012,7 @@ function ChannelItem({
         {canManage && (
           <span
             aria-hidden="true"
+            data-tooltip={t('spaces:channels.settings')}
             className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-md text-txt-tertiary opacity-0 transition-opacity hover:bg-interactive-hover hover:text-txt-primary group-hover:opacity-100"
             onClick={(e) => {
               e.stopPropagation();

@@ -1,5 +1,15 @@
 import { getApiForOrigin } from '../stores/spaceStore';
 
+/**
+ * The address a stored picture (an icon, a banner) is fetched from: an absolute address or a path as
+ * it is, a bare upload name under this page's own `/api/uploads/`. A space or person from another
+ * instance already carries an absolute address on that instance (the stores rewrite it on arrival),
+ * so no origin is needed here.
+ */
+export function uploadAddress(value: string): string {
+  return value.startsWith('http') || value.startsWith('/') ? value : `/api/uploads/${value}`;
+}
+
 /** Strip /api/uploads/ prefix to get bare filename. No-op for bare filenames and absolute URLs. */
 export function stripUploadPrefix(filename: string): string {
   return filename.startsWith('/api/uploads/') ? filename.slice('/api/uploads/'.length) : filename;

@@ -755,7 +755,6 @@ function RowAction({ title, onClick, tone = 'neutral', icon }: { title: string; 
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       className={`icon-btn icon-btn-lg ${hover}`}
-      title={title}
       aria-label={title}
     >
       <Icon name={icon} size={16} />

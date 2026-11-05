@@ -207,6 +207,7 @@ export function StickerUploadForm({ onAdded, onCancel, capacity }: StickerUpload
       <div className="flex items-center justify-between border-b border-border-hard py-2 pl-4 pr-2">
         <h3 className="text-ui font-semibold">{t('stickers.upload')}</h3>
         <button
+          data-tooltip=""
           type="button"
           disabled={busy}
           onClick={onCancel}

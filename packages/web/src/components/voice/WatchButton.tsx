@@ -43,13 +43,13 @@ export function WatchButton({ channelId, className }: { channelId: string; class
   return (
     <>
       <button
+        data-tooltip=""
         ref={anchorRef}
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={t('voice:watch.button')}
-        title={t('voice:watch.button')}
         className={className}
       >
         <Icon name="watch" size={20} />

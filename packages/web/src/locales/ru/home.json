@@ -2,6 +2,7 @@
   "nav": {
     "home": "Главная",
     "about": "О приложении",
+    "more": "Ещё",
     "inbox": "Входящие",
     "requestsLabel_one": "{{count}} заявка в друзья ждёт ответа",
     "requestsLabel_few": "{{count}} заявки в друзья ждут ответа",
@@ -47,10 +48,16 @@
     "inVoice_few": "{{count}} друга в голосовом канале",
     "inVoice_many": "{{count}} друзей в голосовом канале",
     "inVoice_other": "{{count}} друга в голосовом канале",
+    "peopleInVoice_one": "{{count}} человек в голосовом канале",
+    "peopleInVoice_few": "{{count}} человека в голосовом канале",
+    "peopleInVoice_many": "{{count}} человек в голосовом канале",
+    "peopleInVoice_other": "{{count}} человека в голосовом канале",
     "mentions_one": "{{count}} непрочитанное упоминание",
     "mentions_few": "{{count}} непрочитанных упоминания",
     "mentions_many": "{{count}} непрочитанных упоминаний",
-    "mentions_other": "{{count}} непрочитанного упоминания"
+    "mentions_other": "{{count}} непрочитанного упоминания",
+    "showAll": "Показать все",
+    "showFewer": "Показать меньше"
   },
   "about": {
     "title": "Об Tavvit",
@@ -148,9 +155,6 @@
     "viewAll": "Показать всех",
     "nobodyTitle": "Никого нет в сети",
     "noFriendsTitle": "Друзей пока нет"
-  },
-  "jump": {
-    "label": "Перейти к разговору…"
   },
   "onboarding": {
     "friends": {

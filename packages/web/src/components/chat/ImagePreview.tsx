@@ -27,7 +27,6 @@ export function ImagePreview() {
         <button
           className="icon-btn icon-btn-lg text-txt-secondary"
           onClick={() => saveImage(imageUrl)}
-          title={t('chat:preview.save')}
           aria-label={t('chat:preview.save')}
         >
           <Icon name="download" size={18} />
@@ -35,7 +34,6 @@ export function ImagePreview() {
         <button
           className="icon-btn icon-btn-lg text-txt-secondary"
           onClick={() => copyImageToClipboard(imageUrl)}
-          title={t('chat:preview.copy')}
           aria-label={t('chat:preview.copy')}
         >
           <Icon name="copy" size={18} />
@@ -43,7 +41,6 @@ export function ImagePreview() {
         <button
           className="icon-btn icon-btn-lg text-txt-secondary"
           onClick={closeImagePreview}
-          title={t('common:actions.close')}
           aria-label={t('common:actions.close')}
         >
           <Icon name="x" size={18} />

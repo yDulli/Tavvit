@@ -123,7 +123,6 @@ export function PinsPopover({ open, onClose, anchorRef, channelId, isDm, canUnpi
                     type="button"
                     onClick={() => void unpin(message.id)}
                     aria-label={t('chat:pins.unpin')}
-                    title={t('chat:pins.unpin')}
                     className="icon-btn absolute right-1 top-1 desktop:opacity-0 desktop:group-hover/pin:opacity-100 desktop:focus-visible:opacity-100"
                   >
                     <Icon name="x" size={14} />

@@ -62,17 +62,17 @@ export function AttachmentProgress({ loaded, total, state, filename, error, onPa
       {!isFinal && (
         <div className="absolute top-1 right-1 flex gap-1">
           {state === 'paused' && onResume && (
-            <button onClick={onResume} className={OVERLAY_BUTTON} aria-label={t('common:actions.resume')}>
+            <button data-tooltip="" onClick={onResume} className={OVERLAY_BUTTON} aria-label={t('common:actions.resume')}>
               <Icon name="play" size={12} strokeWidth={2} />
             </button>
           )}
           {state === 'active' && onPause && (
-            <button onClick={onPause} className={OVERLAY_BUTTON} aria-label={t('common:actions.pause')}>
+            <button data-tooltip="" onClick={onPause} className={OVERLAY_BUTTON} aria-label={t('common:actions.pause')}>
               <Icon name="pause" size={12} strokeWidth={2.25} />
             </button>
           )}
           {onAbort && (
-            <button onClick={onAbort} className={OVERLAY_BUTTON} aria-label={t('common:actions.abort')}>
+            <button data-tooltip="" onClick={onAbort} className={OVERLAY_BUTTON} aria-label={t('common:actions.abort')}>
               <Icon name="x" size={12} strokeWidth={2.25} />
             </button>
           )}

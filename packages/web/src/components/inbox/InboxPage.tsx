@@ -1,3 +1,4 @@
+import { uploadAddress } from '../../utils/assetUrls';
 import { KeywordMatches } from './KeywordMatches';
 import { SavedList } from './SavedList';
 import { useKeywordStore } from '../../stores/keywordStore';
@@ -31,7 +32,7 @@ type InboxTab = 'unread' | 'mentions' | 'saved' | 'keywords';
 const FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, replicatedInstances: [] } as unknown as User;
 
 export function iconSrc(icon: string): string {
-  return icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`;
+  return uploadAddress(icon);
 }
 
 function useSpaceOf(spaceId: string, origin: string): TaggedSpace | undefined {
@@ -65,7 +66,6 @@ function MarkReadButton({ label, onMark, className }: { label: string; onMark: (
   return (
     <button
       type="button"
-      title={label}
       aria-label={label}
       disabled={pending}
       onClick={(event) => {

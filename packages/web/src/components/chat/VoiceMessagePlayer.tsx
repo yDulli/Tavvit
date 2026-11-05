@@ -99,10 +99,10 @@ export function VoiceMessagePlayer({ url, bars, duration }: VoiceMessagePlayerPr
         }}
       />
       <button
+        data-tooltip=""
         type="button"
         onClick={toggle}
         aria-label={playing ? t('voiceMessage.pause') : t('voiceMessage.play')}
-        title={playing ? t('voiceMessage.pause') : t('voiceMessage.play')}
         className="btn-primary h-8 w-8 flex-shrink-0 p-0"
       >
         <Icon name={playing ? 'pause' : 'play'} size={15} />

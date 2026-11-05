@@ -167,7 +167,6 @@ export function RoleMembers({ space, role }: { space: TaggedSpace; role: Role })
                       className="icon-btn"
                       onClick={() => { void changeMemberRole(target(member), role.id, false); }}
                       aria-label={t('spaces:roleDisplay.removeMember', { name })}
-                      title={t('spaces:roleDisplay.removeMember', { name })}
                     >
                       <Icon name="x" size={14} />
                     </button>

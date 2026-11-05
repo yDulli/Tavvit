@@ -513,7 +513,7 @@ interface MobileScreenHeaderProps {
 }
 ```
 
-- `.panel-bar` at 48px (`h-12`): a `--border-hard` line under it, `bg-surface-base`
+- `.panel-bar` at 48px (`h-12`): a `--border-hard` line under it, `bg-surface-base`. A space's bar over its channel list lies over the space's banner when it has one (`.panel-bar-over`, design-system.md), with its buttons in the primary colour (`BAR_BUTTON_ON_PICTURE`)
 - Back button (`BAR_BUTTON`, 40px) calls `popMobileScreen()`
 - Title (`BAR_TITLE`): 15px semibold, as a dialog's; the chat, DM, You and call headers use the same
 

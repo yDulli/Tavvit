@@ -27,7 +27,6 @@ export function CommandReplies({ channelId }: { channelId: string }) {
               onClick={() => dismiss(reply.id)}
               className="icon-btn h-6 w-6 flex-shrink-0"
               aria-label={t('chat:commands.dismiss')}
-              title={t('chat:commands.dismiss')}
             >
               <Icon name="x" size={14} />
             </button>

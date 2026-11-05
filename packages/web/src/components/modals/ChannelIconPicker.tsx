@@ -66,13 +66,13 @@ export function ChannelIconPicker({ value, type, busy, onChange }: {
                   const name = t(`spaces:roleIcons.names.${id}`);
                   return (
                     <button
+                      data-tooltip=""
                       key={id}
                       type="button"
                       onClick={() => onChange(roleGlyphValue(id))}
                       disabled={busy}
                       aria-pressed={glyph === id}
                       aria-label={name}
-                      title={name}
                       className="role-glyph-option aria-pressed:bg-interactive-selected aria-pressed:text-txt-primary"
                     >
                       <RoleGlyph id={id} size={18} />

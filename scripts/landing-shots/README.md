@@ -30,7 +30,12 @@ PLAYWRIGHT_PREFIX=/tmp/landing-shots node scripts/landing-shots/shoot.mjs /tmp/l
 ```
 
 `CHROME_PATH` names the browser (it defaults to Chrome's place on Windows). A second
-argument to `shoot.mjs` retakes one picture by name.
+argument to `shoot.mjs` retakes one picture by name. Night Shift's banner is painted by
+`seed.mjs` itself and sent as the app sends one. When ports 3005 and 5173 are taken (a
+dev server in use), run the scratch pair on others and name them: `API_URL`
+(`http://localhost:3007/api`) for `seed.mjs`, `WS_URL` (`ws://localhost:3007/ws`) for
+`presence.mjs`, `WEB_URL` (`http://localhost:5174`) for `shoot.mjs`, with Vite's proxy
+pointed at that server.
 
 The voice room comes from `packages/web/dev-voice-room.html`: the real components
 with seeded stores, because a call would need a LiveKit server and other people.

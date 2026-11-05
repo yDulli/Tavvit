@@ -469,7 +469,6 @@ export function ScreenShareSetup() {
             onClick={handleClose}
             className="icon-btn icon-btn-lg"
             aria-label={t('common:actions.close')}
-            title={t('common:actions.close')}
           >
             <Icon name="x" size={18} />
           </button>
@@ -666,7 +665,6 @@ export function ScreenShareSetup() {
                 onClick={() => setSettingsOpen(false)}
                 className="icon-btn"
                 aria-label={t('common:actions.close')}
-                title={t('common:actions.close')}
               >
                 <Icon name="x" size={16} />
               </button>

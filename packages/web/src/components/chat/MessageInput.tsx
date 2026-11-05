@@ -1030,7 +1030,6 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="icon-btn h-10 w-10 desktop:h-8 desktop:w-8"
-                title={t('chat:composer.attachFile')}
                 aria-label={t('chat:composer.attachFile')}
               >
                 <Icon name="paperclip" size={18} />
@@ -1123,7 +1122,6 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
                 type="button"
                 onClick={() => useUIStore.getState().openModal('createPoll', { channelId })}
                 className="icon-btn h-10 w-10 desktop:h-8 desktop:w-8"
-                title={t('chat:poll.create.open')}
                 aria-label={t('chat:poll.create.open')}
               >
                 <Icon name="poll" size={20} />
@@ -1136,7 +1134,6 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
                 onClick={() => togglePopover('gif')}
                 data-active={activePopover === 'gif' ? 'true' : undefined}
                 className="icon-btn h-10 w-10 desktop:h-8 desktop:w-8"
-                title={t('chat:composer.gif')}
                 aria-label={t('chat:composer.gifPicker')}
               >
                 <Icon name="gif" size={20} />
@@ -1148,7 +1145,6 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
               onClick={() => togglePopover('emoji')}
               data-active={activePopover === 'emoji' ? 'true' : undefined}
               className="icon-btn h-10 w-10 desktop:h-8 desktop:w-8"
-              title={t('chat:composer.emoji')}
               aria-label={t('chat:composer.emojiPicker')}
             >
               <Icon name="smile" size={20} />
@@ -1171,7 +1167,6 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
                 }}
                 style={isMobile ? { touchAction: 'none' } : undefined}
                 className="icon-btn h-10 w-10 desktop:h-8 desktop:w-8"
-                title={isMobile ? t('chat:voiceMessage.holdToRecord') : t('chat:voiceMessage.record')}
                 aria-label={isMobile ? t('chat:voiceMessage.holdToRecord') : t('chat:voiceMessage.record')}
               >
                 <Icon name="mic" size={18} />
@@ -1181,11 +1176,11 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
             {/* Send button — appears when there's content/attachments to send */}
             {canSend && (
               <button
+                data-tooltip=""
                 onClick={() => void handleSubmit()}
                 disabled={anyUnshippable}
                 className="btn-primary h-10 w-10 p-0 desktop:h-8 desktop:w-8"
                 aria-label={t('chat:composer.sendMessage')}
-                title={t('chat:composer.send')}
               >
                 <Icon name="send" size={16} />
               </button>

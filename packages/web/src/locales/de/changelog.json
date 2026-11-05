@@ -4,6 +4,17 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.33.2": {
+      "title": "Eine neue Produktseite, Banner und Tooltips",
+      "items": {
+        "landing": "Die Produktseite ist neu. Sie liest sich wie ein Space: Ihre Kapitel stehen in einer eigenen Spalte und werden beim Lesen gelesen, Ctrl K springt zwischen ihnen, und wer auf das Fenster der App zeigt, sieht den benannten Teil aufleuchten.",
+        "banners": "Das Banner eines Space steht jetzt über seiner Kanalliste, am Desktop und auf dem Handy, und auf seiner Karte auf der Startseite.",
+        "home": "Deine Spaces stehen auf der Startseite ganz oben, als große Karten mit ihrem Banner, mit dem, was neu ist, und wer gerade spricht.",
+        "sidebar": "Entdecken und Info liegen in der Spalte der Startseite unter „Mehr“, und ein Space hat eine einzige Zeile „Erstellen“ für Kanäle und Kategorien.",
+        "tooltips": "Jeder Knopf, der nur ein Symbol zeigt, nennt seinen Namen, sobald der Mauszeiger darauf ruht oder die Tastatur ihn erreicht.",
+        "search": "Die Startseite hat kein zweites Suchfeld mehr: Das in der oberen Leiste öffnet dasselbe."
+      }
+    },
     "1.33.1": {
       "title": "Ein Konto löschen, das Spaces besitzt",
       "items": {

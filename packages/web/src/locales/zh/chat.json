@@ -13,7 +13,8 @@
       "discard": "舍弃"
     },
     "actions": {
-      "confirmDelete": "确认删除"
+      "confirmDelete": "确认删除",
+      "reactWith": "用 {{emoji}} 回应"
     },
     "reply": {
       "jump": "跳转到原消息"
@@ -81,11 +82,9 @@
     "uploadingLabel": "正在上传",
     "failedCount_other": "{{count}} 个失败",
     "failedHint": "移除或重试失败的附件后即可发送",
-    "gif": "GIF 动图",
     "gifPicker": "选择 GIF 动图",
     "emoji": "表情",
     "emojiPicker": "选择表情",
-    "send": "发送",
     "sendMessage": "发送消息",
     "uploadFailed": "上传 {{file}} 失败：{{reason}}",
     "uploadFailedReason": "上传失败",

@@ -209,6 +209,7 @@ export function CreateSpaceModal() {
               const entry = SPACE_GRADIENT_MAP[key];
               return (
                 <button
+                  data-tooltip=""
                   key={key}
                   type="button"
                   onClick={() => setAvatarColor(key)}
@@ -218,7 +219,7 @@ export function CreateSpaceModal() {
                     borderColor: avatarColor === key ? 'white' : 'transparent',
                     boxShadow: avatarColor === key ? `0 0 0 2px ${entry.glow}40` : 'none',
                   }}
-                  title={colorNames[key]}
+                  aria-label={colorNames[key]}
                 />
               );
             })}

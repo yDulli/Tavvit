@@ -129,7 +129,6 @@ export function UserControls() {
         type="button"
         onClick={() => openSettings()}
         className="icon-btn icon-btn-lg"
-        title={t('common:labels.settings')}
         aria-label={t('common:labels.settings')}
       >
         <Icon name="settings" size={18} />
@@ -173,21 +172,21 @@ function SwitchGroup({ icon, title, tone, onToggle, menuTitle, menuOpen, onMenu 
       tone === 'off' ? 'bg-accent-rose/[0.12]' : menuOpen ? 'bg-interactive-selected' : 'hover:bg-interactive-hover'
     }`}>
       <button
+        data-tooltip=""
         type="button"
         onClick={onToggle}
         aria-label={title}
         className={`flex w-8 items-center justify-center rounded-l-md transition-colors active:bg-interactive-active ${toneClass}`}
-        title={title}
       >
         <Icon name={icon} size={18} />
       </button>
       <button
+        data-tooltip=""
         type="button"
         onClick={onMenu}
         aria-expanded={menuOpen}
         aria-label={menuTitle}
         className={`flex w-5 items-center justify-center rounded-r-md transition-colors active:bg-interactive-active ${menuOpen ? 'text-txt-primary' : 'text-txt-tertiary hover:text-txt-primary'}`}
-        title={menuTitle}
       >
         <Icon name="chevron-down" size={12} strokeWidth={2.2} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
       </button>
@@ -203,6 +202,7 @@ function Identity({ onOpen }: { onOpen: (rect: DOMRect) => void }) {
   const name = user.displayName ?? user.username;
   return (
     <button
+      data-tooltip=""
       type="button"
       onClick={(e) => onOpen(e.currentTarget.getBoundingClientRect())}
       aria-label={name}

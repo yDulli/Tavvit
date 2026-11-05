@@ -105,7 +105,6 @@ export function UpdateToast() {
             onClick={handleLater}
             className="icon-btn -mt-1 -mr-1"
             aria-label={t('desktop:update.dismiss')}
-            title={t('desktop:update.dismiss')}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />

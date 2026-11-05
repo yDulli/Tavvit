@@ -79,11 +79,11 @@ export function StagedTransferTiles({ stagedTransfers, previewUrls, onRemove }: 
             {/* A picture or video can go out covered. */}
             {isFinal && (isImage || transfer.file.mimetype.startsWith('video/')) && (
               <button
+                data-tooltip=""
                 type="button"
                 onClick={() => setSpoiler(transfer.id, transfer.spoiler !== true)}
                 aria-pressed={transfer.spoiler === true}
                 aria-label={t('spoiler.mark')}
-                title={t('spoiler.mark')}
                 className={`glass absolute -top-2 right-5 z-10 flex h-6 w-6 items-center justify-center rounded-md transition-colors ${transfer.spoiler ? 'text-accent-soft' : 'text-txt-tertiary hover:text-txt-primary'}`}
               >
                 <Icon name="eye-off" size={14} />
@@ -93,6 +93,7 @@ export function StagedTransferTiles({ stagedTransfers, previewUrls, onRemove }: 
             {/* Remove chip, shown once the upload has completed. */}
             {isFinal && (
               <button
+                data-tooltip=""
                 onClick={() => onRemove(transfer.id)}
                 className="glass absolute -top-2 -right-2 z-10 flex h-6 w-6 items-center justify-center rounded-md text-txt-secondary transition-colors hover:border-accent-rose/60 hover:text-txt-danger active:bg-accent-rose/20"
                 aria-label={t('composer.removeAttachment')}

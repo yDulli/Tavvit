@@ -919,6 +919,8 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                 <button
                   key={emoji}
                   onClick={() => toggleReaction(emoji)}
+                  aria-label={t('chat:message.actions.reactWith', { emoji })}
+                  data-tooltip=""
                   className="h-7 w-7 rounded-md text-lead leading-none transition-colors duration-100 hover:bg-interactive-hover active:bg-interactive-active"
                 >
                   {emoji}
@@ -929,7 +931,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                 onClick={() => setReactionPicker((v) => (v ? null : 'button'))}
                 data-active={showReactionPicker ? 'true' : undefined}
                 className="icon-btn"
-                title={t('common:actions.addReaction')}
+                aria-label={t('common:actions.addReaction')}
               >
                 <Icon name="smile" size={16} />
               </button>
@@ -938,7 +940,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
           <button
             onClick={startReply}
             className="icon-btn"
-            title={t('common:actions.reply')}
+            aria-label={t('common:actions.reply')}
           >
             <Icon name="reply" size={16} />
           </button>
@@ -947,7 +949,6 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
               type="button"
               onClick={() => void openOrStartThread()}
               className="icon-btn"
-              title={!isPendingMessage(message) && message.thread ? t('chat:menu.openThread') : t('chat:menu.startThread')}
               aria-label={!isPendingMessage(message) && message.thread ? t('chat:menu.openThread') : t('chat:menu.startThread')}
             >
               <Icon name="thread" size={16} />
@@ -957,13 +958,14 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
             <button
               onClick={startEditing}
               className="icon-btn"
-              title={t('common:actions.edit')}
+              aria-label={t('common:actions.edit')}
             >
               <Icon name="edit" size={16} />
             </button>
           )}
           {canDelete && (
             <button
+              data-tooltip=""
               onClick={() => {
                 if (confirmingDelete) {
                   cancelDeleteConfirm();
@@ -977,7 +979,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                   ? 'bg-accent-rose/20 text-txt-danger'
                   : 'text-txt-tertiary hover:text-txt-danger hover:bg-interactive-hover active:bg-interactive-active'
               }`}
-              title={confirmingDelete ? t('chat:message.actions.confirmDelete') : t('common:actions.delete')}
+              aria-label={confirmingDelete ? t('chat:message.actions.confirmDelete') : t('common:actions.delete')}
             >
               <Icon
                 name="trash"

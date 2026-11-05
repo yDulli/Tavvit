@@ -2,6 +2,7 @@
   "nav": {
     "home": "Home",
     "about": "About",
+    "more": "More",
     "inbox": "Inbox",
     "requestsLabel_one": "{{count}} friend request waiting",
     "requestsLabel_other": "{{count}} friend requests waiting"
@@ -43,8 +44,12 @@
     "join": "Join with invite",
     "inVoice_one": "{{count}} friend in voice",
     "inVoice_other": "{{count}} friends in voice",
+    "peopleInVoice_one": "{{count}} person in voice",
+    "peopleInVoice_other": "{{count}} people in voice",
     "mentions_one": "{{count}} unread mention",
-    "mentions_other": "{{count}} unread mentions"
+    "mentions_other": "{{count}} unread mentions",
+    "showAll": "Show all",
+    "showFewer": "Show fewer"
   },
   "about": {
     "title": "About Tavvit",
@@ -132,9 +137,6 @@
     "viewAll": "View all",
     "nobodyTitle": "Nobody is online",
     "noFriendsTitle": "No friends yet"
-  },
-  "jump": {
-    "label": "Jump to a conversation…"
   },
   "onboarding": {
     "friends": {

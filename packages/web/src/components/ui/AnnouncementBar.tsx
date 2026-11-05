@@ -45,7 +45,6 @@ export function AnnouncementBar() {
             type="button"
             onClick={() => dismiss(entry.id)}
             aria-label={t('actions.dismiss')}
-            title={t('actions.dismiss')}
             className="icon-btn h-6 w-6 flex-shrink-0 text-current hover:text-current"
           >
             <Icon name="x" size={13} />

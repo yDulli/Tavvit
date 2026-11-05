@@ -98,7 +98,6 @@ export function ForumTagsTab({ channelId }: { channelId: string }) {
                 type="button"
                 onClick={() => setTags((current) => (current ?? []).filter((item) => item.key !== tag.key))}
                 className="icon-btn"
-                title={t('spaces:channel.settings.tags.remove')}
                 aria-label={t('spaces:channel.settings.tags.remove')}
               >
                 <Icon name="trash" size={14} />

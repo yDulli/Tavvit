@@ -353,7 +353,7 @@ export function ForumPostTagsButton({ thread }: { thread: ThreadInfo }) {
   const atLimit = selected.length >= FORUM_LIMITS.TAGS_PER_POST;
   return (
     <>
-      <button type="button" onClick={() => void start()} title={t('chat:forum.tags.edit')} aria-label={t('chat:forum.tags.edit')} className="icon-btn">
+      <button type="button" onClick={() => void start()} aria-label={t('chat:forum.tags.edit')} className="icon-btn">
         <Icon name="tag" size={15} />
       </button>
       {open && (

@@ -92,7 +92,6 @@ export function DayChart({ title, values, firstDay, kind }: {
           type="button"
           onClick={() => setAsTable((current) => !current)}
           aria-pressed={asTable}
-          title={asTable ? t('console.dashboard.showChart') : t('console.dashboard.showTable')}
           aria-label={asTable ? t('console.dashboard.showChart') : t('console.dashboard.showTable')}
           className="icon-btn"
           data-active={asTable}

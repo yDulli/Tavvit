@@ -1,16 +1,18 @@
 import { messagePath } from '../../utils/openThread';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import type { DmChannel, User } from '@backspace/shared';
-import { useAuthStore } from '../../stores/authStore';
+import { getMyUserIdForOrigin, useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
 import { isIncomingRequest, useSocialStore, type TaggedFriend } from '../../stores/socialStore';
 import { useSpaceStore, type TaggedSpace } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { selectRecentPlaces, useRecentPlacesStore, type RecentPlace } from '../../stores/recentPlacesStore';
-import { useQuickSwitcherStore } from '../../stores/quickSwitcherStore';
+import { useInstanceStore } from '../../stores/instanceStore';
+import { useUnreadCountStore } from '../../stores/unreadCountStore';
+import { useCanOpenSpace } from '../../hooks/useCanOpenSpace';
 import { useFriendBuckets } from '../../hooks/useFriendBuckets';
 import { useHomeInstanceInfo } from '../../hooks/useHomeInstanceInfo';
 import { WhatsNewNote } from './WhatsNewNote';
@@ -25,15 +27,14 @@ import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { openDirectMessage } from '../../utils/openDirectMessage';
 import { markConversationRead } from '../../utils/markConversationRead';
 import { getSpaceGradient } from '../../utils/gradients';
-import { lightFromColor } from '../../utils/placeLight';
-import { switcherShortcut } from '../../utils/quickSwitcher';
+import { bannerFill, lightFromColor } from '../../utils/placeLight';
 import { resolveSpaceLayout, spacesInLayoutOrder } from '../../utils/spaceLayout';
 import { FRIENDS_ADD_PATH, FRIENDS_PENDING_PATH, HOME_ROUTES } from '../../utils/homeNav';
 import { Avatar } from '../ui/Avatar';
 import { AvatarStack } from '../ui/AvatarStack';
 import { ChannelIcon } from '../ui/ChannelIcon';
 import { Icon, type IconName } from '../ui/Icon';
-import { useSpaceUnreadCount } from '../layout/SpaceUnreadBadge';
+import { SpaceBand } from '../ui/SpaceBand';
 import { useUserContextMenu } from '../layout/userMenu/useUserContextMenu';
 import { useConversationContextMenu } from '../layout/conversationMenu/useConversationContextMenu';
 import { useSpaceContextMenu } from '../layout/spaceMenu/useSpaceContextMenu';
@@ -50,6 +51,8 @@ const RECENT_LIMIT = 8;
 const ONLINE_LIMIT = 8;
 /** Below this many spaces, the space grid offers to create or join one. */
 const SUGGEST_SPACE_BELOW = 3;
+/** How many space cards Home shows before "Show all": two rows on a wide window, three on a narrower one. */
+const SPACE_CARD_LIMIT = 6;
 
 const FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, replicatedInstances: [] } as unknown as User;
 
@@ -185,7 +188,6 @@ function OnlineFriendRow({ row, onOpen, onMessage, onContextMenu }: {
       <button
         type="button"
         onClick={() => onMessage(row)}
-        title={t('online.message', { name })}
         aria-label={t('online.message', { name })}
         className="icon-btn mr-1.5 flex-shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
       >
@@ -226,73 +228,115 @@ function VoiceGroupRow({ group, onJoin, onContextMenu }: {
 }
 
 /**
- * A space as a tile: its icon and name, what is new in it (mentions in the
- * accent, other unread messages quieter) and, when friends are talking in one
- * of its voice channels, how many. A remote space says which instance it is on.
+ * A space as a card, as Explore shows one: its banner across the top (or a band painted in its
+ * colour when it has none that may be shown), its icon over the band's edge, its name, and what is
+ * going on in it: mentions in the accent, other unread messages quieter, who is talking in its voice
+ * channels (friends first), else what it is about. A space on another instance names that instance,
+ * and says so while the connection to it is out.
  */
-function SpaceTile({ space, mentions, unread, inVoice, onOpen, onContextMenu }: {
+function HomeSpaceCard({ space, mentions, unreadTotal, unread, friendsInVoice, peopleInVoice, reconnecting, onOpen, onContextMenu }: {
   space: TaggedSpace;
   mentions: number;
+  /** The unread messages its instance counted; 0 when that instance sends no counts. */
+  unreadTotal: number;
   /** Some text channel of it has unread messages, counted or not. */
   unread: boolean;
-  inVoice: number;
+  friendsInVoice: number;
+  /** Everyone in its voice channels except the viewer. */
+  peopleInVoice: number;
+  /** The name of its instance while the connection to it is out; null otherwise. */
+  reconnecting: string | null;
   onOpen: () => void;
   onContextMenu: (event: React.MouseEvent) => void;
 }) {
-  const { t } = useTranslation('home');
-  const { total } = useSpaceUnreadCount(space.id);
+  const { t } = useTranslation(['home', 'spaces']);
   const remoteHost = useMemo(() => {
     if (!space._instanceOrigin) return null;
     try { return new URL(space._instanceOrigin).host; } catch { return space._instanceOrigin; }
   }, [space._instanceOrigin]);
-  const tile = lightFromColor(getSpaceGradient(space.id, space.name, space.avatarColor).from);
+  const tone = getSpaceGradient(space.id, space.name, space.avatarColor).from;
   return (
     <li className="min-w-0">
       <button
         type="button"
         onClick={onOpen}
         onContextMenu={onContextMenu}
-        style={{ '--tile': tile } as React.CSSProperties}
-        className="surface-card tinted-card lift spotlight flex h-full w-full items-center gap-3 rounded-lg px-3 py-3 text-left hover:bg-interactive-hover active:bg-interactive-active"
+        style={{ '--tile': lightFromColor(tone) } as React.CSSProperties}
+        className="surface-card tinted-card lift spotlight flex h-full w-full flex-col overflow-hidden rounded-lg text-left hover:bg-interactive-hover active:bg-interactive-active"
       >
-        <Avatar src={space.icon ? iconSrc(space.icon) : null} name={space.name} size={36} palette="space" userId={space.id} avatarColor={space.avatarColor} />
-        <span className="min-w-0 flex-1">
-          <span className={`block truncate text-ui ${unread || mentions > 0 ? 'font-semibold text-txt-primary' : 'font-medium text-txt-primary'}`}>{space.name}</span>
-          {inVoice > 0 ? (
-            <span className="mt-0.5 flex min-w-0 items-center gap-1 text-meta text-txt-secondary">
-              <Icon name="volume" size={13} className="flex-shrink-0 text-status-online" />
-              <span className="truncate">{t('spaces.inVoice', { count: inVoice })}</span>
-            </span>
-          ) : remoteHost ? (
-            <span className="mt-0.5 block truncate font-mono text-label text-txt-tertiary">{remoteHost}</span>
-          ) : null}
+        <SpaceBand banner={space.banner} fill={bannerFill(tone)} faded={reconnecting !== null} className="h-24 w-full flex-shrink-0" />
+        <span aria-hidden="true" className="relative z-[2] -mt-6 block px-3.5">
+          <Avatar
+            src={space.icon ? iconSrc(space.icon) : null}
+            name={space.name}
+            size={48}
+            palette="space"
+            userId={space.id}
+            avatarColor={space.avatarColor}
+            ring={{ width: 3, color: 'rgb(var(--bg-chat))' }}
+          />
         </span>
-        {mentions > 0 ? (
-          <UnreadBadge count={mentions} label={t('spaces.mentions', { count: mentions })} />
-        ) : total > 0 ? (
-          <UnreadBadge count={total} tone="muted" />
-        ) : unread ? (
-          <UnreadBadge count={null} tone="muted" />
-        ) : null}
+        <span className="flex min-w-0 flex-1 flex-col gap-1 px-3.5 pb-3.5 pt-2">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className={`min-w-0 flex-1 truncate text-lead text-txt-primary ${unread || mentions > 0 ? 'font-semibold' : 'font-medium'}`}>{space.name}</span>
+            {mentions > 0 ? (
+              <UnreadBadge count={mentions} label={t('home:spaces.mentions', { count: mentions })} />
+            ) : unreadTotal > 0 ? (
+              <UnreadBadge
+                count={unreadTotal}
+                tone="muted"
+                label={unreadTotal > 99 ? t('spaces:sidebar.space.unreadMessagesOver99') : t('spaces:sidebar.space.unreadMessages', { count: unreadTotal })}
+              />
+            ) : unread ? (
+              <UnreadBadge count={null} tone="muted" />
+            ) : null}
+          </span>
+          {friendsInVoice > 0 ? (
+            <span className="flex min-w-0 items-center gap-1.5 text-meta text-txt-secondary">
+              <Icon name="volume" size={13} className="flex-shrink-0 text-status-online" />
+              <span className="truncate">{t('home:spaces.inVoice', { count: friendsInVoice })}</span>
+            </span>
+          ) : peopleInVoice > 0 ? (
+            <span className="flex min-w-0 items-center gap-1.5 text-meta text-txt-secondary">
+              <Icon name="volume" size={13} className="flex-shrink-0 text-txt-tertiary" />
+              <span className="truncate">{t('home:spaces.peopleInVoice', { count: peopleInVoice })}</span>
+            </span>
+          ) : space.description ? (
+            <span className="line-clamp-2 text-meta text-txt-tertiary">{space.description}</span>
+          ) : null}
+          {remoteHost && (
+            <span className="mt-auto flex min-w-0 items-center gap-1.5 pt-1 text-label text-txt-tertiary">
+              {reconnecting ? (
+                <>
+                  <span aria-hidden="true" className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-amber" />
+                  <span className="truncate">{t('spaces:sidebar.space.reconnecting', { instance: reconnecting })}</span>
+                </>
+              ) : (
+                <>
+                  <Icon name="globe" size={12} className="flex-shrink-0" />
+                  <span className="truncate font-mono">{remoteHost}</span>
+                </>
+              )}
+            </span>
+          )}
+        </span>
       </button>
     </li>
   );
 }
 
-/** The quiet tile beside a short list of spaces (or in place of none): make one, or join one. */
+/** The quiet card beside a short list of spaces (or in place of none): make one, or join one. */
 function SpaceSuggestTile({ alone, onCreate, onJoin }: { alone: boolean; onCreate: () => void; onJoin: () => void }) {
   const { t } = useTranslation('home');
   return (
-    <li className={`flex min-w-0 items-center gap-3 rounded-lg border border-border-hard px-3 py-2.5 ${alone ? 'col-span-full' : ''}`}>
-      <span aria-hidden="true" className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-border-hard text-txt-tertiary">
-        <Icon name="plus" size={16} />
+    <li className={`flex min-w-0 flex-col items-start justify-center gap-3 rounded-lg border border-border-hard p-4 ${alone ? 'col-span-full' : ''}`}>
+      <span aria-hidden="true" className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-border-hard text-txt-tertiary">
+        <Icon name="plus" size={18} />
       </span>
-      <span className="min-w-0 flex-1">
-        {alone && <span className="mb-1 block text-ui text-txt-secondary">{t('spaces.empty')}</span>}
-        <span className="-ml-2.5 flex flex-wrap items-center">
-          <button type="button" onClick={onCreate} className="btn-quiet btn-sm">{t('spaces.create')}</button>
-          <button type="button" onClick={onJoin} className="btn-quiet btn-sm">{t('spaces.join')}</button>
-        </span>
+      {alone && <span className="block text-ui text-txt-secondary">{t('spaces.empty')}</span>}
+      <span className="-ml-2.5 flex flex-wrap items-center">
+        <button type="button" onClick={onCreate} className="btn-quiet btn-sm">{t('spaces.create')}</button>
+        <button type="button" onClick={onJoin} className="btn-quiet btn-sm">{t('spaces.join')}</button>
       </span>
     </li>
   );
@@ -364,14 +408,13 @@ function useVisibleRecentPlaces(recent: readonly RecentPlace[], dmChannels: read
  * conversations run in two columns; in a compact one everything is one column.
  */
 export function HomePage({ now }: { now?: Date }) {
-  const { t } = useTranslation(['home', 'common']);
+  const { t } = useTranslation(['home', 'common', 'spaces']);
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const info = useHomeInstanceInfo();
   const openModal = useUIStore((s) => s.openModal);
   const addToast = useUIStore((s) => s.addToast);
   const openUserProfile = useUIStore((s) => s.openUserProfile);
-  const openSwitcher = useQuickSwitcherStore((s) => s.setOpen);
   const loadFriends = useSocialStore((s) => s.loadFriends);
   const loadRequests = useSocialStore((s) => s.loadRequests);
   const requests = useSocialStore((s) => s.requests);
@@ -382,6 +425,12 @@ export function HomePage({ now }: { now?: Date }) {
   const dmChannels = useSpaceStore((s) => s.dmChannels);
   const channelIndex = useSpaceStore((s) => s.spaceChannelIndex);
   const unreadChannels = useChatStore((s) => s.unreadChannels);
+  const unreadCounts = useUnreadCountStore((s) => s.counts);
+  const voiceUsers = useVoiceStore((s) => s.voiceUsers);
+  const instances = useInstanceStore((s) => s.instances);
+  const canOpenSpace = useCanOpenSpace();
+  const spacesListId = useId();
+  const [showAllSpaces, setShowAllSpaces] = useState(false);
   const recent = useRecentPlacesStore((s) => selectRecentPlaces(s, user?.id));
   const buckets = useFriendBuckets();
   const { conversations, mentions, unreadMentionCount } = useInbox();
@@ -447,6 +496,45 @@ export function HomePage({ now }: { now?: Date }) {
     }
     return counts;
   }, [groups]);
+  // The unread messages of each space, from the counts its own instance sent, so two spaces with one
+  // id on two instances never share a number.
+  const unreadTotalBySpace = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const channelId of unreadChannels) {
+      const entry = channelIndex.get(channelId);
+      if (!entry || entry.type === 'voice') continue;
+      const count = unreadCounts[entry.origin]?.[channelId] ?? 0;
+      if (count <= 0) continue;
+      const key = spaceKey(entry.origin, entry.spaceId);
+      totals.set(key, (totals.get(key) ?? 0) + count);
+    }
+    return totals;
+  }, [unreadChannels, channelIndex, unreadCounts]);
+  // Everyone in each space's voice channels but the viewer, as the instance of the space knows them.
+  const peopleInVoiceBySpace = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const [channelId, userIds] of voiceUsers) {
+      const entry = channelIndex.get(channelId);
+      if (!entry || entry.type !== 'voice') continue;
+      const self = getMyUserIdForOrigin(entry.origin);
+      const others = userIds.filter((userId) => userId !== self).length;
+      if (others === 0) continue;
+      const key = spaceKey(entry.origin, entry.spaceId);
+      counts.set(key, (counts.get(key) ?? 0) + others);
+    }
+    return counts;
+  }, [voiceUsers, channelIndex]);
+  // The instances the connection to is out, each by the name the person knows it by.
+  const reconnectingByOrigin = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const instance of instances) {
+      if (instance.status === 'disconnected' || instance.status === 'error') {
+        names.set(instance.origin, instance.label || t('spaces:sidebar.space.remoteInstance'));
+      }
+    }
+    return names;
+  }, [instances, t]);
+  const shownSpaces = showAllSpaces ? orderedSpaces : orderedSpaces.slice(0, SPACE_CARD_LIMIT);
 
   const name = user?.displayName || user?.username || '';
   const instance = info?.name ?? window.location.host;
@@ -500,27 +588,64 @@ export function HomePage({ now }: { now?: Date }) {
               </p>
               <WhatsNewNote />
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-2">
-              {!nothingYet && (
-                <>
-                  <QuickAction main icon="message" label={t('home:actions.newMessage')} onClick={() => openModal('newDm')} />
-                  <QuickAction icon="user-plus" label={t('home:actions.addFriend')} onClick={addFriend} />
-                  <QuickAction icon="plus" label={t('home:actions.createSpace')} onClick={createSpace} />
-                  <QuickAction icon="login" label={t('home:actions.joinSpace')} onClick={joinSpace} />
-                </>
-              )}
-              <button type="button" onClick={() => openSwitcher(true)} className="jump-field w-full desktop:ml-auto desktop:w-[320px] compact:ml-0 compact:w-full">
-                <Icon name="search" size={15} className="flex-shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{t('home:jump.label')}</span>
-                <kbd className="kbd">{switcherShortcut()}</kbd>
-              </button>
-            </div>
+            {/* The search is the top bar's, on every page: Home has no second one. */}
+            {!nothingYet && (
+              <div className="mt-6 flex flex-wrap items-center gap-2">
+                <QuickAction main icon="message" label={t('home:actions.newMessage')} onClick={() => openModal('newDm')} />
+                <QuickAction icon="user-plus" label={t('home:actions.addFriend')} onClick={addFriend} />
+                <QuickAction icon="plus" label={t('home:actions.createSpace')} onClick={createSpace} />
+                <QuickAction icon="login" label={t('home:actions.joinSpace')} onClick={joinSpace} />
+              </div>
+            )}
           </header>
 
           {nothingYet ? (
             <FirstSteps onAddFriend={addFriend} onCreateSpace={createSpace} onJoinSpace={joinSpace} />
           ) : (
             <>
+              {/* The spaces come first and across the whole width: they are the places people come back to. */}
+              <div className="rise-in mt-8">
+                <Section
+                  label={t('home:spaces.title')}
+                  count={orderedSpaces.length}
+                  action={orderedSpaces.length > SPACE_CARD_LIMIT && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllSpaces((all) => !all)}
+                      aria-expanded={showAllSpaces}
+                      aria-controls={spacesListId}
+                      className="btn-quiet btn-sm"
+                    >
+                      {showAllSpaces ? t('home:spaces.showFewer') : t('home:spaces.showAll')}
+                    </button>
+                  )}
+                >
+                  <ul id={spacesListId} className="card-grid px-2.5">
+                    {shownSpaces.map((space) => {
+                      const origin = space._instanceOrigin ?? '';
+                      const key = spaceKey(origin, space.id);
+                      return (
+                        <HomeSpaceCard
+                          key={key}
+                          space={space}
+                          mentions={mentionsBySpace.get(key) ?? 0}
+                          unreadTotal={unreadTotalBySpace.get(key) ?? 0}
+                          unread={unreadSpaces.has(key)}
+                          friendsInVoice={voiceBySpace.get(key) ?? 0}
+                          peopleInVoice={peopleInVoiceBySpace.get(key) ?? 0}
+                          reconnecting={origin ? reconnectingByOrigin.get(origin) ?? null : null}
+                          onOpen={() => { if (canOpenSpace(space)) navigate(`/channels/${space.id}`); }}
+                          onContextMenu={(event) => spaceMenu.open(space.id, event)}
+                        />
+                      );
+                    })}
+                    {orderedSpaces.length < SUGGEST_SPACE_BELOW && (
+                      <SpaceSuggestTile alone={orderedSpaces.length === 0} onCreate={createSpace} onJoin={joinSpace} />
+                    )}
+                  </ul>
+                </Section>
+              </div>
+
               <div className="stagger mt-10 grid grid-cols-1 gap-x-8 gap-y-8 desktop:grid-cols-[minmax(0,1fr)_320px] compact:grid-cols-1">
                 <div className="min-w-0 space-y-8">
                   <Section
@@ -570,27 +695,6 @@ export function HomePage({ now }: { now?: Date }) {
                     )}
                   </Section>
 
-                  <Section label={t('home:spaces.title')} count={orderedSpaces.length}>
-                    <ul className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2 px-2.5">
-                      {orderedSpaces.map((space) => {
-                        const key = spaceKey(space._instanceOrigin ?? '', space.id);
-                        return (
-                          <SpaceTile
-                            key={key}
-                            space={space}
-                            mentions={mentionsBySpace.get(key) ?? 0}
-                            unread={unreadSpaces.has(key)}
-                            inVoice={voiceBySpace.get(key) ?? 0}
-                            onOpen={() => navigate(`/channels/${space.id}`)}
-                            onContextMenu={(event) => spaceMenu.open(space.id, event)}
-                          />
-                        );
-                      })}
-                      {orderedSpaces.length < SUGGEST_SPACE_BELOW && (
-                        <SpaceSuggestTile alone={orderedSpaces.length === 0} onCreate={createSpace} onJoin={joinSpace} />
-                      )}
-                    </ul>
-                  </Section>
                 </div>
 
                 <aside className="min-w-0 space-y-8 desktop:border-l desktop:border-border-hard desktop:pl-6 compact:border-l-0 compact:pl-0">

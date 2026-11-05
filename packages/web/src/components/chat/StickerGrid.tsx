@@ -67,6 +67,7 @@ export function StickerGrid({ items, noMatches, managing, removing, onSelect, on
             {managing && (
               <>
                 <button
+                  data-tooltip=""
                   type="button"
                   data-sticker-rename={item.id}
                   disabled={!!removing}
@@ -77,6 +78,7 @@ export function StickerGrid({ items, noMatches, managing, removing, onSelect, on
                   <PencilIcon />
                 </button>
                 <button
+                  data-tooltip=""
                   type="button"
                   disabled={!!removing}
                   aria-label={t('stickers.removeNamed', { name: item.name })}

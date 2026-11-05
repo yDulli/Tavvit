@@ -58,7 +58,6 @@ export function TransferIndicator() {
         onClick={() => setOpen((v) => !v)}
         data-active={open ? 'true' : undefined}
         className="icon-btn icon-btn-lg relative"
-        title={t('uploads:transfers.title')}
         aria-label={t('uploads:transfers.title')}
       >
         <Icon name="download" size={18} />

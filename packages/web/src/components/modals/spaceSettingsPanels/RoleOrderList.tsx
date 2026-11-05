@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useId, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Role } from '@backspace/shared';
 import { canManageRoleAt } from '@backspace/shared/src/permissions';
@@ -40,6 +40,8 @@ const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visibl
 
 export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
   const { t } = useTranslation('spaces');
+  // How a handle moves a role, once for the list: read after a handle's name, and its tooltip's second line.
+  const handleHintId = useId();
   const roles = useSpaceStore((s) => s.roles);
   const members = useSpaceStore((s) => s.members);
   const space = useSpaceStore((s) => s.spaces.find((sp) => sp.id === spaceId));
@@ -221,6 +223,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
           <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
             {movable && index !== null && (
               <button
+                data-tooltip=""
                 ref={registerControl(role.id, 'handle')}
                 type="button"
                 // Chrome starts no drag of the row from inside a button, so
@@ -228,7 +231,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
                 // themselves; their dragstart reaches the row's handler.
                 draggable
                 aria-label={t('roles.reorder.handle', { name: role.name })}
-                title={t('roles.reorder.handleHint')}
+                aria-describedby={handleHintId}
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={handleKeyDown(index)}
                 className={`w-6 h-6 flex items-center justify-center rounded text-txt-tertiary hover:text-txt-secondary cursor-grab active:cursor-grabbing transition-colors ${FOCUS_RING}`}
@@ -268,6 +271,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
             {movable && index !== null ? (
               <>
                 <button
+                  data-tooltip=""
                   ref={registerControl(role.id, 'up')}
                   type="button"
                   aria-label={t('roles.reorder.up', { name: role.name })}
@@ -280,6 +284,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
                   </svg>
                 </button>
                 <button
+                  data-tooltip=""
                   ref={registerControl(role.id, 'down')}
                   type="button"
                   aria-label={t('roles.reorder.down', { name: role.name })}
@@ -318,6 +323,7 @@ export function RoleOrderList({ spaceId, onOpen }: RoleOrderListProps) {
 
   return (
     <>
+      <span id={handleHintId} className="sr-only">{t('roles.reorder.handleHint')}</span>
       <div className="space-y-0.5" onDragEnd={endDrag}>
         {ranked.map((role, index) => (
           <React.Fragment key={role.id}>

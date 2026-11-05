@@ -397,6 +397,7 @@ export function GroupDmSettings() {
           {/* Clear (X) button — owner-only, only when we have a non-empty icon to clear */}
           {isOwner && previewIconUrl && (
             <button
+              data-tooltip=""
               type="button"
               onClick={handleClearIcon}
               data-group-dm-icon-clear

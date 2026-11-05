@@ -32,7 +32,6 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { HomePage } from './HomePage';
 import { useRecentPlacesStore } from '../../stores/recentPlacesStore';
 import { useInboxStore } from '../../stores/inboxStore';
-import { useQuickSwitcherStore } from '../../stores/quickSwitcherStore';
 
 function user(id: string, name: string): User {
   return {
@@ -97,7 +96,6 @@ beforeEach(() => {
   useUIStore.setState({ activeModal: null });
   useRecentPlacesStore.setState({ byUser: {} });
   useInboxStore.getState().reset();
-  useQuickSwitcherStore.setState({ open: false });
 });
 
 afterEach(cleanup);
@@ -125,10 +123,12 @@ describe('HomePage header', () => {
     expect(screen.getByText('Friend Club · No friends online right now')).toBeInTheDocument();
   });
 
-  it('opens the quick switcher from the jump field', () => {
+  // The search is the top bar's: Home keeps no second one beside it.
+  it('has no search field of its own', () => {
+    useSocialStore.setState({ friends: [friend('a', 'Amy')] });
     renderHome();
-    fireEvent.click(screen.getByRole('button', { name: /Jump to a conversation/ }));
-    expect(useQuickSwitcherStore.getState().open).toBe(true);
+    expect(screen.getByRole('button', { name: /New message/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /jump to a conversation|search/i })).toBeNull();
   });
 
   it('offers the quick actions once there is something to show', () => {

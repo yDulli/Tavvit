@@ -418,7 +418,6 @@ export function UsersPanel() {
                         type="button"
                         onClick={() => handleToggleAdmin(user)}
                         disabled={isFederated && !user.isAdmin}
-                        title={adminButtonTitle(user, isFederated)}
                         aria-label={adminButtonTitle(user, isFederated)}
                         className={`icon-btn ${user.isAdmin ? 'text-accent-amber enabled:hover:bg-accent-amber/10 enabled:hover:text-accent-amber' : ''}`}
                       >
@@ -432,7 +431,6 @@ export function UsersPanel() {
                         type="button"
                         onClick={() => handleResetPassword(user)}
                         disabled={isFederated}
-                        title={isFederated ? t('admin:users.actions.federatedNoReset') : t('admin:users.actions.resetPassword')}
                         aria-label={isFederated ? t('admin:users.actions.federatedNoReset') : t('admin:users.actions.resetPassword')}
                         className="icon-btn"
                       >
@@ -446,7 +444,6 @@ export function UsersPanel() {
                         type="button"
                         onClick={() => handleDeleteUser(user)}
                         disabled={isSelf}
-                        title={isSelf ? t('admin:users.actions.selfDelete') : t('admin:users.actions.delete')}
                         aria-label={isSelf ? t('admin:users.actions.selfDelete') : t('admin:users.actions.delete')}
                         className="icon-btn enabled:hover:bg-accent-rose/10 enabled:hover:text-txt-danger"
                       >

@@ -2,6 +2,7 @@
   "nav": {
     "home": "主页",
     "about": "关于",
+    "more": "更多",
     "inbox": "收件箱",
     "requestsLabel_other": "{{count}} 个好友请求待处理"
   },
@@ -41,7 +42,10 @@
     "create": "创建空间",
     "join": "通过邀请加入",
     "inVoice_other": "{{count}} 位好友在语音中",
-    "mentions_other": "{{count}} 条未读提及"
+    "peopleInVoice_other": "{{count}} 人在语音中",
+    "mentions_other": "{{count}} 条未读提及",
+    "showAll": "显示全部",
+    "showFewer": "收起"
   },
   "about": {
     "title": "关于 Tavvit",
@@ -124,9 +128,6 @@
     "viewAll": "查看全部",
     "nobodyTitle": "没有人在线",
     "noFriendsTitle": "还没有好友"
-  },
-  "jump": {
-    "label": "跳转到对话…"
   },
   "onboarding": {
     "friends": {

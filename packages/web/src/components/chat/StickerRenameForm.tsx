@@ -64,7 +64,7 @@ export function StickerRenameForm({ sticker, onRenamed, onCancel }: StickerRenam
     <form onSubmit={event => void submit(event)} aria-labelledby={headingId} className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between border-b border-border-hard py-2 pl-4 pr-2">
         <h3 id={headingId} className="text-ui font-semibold">{t('chat:stickers.renameTitle')}</h3>
-        <button type="button" disabled={saving} onClick={onCancel} className="sticker-icon-button" aria-label={t('chat:stickers.cancel')}>
+        <button data-tooltip="" type="button" disabled={saving} onClick={onCancel} className="sticker-icon-button" aria-label={t('chat:stickers.cancel')}>
           <Icon name="x" size={16} />
         </button>
       </div>

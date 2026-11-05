@@ -491,7 +491,7 @@ describe('FriendsPage', () => {
       await user.click(screen.getByText('All'));
 
       // Find the Message button by title
-      const dmButton = screen.getByTitle('Message');
+      const dmButton = screen.getByRole('button', { name: 'Message' });
       await user.click(dmButton);
 
       await waitFor(() => {
@@ -524,7 +524,7 @@ describe('FriendsPage', () => {
 
       renderFriendsPage();
       await user.click(screen.getByText('All'));
-      await user.click(screen.getByTitle('Message'));
+      await user.click(screen.getByRole('button', { name: 'Message' }));
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/channels/@me/dm-home-copy');
@@ -554,7 +554,7 @@ describe('FriendsPage', () => {
 
       renderFriendsPage();
       await user.click(screen.getByText('All'));
-      await user.click(screen.getByTitle('Message'));
+      await user.click(screen.getByRole('button', { name: 'Message' }));
 
       await waitFor(() => expect(addToast).toHaveBeenCalledWith('Could not open the conversation: No user with that name was found.', 'warning'));
       expect(mockNavigate).not.toHaveBeenCalled();
