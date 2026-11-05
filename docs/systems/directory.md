@@ -34,7 +34,6 @@ Source files:
 - `packages/web/src/components/modals/ConnectAndJoinModal.tsx`, `RemotePasswordStep.tsx` - the connect-from-card dialog and the password step it shares with the Connections panel
 - `packages/web/src/components/modals/instanceSettingsPanels/GeneralPanel.tsx` - the admin space-discovery ladder and the directory status line
 - `packages/web/src/components/modals/SpaceSettings.tsx` - the per-space switch in `DiscoveryPanel`, and the admin's way out of its opt-in reason
-- Design spec: `docs/superpowers/specs/2026-09-21-space-directory-design.md`
 
 ---
 

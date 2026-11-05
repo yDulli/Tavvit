@@ -62,6 +62,7 @@ The license of every change is the same as the code it changes: AGPL-3.0-only. S
 | `deploy.sh` | Upstream maintainer's rsync script for his own machines. Replaced by `scripts/package-release.mjs` and `update.sh --from`. |
 | The DM Sans font files | Tavvit uses Inter only. |
 | Support-card switch in Instance settings | The card is gone. |
+| Upstream's instructions for coding agents and its planning notes (`docs/superpowers/`) | Working files of upstream's own development, not documentation of this server. `docs/systems/` stays the reference. |
 
 (Tests of removed features were removed with them.)
 
@@ -153,6 +154,6 @@ Game detection (1.27.0): the desktop app asks Steam which game runs and reads wh
 - Internal identifiers: `@backspace/*` packages, the `backspace` Docker service and
   container, `backspace.db`, `window.backspace`, a few `backspace-*` storage keys.
 - Upstream's CI configuration in `.github/`.
-- Upstream's developer documentation in `docs/systems/` and `CLAUDE.md`, which
-  describes the code accurately but keeps the Backspace name in places.
+- Upstream's developer documentation in `docs/systems/`, which describes the code
+  accurately but keeps the Backspace name in places.
 - The database's existing tables, apart from what migrations `0032` and later add to them.

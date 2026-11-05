@@ -5,8 +5,7 @@
 // surface (every `from '.../routes/federation.js'` import resolves unchanged) and
 // composes the HTTP route registrars into `federationRoutes()`.
 //
-// See docs/systems/federation.md and
-// docs/superpowers/specs/2026-07-10-federation-ts-split-design.md.
+// See docs/systems/federation.md.
 
 import type { FastifyInstance } from 'fastify';
 import { registerPeerHandshakeRoutes } from './federation/handlers/peerHandshake.js';

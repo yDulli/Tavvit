@@ -6,8 +6,7 @@
  * so the JSON that is hashed has a fixed key order and a fixed `spaces` order
  * whatever order the instance, `JSON.parse` or `parseDocument` produced.
  *
- * See section 7 of docs/superpowers/specs/2026-09-21-space-directory-design.md,
- * ping step 7.
+ * See the hub in docs/systems/directory.md.
  */
 
 import type { ValidDocument, ValidSpace } from './validate';

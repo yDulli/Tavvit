@@ -14,8 +14,7 @@ import {
 import type { FeedRow } from './store';
 
 /**
- * The directory hub. Two routes and a cron, in the order of section 7 of
- * docs/superpowers/specs/2026-09-21-space-directory-design.md:
+ * The directory hub (docs/systems/directory.md). Two routes and a cron:
  *
  * - `POST /v1/ping` takes an origin, fetches that origin's own directory
  *   document, validates it and stores it as a diff. The hub never lists

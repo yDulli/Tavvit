@@ -249,7 +249,7 @@ export function InviteModal() {
     }
   }, [isOpen]);
 
-  // Federated-identity match per CLAUDE.md rule. The currently-loaded space's
+  // Federated-identity match (docs/systems/client-federation.md). The currently-loaded space's
   // member list lives on the store as `members: MemberWithUser[]`. Read the
   // federated identity tuple (user.homeUserId / user.homeInstance) on each side,
   // falling back to the local id for non-federated users.

@@ -2,9 +2,8 @@
  * Pure parsing and validation for the two things the hub reads from the
  * network: the origin in an incoming ping and the document fetched from that
  * origin. No Workers binding, no IO, no global state, so the routes can call
- * these and the tests can exercise them without a request. See section 7 of
- * docs/superpowers/specs/2026-09-21-space-directory-design.md, ping steps 3
- * and 6.
+ * these and the tests can exercise them without a request. See
+ * docs/systems/directory.md.
  */
 
 /** A ping body is read in full and rejected past this size, whatever Content-Length claimed. */

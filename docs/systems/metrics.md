@@ -152,7 +152,7 @@ All files live at the root of the `metrics-data` branch. CSVs are sorted ascendi
 
 **`releases.csv` is keyed on `tag`, not `date`.** It is the one CSV where more than one row can legitimately share a date, so its merge uses `upsertByKey` with a `tag` ascending tie-break (`compareReleaseRows`) rather than `upsertByDate`. See §4.2.
 
-**`telemetry/network.csv` comes from a second service, and every column in it is a gauge.** The rows are not fetched from GitHub at all: they are aggregated from the opt-in instance pings the receiver at `hello.backspacechat.com` collects, read back through its `export` route (`telemetry.ts`, and the design spec at `docs/superpowers/specs/2026-09-06-instance-telemetry-design.md` §8 for the payload). The rules that decide what a row means:
+**`telemetry/network.csv` comes from a second service, and every column in it is a gauge.** The rows are not fetched from GitHub at all: they are aggregated from the opt-in instance pings the receiver at `hello.backspacechat.com` collects, read back through its `export` route (`telemetry.ts` for the payload). The rules that decide what a row means:
 
 - **Snapshot, not sum.** A row for day D is built from the *latest ping per instance* in `[D-6, D]`. An instance whose ping failed, or whose host was off for a day, keeps its last reported values for up to a week rather than dropping the fleet total by its size and putting it back the next day. Consecutive rows are comparable; they must never be summed across days.
 - **Two days in thirty.** Only instances that reported on at least two distinct days in `[D-29, D]` enter any figure. A single ping, from a test box or from somebody curious about the endpoint, never moves a total.
@@ -1064,6 +1064,6 @@ Unsupported by type stripping and therefore avoided throughout the package: enum
 
 ## 14. Volume
 
-Not independently re-measured for this document; carried forward from the design spec's measurement against the real API responses at the time it was written (`docs/superpowers/specs/2026-08-25-repo-metrics-design.md`, §5.5): roughly 815 KB/year across all files combined, dominated by the two NDJSON files. At that rate the archive stays well under a size where the plain-text-over-SQLite tradeoff (§2) needs revisiting.
+Not independently re-measured for this document; carried forward from the original design's measurement against the real API responses at the time: roughly 815 KB/year across all files combined, dominated by the two NDJSON files. At that rate the archive stays well under a size where the plain-text-over-SQLite tradeoff (§2) needs revisiting.
 
 The published bundle grows far more slowly than the archive — roughly **68 KB/year**, the figure §10.3's warning threshold is derived from. The two numbers are not in tension: the archive keeps every dimensional row for every snapshot, while the bundle keeps only the newest snapshot's ranking plus five trajectories per file, so almost all of the archive's growth is discarded on the way to `data.json`.

@@ -126,5 +126,5 @@ Honest list of what is still your job:
 4. **Upstream's CI configuration** (`.github/workflows/`) is still in the repository.
    Those workflows publish upstream's website, images and metrics; if you push this
    repository to GitHub, disable or delete the ones you do not want.
-5. `docs/systems/` and `CLAUDE.md` are upstream's developer documentation. They are
-   accurate about the code but still say "Backspace" in places.
+5. `docs/systems/` is upstream's developer documentation. It is accurate about the
+   code but still says "Backspace" in places.

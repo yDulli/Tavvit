@@ -1,7 +1,7 @@
 /**
  * Pure parsing and validation for an incoming ping. No Workers binding, no IO,
  * no global state, so the ping route can call it and the tests can exercise it
- * without a request. See section 7 of docs/superpowers/specs/2026-09-06-instance-telemetry-design.md.
+ * without a request. See docs/systems/metrics.md.
  */
 
 /** A body is read in full and rejected past this size, whatever Content-Length claimed. */

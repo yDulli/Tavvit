@@ -9,7 +9,7 @@
  * 100 parameters, so a document is written as one prepared statement per row
  * rather than one multi-row `INSERT`; the widest statement here binds 11.
  *
- * See section 7 of docs/superpowers/specs/2026-09-21-space-directory-design.md.
+ * See docs/systems/directory.md.
  */
 
 import { rowHash } from './hash';

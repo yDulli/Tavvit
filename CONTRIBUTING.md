@@ -92,20 +92,18 @@ in this section changes that bar. It describes how to reach it with an agent,
 because an agent used carelessly produces work that looks finished and is not,
 and that costs more to review than it did to write.
 
-**The repository is set up for agents.** `CLAUDE.md` at the root carries the
-rules and points to `docs/systems/`, where every subsystem is specified. Point
-your agent at it before anything else, whatever the agent is called. The specs
-are kept current by the same changes that alter the subsystems, so a change
-that touches one is expected to update it in the same pull request; an agent
-that has read the spec will do that on its own.
+**Every subsystem is specified in `docs/systems/`.** Point your agent at the
+specs of what you are changing before anything else, whatever the agent is
+called. The specs are kept current by the same changes that alter the
+subsystems, so a change that touches one is expected to update it in the same
+pull request; an agent that has read the spec will do that on its own.
 
 **Find the optimal solution before writing code.** Plan first, with the agent
 doing the exploration: read the affected subsystems, lay out the options, and
 argue them against each other until one wins on its merits, not on being the
 first that worked. Write the plan down. For architectural changes, that plan
 is the design proposal above, and it is discussed before implementation. A
-planning workflow such as the superpowers plugin makes this the default rather
-than a discipline.
+planning workflow makes this the default rather than a discipline.
 
 **Execute the plan with tests leading.** Write the test, make it pass, move
 on. Review the work against the plan and the spec as you go rather than at the

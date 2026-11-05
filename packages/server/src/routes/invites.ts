@@ -33,7 +33,7 @@ import type {
  *   - InviteStateConflictError → 409 Conflict
  *   - anything else            → propagates to Fastify's 500 handler
  *
- * Response shapes mirror spec §3.1 — see `docs/superpowers/specs/2026-04-28-registration-invites-design.md`.
+ * Response shapes are listed in docs/systems/api.md.
  */
 export async function invitesRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: CreateInviteRequest }>('/api/admin/invites', {

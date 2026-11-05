@@ -3,7 +3,7 @@
  * handlers in `index.ts` deal with HTTP only, and the exact column list that
  * leaves the receiver is written down in one place.
  *
- * See section 7 of docs/superpowers/specs/2026-09-06-instance-telemetry-design.md.
+ * See docs/systems/metrics.md.
  */
 
 /** One stored ping. `body` is the validated payload re-serialised by `parsePing`. */

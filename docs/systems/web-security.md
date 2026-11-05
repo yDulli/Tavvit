@@ -719,9 +719,7 @@ more, `request.protocol` and `request.hostname` are taken from
 at 0 they come from the socket and the `Host` header. Raising the count to 2
 for a CDN changes which address is billed and leaves protocol and host where
 they were. Nothing in this server reads those two, which is what keeps it from
-mattering; a route that builds a URL from the request host would change that
-(see the CVE note in
-`docs/superpowers/plans/2026-09-03-deferred-dependency-upgrades.md`).
+mattering; a route that builds a URL from the request host would change that.
 
 **What rests on the address.** The global rate limiter keys on it and has
 nothing else to key on (see [api.md](api.md), "Rate limiting"); the per-route

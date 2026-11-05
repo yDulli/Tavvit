@@ -831,7 +831,7 @@ Why this matters: a user who Task-Manager-kills a broken app never triggers the 
 
 ### Manual Smoke Checklist
 
-Executed before each release. See `docs/superpowers/specs/2026-05-03-electron-recovery-mode-design.md` §9 for the 14-scenario checklist (plus scenario 15 added during implementation).
+Executed before each release. The 14-scenario checklist (plus a 15th added during implementation) comes from upstream's design notes, which this repository does not carry.
 
 ---
 
