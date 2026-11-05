@@ -325,7 +325,7 @@
     "title": "Abrir o seu leva três passos.",
     "one": {
       "title": "Arrume o seu lugar",
-      "body": "Comece um espaço novo ou cole um modelo de servidor do Discord e receba os cargos, categorias e canais."
+      "body": "Comece um espaço novo ou traga seu servidor do Discord: os cargos, categorias e canais de um modelo, os emojis e figurinhas com um bot seu."
     },
     "two": {
       "title": "Envie um link",
@@ -423,7 +423,7 @@
       },
       "moving": {
         "q": "Posso trazer o meu servidor do Discord?",
-        "a": "A estrutura, sim. Cole o link de um modelo de servidor e o Tavvit cria os cargos, categorias, canais e permissões. Mensagens e membros não vêm junto, então convide a sua turma com um link."
+        "a": "A estrutura e os emojis, sim. Cole o link de um modelo de servidor e o Tavvit cria os cargos, categorias, canais e permissões; com um bot seu, os emojis e figurinhas do servidor vêm junto. Mensagens e membros não, então convide a sua turma com um link."
       },
       "bots": {
         "q": "Posso usar bots?",

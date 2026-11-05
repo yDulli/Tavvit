@@ -11,6 +11,8 @@ interface StickerGridProps {
   onSelect: (token: string) => void;
   onRename: (sticker: PersonalSticker) => void;
   onRemove: (id: string) => void;
+  /** Part of a longer list whose scroll area is the caller's. */
+  flat?: boolean;
 }
 
 function PencilIcon() {
@@ -29,12 +31,12 @@ function PencilIcon() {
  * tile: the desktop context menu draws at z-index 200, under the z-index 300
  * popovers the picker opens in, so it would be hidden behind the picker.
  */
-export function StickerGrid({ items, noMatches, managing, removing, onSelect, onRename, onRemove }: StickerGridProps) {
+export function StickerGrid({ items, noMatches, managing, removing, onSelect, onRename, onRemove, flat = false }: StickerGridProps) {
   const { t } = useTranslation('chat');
 
   if (noMatches) {
     return (
-      <div className="flex-1 min-h-0 px-3 pb-3">
+      <div className={flat ? 'px-3 pb-3' : 'flex-1 min-h-0 px-3 pb-3'}>
         <p role="status" className="flex h-40 items-center justify-center px-4 text-center text-ui text-txt-tertiary">
           {t('stickers.noResults')}
         </p>
@@ -43,7 +45,7 @@ export function StickerGrid({ items, noMatches, managing, removing, onSelect, on
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 pb-3">
+    <div className={flat ? 'px-3 pb-3' : 'flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 pb-3'}>
       <div className="grid grid-cols-4 gap-1.5">
         {items.map(item => (
           <div key={item.id} className="group relative min-w-0 rounded-lg hover:bg-interactive-hover transition-colors">

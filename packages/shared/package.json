@@ -1,6 +1,6 @@
 {
   "name": "@backspace/shared",
-  "version": "1.33.2",
+  "version": "1.34.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Jannis Braun",
@@ -91,6 +91,10 @@
     "./src/profileFields.js": "./src/profileFields.ts",
     "./src/discordImport": "./src/discordImport.ts",
     "./src/discordImport.js": "./src/discordImport.ts",
+    "./src/discordExpressionImport": "./src/discordExpressionImport.ts",
+    "./src/discordExpressionImport.js": "./src/discordExpressionImport.ts",
+    "./src/spaceExpressions": "./src/spaceExpressions.ts",
+    "./src/spaceExpressions.js": "./src/spaceExpressions.ts",
     "./src/profileImage": "./src/profileImage.ts",
     "./src/profileImage.js": "./src/profileImage.ts",
     "./src/customEmoji": "./src/customEmoji.ts",

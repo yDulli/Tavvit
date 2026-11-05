@@ -16,6 +16,7 @@ import { authenticate } from '../utils/auth.js';
 import { checkedPostTags, forumPostOrder, forumPostRowOf, forumPostsFor, forumTagsOf } from '../utils/forums.js';
 import { sendError } from '../utils/httpErrors.js';
 import { mayPostSticker } from '../utils/remoteMedia.js';
+import { emojiUseRefusal } from '../utils/emojiUse.js';
 import { mentionableRoleIds } from '../utils/mentionableRoles.js';
 import { hasPermission, PermissionBits } from '../utils/permissions.js';
 import { generateSnowflake } from '../utils/snowflake.js';
@@ -79,6 +80,8 @@ export async function forumRoutes(app: FastifyInstance): Promise<void> {
     if (!content && attachmentIds.length === 0) return sendError(reply, 400, 'message_empty');
     if (content.length > MAX_MESSAGE_LENGTH) return sendError(reply, 400, 'content_too_long', { max: MAX_MESSAGE_LENGTH });
     if (!mayPostSticker(content, userId)) return sendError(reply, 400, 'sticker_elsewhere');
+    const emojiRefusal = emojiUseRefusal(content, userId, spaceId);
+    if (emojiRefusal) return sendError(reply, emojiRefusal.status, emojiRefusal.code);
     if (hasGatedMassMention(content, mentionableRoleIds(spaceId)) && !hasPermission(userId, spaceId, PermissionBits.MENTION_EVERYONE, id)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'MENTION_EVERYONE' });
     }

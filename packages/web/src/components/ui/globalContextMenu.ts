@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import i18n from '../../i18n';
+import { copyText } from '../../utils/clipboard';
 import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextMenuStore';
 import { useUIStore } from '../../stores/uiStore';
 
@@ -133,15 +134,6 @@ function toast(message: string): void {
   useUIStore.getState().addToast(message, 'warning');
 }
 
-async function writeClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** Where a menu opens: at the pointer, or under the element for the menu key (reported at 0,0). */
 function positionOf(event: MouseEvent, fallback: Element | null): Point {
   if (event.clientX !== 0 || event.clientY !== 0 || !fallback) return { x: event.clientX, y: event.clientY };
@@ -182,7 +174,7 @@ function textFieldItems(target: EditTarget): ContextMenuItem[] {
       onClick: () => {
         target.restore();
         if (document.execCommand('copy')) return;
-        void writeClipboard(target.selectedText).then((ok) => { if (!ok) toast(i18n.t('common:contextMenu.clipboardFailed')); });
+        void copyText(target.selectedText).then((ok) => { if (!ok) toast(i18n.t('common:contextMenu.clipboardFailed')); });
       },
     },
     {
@@ -270,7 +262,7 @@ function fallbackItems(target: EventTarget | null): ContextMenuItem[] {
   if (selected.trim().length > 0) {
     items.push({
       type: 'action', key: 'copy-selection', label: i18n.t('common:actions.copy'),
-      onClick: () => { void writeClipboard(selected).then((ok) => { if (!ok) toast(i18n.t('common:contextMenu.clipboardFailed')); }); },
+      onClick: () => { void copyText(selected).then((ok) => { if (!ok) toast(i18n.t('common:contextMenu.clipboardFailed')); }); },
     });
   }
   const anchor = target instanceof Element ? target.closest('a[href]') : null;
@@ -288,7 +280,7 @@ function fallbackItems(target: EventTarget | null): ContextMenuItem[] {
         {
           type: 'action', key: 'copy-link', label: i18n.t('chat:menu.copyLink'),
           onClick: () => {
-            void writeClipboard(url).then((ok) => {
+            void copyText(url).then((ok) => {
               if (ok) useUIStore.getState().addToast(i18n.t('chat:menu.linkCopied'), 'success', 2000);
               else toast(i18n.t('chat:menu.linkCopyFailed'));
             });

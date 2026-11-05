@@ -92,6 +92,7 @@ export const PERMISSION_GROUPS: { id: PermissionGroupId; perms: PermDef[] }[] = 
       { bit: PermissionBits.VIEW_AUDIT_LOG, key: 'VIEW_AUDIT_LOG' },
       { bit: PermissionBits.MANAGE_EVENTS, key: 'MANAGE_EVENTS' },
       { bit: PermissionBits.MANAGE_SOUNDS, key: 'MANAGE_SOUNDS' },
+      { bit: PermissionBits.MANAGE_EMOJIS, key: 'MANAGE_EMOJIS' },
     ],
   },
   {
@@ -128,5 +129,6 @@ export function usePermissionDescriptions(): Partial<Record<PermissionKey, strin
   return useMemo(() => ({
     MODERATE_MEMBERS: t('spaces:permissions.descriptions.moderateMembers'),
     VIEW_AUDIT_LOG: t('spaces:permissions.descriptions.viewAuditLog'),
+    MANAGE_EMOJIS: t('spaces:permissions.descriptions.manageEmojis'),
   }), [t]);
 }

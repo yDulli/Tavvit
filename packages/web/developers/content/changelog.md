@@ -6,6 +6,12 @@
 
 What is not in these docs is not promised, and is closed to a bot's token anyway.
 
+## 1.34.0
+
+- A new right, `MANAGE_EMOJIS` (536870912), for a space's own emoji and stickers. The routes it opens are not open to bots.
+- A reaction `emoji:<id>` must name an emoji of this instance that the bot may use there: 400 `emoji_not_found` for an id the instance does not know, 403 `emoji_unavailable` for a space's emoji it may not use. Adding to a reaction someone already gave is always allowed.
+- A message or an edit with a space's emoji (`<:name:id>`) that the sender may not use answers 403 `emoji_unavailable`; an id the instance does not know stays text. A bot may use the instance's emoji and those of the spaces it is in, a webhook the instance's and those of its channel's space.
+
 ## 1.32.3
 
 - A channel has `icon`: null, `glyph:<name>` for one of the icons the app draws, or one emoji. Show the channel type's own icon when it is null, and for a name you do not know.

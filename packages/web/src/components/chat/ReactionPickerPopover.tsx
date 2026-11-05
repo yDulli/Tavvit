@@ -4,11 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { EmojiPicker } from './EmojiPicker';
 import { PickerEscapeScope } from './pickerEscape';
 import { layoutPixels, layoutRect } from '../../platform/interfaceScale';
+import type { EmojiContext } from '../../utils/emojiSets';
 
 export interface ReactionPickerPopoverProps {
   anchorEl: HTMLElement | null;
   onEmojiSelect: (emoji: { native: string }) => void;
   onClose: () => void;
+  /** The message's place: which instance's emoji may react to it (utils/emojiSets.ts). */
+  context: EmojiContext;
 }
 
 const VIEWPORT_MARGIN = 8;
@@ -22,6 +25,7 @@ export function ReactionPickerPopover({
   anchorEl,
   onEmojiSelect,
   onClose,
+  context,
 }: ReactionPickerPopoverProps) {
   const { t } = useTranslation('common');
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -118,7 +122,7 @@ export function ReactionPickerPopover({
     >
       <div className="glass rounded-lg overflow-hidden max-h-[calc(100*var(--app-dvh)-16px)] flex flex-col">
         <PickerEscapeScope onClose={onClose}>
-          <EmojiPicker onEmojiSelect={onEmojiSelect} customAs="reaction" />
+          <EmojiPicker onEmojiSelect={onEmojiSelect} customAs="reaction" context={context} />
         </PickerEscapeScope>
       </div>
     </div>,

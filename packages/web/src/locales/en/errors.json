@@ -432,5 +432,17 @@
   "username_change_connected": "This account is connected to other servers, which know it by this name.",
   "username_change_too_soon": "A username can be changed once in {{days}} days.",
   "channel_icon_invalid": "A channel icon is one of the icons on offer or one emoji.",
-  "sticker_elsewhere": "This sticker is stored on a server this one does not know, so it cannot be sent."
+  "sticker_elsewhere": "This sticker is stored on a server this one does not know, so it cannot be sent.",
+  "discord_server_id_invalid": "That is not a Discord server ID. It is a number of 17 to 20 digits: right-click the server in Discord and choose Copy Server ID.",
+  "discord_bot_token_invalid": "Discord did not accept that bot token. Copy it again from the Bot page of your application.",
+  "discord_bot_not_in_server": "The bot is not on that Discord server. Add it with the link from OAuth2 → URL Generator, then try again.",
+  "discord_import_expired": "This import ran out. Look the server up again.",
+  "discord_import_running": "This import is already bringing pictures over.",
+  "space_emoji_limit_reached": "This space already has as many emoji as it can hold ({{max}}).",
+  "space_sticker_limit_reached": "This space already has as many stickers as it can hold ({{max}}).",
+  "space_emoji_name_taken": "This space already has an emoji with that name.",
+  "space_sticker_name_taken": "This space already has a sticker with that name.",
+  "space_emoji_not_found": "That emoji is gone.",
+  "space_sticker_not_found": "That sticker is gone.",
+  "emoji_unavailable": "This emoji belongs to a space you are not in."
 }

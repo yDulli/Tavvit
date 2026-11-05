@@ -138,6 +138,12 @@ export const spaces = sqliteTable('spaces', {
   directoryListed: integer('directory_listed').notNull().default(0),
   description: text('description'),
   /**
+   * When something was last brought over from Discord (its structure, its emoji or stickers): the
+   * fact the invite page's welcome for people coming from Discord rests on, so it never claims a
+   * move that did not happen. Null when nothing was.
+   */
+  discordImportedAt: integer('discord_imported_at'),
+  /**
    * JSON array of the badges an instance admin gave the space
    * (GrantedSpaceBadgeId); null without. Verified is not stored here: it comes
    * from `verification_status`.
@@ -1691,6 +1697,52 @@ export const spaceSounds = sqliteTable('space_sounds', {
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   spaceIdx: index('idx_space_sounds_space').on(table.spaceId),
+}));
+
+/**
+ * A space's own emoji (routes/spaceExpressions.ts, docs/systems/emoji.md). Its id comes from the same
+ * generator as the instance's emoji and its picture is the same kind of file, `emoji/<id>.webp`, so
+ * one token and one picture route serve both. `discord_id` names the Discord emoji an import brought,
+ * so a second import adds nothing twice. `created_by` has no foreign key: a deleted account's entries
+ * stay with the space without its name (tombstoneUser).
+ */
+export const spaceEmojis = sqliteTable('space_emojis', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  animated: integer('animated').notNull().default(0),
+  size: integer('size').notNull(),
+  discordId: text('discord_id'),
+  createdBy: text('created_by'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  spaceNameUnique: uniqueIndex('space_emojis_space_name_unique').on(table.spaceId, table.name),
+  spaceDiscordUnique: uniqueIndex('space_emojis_space_discord_unique').on(table.spaceId, table.discordId).where(sql`discord_id IS NOT NULL`),
+  createdByIdx: index('idx_space_emojis_created_by').on(table.createdBy),
+}));
+
+/**
+ * A space's own sticker: a named entry over a content-addressed asset (sticker_assets), sent with the
+ * same token as a personal sticker. The asset is shared with collections and messages, so removing
+ * the entry leaves the file to the janitor (utils/stickerAssets.ts), which keeps it while anything
+ * names it, this table included. `size` is what the entry counts on its creator's storage.
+ */
+export const spaceStickers = sqliteTable('space_stickers', {
+  id: text('id').primaryKey(),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  stickerId: text('sticker_id').notNull().references(() => stickerAssets.id),
+  name: text('name').notNull(),
+  description: text('description'),
+  animated: integer('animated').notNull().default(0),
+  size: integer('size').notNull(),
+  discordId: text('discord_id'),
+  createdBy: text('created_by'),
+  createdAt: integer('created_at').notNull(),
+}, (table) => ({
+  spaceNameUnique: uniqueIndex('space_stickers_space_name_unique').on(table.spaceId, table.name),
+  spaceDiscordUnique: uniqueIndex('space_stickers_space_discord_unique').on(table.spaceId, table.discordId).where(sql`discord_id IS NOT NULL`),
+  stickerIdx: index('idx_space_stickers_sticker').on(table.stickerId),
+  createdByIdx: index('idx_space_stickers_created_by').on(table.createdBy),
 }));
 
 /**

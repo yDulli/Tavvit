@@ -245,7 +245,8 @@
     "renameNamed": "Rename {{name}}",
     "renameTitle": "Rename sticker",
     "search": "Search stickers",
-    "noResults": "No stickers found"
+    "noResults": "No stickers found",
+    "spaceSection": "Stickers of {{space}}"
   },
   "poke": {
     "action": "Poke",

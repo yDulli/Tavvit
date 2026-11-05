@@ -18,7 +18,8 @@ vi.mock('../../../api/client', async (importOriginal) => ({
   api: { emojis: emojiApi },
 }));
 
-import { EmojiSettingsPanel, suggestEmojiName } from './EmojiSettingsPanel';
+import { EmojiSettingsPanel } from './EmojiSettingsPanel';
+import { suggestEmojiName } from '../../../utils/emojiName';
 import { useEmojiStore } from '../../../stores/emojiStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useSettingsStore } from '../../../stores/settingsStore';

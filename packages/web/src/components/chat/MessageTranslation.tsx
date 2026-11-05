@@ -9,7 +9,13 @@ import { MarkdownRenderer } from './MarkdownRenderer';
  * A message in the reader's language, under the original, which stays where it is: what a
  * person wrote is never replaced by what a machine made of it.
  */
-export function MessageTranslation({ messageId, content, channelId }: { messageId: string; content: string; channelId: string | null }) {
+export function MessageTranslation({ messageId, content, channelId, emojiOrigin }: {
+  messageId: string;
+  content: string;
+  channelId: string | null;
+  /** The instance whose emoji the text names (see `MarkdownRenderer`). */
+  emojiOrigin?: string;
+}) {
   const { t } = useTranslation(['chat']);
   const { formatLanguageName } = useFormatters();
   const entry = useTranslationStore((s) => s.entries[messageId]);
@@ -64,7 +70,7 @@ export function MessageTranslation({ messageId, content, channelId }: { messageI
   return (
     <div className="msg-translation">
       <div className="message-text text-txt-message leading-[1.5] break-words whitespace-pre-wrap">
-        <MarkdownRenderer content={entry.text} channelId={channelId} />
+        <MarkdownRenderer content={entry.text} channelId={channelId} {...(emojiOrigin !== undefined ? { emojiOrigin } : {})} />
       </div>
       <p className="msg-translation-note mt-0.5">
         <span>{entry.source ? t('chat:translation.from', { language: formatLanguageName(entry.source) }) : t('chat:translation.fromUnknown')}</span>

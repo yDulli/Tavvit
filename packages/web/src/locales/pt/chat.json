@@ -253,7 +253,8 @@
     "renameNamed": "Renomear {{name}}",
     "renameTitle": "Renomear figurinha",
     "search": "Pesquisar figurinhas",
-    "noResults": "Nenhuma figurinha encontrada"
+    "noResults": "Nenhuma figurinha encontrada",
+    "spaceSection": "Figurinhas de {{space}}"
   },
   "poke": {
     "action": "Cutucar",

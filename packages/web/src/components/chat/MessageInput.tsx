@@ -20,6 +20,8 @@ import { StagedTransferTiles } from './StagedTransferTiles';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import { MAX_MESSAGE_LENGTH, type User } from '@backspace/shared';
 import { toWireText } from '../../utils/emojiWire';
+import { useEmojiContextOfChannel } from '../../utils/emojiSets';
+import { useEmojiStore } from '../../stores/emojiStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useComposerStore } from '../../stores/composerStore';
@@ -88,6 +90,12 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
 
   // UI-only state stays local
   const [activePopover, setActivePopover] = useState<InputPopoverTab | null>(null);
+  // What the text names its emoji by (utils/emojiSets.ts). Loaded with the composer, so a
+  // `:name:` typed without opening the picker still becomes its emoji when sent.
+  const emojiContext = useEmojiContextOfChannel(channelId);
+  useEffect(() => {
+    useEmojiStore.getState().ensureOrigin(emojiContext.origin);
+  }, [emojiContext.origin]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -952,6 +960,7 @@ export function MessageInput({ channelId, channelName, placeholder }: MessageInp
           anchorRef={popoverAnchorRef}
           gifEnabled={gifEnabled}
           onTabChange={setActivePopover}
+          context={emojiContext}
         />
       )}
 

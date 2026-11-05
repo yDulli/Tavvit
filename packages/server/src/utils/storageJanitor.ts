@@ -16,6 +16,7 @@ import type { StorageStats, StorageBreakdown, OrphanedFile, CleanupResult } from
 import { profileImageFilenames } from './profileImageRefs.js';
 import { renameLegacyUploads } from './legacyUploadNames.js';
 import { removeUnusedSoundFiles } from './soundFiles.js';
+import { removeUnusedEmojiFiles } from './spaceExpressions.js';
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico', '.bmp', '.avif']);
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.avi', '.mkv']);
@@ -949,6 +950,15 @@ export async function runFederationJanitor(): Promise<void> {
       if (sounds > 0) console.log(`[storage-janitor] Removed ${sounds} soundboard file(s) without a clip`);
     } catch (err) {
       console.error('[storage-janitor] Removing unused soundboard files failed:', err);
+    }
+
+    // Emoji pictures, of the instance or of a space, that no emoji names: the same hour first, as an
+    // emoji being added has its file before its row.
+    try {
+      const emoji = removeUnusedEmojiFiles(60 * 60 * 1000);
+      if (emoji > 0) console.log(`[storage-janitor] Removed ${emoji} emoji file(s) without an emoji`);
+    } catch (err) {
+      console.error('[storage-janitor] Removing unused emoji files failed:', err);
     }
 
     // Expire approval requests:

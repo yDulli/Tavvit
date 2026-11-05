@@ -356,6 +356,9 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
         // Custom emoji are the home instance's too, and may have changed while this tab was away.
         void useEmojiStore.getState().load();
       }
+      // What this instance offers to pick may have changed while this tab was away: read again
+      // what was read before, the rest waits until a picker or composer needs it.
+      if (useEmojiStore.getState().origins.has(origin)) void useEmojiStore.getState().loadOrigin(origin);
       // Each instance answers for the mentions in its own spaces. A fresh first
       // page on every (re)connect, so nothing said while away is missed.
       void useInboxStore.getState().loadOrigin(origin);
@@ -1313,14 +1316,23 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
     }
 
     case 'emoji_upserted': {
+      // The library of the instance that sent it; the home one also has its settings page.
       if (isHome) useEmojiStore.getState().upsert(event.emoji);
+      else useEmojiStore.getState().upsertLibrary(origin, event.emoji);
       break;
     }
 
     case 'emoji_removed': {
       if (isHome) useEmojiStore.getState().drop(event.emojiId);
+      else useEmojiStore.getState().dropLibrary(origin, event.emojiId);
       break;
     }
+
+    case 'space_emojis_changed':
+    case 'space_stickers_changed':
+      // A space's emoji or stickers changed on the instance that hosts it (docs/systems/emoji.md).
+      void useEmojiStore.getState().reloadSpace(origin, event.spaceId);
+      break;
 
     case 'blocks_updated': {
       // Only the home instance blocks on this user's behalf; an id from another

@@ -1,31 +1,25 @@
 import type { FastifyInstance } from 'fastify';
 import { and, count, desc, eq } from 'drizzle-orm';
-import sharp from 'sharp';
-import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
-import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import {
-  MAX_PERSONAL_STICKERS, MAX_STICKER_BYTES, MAX_STICKER_NAME_LENGTH, STICKER_ID_PATTERN, STICKER_PREFIX,
+  MAX_PERSONAL_STICKERS, MAX_STICKER_BYTES, MAX_STICKER_NAME_LENGTH, STICKER_ID_PATTERN,
   STICKER_UPLOADS_PER_MINUTE, normalizeStickerName, type PersonalSticker,
 } from '@backspace/shared/src/stickers.js';
 import { getDb, schema } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
-import { getOurOrigin } from '../utils/federationAuth.js';
 import { stickerAssetPath as assetPath } from '../utils/stickerAssets.js';
 import { sendError } from '../utils/httpErrors.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
 import { diskWouldFill } from '../utils/accountLimits.js';
+import { StickerImageError, encodeSticker, stickerTokenFor, storeStickerAsset } from '../utils/stickerImage.js';
+import { MediaBusyError } from '../utils/thumbnail.js';
 
-const tokenFor = (id: string) => `${STICKER_PREFIX}${getOurOrigin()}/api/stickers/assets/${id}.webp`;
+const tokenFor = stickerTokenFor;
 const MAX_STICKER_MB = MAX_STICKER_BYTES / (1024 * 1024);
 const nameSchema = { type: 'string', minLength: 1, maxLength: MAX_STICKER_NAME_LENGTH } as const;
 const idParamsSchema = {
   type: 'object', required: ['id'], properties: { id: { type: 'string', pattern: STICKER_ID_PATTERN.source } },
 } as const;
-/** Stored stickers fit this box; the largest place one is shown is a 240 px message row. */
-const MAX_STICKER_DIMENSION = 512;
-/** Bound decoded pixels across animation frames, not only the compressed upload size. */
-const MAX_DECODED_PIXELS = 16_777_216;
 
 /**
  * Uploads per account (the row id on this instance, so each federated account
@@ -44,14 +38,6 @@ const dailyUploadLimit = createFixedWindowLimit({ max: 50, windowMs: 24 * 60 * 6
 export function _resetStickerUploadLimit(): void {
   uploadLimit.reset();
   dailyUploadLimit.reset();
-}
-
-/** Thrown by `encodeSticker` for bytes that are not an accepted image. */
-export class StickerImageError extends Error {
-  constructor() {
-    super('Not an accepted sticker image');
-    this.name = 'StickerImageError';
-  }
 }
 
 function collectionSize(userId: string): number {
@@ -76,33 +62,6 @@ function collectSticker(input: { userId: string; id: string; name: string }): Pe
     userId: input.userId, stickerId: input.id, name: input.name, createdAt: Date.now(),
   }).onConflictDoNothing().run();
   return { id: input.id, name: existing()!.name, token: tokenFor(input.id) };
-}
-
-/**
- * Re-encode instead of trusting MIME/extension; decode all frames to preserve
- * animations safely. The result fits MAX_STICKER_DIMENSION and is refused
- * when it is still larger than an upload may be, so a stored asset is never
- * bigger than the bytes the account sent.
- */
-export async function encodeSticker(bytes: Buffer): Promise<Buffer> {
-  if (!bytes.length || bytes.length > MAX_STICKER_BYTES) throw new StickerImageError();
-  let encoded: Buffer;
-  try {
-    const image = sharp(bytes, { animated: true, limitInputPixels: MAX_DECODED_PIXELS });
-    const metadata = await image.metadata();
-    if (!metadata.format || !['png', 'jpeg', 'webp', 'gif'].includes(metadata.format)) {
-      throw new StickerImageError();
-    }
-    encoded = await image.rotate()
-      .resize(MAX_STICKER_DIMENSION, MAX_STICKER_DIMENSION, { fit: 'inside', withoutEnlargement: true })
-      .webp().toBuffer();
-  } catch (error) {
-    // Sharp's own messages name decoder internals; the caller only needs to know the image was refused.
-    if (error instanceof StickerImageError) throw error;
-    throw new StickerImageError();
-  }
-  if (encoded.length > MAX_STICKER_BYTES) throw new StickerImageError();
-  return encoded;
 }
 
 export async function stickerRoutes(app: FastifyInstance): Promise<void> {
@@ -133,25 +92,16 @@ export async function stickerRoutes(app: FastifyInstance): Promise<void> {
     if (bytes.toString('base64') !== image) return sendError(reply, 400, 'validation_failed');
     // Only decode failures become validation errors; filesystem/database failures stay server errors.
     let encoded: Buffer;
-    try { encoded = await encodeSticker(bytes); }
+    try { encoded = await encodeSticker(bytes, request.userId); }
     catch (error) {
       if (error instanceof StickerImageError) return sendError(reply, 400, 'sticker_invalid_image', { max: MAX_STICKER_MB });
+      // This account's last picture is still being worked on, or the queue is full: later.
+      if (error instanceof MediaBusyError) return sendError(reply, 429, 'rate_limited');
       throw error;
     }
     // The disk keeps its reserve for the database, as for any upload (utils/accountLimits.ts).
     if (diskWouldFill(encoded.length)) return sendError(reply, 507, 'disk_full');
-    const id = createHash('sha256').update(encoded).digest('hex');
-    // The row is written, or made fresh again, before the file: the janitor
-    // never removes an asset inside its grace period, so it cannot delete this
-    // file between the write below and the collection entry after it.
-    const now = Date.now();
-    getDb().insert(schema.stickerAssets).values({ id, createdAt: now })
-      .onConflictDoUpdate({ target: schema.stickerAssets.id, set: { createdAt: now } }).run();
-    await mkdir(path.dirname(assetPath(id)), { recursive: true });
-    // Publish atomically: concurrent duplicate uploads must never expose a truncated image.
-    const temporaryPath = `${assetPath(id)}.${randomUUID()}.tmp`;
-    await writeFile(temporaryPath, encoded);
-    await rename(temporaryPath, assetPath(id));
+    const id = await storeStickerAsset(encoded);
     const sticker = collectSticker({ userId: request.userId, id, name });
     if (!sticker) return sendError(reply, 409, 'sticker_collection_full', { max: MAX_PERSONAL_STICKERS });
     return sticker;

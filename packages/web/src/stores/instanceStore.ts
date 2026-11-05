@@ -21,6 +21,7 @@ import {
 import { useSpaceStore } from './spaceStore';
 import { useSocialStore } from './socialStore';
 import { connectInstance, disconnectInstance as disconnectWs, disconnectAllRemote } from '../hooks/useWebSocket';
+import { useEmojiStore } from './emojiStore';
 // dmOriginFailover lazily reads useInstanceStore/useSpaceStore/useChatStore at call time,
 // so a static import here does not create an import-time cycle.
 import { useUIStore } from './uiStore';
@@ -999,6 +1000,8 @@ export const useInstanceStore = create<InstanceState>((set, get) => ({
     // row, so actions on it go to an instance the user still holds.
     useSpaceStore.getState().removeInstanceSpaces(origin);
     useSocialStore.getState().removeInstanceRows(origin);
+    // What it offered to pick goes with it; connecting again reads it anew when needed.
+    useEmojiStore.getState().forgetOrigin(origin);
 
     // Sync updated lists to remaining instances (fire-and-forget)
     get().syncInstanceList().catch(() => {});

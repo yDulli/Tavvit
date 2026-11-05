@@ -1,6 +1,7 @@
 import { DISCORD_IMPORT_LIMITS } from '@backspace/shared/src/discordImport.js';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors.js';
 import { readCapped } from './cappedBody.js';
+import { retryAfterOf } from './discordApi.js';
 
 // Reads a server template from Discord (docs/systems/spaces.md, "Importing a
 // Discord template"). The one request this instance makes for an import goes
@@ -32,13 +33,6 @@ function remember(code: string, data: unknown, now: number): void {
   }
 }
 
-
-/** Discord's own wait, in whole seconds, from a 429's body or header; 5 when it names none. */
-function retryAfterOf(body: unknown, header: string | null): number {
-  const fromBody = typeof body === 'object' && body !== null ? (body as { retry_after?: unknown }).retry_after : undefined;
-  const seconds = typeof fromBody === 'number' ? fromBody : header !== null ? Number(header) : NaN;
-  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 5;
-}
 
 export async function fetchDiscordTemplate(code: string, now: number = Date.now()): Promise<TemplateFetchResult> {
   if (!CODE.test(code)) return { ok: false, status: 400, code: 'discord_template_code_invalid' };

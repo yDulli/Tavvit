@@ -273,6 +273,16 @@ async function buildArchive(userId: string, target: string): Promise<void> {
     for (const emoji of raw.prepare('SELECT id, name FROM custom_emojis WHERE created_by = ?').all(userId) as Array<{ id: string; name: string }>) {
       addFile('emoji', `${emoji.name}.webp`, emojiFilePath(emoji.id));
     }
+    // What they added to a space, by hand or by importing it from Discord, named by the space.
+    for (const emoji of raw.prepare('SELECT id, space_id AS spaceId, name FROM space_emojis WHERE created_by = ?')
+      .all(userId) as Array<{ id: string; spaceId: string; name: string }>) {
+      addFile('space-emoji', `${emoji.spaceId}-${emoji.name}.webp`, emojiFilePath(emoji.id));
+    }
+    for (const sticker of raw.prepare('SELECT id, sticker_id AS stickerId, space_id AS spaceId, name FROM space_stickers WHERE created_by = ?')
+      .all(userId) as Array<{ id: string; stickerId: string; spaceId: string; name: string }>) {
+      // The name made safe before the ids go in front: a slash in it would otherwise cut them off.
+      addFile('space-stickers', `${sticker.spaceId}-${sticker.id}-${archiveName(sticker.name)}.webp`, stickerAssetPath(sticker.stickerId));
+    }
 
     let total = 0;
     for (const entry of entries) total += (await stat(entry.file)).size;
@@ -313,7 +323,7 @@ async function buildArchive(userId: string, target: string): Promise<void> {
       'events-announced.jsonl       the events you announced',
       'event-answers.jsonl          the events you said you are going to',
       'thread-follows.jsonl         the threads you follow',
-      'files/                       your profile pictures, attachments, stickers and emoji',
+      'files/                       your profile pictures, attachments, stickers and emoji, and the emoji, stickers and sounds you added to spaces',
       '',
       "What other people wrote to you is not in here: those are their words. Your password is not in here either; the server only keeps a value it can check a password against.",
       ...(left.length > 0 ? ['', `These files did not fit into one archive. Write to the operator of this server for them:`, ...left] : []),

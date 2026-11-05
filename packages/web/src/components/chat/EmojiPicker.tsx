@@ -3,13 +3,15 @@ import { StickerPicker } from './StickerPicker';
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import Picker from '@emoji-mart/react';
 import { loadEmojiData } from '../../utils/emojiData';
-import { customEmojiUrl, emojiReactionValue } from '@backspace/shared/src/customEmoji';
-import { useEmojiStore } from '../../stores/emojiStore';
+import { emojiPictureUrl, emojiReactionValue } from '@backspace/shared/src/customEmoji';
+import { DIRECT_MESSAGE_EMOJI_CONTEXT, shortcodeIndex, useEmojiSets, type EmojiContext } from '../../utils/emojiSets';
 
-/** The picker's own category for the instance's custom emoji, and the prefix that tells their ids from the standard ones. */
+/** The picker's category for the instance's library, and the prefix that tells custom ids from the standard ones. */
 const ORBIT_CATEGORY = 'orbit';
 const ORBIT_ID_PREFIX = 'orbit-';
 const ORBIT_ICON_SVG = '<svg style="display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)"/></svg>';
+/** A space's own category: a rounded square, as spaces are drawn in the rail. */
+const SPACE_ICON_SVG = '<svg style="display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4.5"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>';
 
 /**
  * emoji-mart's init looks at its module-level data before awaiting this loader
@@ -80,8 +82,13 @@ interface EmojiPickerProps {
    */
   mobile?: boolean;
   stickers?: boolean;
-  /** Offers the instance's own emoji too. Off where only a standard emoji will do (a channel's icon). */
+  /** Offers custom emoji too. Off where only a standard emoji will do (a channel's icon). */
   custom?: boolean;
+  /**
+   * Where the emoji goes (utils/emojiSets.ts): which instance's emoji and which spaces' are on
+   * offer. A direct message's by default.
+   */
+  context?: EmojiContext;
 }
 
 function HeartIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -92,27 +99,37 @@ function HeartIcon({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
-export function EmojiPicker({ onEmojiSelect, customAs = 'text', mobile = false, stickers = true, custom: withCustom = true }: EmojiPickerProps) {
+export function EmojiPicker({
+  onEmojiSelect, customAs = 'text', mobile = false, stickers = true, custom: withCustom = true, context = DIRECT_MESSAGE_EMOJI_CONTEXT,
+}: EmojiPickerProps) {
   const { t } = useTranslation('chat');
-  const library = useEmojiStore((s) => s.emojis);
-  const custom = useMemo(() => (!withCustom || library.length === 0 ? [] : [{
-    id: ORBIT_CATEGORY,
-    name: t('emoji.category'),
-    emojis: library.map((emoji) => ({
-      id: `${ORBIT_ID_PREFIX}${emoji.id}`,
-      name: emoji.name,
-      keywords: [emoji.name],
-      skins: [{ src: customEmojiUrl(emoji.id) }],
-    })),
-  }]), [library, t, withCustom]);
+  const sets = useEmojiSets(context);
+  const offered = useMemo(() => (withCustom ? sets.filter((set) => set.emojis.length > 0) : []), [sets, withCustom]);
+  const { shortcodeById } = useMemo(() => shortcodeIndex(offered), [offered]);
+  // One category per set: this space, the library, then the other spaces, as utils/emojiSets.ts orders them.
+  const custom = useMemo(() => offered.map((set) => ({
+    id: set.key === 'library' ? ORBIT_CATEGORY : set.key,
+    name: set.space ? set.space.name : t('emoji.category'),
+    emojis: set.emojis.map((emoji) => {
+      const shortcode = shortcodeById.get(emoji.id) ?? emoji.name;
+      return {
+        id: `${ORBIT_ID_PREFIX}${emoji.id}`,
+        name: shortcode,
+        keywords: [emoji.name],
+        skins: [{ src: emojiPictureUrl(emoji.id, context.origin) }],
+      };
+    }),
+  })), [offered, shortcodeById, context.origin, t]);
+  // emoji-mart reads its custom categories once: a new offer mounts a new picker.
+  const customKey = custom.map((category) => `${category.id}:${category.emojis.length}`).join('|');
 
   const handlePick = (picked: { native?: string; id?: string }) => {
     if (picked.id?.startsWith(ORBIT_ID_PREFIX)) {
       const id = picked.id.slice(ORBIT_ID_PREFIX.length);
-      const emoji = useEmojiStore.getState().byId.get(id);
-      // Removed while the picker was open: nothing to insert.
-      if (!emoji) return;
-      onEmojiSelect({ native: customAs === 'reaction' ? emojiReactionValue(id) : `:${emoji.name}:` });
+      const shortcode = shortcodeById.get(id);
+      // Gone from the offer while the picker was open: nothing to insert.
+      if (shortcode === undefined) return;
+      onEmojiSelect({ native: customAs === 'reaction' ? emojiReactionValue(id) : `:${shortcode}:` });
       return;
     }
     onEmojiSelect({ native: picked.native ?? '' });
@@ -140,7 +157,7 @@ export function EmojiPicker({ onEmojiSelect, customAs = 'text', mobile = false, 
       style.textContent = PICKER_SHADOW_CSS;
       root.appendChild(style);
     });
-  }, [showStickers, library.length]);
+  }, [showStickers, customKey]);
 
   // emoji-mart's Picker computes its own internal width from
   // `perLine * emojiButtonSize` UNLESS `dynamicWidth` is set, in which case
@@ -190,11 +207,13 @@ export function EmojiPicker({ onEmojiSelect, customAs = 'text', mobile = false, 
           </button>
         </div>
       )}
-      {stickers && showStickers ? <StickerPicker mobile={mobile} onSelect={token => onEmojiSelect({ native: token })} /> : <Picker
-        key={`library-${library.length}`}
+      {stickers && showStickers ? <StickerPicker mobile={mobile} context={context} onSelect={token => onEmojiSelect({ native: token })} /> : <Picker
+        key={`custom-${customKey}`}
         data={loadPickerData}
         custom={custom}
-        categoryIcons={custom.length > 0 ? { [ORBIT_CATEGORY]: { svg: ORBIT_ICON_SVG } } : undefined}
+        categoryIcons={custom.length > 0
+          ? Object.fromEntries(custom.map((category) => [category.id, { svg: category.id === ORBIT_CATEGORY ? ORBIT_ICON_SVG : SPACE_ICON_SVG }]))
+          : undefined}
         onEmojiSelect={handlePick}
         theme="dark"
         set="native"
@@ -207,7 +226,7 @@ export function EmojiPicker({ onEmojiSelect, customAs = 'text', mobile = false, 
         emojiButtonSize={mobile ? 40 : 32}
         emojiButtonRadius="calc(5px * var(--radius-scale, 1))"
         dynamicWidth={mobile ? true : false}
-        categories={['frequent', ...(custom.length > 0 ? [ORBIT_CATEGORY] : []), 'people', 'nature', 'foods', 'activity', 'places', 'objects', 'symbols', 'flags']}
+        categories={['frequent', ...custom.map((category) => category.id), 'people', 'nature', 'foods', 'activity', 'places', 'objects', 'symbols', 'flags']}
       />}
     </div>
   );

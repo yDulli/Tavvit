@@ -156,6 +156,8 @@ function previewOf(source: DiscordTemplateSource, plan: DiscordImportPlan): Disc
       name: source.name,
       description: source.description,
       guildName: source.guildName,
+      // The server it was made from: what importing its emoji and stickers asks for (DiscordMovePanel).
+      sourceGuildId: source.sourceGuildId,
       usageCount: source.usageCount,
       creatorName: source.creatorName,
       updatedAt: source.updatedAt,
@@ -334,7 +336,12 @@ export async function discordImportRoutes(app: FastifyInstance): Promise<void> {
       if (refusesRoleCreation(plan, target)) return sendError(reply, 403, 'role_hierarchy');
       let created: ReturnType<typeof writePlan>;
       try {
-        created = db.transaction((tx) => writePlan(tx, spaceId, plan, now));
+        created = db.transaction((tx) => {
+          const written = writePlan(tx, spaceId, plan, now);
+          // What the invite page's welcome for people coming from Discord rests on.
+          tx.update(schema.spaces).set({ discordImportedAt: now }).where(eq(schema.spaces.id, spaceId)).run();
+          return written;
+        });
       } catch (err) {
         request.log.error({ err }, '[discordImport] import into an existing space failed');
         return sendError(reply, 500, 'internal_error');
@@ -379,6 +386,7 @@ export async function discordImportRoutes(app: FastifyInstance): Promise<void> {
           inviteCode: generateInviteCode(),
           visibility: 'private',
           description: source.description ? source.description.slice(0, 200) : null,
+          discordImportedAt: now,
           createdAt: now,
         }).run();
         tx.insert(schema.spaceMembers).values({ spaceId, userId: request.userId, joinedAt: now }).run();

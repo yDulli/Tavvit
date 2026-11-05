@@ -46,6 +46,8 @@ export const PermissionBits = {
   USE_SOUNDBOARD:       1n << 27n,
   // Add, rename and remove the space's clips.
   MANAGE_SOUNDS:        1n << 28n,
+  // Add, rename and remove the space's emoji and stickers, and bring them over from Discord.
+  MANAGE_EMOJIS:        1n << 29n,
 } as const;
 
 export type PermissionBit = (typeof PermissionBits)[keyof typeof PermissionBits];

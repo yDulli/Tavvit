@@ -69,6 +69,7 @@ and after the pass.
 | 19 | MANAGE_WEBHOOKS | Make, rename and delete a channel's webhooks, and give them a new token; have an announcement channel's posts arrive in a channel, and see or end that ([forums.md](forums.md)). With VIEW_CHANNEL, in the channel with its overrides. Not in the default. |
 | 27 | USE_SOUNDBOARD | Play a clip in a call you are in. In the default for @everyone; migration 0061 gave it to the existing @everyone roles. Can be denied per voice channel. |
 | 28 | MANAGE_SOUNDS | Add, rename and remove a space's clips. Not in the default. |
+| 29 | MANAGE_EMOJIS | Add, rename and remove a space's own emoji and stickers, and bring them over from Discord (1.34.0; value 536870912). Space-wide only (see "MANAGE_EMOJIS" below). Not in the default. |
 | 20 | CONNECT | Join voice channels |
 | 21 | SPEAK | Transmit audio |
 | 22 | MUTE_MEMBERS | Space-mute others |
@@ -80,6 +81,10 @@ and after the pass.
 **Default @everyone:** VIEW_CHANNEL, SEND_MESSAGES, CREATE_INVITE, CONNECT, SPEAK, ATTACH_FILES, READ_MESSAGE_HISTORY, ADD_REACTIONS, STREAM. MENTION_EVERYONE is not a default: it is granted per role. Neither are MODERATE_MEMBERS and VIEW_AUDIT_LOG. Bits 8 and 9 had no meaning before them; a role that carried one anyway (only the owner, an instance admin or an ADMINISTRATOR holder could set a bit no permission defined, see "Held-bits rule") holds the permission now.
 
 **Moderation exemptions** (spaces.md, "Moderation", "Exemptions"): the space's minimum account and membership ages and its automatic message rules do not apply to a member who holds MANAGE_MESSAGES in the channel or MANAGE_SPACE (the owner, instance admins and ADMINISTRATOR hold both); slow mode does not apply to MANAGE_MESSAGES or MANAGE_CHANNELS in the channel. A timeout has no exemption.
+
+**MANAGE_EMOJIS** (bit 29, `1n << 29n`) is read at space level only. Every route that adds, renames or removes a space's emoji or stickers, and every step of the Discord import, asks `expressionManagerRefusal` (`server/src/utils/spaceExpressions.ts`): the bit in the space (`403 missing_permission`, `details.permission` = `MANAGE_EMOJIS`), then `memberActionRefusal` (a timeout, an address not yet confirmed, rules not yet agreed to; "Held back in a space"). An add asks again with nothing awaited right before its row goes in, so someone who lost the bit while their picture was being encoded adds nothing. A channel or category override that sets it changes nothing, and the override editors do not offer it; the role editors list it in the space's group as "Manage Emoji and Stickers", with a line under it saying what it covers. The owner, instance admins and ADMINISTRATOR holders hold it, and a role gets it only from someone who holds it ("Held-bits rule"). Listing a space's emoji and stickers takes membership, or this bit (an instance admin who is not a member); anyone else gets `403 not_space_member`. Using a space's emoji in text or as a reaction is no permission bit: see [emoji.md](emoji.md), "Who may use which". Bit 29 had no meaning before 1.34.0; a role that carried it anyway holds the permission now, as with bits 8 and 9.
+
+**From a Discord template** (spaces.md, "Importing a Discord template") each Discord bit maps to the bit with the same meaning, or is reported as not supported. Discord's Manage Expressions (bit 30) edits and deletes everyone's emoji, stickers and sounds, and Create Expressions (bit 43) adds them; MANAGE_EMOJIS and MANAGE_SOUNDS do both. So a role or overwrite gets those two only when it held both Discord bits (`DISCORD_COMBINED_PERMISSIONS` in `packages/shared/src/discordImport.ts`); with only one of them it gets neither, and that bit is reported as not supported. Create Public Threads (35) gives CREATE_THREADS and Use Soundboard (42) gives USE_SOUNDBOARD (both from 1.34.0).
 
 ---
 
@@ -523,7 +528,7 @@ channel-scoped for editing or deleting one channel. The current split:
 | Scope | Actions |
 |---|---|
 | Channel | view, send, attach, react, read history, manage messages, mention everyone, poke (VIEW_CHANNEL and SEND_MESSAGES); connect, speak, stream; edit or delete the channel (`MANAGE_CHANNELS`); mute, deafen, move, disconnect a voice user (checked on the channel the target is in) |
-| Space | create a channel; reorder channels and categories; create, rename or delete a category; read or write any channel or category override (`MANAGE_ROLES`); invites, kick, ban, space settings |
+| Space | create a channel; reorder channels and categories; create, rename or delete a category; read or write any channel or category override (`MANAGE_ROLES`); invites, kick, ban, space settings; the space's emoji and stickers and their import from Discord (`MANAGE_EMOJIS`) |
 
 Member and role actions also follow the role hierarchy and the held-bits
 rule (above). Every gated surface:
@@ -549,6 +554,8 @@ rule (above). Every gated surface:
 | Voice user menu: mute, deafen, move, disconnect | `voice/voiceMenuItems.tsx` | no moderation items for members ranked at or above the viewer |
 | Message author right-click: Mention, Poke | `chat/useAuthorMenu.ts` via `chat/Message.tsx` | both only for someone else's sent message where the viewer can write: SEND_MESSAGES (`channelPermissions`) in a space channel, a DM whose partner still has an account. Mention: only when the author is one of the channel's people (`utils/channelUser`). Poke: space channels only, where the space's instance offered pokes in its `ready`; the server also needs the target to be a member with VIEW_CHANNEL (websocket.md, "Channel pokes"). With neither, the right click opens the message menu |
 | Voice drag-to-move | `hooks/useDragManager.ts` via `layout/ChannelSidebar.tsx` | not draggable for members ranked at or above the viewer |
+| Space settings: tabs, and the phone's settings button | `spaceSettingsPanels/spaceSettingsTabs.ts` (`allowedSpaceSettingsTabs`, `mayManageSpaceSettings`) via `modals/SpaceSettings.tsx` and `layout/MobileSpacesScreen.tsx` | each tab with the space-wide bit its routes check (spaces.md, "Settings tabs"): Emoji and stickers with MANAGE_EMOJIS; Get from Discord with MANAGE_ROLES and MANAGE_CHANNELS, or MANAGE_EMOJIS; Verification for the owner. The phone's button shows when any tab beyond Your settings is open to the viewer |
+| Get from Discord: its parts | `spaceSettingsPanels/DiscordMovePanel.tsx` | the template import with MANAGE_ROLES and MANAGE_CHANNELS; the emoji and sticker import with MANAGE_EMOJIS; the announcement when the space has its own invite address or the viewer holds CREATE_INVITE |
 
 The helpers in `web/src/utils/roleHierarchy.ts` are the surface every role
 and permission editor gates with: `myUserIdInSpace`, `myStandingIn`,
@@ -802,7 +809,7 @@ Covered by `packages/server/src/routes/messages.replyAuthorization.test.ts` and
 
 ## Held back in a space
 
-`memberActionRefusal` (`utils/spaceModeration.ts`) is the one gate for taking part: a running timeout, or required rules not yet agreed to (`rules_not_accepted`). Messages (through `spaceMessageRefusal`), reactions, votes, pins, threads, pokes, joining voice and a voice token all pass it, and so does making a webhook.
+`memberActionRefusal` (`utils/spaceModeration.ts`) is the one gate for taking part: a running timeout, or required rules not yet agreed to (`rules_not_accepted`). Messages (through `spaceMessageRefusal`), reactions, votes, pins, threads, pokes, joining voice and a voice token all pass it, and so does making a webhook. Since 1.34.0 so do changing a space's emoji and stickers and bringing them over from Discord, through `expressionManagerRefusal` ("MANAGE_EMOJIS").
 
 ## Seeing and writing
 

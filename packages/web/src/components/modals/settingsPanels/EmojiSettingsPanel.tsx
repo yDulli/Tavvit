@@ -18,12 +18,7 @@ import { Icon } from '../../ui/Icon';
 import { SettingsField, SettingsPage, SettingsSection } from './_shared/SettingsControls';
 import { describeError } from '../../../i18n/errors';
 import { base64OfDataUrl } from '../../../utils/animatedImage';
-
-/** A name for an emoji from the file's own name: lower case, letters, digits and underscores, or empty when nothing usable is left. */
-export function suggestEmojiName(fileName: string): string {
-  const base = fileName.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
-  return normalizeEmojiName(base.slice(0, CUSTOM_EMOJI_NAME_MAX)) ?? '';
-}
+import { suggestEmojiName } from '../../../utils/emojiName';
 
 const SOURCE_MB = CUSTOM_EMOJI_LIMITS.MAX_SOURCE_BYTES / (1024 * 1024);
 

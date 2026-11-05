@@ -28,6 +28,11 @@ interface ReactionPillProps {
   reactions: readonly Reaction[];
   /** The instance that issued the message and its reactions. */
   origin: string;
+  /**
+   * The instance whose emoji an `emoji:<id>` reaction names: the message's in a space, the first
+   * reactor's home in a direct message. `origin` without it.
+   */
+  emojiOrigin?: string;
   /** It was not there when the message's row mounted: it comes in with a small jump. */
   added?: boolean;
   onToggle: () => void;
@@ -55,7 +60,7 @@ function truncateName(name: string): string {
  * routed through the cross-instance user views so a remote user shows their
  * home instance's name rather than a stub's.
  */
-export function ReactionPill({ emoji, reactions, origin, added = false, onToggle }: ReactionPillProps) {
+export function ReactionPill({ emoji, reactions, origin, emojiOrigin = origin, added = false, onToggle }: ReactionPillProps) {
   const { t } = useTranslation(['chat', 'common', 'legal']);
   const bumps = useBump(reactions.length);
   const stickerAddress = stickerUrl(emoji);
@@ -154,7 +159,7 @@ export function ReactionPill({ emoji, reactions, origin, added = false, onToggle
       >
         {imageUrl ? <img src={imageUrl} alt={t('chat:stickers.sticker')} className="h-7 w-7 overflow-hidden object-contain text-2xs" />
           : stickerAddress ? <span title={t('legal:external.compactTitle', { host: blockedHost })}><Icon name="image" size={16} className="text-txt-tertiary" /></span>
-          : customEmojiId ? <CustomEmojiImage id={customEmojiId} size="inline" className="!h-4 !min-w-4 align-middle" />
+          : customEmojiId ? <CustomEmojiImage id={customEmojiId} origin={emojiOrigin} size="inline" className="!h-4 !min-w-4 align-middle" />
           : <span className="text-body leading-none">{emoji}</span>}
         <span key={bumps} className={`tabular font-mono text-label font-medium ${mine ? 'text-accent-soft' : 'text-txt-secondary'}${bumps > 0 ? ' bump' : ''}`}>
           {fmt.formatNumber(reactions.length)}
@@ -174,7 +179,7 @@ export function ReactionPill({ emoji, reactions, origin, added = false, onToggle
             <img src={imageUrl} alt={t('chat:stickers.preview')} className="w-full h-40 object-contain" />
           </div>
             : stickerAddress ? <Icon name="image" size={16} className="flex-shrink-0 text-txt-tertiary" />
-            : customEmojiId ? <CustomEmojiImage id={customEmojiId} size="inline" className="!h-5 !min-w-5 align-middle flex-shrink-0" />
+            : customEmojiId ? <CustomEmojiImage id={customEmojiId} origin={emojiOrigin} size="inline" className="!h-5 !min-w-5 align-middle flex-shrink-0" />
             : <span className="text-base leading-none flex-shrink-0">{emoji}</span>}
           <span className={`text-ui leading-[18px] text-txt-secondary [overflow-wrap:anywhere] ${imageUrl ? 'w-full border-t border-border-soft px-3 py-2.5 text-center' : ''}`}>
             {before}

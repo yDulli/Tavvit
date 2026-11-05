@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
 import type { CustomEmoji } from '@backspace/shared/src/customEmoji';
 
 vi.mock('../../audio/AudioManager', () => ({
@@ -61,8 +62,9 @@ describe('MarkdownRenderer and custom emoji', () => {
     expect(container.textContent).toContain('<:wave:11111>');
   });
 
-  it('shows :name: for an emoji that is no longer in the library', () => {
+  it('shows :name: for an emoji whose picture is gone', () => {
     render(<MarkdownRenderer content="<:gone:99999>" channelId="home-chan" />);
+    fireEvent.error(screen.getByRole('img', { name: ':gone:' }));
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.getByTestId('emoji-fallback')).toHaveTextContent(':gone:');
   });

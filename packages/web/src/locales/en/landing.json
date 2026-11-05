@@ -324,7 +324,7 @@
     "title": "Opening your own takes three steps.",
     "one": {
       "title": "Set up your place",
-      "body": "Start a new space, or paste a Discord server template and get its roles, categories and channels."
+      "body": "Start a new space, or bring your Discord server: its roles, categories and channels from a template, its emoji and stickers with a bot of your own."
     },
     "two": {
       "title": "Send one link",
@@ -422,7 +422,7 @@
       },
       "moving": {
         "q": "Can I bring my Discord server along?",
-        "a": "Its structure, yes. Paste a server template link and Tavvit sets up the roles, categories, channels and permissions. Messages and members cannot come along, so invite your people with a link."
+        "a": "Its structure and its emoji, yes. Paste a server template link and Tavvit sets up the roles, categories, channels and permissions; with a bot of your own, the server's emoji and stickers come along too. Messages and members cannot, so invite your people with a link."
       },
       "bots": {
         "q": "Can I use bots?",

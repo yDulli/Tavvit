@@ -4,6 +4,17 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.34.0": {
+      "title": "Umzug von Discord",
+      "items": {
+        "spaceEmoji": "Jeder Space kann eigene Emojis haben, bis zu 200, und Sticker, bis zu 60. Alle können sie in den Kanälen des Space verwenden, seine Mitglieder überall auf dem Server.",
+        "import": "Space-Einstellungen, Von Discord holen bringt die Emojis und Sticker eines Discord-Servers mit einem eigenen Bot herüber. Sein Token wird für zwei Anfragen an Discord genutzt und nie gespeichert.",
+        "announce": "Eine fertige Ankündigung in fünf Sprachen sagt deinem Discord-Server, wohin ihr gezogen seid, und ihr Link begrüßt alle, die nachkommen.",
+        "pickers": "Die Auswahl für Emojis und Sticker zeigt zuerst den Space, in dem du schreibst, dann die Emojis des Servers, dann deine anderen Spaces.",
+        "right": "Ein neues Recht, Emojis und Sticker verwalten, legt fest, wer sie hinzufügen, umbenennen und entfernen darf.",
+        "elsewhere": "Emojis in einem Space auf einem anderen Server werden jetzt dort angezeigt, und Reaktionen damit funktionieren."
+      }
+    },
     "1.33.2": {
       "title": "Eine neue Produktseite, Banner und Tooltips",
       "items": {

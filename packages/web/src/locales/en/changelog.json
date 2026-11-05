@@ -4,6 +4,17 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.34.0": {
+      "title": "Move over from Discord",
+      "items": {
+        "spaceEmoji": "Every space can have its own emoji, up to 200, and stickers, up to 60. Everyone can use them in the space's channels, and its members anywhere on the server.",
+        "import": "Space settings, Get from Discord brings a Discord server's emoji and stickers over with a bot of your own. Its token is used for two requests to Discord and never stored.",
+        "announce": "A ready-made announcement in five languages tells your Discord server where you went, and its link welcomes everyone who follows.",
+        "pickers": "The emoji and sticker pickers show the space you are writing in first, then the server's emoji, then your other spaces.",
+        "right": "A new right, Manage Emoji and Stickers, decides who may add, rename and remove them.",
+        "elsewhere": "Emoji in a space on another server now show there, and reactions with them work."
+      }
+    },
     "1.33.2": {
       "title": "A new product page, banners and tooltips",
       "items": {

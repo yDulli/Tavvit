@@ -34,6 +34,7 @@ import { botsEnabled, createBotAccount, newBotToken } from '../utils/botAccess.j
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
 import { sendError } from '../utils/httpErrors.js';
 import { mayPostSticker } from '../utils/remoteMedia.js';
+import { emojiUseRefusal } from '../utils/emojiUse.js';
 import { computePermissions, getChannelSpaceId, hasPermission, isBanned, isMember, PermissionBits } from '../utils/permissions.js';
 import { recordPlatformAudit } from '../utils/platformAudit.js';
 import { normalizeRolePositions } from '../db/rolePositions.js';
@@ -453,6 +454,8 @@ export async function botRoutes(app: FastifyInstance): Promise<void> {
     const given = typeof request.body?.content === 'string' ? request.body.content.trim() : '';
     if (given.length > MAX_MESSAGE_LENGTH) return sendError(reply, 400, 'content_too_long', { max: MAX_MESSAGE_LENGTH });
     if (!mayPostSticker(given, request.userId)) return sendError(reply, 400, 'sticker_elsewhere');
+    const emojiRefusal = emojiUseRefusal(given, request.userId, spaceId);
+    if (emojiRefusal) return sendError(reply, emojiRefusal.status, emojiRefusal.code);
     let cards: MessageCard[] = [];
     if (request.body?.cards !== undefined) {
       const cleaned = cleanCards(request.body.cards, withoutMentions);

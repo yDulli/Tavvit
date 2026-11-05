@@ -401,6 +401,13 @@ for (const url of ['/api/admin/dashboard', '/api/admin/system', '/api/admin/anno
   check('an invite link previews its space', /og:title" content="Night Shift"/.test(html), html.match(/og:title" content="[^"]*"/)?.[0]);
   check('  and is left out of search engines', res.headers.get('x-robots-tag') === 'noindex', res.headers.get('x-robots-tag') ?? 'no header');
   const maraHeaders = { authorization: `Bearer ${seed.users.mara.token}` };
+  const preview = await fetch(`${WEB}/api/spaces/invite/${inviteCode}/preview`).then((r) => r.json());
+  check('an invite preview says whether its space came from Discord', typeof preview.movedFromDiscord === 'boolean', JSON.stringify(preview.movedFromDiscord));
+  const fromDiscord = await fetch(`${WEB}/join/${inviteCode}?from=discord`);
+  check('  and a link marked from Discord opens the same page', fromDiscord.ok && /og:title" content="Night Shift"/.test(await fromDiscord.text()));
+  const offer = await fetch(`${WEB}/api/emojis/available`, { headers: maraHeaders }).then((r) => r.json());
+  check('a member reads what they may pick: the library and their spaces', Array.isArray(offer.library) && Array.isArray(offer.spaces)
+    && offer.spaces.some((entry) => entry.spaceId === seed.spaces.nightShift.id), JSON.stringify(offer).slice(0, 120));
   const spaces = await fetch(`${WEB}/api/spaces`, { headers: maraHeaders }).then((r) => r.json());
   const address = spaces.find((entry) => entry.id === seed.spaces.nightShift.id)?.vanityCode ?? null;
   const setAddress = (code) => fetch(`${WEB}/api/spaces/${seed.spaces.nightShift.id}/vanity`, {

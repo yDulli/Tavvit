@@ -78,6 +78,10 @@ export const BansPanel = lazyPanel(() => import('./spaceSettingsPanels/BansPanel
 export const ModerationPanel = lazyPanel(() => import('./spaceSettingsPanels/ModerationPanel'), (m) => m.ModerationPanel);
 export const AuditLogPanel = lazyPanel(() => import('./spaceSettingsPanels/AuditLogPanel'), (m) => m.AuditLogPanel);
 export const VerificationPanel = lazyPanel(() => import('./spaceSettingsPanels/VerificationPanel'), (m) => m.VerificationPanel);
+export const EmojiStickersPanel = lazyPanel(() => import('./spaceSettingsPanels/EmojiStickersPanel'), (m) => m.EmojiStickersPanel);
+export const DiscordMovePanel = lazyPanel(() => import('./spaceSettingsPanels/DiscordMovePanel'), (m) => m.DiscordMovePanel);
+export const SoundsPanel = lazyPanel(() => import('./spaceSettingsPanels/SoundsPanel'), (m) => m.SoundsPanel);
+export const WelcomePanel = lazyPanel(() => import('./spaceSettingsPanels/WelcomePanel'), (m) => m.WelcomePanel);
 
 /**
  * Holds the panel's place while its chunk loads. The block has a fixed height

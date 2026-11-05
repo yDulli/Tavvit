@@ -348,7 +348,9 @@
         "verification": "Verificação",
         "you": "Suas configurações",
         "access": "Acesso",
-        "invites": "Convites"
+        "invites": "Convites",
+        "emoji": "Emojis e figurinhas",
+        "discord": "Trazer do Discord"
       }
     },
     "discardChanges": "Descartar",
@@ -589,7 +591,14 @@
         "forumTagsUpdate": "Tags do fórum alteradas",
         "channelFollowCreate": "Acompanhamento iniciado",
         "channelFollowDelete": "Acompanhamento encerrado",
-        "vanityUpdate": "Endereço próprio alterado"
+        "vanityUpdate": "Endereço próprio alterado",
+        "emojiCreate": "Emoji adicionado",
+        "emojiUpdate": "Emoji renomeado",
+        "emojiDelete": "Emoji removido",
+        "stickerCreate": "Figurinha adicionada",
+        "stickerUpdate": "Figurinha alterada",
+        "stickerDelete": "Figurinha removida",
+        "discordExpressionsImport": "Emojis e figurinhas importados do Discord"
       },
       "sentences": {
         "spaceUpdate": "{{actor}} alterou as configurações do espaço",
@@ -642,7 +651,14 @@
         "forumTagsUpdate": "{{actor}} alterou as tags de {{target}}",
         "channelFollowCreate": "{{actor}} conectou {{target}} a um canal de outro espaço",
         "channelFollowDelete": "{{actor}} encerrou a conexão de {{target}} com um canal de outro espaço",
-        "vanityUpdate": "{{actor}} alterou o endereço próprio do espaço"
+        "vanityUpdate": "{{actor}} alterou o endereço próprio do espaço",
+        "emojiCreate": "{{actor}} adicionou o emoji {{target}}",
+        "emojiUpdate": "{{actor}} renomeou o emoji {{target}}",
+        "emojiDelete": "{{actor}} removeu o emoji {{target}}",
+        "stickerCreate": "{{actor}} adicionou a figurinha {{target}}",
+        "stickerUpdate": "{{actor}} alterou a figurinha {{target}}",
+        "stickerDelete": "{{actor}} removeu a figurinha {{target}}",
+        "discordExpressionsImport": "{{actor}} trouxe emojis e figurinhas do Discord"
       },
       "fields": {
         "name": "Nome",
@@ -687,7 +703,9 @@
         "channels": "Canais",
         "messages": "Mensagens",
         "tags": "Tags",
-        "vanityCode": "Endereço"
+        "vanityCode": "Endereço",
+        "emoji": "Emojis",
+        "stickers": "Figurinhas"
       }
     },
     "you": {
@@ -787,6 +805,50 @@
       "remove": "Remover {{name}}",
       "removeTitle": "Remover este clipe?",
       "removeBody": "{{name}} desaparece para todos neste espaço."
+    },
+    "expressions": {
+      "title": "Emojis e figurinhas",
+      "intro": "Todos podem usá-los nos canais deste espaço, e os membros dele em qualquer lugar deste servidor.",
+      "emptyTitle": "Nenhum emoji ou figurinha ainda",
+      "emptyBody": "Adicione imagens suas ou traga-as do seu servidor do Discord.",
+      "fromDiscord": "Trazer do Discord",
+      "filter": "Buscar pelo nome",
+      "count": "{{used}} de {{max}}",
+      "progress": "Adicionando {{done}} de {{total}}…",
+      "animated": "Animado",
+      "fileTooLarge": "{{name}} tem mais de {{max}} MB.",
+      "fileFailed": "{{name}}: {{reason}}",
+      "emoji": {
+        "title": "Emojis",
+        "add": "Adicionar emoji",
+        "hint": "PNG, JPEG, WebP ou GIF, até {{max}} MB cada. Escolha vários de uma vez: os nomes vêm dos nomes dos arquivos, e você pode mudá-los.",
+        "noRoomFor_one": "{{count}} imagem não coube: o espaço não tem lugar para mais emojis.",
+        "noRoomFor_many": "{{count}} de imagens não couberam: o espaço não tem lugar para mais emojis.",
+        "noRoomFor_other": "{{count}} imagens não couberam: o espaço não tem lugar para mais emojis.",
+        "rename": "Renomear :{{name}}:",
+        "nameLabel": "Nome do emoji",
+        "remove": "Remover :{{name}}:",
+        "removeTitle": "Remover :{{name}}:?",
+        "removeBody": "Mensagens que o usaram vão mostrar :{{name}}: como texto."
+      },
+      "stickers": {
+        "title": "Figurinhas",
+        "add": "Adicionar figurinha",
+        "hint": "PNG, JPEG, WebP ou GIF, até {{max}} MB cada. Os membros podem guardá-las na própria coleção.",
+        "noRoomFor_one": "{{count}} imagem não coube: o espaço não tem lugar para mais figurinhas.",
+        "noRoomFor_many": "{{count}} de imagens não couberam: o espaço não tem lugar para mais figurinhas.",
+        "noRoomFor_other": "{{count}} imagens não couberam: o espaço não tem lugar para mais figurinhas.",
+        "untitled": "Figurinha",
+        "rename": "Renomear {{name}}",
+        "nameLabel": "Nome da figurinha",
+        "noDescription": "Sem descrição para leitores de tela",
+        "editDescription": "Descrever {{name}} para leitores de tela",
+        "descriptionLabel": "Descrição para leitores de tela",
+        "descriptionPlaceholder": "O que a figurinha mostra",
+        "remove": "Remover {{name}}",
+        "removeTitle": "Remover {{name}}?",
+        "removeBody": "Mensagens que já a mostram continuam com ela."
+      }
     }
   },
   "bans": {
@@ -890,7 +952,8 @@
       "useSoundboard": "Usar soundboard",
       "manageSounds": "Gerenciar soundboard",
       "moderateMembers": "Aplicar castigo a membros",
-      "viewAuditLog": "Ver registro de auditoria"
+      "viewAuditLog": "Ver registro de auditoria",
+      "manageEmojis": "Gerenciar emojis e figurinhas"
     },
     "tristate": {
       "deny": "Negar",
@@ -924,7 +987,8 @@
     "aboveYouShort": "Hierarquia igual ou superior ao seu cargo mais alto",
     "descriptions": {
       "moderateMembers": "Impedir por um tempo que membros enviem mensagens, reajam e entrem em canais de voz. Só vale para membros abaixo do seu cargo.",
-      "viewAuditLog": "Ver quem mudou o quê nas configurações, nos cargos, nos canais e nos membros deste espaço."
+      "viewAuditLog": "Ver quem mudou o quê nas configurações, nos cargos, nos canais e nos membros deste espaço.",
+      "manageEmojis": "Adicionar, renomear e remover os emojis e figurinhas deste espaço, e trazê-los do Discord."
     }
   },
   "sidebar": {
@@ -1208,7 +1272,7 @@
     },
     "notTransferred": {
       "title": "O que um modelo não contém",
-      "body": "Um modelo é um retrato da estrutura, não um backup. Mensagens, membros, bots, webhooks, emojis, figurinhas, o ícone do servidor, eventos, tópicos e integrações ficam no Discord."
+      "body": "Um modelo é um retrato da estrutura, não um backup. Mensagens, membros, bots, webhooks, o ícone do servidor, eventos, tópicos e integrações ficam no Discord. Emojis e figurinhas vêm à parte, com um bot seu: Configurações do espaço, Trazer do Discord."
     },
     "preview": {
       "by": "por {{name}}",
@@ -1289,6 +1353,92 @@
     "discordTypes": {
       "stage": "um canal de palco",
       "media": "um canal de mídia"
+    },
+    "move": {
+      "intro": "Traga seu servidor: os canais e cargos de um modelo, os emojis e figurinhas com um bot seu. Depois avise o pessoal onde vocês estão.",
+      "structureTitle": "Canais, cargos e permissões",
+      "history": "Mensagens e membros ficam no Discord: as mensagens de ninguém são copiadas."
+    },
+    "expressions": {
+      "entryTitle": "Emojis e figurinhas",
+      "intro": "O Tavvit pede ao Discord os emojis e figurinhas do seu servidor com o token de um bot seu que está nesse servidor. As mensagens ficam no Discord.",
+      "howTo": {
+        "app": "Crie um aplicativo em discord.com/developers/applications.",
+        "token": "Em Bot, escolha Reset Token e copie o token.",
+        "invite": "Em OAuth2 → URL Generator, marque “bot” sem permissões e abra o link para adicionar o bot ao seu servidor.",
+        "serverId": "No Discord, ative o Modo de desenvolvedor (Configurações → Avançado), clique com o botão direito no servidor e escolha Copiar ID do servidor."
+      },
+      "serverIdLabel": "ID do servidor",
+      "tokenLabel": "Token do bot",
+      "tokenHint": "Enviado uma vez para {{host}}, usado em duas consultas ao Discord e depois esquecido: nunca é guardado. Depois você pode redefini-lo no Discord.",
+      "lookUp": "Consultar",
+      "lookingUp": "Perguntando ao Discord…",
+      "preview": {
+        "found": "O Discord tem {{emoji}} e {{stickers}} neste servidor.",
+        "emoji_one": "{{count}} emoji",
+        "emoji_many": "{{count}} de emojis",
+        "emoji_other": "{{count}} emojis",
+        "stickers_one": "{{count}} figurinha",
+        "stickers_many": "{{count}} de figurinhas",
+        "stickers_other": "{{count}} figurinhas",
+        "room": "Ainda cabem aqui {{emoji}} emojis e {{stickers}} figurinhas.",
+        "picturesHint": "As imagens estão nos servidores do Discord. Seu aparelho só as carrega de lá se você quiser vê-las.",
+        "showPictures": "Mostrar imagens",
+        "nothing": "Este servidor não tem emojis nem figurinhas próprios.",
+        "emojiHeading": "Emojis · {{selected}} de {{total}}",
+        "stickersHeading": "Figurinhas · {{selected}} de {{total}}",
+        "tooMany": "Há mais selecionados do que cabem aqui: os últimos da lista ficam de fora."
+      },
+      "skip": {
+        "already_here": "já está aqui",
+        "no_room": "sem espaço",
+        "lottie": "uma figurinha vetorial animada, que não pode vir",
+        "managed": "pertence a uma integração no Discord",
+        "download_failed": "não foi possível baixar",
+        "image_refused": "não foi possível ler como imagem"
+      },
+      "note": {
+        "renamed": "vira {{name}}",
+        "still_picture": "vem como imagem parada",
+        "role_restriction_dropped": "no Discord só alguns cargos podiam usar; aqui todos os membros podem"
+      },
+      "start_one": "Importar {{count}}",
+      "start_many": "Importar {{count}}",
+      "start_other": "Importar {{count}}",
+      "importing": "Trazendo",
+      "progress": "{{done}} de {{total}}",
+      "keepOpen": "Mantenha esta página aberta até terminar. Se você sair, a importação para; o que já veio fica.",
+      "stop": "Parar",
+      "done": {
+        "title": "Emojis e figurinhas importados",
+        "stoppedTitle": "A importação parou",
+        "stoppedByYou": "Você parou. O que já veio fica.",
+        "counts": "{{emoji}} e {{stickers}} vieram.",
+        "leftOut_one": "{{count}} ficou de fora",
+        "leftOut_many": "{{count}} de itens ficaram de fora",
+        "leftOut_other": "{{count}} ficaram de fora",
+        "revoke": "Agora você pode tirar o bot do seu servidor do Discord e redefinir o token dele."
+      }
+    },
+    "announce": {
+      "title": "Avise seu servidor do Discord",
+      "intro": "Publique isto no seu servidor do Discord, por exemplo no canal de anúncios. O link abre uma página que recebe as pessoas e diz o que já está aqui.",
+      "language": "Idioma do texto",
+      "textLabel": "Anúncio",
+      "copyText": "Copiar texto",
+      "copyLink": "Copiar link",
+      "copyFailed": "Não foi possível copiar. Selecione o texto e copie você mesmo.",
+      "linkFailed": "Não foi possível criar um link de convite para este espaço: {{reason}}",
+      "registrationClosed": "Este servidor só aceita novas contas com um convite dos administradores, então ninguém consegue se cadastrar só com este link.",
+      "lines": {
+        "headline": "{{space}} se mudou para o {{instance}}.",
+        "ready": "Nossos canais e cargos já estão prontos lá.",
+        "readyWithEmoji": "Nossos canais, cargos e emojis já estão prontos lá.",
+        "account": "Criar uma conta leva mais ou menos um minuto.",
+        "join": "Entre com este link:",
+        "request": "Peça para entrar com este link, e nós deixamos você entrar:",
+        "history": "Tudo o que foi escrito aqui fica no Discord."
+      }
     }
   },
   "spaceProfile": {

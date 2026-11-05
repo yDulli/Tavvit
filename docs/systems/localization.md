@@ -93,11 +93,11 @@ Rules:
 | Namespace | Covers |
 |-----------|--------|
 | `common` | Shared strings used across surfaces, grouped as `actions` (Save, Cancel, Accept, Leave, Log In…), `states` (Loading, Enabled, the four presence labels, Settings saved…), `labels` (Username, Password, Members, Friends, Danger Zone…), `time` (Today at, Yesterday at, Never, Just now), `units` (ms, %, kbps, Mbps) and `colors` (the avatar and folder colour names); the language selector. `src/i18n/presence.ts` maps a presence status to its `states` key so every surface shows the same words |
-| `auth` | Login, register, join-by-invite, password fields, federated account creation |
-| `chat` | Message list, composer, attachments, embeds, reactions, replies, typing, jump-to-message |
+| `auth` | Login, register, join-by-invite, password fields, federated account creation; the invite page's welcome for people coming from Discord (`join.fromDiscord.*`, shown for a `?from=discord` link only when the space's instance confirms the move) |
+| `chat` | Message list, composer, attachments, embeds, reactions, replies, typing, jump-to-message; the emoji and sticker pickers, where a space's set is headed by the space's own name, the instance's library by `emoji.category`, and a space's stickers are a section labelled `stickers.spaceSection` |
 | `dm` | DM list, group DM management, DM calls, DM system messages |
 | `voice` | Voice channel controls, screen share, stream tiles, device pickers |
-| `spaces` | Space, category and channel CRUD, invites, discovery, membership, bans, roles; the Explore page's Inner and Outer Space sections, the connect-and-join dialog, the connections-that-need-attention chips and the per-space directory switch (`explore.inner.*`, `explore.outer.*`, `explore.connect.*`, `explore.connections.*`, `settings.discovery.directory.*`); the per-space and per-channel notification settings: the bell popover, the dialog, the menu entry and the muted indicator (`notifications.*`; the level and mute-duration labels are closed unions mapped by `switch` in `NotificationSettingsControls.tsx`, never built from the value) |
+| `spaces` | Space, category and channel CRUD, invites, discovery, membership, bans, roles; the Explore page's Inner and Outer Space sections, the connect-and-join dialog, the connections-that-need-attention chips and the per-space directory switch (`explore.inner.*`, `explore.outer.*`, `explore.connect.*`, `explore.connections.*`, `settings.discovery.directory.*`); the per-space and per-channel notification settings: the bell popover, the dialog, the menu entry and the muted indicator (`notifications.*`; the level and mute-duration labels are closed unions mapped by `switch` in `NotificationSettingsControls.tsx`, never built from the value); the space settings' Emoji and stickers tab (`settings.expressions.*`) and Get from Discord tab: its introduction and the template step (`import.move.*`), the emoji and sticker import (`import.expressions.*`; the report's reasons `skip.*` and `note.*` are the wire's closed unions, each key written out in `DiscordExpressionImport.tsx`, never built from the value) and the announcement for the Discord server (`import.announce.*`, whose `lines.*` are read in the language picked in the box, see "A text in another language") |
 | `settings` | User settings modal and its panels (account, voice, privacy, connections, keybinds, desktop) |
 | `admin` | Instance settings panels (general, registration, users, storage, streaming, updates, federation); the space-discovery ladder and the directory status line (`general.discovery.*`, `general.directory.*`) |
 | `federation` | Connected instances UI, peering requests, identity attach and detach |
@@ -237,6 +237,21 @@ The store shape for `CustomTypeOptions.resources` is derived from the
 English catalogs (`resources.ts` imports every `en/*.json`), which is what
 makes keys typed without maintaining a parallel type by hand.
 
+### A text in another language
+
+One surface writes in a language other than the app's: the announcement a
+space posts on its Discord server (`DiscordAnnouncement.tsx`, built by
+`buildDiscordAnnouncement` in `utils/discordAnnouncement.ts` from
+`spaces:import.announce.lines.*`), in a language picked in its own box among
+the released ones, starting at the app's. That language's catalogs may not be
+loaded yet, so the box loads them first (`i18n.loadLanguages(language)`) and
+then builds the text with `i18n.getFixedT(language, 'spaces')`; asked before,
+i18next would quietly answer from the English fallback under the other
+language's name. When the load fails, the box writes in the app's language.
+The pick changes nothing else: the app stays in its own language. A new
+surface that writes for other people in a language of their choosing follows
+the same steps.
+
 ---
 
 ## Language selection and persistence
@@ -357,6 +372,25 @@ four codes: `sticker_invalid_image` (`details.max`, in MB), `sticker_not_local`,
 `sticker_not_found` and `sticker_collection_full` (`details.max`). The
 sticker upload limit answers with the shared `rate_limited`.
 
+A space's emoji and stickers ([emoji.md](emoji.md)) added seven codes:
+`space_emoji_limit_reached` and `space_sticker_limit_reached` (`details.max`),
+`space_emoji_name_taken`, `space_sticker_name_taken`, `space_emoji_not_found`,
+`space_sticker_not_found`, and `emoji_unavailable` (a space's emoji in a
+message, an edit or a reaction of someone who may not use it, over REST and on
+the socket). Their uploads reuse the codes of the instance's library and of
+personal stickers (`emoji_name_invalid`, `emoji_image_invalid`,
+`emoji_image_too_large`, `sticker_name_invalid`, `sticker_invalid_image`) and
+the shared `rate_limited`, `storage_limit_reached` and `disk_full`;
+`rate_limited` also answers picture work that cannot start now, while the
+account's previous picture is still being worked on or too many wait.
+Importing them from Discord ([spaces.md](spaces.md), "Importing emoji and
+stickers from Discord") added five: `discord_server_id_invalid`,
+`discord_bot_token_invalid`, `discord_bot_not_in_server`,
+`discord_import_expired` and `discord_import_running`, next to the template
+import's `discord_rate_limited` and `discord_unreachable`. Discord refusing the
+bot token is answered with 400, never 401: the client takes any 401 as the end
+of its own session and would sign out instead of showing the text.
+
 Concurrent permission edits ([permissions.md](permissions.md), "Concurrent
 edits") added two `409` codes: `overrides_conflict` (a channel or category
 override changed since the editor loaded it) and `role_permissions_conflict`
@@ -395,6 +429,16 @@ Explore page from `spaces:explore.inner.noneAnswered` and `describeError`
 respectively. The test for a store that reports a failure is whether the
 words could be chosen later, at the surface, in the language the reader has
 now.
+
+The report of the Discord emoji and sticker import follows the same rule. What
+became of an entry (`imported`, `already_here`, `no_room`, `lottie`,
+`managed`, `download_failed`, `image_refused`) and what changed on the way
+(`renamed`, `still_picture`, `role_restriction_dropped`) are closed unions on
+the wire (`DiscordExpressionOutcome`, `DiscordExpressionNote` in
+`packages/shared/src/discordExpressionImport.ts`), not `ErrorCode`s: nothing
+was refused, an entry only stayed behind or came over changed. The page words
+why an entry stayed behind from `spaces:import.expressions.skip.*` and what
+changed from `.note.*`.
 
 The check reads `ERROR_CODES` by scanning the array for quoted words, so it
 strips comments from the file first (`readErrorCodes` in
@@ -438,8 +482,11 @@ routes' codes, from `utils/dmMessageRules.ts`; see
 (`dm_call_accept`; see [voice.md](voice.md#dm-call-state-machine)), every
 refusal of `channel_poke` (`validation_failed`, `channel_not_found`,
 `missing_permission`, `member_not_found`, `poke_target_no_access`,
-`rate_limited`; see [websocket.md](websocket.md#channel-pokes)), and
-`system_message_immutable` for a `message_edit` of a channel system message.
+`rate_limited`; see [websocket.md](websocket.md#channel-pokes)),
+`system_message_immutable` for a `message_edit` of a channel system message,
+`emoji_unavailable` from `message_create` and `message_edit`, and
+`emoji_not_found` and `emoji_unavailable` from `reaction_add` (see
+[websocket.md](websocket.md#reactions-space--dm-auto-detected)).
 
 The web client no longer matches on English error text. The places that
 used to (the join page, the space invite card, the invite modal, the roles

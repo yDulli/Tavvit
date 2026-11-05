@@ -500,6 +500,25 @@ export const ERROR_CODES = [
   // details: { max }
   'discord_template_too_many_overwrites',
   'import_target_forbidden',
+
+  // Importing a Discord server's emoji and stickers (docs/systems/spaces.md)
+  'discord_server_id_invalid',
+  'discord_bot_token_invalid',
+  'discord_bot_not_in_server',
+  'discord_import_expired',
+  'discord_import_running',
+
+  // A space's emoji and stickers (docs/systems/emoji.md)
+  // details: { max }
+  'space_emoji_limit_reached',
+  // details: { max }
+  'space_sticker_limit_reached',
+  'space_emoji_name_taken',
+  'space_sticker_name_taken',
+  'space_emoji_not_found',
+  'space_sticker_not_found',
+  // A space's emoji used outside its space by someone who is not its member.
+  'emoji_unavailable',
   // A forum holds posts, not messages of its own.
   'forum_takes_posts',
   'forum_required',

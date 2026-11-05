@@ -5,14 +5,6 @@
     "next": {
       "title": "Next",
       "items": {
-        "spaceEmoji": {
-          "title": "Emojis and stickers for each space",
-          "text": "Every space gets its own emojis and stickers, and its members can use them everywhere on the server, free."
-        },
-        "discordMove": {
-          "title": "Bring your Discord server along",
-          "text": "Its channels, roles, emojis and stickers in a few minutes, and an invite that welcomes everyone who follows."
-        },
         "cameraEffects": {
           "title": "Background blur and backgrounds",
           "text": "Blur your room on camera or put a picture behind you, worked out on your own device."

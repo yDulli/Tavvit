@@ -31,8 +31,12 @@ Source files:
 - `packages/web/src/hooks/useSpaceJoin.ts` — Shared join/request state machine over exploreStore (used by ExplorePage SpaceCard and the JoinSpace modal preview card)
 - `packages/web/src/utils/inviteParser.ts` — Invite code/URL/qualified-code parser
 - `packages/web/src/utils/joinErrors.ts`, `utils/inviteJoinRequest.ts` - `JoinRequestRequiredError` and the join refusal checks; `sendInviteJoinRequest`, the join request an invite to a request space leads to
+- `packages/web/src/components/modals/spaceSettingsPanels/spaceSettingsTabs.ts` — The settings tabs and who may open each, read by the settings window and the phone's settings button (see "Settings tabs")
+- `packages/web/src/components/modals/spaceSettingsPanels/EmojiStickersPanel.tsx` — The Emoji and stickers tab (see "Settings tabs"; the routes in [emoji.md](emoji.md))
+- `packages/web/src/components/modals/spaceSettingsPanels/DiscordMovePanel.tsx`, `DiscordExpressionImport.tsx`, `DiscordAnnouncement.tsx`, `packages/web/src/utils/discordAnnouncement.ts` — The Get from Discord tab: the template entry, the emoji and sticker import, the announcement
+- `packages/server/src/routes/discordExpressionImport.ts`, `utils/discordApi.ts`, `utils/discordExpressionSessions.ts`, `packages/shared/src/discordExpressionImport.ts` — Bringing a Discord server's emoji and stickers into a space (see "Importing emoji and stickers from Discord")
 
-Cross-references: [database.md](database.md) (table schemas), [permissions.md](permissions.md) (resolution algorithm, override tiers), [websocket.md](websocket.md) (event types), [federation.md](federation.md) (peer relay), [voice.md](voice.md) (voice channel join)
+Cross-references: [database.md](database.md) (table schemas), [permissions.md](permissions.md) (resolution algorithm, override tiers), [websocket.md](websocket.md) (event types), [federation.md](federation.md) (peer relay), [voice.md](voice.md) (voice channel join), [emoji.md](emoji.md) (a space's own emoji and stickers, who may use which)
 
 ---
 
@@ -129,7 +133,7 @@ Each change records a `changed` event in the review history, with the editor as 
 4. All `space_folder_members` referencing this space
 5. The space itself, which takes its review rows (`space_verification_requests`, `space_discovery_requests`, `space_review_events`) with it through their `ON DELETE CASCADE` foreign keys
 
-**Post-transaction:** All attachment files and space icon/banner files deleted from disk.
+**Post-transaction:** All attachment files and space icon/banner files deleted from disk, and the pictures of the space's emoji, whose `space_emojis` rows went with the space (`ON DELETE CASCADE`, like `space_stickers`). A sticker's picture is shared by content and stays while a message, a reaction or someone's collection names it; the storage janitor takes the rest.
 
 ---
 
@@ -200,10 +204,11 @@ The icon appears only when it is an upload on this instance; a space icon at ano
   memberCount: number;     // live count from space_members
   instanceName: string;    // from instance_settings
   visibility?: SpaceVisibility; // read on every call; absent from an instance up to 1.9.0
+  movedFromDiscord?: boolean;   // spaces.discord_imported_at is set; absent from an instance before 1.34.0
 }
 ```
 
-Built by `getLocalInvitePreview` (`utils/spaceInviteSnapshot.ts`). `getLocalInviteSnapshot`, which the DM invite route stores in the card, is the same read without `visibility`.
+Built by `getLocalInvitePreview` (`utils/spaceInviteSnapshot.ts`). `getLocalInviteSnapshot`, which the DM invite route stores in the card, is the same read without `visibility` and `movedFromDiscord`. What `movedFromDiscord` is for: "Telling the Discord server".
 
 ### Join by Invite Code
 
@@ -246,6 +251,8 @@ Public route at `/join/:inviteCode`. Handles six phases:
 | `request-sent` | Request sent, or one was already pending | "Request sent to {space}" or "Your request to join {space} is waiting", and Back to Backspace |
 
 **The page's action** is `join` or `request`, read from the preview's `visibility` on load. `request` sends `sendInviteJoinRequest(preview.spaceId, origin, note)` to the space's instance, after the connect step when that instance is remote. It changes when the server says otherwise: a join answered with `join_request_required` (an instance without `visibility` in its preview, or a space switched to `request` after the page loaded) switches to `request` for the user to send; a join answered with `join_request_pending` shows the waiting request; a request answered with `space_not_requestable` (the space left `request`) joins by the code instead. Banned is shown as the refusal text, as on every join path. While the action is `request` the heading above the space name is `auth:join.invitedToRequest` ("You've been invited to ask to join") in every phase, signed out included, so the page never promises entry.
+
+**From Discord.** With `?from=discord` in the address and `movedFromDiscord: true` in the preview, the page shows a welcome for people following their community from Discord (`auth:join.fromDiscord`). See "Telling the Discord server".
 
 **Federation redirect flow (other-instance):**
 1. User enters their home domain (e.g., `my-instance.com`)
@@ -685,7 +692,32 @@ Since 1.32.7 a removed member (left, kicked, banned), and every member of a dele
 
 ## Settings tabs
 
-What a person sees follows what they may do, and a tab they may not use is not shown. **Your settings** is for everyone: notifications, their profile here, and Leave (not for the owner). **Overview, Access, Invites, Discovery and Moderation** need MANAGE_SPACE. **Members** needs one of MANAGE_ROLES, KICK_MEMBERS or BAN_MEMBERS. Access holds the visibility and, with its count beside the tab, the join requests. The server checks every one of these again; the tabs only spare people what they cannot use.
+What a person sees follows what they may do, and a tab they may not use is not shown. One function decides it for every surface, `allowedSpaceSettingsTabs` in `spaceSettingsPanels/spaceSettingsTabs.ts`: each tab with the bit its routes check, read from the viewer's space-wide permissions on the instance that hosts the space (`spacePermissions`). The same module holds the order of the navigation (`SPACE_SETTINGS_NAV`).
+
+| Tab | Shown to |
+|---|---|
+| Your settings | everyone: notifications, their profile here, and Leave (not for the owner) |
+| Overview, Welcome and rules, Access, Invites, Discovery, Moderation | MANAGE_SPACE |
+| Emoji and stickers | MANAGE_EMOJIS |
+| Soundboard | MANAGE_SOUNDS |
+| Get from Discord | MANAGE_ROLES with MANAGE_CHANNELS (the template), or MANAGE_EMOJIS (the emoji and stickers) |
+| Verification | the owner |
+| Members | MANAGE_ROLES, KICK_MEMBERS or BAN_MEMBERS |
+| Roles | MANAGE_ROLES |
+| Bans | BAN_MEMBERS |
+| Audit log | VIEW_AUDIT_LOG |
+
+Access holds the visibility and, with its count beside the tab, the join requests. The server checks every one of these again; the tabs only spare people what they cannot use. The panels load on demand from `lazySettingsPanels.tsx`, the Soundboard and Welcome panels too since 1.34.0.
+
+**The way in.** On the desktop the space's name at the head of its channel column opens the settings for everyone. On the phone the settings button in the space's bar (`MobileSpaceBar` in `layout/MobileSpacesScreen.tsx`) shows when `mayManageSpaceSettings` holds: some tab beyond Your settings is open to the viewer. Before 1.34.0 it needed MANAGE_SPACE, so a member who may manage only the emoji, the clips or the roles had no way in on the phone.
+
+**Emoji and stickers** (`EmojiStickersPanel`; routes and limits in [emoji.md](emoji.md)) lists the space's emoji and its stickers, each list with its count against the limit the space's instance answers (`max`). Several pictures can be picked at once. They are added one after another, each under a free name made from its file name (`name_2` for an emoji, `name (2)` for a sticker, `freeExpressionName`), and a run stops at the first refusal that would refuse the next file the same way (the rate limit, storage, the space full, the right gone), listing what was not added and why. Names are changed in place. So is a sticker's description, what a screen reader says for it, which may be left empty. Removing asks first. A search field appears once there are 24 or more. While the space has no emoji and no stickers, the tab offers "Get from Discord" to whoever may open that tab. Every request goes to the space's own instance (`getApiForOrigin`).
+
+**Get from Discord** (`DiscordMovePanel`) holds the move from a Discord server in one place, each part shown to whoever holds what its routes check:
+- "Channels, roles and permissions" opens the template import ("Importing a Discord template"), with MANAGE_ROLES and MANAGE_CHANNELS. Before 1.34.0 this entry was in Overview.
+- "Emoji and stickers" is the import with a bot of one's own ("Importing emoji and stickers from Discord"), with MANAGE_EMOJIS.
+- "Tell your Discord server" is the announcement ("Telling the Discord server"), when the space has its own invite address or the viewer holds CREATE_INVITE.
+- A last line says that messages and members stay on Discord.
 
 ---
 
@@ -883,9 +915,9 @@ Client-side hook managing three drag types:
 
 ## Importing a Discord template
 
-A Discord server template (a `discord.new/CODE` or `discord.com/template/CODE` link) holds a server's structure: its roles with their permissions, colours and order, its categories and channels with their order, topics, slow mode and permission overwrites. Tavvit can start a new space from one or add one to a space someone manages. A template is not a backup: messages, members, bots, webhooks, emoji, stickers, the server icon, events, threads and integrations are never in it, and the import says so before anything is written.
+A Discord server template (a `discord.new/CODE` or `discord.com/template/CODE` link) holds a server's structure: its roles with their permissions, colours and order, its categories and channels with their order, topics, slow mode and permission overwrites. Tavvit can start a new space from one or add one to a space someone manages. A template is not a backup: messages, members, bots, webhooks, emoji, stickers, the server icon, events, threads and integrations are never in it, and the import says so before anything is written. The server's emoji and stickers can follow with a bot of one's own (next section).
 
-**Where it starts.** Create Space, "Import from Discord", for a new space; Space Settings, Overview, "Import from Discord" for an existing one (shown with `MANAGE_ROLES` and `MANAGE_CHANNELS`). Both open `DiscordImportModal` (web): the template as a link, a code or a `.json` file, a preview of exactly what will be made, the import, and a report.
+**Where it starts.** Create Space, "Import from Discord", for a new space; Space Settings, "Get from Discord", "Import template" for an existing one (shown with `MANAGE_ROLES` and `MANAGE_CHANNELS`; in Overview before 1.34.0, see "Settings tabs"). Both open `DiscordImportModal` (web): the template as a link, a code or a `.json` file, a preview of exactly what will be made, the import, and a report.
 
 **Fetching.** The server alone fetches a template, and only from one address: `https://discord.com/api/v10/guilds/templates/{code}` (`utils/discordTemplateFetch.ts`), Discord's public template endpoint, which needs no account. The code is checked first (`parseDiscordTemplateCode`: letters, digits, `_` and `-`, 2 to 64 characters; `400 discord_template_code_invalid`), so the request cannot reach another host or path. Redirects are refused, the request times out after 10 seconds, the body is read up to 2 MB, and answers are cached for five minutes (50 codes). No token, cookie or credential is ever sent. A template Discord does not know is `404 discord_template_not_found`; Discord's rate limit is `429 discord_rate_limited` (`details.retryAfterSeconds`); anything else is `502 discord_unreachable`. Instead of a code the client may send the template itself (`template`, the JSON of that endpoint, for example saved by hand), read by the same validator.
 
@@ -893,15 +925,74 @@ A Discord server template (a `discord.new/CODE` or `discord.com/template/CODE` l
 
 **The plan** (`planDiscordImport`, shared, so the preview and the import are the same computation):
 - **Roles** keep Discord's order and come in below the space's existing roles. A role whose name the space already has is reused as it is, never changed, and each existing role is taken over by one template role at most: a second role of one name becomes "Name (2)", or takes over the "Name (2)" an earlier import made, so importing the same template again adds nothing and never collides. Names and icons follow the role routes' rules (`normalizeRoleName`, `isRoleIcon`, packages/shared/src/roleDisplay.ts): hidden characters are dropped from a name, an icon that is not an emoji is dropped (noted), a role with a picture icon loses it, and a role named "@everyone" that is not the template's own becomes "@everyone (2)". On a new space the template's @everyone permissions replace the defaults; on an existing space @everyone keeps its own. A reused role and a kept @everyone are not written, so nothing of them is reported as withheld.
-- **Permissions** go through one table, `DISCORD_PERMISSIONS`: each Discord bit maps to the Tavvit bit with the same meaning (MANAGE_GUILD to MANAGE_SPACE, MODERATE_MEMBERS to MODERATE_MEMBERS, MOVE_MEMBERS to MOVE_MEMBERS and DISCONNECT_MEMBERS, and so on) or is reported as not supported, by name, on the role or overwrite that had it. Importing into an existing space, someone who is not the owner (and not an administrator there) cannot hand out bits they do not hold: those bits are dropped and listed as withheld, the held-bits rule applied before the write rather than refused after it (permissions.md, "Held-bits rule"). Bits left out of an override are named per channel or category (note `override_withheld`).
+- **Permissions** go through one table, `DISCORD_PERMISSIONS`: each Discord bit maps to the Tavvit bit with the same meaning (MANAGE_GUILD to MANAGE_SPACE, MODERATE_MEMBERS to MODERATE_MEMBERS, MOVE_MEMBERS to MOVE_MEMBERS and DISCONNECT_MEMBERS, and so on) or is reported as not supported, by name, on the role or overwrite that had it. Two Discord bits count only together (`DISCORD_COMBINED_PERMISSIONS`): since Discord split them, Manage Expressions (30) edits and deletes everyone's emoji, stickers and sounds and Create Expressions (43) adds them, while `MANAGE_EMOJIS` and `MANAGE_SOUNDS` do both. A role or overwrite with both gets both Tavvit bits; one with only one of them gets neither, rather than more than it had on Discord, and that bit is reported as not supported. Create Public Threads (35) gives `CREATE_THREADS` and Use Soundboard (42) `USE_SOUNDBOARD` (before 1.34.0 these four were all reported as not supported). Importing into an existing space, someone who is not the owner (and not an administrator there) cannot hand out bits they do not hold: those bits are dropped and listed as withheld, the held-bits rule applied before the write rather than refused after it (permissions.md, "Held-bits rule"). Bits left out of an override are named per channel or category (note `override_withheld`).
 - **The role hierarchy** applies as on the role and override routes (permissions.md, "Role hierarchy"). Creating roles takes a role above position 1, so an importer whose top role is the lowest is refused (`403 role_hierarchy`, preview and import) when the plan would create one; the owner and instance admins are exempt, ADMINISTRATOR is not. An override is written only on a role below the importer's top role (or @everyone, or a role the import creates, which always sit below); the others are left out and named per channel or category (note `override_hierarchy`).
 - **Categories** whose name the space has are reused, each existing one by one template category at most (decorative names repeat); others are created in Discord's order.
 - **Channels**: text (0) and voice (2) come over as they are; announcement (5) and forum (15) come over as themselves ([forums.md](forums.md)), media (16) becomes a text channel and stage (13) a voice channel, each noted; any other type is left out and noted. A channel the space already has of the same kind under the same name in the same category is skipped, which makes a second import of the same template add nothing. Every channel name, text or voice, takes the form every Tavvit channel has (`normalizeChannelName`, as `POST /api/channels` stores it; a text channel's change is noted), topics are cut to Tavvit's length, slow mode is rounded down to an Tavvit step (off below the shortest), and age restriction has no Tavvit equivalent (noted).
 - **Overwrites**: role overwrites are mapped like role permissions. Discord channels in a category may be synced with it or carry their own overwrites; Tavvit layers the category's overrides under the channel's. A category's overwrites are therefore written on the category only when every channel in it carries exactly the same set; otherwise each channel carries its own and the category none, which keeps every channel's effective permissions. Overwrites for single members cannot come over (members are not in a template) and are noted.
 
-**Endpoints** (routes/discordImport.ts; api.md): `POST /api/import/discord/preview` answers the template's summary, the plan, the notes and the list of what a template never holds, and changes nothing. `POST /api/import/discord/apply` computes the plan again from the source and from the space as it is after the wait for Discord, then writes it in one transaction with nothing awaited in between: for a new space the space (private, an invite code, the caller as owner), the membership, @everyone and the plan; for an existing one the plan alone, after moving the existing roles up to make room. A failure leaves nothing behind. Both take at most 10 starts a minute per user (`429 rate_limited`). An existing space needs the owner or `MANAGE_ROLES` and `MANAGE_CHANNELS` (`403 import_target_forbidden`), records `template_import` in the audit log with the counts, and sends `space_access_changed` to every member so clients load the new roles and channels. A new space answers `201 { space, plan }` and is added to the caller's sessions.
+**Endpoints** (routes/discordImport.ts; api.md): `POST /api/import/discord/preview` answers the template's summary, the plan, the notes and the list of what a template never holds, and changes nothing. The summary carries `sourceGuildId`, the id of the Discord server the template was made from (Discord's `source_guild_id`, null when the template has none), which is the server id the emoji and sticker import asks for. `POST /api/import/discord/apply` computes the plan again from the source and from the space as it is after the wait for Discord, then writes it in one transaction with nothing awaited in between: for a new space the space (private, an invite code, the caller as owner), the membership, @everyone and the plan; for an existing one the plan alone, after moving the existing roles up to make room. Either way the same transaction sets `spaces.discord_imported_at` ("Telling the Discord server"). A failure leaves nothing behind. Both take at most 10 starts a minute per user (`429 rate_limited`). An existing space needs the owner or `MANAGE_ROLES` and `MANAGE_CHANNELS` (`403 import_target_forbidden`), records `template_import` in the audit log with the counts, and sends `space_access_changed` to every member so clients load the new roles and channels. A new space answers `201 { space, plan }` and is added to the caller's sessions.
 
 **The report.** After the import the modal shows the counts (roles, categories, channels, overrides, skipped), every role whose permissions were reduced and why, and what to do next: invite the members, check the roles that lost permissions, set up bots and integrations again.
+
+## Importing emoji and stickers from Discord
+
+A template holds no emoji or stickers, and Discord lists a server's emoji and stickers only to an account on that server. So the person brings a bot of their own: they create an application on Discord, add its bot to their server with no permissions, and give the bot's token and the server's id. The instance asks Discord for the server's two lists with that token, once, and forgets it; then it brings the pictures over from Discord's content servers, without the token, in batches the client asks for one after another. Messages and members never come. Code: `routes/discordExpressionImport.ts` (the routes and the batches), `utils/discordApi.ts` (every request to Discord), `utils/discordExpressionSessions.ts` (the listings in memory), `packages/shared/src/discordExpressionImport.ts` (pure: reading Discord's answers, the plan, the picture addresses); the client is `spaceSettingsPanels/DiscordExpressionImport.tsx`. None of the routes is open to bots.
+
+**Where it starts.** Space Settings, "Get from Discord", "Emoji and stickers", shown with `MANAGE_EMOJIS` ("Settings tabs"). The form lists the steps on Discord's side (create an application; under Bot, Reset Token and copy it; add the bot through OAuth2, URL Generator, with "bot" and no permissions; turn on Developer Mode and copy the server id), takes the server id and the token, and says where the token goes (the host of the space's instance) and that it is used for two requests and not stored. It adds to the space whose settings are open; no new space starts from it.
+
+**Who may.** Every step asks `expressionManagerRefusal` (`utils/spaceExpressions.ts`): `MANAGE_EMOJIS` in the space (`403 missing_permission`, `details.permission: 'MANAGE_EMOJIS'`), then `memberActionRefusal` (a timeout, an address not yet confirmed, rules not yet agreed to). It is asked at the look-up, again once Discord has answered, before every batch, before every picture, and once more with nothing awaited right before each row goes in, so someone banned, timed out or demoted while an import runs adds nothing more.
+
+**The look-up.** `POST /api/import/discord/expressions/preview` `{ spaceId, guildId, token }`, checked in this order:
+
+| Check | Refusal |
+|---|---|
+| The right (above) | `403 missing_permission`, or the refusal that holds the member back |
+| The server id, trimmed, is 17 to 20 digits (`DISCORD_SNOWFLAKE`) | `400 discord_server_id_invalid` |
+| The token has the form Discord issues (`parseBotToken`: three dot-separated parts of letters, digits, `-` and `_`; a pasted `Bot ` in front is forgiven). Checked before anything is sent, so no header check can quote it back | `400 discord_bot_token_invalid` |
+| No import of the account's is running | `409 discord_import_running` |
+| The session store has room (below) | `429 rate_limited` |
+| At most 5 look-ups per account in 10 minutes, counted only here, once the request could reach Discord, so a typo costs nothing | `429 rate_limited` |
+
+Then two requests to Discord's API: `GET https://discord.com/api/v10/guilds/{id}/emojis` and, only once that one succeeded, `GET https://discord.com/api/v10/guilds/{id}/stickers` (Discord counts refused requests per address, and the instance's address is shared by everyone who imports). Each carries `Authorization: Bot <token>` and the User-Agent Discord asks of bots, `DiscordBot (https://github.com/yDulli/Tavvit, <version>)`, refuses redirects (`redirect: 'error'`: a redirect would carry the token to an address the code did not choose), goes through the dispatcher that reaches public addresses only (`publicOnlyDispatcher`, `utils/ssrf.ts`), times out after 10 seconds and reads at most 1 MB. Nothing is retried by itself. Discord's answer becomes:
+
+| Discord answers | Tavvit answers |
+|---|---|
+| 401, or JSON code 40001 | `400 discord_bot_token_invalid`, never a 401: the web client takes any 401 as the end of its own session |
+| 403 or 404, or code 50001 or 10004 | `400 discord_bot_not_in_server` |
+| 429 | `429 discord_rate_limited`, `details.retryAfterSeconds` (Discord's own wait, rounded up; 5 when it names none) |
+| No answer, another error, more than 1 MB, or a list that is not one | `502 discord_unreachable` |
+
+At most 1000 emoji and 200 stickers are read; a longer list is taken as malformed. Kept: an emoji's id, name, whether it is animated, whether it belongs to an integration (`managed`) and whether only some roles could use it; a sticker's id, name and format, for the server's own stickers only (type 2; Discord's standard stickers are left out). Dropped as they are read: who uploaded it (`user`), the role list, a sticker's tags and its description. Once Discord has answered, the route asks the right and the running check again, since the look-up took a moment, and keeps the listing as a session (below).
+
+The answer (`DiscordExpressionPreview`) is `{ importId, expiresAt, items, room, limits }`: each item `{ key, kind, discordId, sourceName, name, animated, format?, action, skip, notes }`, where `key` is `emoji:<id>` or `sticker:<id>`; `room` is what the space has left, `limits` the space's limits (200 emoji, 60 stickers).
+
+**The plan** (`planDiscordExpressionImport`, shared, so the preview and every batch are the same computation) goes through Discord's lists in their order, emoji first:
+- **Names.** An emoji's name is made valid (lower case, every character outside `[a-z0-9_]` an underscore, cut to 32, padded to 2 with underscores), a sticker's as `normalizeStickerName` stores it. Then it is made free in the space and among what the same import brings, compared without regard to case: `name_2`, `name_3`… for an emoji, `name (2)`… for a sticker (`freeExpressionName`).
+- **Skips**, decided in this order: `not_selected` (not picked; first, so a report names only what was picked), then `lottie` (a vector sticker, which cannot be decoded) and `managed` (an emoji of an integration, not the server's own picture), then `already_here` (an earlier import brought that Discord id: `space_emojis.discord_id`, `space_stickers.discord_id`), then `no_room`. Room is taken in Discord's order, so what does not fit is the end of the list.
+- **Notes:** `renamed`, `still_picture` (an animated PNG sticker comes over as a still picture), `role_restriction_dropped` (only some roles could use it on Discord; here every member can).
+
+**Sessions** (`utils/discordExpressionSessions.ts`). A look-up's listing is kept in memory, at most 500 at a time, with the pick, what is settled and the results; the session type has no field for the token. A new look-up replaces the account's other sessions, and when the store is full the oldest that is not running makes way. A running one is never ended or pushed out, and a store full of running imports answers a look-up `429 rate_limited`. An open session ends 30 minutes after it was last used (`expiresAt`). An import that is over keeps its outcome 5 minutes more, so an answer that never arrived can be asked for again. A restart forgets every session, and the import is looked up again.
+
+**Batches.** `POST /api/import/discord/expressions/apply` `{ importId, selection?, after? }` carries no token. The first call that arrives fixes the pick: keys of the listing (`400 validation_failed`, `details.field: 'selection'`, for one that is not), or everything when none is sent. An import that is not the caller's, never was, or is gone answers `404 discord_import_expired`; one whose batch is running, `409 discord_import_running`. A batch brings at most 8 pictures, starts none after 12 seconds and lets no fetch run past 20 seconds (the client waits 30 seconds for an answer). Before every picture it plans again against the space as it is, so a picture that failed frees its room for the next, and asks again whether the importer may add. A picture is fetched only from `https://cdn.discordapp.com` or `https://media.discordapp.net` (`discordAssetUrl`, `fetchDiscordAsset`): no token, no redirect, 8 seconds, only a `200` with an `image/*` type, at most the source size of its kind (3 MB for an emoji, 5 MB for a sticker). It is then added as an upload is (`addSpaceEmoji`, `addSpaceSticker`, emoji.md): re-encoded, its size held on the importer's storage, room, name and right checked once more with nothing awaited before the insert, and the Discord id stored on the row. The import does not count against the upload routes' limits (30 pictures a minute, 100 stickers a day); its pace is the batch and the picture queue, where an account has one job at a time. The route takes 60 calls a minute from one address.
+
+Each entry settles as one outcome: `imported`, `already_here`, `no_room`, `lottie`, `managed`, `download_failed` (the picture could not be had) or `image_refused` (it could not be read as a picture). An entry without room settles as `no_room` only once nothing else is left to bring. A name someone took while the picture was on its way is planned again. A refusal that says the importer cannot go on now (the right, a timeout, an unconfirmed address, the rules, or `rate_limited`: the account's picture work is busy or the queue is full) ends the batch with the entry unsettled, and the next call says why. `storage_limit_reached` or `disk_full` stops the import. The answer (`DiscordExpressionApplyResult`) is `{ done, total, finished, stopped, results }`, `results` being everything settled after the client's cursor `after`: what this call settled, and what an earlier answer carried that never arrived. A space deleted under a batch ends the import with `404 space_not_found`.
+
+When a batch brought anything, the space is told (`sendToSpace`: `space_emojis_changed` when emoji came, `space_stickers_changed` when stickers came) and `spaces.discord_imported_at` is set ("Telling the Discord server").
+
+**Stopping.** `DELETE /api/import/discord/expressions/:importId` ends the import and answers `{ success: true }`; a batch that is running finishes the picture it is on and then ends it. What came over stays.
+
+**The audit entry.** `discord_expressions_import`, once per import and only when anything came over: when the import is over (through, stopped, ended by the person), or when its open session ends without that (it ran out, or a new look-up replaced it). The target is the space; the changes are `emoji` and `stickers`, how many came over. The single pictures are not recorded as `emoji_create` or `sticker_create`.
+
+**The token** is used for the two list requests and nothing else: a local of the look-up request, never stored, logged, echoed in an error or put in an event, and no failure carries Discord's own message either. `routes/discordExpressionImport.test.ts` runs every path with a sentinel token and searches the answers, the log lines, every database column, the socket events and the console for it. In the browser it lives in the component's state only and is cleared once Discord has answered or refused; it never goes into a store, the address bar, a toast or an error text. The field is a text field masked with CSS (`-webkit-text-security: disc`) where the browser supports that, because browsers take a password field in a form that goes away after a request for a sign-in and offer to save the token as the site's password. Where masking is not supported it stays a password field, so the token is never shown on a shared screen. It is marked to be left alone by the browser (`autocomplete="off"`) and by 1Password, LastPass, Bitwarden and Proton Pass (each one's ignore attribute). The privacy draft names the requests to Discord and what is kept of their answers (legal.md).
+
+**The client.** After the look-up the preview lists the emoji and stickers with the room left, each with its note or the reason it stays behind. What fits is ticked, and an entry without room can be ticked in place of another; a line says when more are ticked than fit. The pictures are on Discord's servers, and the browser loads them only after "Show pictures" (with no referrer). "Import" runs the batches one after another, sending the pick until an answer arrives and, as `after`, the count of results it holds. A timeout or `409 discord_import_running` means a slow batch is still running: the client waits 3 seconds and asks again, at most 6 times in a row. A batch that settled nothing (the picture queue was busy) is followed by a 3-second pause. The import ends when the server says it is finished or stopped, and the panel shows what came over, what stayed behind and why, and that the bot can now be removed from the server and its token reset. Stop sends the `DELETE`, and so does leaving the page; what came over stays.
+
+### Telling the Discord server
+
+**The announcement** (`DiscordAnnouncement`, `utils/discordAnnouncement.ts`), in the Get from Discord tab, is a text to post on the Discord server, with Copy text and Copy link. Its link is the space's own invite address when it has one ("Own invite address"), else its standing invite (`POST /api/spaces/:id/invite`, `CREATE_INVITE`, which the server checks), on the space's instance, with `?from=discord`. The text is in a language picked in the box, any language of the app, whose catalog is loaded before the text is made (`i18n.loadLanguages`); otherwise i18next would answer in English under another language's name. In order it says: a bold headline that the space has moved to the instance, by the instance's name; that the channels and roles are set up there, and the emoji once the space has any; that making an account takes about a minute, only while the instance's registration is open; "Join us with this link:", or for a request space "Ask to join with this link, and we will let you in:"; the link on a line of its own, so Discord shows its preview; and that everything written stays on Discord. Names are escaped for Discord (`escapeDiscordText`): its markdown characters get a backslash, and `@everyone`, `@here` and `<@`, `<#`, `<:`, `</`, `<a:`, `<t:` are broken with a zero-width space, since Discord finds mentions in the raw text, where a backslash would not stop a ping. The link is left as it is. The whole stays far below the 2000 characters Discord takes in a message (a test holds it there). While the instance's registration is closed the box says that people cannot sign up with this link alone.
+
+**The welcome.** `spaces.discord_imported_at` (migration 0071) holds when something last came over from Discord: a template import sets it in the transaction that writes the plan, for a new space and an existing one, and so does an emoji and sticker batch that brought anything. Nothing clears it. The invite preview carries it as `movedFromDiscord` ("Invite Preview"; absent from an instance before 1.34.0). A link with `?from=discord` opens the Join Page with a welcome for people following their community from Discord (`auth:join.fromDiscord`), shown only when the preview says `movedFromDiscord: true`: anyone can add the parameter to a link, and the page claims nothing the space's instance does not confirm. The parameter is read by the page alone; no request carries it, and nothing stores or counts it.
 
 ---
 
@@ -1086,12 +1177,16 @@ strings, durations seconds.
 | `message_delete` | `DELETE /messages/:id` and WS `message_delete` by someone other than the author | message (label: the author's name) | `channel` (its name) |
 | `join_request_approve`, `join_request_decline` | `PATCH /spaces/:id/join-requests/:rid` | join request (label: the requester's name) | — |
 | `ownership_transfer` | `PATCH /spaces/:id/transfer-ownership` | member (the new owner) | `owner`, former to new |
+| `emoji_create`, `emoji_update`, `emoji_delete` | `POST /spaces/:id/emojis`, `PATCH /space-emojis/:id` that changes the name, `DELETE /space-emojis/:id` | space (id: the emoji's; label: its name) | `name` (update) |
+| `sticker_create`, `sticker_update`, `sticker_delete` | `POST /spaces/:id/stickers`, `PATCH /space-stickers/:id` that changes the name or the description, `DELETE /space-stickers/:id` | space (id: the sticker's; label: its name) | `name`, `description` (update) |
+| `discord_expressions_import` | `POST /import/discord/expressions/apply`, once per import that brought anything ("Importing emoji and stickers from Discord") | space | `emoji` and `stickers`: how many came over |
 
 Not recorded: a member leaving, a nickname change, voice moderation (mute,
 deafen, move, disconnect), a pure reorder of channels or categories, and
 deleting the space (its log goes with it). There is no operation that replaces
 an existing invite code, so `invite_regenerate` is only ever the first code of
-a space left without one.
+a space left without one. The emoji and stickers the Discord import brings are
+counted in its `discord_expressions_import` entry, not recorded one by one.
 
 Entries older than 180 days are deleted from inside `recordAudit`, at most once
 an hour per space (an in-memory throttle, so a restart sweeps again with the
@@ -1283,6 +1378,8 @@ The space layout and folder data are delivered in the WS `ready` event (`handler
 | `category_deleted` | S→C (space) | Category removed |
 | `channel_layout_updated` | S→C (per-user) | Batch reorder, per-user channel filtering |
 | `space_layout_updated` | S→C (user) | Sidebar layout changed (multi-tab sync) |
+| `space_emojis_changed` | S→C (space) | A space emoji was added, renamed or removed, or the Discord import brought some; clients load the space's list again ([emoji.md](emoji.md)) |
+| `space_stickers_changed` | S→C (space) | The same for the space's stickers |
 
 ---
 

@@ -432,5 +432,17 @@
   "username_change_connected": "Esta conta está conectada a outros servidores, que a conhecem por este nome.",
   "username_change_too_soon": "Um nome de usuário pode ser alterado uma vez a cada {{days}} dias.",
   "channel_icon_invalid": "O ícone de um canal é um dos ícones oferecidos ou um emoji.",
-  "sticker_elsewhere": "Esta figurinha está guardada num servidor que este não conhece, por isso não pode ser enviada."
+  "sticker_elsewhere": "Esta figurinha está guardada num servidor que este não conhece, por isso não pode ser enviada.",
+  "discord_server_id_invalid": "Isso não é um ID de servidor do Discord. É um número de 17 a 20 dígitos: clique com o botão direito no servidor no Discord e escolha Copiar ID do servidor.",
+  "discord_bot_token_invalid": "O Discord não aceitou esse token de bot. Copie-o de novo da página Bot do seu aplicativo.",
+  "discord_bot_not_in_server": "O bot não está nesse servidor do Discord. Adicione-o com o link de OAuth2 → URL Generator e tente de novo.",
+  "discord_import_expired": "Esta importação expirou. Consulte o servidor de novo.",
+  "discord_import_running": "Esta importação já está trazendo imagens.",
+  "space_emoji_limit_reached": "Este espaço já tem o máximo de emojis ({{max}}).",
+  "space_sticker_limit_reached": "Este espaço já tem o máximo de figurinhas ({{max}}).",
+  "space_emoji_name_taken": "Este espaço já tem um emoji com esse nome.",
+  "space_sticker_name_taken": "Este espaço já tem uma figurinha com esse nome.",
+  "space_emoji_not_found": "Esse emoji não existe mais.",
+  "space_sticker_not_found": "Essa figurinha não existe mais.",
+  "emoji_unavailable": "Este emoji pertence a um espaço do qual você não faz parte."
 }

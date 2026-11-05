@@ -56,8 +56,8 @@ A member who leaves, is kicked or banned, and every member of a deleted space, i
 ### Messages
 | type | fields | notes |
 |------|--------|-------|
-| `message_create` | channelId, content, replyToId? | SEND_MESSAGES perm; MENTION_EVERYONE for content with `@everyone`, `@here` or a role token (permissions.md, "Mass mentions"); `replyToId` must name a message a member wrote in the same channel; then the space's moderation, as on REST (see below) |
-| `message_edit` | messageId, content | author only; MENTION_EVERYONE when the edit adds a mass mention the message did not have; a system message cannot be edited (`error` with `system_message_immutable`); then the space's moderation, slow mode excepted |
+| `message_create` | channelId, content, replyToId? | SEND_MESSAGES perm; a space's custom emoji the writer may not use is refused with an `error` coded `emoji_unavailable` (api.md, "Using a space's emoji"); MENTION_EVERYONE for content with `@everyone`, `@here` or a role token (permissions.md, "Mass mentions"); `replyToId` must name a message a member wrote in the same channel; then the space's moderation, as on REST (see below) |
+| `message_edit` | messageId, content | author only; `emoji_unavailable` when the edit adds a space's emoji the author may not use (emoji the stored text carried are not asked about again); MENTION_EVERYONE when the edit adds a mass mention the message did not have; a system message cannot be edited (`error` with `system_message_immutable`); then the space's moderation, slow mode excepted |
 | `message_delete` | messageId | author or MANAGE_MESSAGES; a delete by someone other than the author is recorded in the audit log |
 | `channel_poke` | channelId, targetUserId | VIEW_CHANNEL and SEND_MESSAGES; not while timed out; 5 a minute per actor. See "Channel pokes" |
 | `typing_start` | channelId | 5s auto-expire |
@@ -80,12 +80,12 @@ nothing is stored or broadcast.
 | `dm_message_delete` | messageId | member, author only |
 | `dm_typing_start` | dmChannelId | 5s auto-expire |
 
-`dm_message_create` first counts against its rate limit: the REST route's numbers (`utils/dmMessageRateLimit.ts`), keyed on the address the socket connected from (`request.ip` of the upgrade, recorded in `ws/socketAddress.ts`, so it follows `TRUSTED_PROXY_HOPS` as the HTTP limiter does), in a counter of its own. `DISABLE_RATE_LIMITS` switches it off. The three DM message events run the REST routes' checks (`utils/dmMessageRules.ts`), so they refuse what the routes refuse, in the same order and with the same codes (dm-system.md, "Message Operations"), `recipient_deleted` in a 1-on-1 whose partner was deleted included. A missing `dmChannelId` or `messageId` is `validation_failed`. Each refusal is an `error` with its code, and `details` where the code has placeholders, sent to the socket that sent the event and not to the user's other sessions (they did not act, and the client shows a coded error as a toast); nothing is stored, broadcast or relayed. The web client sends these actions over REST, not over these events.
+`dm_message_create` first counts against its rate limit: the REST route's numbers (`utils/dmMessageRateLimit.ts`), keyed on the address the socket connected from (`request.ip` of the upgrade, recorded in `ws/socketAddress.ts`, so it follows `TRUSTED_PROXY_HOPS` as the HTTP limiter does), in a counter of its own. `DISABLE_RATE_LIMITS` switches it off. The three DM message events run the REST routes' checks (`utils/dmMessageRules.ts`), so they refuse what the routes refuse, in the same order and with the same codes (dm-system.md, "Message Operations"), `recipient_deleted` in a 1-on-1 whose partner was deleted included, and `emoji_unavailable` for a space's emoji written by an account whose home is this instance (api.md, "DMs"). A missing `dmChannelId` or `messageId` is `validation_failed`. Each refusal is an `error` with its code, and `details` where the code has placeholders, sent to the socket that sent the event and not to the user's other sessions (they did not act, and the client shows a coded error as a toast); nothing is stored, broadcast or relayed. The web client sends these actions over REST, not over these events.
 
 ### Reactions (space + DM, auto-detected)
 | type | fields | notes |
 |------|--------|-------|
-| `reaction_add` | messageId, emoji | ADD_REACTIONS perm (space); refused with an `error` coded `member_timed_out` (`until`) while the user is timed out in the space. `emoji` is a native emoji or a sticker token (`sticker:<asset URL>`, uploads.md "Personal stickers"); the server stores and relays either as the same string. One reaction per user and emoji: a repeat stores nothing, sends no `reaction_added` and queues no relay. The client does not send one either (`chatStore.addReaction` skips a reaction the user holds or has an add in flight for) |
+| `reaction_add` | messageId, emoji | ADD_REACTIONS perm (space); refused with an `error` coded `member_timed_out` (`until`) while the user is timed out in the space. `emoji` is a native emoji, a custom emoji `emoji:<id>` (of the instance's library or of a space; api.md, "Custom emoji and space stickers") or a sticker token (`sticker:<asset URL>`, uploads.md "Personal stickers"); the server stores and relays each as the same string. A custom emoji must be one this instance holds (`error` coded `emoji_not_found`) and, when it is a space's, one the reactor may use: in that space's channels, or as the space's member (`emoji_unavailable`). Joining a reaction someone already gave on the message is always allowed. On a DM message only an account whose home is this instance is checked, since another account's `emoji:<id>` names an emoji of its home. One reaction per user and emoji: a repeat stores nothing, sends no `reaction_added` and queues no relay. The client does not send one either (`chatStore.addReaction` skips a reaction the user holds or has an add in flight for) |
 | `reaction_remove` | messageId, emoji | own reactions only |
 
 ### Read State
@@ -271,6 +271,18 @@ shows a stored poke as "System message" when it loads history.
 | `command_reply` | `id`, `channelId`, `spaceId`, `botId`, `botName`, `botAvatar`, `content`, `cards?`, `createdAt` | The person who asked, alone. Stored nowhere ([bots.md](bots.md), "Commands") |
 
 A pin's line and a poll are ordinary `message_created`. A pin's line is `type: 'system'`, so it raises no unread count, sound or notification.
+
+### Emoji and stickers
+| type | fields | scope |
+|------|--------|-------|
+| `emoji_upserted` | emoji: CustomEmoji | everyone connected to this instance (`sendToAll`) |
+| `emoji_removed` | emojiId | everyone connected to this instance |
+| `space_emojis_changed` | spaceId | space |
+| `space_stickers_changed` | spaceId | space |
+
+`emoji_upserted` follows `POST /api/emojis` and `PATCH /api/emojis/:id`, an emoji of the instance's library added or renamed, and carries it whole; `emoji_removed` follows `DELETE /api/emojis/:id`. `space_emojis_changed` and `space_stickers_changed` follow every add, rename, description change and removal of a space's emoji or sticker, and a batch of a Discord import that brought at least one (api.md, "Custom emoji and space stickers" and "Import"); they carry no list, only which space to read again. None of this is in `ready`: a client asks an instance for `GET /api/emojis/available` when it first needs what that instance offers.
+
+**Client.** `stores/emojiStore.ts` keeps everything per origin, since an emoji's id means something only on the instance that holds it. `emoji_upserted` and `emoji_removed` change the library of the instance whose socket delivered them (`upsertLibrary`, `dropLibrary`), from the home instance also the flat home library its settings page edits; up to 1.33 the client applied them only from the home instance. The two space events read that space's emoji and stickers again from that instance (`reloadSpace`: `GET /api/spaces/:id/emojis` and `/stickers`), once that origin's offer is loaded. Each `ready` of an origin whose offer was loaded reads it again, and disconnecting from an instance forgets it (`forgetOrigin`). Mixed versions: a client before 1.34.0 ignores the two space events, and an instance before 1.34.0 sends none.
 
 ### DM Messages
 | type | fields | scope |
@@ -483,7 +495,9 @@ connected to an old server still gets the old `ready` push.
 An `error` that carries a `code` is the refusal of something the user just
 did (`role_hierarchy` from the voice moderation events, the moderation refusals
 of `message_create`, `message_edit`, `reaction_add`, `voice_join` and
-`channel_poke` (see "Messages" above), `dm_call_in_progress`,
+`channel_poke` (see "Messages" above), the custom emoji refusals of
+`message_create`, `message_edit` (`emoji_unavailable`) and `reaction_add`
+(`emoji_not_found`, `emoji_unavailable`), `dm_call_in_progress`,
 `not_dm_member` and `validation_failed` from `dm_call_start`, `dm_call_not_found`,
 `not_dm_member` and `validation_failed` from `dm_call_accept`, and the DM
 message events (see "DM Messages")); the client shows it as a warning

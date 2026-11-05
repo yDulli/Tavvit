@@ -432,5 +432,17 @@
   "username_change_connected": "Dieses Konto ist mit anderen Servern verbunden, die es unter diesem Namen kennen.",
   "username_change_too_soon": "Ein Benutzername lässt sich einmal in {{days}} Tagen ändern.",
   "channel_icon_invalid": "Ein Kanal-Icon ist eines der angebotenen Icons oder ein Emoji.",
-  "sticker_elsewhere": "Dieser Sticker liegt auf einem Server, den dieser nicht kennt, und kann deshalb nicht gesendet werden."
+  "sticker_elsewhere": "Dieser Sticker liegt auf einem Server, den dieser nicht kennt, und kann deshalb nicht gesendet werden.",
+  "discord_server_id_invalid": "Das ist keine Discord-Server-ID. Sie ist eine Zahl mit 17 bis 20 Ziffern: Klicke den Server in Discord mit rechts an und wähle „Server-ID kopieren“.",
+  "discord_bot_token_invalid": "Discord hat dieses Bot-Token nicht angenommen. Kopiere es noch einmal von der Bot-Seite deiner Anwendung.",
+  "discord_bot_not_in_server": "Der Bot ist nicht auf diesem Discord-Server. Füge ihn mit dem Link aus „OAuth2“ → „URL Generator“ hinzu und versuche es dann noch einmal.",
+  "discord_import_expired": "Dieser Import ist abgelaufen. Frag den Server noch einmal ab.",
+  "discord_import_running": "Dieser Import holt schon Bilder herüber.",
+  "space_emoji_limit_reached": "Dieser Space hat schon so viele Emojis, wie er haben kann ({{max}}).",
+  "space_sticker_limit_reached": "Dieser Space hat schon so viele Sticker, wie er haben kann ({{max}}).",
+  "space_emoji_name_taken": "Dieser Space hat schon ein Emoji mit diesem Namen.",
+  "space_sticker_name_taken": "Dieser Space hat schon einen Sticker mit diesem Namen.",
+  "space_emoji_not_found": "Dieses Emoji gibt es nicht mehr.",
+  "space_sticker_not_found": "Diesen Sticker gibt es nicht mehr.",
+  "emoji_unavailable": "Dieses Emoji gehört zu einem Space, in dem du nicht bist."
 }

@@ -9,6 +9,7 @@ import { authenticate } from '../utils/auth.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
 import { sendError } from '../utils/httpErrors.js';
 import { isStickerFrom, mediaOriginsFor } from '../utils/remoteMedia.js';
+import { emojiUseRefusal } from '../utils/emojiUse.js';
 import { withoutMentions } from '../utils/neutralMentions.js';
 import { getChannelSpaceId, hasPermission, PermissionBits } from '../utils/permissions.js';
 import { generateSnowflake } from '../utils/snowflake.js';
@@ -183,6 +184,9 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
     if (trimmed.length > MAX_MESSAGE_LENGTH) return sendError(reply, 400, 'content_too_long', { max: MAX_MESSAGE_LENGTH });
     // A webhook's account lives here, so its stickers can only be this instance's (utils/remoteMedia.ts).
     if (!isStickerFrom(trimmed, mediaOriginsFor())) return sendError(reply, 400, 'sticker_elsewhere');
+    // Its account belongs to no space, so of the spaces' emoji only its own channel's may come.
+    const emojiRefusal = emojiUseRefusal(trimmed, row.userId, row.spaceId);
+    if (emojiRefusal) return sendError(reply, emojiRefusal.status, emojiRefusal.code);
 
     // Cards, or Discord's embeds from a program that already speaks them. No uploads here, so no pictures.
     let cards: MessageCard[] = [];

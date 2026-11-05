@@ -2,6 +2,7 @@ import sharp, { type Metadata } from 'sharp';
 import path from 'node:path';
 import { CUSTOM_EMOJI_LIMITS } from '@backspace/shared/src/customEmoji.js';
 import { config } from '../config.js';
+import { PICTURE_ENCODE_SECONDS, runMediaJob } from './thumbnail.js';
 
 /**
  * Turns an uploaded picture into the one stored form of an emoji: a WebP no
@@ -32,7 +33,16 @@ export interface EncodedEmoji {
   animated: boolean;
 }
 
-export async function encodeEmoji(source: Buffer): Promise<EncodedEmoji> {
+/**
+ * Takes its turn with the other media work (utils/thumbnail.ts), so many at once cannot take the
+ * machine; `account` is who sent the picture, who may have one such job under way at a time.
+ * Rejects with MediaBusyError when that cannot start now.
+ */
+export function encodeEmoji(source: Buffer, account: string): Promise<EncodedEmoji> {
+  return runMediaJob(() => encodeEmojiNow(source), account);
+}
+
+async function encodeEmojiNow(source: Buffer): Promise<EncodedEmoji> {
   if (source.length === 0) throw new EmojiImageError('emoji_image_invalid', 'Empty file');
   if (source.length > CUSTOM_EMOJI_LIMITS.MAX_SOURCE_BYTES) {
     throw new EmojiImageError('emoji_image_too_large', 'The original is too large');
@@ -54,15 +64,23 @@ export async function encodeEmoji(source: Buffer): Promise<EncodedEmoji> {
   }
   const animated = frames > 1;
 
+  // One limit for every quality pass together: a picture that takes longer is too heavy to keep.
+  const deadline = Date.now() + PICTURE_ENCODE_SECONDS * 1000;
   for (const quality of QUALITY_STEPS) {
+    const seconds = Math.ceil((deadline - Date.now()) / 1000);
+    if (seconds <= 0) throw new EmojiImageError('emoji_image_too_large', 'The picture takes too long to encode');
     let data: Buffer;
     try {
       data = await sharp(source, { animated: true, limitInputPixels: MAX_DECODED_PIXELS })
         .rotate()
         .resize(CUSTOM_EMOJI_LIMITS.SIZE, CUSTOM_EMOJI_LIMITS.SIZE, { fit: 'inside', withoutEnlargement: true })
         .webp({ quality, effort: 4 })
+        .timeout({ seconds })
         .toBuffer();
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && /timeout/i.test(err.message)) {
+        throw new EmojiImageError('emoji_image_too_large', 'The picture takes too long to encode');
+      }
       throw new EmojiImageError('emoji_image_invalid', 'The image could not be processed');
     }
     if (data.length <= CUSTOM_EMOJI_LIMITS.MAX_STORED_BYTES) return { data, animated };

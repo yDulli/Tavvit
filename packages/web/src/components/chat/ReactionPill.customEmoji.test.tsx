@@ -64,6 +64,7 @@ describe('a reaction that is a custom emoji', () => {
 
   it('still shows a count for an emoji that has since been removed, as :emoji:', () => {
     render(<ReactionPill emoji="emoji:99999" reactions={[reaction('emoji:99999')]} origin="" onToggle={() => {}} />);
+    fireEvent.error(screen.getByRole('img'));
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.getByTestId('emoji-fallback')).toBeInTheDocument();
     expect(screen.getByRole('button')).toHaveTextContent('1');

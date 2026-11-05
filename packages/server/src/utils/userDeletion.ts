@@ -211,6 +211,10 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
     tx.update(schema.webhooks).set({ createdBy: null }).where(eq(schema.webhooks.createdBy, uid)).run();
     tx.update(schema.channelFollows).set({ createdBy: null }).where(eq(schema.channelFollows.createdBy, uid)).run();
     tx.update(schema.spaceSounds).set({ createdBy: null }).where(eq(schema.spaceSounds.createdBy, uid)).run();
+    tx.update(schema.spaceEmojis).set({ createdBy: null }).where(eq(schema.spaceEmojis.createdBy, uid)).run();
+    tx.update(schema.spaceStickers).set({ createdBy: null }).where(eq(schema.spaceStickers.createdBy, uid)).run();
+    // The instance's emoji: a tombstone keeps the users row, so the column's ON DELETE SET NULL never fires.
+    tx.update(schema.customEmojis).set({ createdBy: null }).where(eq(schema.customEmojis.createdBy, uid)).run();
     tx.update(schema.channels).set({ threadCreatedBy: null }).where(eq(schema.channels.threadCreatedBy, uid)).run();
     tx.delete(schema.pushSubscriptions).where(eq(schema.pushSubscriptions.userId, uid)).run();
     tx.delete(schema.peerApprovalSubscribers).where(eq(schema.peerApprovalSubscribers.userId, uid)).run();

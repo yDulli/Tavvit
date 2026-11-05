@@ -19,7 +19,6 @@ import { SegmentedControl } from '../settingsPanels/_shared/SettingsControls';
 import { Toggle } from '../../ui/Toggle';
 import { Avatar } from '../../ui/Avatar';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
-import { Icon } from '../../ui/Icon';
 import { ownerHasOwnGroup } from '../../../utils/memberGroups';
 
 /** The default-notifications choice: one of the space levels, or Tavvit's own default (stored as null). */
@@ -65,27 +64,6 @@ function OwnerListingSection({ spaceId, ownerGroup }: { spaceId: string; ownerGr
           </span>
           <Toggle enabled={ownerGroup} disabled={saving} onChange={(next) => { void toggle(next); }} ariaLabel={t('spaces:ownerDisplay.ownGroup')} />
         </label>
-      </div>
-    </div>
-  );
-}
-
-/** Opens the Discord template import for this space, for whoever may add its roles and channels. */
-function DiscordImportEntry({ spaceId }: { spaceId: string }) {
-  const { t } = useTranslation(['spaces']);
-  const openModal = useUIStore((s) => s.openModal);
-  const permissions = useSpaceStore((s) => s.spacePermissions.get(spaceId));
-  const canImport = hasPermissionBit(permissions, PermissionBits.MANAGE_ROLES) && hasPermissionBit(permissions, PermissionBits.MANAGE_CHANNELS);
-  if (!canImport) return null;
-  return (
-    <div>
-      <div className="label-mono mb-1.5">{t('spaces:import.entry.title')}</div>
-      <div className="flex flex-wrap items-center justify-between gap-3 surface-card rounded-lg p-4">
-        <p className="min-w-0 flex-1 basis-60 text-meta leading-snug text-txt-tertiary">{t('spaces:import.entry.hint')}</p>
-        <button type="button" className="btn-outline btn-sm" onClick={() => openModal('discordImport', { spaceId })}>
-          <Icon name="download" size={14} />
-          {t('spaces:import.entry.action')}
-        </button>
       </div>
     </div>
   );
@@ -597,7 +575,6 @@ export function OverviewPanel({ spaceId }: OverviewPanelProps) {
         )}
 
         {/* Structure from Discord: the import adds, it never changes or removes. */}
-        {space && <DiscordImportEntry spaceId={spaceId} />}
 
         {/* Danger Zone */}
         {isOwner && (

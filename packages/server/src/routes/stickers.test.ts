@@ -25,7 +25,8 @@ vi.mock('../utils/auth.js', () => ({
     request.userId = request.headers.authorization;
   },
 }));
-import { stickerRoutes, encodeSticker, _resetStickerUploadLimit } from './stickers.js';
+import { stickerRoutes, _resetStickerUploadLimit } from './stickers.js';
+import { encodeSticker } from '../utils/stickerImage.js';
 
 beforeEach(async () => {
   _resetStickerUploadLimit();
@@ -99,7 +100,7 @@ describe('personal stickers', () => {
     expect(invalid.json()).toMatchObject({ code: 'validation_failed' });
     const blank = await app.inject({ method: 'POST', url: '/api/stickers', headers: { authorization: 'alice' }, payload: { name: '   ', image: 'eA==' } });
     expect(blank.json()).toMatchObject({ code: 'sticker_name_invalid', details: { max: 100 } });
-    await expect(encodeSticker(Buffer.alloc(MAX_STICKER_BYTES + 1))).rejects.toThrow();
+    await expect(encodeSticker(Buffer.alloc(MAX_STICKER_BYTES + 1), 'user-test')).rejects.toThrow();
     const tooLarge = await app.inject({ method: 'POST', url: '/api/stickers', headers: { authorization: 'alice' },
       payload: { name: 'large', image: Buffer.alloc(MAX_STICKER_BYTES + 4096).toString('base64') } });
     expect(tooLarge.statusCode).toBe(413);
@@ -161,10 +162,10 @@ describe('personal stickers', () => {
 
   it('stores large images within the display box', async () => {
     const image = await sharp({ create: { width: 2048, height: 1024, channels: 4, background: 'green' } }).png().toBuffer();
-    const metadata = await sharp(await encodeSticker(image)).metadata();
+    const metadata = await sharp(await encodeSticker(image, 'user-test')).metadata();
     expect([metadata.width, metadata.height]).toEqual([512, 256]);
     const small = await sharp({ create: { width: 40, height: 20, channels: 4, background: 'green' } }).png().toBuffer();
-    const smallMetadata = await sharp(await encodeSticker(small)).metadata();
+    const smallMetadata = await sharp(await encodeSticker(small, 'user-test')).metadata();
     expect([smallMetadata.width, smallMetadata.height]).toEqual([40, 20]);
   });
 
@@ -180,7 +181,7 @@ describe('personal stickers', () => {
     const frames = Buffer.alloc(8 * 16 * 4, 255);
     frames.fill(0, 8 * 8 * 4);
     const gif = await sharp(frames, { raw: { width: 8, height: 16, channels: 4, pageHeight: 8 } }).gif({ delay: [100, 200], loop: 0 }).toBuffer();
-    const result = await encodeSticker(gif);
+    const result = await encodeSticker(gif, 'user-test');
     const metadata = await sharp(result, { animated: true }).metadata();
     expect(metadata.pages).toBe(2);
     expect(metadata.delay).toEqual([100, 200]);
@@ -190,7 +191,7 @@ describe('personal stickers', () => {
     const frames = Buffer.alloc(800 * 1600 * 4, 255);
     frames.fill(0, 800 * 800 * 4);
     const gif = await sharp(frames, { raw: { width: 800, height: 1600, channels: 4, pageHeight: 800 } }).gif({ delay: [100, 200], loop: 0 }).toBuffer();
-    const metadata = await sharp(await encodeSticker(gif), { animated: true }).metadata();
+    const metadata = await sharp(await encodeSticker(gif, 'user-test'), { animated: true }).metadata();
     expect(metadata.pages).toBe(2);
     expect([metadata.width, metadata.pageHeight]).toEqual([512, 512]);
   });

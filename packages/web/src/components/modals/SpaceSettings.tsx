@@ -1,5 +1,3 @@
-import { SoundsPanel } from './spaceSettingsPanels/SoundsPanel';
-import { WelcomePanel } from './spaceSettingsPanels/WelcomePanel';
 import { Fragment, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '../../i18n/formatters';
@@ -15,7 +13,11 @@ import { CountBadge } from '../ui/CountBadge';
 import { Toggle } from '../ui/Toggle';
 import { getApiForOrigin } from '../../utils/crossStoreResolvers';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
-import { OverviewPanel, YourSpacePanel, InvitesPanel, MembersPanel, RolesPanel, BansPanel, ModerationPanel, AuditLogPanel, VerificationPanel, SettingsPanelSuspense } from './lazySettingsPanels';
+import {
+  OverviewPanel, YourSpacePanel, InvitesPanel, MembersPanel, RolesPanel, BansPanel, ModerationPanel, AuditLogPanel, VerificationPanel,
+  EmojiStickersPanel, DiscordMovePanel, SoundsPanel, WelcomePanel, SettingsPanelSuspense,
+} from './lazySettingsPanels';
+import { allowedSpaceSettingsTabs, isSpaceSettingsTab, SPACE_SETTINGS_NAV, type SpaceSettingsGroup, type SpaceSettingsTab } from './spaceSettingsPanels/spaceSettingsTabs';
 import { DiscoveryListingSection } from './spaceSettingsPanels/DiscoveryListingSection';
 import { useIsSpaceOwner } from '../../hooks/useIsSpaceOwner';
 import { useVisibilityOptions } from './spaceSettingsPanels/spaceOptions';
@@ -696,22 +698,6 @@ function JoinRequestsSection({ spaceId, origin, onCountChange }: { spaceId: stri
   );
 }
 
-type SpaceSettingsTab = 'you' | 'overview' | 'welcome' | 'sounds' | 'access' | 'invites' | 'discovery' | 'verification' | 'moderation' | 'members' | 'roles' | 'bans' | 'audit';
-
-const SPACE_SETTINGS_TABS: readonly SpaceSettingsTab[] = ['you', 'overview', 'welcome', 'sounds', 'access', 'invites', 'discovery', 'verification', 'moderation', 'members', 'roles', 'bans', 'audit'];
-
-function isSpaceSettingsTab(value: unknown): value is SpaceSettingsTab {
-  return typeof value === 'string' && (SPACE_SETTINGS_TABS as readonly string[]).includes(value);
-}
-
-type SpaceSettingsGroup = 'general' | 'management';
-
-/** The navigation's sections and their tabs, in order. A tab the viewer may not open is left out. */
-const SPACE_SETTINGS_NAV: readonly { group: SpaceSettingsGroup; tabs: readonly SpaceSettingsTab[] }[] = [
-  { group: 'general', tabs: ['you', 'overview', 'welcome', 'sounds', 'access', 'invites', 'discovery', 'verification', 'moderation'] },
-  { group: 'management', tabs: ['members', 'roles', 'bans', 'audit'] },
-];
-
 export function SpaceSettingsModal() {
   const { t } = useTranslation(['spaces', 'common']);
   const activeModal = useUIStore((s) => s.activeModal);
@@ -730,32 +716,12 @@ export function SpaceSettingsModal() {
   const space = spaces.find(s => s.id === currentSpaceId);
   const mySpacePerms = currentSpaceId ? spacePermissions.get(currentSpaceId) : undefined;
   const canManageSpace = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_SPACE);
-  const canManageSounds = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_SOUNDS);
-  const canManageRoles = hasPermissionBit(mySpacePerms, PermissionBits.MANAGE_ROLES);
-  const canBanMembers = hasPermissionBit(mySpacePerms, PermissionBits.BAN_MEMBERS);
-  const canViewAuditLog = hasPermissionBit(mySpacePerms, PermissionBits.VIEW_AUDIT_LOG);
-  const canKickMembers = hasPermissionBit(mySpacePerms, PermissionBits.KICK_MEMBERS);
   // Verification is asked for by the owner alone (admin.md, "Verification").
   const isOwner = useIsSpaceOwner(currentSpaceId ?? '');
 
   // Which tabs this viewer may open: the permission each panel's routes
   // check on the instance that hosts the space.
-  const allowed: Record<SpaceSettingsTab, boolean> = {
-    you: true,
-    overview: canManageSpace,
-    access: canManageSpace,
-    invites: canManageSpace,
-    discovery: canManageSpace,
-    verification: isOwner,
-    moderation: canManageSpace,
-    welcome: canManageSpace,
-    sounds: canManageSounds,
-    // The list is for those who can act on it; everyone else has the member list beside the chat.
-    members: canManageRoles || canKickMembers || canBanMembers,
-    roles: canManageRoles,
-    bans: canBanMembers,
-    audit: canViewAuditLog,
-  };
+  const allowed = allowedSpaceSettingsTabs(mySpacePerms, isOwner);
 
   // Reset tab and mobile view when modal opens. A caller may name the tab
   // to open on (`openModal('spaceSettings', { tab: 'discovery' })`); a tab
@@ -798,6 +764,8 @@ export function SpaceSettingsModal() {
     moderation: t('spaces:settings.nav.tabs.moderation'),
     welcome: t('spaces:settings.nav.tabs.welcome'),
     sounds: t('spaces:settings.nav.tabs.sounds'),
+    emoji: t('spaces:settings.nav.tabs.emoji'),
+    discord: t('spaces:settings.nav.tabs.discord'),
     members: t('common:labels.members'),
     roles: t('spaces:settings.nav.tabs.roles'),
     bans: t('spaces:settings.nav.tabs.bans'),
@@ -912,8 +880,16 @@ export function SpaceSettingsModal() {
               <SettingsPanelSuspense key={tab}>
                 {tab === 'you' && <YourSpacePanel spaceId={currentSpaceId} />}
                 {tab === 'overview' && canManageSpace && <OverviewPanel spaceId={currentSpaceId} />}
-                {tab === 'welcome' && canManageSpace && <WelcomePanel key={currentSpaceId} spaceId={currentSpaceId} />}
-                {tab === 'sounds' && canManageSounds && <SoundsPanel key={currentSpaceId} spaceId={currentSpaceId} />}
+                {tab === 'welcome' && allowed.welcome && <WelcomePanel key={currentSpaceId} spaceId={currentSpaceId} />}
+                {tab === 'emoji' && allowed.emoji && (
+                  <EmojiStickersPanel
+                    key={currentSpaceId}
+                    spaceId={currentSpaceId}
+                    onOpenDiscord={allowed.discord ? () => handleTabClick('discord') : undefined}
+                  />
+                )}
+                {tab === 'sounds' && allowed.sounds && <SoundsPanel key={currentSpaceId} spaceId={currentSpaceId} />}
+                {tab === 'discord' && allowed.discord && <DiscordMovePanel key={currentSpaceId} spaceId={currentSpaceId} />}
                 {tab === 'access' && canManageSpace && <AccessPanel key={currentSpaceId} spaceId={currentSpaceId} onRequestCountChange={setPendingRequests} />}
                 {tab === 'invites' && canManageSpace && <InvitesPanel key={currentSpaceId} spaceId={currentSpaceId} />}
                 {tab === 'discovery' && canManageSpace && <DiscoveryPanel spaceId={currentSpaceId} />}
@@ -921,9 +897,9 @@ export function SpaceSettingsModal() {
                 {/* Keyed by space: a different space's rules or log never shows in the same form. */}
                 {tab === 'moderation' && canManageSpace && <ModerationPanel key={currentSpaceId} spaceId={currentSpaceId} />}
                 {tab === 'members' && allowed.members && <MembersPanel spaceId={currentSpaceId} />}
-                {tab === 'roles' && canManageRoles && <RolesPanel spaceId={currentSpaceId} />}
-                {tab === 'bans' && canBanMembers && <BansPanel spaceId={currentSpaceId} />}
-                {tab === 'audit' && canViewAuditLog && <AuditLogPanel key={currentSpaceId} spaceId={currentSpaceId} />}
+                {tab === 'roles' && allowed.roles && <RolesPanel spaceId={currentSpaceId} />}
+                {tab === 'bans' && allowed.bans && <BansPanel spaceId={currentSpaceId} />}
+                {tab === 'audit' && allowed.audit && <AuditLogPanel key={currentSpaceId} spaceId={currentSpaceId} />}
               </SettingsPanelSuspense>
             </div>
           </div>

@@ -12,7 +12,7 @@ import { Spoiler } from './Spoiler';
 import { useEmojiShortcodeNames } from '../../utils/emojiShortcodes';
 import { splitMentions } from '../../utils/mentionTokens';
 import { splitCustomEmoji } from '@backspace/shared/src/customEmoji';
-import { CustomEmojiImage, EmojiSizeContext, type EmojiSize } from '../ui/CustomEmojiImage';
+import { CustomEmojiImage, EmojiOriginContext, EmojiSizeContext, type EmojiSize } from '../ui/CustomEmojiImage';
 import { getChannelOrigin } from '../../stores/spaceStore';
 
 // ─── Remark Plugin: Tag Bare Fenced Blocks ─────────────────────────────────
@@ -206,16 +206,10 @@ function ChannelMassMentionBadge({ target }: { target: string }) {
 }
 
 /**
- * An emoji in a channel's message. Emoji ids belong to the instance that holds
- * the library (this one), so in a channel another instance hosts the id means
- * nothing here and the emoji stays as the `:name:` the author's text carried.
+ * An emoji in a message, drawn from the instance whose emoji the text names (EmojiOriginContext,
+ * set by MarkdownRenderer): the channel's host, or for a direct message the writer's home.
  */
 function ChannelEmoji({ id, name }: { id: string; name: string | undefined }) {
-  const channelId = useContext(MentionChannelContext);
-  if (channelId !== null && getChannelOrigin(channelId) !== '') {
-    const written = `:${name ?? 'emoji'}:`;
-    return <>{written}</>;
-  }
   return <CustomEmojiImage id={id} fallbackName={name} />;
 }
 
@@ -352,12 +346,20 @@ interface MarkdownRendererProps {
    * to no channel, where a mention cannot be resolved.
    */
   channelId?: string | null;
+  /**
+   * The instance whose custom emoji the text names: a direct message's writer's home
+   * (utils/emojiSets.ts `emojiOriginOfPerson`). Without it, the channel's host, or this page's
+   * instance for text that belongs to no channel.
+   */
+  emojiOrigin?: string;
 }
 
-export const MarkdownRenderer = React.memo(function MarkdownRenderer({ content, channelId = null }: MarkdownRendererProps) {
+export const MarkdownRenderer = React.memo(function MarkdownRenderer({ content, channelId = null, emojiOrigin }: MarkdownRendererProps) {
   useEmojiShortcodeNames();
+  const origin = emojiOrigin ?? (channelId !== null ? getChannelOrigin(channelId) : '');
   return (
     <EmojiSizeContext.Provider value={emojiSizeOf(content)}>
+    <EmojiOriginContext.Provider value={origin}>
     <MentionChannelContext.Provider value={channelId}>
       {/* The message body sits in a `whitespace-pre-wrap` container (so typed line
           breaks survive), and react-markdown emits a "\n" text node between every
@@ -370,6 +372,7 @@ export const MarkdownRenderer = React.memo(function MarkdownRenderer({ content, 
         </ReactMarkdown>
       </div>
     </MentionChannelContext.Provider>
+    </EmojiOriginContext.Provider>
     </EmojiSizeContext.Provider>
   );
 });

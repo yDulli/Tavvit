@@ -7,6 +7,7 @@ import { isDeadOneOnOne, isDmMember } from './permissions.js';
 import { dmMessageEditRefusal } from './dmSystemMessages.js';
 import { oneOnOneBlockRefusal } from './blocks.js';
 import { mayPostSticker } from './remoteMedia.js';
+import { emojiUseRefusal, namesEmojiOfThisInstance } from './emojiUse.js';
 
 /**
  * The rules for creating, editing and deleting a DM message, in one place.
@@ -127,6 +128,12 @@ export function checkDmMessageCreate(
   }
   // The other member's client fetches a sticker as soon as the message shows (utils/remoteMedia.ts).
   if (!mayPostSticker(text, userId)) return refuse(400, 'sticker_elsewhere');
+  // An account of this instance names this instance's emoji; one whose home is elsewhere, that
+  // home's, which only it can judge (utils/emojiUse.ts).
+  if (namesEmojiOfThisInstance(userId)) {
+    const emojiRefusal = emojiUseRefusal(text, userId, null);
+    if (emojiRefusal) return refuse(emojiRefusal.status, emojiRefusal.code);
+  }
 
   const reply = replyToId || null;
   if (reply && !isDmReplyTargetInChannel(dmChannelId, reply)) return refuse(400, 'reply_target_invalid');
@@ -161,6 +168,10 @@ export function checkDmMessageEdit(
   const message = getDb().select().from(schema.dmMessages).where(eq(schema.dmMessages.id, messageId)).get();
   if (!message) return refuse(404, 'message_not_found');
   if (!isDmMember(message.dmChannelId, editorId)) return refuse(403, 'not_dm_member');
+  if (namesEmojiOfThisInstance(editorId)) {
+    const emojiRefusal = emojiUseRefusal(content.trim(), editorId, null, message.content);
+    if (emojiRefusal) return refuse(emojiRefusal.status, emojiRefusal.code);
+  }
 
   const editRefusal = dmMessageEditRefusal(message, editorId);
   if (editRefusal) return refuse(403, editRefusal);

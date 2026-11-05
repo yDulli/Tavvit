@@ -951,6 +951,7 @@ All origin comparisons use `extractDomain()` or `getOurOrigin()` with normalizat
 - A relayed group metadata `icon` must be an upload of the sending peer or of this instance, by its address (`invalid_payload` otherwise).
 - A profile picture or banner a home names (`resolveHomeAsset`) is downloaded only from that home; an address anywhere else becomes no picture rather than being kept as an address (it was before).
 - A replicated user's stored picture on any other server is not handed to clients (`publicUserOf`).
+- A custom emoji token (1.34) carries an id and no address: clients fetch its picture from the author's home (a reaction pill's from its first reactor's home), and while they are not connected to that home only after the reader's yes (see "Custom emoji in relayed messages" below).
 
 ### 1-on-1 DMs
 
@@ -1032,6 +1033,15 @@ This permissiveness is **intentional** — the relay envelope is designed for ad
 `FederationRelayEvent.message.mentions?: FederationMentionRef[]`, each `{ id, homeUserId, homeInstance }`: an id as it appears in a `<@id>` token of the relayed `content`, and the federated identity of the user it names on the sender. It rides every path that carries content: live `create` and `update` and the sync endpoint's replay of both, which all build the message part with `buildRelayPayload` (the replay on the current content). The receiver (`processCreateEvent`, `processUpdateEvent`) rewrites each listed token to its own row for that identity before storing the content. Sender and receiver rules, validation and limits are in `dm-system.md` "Mentions in relayed messages"; the code is `utils/federationMentions.ts`.
 
 Additive like `message.type`: an older sender omits the list and its content is stored as sent, which leaves foreign ids in the tokens as before; an older receiver ignores the field and does the same.
+
+### Custom emoji in relayed messages (1.34)
+
+A custom emoji is the token `<:name:id>` in text and `emoji:<id>` as a reaction (`shared/src/customEmoji.ts`). In a direct message the id names an emoji of the **writer's home**, from its library or one of its spaces, and a reaction one of the **reactor's home**. The relay carries both as written. Unlike a mention token, nothing is rewritten on the way: the id means something only on that home, and readers' clients fetch the picture from there (`<home>/api/emojis/<id>.webp`, served without sign-in). A space's channel is not part of this: its text and reactions name its host's emoji, which the host checks itself, and a client reads a space on another instance from that instance (client-federation.md).
+
+- **Checked here, before the relay.** For direct messages the use rule (`utils/emojiUse.ts`: the instance's library, and the emoji of every space the writer is a member of) applies only to accounts whose home is this instance (`namesEmojiOfThisInstance`). `checkDmMessageCreate` and `checkDmMessageEdit` (`utils/dmMessageRules.ts`, for REST and the socket) refuse a space's emoji the writer may not use with 403 `emoji_unavailable`; the socket's `reaction_add` on a DM message does the same, and refuses an id this instance does not know with 400 `emoji_not_found`. Nothing refused is queued. An edit is asked only about emoji its previous text did not carry, and joining a reaction someone already gave is always allowed.
+- **Not checked.** `processCreateEvent`, `processUpdateEvent` and `processReactionAddEvent` do not apply the rule to what a peer relays. A DM or DM reaction written here by an account whose home is elsewhere is not asked either: its ids are its home's, whose spaces and memberships this instance cannot see. Its home receives it relayed and does not ask, so such a message is checked nowhere; what it can show is a picture its home serves to anyone anyway.
+- **Forwarding.** `routes/forward.ts` passes a copy's content through `forwardableEmojiText`: each space emoji the forwarder may not use where the copy lands becomes its `:name:`. A forward into a DM by an account whose home is elsewhere turns **every** custom emoji into text, because the copy is that account's message, and readers would look its ids up on the account's home, where they name another emoji or none.
+- **Drawn by the client** from the writer's home for a DM, the quoted author's home for a reply's quote, and the first reactor's home for a DM reaction pill (`emojiOriginOfPerson` in `utils/emojiSets.ts`). A picture from an instance the client is not connected to waits for the reader's yes (legal.md, "Content from other servers"); one that does not load shows `:name:`.
 
 ### Typing Indicator Relay
 
@@ -1875,7 +1885,7 @@ A replicated stub is named `<realname>@<domain>` when a username for the identit
 
 ## 11. Reaction Relay
 
-`emoji` is a native emoji or a sticker token (`sticker:<asset URL>`); both relay as the same opaque string, and the unique index treats each token as one emoji.
+`emoji` is a native emoji, a custom emoji (`emoji:<id>`, an emoji of the reactor's home: section 4, "Custom emoji in relayed messages") or a sticker token (`sticker:<asset URL>`); all relay as the same opaque string, and the unique index treats each token as one emoji.
 
 ### Outbound
 
@@ -1886,6 +1896,8 @@ Reactions are queued by WS event handlers in `events.ts`:
 Payload includes `userId`, `homeUserId`, `emoji`, `createdAt`, plus `messageId` and `messageHomeInstance` for cross-instance message resolution: the reacted-to message as a `FederationMessageRef`, built by `dmMessageFederationRef` (see `dm-system.md` "Naming a message across instances").
 
 The WS reaction handlers accept a federated account (a user whose `homeInstance` is another instance) like any DM member. Until #295 they silently dropped its DM reactions: a leftover of the `isFederated` gate that `662143bf` lifted for every other DM operation, so a client whose DM was pinned to a remote origin could not react at all.
+
+Before a DM reaction is stored and queued, an account whose home is here is asked the emoji use rule (1.34, `reactionEmojiRefusal`: 400 `emoji_not_found`, 403 `emoji_unavailable`; joining a reaction already on the message is always allowed). A federated account is not: its `emoji:<id>` names its home's emoji.
 
 The mutation log entry for reactions stores a simpler payload (no `messageId`/`messageHomeInstance`), while the outbox entry carries the full reaction payload including those fields. The sync endpoint (`POST /api/federation/sync`) fills them when it replays a reaction: it reads the reacted-to row (the log's `entity_id`) and names it with the same `dmMessageFederationRef`, so a replayed reaction resolves on the receiver exactly like a live one. A reaction whose message row is gone by the time of the sync is not replayed, and a reaction row is served only when the reaction's current state agrees with it (an add while the reaction exists, a remove while it does not), so a replay converges on the state now.
 
@@ -1898,6 +1910,8 @@ The mutation log entry for reactions stores a simpler payload (no `messageId`/`m
 2. Resolve reacting user via `resolveRelayActor` (must already exist): unknown → `user_not_found`
 3. Insert `dm_reactions` with `ON CONFLICT DO NOTHING` against the unique `(dm_message_id, user_id, emoji)` index (database.md "Reaction uniqueness (0024)"). No row written means the reaction is already held (a retry, or the same event pulled again under another id): accepted, nothing broadcast
 4. Otherwise broadcast `reaction_added` to local clients
+
+No emoji use check: an `emoji:<id>` names an emoji of the reactor's home, which this instance cannot judge (section 4, "Custom emoji in relayed messages").
 
 **`processReactionRemoveEvent` (`routes/federation/events/dmMessages.ts`):**
 - Same resolution logic

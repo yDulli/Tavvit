@@ -5,6 +5,7 @@ import { replaceEmojiShortcodesInMarkdownSource, useEmojiShortcodeNames } from '
 import { splitMentions } from '../../utils/mentionTokens';
 import { splitCustomEmoji } from '@backspace/shared/src/customEmoji';
 import { CustomEmojiImage } from '../ui/CustomEmojiImage';
+import { getChannelOrigin } from '../../stores/spaceStore';
 import { isStickerMessage, messageTextForPreview } from '../../utils/stickerMessages';
 import i18n from '../../i18n';
 import { maskSpoilers } from '@backspace/shared/src/spoilers';
@@ -15,6 +16,8 @@ interface InlineMessageTextProps {
   channelId: string | null;
   /** Names for mentions the channel's people cannot answer, by user id (see `MentionBadge`). */
   mentionedNames?: Readonly<Record<string, string>>;
+  /** The instance whose emoji the text names (see `MarkdownRenderer`); the channel's host without it. */
+  emojiOrigin?: string;
 }
 
 /**
@@ -27,8 +30,9 @@ interface InlineMessageTextProps {
  * plain text. A sticker is its label
  * (`messageTextForPreview`).
  */
-export function InlineMessageText({ content, channelId, mentionedNames }: InlineMessageTextProps) {
+export function InlineMessageText({ content, channelId, mentionedNames, emojiOrigin }: InlineMessageTextProps) {
   useEmojiShortcodeNames();
+  const origin = emojiOrigin ?? (channelId ? getChannelOrigin(channelId) : '');
   if (isStickerMessage(content)) return <>{messageTextForPreview(content)}</>;
   return (
     <>
@@ -40,7 +44,7 @@ export function InlineMessageText({ content, channelId, mentionedNames }: Inline
           case 'text': return (
             <React.Fragment key={i}>
               {splitCustomEmoji(part.text).map((piece, j) => (piece.kind === 'emoji'
-                ? <CustomEmojiImage key={j} id={piece.id} fallbackName={piece.name} />
+                ? <CustomEmojiImage key={j} id={piece.id} origin={origin} fallbackName={piece.name} />
                 : replaceEmojiShortcodesInMarkdownSource(piece.text)))}
             </React.Fragment>
           );

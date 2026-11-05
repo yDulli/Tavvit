@@ -31,14 +31,19 @@ const STICKER_TEMP_FILE_AGE_MS = 60 * 60 * 1000;
 
 /**
  * Asset ids that something stored on this instance still names: a collection
- * entry, a channel or DM message whose content is a sticker token, or a
- * channel or DM reaction that is one. A token from another instance that
- * happens to carry the same hash counts too, which only ever keeps a file.
+ * entry, a space's sticker, a channel or DM message whose content is a sticker
+ * token, or a channel or DM reaction that is one. A token from another
+ * instance that happens to carry the same hash counts too, which only ever
+ * keeps a file. A space's sticker must count: its row holds a foreign key to
+ * the asset's row, which the cleanup below deletes.
  */
 export function getReferencedStickerIds(): Set<string> {
   const db = getDb();
   const ids = new Set<string>();
   for (const row of db.select({ id: schema.personalStickers.stickerId }).from(schema.personalStickers).all()) {
+    ids.add(row.id);
+  }
+  for (const row of db.select({ id: schema.spaceStickers.stickerId }).from(schema.spaceStickers).all()) {
     ids.add(row.id);
   }
   const values = [

@@ -16,6 +16,7 @@ import { sendError } from '../utils/httpErrors.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
 import { EmojiImageError, emojiDir, emojiFilePath, encodeEmoji } from '../utils/emojiImage.js';
+import { MediaBusyError } from '../utils/thumbnail.js';
 import { connectionManager } from '../ws/handler.js';
 
 /**
@@ -60,11 +61,15 @@ export async function emojiRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(200).send({ emojis: rows.map(toEmoji) });
   });
 
-  // GET /api/emojis/:id.webp - the picture. Public like an upload: an <img> cannot send a token.
+  // GET /api/emojis/:id.webp - the picture, of the instance's emoji or of a space's (both take their
+  // ids from one generator, so an id names one of them). Public like an upload: an <img> cannot send
+  // a token, and a message that uses a space's emoji is read outside the space too.
   app.get<{ Params: { file: string } }>('/api/emojis/:file', async (request, reply) => {
     const id = request.params.file.replace(/\.webp$/, '');
     if (!EMOJI_ID_PATTERN.test(id) || request.params.file !== `${id}.webp`) return sendError(reply, 404, 'emoji_not_found');
-    const row = getDb().select({ id: schema.customEmojis.id }).from(schema.customEmojis).where(eq(schema.customEmojis.id, id)).get();
+    const db = getDb();
+    const row = db.select({ id: schema.customEmojis.id }).from(schema.customEmojis).where(eq(schema.customEmojis.id, id)).get()
+      ?? db.select({ id: schema.spaceEmojis.id }).from(schema.spaceEmojis).where(eq(schema.spaceEmojis.id, id)).get();
     if (!row) return sendError(reply, 404, 'emoji_not_found');
     let bytes: Buffer;
     try {
@@ -126,10 +131,12 @@ export async function emojiRoutes(app: FastifyInstance): Promise<void> {
 
     let encoded: Awaited<ReturnType<typeof encodeEmoji>>;
     try {
-      encoded = await encodeEmoji(source);
+      encoded = await encodeEmoji(source, request.userId);
     } catch (err) {
       // Only what is wrong with the picture is the client's to hear; anything else stays a server error.
       if (err instanceof EmojiImageError) return sendError(reply, err.code === 'emoji_image_too_large' ? 413 : 400, err.code);
+      // This account's last picture is still being worked on, or the queue is full: later.
+      if (err instanceof MediaBusyError) return sendError(reply, 429, 'rate_limited');
       throw err;
     }
 

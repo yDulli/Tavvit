@@ -8,6 +8,7 @@ import { GifPicker } from './GifPicker';
 import { useUIStore } from '../../stores/uiStore';
 import { MobilePickerSheet } from './MobilePickerSheet';
 import { PickerEscapeScope } from './pickerEscape';
+import type { EmojiContext } from '../../utils/emojiSets';
 
 export type InputPopoverTab = 'emoji' | 'gif' | 'sticker';
 
@@ -20,6 +21,8 @@ interface InputPopoverProps {
   anchorRef: React.RefObject<HTMLElement | null>;
   gifEnabled: boolean;
   onTabChange: (tab: InputPopoverTab) => void;
+  /** Where the composer's text goes: which emoji and stickers are on offer (utils/emojiSets.ts). */
+  context: EmojiContext;
 }
 
 interface SharedTabProps {
@@ -78,6 +81,7 @@ function DesktopPopover({
   gifEnabled,
   onTabChange,
   availableTabs,
+  context,
 }: DesktopPopoverProps) {
   const floatingRef = useRef<HTMLDivElement>(null);
 
@@ -150,8 +154,8 @@ function DesktopPopover({
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           <PickerEscapeScope onClose={onClose}>
-            {activeTab === 'emoji' && <EmojiPicker stickers={false} onEmojiSelect={onEmojiSelect} />}
-            {activeTab === 'sticker' && <StickerPicker onSelect={onGifSelect} />}
+            {activeTab === 'emoji' && <EmojiPicker stickers={false} onEmojiSelect={onEmojiSelect} context={context} />}
+            {activeTab === 'sticker' && <StickerPicker onSelect={onGifSelect} context={context} />}
             {activeTab === 'gif' && gifEnabled && <GifPicker onGifSelect={onGifSelect} />}
           </PickerEscapeScope>
         </div>
@@ -173,14 +177,15 @@ function MobileSheet({
   gifEnabled,
   onTabChange,
   availableTabs,
+  context,
 }: MobileSheetProps) {
   return (
     <MobilePickerSheet
       onClose={onClose}
       header={<TabBar activeTab={activeTab} availableTabs={availableTabs} onTabChange={onTabChange} />}
     >
-      {activeTab === 'emoji' && <EmojiPicker stickers={false} onEmojiSelect={onEmojiSelect} mobile />}
-      {activeTab === 'sticker' && <StickerPicker onSelect={onGifSelect} mobile />}
+      {activeTab === 'emoji' && <EmojiPicker stickers={false} onEmojiSelect={onEmojiSelect} mobile context={context} />}
+      {activeTab === 'sticker' && <StickerPicker onSelect={onGifSelect} mobile context={context} />}
       {activeTab === 'gif' && gifEnabled && <GifPicker onGifSelect={onGifSelect} mobile />}
     </MobilePickerSheet>
   );

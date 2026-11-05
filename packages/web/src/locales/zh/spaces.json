@@ -342,7 +342,9 @@
         "verification": "认证",
         "you": "你的设置",
         "access": "访问权限",
-        "invites": "邀请"
+        "invites": "邀请",
+        "emoji": "表情和贴纸",
+        "discord": "从 Discord 迁移"
       }
     },
     "discardChanges": "放弃修改",
@@ -581,7 +583,14 @@
         "forumTagsUpdate": "论坛标签已更改",
         "channelFollowCreate": "已开始关注",
         "channelFollowDelete": "已取消关注",
-        "vanityUpdate": "专属地址已更改"
+        "vanityUpdate": "专属地址已更改",
+        "emojiCreate": "已添加表情",
+        "emojiUpdate": "已重命名表情",
+        "emojiDelete": "已移除表情",
+        "stickerCreate": "已添加贴纸",
+        "stickerUpdate": "已修改贴纸",
+        "stickerDelete": "已移除贴纸",
+        "discordExpressionsImport": "已从 Discord 导入表情和贴纸"
       },
       "sentences": {
         "spaceUpdate": "{{actor}} 更改了空间设置",
@@ -634,7 +643,14 @@
         "forumTagsUpdate": "{{actor}} 更改了 {{target}} 的标签",
         "channelFollowCreate": "{{actor}} 将 {{target}} 与其他空间的频道相连",
         "channelFollowDelete": "{{actor}} 断开了 {{target}} 与其他空间频道的连接",
-        "vanityUpdate": "{{actor}} 更改了空间的专属地址"
+        "vanityUpdate": "{{actor}} 更改了空间的专属地址",
+        "emojiCreate": "{{actor}} 添加了表情 {{target}}",
+        "emojiUpdate": "{{actor}} 重命名了表情 {{target}}",
+        "emojiDelete": "{{actor}} 移除了表情 {{target}}",
+        "stickerCreate": "{{actor}} 添加了贴纸 {{target}}",
+        "stickerUpdate": "{{actor}} 修改了贴纸 {{target}}",
+        "stickerDelete": "{{actor}} 移除了贴纸 {{target}}",
+        "discordExpressionsImport": "{{actor}} 从 Discord 迁移了表情和贴纸"
       },
       "fields": {
         "name": "名称",
@@ -679,7 +695,9 @@
         "channels": "频道",
         "messages": "消息",
         "tags": "标签",
-        "vanityCode": "地址"
+        "vanityCode": "地址",
+        "emoji": "表情",
+        "stickers": "贴纸"
       }
     },
     "you": {
@@ -777,6 +795,48 @@
       "remove": "移除 {{name}}",
       "removeTitle": "移除此音频片段？",
       "removeBody": "{{name}} 将对此空间的所有人消失。"
+    },
+    "expressions": {
+      "title": "表情和贴纸",
+      "intro": "所有人都可以在此空间的频道中使用它们，其成员还可以在此服务器的任何地方使用。",
+      "emptyTitle": "还没有表情或贴纸",
+      "emptyBody": "添加你自己的图片，或从你的 Discord 服务器迁移过来。",
+      "fromDiscord": "从 Discord 迁移",
+      "filter": "按名称查找",
+      "count": "{{used}} / {{max}}",
+      "progress": "正在添加第 {{done}} 个，共 {{total}} 个…",
+      "animated": "动图",
+      "fileTooLarge": "{{name}} 超过 {{max}} MB。",
+      "fileFailed": "{{name}}：{{reason}}",
+      "emoji": {
+        "title": "表情",
+        "add": "添加表情",
+        "hint": "PNG、JPEG、WebP 或 GIF，每个最大 {{max}} MB。可一次选择多个：名称取自文件名，之后可以修改。",
+        "noRoomFor_one": "有 {{count}} 张图片放不下：此空间已没有空位放更多表情。",
+        "noRoomFor_other": "有 {{count}} 张图片放不下：此空间已没有空位放更多表情。",
+        "rename": "重命名 :{{name}}:",
+        "nameLabel": "表情名称",
+        "remove": "移除 :{{name}}:",
+        "removeTitle": "移除 :{{name}}:？",
+        "removeBody": "使用过它的消息将以文字 :{{name}}: 显示。"
+      },
+      "stickers": {
+        "title": "贴纸",
+        "add": "添加贴纸",
+        "hint": "PNG、JPEG、WebP 或 GIF，每个最大 {{max}} MB。成员可以把它们收进自己的收藏。",
+        "noRoomFor_one": "有 {{count}} 张图片放不下：此空间已没有空位放更多贴纸。",
+        "noRoomFor_other": "有 {{count}} 张图片放不下：此空间已没有空位放更多贴纸。",
+        "untitled": "贴纸",
+        "rename": "重命名 {{name}}",
+        "nameLabel": "贴纸名称",
+        "noDescription": "没有给屏幕阅读器的描述",
+        "editDescription": "为屏幕阅读器描述 {{name}}",
+        "descriptionLabel": "给屏幕阅读器的描述",
+        "descriptionPlaceholder": "贴纸上是什么",
+        "remove": "移除 {{name}}",
+        "removeTitle": "移除 {{name}}？",
+        "removeBody": "已经显示它的消息会保留它。"
+      }
     }
   },
   "bans": {
@@ -880,7 +940,8 @@
       "useSoundboard": "使用音效板",
       "manageSounds": "管理音效板",
       "moderateMembers": "禁言成员",
-      "viewAuditLog": "查看审计日志"
+      "viewAuditLog": "查看审计日志",
+      "manageEmojis": "管理表情和贴纸"
     },
     "tristate": {
       "deny": "拒绝",
@@ -910,7 +971,8 @@
     "aboveYouShort": "与您的最高身份组同级或更高",
     "descriptions": {
       "moderateMembers": "在一段时间内禁止成员发消息、添加反应和加入语音频道。只对身份组低于你的成员有效。",
-      "viewAuditLog": "查看谁更改了此空间的设置、身份组、频道和成员。"
+      "viewAuditLog": "查看谁更改了此空间的设置、身份组、频道和成员。",
+      "manageEmojis": "添加、重命名和移除此空间的表情和贴纸，并从 Discord 迁移它们。"
     }
   },
   "sidebar": {
@@ -1176,7 +1238,7 @@
     },
     "notTransferred": {
       "title": "模板不包含的内容",
-      "body": "模板是结构的快照，而不是备份。消息、成员、机器人、Webhook、表情、贴纸、服务器图标、活动、子区和集成都会留在 Discord。"
+      "body": "模板是结构的快照，而不是备份。消息、成员、机器人、Webhook、服务器图标、活动、子区和集成都会留在 Discord。表情和贴纸可借助你自己的机器人单独迁移：空间设置 → 从 Discord 迁移。"
     },
     "preview": {
       "by": "作者：{{name}}",
@@ -1251,6 +1313,88 @@
     "discordTypes": {
       "stage": "舞台频道",
       "media": "媒体频道"
+    },
+    "move": {
+      "intro": "把你的服务器搬过来：频道和身份组来自模板，表情和贴纸借助你自己的机器人。然后告诉大家在哪里找到你们。",
+      "structureTitle": "频道、身份组和权限",
+      "history": "消息和成员留在 Discord：不会复制任何人的消息。"
+    },
+    "expressions": {
+      "entryTitle": "表情和贴纸",
+      "intro": "Tavvit 会用你在该服务器上的机器人的令牌，向 Discord 请求你服务器的表情和贴纸。消息留在 Discord。",
+      "howTo": {
+        "app": "在 discord.com/developers/applications 创建一个应用。",
+        "token": "在 Bot 页面选择 Reset Token 并复制令牌。",
+        "invite": "在 OAuth2 → URL Generator 中勾选“bot”，不选任何权限，打开链接把机器人添加到你的服务器。",
+        "serverId": "在 Discord 中开启开发者模式（设置 → 高级），右键点击你的服务器并选择“复制服务器 ID”。"
+      },
+      "serverIdLabel": "服务器 ID",
+      "tokenLabel": "机器人令牌",
+      "tokenHint": "只发送一次到 {{host}}，用于向 Discord 发出两次请求，之后即被遗忘：它从不被保存。之后你可以在 Discord 中重置它。",
+      "lookUp": "查询",
+      "lookingUp": "正在询问 Discord…",
+      "preview": {
+        "found": "Discord 上这个服务器有 {{emoji}}和{{stickers}}。",
+        "emoji_one": "{{count}} 个表情",
+        "emoji_other": "{{count}} 个表情",
+        "stickers_one": "{{count}} 个贴纸",
+        "stickers_other": "{{count}} 个贴纸",
+        "room": "这里还能放 {{emoji}} 个表情和 {{stickers}} 个贴纸。",
+        "picturesHint": "这些图片在 Discord 的服务器上。只有你想看时，你的设备才会从那里加载它们。",
+        "showPictures": "显示图片",
+        "nothing": "这个服务器没有自己的表情或贴纸。",
+        "emojiHeading": "表情 · 已选 {{selected}} / {{total}}",
+        "stickersHeading": "贴纸 · 已选 {{selected}} / {{total}}",
+        "tooMany": "选中的比这里能放的多：列表末尾的会留下。"
+      },
+      "skip": {
+        "already_here": "已在这里",
+        "no_room": "没有空位",
+        "lottie": "动态矢量贴纸，无法迁移",
+        "managed": "属于 Discord 上的某个集成",
+        "download_failed": "无法下载",
+        "image_refused": "无法作为图片读取"
+      },
+      "note": {
+        "renamed": "改名为 {{name}}",
+        "still_picture": "以静态图片迁移",
+        "role_restriction_dropped": "在 Discord 上只有部分身份组可用；这里所有成员都可用"
+      },
+      "start_one": "导入 {{count}} 个",
+      "start_other": "导入 {{count}} 个",
+      "importing": "正在迁移",
+      "progress": "{{done}} / {{total}}",
+      "keepOpen": "完成前请保持此页面打开。离开页面会停止导入；已迁移的会保留。",
+      "stop": "停止",
+      "done": {
+        "title": "表情和贴纸已导入",
+        "stoppedTitle": "导入已停止",
+        "stoppedByYou": "你停止了导入。已迁移的会保留。",
+        "counts": "已迁移 {{emoji}}和{{stickers}}。",
+        "leftOut_one": "{{count}} 个未迁移",
+        "leftOut_other": "{{count}} 个未迁移",
+        "revoke": "现在你可以把机器人从 Discord 服务器移除，并重置它的令牌。"
+      }
+    },
+    "announce": {
+      "title": "通知你的 Discord 服务器",
+      "intro": "把这段话发到你的 Discord 服务器，例如公告频道。链接会打开一个欢迎大家并说明已准备好什么的页面。",
+      "language": "文字的语言",
+      "textLabel": "公告",
+      "copyText": "复制文字",
+      "copyLink": "复制链接",
+      "copyFailed": "无法复制。请选中文字自行复制。",
+      "linkFailed": "无法为此空间创建邀请链接：{{reason}}",
+      "registrationClosed": "此服务器只接受管理员邀请的新账号，所以仅凭这个链接无法注册。",
+      "lines": {
+        "headline": "{{space}} 已搬到 {{instance}}。",
+        "ready": "我们的频道和身份组已经在那里设置好了。",
+        "readyWithEmoji": "我们的频道、身份组和表情已经在那里设置好了。",
+        "account": "创建账号大约只需一分钟。",
+        "join": "通过这个链接加入我们：",
+        "request": "通过这个链接申请加入，我们会让你进来：",
+        "history": "这里写过的一切都留在 Discord。"
+      }
     }
   },
   "spaceProfile": {

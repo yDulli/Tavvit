@@ -31,6 +31,7 @@ import { parseHistoryPage, selectHistoryPage, markHistoryPageHonoured } from '..
 import { fetchEmbedsForMessages, resolveEmbeds, reResolveEmbeds, embedRowToEmbed } from '../utils/embedResolver.js';
 import { recordSlowmodePost, spaceMessageRefusal } from '../utils/spaceModeration.js';
 import { mayPostSticker } from '../utils/remoteMedia.js';
+import { emojiUseRefusal } from '../utils/emojiUse.js';
 import { recordMessageDeleteAudit, recordMessagesBulkDeleteAudit } from '../utils/auditLog.js';
 import { fetchPollsForMessages, isPollMessage } from '../utils/polls.js';
 import type { PollInfo } from '@backspace/shared/src/polls.js';
@@ -509,6 +510,9 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 
     // Every reader's client fetches a sticker by itself, so it only comes from where the sender's do (utils/remoteMedia.ts).
     if (!mayPostSticker(content, request.userId)) return sendError(reply, 400, 'sticker_elsewhere');
+    // A space's emoji is for its own channels and its members (utils/emojiUse.ts).
+    const emojiRefusal = emojiUseRefusal(content, request.userId, spaceId);
+    if (emojiRefusal) return sendError(reply, emojiRefusal.status, emojiRefusal.code);
 
     // @everyone, @here and role mentions alert many people; only MENTION_EVERYONE
     // may send them, except a role the space opened to mentions (permissions.md,
@@ -642,6 +646,11 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     const editSpaceId = getChannelSpaceId(message.channelId);
     if (!editSpaceId || !hasPermission(request.userId, editSpaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.SEND_MESSAGES, message.channelId)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'SEND_MESSAGES' });
+    }
+    // Emoji the message already carried stay; one it adds must be the author's to use (utils/emojiUse.ts).
+    if (typeof givenContent === 'string') {
+      const emojiRefusal = emojiUseRefusal(givenContent.trim(), request.userId, editSpaceId, message.content);
+      if (emojiRefusal) return sendError(reply, emojiRefusal.status, emojiRefusal.code);
     }
     // Its question does not change under the votes already cast.
     if (isPollMessage(id)) {

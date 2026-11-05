@@ -345,7 +345,9 @@
         "verification": "Verification",
         "you": "Your settings",
         "access": "Access",
-        "invites": "Invites"
+        "invites": "Invites",
+        "emoji": "Emoji and stickers",
+        "discord": "Get from Discord"
       }
     },
     "discardChanges": "Discard",
@@ -585,7 +587,14 @@
         "forumTagsUpdate": "Forum tags changed",
         "channelFollowCreate": "Follow started",
         "channelFollowDelete": "Follow ended",
-        "vanityUpdate": "Own address changed"
+        "vanityUpdate": "Own address changed",
+        "emojiCreate": "Emoji added",
+        "emojiUpdate": "Emoji renamed",
+        "emojiDelete": "Emoji removed",
+        "stickerCreate": "Sticker added",
+        "stickerUpdate": "Sticker changed",
+        "stickerDelete": "Sticker removed",
+        "discordExpressionsImport": "Emoji and stickers imported from Discord"
       },
       "sentences": {
         "spaceUpdate": "{{actor}} changed the space settings",
@@ -638,7 +647,14 @@
         "forumTagsUpdate": "{{actor}} changed the tags of {{target}}",
         "channelFollowCreate": "{{actor}} connected {{target}} with a channel of another space",
         "channelFollowDelete": "{{actor}} ended the connection of {{target}} with a channel of another space",
-        "vanityUpdate": "{{actor}} changed the space's own address"
+        "vanityUpdate": "{{actor}} changed the space's own address",
+        "emojiCreate": "{{actor}} added the emoji {{target}}",
+        "emojiUpdate": "{{actor}} renamed the emoji {{target}}",
+        "emojiDelete": "{{actor}} removed the emoji {{target}}",
+        "stickerCreate": "{{actor}} added the sticker {{target}}",
+        "stickerUpdate": "{{actor}} changed the sticker {{target}}",
+        "stickerDelete": "{{actor}} removed the sticker {{target}}",
+        "discordExpressionsImport": "{{actor}} brought emoji and stickers over from Discord"
       },
       "fields": {
         "name": "Name",
@@ -683,7 +699,9 @@
         "channels": "Channels",
         "messages": "Messages",
         "tags": "Tags",
-        "vanityCode": "Address"
+        "vanityCode": "Address",
+        "emoji": "Emoji",
+        "stickers": "Stickers"
       }
     },
     "you": {
@@ -781,6 +799,48 @@
       "remove": "Remove {{name}}",
       "removeTitle": "Remove this clip?",
       "removeBody": "{{name}} is gone for everyone in this space."
+    },
+    "expressions": {
+      "title": "Emoji and stickers",
+      "intro": "Everyone can use them in this space's channels, and its members anywhere on this server.",
+      "emptyTitle": "No emoji or stickers yet",
+      "emptyBody": "Add pictures of your own, or bring them over from your Discord server.",
+      "fromDiscord": "Get from Discord",
+      "filter": "Find by name",
+      "count": "{{used}} of {{max}}",
+      "progress": "Adding {{done}} of {{total}}…",
+      "animated": "Animated",
+      "fileTooLarge": "{{name}} is larger than {{max}} MB.",
+      "fileFailed": "{{name}}: {{reason}}",
+      "emoji": {
+        "title": "Emoji",
+        "add": "Add emoji",
+        "hint": "PNG, JPEG, WebP or GIF, up to {{max}} MB each. Pick several at once: the names come from the file names, and you can change them.",
+        "noRoomFor_one": "{{count}} picture didn't fit: the space has no room for more emoji.",
+        "noRoomFor_other": "{{count}} pictures didn't fit: the space has no room for more emoji.",
+        "rename": "Rename :{{name}}:",
+        "nameLabel": "Emoji name",
+        "remove": "Remove :{{name}}:",
+        "removeTitle": "Remove :{{name}}:?",
+        "removeBody": "Messages that used it will show :{{name}}: as text."
+      },
+      "stickers": {
+        "title": "Stickers",
+        "add": "Add sticker",
+        "hint": "PNG, JPEG, WebP or GIF, up to {{max}} MB each. Members can take them into their own collection.",
+        "noRoomFor_one": "{{count}} picture didn't fit: the space has no room for more stickers.",
+        "noRoomFor_other": "{{count}} pictures didn't fit: the space has no room for more stickers.",
+        "untitled": "Sticker",
+        "rename": "Rename {{name}}",
+        "nameLabel": "Sticker name",
+        "noDescription": "No description for screen readers",
+        "editDescription": "Describe {{name}} for screen readers",
+        "descriptionLabel": "Description for screen readers",
+        "descriptionPlaceholder": "What the sticker shows",
+        "remove": "Remove {{name}}",
+        "removeTitle": "Remove {{name}}?",
+        "removeBody": "Messages that already show it keep it."
+      }
     }
   },
   "bans": {
@@ -884,7 +944,8 @@
       "useSoundboard": "Use Soundboard",
       "manageSounds": "Manage Soundboard",
       "moderateMembers": "Time Out Members",
-      "viewAuditLog": "View Audit Log"
+      "viewAuditLog": "View Audit Log",
+      "manageEmojis": "Manage Emoji and Stickers"
     },
     "tristate": {
       "deny": "Deny",
@@ -916,7 +977,8 @@
     "aboveYouShort": "Ranks at or above your highest role",
     "descriptions": {
       "moderateMembers": "Stop members from posting, reacting and joining voice for a while. Only works on members ranked below you.",
-      "viewAuditLog": "See who changed what in this space's settings, roles, channels and members."
+      "viewAuditLog": "See who changed what in this space's settings, roles, channels and members.",
+      "manageEmojis": "Add, rename and remove this space's emoji and stickers, and bring them over from Discord."
     }
   },
   "sidebar": {
@@ -1191,7 +1253,7 @@
     },
     "notTransferred": {
       "title": "What a template does not hold",
-      "body": "A template is a snapshot of the structure, not a backup. Messages, members, bots, webhooks, emoji, stickers, the server icon, events, threads and integrations stay on Discord."
+      "body": "A template is a snapshot of the structure, not a backup. Messages, members, bots, webhooks, the server icon, events, threads and integrations stay on Discord. Emoji and stickers come over separately, with a bot of your own: Space settings, Get from Discord."
     },
     "preview": {
       "by": "by {{name}}",
@@ -1269,6 +1331,88 @@
     "discordTypes": {
       "stage": "a stage channel",
       "media": "a media channel"
+    },
+    "move": {
+      "intro": "Bring your server over: its channels and roles from a template, its emoji and stickers with a bot of your own. Then tell your people where to find you.",
+      "structureTitle": "Channels, roles and permissions",
+      "history": "Messages and members stay on Discord: nobody's messages are copied."
+    },
+    "expressions": {
+      "entryTitle": "Emoji and stickers",
+      "intro": "Tavvit asks Discord for your server's emoji and stickers with the token of a bot of yours that is on that server. Messages stay on Discord.",
+      "howTo": {
+        "app": "Create an application at discord.com/developers/applications.",
+        "token": "Under Bot, choose Reset Token and copy the token.",
+        "invite": "Under OAuth2 → URL Generator, tick “bot” with no permissions and open the link to add the bot to your server.",
+        "serverId": "In Discord, turn on Developer Mode (Settings → Advanced), right-click your server and choose Copy Server ID."
+      },
+      "serverIdLabel": "Server ID",
+      "tokenLabel": "Bot token",
+      "tokenHint": "Sent once to {{host}}, used for two requests to Discord and then forgotten: it is never stored. You can reset it in Discord afterwards.",
+      "lookUp": "Look up",
+      "lookingUp": "Asking Discord…",
+      "preview": {
+        "found": "Discord has {{emoji}} and {{stickers}} on this server.",
+        "emoji_one": "{{count}} emoji",
+        "emoji_other": "{{count}} emoji",
+        "stickers_one": "{{count}} sticker",
+        "stickers_other": "{{count}} stickers",
+        "room": "Room left here: {{emoji}} emoji and {{stickers}} stickers.",
+        "picturesHint": "The pictures are on Discord's servers. Your device loads them from there only if you want to see them.",
+        "showPictures": "Show pictures",
+        "nothing": "This server has no emoji or stickers of its own.",
+        "emojiHeading": "Emoji · {{selected}} of {{total}}",
+        "stickersHeading": "Stickers · {{selected}} of {{total}}",
+        "tooMany": "More are picked than fit here: the last ones in the list stay behind."
+      },
+      "skip": {
+        "already_here": "already here",
+        "no_room": "no room left",
+        "lottie": "an animated vector sticker, which can't come over",
+        "managed": "belongs to an integration on Discord",
+        "download_failed": "couldn't be downloaded",
+        "image_refused": "couldn't be read as a picture"
+      },
+      "note": {
+        "renamed": "becomes {{name}}",
+        "still_picture": "comes over as a still picture",
+        "role_restriction_dropped": "only some roles could use it on Discord; here every member can"
+      },
+      "start_one": "Import {{count}}",
+      "start_other": "Import {{count}}",
+      "importing": "Bringing them over",
+      "progress": "{{done}} of {{total}}",
+      "keepOpen": "Keep this page open until it is done. If you leave it, the import stops; what came over stays.",
+      "stop": "Stop",
+      "done": {
+        "title": "Emoji and stickers imported",
+        "stoppedTitle": "The import stopped",
+        "stoppedByYou": "You stopped it. What came over stays.",
+        "counts": "{{emoji}} and {{stickers}} came over.",
+        "leftOut_one": "{{count}} left out",
+        "leftOut_other": "{{count}} left out",
+        "revoke": "You can remove the bot from your Discord server and reset its token now."
+      }
+    },
+    "announce": {
+      "title": "Tell your Discord server",
+      "intro": "Post this in your Discord server, for example in its announcement channel. The link opens a page that welcomes people and says what is already here.",
+      "language": "Language of the text",
+      "textLabel": "Announcement",
+      "copyText": "Copy text",
+      "copyLink": "Copy link",
+      "copyFailed": "Couldn't copy. Select the text and copy it yourself.",
+      "linkFailed": "No invite link could be made for this space: {{reason}}",
+      "registrationClosed": "This server takes new accounts only with an invite from its administrators, so people cannot sign up with this link alone.",
+      "lines": {
+        "headline": "{{space}} has moved to {{instance}}.",
+        "ready": "Our channels and roles are already set up there.",
+        "readyWithEmoji": "Our channels, roles and emoji are already set up there.",
+        "account": "Creating an account takes about a minute.",
+        "join": "Join us with this link:",
+        "request": "Ask to join with this link, and we will let you in:",
+        "history": "Everything written here stays on Discord."
+      }
     }
   },
   "spaceProfile": {

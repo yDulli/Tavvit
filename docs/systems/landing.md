@@ -105,6 +105,13 @@ as a space").
   `BOT_ROUTES`, so it cannot name a route a bot does not have.
 - **The questions** are plain `details`, so they open without a script and with the keyboard. The
   first stands open, which shows how the rest work.
+- **Moving from Discord.** The first of the three steps of moving in (`moving.one`) offers a new
+  space, or the Discord server brought along: its roles, categories and channels from a template,
+  and since 1.34.0 its emoji and stickers with a bot of the person's own (spaces.md, "Importing
+  emoji and stickers from Discord"). The question "Can I bring my Discord server along?"
+  (`questions.items.moving`) answers the same: its structure and its emoji, yes; messages and
+  members cannot come, so people are invited with a link. The community chapter's point
+  (`community.points.template`) and the menu (`features.items.template`) name the template alone.
 - **The second button of the hero** is the Windows download on Windows, the only desktop app there
   is, and a look around the page everywhere else.
 - **The voice.** The headline says what the product is ("Where your group talks."), and the chapter
@@ -236,7 +243,9 @@ with seeded stores, because a call needs a LiveKit server and other people.
 Every feature named on the page exists in the app; keep it that way when something is removed.
 It does not promise federation (off by default), native phone apps, end-to-end encryption or any
 number of users. It says nothing about what Tavvit costs, because that has not been decided. Discord
-is named only for what the template import reads, as plain words with no logo. Five statements depend
+is named only for what can be brought over from it, as plain words with no logo: a server template's
+roles, categories, channels and permissions, and the server's emoji and stickers through a bot of the
+person's own. Five statements depend
 on how the instance is run: voice needs LiveKit (`COMPOSE_PROFILES=voice`), Explore needs Discovery
 turned on (Admin console → General), the Windows download needs a published desktop release, bots
 need turning on (Admin console → Bots) and two-factor sign-in needs `TOTP_ENCRYPTION_KEY`.

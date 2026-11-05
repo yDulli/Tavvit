@@ -6,6 +6,7 @@ import { disconnectMemberFromSpaceVoice } from '../ws/events.js';
 import { deleteAttachmentFiles, deleteUploadFile } from './fileCleanup.js';
 import { pictureFileReleasable, releaseMemberPictures, uploadNameOf } from './profileImageRefs.js';
 import { removeSoundFiles } from './soundFiles.js';
+import { removeEmojiFiles } from './spaceExpressions.js';
 import { discoveryStatusOf, isOpenReview, verificationStatusOf } from './spaceReview.js';
 import { announceReviewQueue } from './reviewNotify.js';
 
@@ -13,7 +14,7 @@ type SpaceRow = typeof schema.spaces.$inferSelect;
 
 /**
  * Delete a space with everything in it: its channels and their messages, members, folder
- * entries, read states, the files only it showed, its clips, and everyone out of its voice. The
+ * entries, read states, the files only it showed, its clips and emoji, and everyone out of its voice. The
  * one way a space goes, whoever asks: its owner (`DELETE /api/spaces/:id`) or an administrator
  * deleting the owner's account with the spaces it owns (`DELETE /api/admin/users/:id`).
  */
@@ -45,6 +46,10 @@ export function deleteSpaceCompletely(space: SpaceRow): void {
   // The soundboard's rows go with the space; their files are removed here, not left for a restart.
   const soundIds = db.select({ id: schema.spaceSounds.id }).from(schema.spaceSounds)
     .where(eq(schema.spaceSounds.spaceId, id)).all().map((sound) => sound.id);
+  // Its emoji too. Its stickers' pictures are shared by content and stay while anything names them
+  // (utils/stickerAssets.ts); the janitor takes the rest.
+  const emojiIds = db.select({ id: schema.spaceEmojis.id }).from(schema.spaceEmojis)
+    .where(eq(schema.spaceEmojis.spaceId, id)).all().map((emoji) => emoji.id);
 
   // Delete all channels (messages cascade), members, folder refs, read states, then space atomically
   db.transaction((tx) => {
@@ -67,6 +72,7 @@ export function deleteSpaceCompletely(space: SpaceRow): void {
   // Clean up all attachment files from disk
   deleteAttachmentFiles(attachmentRows);
   removeSoundFiles(soundIds);
+  removeEmojiFiles(emojiIds);
 
   // Clean up space icon/banner files nothing else shows, and the members' own pictures.
   for (const picture of [uploadNameOf(spaceIcon), uploadNameOf(spaceBanner)]) {

@@ -41,6 +41,20 @@ import type { PersonalSticker } from '@backspace/shared/src/stickers';
 import type { ProfileImageRequest, ProfileImageResponse } from '@backspace/shared/src/profileImage';
 import type { CustomEmoji } from '@backspace/shared/src/customEmoji';
 import type { DiscordImportApplyRequest, DiscordImportPreview, DiscordImportPreviewRequest, DiscordImportResult } from '@backspace/shared/src/discordImport';
+import type {
+  DiscordExpressionApplyRequest,
+  DiscordExpressionApplyResult,
+  DiscordExpressionPreview,
+  DiscordExpressionPreviewRequest,
+} from '@backspace/shared/src/discordExpressionImport';
+import type {
+  AvailableExpressionsResponse,
+  SpaceEmoji,
+  SpaceEmojiRequest,
+  SpaceSticker,
+  SpaceStickerRequest,
+  SpaceStickerUpdate,
+} from '@backspace/shared/src/spaceExpressions';
 import { isErrorCode, type ErrorCode, type ErrorDetails } from '@backspace/shared/src/errors';
 import type {
   RoleWriteRequest,
@@ -446,6 +460,27 @@ export class BackspaceApiClient {
   readonly import: {
     discordPreview: (data: DiscordImportPreviewRequest) => Promise<DiscordImportPreview>;
     discordApply: (data: DiscordImportApplyRequest) => Promise<DiscordImportResult>;
+    /**
+     * A Discord server's emoji and stickers (spaces.md, "Importing emoji and stickers from
+     * Discord"): one look-up with the bot token, then batches without it until `finished`.
+     */
+    discordExpressionsPreview: (data: DiscordExpressionPreviewRequest) => Promise<DiscordExpressionPreview>;
+    discordExpressionsApply: (data: DiscordExpressionApplyRequest) => Promise<DiscordExpressionApplyResult>;
+    discordExpressionsCancel: (importId: string) => Promise<{ success: boolean }>;
+  };
+
+  /** A space's own emoji and stickers (docs/systems/emoji.md). Called on the instance that hosts the space. */
+  readonly spaceExpressions: {
+    /** Everything this person may pick on this instance: the library and every space they are in. */
+    available: () => Promise<AvailableExpressionsResponse>;
+    emojis: (spaceId: string) => Promise<{ emojis: SpaceEmoji[]; max: number }>;
+    addEmoji: (spaceId: string, body: SpaceEmojiRequest) => Promise<SpaceEmoji>;
+    renameEmoji: (id: string, name: string) => Promise<SpaceEmoji>;
+    removeEmoji: (id: string) => Promise<{ success: boolean }>;
+    stickers: (spaceId: string) => Promise<{ stickers: SpaceSticker[]; max: number }>;
+    addSticker: (spaceId: string, body: SpaceStickerRequest) => Promise<SpaceSticker>;
+    updateSticker: (id: string, body: SpaceStickerUpdate) => Promise<SpaceSticker>;
+    removeSticker: (id: string) => Promise<{ success: boolean }>;
   };
 
   /**
@@ -1173,6 +1208,22 @@ export class BackspaceApiClient {
     this.import = {
       discordPreview: (data) => request<DiscordImportPreview>('POST', '/import/discord/preview', data),
       discordApply: (data) => request<DiscordImportResult>('POST', '/import/discord/apply', data),
+      discordExpressionsPreview: (data) => request<DiscordExpressionPreview>('POST', '/import/discord/expressions/preview', data),
+      discordExpressionsApply: (data) => request<DiscordExpressionApplyResult>('POST', '/import/discord/expressions/apply', data),
+      discordExpressionsCancel: (importId) =>
+        request<{ success: boolean }>('DELETE', `/import/discord/expressions/${encodeURIComponent(importId)}`),
+    };
+
+    this.spaceExpressions = {
+      available: () => request<AvailableExpressionsResponse>('GET', '/emojis/available'),
+      emojis: (spaceId) => request<{ emojis: SpaceEmoji[]; max: number }>('GET', `/spaces/${encodeURIComponent(spaceId)}/emojis`),
+      addEmoji: (spaceId, body) => request<SpaceEmoji>('POST', `/spaces/${encodeURIComponent(spaceId)}/emojis`, body),
+      renameEmoji: (id, name) => request<SpaceEmoji>('PATCH', `/space-emojis/${encodeURIComponent(id)}`, { name }),
+      removeEmoji: (id) => request<{ success: boolean }>('DELETE', `/space-emojis/${encodeURIComponent(id)}`),
+      stickers: (spaceId) => request<{ stickers: SpaceSticker[]; max: number }>('GET', `/spaces/${encodeURIComponent(spaceId)}/stickers`),
+      addSticker: (spaceId, body) => request<SpaceSticker>('POST', `/spaces/${encodeURIComponent(spaceId)}/stickers`, body),
+      updateSticker: (id, body) => request<SpaceSticker>('PATCH', `/space-stickers/${encodeURIComponent(id)}`, body),
+      removeSticker: (id) => request<{ success: boolean }>('DELETE', `/space-stickers/${encodeURIComponent(id)}`),
     };
 
     this.moderation = {

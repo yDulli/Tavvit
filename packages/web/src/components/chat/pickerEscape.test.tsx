@@ -8,6 +8,9 @@ import { InputPopover } from './InputPopover';
 import { MobilePickerSheet } from './MobilePickerSheet';
 import { ReactionPickerPopover } from './ReactionPickerPopover';
 
+vi.mock('../../audio/AudioManager', () => ({
+  AudioManager: { getInstance: vi.fn().mockReturnValue({ setOutputDevice: vi.fn(), setVolume: vi.fn() }) },
+}));
 vi.mock('../../api/client', async importOriginal => ({
   ...await importOriginal<typeof import('../../api/client')>(),
   api: { stickers: { list: vi.fn(), remove: vi.fn(), collect: vi.fn(), rename: vi.fn() } },

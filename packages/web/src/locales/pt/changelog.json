@@ -4,6 +4,17 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.34.0": {
+      "title": "Mudança do Discord",
+      "items": {
+        "spaceEmoji": "Cada espaço pode ter seus próprios emojis, até 200, e figurinhas, até 60. Todos podem usá-los nos canais do espaço, e os membros dele em qualquer lugar do servidor.",
+        "import": "Configurações do espaço, Trazer do Discord traz os emojis e figurinhas de um servidor do Discord com um bot seu. O token dele é usado em duas consultas ao Discord e nunca é guardado.",
+        "announce": "Um anúncio pronto em cinco idiomas conta ao seu servidor do Discord para onde vocês foram, e o link dele recebe todo mundo que vier atrás.",
+        "pickers": "Os seletores de emojis e figurinhas mostram primeiro o espaço em que você está escrevendo, depois os emojis do servidor, depois os seus outros espaços.",
+        "right": "Uma nova permissão, Gerenciar emojis e figurinhas, decide quem pode adicioná-los, renomeá-los e removê-los.",
+        "elsewhere": "Emojis de um espaço em outro servidor agora aparecem lá, e reações com eles funcionam."
+      }
+    },
     "1.33.2": {
       "title": "Uma nova página do produto, banners e dicas",
       "items": {

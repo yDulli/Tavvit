@@ -245,7 +245,8 @@
     "renameNamed": "{{name}} umbenennen",
     "renameTitle": "Sticker umbenennen",
     "search": "Sticker suchen",
-    "noResults": "Keine Sticker gefunden"
+    "noResults": "Keine Sticker gefunden",
+    "spaceSection": "Sticker von {{space}}"
   },
   "poke": {
     "action": "Anstupsen",

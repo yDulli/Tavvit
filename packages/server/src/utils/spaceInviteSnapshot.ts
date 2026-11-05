@@ -45,6 +45,7 @@ export function getLocalInvitePreview(inviteCode: string): InvitePreview | null 
     memberCount,
     instanceName,
     visibility: (space.visibility ?? 'private') as SpaceVisibility,
+    movedFromDiscord: space.discordImportedAt !== null,
   };
 }
 

@@ -174,7 +174,22 @@ Migration `0031_personal_stickers` adds only these two tables; message and react
 | personal_stickers | name | text NOT NULL | User’s collection label |
 | personal_stickers | created_at | integer NOT NULL | Epoch ms |
 
-The composite primary key (user_id, sticker_id) makes collection idempotent; one user holds at most 200 rows (`MAX_PERSONAL_STICKERS`, checked by the routes). Removing an entry or deleting its user removes only the association. An asset stays while any collection entry, message or reaction on this instance names it; after that, and once past its grace period, the storage cleanup deletes the row and its file (`cleanupUnusedStickerAssets`). Files live under `UPLOAD_DIR/stickers`, outside the attachment phases and the storage stats.
+The composite primary key (user_id, sticker_id) makes collection idempotent; one user holds at most 200 rows (`MAX_PERSONAL_STICKERS`, checked by the routes). Removing an entry or deleting its user removes only the association. An asset stays while any collection entry, space sticker (`space_stickers`, migration 0071), message or reaction on this instance names it; after that, and once past its grace period, the storage cleanup deletes the row and its file (`cleanupUnusedStickerAssets`). Files live under `UPLOAD_DIR/stickers`, outside the attachment phases and the storage stats.
+
+### custom_emojis
+
+The instance's emoji library (migration `0036_orbit_custom_emoji`). The picture is `UPLOAD_DIR/emoji/<id>.webp`, outside the attachment phases and the storage stats; deleting the row deletes the file, and a file no emoji names is swept ([uploads.md](uploads.md#unused-emoji-files)). A space's own emoji are in `space_emojis` (migration 0071), with ids from the same generator, so an id names one emoji of either kind.
+
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| id | text PK NOT NULL | | Snowflake |
+| name | text UNIQUE NOT NULL | | `[a-z0-9_]`, 2 to 32 characters (`normalizeEmojiName`). Unique in the library (`custom_emojis_name_unique`); a space's emoji may have the same name |
+| animated | integer NOT NULL | 0 | 1 when the stored WebP has more than one frame |
+| size | integer NOT NULL | | Bytes of the stored WebP, at most 256 KiB. Counted on nobody's storage |
+| created_by | text | | FK → users.id SET NULL. Whoever added it may rename or remove it, as may the administrators. Since 1.34.0 `tombstoneUser` clears it too: a tombstone keeps the `users` row, so the foreign key's action never fires |
+| created_at | integer NOT NULL | | Epoch ms |
+
+Index: `idx_custom_emojis_created_by` (created_by). A person who is not an administrator adds at most 50 (`CUSTOM_EMOJI_LIMITS.MAX_PER_USER`), and the library holds at most 500 (`MAX_TOTAL`), both checked by the route. Who may add at all is `instance_settings.emoji_policy`.
 
 ### embeds
 | Column | Type | Notes |
@@ -1155,3 +1170,51 @@ See [client-federation.md](client-federation.md) and [api.md](api.md), `PATCH /a
 | Table or column | Notes |
 |-----------------|-------|
 | `users.replicated_instances` | A data step only: a list the route could never have written (not JSON, not a list, more than 20 entries, longer than 32 KiB) becomes `[]`. A list the app wrote stays. From 1.32.8 the route keeps a name and an origin per entry, each origin once, and the list goes only to the account itself (`sanitizeUser` with `isSelf`), never into what others see of it. |
+
+## Space emoji and stickers (migration 0071)
+
+See [emoji.md](emoji.md) and [uploads.md](uploads.md#space-emoji-and-stickers-1340). Migration `0071_tavvit_space_expressions` only adds two tables and a nullable column, so every existing space starts with no emoji and no stickers, and with `discord_imported_at` null even where a template import ran before. It gives MANAGE_EMOJIS (bit 29) to no role, and the bit is in no default: the owner, instance admins and holders of ADMINISTRATOR have it.
+
+Both tables' rows go with their space (CASCADE). The emoji files go with them (`deleteSpaceCompletely`); the stickers' assets stay for the storage cleanup, which keeps them while anything names them. `created_by` is what an account's storage sums (`storageUsedByAccount`), what the data export reads and what `tombstoneUser` clears; the `created_by` indexes are for those. The limits per space, 200 emoji and 60 stickers (`SPACE_EXPRESSION_LIMITS`), are checked in code (`utils/spaceExpressions.ts`), not by the schema.
+
+### space_emojis
+
+A space's own emoji. Its picture is `UPLOAD_DIR/emoji/<id>.webp`, as for `custom_emojis`.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK NOT NULL | Snowflake from the generator `custom_emojis` uses, so the token `<:name:id>`, the reaction `emoji:<id>` and `GET /api/emojis/<id>.webp` serve both kinds |
+| space_id | text NOT NULL | FK → spaces.id CASCADE |
+| name | text NOT NULL | `[a-z0-9_]`, 2 to 32 characters (`normalizeEmojiName`) |
+| animated | integer NOT NULL, default 0 | 1 when the stored WebP has more than one frame |
+| size | integer NOT NULL | Bytes of the stored WebP; counts on `created_by`'s storage |
+| discord_id | text | The Discord emoji an import brought; null for one added by hand. Not in what clients receive of the emoji (`SpaceEmoji`) |
+| created_by | text | Who added it, by hand or by an import. No foreign key: `tombstoneUser` clears it, and the emoji stays with the space |
+| created_at | integer NOT NULL | Epoch ms |
+
+Indexes: `space_emojis_space_name_unique` UNIQUE (space_id, name); `space_emojis_space_discord_unique` UNIQUE (space_id, discord_id) WHERE discord_id IS NOT NULL, so a second import brings nothing twice, even side by side; `idx_space_emojis_created_by` (created_by).
+
+### space_stickers
+
+A space's own sticker: a named entry over a content-addressed asset (`sticker_assets`), sent with the same token as a personal sticker.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK NOT NULL | Snowflake: the entry's own id, which renaming and removing name |
+| space_id | text NOT NULL | FK → spaces.id CASCADE |
+| sticker_id | text NOT NULL | FK → sticker_assets.id, no delete action. The asset may be shared with collections, messages and other spaces, so removing the entry leaves it to the storage cleanup, which counts this column as a reference (`getReferencedStickerIds`); without that, the cleanup would remove the file and then fail on the row |
+| name | text NOT NULL | At most 100 characters, one visible line, stored trimmed (`normalizeStickerName`). The index compares exactly; the routes also refuse a name that differs only in case (`409 space_sticker_name_taken`) |
+| description | text | What a screen reader says in place of the picture: at most 200 characters, one visible line (`normalizeStickerDescription`); null for none |
+| animated | integer NOT NULL, default 0 | 1 when the stored WebP has more than one frame |
+| size | integer NOT NULL | Bytes of the stored WebP; counts on `created_by`'s storage for each entry, also when the asset is shared |
+| discord_id | text | The Discord sticker an import brought; null for one added by hand. Not in what clients receive of the sticker (`SpaceSticker`) |
+| created_by | text | As for `space_emojis` |
+| created_at | integer NOT NULL | Epoch ms; the space lists its stickers in this order |
+
+Indexes: `space_stickers_space_name_unique` UNIQUE (space_id, name); `space_stickers_space_discord_unique` UNIQUE (space_id, discord_id) WHERE discord_id IS NOT NULL; `idx_space_stickers_sticker` (sticker_id), for the foreign key's check when the cleanup deletes asset rows; `idx_space_stickers_created_by` (created_by).
+
+### spaces: brought over from Discord
+
+| Column | Notes |
+|--------|-------|
+| `spaces.discord_imported_at` | integer, null. When something was last brought over from Discord: set by a template import, into a new space or an existing one, and by an emoji and sticker import that brought anything. Read only into the invite preview (`movedFromDiscord`, `utils/spaceInviteSnapshot.ts`), so the welcome for people coming from Discord never claims a move that did not happen. Null while nothing was. |

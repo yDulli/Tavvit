@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Trans, useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/authStore';
 import { useSpaceStore, NotConnectedError } from '../stores/spaceStore';
@@ -54,6 +54,10 @@ export function JoinPage() {
   const { t } = useTranslation(['auth', 'common']);
   const { inviteCode: rawInviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
+  // A link from the announcement a space posted on Discord (Space settings, "Get from Discord").
+  // Read by this page alone: no request carries it, and nothing stores or counts it.
+  const [searchParams] = useSearchParams();
+  const fromDiscord = searchParams.get('from') === 'discord';
   // Joining from another server needs federation; a private server offers only its own sign-in.
   const federation = useFederationEnabled() === true;
   const token = useAuthStore((s) => s.token);
@@ -394,6 +398,16 @@ export function JoinPage() {
             </span>
           </div>
         </div>
+
+        {/* A welcome for people following their community over from Discord, only where the
+            space's instance confirms it came from there. */}
+        {fromDiscord && preview.movedFromDiscord === true && (
+          <div className="surface-card mb-5 rounded-lg p-4">
+            <p className="text-ui font-medium text-txt-primary">{t('auth:join.fromDiscord.title')}</p>
+            <p className="mt-1 text-meta leading-relaxed text-txt-secondary">{t('auth:join.fromDiscord.body', { space: preview.spaceName })}</p>
+            <p className="mt-2 text-meta leading-snug text-txt-tertiary">{t('auth:join.fromDiscord.history')}</p>
+          </div>
+        )}
 
         {error && (
           <div role="alert" className="mb-4 rounded-md border border-accent-rose/30 bg-accent-rose/10 px-3 py-2 text-ui text-txt-danger">

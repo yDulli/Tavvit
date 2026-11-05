@@ -1,6 +1,7 @@
 import { addSpaceReaction, REACTION_EMOJI_MAX_LENGTH, REACTIONS_PER_MESSAGE_MAX, reactionLimitReached, removeSpaceReaction } from '../utils/reactions.js';
 import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { mayPostSticker } from '../utils/remoteMedia.js';
+import { dmReactionExists, emojiUseRefusal, namesEmojiOfThisInstance, reactionEmojiRefusal } from '../utils/emojiUse.js';
 import { handleChannelPoke } from './channelPoke.js';
 import type { WebSocket } from 'ws';
 import { addsGatedMassMention, hasGatedMassMention } from '@backspace/shared/src/mentions.js';
@@ -329,6 +330,13 @@ function handleMessageCreate(event: Record<string, unknown>, userId: string): vo
     return;
   }
 
+  // A space's emoji is for its own channels and its members (utils/emojiUse.ts).
+  const emojiRefusal = emojiUseRefusal(content.trim(), userId, spaceId);
+  if (emojiRefusal) {
+    refuseSpaceEvent(userId, emojiRefusal.code);
+    return;
+  }
+
   if (hasGatedMassMention(content, mentionableRoleIds(spaceId)) && !hasPermission(userId, spaceId, PermissionBits.MENTION_EVERYONE, channelId)) {
     sendMissingMentionEveryone(userId);
     return;
@@ -424,6 +432,11 @@ function handleMessageEdit(event: Record<string, unknown>, userId: string): void
   const editSpaceId = getChannelSpaceId(message.channelId);
   if (!editSpaceId || !hasPermission(userId, editSpaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.SEND_MESSAGES, message.channelId)) {
     refuseSpaceEvent(userId, 'missing_permission', { permission: 'SEND_MESSAGES' });
+    return;
+  }
+  const emojiRefusal = emojiUseRefusal(content.trim(), userId, editSpaceId, message.content);
+  if (emojiRefusal) {
+    refuseSpaceEvent(userId, emojiRefusal.code);
     return;
   }
   if (isPollMessage(messageId)) {
@@ -1208,6 +1221,15 @@ function handleReactionAdd(event: Record<string, unknown>, userId: string): void
   if (!mayPostSticker(emoji, userId)) {
     refuseSpaceEvent(userId, 'sticker_elsewhere');
     return;
+  }
+  // A reaction here by an account of this instance names one of its emoji (utils/emojiUse.ts);
+  // one whose home is elsewhere names an emoji of that home, which this instance cannot judge.
+  if (namesEmojiOfThisInstance(userId)) {
+    const emojiRefusal = reactionEmojiRefusal(emoji, userId, null, dmReactionExists(messageId, emoji));
+    if (emojiRefusal) {
+      refuseSpaceEvent(userId, emojiRefusal.code);
+      return;
+    }
   }
   if (reactionLimitReached('dm', messageId, emoji)) {
     refuseSpaceEvent(userId, 'reaction_limit_reached', { max: REACTIONS_PER_MESSAGE_MAX });

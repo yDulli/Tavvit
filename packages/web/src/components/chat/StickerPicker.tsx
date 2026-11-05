@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MAX_PERSONAL_STICKERS, type PersonalSticker } from '@backspace/shared/src/stickers';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
+import { DIRECT_MESSAGE_EMOJI_CONTEXT, useEmojiSets, type EmojiContext } from '../../utils/emojiSets';
 import { StickerUploadForm } from './StickerUploadForm';
 import { StickerRenameForm } from './StickerRenameForm';
 import { StickerGrid } from './StickerGrid';
@@ -16,9 +17,27 @@ export function filterStickers(items: PersonalSticker[], query: string): Persona
   return needle ? items.filter(item => item.name.toLowerCase().includes(needle)) : items;
 }
 
-export function StickerPicker({ onSelect, mobile = false }: { onSelect: (token: string) => void; mobile?: boolean }) {
+/**
+ * The stickers a person can send where they write: their own collection first, then the stickers
+ * of the spaces they are in on the instance the text goes to (docs/systems/emoji.md), the space
+ * written in first. In a direct message, the spaces of this page's instance: a sticker reaches the
+ * other side only from the writer's home or this instance (`mayPostSticker`).
+ */
+export function StickerPicker({ onSelect, mobile = false, context = DIRECT_MESSAGE_EMOJI_CONTEXT }: {
+  onSelect: (token: string) => void;
+  mobile?: boolean;
+  context?: EmojiContext;
+}) {
   const { t } = useTranslation(['chat', 'common']);
   const userId = useAuthStore(s => s.user?.id);
+  const sets = useEmojiSets(context);
+  const spaceSections = useMemo(() => sets
+    .filter((set) => set.space !== null && set.stickers.length > 0)
+    .map((set) => ({
+      key: set.key,
+      title: set.space?.name ?? '',
+      items: set.stickers.map((sticker): PersonalSticker => ({ id: sticker.stickerId, name: sticker.name, token: sticker.token })),
+    })), [sets]);
   const [items, setItems] = useState<PersonalSticker[]>([]);
   const [removing, setRemoving] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,6 +98,11 @@ export function StickerPicker({ onSelect, mobile = false }: { onSelect: (token: 
 
   const full = items.length >= MAX_PERSONAL_STICKERS;
   const visible = filterStickers(items, search);
+  const visibleSections = spaceSections
+    .map((section) => ({ ...section, items: filterStickers(section.items, search) }))
+    .filter((section) => section.items.length > 0);
+  const spaceStickerCount = spaceSections.reduce((sum, section) => sum + section.items.length, 0);
+  const nothingMatches = search.trim() !== '' && visible.length === 0 && visibleSections.length === 0;
 
   const startUpload = () => {
     setError('');
@@ -140,7 +164,7 @@ export function StickerPicker({ onSelect, mobile = false }: { onSelect: (token: 
           </div>
         </div>
         <p className="px-4 pb-3 text-meta text-txt-tertiary">{t(managing ? 'stickers.manageHint' : full ? 'stickers.full' : 'stickers.collectionHint')}</p>
-        {items.length > 0 && <div className="relative mx-4 mb-3 flex shrink-0 items-center">
+        {(items.length > 0 || spaceStickerCount > 0) && <div className="relative mx-4 mb-3 flex shrink-0 items-center">
           <Icon name="search" size={14} className="pointer-events-none absolute left-2.5 text-txt-tertiary" />
           <input type="text" role="searchbox" value={search} onChange={event => setSearch(event.target.value)}
             placeholder={t('stickers.search')} aria-label={t('stickers.search')} maxLength={100}
@@ -156,17 +180,25 @@ export function StickerPicker({ onSelect, mobile = false }: { onSelect: (token: 
           <div role="status" aria-label={t('stickers.loading')} className="grid grid-cols-4 gap-2">
             {Array.from({ length: 12 }, (_, index) => <div key={index} className="skeleton skeleton-block aspect-square" />)}
           </div>
-        </div> : items.length === 0 ? <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-3 pb-3">
-          {!error && <div className="empty-state h-full min-h-48">
+        </div> : <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+          {items.length === 0 ? (!error && (search.trim() === '' || spaceStickerCount === 0) && <div className={`empty-state ${spaceStickerCount > 0 ? 'py-6' : 'h-full min-h-48'}`}>
             <span className="empty-state-icon" aria-hidden="true">
               <Icon name="smile" size={18} />
             </span>
             <p className="empty-state-title">{t('stickers.empty')}</p>
             <p className="empty-state-body">{t('stickers.emptyHint')}</p>
             <button type="button" onClick={startUpload} className="btn-outline btn-sm mt-2">{t('stickers.chooseImage')}</button>
-          </div>}
-        </div> : <StickerGrid items={visible} noMatches={visible.length === 0} managing={managing} removing={removing}
-          onSelect={onSelect} onRename={startRename} onRemove={id => void remove(id)} />}
+          </div>) : (visible.length > 0 || nothingMatches) && <StickerGrid flat items={visible} noMatches={nothingMatches} managing={managing} removing={removing}
+            onSelect={onSelect} onRename={startRename} onRemove={id => void remove(id)} />}
+          {/* The spaces' stickers are the spaces' to manage: here they are only sent. */}
+          {!managing && visibleSections.map((section) => (
+            <section key={section.key} aria-label={t('stickers.spaceSection', { space: section.title })}>
+              <h4 className="label-mono truncate px-4 pb-1.5 pt-2">{section.title}</h4>
+              <StickerGrid flat items={section.items} noMatches={false} managing={false} removing={null}
+                onSelect={onSelect} onRename={() => undefined} onRemove={() => undefined} />
+            </section>
+          ))}
+        </div>}
         <div className="shrink-0 border-t border-border-hard px-4 py-2 text-label text-txt-tertiary">{t('stickers.limits')}</div>
       </>}
     </div>

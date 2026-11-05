@@ -324,7 +324,7 @@
     "title": "Einen eigenen eröffnest du in drei Schritten.",
     "one": {
       "title": "Richte dich ein",
-      "body": "Starte einen neuen Space oder füge eine Discord-Servervorlage ein und bekomm ihre Rollen, Kategorien und Kanäle."
+      "body": "Starte einen neuen Space oder hol deinen Discord-Server: Rollen, Kategorien und Kanäle aus einer Vorlage, Emojis und Sticker mit einem eigenen Bot."
     },
     "two": {
       "title": "Schick einen Link",
@@ -422,7 +422,7 @@
       },
       "moving": {
         "q": "Kann ich meinen Discord-Server mitnehmen?",
-        "a": "Seine Struktur, ja. Füge den Link einer Servervorlage ein, und Tavvit legt Rollen, Kategorien, Kanäle und Rechte an. Nachrichten und Mitglieder kommen nicht mit, lade deine Leute also per Link ein."
+        "a": "Seine Struktur und seine Emojis, ja. Füge den Link einer Servervorlage ein, und Tavvit legt Rollen, Kategorien, Kanäle und Rechte an; mit einem eigenen Bot kommen auch die Emojis und Sticker des Servers mit. Nachrichten und Mitglieder nicht, lade deine Leute also per Link ein."
       },
       "bots": {
         "q": "Kann ich Bots nutzen?",

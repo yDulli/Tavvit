@@ -51,6 +51,43 @@ async function mediaJob<T>(job: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Picture work people send (emoji, stickers, the Discord import) waits for the same turns, with two
+ * bounds on top. An account has at most one such job queued or running: a second is refused at
+ * once instead of waiting with its picture in memory (an account's uploads go one after another
+ * anyway). And while this many jobs of any kind wait, a new one is refused too, so many accounts
+ * together cannot grow the queue and the memory it holds without end. An upload's own thumbnail is
+ * never refused here.
+ */
+const PICTURE_JOBS_PER_ACCOUNT = 1;
+const WAITING_BEFORE_REFUSAL = 24;
+const pictureJobsByAccount = new Map<string, number>();
+
+/** How long one encode of a picture people send may take before it is given up as too heavy. */
+export const PICTURE_ENCODE_SECONDS = 30;
+
+/** Picture work refused because its account has some under way already, or too much waits. Answered as 429. */
+export class MediaBusyError extends Error {
+  constructor() {
+    super('Picture work is busy');
+    this.name = 'MediaBusyError';
+  }
+}
+
+/** Runs picture work for `account` in its turn, or rejects with MediaBusyError at once (see above). */
+export function runMediaJob<T>(job: () => Promise<T>, account: string): Promise<T> {
+  const held = pictureJobsByAccount.get(account) ?? 0;
+  if (held >= PICTURE_JOBS_PER_ACCOUNT || mediaJobsWaiting.length >= WAITING_BEFORE_REFUSAL) {
+    return Promise.reject(new MediaBusyError());
+  }
+  pictureJobsByAccount.set(account, held + 1);
+  return mediaJob(job).finally(() => {
+    const left = (pictureJobsByAccount.get(account) ?? 1) - 1;
+    if (left > 0) pictureJobsByAccount.set(account, left);
+    else pictureJobsByAccount.delete(account);
+  });
+}
+
 const PROFILE_LIMITS = { avatar: 256, icon: 256, banner: 1280 } as const;
 
 /** What a picture field keeps: formats every browser shows, each written back as itself. */

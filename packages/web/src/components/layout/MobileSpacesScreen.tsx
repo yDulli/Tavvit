@@ -17,6 +17,8 @@ import { useContextMenuStore, type ContextMenuItem } from '../../stores/contextM
 import { useNavigate } from 'react-router-dom';
 import { getSpaceGradient } from '../../utils/gradients';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
+import { mayManageSpaceSettings } from '../modals/spaceSettingsPanels/spaceSettingsTabs';
+import { useIsSpaceOwner } from '../../hooks/useIsSpaceOwner';
 import type { Channel } from '@backspace/shared';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { TransferOwnershipModal } from '../modals/TransferOwnershipModal';
@@ -51,11 +53,12 @@ function stripTabClass(isSelected: boolean, hasUnread: boolean): string {
  * the settings. Over the space's banner the buttons are drawn in the primary colour, which keeps its
  * contrast on a picture under the bar's shade.
  */
-function MobileSpaceBar({ spaceId, name, canInvite, canManageSpace, overBanner }: {
+function MobileSpaceBar({ spaceId, name, canInvite, canOpenSettings, overBanner }: {
   spaceId: string;
   name: string;
   canInvite: boolean;
-  canManageSpace: boolean;
+  /** Any tab of the space's settings beyond the viewer's own (spaceSettingsTabs.ts). */
+  canOpenSettings: boolean;
   overBanner: boolean;
 }) {
   const { t } = useTranslation(['spaces', 'common']);
@@ -76,7 +79,7 @@ function MobileSpaceBar({ spaceId, name, canInvite, canManageSpace, overBanner }
           </svg>
         </button>
       )}
-      {canManageSpace && (
+      {canOpenSettings && (
         <button
           type="button"
           onClick={() => openModal('spaceSettings', { spaceId })}
@@ -145,6 +148,7 @@ export function MobileSpacesScreen() {
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(
     currentSpaceId ?? lastSelectedSpaceId,
   );
+  const selectedSpaceIsOwn = useIsSpaceOwner(selectedSpaceId ?? '');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [leaveConfirmSpaceId, setLeaveConfirmSpaceId] = useState<string | null>(null);
@@ -592,7 +596,9 @@ export function MobileSpacesScreen() {
   const selectedSpace = spaces.find(s => s.id === selectedSpaceId);
   const myPerms = selectedSpaceId ? spacePermissions.get(selectedSpaceId) : undefined;
   const canInvite = hasPermissionBit(myPerms, PermissionBits.CREATE_INVITE);
-  const canManageSpace = hasPermissionBit(myPerms, PermissionBits.MANAGE_SPACE);
+  // The way into the space's settings, for whoever may open any tab there: a member who may manage
+  // only the emoji must find it as well as the owner.
+  const canOpenSettings = mayManageSpaceSettings(myPerms, selectedSpaceIsOwn);
   // The space's banner heads its channel list when it has one the page may show (docs/systems/spaces.md).
   const banner = useSpaceBanner(selectedSpace?.banner);
   const channelListRef = useRef<HTMLDivElement>(null);
@@ -865,7 +871,7 @@ export function MobileSpacesScreen() {
         {/* Space header. With a banner it lies over the picture, inside the channel list (below). */}
         {selectedSpace && !banner.src && (
           <header className="panel-bar flex h-12 items-center gap-1 pl-4 pr-1">
-            <MobileSpaceBar spaceId={selectedSpace.id} name={selectedSpace.name} canInvite={canInvite} canManageSpace={canManageSpace} overBanner={false} />
+            <MobileSpaceBar spaceId={selectedSpace.id} name={selectedSpace.name} canInvite={canInvite} canOpenSettings={canOpenSettings} overBanner={false} />
           </header>
         )}
 
@@ -880,7 +886,7 @@ export function MobileSpacesScreen() {
               barClassName="lit -mx-2 flex h-12 items-center gap-1 pl-4 pr-1"
               bandClassName="-mx-2 mb-2 max-h-[220px]"
             >
-              {(over) => <MobileSpaceBar spaceId={selectedSpace.id} name={selectedSpace.name} canInvite={canInvite} canManageSpace={canManageSpace} overBanner={over} />}
+              {(over) => <MobileSpaceBar spaceId={selectedSpace.id} name={selectedSpace.name} canInvite={canInvite} canOpenSettings={canOpenSettings} overBanner={over} />}
             </SpaceBannerHeader>
           )}
           {showChannelSkeleton ? (

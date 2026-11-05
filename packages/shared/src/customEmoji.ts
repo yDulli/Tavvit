@@ -1,16 +1,18 @@
 /**
- * Custom emoji: pictures anyone on the instance can add, usable in every space
- * and conversation, in text and as reactions.
+ * Custom emoji (docs/systems/emoji.md): pictures used in text and as reactions.
  *
- * There is one library for the whole instance. Anyone may add to it, the person
- * who added an emoji and the administrators may rename or remove it, and every
- * emoji can be used everywhere (nothing is tied to a space).
+ * An instance has one library of its own, which its administrators fill, or
+ * everyone when the instance's emoji policy says so; each space can have emoji
+ * of its own (shared/src/spaceExpressions.ts). Both kinds take their ids from one
+ * generator, so an id names exactly one picture on its instance.
  *
  * In message text an emoji is the token `<:name:id>`. The id names the picture;
  * the name is only what a reader of the raw text sees, so a rename never breaks
  * an old message. As a reaction it is `emoji:<id>`, with no name, because a
  * reaction is counted by its exact text and a rename must not split the count.
- * Tokens in code stay text, as mentions do.
+ * Tokens in code stay text, as mentions do. A token names an emoji of the
+ * instance the text belongs to: the channel's host, or for a direct message the
+ * writer's home (for a reaction, the reactor's).
  */
 
 export const CUSTOM_EMOJI_NAME_MIN = 2;
@@ -66,6 +68,17 @@ export const EMOJI_ID_PATTERN = /^\d{5,25}$/;
 export function customEmojiUrl(id: string): string {
   return `/api/emojis/${id}.webp`;
 }
+
+/** The picture's address on the instance `origin` (`''`: the page's own). */
+export function emojiPictureUrl(id: string, origin: string): string {
+  return `${origin}${customEmojiUrl(id)}`;
+}
+
+/**
+ * A shortcode a person types for an emoji: its name, and where two sets on offer have an emoji of
+ * the same name, the later ones `name~2`, `name~3`… in the order the sets are offered.
+ */
+export const EMOJI_SHORTCODE_ALIAS = /~\d{1,3}$/;
 
 /** The text of an emoji in a message. */
 export function emojiToken(name: string, id: string): string {
@@ -125,15 +138,16 @@ export function emojiIdsIn(content: string | null | undefined): string[] {
  * `content` with each `:name:` that names a known emoji (outside code) turned
  * into its token. People type and see `:name:`; the token is what is sent. A
  * name that is not in `idsByName` stays as typed, so ordinary `:smile:` text
- * and the standard shortcodes are left to the rest of the app.
+ * and the standard shortcodes are left to the rest of the app. `idsByName` may
+ * hold shortcodes with an alias (`pepe~2`); the token carries the name alone.
  */
 export function tokenizeCustomEmojiShortcodes(content: string, idsByName: ReadonlyMap<string, string>): string {
   if (idsByName.size === 0 || !content.includes(':')) return content;
-  const scanner = /(```[\s\S]*?```|`[^`]+`|<:[a-z0-9_]{2,32}:\d{5,25}>)|(?<![\w:]):([a-z0-9_]{2,32}):(?![\w:])/g;
-  return content.replace(scanner, (whole, protectedText: string | undefined, name: string | undefined) => {
-    if (protectedText !== undefined || name === undefined) return whole;
-    const id = idsByName.get(name);
-    return id === undefined ? whole : emojiToken(name, id);
+  const scanner = /(```[\s\S]*?```|`[^`]+`|<:[a-z0-9_]{2,32}:\d{5,25}>)|(?<![\w:]):([a-z0-9_]{2,32}(?:~\d{1,3})?):(?![\w:])/g;
+  return content.replace(scanner, (whole, protectedText: string | undefined, shortcode: string | undefined) => {
+    if (protectedText !== undefined || shortcode === undefined) return whole;
+    const id = idsByName.get(shortcode);
+    return id === undefined ? whole : emojiToken(shortcode.replace(EMOJI_SHORTCODE_ALIAS, ''), id);
   });
 }
 

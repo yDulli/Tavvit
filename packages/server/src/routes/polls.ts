@@ -7,6 +7,7 @@ import { authenticate } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
 import { mentionableRoleIds } from '../utils/mentionableRoles.js';
 import { getChannelSpaceId, hasPermission, PermissionBits } from '../utils/permissions.js';
+import { emojiUseRefusal } from '../utils/emojiUse.js';
 import { fetchPollsForMessages } from '../utils/polls.js';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { generateSnowflake } from '../utils/snowflake.js';
@@ -51,6 +52,9 @@ export async function pollRoutes(app: FastifyInstance): Promise<void> {
     if (hasGatedMassMention(poll.question, mentionableRoleIds(spaceId)) && !hasPermission(request.userId, spaceId, PermissionBits.MENTION_EVERYONE, id)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'MENTION_EVERYONE' });
     }
+    // The question is drawn as a message is, emoji included; the answers are plain text.
+    const emojiRefusal = emojiUseRefusal(poll.question, request.userId, spaceId);
+    if (emojiRefusal) return sendError(reply, emojiRefusal.status, emojiRefusal.code);
     const now = Date.now();
     // The answers are words in the channel too, so the space's rules read them as well.
     const refusal = spaceMessageRefusal({

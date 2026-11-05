@@ -20,6 +20,7 @@ vi.mock('../../stores/spaceStore', () => ({
     }),
   getApiForOrigin: vi.fn(),
   getMyUserIdForOrigin: vi.fn(),
+  getChannelOrigin: () => '',
 }));
 vi.mock('../../stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: null }),

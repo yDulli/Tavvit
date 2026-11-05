@@ -432,5 +432,17 @@
   "username_change_connected": "此账户已连接到其他服务器，它们通过此名称识别该账户。",
   "username_change_too_soon": "用户名每 {{days}} 天只能更改一次。",
   "channel_icon_invalid": "频道图标必须是提供的图标之一或一个表情符号。",
-  "sticker_elsewhere": "此表情存储在本服务器不认识的服务器上，因此无法发送。"
+  "sticker_elsewhere": "此表情存储在本服务器不认识的服务器上，因此无法发送。",
+  "discord_server_id_invalid": "这不是 Discord 服务器 ID。它是 17 到 20 位的数字：在 Discord 中右键点击服务器并选择“复制服务器 ID”。",
+  "discord_bot_token_invalid": "Discord 不接受这个机器人令牌。请从你应用的 Bot 页面重新复制。",
+  "discord_bot_not_in_server": "机器人不在那个 Discord 服务器上。请用 OAuth2 → URL Generator 中的链接添加它，然后重试。",
+  "discord_import_expired": "这次导入已过期。请重新查询服务器。",
+  "discord_import_running": "这次导入正在迁移图片。",
+  "space_emoji_limit_reached": "此空间的表情已达上限（{{max}}）。",
+  "space_sticker_limit_reached": "此空间的贴纸已达上限（{{max}}）。",
+  "space_emoji_name_taken": "此空间已有同名表情。",
+  "space_sticker_name_taken": "此空间已有同名贴纸。",
+  "space_emoji_not_found": "该表情已不存在。",
+  "space_sticker_not_found": "该贴纸已不存在。",
+  "emoji_unavailable": "这个表情属于一个你没有加入的空间。"
 }

@@ -93,6 +93,8 @@ export interface DiscordTemplateChannel {
 /** A template as read and checked, whatever it came from. */
 export interface DiscordTemplateSource {
   code: string | null;
+  /** The Discord server the template was made from, for the step that brings its emoji and stickers. */
+  sourceGuildId: string | null;
   name: string;
   description: string | null;
   guildName: string;
@@ -215,6 +217,7 @@ export function readDiscordTemplate(raw: unknown, code: string | null): DiscordT
     ok: true,
     source: {
       code,
+      sourceGuildId: decimalOf(raw.source_guild_id),
       name: textOf(raw.name, DISCORD_IMPORT_LIMITS.MAX_NAME_LENGTH) ?? guildName,
       description: textOf(raw.description, DISCORD_IMPORT_LIMITS.MAX_DESCRIPTION_LENGTH),
       guildName,
@@ -269,19 +272,21 @@ export const DISCORD_PERMISSIONS: ReadonlyArray<{ bit: number; name: string; nat
   { bit: 27, name: 'MANAGE_NICKNAMES', native: [] },
   { bit: 28, name: 'MANAGE_ROLES', native: ['MANAGE_ROLES'] },
   { bit: 29, name: 'MANAGE_WEBHOOKS', native: ['MANAGE_WEBHOOKS'] },
+  // Edits and deletes everyone's emoji, stickers and sounds; adding them is bit 43. Tavvit's rights do
+  // both, so they come only from the two together (DISCORD_COMBINED_PERMISSIONS).
   { bit: 30, name: 'MANAGE_GUILD_EXPRESSIONS', native: [] },
   { bit: 31, name: 'USE_APPLICATION_COMMANDS', native: [] },
   { bit: 32, name: 'REQUEST_TO_SPEAK', native: [] },
   { bit: 33, name: 'MANAGE_EVENTS', native: [] },
   { bit: 34, name: 'MANAGE_THREADS', native: [] },
-  { bit: 35, name: 'CREATE_PUBLIC_THREADS', native: [] },
+  { bit: 35, name: 'CREATE_PUBLIC_THREADS', native: ['CREATE_THREADS'] },
   { bit: 36, name: 'CREATE_PRIVATE_THREADS', native: [] },
   { bit: 37, name: 'USE_EXTERNAL_STICKERS', native: [] },
   { bit: 38, name: 'SEND_MESSAGES_IN_THREADS', native: [] },
   { bit: 39, name: 'USE_EMBEDDED_ACTIVITIES', native: [] },
   { bit: 40, name: 'MODERATE_MEMBERS', native: ['MODERATE_MEMBERS'] },
   { bit: 41, name: 'VIEW_CREATOR_MONETIZATION_ANALYTICS', native: [] },
-  { bit: 42, name: 'USE_SOUNDBOARD', native: [] },
+  { bit: 42, name: 'USE_SOUNDBOARD', native: ['USE_SOUNDBOARD'] },
   { bit: 43, name: 'CREATE_GUILD_EXPRESSIONS', native: [] },
   { bit: 44, name: 'CREATE_EVENTS', native: ['MANAGE_EVENTS'] },
   { bit: 45, name: 'USE_EXTERNAL_SOUNDS', native: [] },
@@ -289,6 +294,17 @@ export const DISCORD_PERMISSIONS: ReadonlyArray<{ bit: number; name: string; nat
   { bit: 49, name: 'SEND_POLLS', native: [] },
   { bit: 50, name: 'USE_EXTERNAL_APPS', native: [] },
   { bit: 51, name: 'PIN_MESSAGES', native: ['PIN_MESSAGES'] },
+];
+
+/**
+ * Discord bits that make a Tavvit right only together. Since Discord split them, Manage Expressions
+ * (30) edits and deletes everyone's emoji, stickers and sounds and Create Expressions (43) adds
+ * them; Tavvit's Manage Emoji and Stickers and Manage Soundboard do both. A role that held only
+ * one of the two would get more here than it had on Discord, so it gets neither, and the one it
+ * held is named as unsupported.
+ */
+export const DISCORD_COMBINED_PERMISSIONS: ReadonlyArray<{ bits: readonly number[]; native: readonly NativePermission[] }> = [
+  { bits: [30, 43], native: ['MANAGE_EMOJIS', 'MANAGE_SOUNDS'] },
 ];
 
 const KNOWN_DISCORD_BITS = DISCORD_PERMISSIONS.reduce((all, entry) => all | (1n << BigInt(entry.bit)), 0n);
@@ -303,10 +319,17 @@ export interface MappedPermissions {
 /** Discord permission bits (a decimal string) in Tavvit's terms. Unknown bits are named by number. */
 export function mapDiscordPermissions(discord: string): MappedPermissions {
   const value = BigInt(discord);
+  const has = (bit: number) => (value & (1n << BigInt(bit))) !== 0n;
   let native = 0n;
   const unsupported: string[] = [];
+  const combined = new Set<number>();
+  for (const rule of DISCORD_COMBINED_PERMISSIONS) {
+    if (!rule.bits.every(has)) continue;
+    for (const name of rule.native) native |= PermissionBits[name];
+    for (const bit of rule.bits) combined.add(bit);
+  }
   for (const entry of DISCORD_PERMISSIONS) {
-    if ((value & (1n << BigInt(entry.bit))) === 0n) continue;
+    if (!has(entry.bit) || combined.has(entry.bit)) continue;
     if (entry.native.length === 0) unsupported.push(entry.name);
     for (const name of entry.native) native |= PermissionBits[name];
   }

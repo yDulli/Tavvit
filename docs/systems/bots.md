@@ -30,6 +30,8 @@ It can moderate as well, under the routes in `BOT_ROUTES`: removing a member, ba
 
 A reaction goes by the socket or by `PUT` and `DELETE /api/messages/:id/reactions/:emoji`, which run the one set of rules in `utils/reactions.ts`: seeing the channel, `ADD_REACTIONS`, not being timed out.
 
+**Custom emoji (1.34)** follow the rule for everyone (`utils/emojiUse.ts`): a bot may use the instance's library and the emoji of every space it is in, in any channel it writes in. A reaction `emoji:<id>` must name an emoji of this instance (else 400 `emoji_not_found`) that the bot may use there (else 403 `emoji_unavailable`); adding itself to a reaction someone already gave is always allowed. A message, an edit, a forum post or a command's answer, ephemeral or not, whose text carries a space's emoji the bot may not use is refused 403 `emoji_unavailable`. An id this instance does not know is not refused in text: it stays as written, and readers see `:name:`. An edit is asked only about emoji its previous text did not carry. On the socket a refusal is an `error` event with the code.
+
 A bot was let in on purpose, so the rules and ages a space sets for people arriving by themselves do not hold it back: `rules_accepted_at` is set when it joins, and `spaceMessageRefusal` skips the ages for it. Slow mode, automatic rules and channel permissions apply as for anyone.
 
 ## Who may do what
@@ -47,6 +49,8 @@ Retiring a bot (`retireBot`) deletes its row and its role and tombstones its acc
 A bot can read and start a forum's posts (`GET`, `POST /api/channels/:id/posts`), under the rights a person needs. Tags and follows are left to people, for now: they arrange a space rather than speak in it. A bot in an announcement channel writes only where the channel's overrides let it, as anyone.
 
 Translating a message is not open to bots either (`POST /api/messages/:id/translate`, [translation.md](translation.md)): it spends the operator's allowance at a provider, and a program can use its own.
+
+A space's emoji and stickers are not open to bots (1.34): listing, adding, renaming and removing them (`routes/spaceExpressions.ts`), `GET /api/emojis/available` and the import from Discord (`routes/discordExpressionImport.ts`) are not in `BOT_ROUTES` and answer 403 `bot_route_forbidden`. So `MANAGE_EMOJIS` in a bot's role opens nothing, and a bot has no list of emoji: it uses the ids it reads in messages and reactions.
 
 ## Commands
 

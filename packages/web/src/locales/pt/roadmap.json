@@ -5,14 +5,6 @@
     "next": {
       "title": "A seguir",
       "items": {
-        "spaceEmoji": {
-          "title": "Emojis e figurinhas para cada espaço",
-          "text": "Cada espaço ganha seus próprios emojis e figurinhas, e os membros podem usá-los em todo o servidor, de graça."
-        },
-        "discordMove": {
-          "title": "Traga seu servidor do Discord",
-          "text": "Canais, cargos, emojis e figurinhas em poucos minutos, e um convite que dá as boas-vindas a quem vier depois."
-        },
         "cameraEffects": {
           "title": "Desfoque e troca de fundo",
           "text": "Desfoque o seu ambiente na câmera ou coloque uma imagem atrás de você, calculado no seu próprio dispositivo."

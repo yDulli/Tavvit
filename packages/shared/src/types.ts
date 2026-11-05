@@ -238,6 +238,12 @@ export interface InvitePreview {
    * to a request when the join answers `join_request_required`.
    */
   visibility?: SpaceVisibility;
+  /**
+   * Whose space came over from Discord: its channels and roles from a template, or its emoji and
+   * stickers (`spaces.discord_imported_at`). The invite page's welcome for a link marked
+   * `?from=discord` claims nothing this does not confirm. Absent from older instances.
+   */
+  movedFromDiscord?: boolean;
 }
 
 export interface ExploreSpace {
@@ -803,6 +809,13 @@ export const AUDIT_LOG_ACTIONS = [
   'sound_create',
   'sound_update',
   'sound_delete',
+  'emoji_create',
+  'emoji_update',
+  'emoji_delete',
+  'sticker_create',
+  'sticker_update',
+  'sticker_delete',
+  'discord_expressions_import',
   'bot_add',
   'message_pin',
   'message_unpin',
@@ -1198,6 +1211,8 @@ export type ServerEvent =
   | { type: 'watch_position'; channelId: string; position: WatchPosition; serverNow: number }
   | { type: 'watch_reaction'; channelId: string; reaction: WatchReaction }
   | { type: 'space_sounds_changed'; spaceId: string }
+  | { type: 'space_emojis_changed'; spaceId: string }
+  | { type: 'space_stickers_changed'; spaceId: string }
   | { type: 'saved_changed'; messageId: string; saved: boolean }
   | { type: 'saved_reminder'; item: SavedItem; preview: string }
   | { type: 'space_welcome_changed'; spaceId: string }

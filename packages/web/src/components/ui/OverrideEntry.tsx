@@ -42,6 +42,7 @@ export function usePermissionNames(): Record<PermissionKey, string> {
     MANAGE_WEBHOOKS: t('spaces:permissions.names.manageWebhooks'),
     USE_SOUNDBOARD: t('spaces:permissions.names.useSoundboard'),
     MANAGE_SOUNDS: t('spaces:permissions.names.manageSounds'),
+    MANAGE_EMOJIS: t('spaces:permissions.names.manageEmojis'),
     READ_MESSAGE_HISTORY: t('spaces:permissions.names.readMessageHistory'),
     ADD_REACTIONS: t('spaces:permissions.names.addReactions'),
     CONNECT: t('spaces:permissions.names.connect'),

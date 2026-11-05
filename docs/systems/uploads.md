@@ -3,7 +3,7 @@
 Source files:
 - `packages/server/src/routes/uploads.ts` -- File serving (cache, security, Range)
 - `packages/server/src/routes/files.ts` -- tus protocol endpoints (`/api/files/*`), PRE_CREATE / PRE_PATCH / POST_FINISH hooks, janitor helpers
-- `packages/server/src/utils/thumbnail.ts` -- Image thumbnail generation (sharp), video thumbnail extraction (ffmpeg), image dimension probing, profile image resizing, media metadata extraction (incl. video codec)
+- `packages/server/src/utils/thumbnail.ts` -- Image thumbnail generation (sharp), video thumbnail extraction (ffmpeg), image dimension probing, profile image resizing, media metadata extraction (incl. video codec), the media work queue (`runMediaJob`, `MediaBusyError`)
 - `packages/server/src/utils/mediaPlayable.ts` -- `classifyVideoPlayable(mimetype, codec)` web-playability classifier (drives `attachments.playable`)
 - `packages/server/src/utils/fileCleanup.ts` -- File deletion helpers (disk + thumbnail + attachment record cleanup)
 - `packages/server/src/utils/storageJanitor.ts` -- Storage stats, orphan detection, cleanup routines (orphaned files, unlinked attachments, dangling references, old media), federation GC, soft-deleted DM channel purge
@@ -22,12 +22,18 @@ Source files:
 - `packages/shared/src/stickers.ts` -- Sticker token grammar (`stickerUrl`, `stickerIdOf`) and limits
 - `packages/web/src/components/chat/StickerPicker.tsx`, `StickerUploadForm.tsx`, `StickerUploadPreview.tsx`, `StickerMessage.tsx` -- Picker, batch upload form, sticker message row
 - `packages/web/src/utils/stickerMessages.ts` -- What a sticker message is and what a one-line surface shows for it
+- `packages/server/src/utils/stickerImage.ts` -- Sticker encoding and asset storage, for personal and space stickers alike
+- `packages/server/src/utils/emojiImage.ts` -- Emoji encoding and the emoji directory, for the instance's library and space emoji alike
+- `packages/server/src/routes/spaceExpressions.ts`, `utils/spaceExpressions.ts` -- A space's emoji and stickers: the routes, the one add path (the Discord import's too), the emoji file sweep
+- `packages/shared/src/spaceExpressions.ts` -- Their limits and types
 
-DB tables: `attachments`, `instance_settings` (maxUploadSizeBytes), `sticker_assets`, `personal_stickers`. See `docs/systems/database.md` for full schemas.
+DB tables: `attachments`, `instance_settings` (maxUploadSizeBytes), `sticker_assets`, `personal_stickers`, `custom_emojis`, `space_emojis`, `space_stickers`. See `docs/systems/database.md` for full schemas.
 
 **Out of scope:** Federation file replication/download queue (see `docs/systems/federation.md`), admin storage stats UI, admin user management.
 
 **Personal stickers** have their own small upload path, storage directory and cleanup phase; see [section 14](#14-personal-stickers). The tus pipeline and the attachment lifecycle do not handle them.
+
+**A space's emoji and stickers** (1.34.0) take a path of the same kind, and their sizes count on the account that added them; see [Space emoji and stickers](#space-emoji-and-stickers-1340).
 
 ### Capability Matrix
 
@@ -94,7 +100,7 @@ So that no single account can fill the disk (`utils/accountLimits.ts`, `shared/s
 | Spaces one account owns | 25, `instance_settings.spaces_per_account` | `POST /api/spaces`, the Discord import into a new space. Handing a space over is not limited. | 409 `space_limit_reached` |
 | Room on the disk | Keeps the smaller of 2 GB and 5% free, whoever uploads | `onUploadCreate` (`fs.statfsSync`). A disk that cannot be asked is no reason to refuse. | 507 `disk_full` |
 
-**What counts** is `storageUsedByAccount`: the sizes in `attachments` under `uploader_id`, the account's own and those of the bots it runs, one per `filename`, without `source_url` (a copy fetched from another instance). So a file held through several messages counts once, a forwarded copy counts for the person who forwarded it, and five bots do not make five times the room. It has to: if only the original counted, forwarding a file to yourself and deleting the original would free the room while the file stays. Thumbnails do not count. Soundboard clips count on the account that added them (`space_sounds.size` by `created_by`), for as long as their space keeps them (1.32.8): a clip is checked against the account's room and the disk's reserve before its file is written, and held like an upload under way while it is. Pictures of profiles, emoji and stickers have limits of their own and leave `attachments`, or never enter it. A group DM's icon is a picture too: what bounds those files is that an account is in at most 100 groups (`utils/groupDmLimits.ts`), and each icon is written anew at an icon's size. Lowering a limit takes nothing away; only new uploads are refused.
+**What counts** is `storageUsedByAccount`: the sizes in `attachments` under `uploader_id`, the account's own and those of the bots it runs, one per `filename`, without `source_url` (a copy fetched from another instance). So a file held through several messages counts once, a forwarded copy counts for the person who forwarded it, and five bots do not make five times the room. It has to: if only the original counted, forwarding a file to yourself and deleting the original would free the room while the file stays. Thumbnails do not count. Soundboard clips count on the account that added them (`space_sounds.size` by `created_by`), for as long as their space keeps them (1.32.8): a clip is checked against the account's room and the disk's reserve before its file is written, and held like an upload under way while it is. A space's emoji and stickers count the same way (1.34.0, `space_emojis.size` and `space_stickers.size` by `created_by`), added by hand or brought over from Discord ([Space emoji and stickers](#space-emoji-and-stickers-1340)). Profile pictures, the instance's emoji library and personal stickers have limits of their own and leave `attachments`, or never enter it. A group DM's icon is a picture too: what bounds those files is that an account is in at most 100 groups (`utils/groupDmLimits.ts`), and each icon is written anew at an icon's size. Lowering a limit takes nothing away; only new uploads are refused.
 
 **Uploads under way** (`reserveUpload`) count from the moment they start. Their bytes are in `.tus/` and in no table yet: without this, uploads started side by side would all pass, and uploads never finished would take room nothing counts. The check and the reservation run with nothing awaited between them. What is held goes when the upload finishes, is cancelled (`POST_TERMINATE`) or expires (`tusExpirationMs`), and is forgotten on a restart, which is why `onUploadFinish` checks once more and removes the staged file when it no longer fits.
 
@@ -753,9 +759,11 @@ The client reads `isStickerMessage` and `messageTextForPreview` from `utils/stic
 `POST /api/stickers` takes `{ name, image }`, the image as canonical base64 inside the JSON body of the authenticated API client (not tus: stickers are small and are stored once per content hash). The route:
 
 1. refuses a name `normalizeStickerName` refuses (`sticker_name_invalid` with `details.max`: blank, over 100 characters after trimming, a line break, a control or bidirectional character, or nothing visible; the name is stored trimmed), more than 30 uploads per account per minute (`429 rate_limited`, a fixed window keyed on the row id, so each federated account counts on its own) and a full collection (`409 sticker_collection_full`, 200 entries, `MAX_PERSONAL_STICKERS`);
-2. decodes the bytes with sharp: at most 5 MiB in, at most 16,777,216 decoded pixels across all frames, PNG, JPEG, WebP or GIF only (SVG and anything else is `400 sticker_invalid_image` with `details.max`, the limit in MB);
-3. re-encodes to WebP, keeping animation and frame delays, fitting every frame into 512 x 512 without enlarging, and refuses a result larger than 5 MiB. Metadata and any bytes outside the image are dropped;
+2. decodes the bytes with sharp: at most 5 MiB in, at most 16,777,216 decoded pixels across all frames, at most 300 frames (`MAX_STICKER_FRAMES`, checked before anything is encoded: a tiny picture with a huge number of frames passes the pixel limit and would keep the encoder busy for minutes), PNG, JPEG, WebP or GIF only (SVG and anything else is `400 sticker_invalid_image` with `details.max`, the limit in MB);
+3. re-encodes to WebP, keeping animation and frame delays, fitting every frame into 512 x 512 without enlarging, and refuses a result larger than 5 MiB, or an encode that takes longer than 30 seconds (`PICTURE_ENCODE_SECONDS`), the same way. Metadata and any bytes outside the image are dropped;
 4. names the asset by the SHA-256 of the encoded bytes, writes (or makes fresh again) its `sticker_assets` row, writes the file to a temporary name and renames it into place, then adds the collection entry.
+
+Steps 2 and 3 (`encodeStickerImage`, `utils/stickerImage.ts`, which a space's stickers use too) are picture work in the media queue since 1.34.0: while another of the account's pictures is queued or being worked on, or 24 jobs wait, the upload is `429 rate_limited` at once ([The picture work queue](#the-picture-work-queue)).
 
 `POST /api/stickers/:id/collect` takes `{ token, name }` and adds an existing local asset: the token must be exactly this instance's token for that id (`400 sticker_not_local` otherwise) and the asset must exist (`404 sticker_not_found`). The client sends a localized default name. Collecting is idempotent: an entry already in the collection is returned unchanged, even when the collection is full. `PATCH /api/stickers/:id` takes `{ name }` and renames only the caller's entry (`404 sticker_not_found` when the caller has none for that id); another account's entry for the same asset keeps its own name, and messages and reactions are unaffected because they carry the token, not the name. Collect and rename apply the same name rule as upload. `DELETE /api/stickers/:id` removes only the caller's entry; the asset stays for messages and reactions that use it. No WebSocket event follows any of these; the picker reads the collection each time it opens.
 
@@ -773,7 +781,7 @@ Collecting is in the context menu ("Add to my stickers") of a sticker message, a
 
 Files live in `UPLOAD_DIR/stickers/<sha256>.webp`. The attachment phases of the janitor read only the top level of `UPLOAD_DIR`, and the storage stats do not count this directory. Back it up with the rest of the upload directory.
 
-Phase 4 of `cleanupStorage` (`cleanupUnusedStickerAssets`) removes an asset when no collection entry, channel message, DM message, channel reaction or DM reaction on this instance names it and its `created_at` is more than 24 hours old. The upload sets `created_at` to the upload time before it writes the file, also for bytes that already have a row, so a file being uploaded is never inside the cleanup's reach; the cleanup runs synchronously from its reference scan to its last delete. Temporary files older than an hour are removed too.
+Phase 4 of `cleanupStorage` (`cleanupUnusedStickerAssets`) removes an asset when no collection entry, space sticker, channel message, DM message, channel reaction or DM reaction on this instance names it and its `created_at` is more than 24 hours old. A space's sticker has to count (`space_stickers.sticker_id`, 1.34.0): its row holds a foreign key to the asset's row with no delete action, so without it the cleanup would remove a file a space still shows and then fail on the row. The upload sets `created_at` to the upload time before it writes the file, also for bytes that already have a row, so a file being uploaded is never inside the cleanup's reach; the cleanup runs synchronously from its reference scan to its last delete. Temporary files older than an hour are removed too.
 
 ### Across instances
 
@@ -829,10 +837,54 @@ Every path that writes a file now keeps to the account's storage, the disk's res
 - **Follow copies:** the copies an announcement follow brings count on whoever set the follow up (`storageAccountOf`, `channel_follows.created_by`) and are checked before copying; refused, the post arrives without its files. Before, deleting the original freed the poster's storage while the hard-linked file stayed.
 - **Picture fields:** an own upload goes into a field only as an image of at most `PICTURE_UPLOAD_MAX_BYTES` (8 MB), and `resizeProfileImage` always writes it anew at the field's size. Setting a field drops the upload's record, so before, any upload of any size could be made to count for nothing. A member's own picture and banner for a space are deleted when the membership goes: leave, kick, ban, space deletion (`releaseMemberPictures`).
 - **Animated profile pictures** (`POST /api/users/@me/profile-image`) are counted and refused as uploads, and named like them.
-- **Stickers:** at most 50 new ones a day per account, and none past the disk reserve.
+- **Personal stickers:** at most 50 new ones a day per account, and none past the disk reserve. A space's stickers have their own day's limit, see [Space emoji and stickers](#space-emoji-and-stickers-1340).
 - **Uploads under way** keep their reservation for 15 minutes without bytes (`touchUpload` on every PATCH), not for the whole tus expiry: started and never sent, a few of them refused every upload on the instance for a day.
 - **Data exports** stop before writing past the disk reserve; after a failed one the next waits an hour.
 - **Files from peers** are counted as they arrive and stop at the declared size, never past `MAX_UPLOAD_SIZE`; they wait while the disk is at its reserve. At most 25 attachments of one relayed message are kept.
-- **Media work:** sharp reads at most 120 megapixels for an upload's thumbnail and 64 for a picture field, every frame together; at most two media jobs (sharp or ffmpeg) run at once. ffmpeg and ffprobe open only the file, as one of the containers in `FFMPEG_INPUT_LIMITS` (`-protocol_whitelist file`, `-format_whitelist`): no HLS or concat playlist can make the server fetch an address or read another file.
+- **Media work:** sharp reads at most 120 megapixels for an upload's thumbnail and 64 for a picture field, every frame together; at most two media jobs (sharp or ffmpeg) run at once; picture work for emoji and stickers has two more bounds since 1.34.0 ([The picture work queue](#the-picture-work-queue)). ffmpeg and ffprobe open only the file, as one of the containers in `FFMPEG_INPUT_LIMITS` (`-protocol_whitelist file`, `-format_whitelist`): no HLS or concat playlist can make the server fetch an address or read another file.
 
 **Serving:** the stored type is no longer sent as it is (`utils/uploadTypes.ts`). Only a known type is sent, shown in the page when it is a picture, a video or a sound (never SVG) and downloaded otherwise; anything else goes as `application/octet-stream`, downloaded. The type a peer gives a relayed file is kept only when it is a known one (`relayedMimetype`). Every response carries `sandbox` in its CSP, so a file opened on its own is no page of this origin.
+
+## Space emoji and stickers (1.34.0)
+
+A space's own emoji and stickers ([emoji.md](emoji.md)) are pictures of the same kind as the instance's emoji library and personal stickers: sent as base64 inside JSON (`POST /api/spaces/:id/emojis`, `POST /api/spaces/:id/stickers`), never through tus, and never an `attachments` row. The routes and the Discord import add them through one path, `addSpaceEmoji` and `addSpaceSticker` in `utils/spaceExpressions.ts`.
+
+### Files
+
+| What | File | When it goes |
+|------|------|--------------|
+| A space's emoji | `UPLOAD_DIR/emoji/<id>.webp`, beside the library's. Both kinds take their ids from one generator, so `GET /api/emojis/<id>.webp` serves either, without a session and with the headers of a sticker asset | With its row. `DELETE /api/space-emojis/:id` removes the file after the row; deleting a space removes its emoji files after its transaction (`deleteSpaceCompletely`, `removeEmojiFiles`) |
+| A space's sticker | An entry in `space_stickers` over a shared asset, `UPLOAD_DIR/stickers/<sha256>.webp` ([section 14](#14-personal-stickers)), sent with the same token as a personal sticker | Never with its entry. The asset stays while a collection entry, a space's sticker, a message or a reaction names it, and Phase 4 of the cleanup removes it once nothing does and its grace period has passed. Deleting a space leaves its stickers' assets to that cleanup too |
+
+### What a picture may be
+
+Both encoders decode the picture and write it anew, so what is stored is always an image this code produced. A space's emoji follows the library's rules (`encodeEmoji`, `utils/emojiImage.ts`): PNG, JPEG, WebP or GIF, at most 3 MiB in, at most 16,777,216 decoded pixels and 120 frames, stored as a WebP within 128 x 128 of at most 256 KiB, tried at quality 85, 65 and 45 until it fits. One limit of 30 seconds (`PICTURE_ENCODE_SECONDS`) covers the three passes together; a picture that takes longer is `413 emoji_image_too_large`. A space's sticker follows a personal sticker's (`encodeStickerImage`, [section 14](#14-personal-stickers)): at most 5 MiB in, 16,777,216 decoded pixels and 300 frames (refused before anything is encoded), stored as a WebP within 512 x 512 of at most 5 MiB, encoded within 30 seconds; any refusal is `400 sticker_invalid_image`.
+
+### Limits
+
+| Limit | Value | Refusal |
+|-------|-------|---------|
+| Emoji in one space | 200 (`SPACE_EXPRESSION_LIMITS.EMOJI_PER_SPACE`) | `409 space_emoji_limit_reached`, `details.max` |
+| Stickers in one space | 60 (`STICKERS_PER_SPACE`) | `409 space_sticker_limit_reached`, `details.max` |
+| Pictures one account adds to spaces per minute, emoji and stickers together | 30 (`UPLOADS_PER_MINUTE`) | `429 rate_limited` |
+| Stickers one account uploads to spaces per day | 100 (`STICKER_UPLOADS_PER_DAY`). A removed sticker's asset stays for the cleanup's grace period, so adding and removing over and over would otherwise fill the disk at the speed of the per-minute limit | `429 rate_limited` |
+| The account's storage and the disk's reserve | As for an upload ([Limits per account](#limits-per-account)) | `413 storage_limit_reached`, `507 disk_full` |
+
+The two rates are counted by the routes, per account. The Discord import counts against neither: it brings at most 8 pictures to a request and adds them through the same path, so the limits of the space, the storage, the disk and the queue below all hold for it. Each of its pictures comes over https from `cdn.discordapp.com` or `media.discordapp.net` only, without the token, with no redirect and only to public addresses, within 8 seconds, as `image/*`, and is read no further than an upload of its kind may be (`fetchDiscordAsset`, `utils/discordApi.ts`). Personal stickers keep their own limits (30 a minute, 50 a day, 200 in a collection), and so does the library (10 a minute, 500 in all, 50 a person).
+
+### Storage
+
+A space's emoji and stickers count on the account that added them, for as long as their space keeps them: `storageUsedByAccount` adds `space_emojis.size` and `space_stickers.size` by `created_by`, the size of the stored picture, each sticker entry on its own even when it shares its asset. Once the picture is encoded, the add checks it against the account's room and the disk's reserve and holds it as an upload under way (`reserveUpload`), with nothing awaited between the two, from before its file is written until its row is in. Right before the insert, again with nothing awaited, it asks once more whether the account may still manage the space's emoji and stickers (`expressionManagerRefusal`), whether the space has room and whether the name is free: someone banned, timed out or demoted while their picture was being encoded adds nothing. A refused emoji takes its file back; a refused sticker leaves its asset to the cleanup's grace period. When the account is deleted, `tombstoneUser` clears `created_by` and the entries stay with the space, counted on nobody.
+
+### The picture work queue
+
+`utils/thumbnail.ts` runs media work at most two at a time, and the rest waits its turn (1.32.7). Picture work people send (the library's emoji, personal stickers, a space's emoji and stickers, and with them the Discord import) ran outside that queue before 1.34.0. It now takes its turn through `runMediaJob`, with two bounds on top:
+
+- **One per account.** An account has at most one such job queued or running. A second is refused at once rather than waiting with its picture in memory; an account's uploads go one after another anyway.
+- **Not past 24 waiting.** While 24 jobs of any kind wait, new picture work is refused, so many accounts together cannot grow the queue, and the memory it holds, without end.
+
+A refusal is `MediaBusyError`, which every route answers `429 rate_limited` at once. The Discord import ends its batch there and tries the picture again on its next request. The other media work (an upload's thumbnail and probe, a picture field's resize, a clip's probe) waits for the same two places and is never refused. [operations.md](operations.md#picture-work) says what this protects.
+
+### Unused emoji files
+
+`removeUnusedEmojiFiles` (`utils/spaceExpressions.ts`) removes the files in `UPLOAD_DIR/emoji` that no emoji names, of the library or of a space: what a deletion that stopped between the row and the file, or an add that stopped between the file and the row, left behind, temporary files included. At each start it removes all of them; the hourly storage janitor (`runFederationJanitor`) leaves those younger than an hour, whose row may still be on its way in. The library's files had no such sweep before.

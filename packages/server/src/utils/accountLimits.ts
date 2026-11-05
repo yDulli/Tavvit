@@ -44,7 +44,8 @@ function storageAccountOf(userId: string): string {
  * holds through several messages counts once, and a copy it forwarded counts too: otherwise
  * forwarding a file and deleting the original would free the room while the file stays. Copies
  * fetched from another instance (`source_url`) are not this account's upload here. The clips it
- * added to a soundboard count as well, for as long as their space keeps them.
+ * added to a soundboard, and the emoji and stickers it added to a space (by hand or by importing
+ * them from Discord), count as well, for as long as their space keeps them.
  */
 function storageUsedByAccount(account: string): number {
   const row = getDb().get<{ used: number }>(sql`
@@ -59,7 +60,9 @@ function storageUsedByAccount(account: string): number {
           AND source_url IS NULL
         GROUP BY filename
       ))
-      + (SELECT COALESCE(SUM(size), 0) FROM space_sounds WHERE created_by = ${account}) AS used
+      + (SELECT COALESCE(SUM(size), 0) FROM space_sounds WHERE created_by = ${account})
+      + (SELECT COALESCE(SUM(size), 0) FROM space_emojis WHERE created_by = ${account})
+      + (SELECT COALESCE(SUM(size), 0) FROM space_stickers WHERE created_by = ${account}) AS used
   `);
   return row?.used ?? 0;
 }

@@ -237,7 +237,8 @@
     "renameNamed": "重命名 {{name}}",
     "renameTitle": "重命名表情",
     "search": "搜索表情",
-    "noResults": "未找到匹配的表情"
+    "noResults": "未找到匹配的表情",
+    "spaceSection": "{{space}} 的贴纸"
   },
   "poke": {
     "action": "戳一戳",

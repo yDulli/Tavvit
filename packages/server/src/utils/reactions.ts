@@ -7,6 +7,7 @@ import { sanitizeUser } from './sanitize.js';
 import { generateSnowflake } from './snowflake.js';
 import { memberActionRefusal } from './spaceModeration.js';
 import { mayPostSticker } from './remoteMedia.js';
+import { reactionEmojiRefusal, spaceReactionExists } from './emojiUse.js';
 
 type MessageRow = typeof schema.messages.$inferSelect;
 
@@ -61,6 +62,9 @@ export function addSpaceReaction(message: MessageRow, userId: string, emoji: str
   if (held) return held;
   // Everyone who sees the message fetches a sticker reaction by themselves (utils/remoteMedia.ts).
   if (!mayPostSticker(emoji, userId)) return { status: 400, code: 'sticker_elsewhere' };
+  // A custom emoji must exist here, and a space's emoji be the reactor's to use (utils/emojiUse.ts).
+  const emojiRefusal = reactionEmojiRefusal(emoji, userId, spaceId, spaceReactionExists(message.id, emoji));
+  if (emojiRefusal) return emojiRefusal;
   if (reactionLimitReached('space', message.id, emoji)) {
     return { status: 400, code: 'reaction_limit_reached', details: { max: REACTIONS_PER_MESSAGE_MAX } };
   }

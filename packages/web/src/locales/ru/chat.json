@@ -261,7 +261,8 @@
     "renameNamed": "Переименовать {{name}}",
     "renameTitle": "Переименовать стикер",
     "search": "Поиск стикеров",
-    "noResults": "Стикеры не найдены"
+    "noResults": "Стикеры не найдены",
+    "spaceSection": "Стикеры пространства {{space}}"
   },
   "poke": {
     "action": "Толкнуть",

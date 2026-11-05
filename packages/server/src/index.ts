@@ -14,6 +14,9 @@ import { userRoutes } from './routes/users.js';
 import { spaceRoutes } from './routes/spaces.js';
 import { spaceModerationRoutes } from './routes/spaceModeration.js';
 import { discordImportRoutes } from './routes/discordImport.js';
+import { discordExpressionImportRoutes } from './routes/discordExpressionImport.js';
+import { spaceExpressionRoutes } from './routes/spaceExpressions.js';
+import { removeUnusedEmojiFiles } from './utils/spaceExpressions.js';
 import { channelRoutes } from './routes/channels.js';
 import { messageRoutes } from './routes/messages.js';
 import { pinRoutes } from './routes/pins.js';
@@ -335,6 +338,8 @@ async function main(): Promise<void> {
   await app.register(spaceRoutes);
   await app.register(spaceModerationRoutes);
   await app.register(discordImportRoutes);
+  await app.register(discordExpressionImportRoutes);
+  await app.register(spaceExpressionRoutes);
   await app.register(channelRoutes);
   await app.register(messageRoutes);
   await app.register(pinRoutes);
@@ -448,6 +453,7 @@ async function main(): Promise<void> {
   startSavedReminderSweeper();
   removeUnusedWebhookAccounts();
   removeUnusedSoundFiles();
+  removeUnusedEmojiFiles();
   startSessionSweeper();
   startDataExportSweeper();
   startLegalRecordSweeper();

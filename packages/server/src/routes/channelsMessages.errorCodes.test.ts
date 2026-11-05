@@ -446,4 +446,57 @@ describe('channel and message routes send error codes', () => {
       expect((JSON.parse(res.body) as ErrorBody).code).toBe('override_target_invalid');
     });
   });
+
+  describe('custom emoji of a space (utils/emojiUse.ts)', () => {
+    const OURS = '7000002';
+    const THEIRS = '7000001';
+    const LIBRARY = '7000003';
+    const UNKNOWN = '7000099';
+
+    beforeEach(() => {
+      testDb.insert(schema.spaceEmojis).values({ id: THEIRS, spaceId: OTHER_SPACE, name: 'theirs', size: 1, createdBy: 'stranger', createdAt: NOW }).run();
+      testDb.insert(schema.spaceEmojis).values({ id: OURS, spaceId: SPACE, name: 'ours', size: 1, createdBy: 'owner', createdAt: NOW }).run();
+      testDb.insert(schema.customEmojis).values({ id: LIBRARY, name: 'lib', size: 1, createdBy: 'owner', createdAt: NOW }).run();
+    });
+
+    const post = (content: string) => app.inject({ method: 'POST', url: `/api/channels/${GENERAL}/messages`, payload: { content } });
+    const react = (messageId: string, emoji: string) => app.inject({ method: 'PUT', url: `/api/messages/${messageId}/reactions/${encodeURIComponent(emoji)}` });
+
+    it('lets anyone writing in a space use its emoji and the library; an unknown id stays text', async () => {
+      const res = await post(`<:ours:${OURS}> <:lib:${LIBRARY}> <:gone:${UNKNOWN}>`);
+      expect(res.statusCode).toBe(201);
+    });
+
+    it("keeps another space's emoji to that space's members", async () => {
+      const refused = await post(`hi <:theirs:${THEIRS}>`);
+      expect(refused.statusCode).toBe(403);
+      expect((JSON.parse(refused.body) as ErrorBody).code).toBe('emoji_unavailable');
+      testDb.insert(schema.spaceMembers).values({ spaceId: OTHER_SPACE, userId: 'member', joinedAt: NOW }).run();
+      expect((await post(`hi <:theirs:${THEIRS}>`)).statusCode).toBe(201);
+    });
+
+    it('asks an edit only about the emoji it adds', async () => {
+      const kept = seedMessage(GENERAL, 'member', `from before <:theirs:${THEIRS}>`);
+      const keep = await app.inject({ method: 'PATCH', url: `/api/messages/${kept}`, payload: { content: `still <:theirs:${THEIRS}>` } });
+      expect(keep.statusCode).toBe(200);
+      const plain = seedMessage(GENERAL, 'member', 'plain');
+      const add = await app.inject({ method: 'PATCH', url: `/api/messages/${plain}`, payload: { content: `now <:theirs:${THEIRS}>` } });
+      expect(add.statusCode).toBe(403);
+      expect((JSON.parse(add.body) as ErrorBody).code).toBe('emoji_unavailable');
+    });
+
+    it("refuses a reaction with another space's emoji or an unknown one, and lets anyone join one given", async () => {
+      const unavailable = await react(ownersMessageId, `emoji:${THEIRS}`);
+      expect(unavailable.statusCode).toBe(403);
+      expect((JSON.parse(unavailable.body) as ErrorBody).code).toBe('emoji_unavailable');
+      const unknown = await react(ownersMessageId, `emoji:${UNKNOWN}`);
+      expect(unknown.statusCode).toBe(400);
+      expect((JSON.parse(unknown.body) as ErrorBody).code).toBe('emoji_not_found');
+      expect((await react(ownersMessageId, `emoji:${OURS}`)).statusCode).toBe(200);
+      expect((await react(ownersMessageId, `emoji:${LIBRARY}`)).statusCode).toBe(200);
+      // Someone who may use it reacted already: joining it is allowed.
+      testDb.insert(schema.reactions).values({ id: 'r-1', messageId: ownersMessageId, userId: 'owner', emoji: `emoji:${THEIRS}`, createdAt: NOW }).run();
+      expect((await react(ownersMessageId, `emoji:${THEIRS}`)).statusCode).toBe(200);
+    });
+  });
 });

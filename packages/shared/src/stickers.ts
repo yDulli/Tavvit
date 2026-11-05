@@ -3,6 +3,12 @@ import { isVisibleSingleLine } from './constants.js';
 /** Namespaced values reuse message/reaction transport without colliding with native emoji. */
 export const STICKER_PREFIX = 'sticker:';
 export const MAX_STICKER_BYTES = 5 * 1024 * 1024;
+/**
+ * The most frames an animated sticker may have. Ten seconds at thirty frames is more than any sticker
+ * needs; a tiny picture with hundreds of thousands of frames stays within the pixel limit and would
+ * otherwise keep the encoder busy for minutes.
+ */
+export const MAX_STICKER_FRAMES = 300;
 /** Longest collection name, after trimming. */
 export const MAX_STICKER_NAME_LENGTH = 100;
 /** Most stickers one account keeps in its collection. */

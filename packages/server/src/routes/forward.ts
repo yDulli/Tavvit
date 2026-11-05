@@ -1,4 +1,5 @@
 import { withoutMentions } from '../utils/neutralMentions.js';
+import { forwardableEmojiText } from '../utils/emojiUse.js';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { MAX_MESSAGE_LENGTH, type ForwardMessageRequest } from '@backspace/shared';
@@ -44,16 +45,18 @@ async function forwardInto(
     return sendError(reply, 400, 'validation_failed', { field: 'target' });
   }
 
-  const content = sourceContent ? withoutMentions(sourceContent) : null;
+  const now = Date.now();
+  const userId = request.userId;
+  const targetSpaceId = typeof channelId === 'string' ? getChannelSpaceId(channelId) : null;
+  // A copy carries only the space emoji the forwarder may use where it lands (utils/emojiUse.ts).
+  const content = sourceContent ? forwardableEmojiText(withoutMentions(sourceContent), userId, targetSpaceId) : null;
   if (content && content.length > MAX_MESSAGE_LENGTH) {
     return sendError(reply, 400, 'content_too_long', { max: MAX_MESSAGE_LENGTH });
   }
-  const now = Date.now();
-  const userId = request.userId;
 
   let target: ForwardTarget;
   if (typeof channelId === 'string') {
-    const spaceId = getChannelSpaceId(channelId);
+    const spaceId = targetSpaceId;
     if (!spaceId) return sendError(reply, 404, 'channel_not_found');
     if (!hasPermission(userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.SEND_MESSAGES, channelId)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'SEND_MESSAGES' });

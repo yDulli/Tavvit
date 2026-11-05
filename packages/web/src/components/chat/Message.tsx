@@ -35,6 +35,7 @@ import { FederationGlobeIcon } from '../ui/Username';
 import { Tooltip } from '../ui/Tooltip';
 import { EmojiPicker } from './EmojiPicker';
 import { toWireText } from '../../utils/emojiWire';
+import { emojiOriginOfPerson, useEmojiContextOfChannel } from '../../utils/emojiSets';
 import { MessageEditBox } from './MessageEditBox';
 import { ThreadChip } from './ThreadChip';
 import { openThreadView } from '../../utils/openThread';
@@ -236,6 +237,9 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const isAuthor = isMine(message.user, messageOrigin, self);
   // The channel whose origin issued this message's ids; mentions resolve there.
   const mentionChannelId = channelKey || null;
+  // Where reactions to it are picked from (utils/emojiSets.ts): its space's instance, or in a direct
+  // message the reactor's home, this page's instance.
+  const reactionContext = useEmojiContextOfChannel(channelKey);
   const selfIdHere = useSelfIdInChannel(mentionChannelId);
   const messageStyle = useAppearanceStore((s) => s.messageStyle);
   const myRoleIdsHere = useSpaceStore((s) => (mentionChannelId ? selectMyRoleIdsInChannel(s, mentionChannelId) : undefined));
@@ -250,6 +254,13 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const isDmMessage = isPendingMessage(message)
     ? !!message.dmChannelId || !message.channelId
     : !!(message as MessageWithUser & { dmChannelId?: string }).dmChannelId || !message.channelId;
+  // The instance whose custom emoji this message's text names: its space's host, or in a direct
+  // message its writer's home (docs/systems/emoji.md, "Which instance a token names"). This
+  // person's own home is this page's instance.
+  const homeOfPerson = (person: User | null | undefined): string => (
+    person && isMine(person, messageOrigin, self) ? '' : emojiOriginOfPerson(person, messageOrigin)
+  );
+  const emojiOrigin = isDmMessage ? homeOfPerson(message.user) : messageOrigin;
   const dmChannelId = isPendingMessage(message)
     ? message.dmChannelId
     : (message as MessageWithUser & { dmChannelId?: string }).dmChannelId;
@@ -685,7 +696,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                 style={replyRoleColor(replyTo)}
               />
               <span className="text-meta text-txt-tertiary truncate max-w-[480px] group-hover/reply:text-txt-secondary transition-colors">
-                {replyTo.content ? <InlineMessageText content={replyTo.content} channelId={mentionChannelId} /> : ''}
+                {replyTo.content ? <InlineMessageText content={replyTo.content} channelId={mentionChannelId} emojiOrigin={isDmMessage ? homeOfPerson(replyTo.user) : messageOrigin} /> : ''}
               </span>
             </>
           );
@@ -781,13 +792,13 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                   >
                     {isSticker
                       ? <StickerMessage token={message.content} />
-                      : <MarkdownRenderer content={message.content} channelId={mentionChannelId} />}
+                      : <MarkdownRenderer content={message.content} channelId={mentionChannelId} emojiOrigin={emojiOrigin} />}
                     {message.editedAt && (
                       <span className="text-label text-txt-tertiary ml-1.5 select-none">{t('chat:message.edited')}</span>
                     )}
                   </div>
                 )}
-                {message.content && !isSticker && <MessageTranslation messageId={message.id} content={message.content} channelId={mentionChannelId} />}
+                {message.content && !isSticker && <MessageTranslation messageId={message.id} content={message.content} channelId={mentionChannelId} emojiOrigin={emojiOrigin} />}
 
                 {/* Embeds */}
                 {!isEditing && !isSticker && message.embeds && message.embeds.length > 0 && (
@@ -883,6 +894,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                     emoji={emoji}
                     reactions={reactions}
                     origin={messageOrigin}
+                    emojiOrigin={isDmMessage ? homeOfPerson(reactions[0]?.user) : messageOrigin}
                     added={!reactionsAtStart.has(emoji)}
                     onToggle={() => toggleReaction(emoji)}
                   />
@@ -896,7 +908,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       {/* Reactions retain the upstream mobile sheet and row/button anchor semantics. */}
       {showInteractions && reactionPicker && canAddReactions && isMobile && (
         <MobilePickerSheet onClose={closeReactionPicker} label={t('common:actions.addReaction')}>
-          <EmojiPicker onEmojiSelect={handleReactionEmojiSelect} customAs="reaction" mobile />
+          <EmojiPicker onEmojiSelect={handleReactionEmojiSelect} customAs="reaction" mobile context={reactionContext} />
         </MobilePickerSheet>
       )}
       {showInteractions && reactionPicker && canAddReactions && !isMobile && (
@@ -904,6 +916,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
           anchorEl={reactionPicker === 'button' ? reactionPickerBtnRef.current : rowRef.current}
           onEmojiSelect={handleReactionEmojiSelect}
           onClose={closeReactionPicker}
+          context={reactionContext}
         />
       )}
 
