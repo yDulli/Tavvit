@@ -17,6 +17,7 @@ import { Icon } from '../ui/Icon';
 import { ImageCropModal } from '../ui/ImageCropModal';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { usePermissionNames } from '../ui/OverrideEntry';
+import { useSensitiveText } from '../ui/Sensitive';
 
 /** What a bot asks for until its owner says otherwise: to read, write and react, and no more. */
 const USUAL_RIGHTS = PermissionBits.VIEW_CHANNEL | PermissionBits.READ_MESSAGE_HISTORY | PermissionBits.SEND_MESSAGES | PermissionBits.ADD_REACTIONS;
@@ -26,8 +27,10 @@ function inviteAddress(botId: string, rights: bigint): string {
   return `${window.location.origin}/bots/${botId}/add?permissions=${permissionsToString(rights)}`;
 }
 
-function CopyField({ label, value }: { label: string; value: string }) {
+/** A value to copy. A `secret` one (a token) streamer mode keeps out of the field; Copy still copies it. */
+function CopyField({ label, value, secret = false }: { label: string; value: string; secret?: boolean }) {
   const { t } = useTranslation(['settings']);
+  const sensitive = useSensitiveText();
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -41,7 +44,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
     <div className="flex items-center gap-1.5">
       <input
         readOnly
-        value={value}
+        value={secret ? sensitive(value) : value}
         aria-label={label}
         onFocus={(focus) => focus.currentTarget.select()}
         className="input-standard min-w-0 flex-1 font-mono text-meta"
@@ -315,7 +318,7 @@ function BotPage({ botId }: { botId: string }) {
 
       {token && bot && (
         <SettingsSection title={t('settings:developers.tokenTitle', { name: bot.name })} description={t('settings:developers.tokenDescription')}>
-          <CopyField label={t('settings:developers.tokenLabel')} value={token} />
+          <CopyField label={t('settings:developers.tokenLabel')} value={token} secret />
         </SettingsSection>
       )}
 

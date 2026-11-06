@@ -18,7 +18,7 @@ import { useSelfIdentity } from '../../stores/authStore';
 import { getAvatarGradient, getSpaceGradient } from '../../utils/gradients';
 import { bannerFill } from '../../utils/placeLight';
 import { bannerBackground, cardEdge, cardTint, profileThemeOf } from '../../utils/profileTheme';
-import { parseFederatedUsername } from '../../utils/identity';
+import { isMine, parseFederatedUsername } from '../../utils/identity';
 import { openDirectMessage } from '../../utils/openDirectMessage';
 import { normalizeUserAssets } from '../../utils/assetUrls';
 import { loadFederatedMutuals, type TaggedMutualFriend, type MutualSpace } from '../../utils/mutuals';
@@ -138,9 +138,15 @@ export function UserProfileModal() {
       } else {
         loadUser(userId, origin);
       }
-      loadMutuals(userId, knownUser);
+      // One's own profile has nothing in common with itself: no mutuals to ask for.
+      if (isMine(knownUser ?? { id: userId }, origin, self)) {
+        setMutualFriends([]);
+        setMutualSpaces([]);
+      } else {
+        loadMutuals(userId, knownUser);
+      }
     }
-  }, [isOpen, userId, passedUser, passedOrigin, memberSpaceId, memberUserId, loadUser, loadMutuals]);
+  }, [isOpen, userId, passedUser, passedOrigin, memberSpaceId, memberUserId, loadUser, loadMutuals, self]);
 
   // Reset on close
   useEffect(() => {
@@ -279,11 +285,18 @@ export function UserProfileModal() {
     ui.openModal('spaceProfile', { spaceId: memberContext.spaceId });
   };
 
-  const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'about', label: t('social:profile.tabs.about') },
-    { key: 'friends', label: t('social:profile.tabs.mutualFriends'), count: mutualFriends.length },
-    { key: 'spaces', label: t('social:profile.tabs.mutualSpaces'), count: mutualSpaces.length },
-  ];
+  // One's own profile shows only what it says: friends and spaces "in common"
+  // with oneself would be all of one's own, so those tabs, and the bar with a
+  // single tab left, are not there.
+  const isSelf = friendship.state === 'self';
+  const tabs: { key: Tab; label: string; count?: number }[] = isSelf
+    ? [{ key: 'about', label: t('social:profile.tabs.about') }]
+    : [
+      { key: 'about', label: t('social:profile.tabs.about') },
+      { key: 'friends', label: t('social:profile.tabs.mutualFriends'), count: mutualFriends.length },
+      { key: 'spaces', label: t('social:profile.tabs.mutualSpaces'), count: mutualSpaces.length },
+    ];
+  const shownTab: Tab = isSelf ? 'about' : activeTab;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center">
@@ -340,8 +353,8 @@ export function UserProfileModal() {
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div className="px-6 flex-shrink-0 border-b border-border-hard">
+        {/* Tab bar, where there is more than one tab */}
+        {tabs.length > 1 && <div className="px-6 flex-shrink-0 border-b border-border-hard">
           <div role="tablist" className="-mx-2 flex gap-1">
             {tabs.map((tab) => (
               <button
@@ -366,11 +379,11 @@ export function UserProfileModal() {
               </button>
             ))}
           </div>
-        </div>
+        </div>}
 
         {/* Tab content */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin p-6 min-h-[200px]">
-          {activeTab === 'about' && (
+        <div className={`flex-1 overflow-y-auto scrollbar-thin p-6 min-h-[200px] ${tabs.length > 1 ? '' : 'border-t border-border-hard'}`}>
+          {shownTab === 'about' && (
             <div className="space-y-4">
               {/* Bio */}
               {bio && (
@@ -399,7 +412,7 @@ export function UserProfileModal() {
             </div>
           )}
 
-          {activeTab === 'friends' && (
+          {shownTab === 'friends' && (
             <div>
               {loadingMutuals ? (
                 <LoadingSpinner size={20} className="py-8 text-txt-tertiary" />
@@ -451,7 +464,7 @@ export function UserProfileModal() {
             </div>
           )}
 
-          {activeTab === 'spaces' && (
+          {shownTab === 'spaces' && (
             <div>
               {loadingMutuals ? (
                 <LoadingSpinner size={20} className="py-8 text-txt-tertiary" />

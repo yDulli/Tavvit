@@ -10,10 +10,14 @@ import {
   ConnectionState,
   ConnectionQuality,
   LocalAudioTrack,
+  LocalTrack,
   LocalTrackPublication,
   DisconnectReason,
   TrackEvent,
 } from 'livekit-client';
+import { applyBackgroundInCall } from '../camera/call';
+import { useOwnImage } from '../camera/ownImage';
+import i18n from '../i18n';
 import { getApiForOrigin, getChannelOrigin, getMyUserIdForOrigin, useSpaceStore } from '../stores/spaceStore';
 import { homeIdentityOf } from '../utils/identity';
 import { refreshStreamHostLimits, useStreamHostLimits } from '../utils/streamHostLimits';
@@ -55,6 +59,8 @@ let _activeRoom: Room | null = null;
 const _republishTrackers = new WeakMap<Room, StreamRepublishTracker>();
 /** The shares each room's viewer may watch again after a full reconnect (`StreamResumeMemory`). */
 const _resumeMemories = new WeakMap<Room, StreamResumeMemory>();
+/** The camera tracks whose end is already watched (the LocalTrackPublished handler). */
+const cameraEndWatched = new WeakSet<LocalTrack>();
 
 /** Forget a room's per-sharer stream state: the room is being left. */
 function clearRoomStreamState(room: Room): void {
@@ -327,6 +333,8 @@ export function useLiveKit() {
   const inputVolume = useVoiceStore((s) => s.inputVolume);
   const inputDeviceId = useVoiceStore((s) => s.inputDeviceId);
   const cameraDeviceId = useVoiceStore((s) => s.cameraDeviceId);
+  const cameraBackground = useVoiceStore((s) => s.cameraBackground);
+  const ownBackgroundImage = useOwnImage((s) => s.url);
   const micPermissionDenied = useVoiceStore((s) => s.micPermissionDenied);
   const echoCancellation = useVoiceStore((s) => s.echoCancellation);
   const noiseSuppression = useVoiceStore((s) => s.noiseSuppression);
@@ -670,15 +678,11 @@ export function useLiveKit() {
     const r = roomRef.current;
     if (!r || !isConnected || !isCameraOn) return;
 
-    const camPub = r.localParticipant.getTrackPublications()
-      .find(p => p.source === Track.Source.Camera);
-    if (!camPub?.track) return;
+    const camTrack = r.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+    if (!camTrack) return;
 
-    const currentDeviceId = camPub.track.mediaStreamTrack?.getSettings().deviceId;
     const target = cameraDeviceId;
-
     if (target === null) return;            // "Auto" never force-switches a live publication
-    if (currentDeviceId === target) return; // already on target
 
     const myGen = ++switchCameraGenRef.current;
 
@@ -687,6 +691,11 @@ export function useLiveKit() {
     // This IIFE's catch then no-ops its store rollback — the newer attempt
     // owns the canonical store state.
     (async () => {
+      // The camera's own device, not `mediaStreamTrack`'s: under a background
+      // that is the processor's picture, which belongs to no device.
+      const currentDeviceId = await camTrack.getDeviceId(false);
+      if (currentDeviceId === target) return; // already on target
+      if (myGen !== switchCameraGenRef.current) return;
       const prev = currentDeviceId ?? null;
       try {
         await r.switchActiveDevice('videoinput', target);
@@ -698,7 +707,7 @@ export function useLiveKit() {
           useUIStore.getState().addToast('Could not switch camera', 'warning');
           return;
         }
-        const stillLive = camPub.track?.mediaStreamTrack?.readyState === 'live';
+        const stillLive = camTrack.mediaStream?.getVideoTracks()[0]?.readyState === 'live';
         if (stillLive && prev) {
           useVoiceStore.getState().setCameraDeviceId(prev);
         } else if (stillLive) {
@@ -719,6 +728,32 @@ export function useLiveKit() {
       }
     })();
   }, [cameraDeviceId, isCameraOn, isConnected]);
+
+  // Lay the chosen background over the live camera when the person changes it
+  // mid-call, or replaces their own picture (camera/call.ts). One change at a
+  // time and in order; each reads what is chosen when its turn comes, so the
+  // last choice wins. A background that cannot start turns the camera off:
+  // the person just asked for their room to be hidden.
+  const backgroundQueueRef = useRef<Promise<void>>(Promise.resolve());
+  useEffect(() => {
+    const r = roomRef.current;
+    if (!r || !isConnected || !isCameraOn) return;
+    backgroundQueueRef.current = backgroundQueueRef.current.then(async () => {
+      if (roomRef.current !== r) return;
+      const change = await applyBackgroundInCall(r).catch((error: unknown) => ({ kind: 'failed' as const, error }));
+      if (change.kind === 'applied' && change.substituted) {
+        useUIStore.getState().addToast(i18n.t('voice:camera.background.ownMissing'), 'info');
+      }
+      if (change.kind !== 'failed') return;
+      console.error('[LiveKit] Camera background failed:', change.error);
+      if (roomRef.current !== r || !useVoiceStore.getState().isCameraOn) return;
+      markIntentionalCameraOff();
+      await r.localParticipant.setCameraEnabled(false).catch(() => {});
+      useVoiceStore.setState({ isCameraOn: false });
+      broadcastVoiceStatus();
+      useUIStore.getState().addToast(i18n.t('voice:camera.background.failedLive'), 'warning');
+    });
+  }, [cameraBackground, ownBackgroundImage, isCameraOn, isConnected]);
 
   const connect = useCallback(async (channelId: string, isDm?: boolean) => {
     const storedId = isDm ? `dm-${channelId}` : channelId;
@@ -896,10 +931,14 @@ export function useLiveKit() {
           });
         }
         if (publication.source === Track.Source.Camera) {
-          const mst = publication.track?.mediaStreamTrack;
-          if (mst) {
-            // Replace any prior listener — on a re-publish the underlying track is new.
-            mst.onended = async () => {
+          const cameraTrack = publication.track;
+          // LiveKit reports the end of the camera itself (TrackEvent.Ended),
+          // also after each restart of the track and under a background, where
+          // `mediaStreamTrack` is the processor's picture and does not end with
+          // the camera. Once per track: a reconnect publishes the same track again.
+          if (cameraTrack && !cameraEndWatched.has(cameraTrack)) {
+            cameraEndWatched.add(cameraTrack);
+            cameraTrack.on(TrackEvent.Ended, async () => {
               // User-initiated camera-off → skip the probe + toast entirely.
               if (consumeIntentionalCameraOff()) return;
               // Room is tearing down or has been replaced → skip.
@@ -935,7 +974,7 @@ export function useLiveKit() {
               useVoiceStore.setState({ isCameraOn: false });
               broadcastVoiceStatus();
               useUIStore.getState().addToast(copy, 'warning');
-            };
+            });
           }
         }
         // NOTE: Microphone track-loss is handled at the AudioManager layer via

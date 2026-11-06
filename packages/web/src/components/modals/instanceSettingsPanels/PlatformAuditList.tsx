@@ -3,6 +3,7 @@ import { isPeerTrustChange, isPlatformAuditAction, type PlatformAuditAction, typ
 import { isGrantedSpaceBadge, isGrantedUserBadge } from '@backspace/shared/src/badges';
 import { useFormatters } from '../../../i18n/formatters';
 import { useBadgeText } from '../../../badges/badgeText';
+import { useSensitiveText } from '../../ui/Sensitive';
 
 type ActionKey = `admin:platform.audit.actions.${PlatformAuditAction}`;
 
@@ -23,6 +24,8 @@ export function PlatformAuditList({ entries, compact = false }: { entries: reado
   const { t } = useTranslation(['admin', 'common']);
   const f = useFormatters();
   const badgeText = useBadgeText();
+  // A space's own address lets anyone in: streamer mode hides it.
+  const sensitive = useSensitiveText();
 
   if (entries.length === 0) {
     return <p className="text-meta text-txt-tertiary">{t('admin:platform.audit.empty')}</p>;
@@ -65,7 +68,7 @@ export function PlatformAuditList({ entries, compact = false }: { entries: reado
         return fields.length > 0 ? t('admin:platform.audit.details.fields', { fields: f.formatList(fields) }) : null;
       }
       case 'space_vanity_revoke':
-        return typeof details.code === 'string' ? `/join/${details.code}` : null;
+        return typeof details.code === 'string' ? `/join/${sensitive(details.code)}` : null;
       case 'peer_trust':
         return isPeerTrustChange(details.change) ? t(`admin:platform.audit.details.peer.${details.change}`) : null;
       case 'storage_cleanup':

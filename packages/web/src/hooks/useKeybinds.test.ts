@@ -141,4 +141,30 @@ describe('global shortcut renderer bridge', () => {
     });
     expect(mock.voice.setMuted.mock.calls).toEqual([[false], [true]]);
   });
+  it('turns streamer mode on and off anywhere, in a call or not, and says which', async () => {
+    const { useStreamerModeStore } = await import('../streamer/streamerModeStore');
+    const { useUIStore } = await import('../stores/uiStore');
+    const addToast = vi.spyOn(useUIStore.getState(), 'addToast');
+    const inCall = mock.voice.currentVoiceChannelId;
+    mock.voice.currentVoiceChannelId = null as unknown as string;
+    const now = vi.spyOn(Date, 'now').mockReturnValue(30000);
+    try {
+      renderHook(() => useKeybinds());
+      act(() => actionListener({ actionId: 'toggleStreamerMode', pressed: true }));
+      expect(useStreamerModeStore.getState().on).toBe(true);
+      expect(addToast).toHaveBeenLastCalledWith('Streamer mode is on.', 'info', 2500);
+      // Letting go of the keys does nothing.
+      act(() => actionListener({ actionId: 'toggleStreamerMode', pressed: false }));
+      expect(useStreamerModeStore.getState().on).toBe(true);
+      now.mockReturnValue(31000);
+      act(() => actionListener({ actionId: 'toggleStreamerMode', pressed: true }));
+      expect(useStreamerModeStore.getState().on).toBe(false);
+      expect(addToast).toHaveBeenLastCalledWith('Streamer mode is off.', 'info', 2500);
+    } finally {
+      mock.voice.currentVoiceChannelId = inCall;
+      now.mockRestore();
+      addToast.mockRestore();
+      useStreamerModeStore.setState(useStreamerModeStore.getInitialState(), true);
+    }
+  });
 });

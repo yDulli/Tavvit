@@ -82,6 +82,39 @@
         "unavailable": "Die ausgewählte Kamera ist nicht verfügbar.",
         "notFound": "Keine Kamera gefunden.",
         "generic": "Die Kameravorschau konnte nicht gestartet werden."
+      },
+      "background": {
+        "label": "Hintergrund",
+        "choice": {
+          "none": "Keiner",
+          "blur": {
+            "light": "Leicht weich",
+            "strong": "Stark weich"
+          },
+          "scene": {
+            "graphite": "Graphit",
+            "tavern": "Taverne",
+            "library": "Bibliothek",
+            "nightWindow": "Nachtfenster",
+            "greenhouse": "Gewächshaus"
+          },
+          "own": "Dein Bild"
+        },
+        "own": {
+          "add": "Bild hinzufügen",
+          "replace": "Anderes Bild wählen",
+          "remove": "Bild entfernen",
+          "missing": "Dein Bild ist nicht mehr auf diesem Gerät. Bis du eines hinzufügst, wird dein Raum weichgezeichnet.",
+          "problem": {
+            "tooLarge": "Die Datei ist größer als 25 MB.",
+            "notAnImage": "Dieser Browser kann die Datei nicht als Bild öffnen.",
+            "notKept": "Dieser Browser hat das Bild nicht behalten. In einem privaten Fenster geht das oft nicht."
+          }
+        },
+        "preparing": "Hintergrund wird vorbereitet…",
+        "failed": "Der Hintergrund konnte auf diesem Gerät nicht starten.",
+        "strained": "Dieses Gerät kommt kaum hinterher. Mit leichter Unschärfe oder ohne Hintergrund bleibt dein Bild flüssig.",
+        "private": "Hintergründe entstehen auf diesem Gerät. Dein Bild bleibt hier und wird nie hochgeladen."
       }
     },
     "title": "Sprache & Video",
@@ -541,6 +574,28 @@
           "nobody": "Niemand"
         }
       }
+    },
+    "streamer": {
+      "title": "Streamer-Modus",
+      "description": "Hält Persönliches von deinem Bildschirm fern, während du streamst oder ihn teilst. Die Einstellung gilt für dieses Gerät.",
+      "on": "Streamer-Modus",
+      "automatic": "Von selbst einschalten",
+      "automaticDescription": "Wenn OBS, Streamlabs oder XSplit startet, und wieder aus, wenn es schließt, außer du hast ihn selbst ausgeschaltet.",
+      "automaticDesktopOnly": "In der Desktop-App kann er sich von selbst einschalten, wenn OBS, Streamlabs oder XSplit startet.",
+      "hidesTitle": "Solange er an ist, verbirgt Tavvit",
+      "hides": {
+        "email": "Deine E-Mail-Adresse",
+        "invites": "Einladungslinks und -codes (Kopieren geht weiterhin)",
+        "instances": "Deine verbundenen Instanzen",
+        "twoFactor": "Zwei-Faktor-Geheimnisse und Wiederherstellungscodes",
+        "sessions": "Wo deine Sitzungen angemeldet sind",
+        "tokens": "Bot-Tokens und Webhook-Adressen",
+        "notes": "Notizen der Moderation zu Konten",
+        "notifications": "Was Benachrichtigungen sagen"
+      },
+      "shortcut": "Tastenkürzel: {{keys}}.",
+      "noShortcut": "Noch kein Tastenkürzel.",
+      "setShortcut": "Unter Tastenkürzel festlegen"
     }
   },
   "connections": {
@@ -570,7 +625,8 @@
       "pushToTalk": "Push-to-Talk",
       "toggleCamera": "Kamera ein/aus",
       "toggleScreenShare": "Bildschirmfreigabe ein/aus",
-      "disconnect": "Verbindung trennen"
+      "disconnect": "Verbindung trennen",
+      "toggleStreamerMode": "Streamer-Modus ein/aus"
     },
     "row": {
       "recordingPrompt": "Tastenkombination drücken…",

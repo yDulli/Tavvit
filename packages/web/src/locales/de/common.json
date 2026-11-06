@@ -305,5 +305,17 @@
     "required": "Bestätige deine E-Mail-Adresse, um in Spaces zu schreiben und zu reagieren, Spaces zu erstellen und Gespräche mit Leuten zu beginnen, die nicht deine Freunde sind.",
     "open": "Einstellungen öffnen",
     "dismiss": "Nicht jetzt"
+  },
+  "streamerMode": {
+    "hidden": "Im Streamer-Modus verborgen",
+    "hiddenBlock": "Verborgen, solange der Streamer-Modus an ist.",
+    "turnOff": "Streamer-Modus ausschalten",
+    "badge": "Streamer-Modus",
+    "badgeLabel": "Streamer-Modus ist an. Einstellungen öffnen",
+    "notification": "Du hast eine neue Benachrichtigung.",
+    "onBySoftware": "Streamer-Modus ist an: Ein Streaming-Programm wurde gestartet.",
+    "offBySoftware": "Streamer-Modus ist aus: Das Streaming-Programm wurde geschlossen.",
+    "turnedOn": "Streamer-Modus ist an.",
+    "turnedOff": "Streamer-Modus ist aus."
   }
 }

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { api, HttpError } from '../../api/client';
 import { useHomeInstanceInfo } from '../../hooks/useHomeInstanceInfo';
 import { describeError } from '../../i18n/errors';
+import { useSensitiveText } from '../ui/Sensitive';
 import { AUTH_LINK, AUTH_SUBMIT, AuthShell } from './AuthShell';
 import { useLinkToken } from './linkToken';
 
@@ -14,6 +15,7 @@ import { useLinkToken } from './linkToken';
  */
 export function VerifyEmailPage() {
   const { t } = useTranslation(['auth', 'common']);
+  const sensitive = useSensitiveText();
   const instanceInfo = useHomeInstanceInfo();
   const token = useLinkToken();
   const [busy, setBusy] = useState(false);
@@ -37,7 +39,7 @@ export function VerifyEmailPage() {
     title = t('auth:verify.doneTitle');
     body = (
       <>
-        <p className="mb-5 break-words text-ui leading-5 text-txt-secondary">{t('auth:verify.doneBody', { address: confirmed })}</p>
+        <p className="mb-5 break-words text-ui leading-5 text-txt-secondary">{t('auth:verify.doneBody', { address: sensitive(confirmed) })}</p>
         <Link to="/channels/@me" className={`${AUTH_SUBMIT} flex items-center justify-center`}>{t('auth:verify.continue')}</Link>
       </>
     );

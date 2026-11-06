@@ -93,6 +93,17 @@ WebAssembly compilation only. It does not re-enable `eval()` or
 `new Function()`, which is why it exists as a separate source expression rather
 than being folded into `'unsafe-eval'`.
 
+The camera backgrounds (1.35.0, voice.md "Camera backgrounds") need nothing
+more: MediaPipe compiles its WebAssembly under the same `'wasm-unsafe-eval'`,
+and adds its loader as a `<script src>` element pointing at the app's own
+`/mediapipe/<version>/vision_wasm_internal.js` (`packages/web/src/build/visionAssets.mjs`),
+which `script-src 'self'` allows. The loader uses neither `eval` nor
+`new Function`. The model is fetched from `assets/` (`connect-src 'self'`), the
+person's own background picture is an object URL (`img-src blob:`), and the
+segmentation runs in WebGL on the page, with no worker. Nothing of it comes from
+another origin: the CDN and Google Storage addresses LiveKit and MediaPipe use
+by default are always replaced by the app's own.
+
 **`frame-src` listing three origins** - `packages/server/src/utils/embedClassifier.ts`
 produces `embedUrl` values on exactly three hosts:
 `https://www.youtube-nocookie.com` (line 73), `https://player.vimeo.com`

@@ -998,6 +998,7 @@ All handlers registered in `main.ts:registerIpcHandlers()`.
 | `get-auto-launch-settings` | R->M | `{ openAtLogin, startMinimized }` | Merge OS state with saved prefs |
 | `set-auto-launch-settings` | R->M | `{ openAtLogin, startMinimized }` | Save + apply to OS |
 | `get-current-activity` | R->M | `Activity \| null` | Current detected game activity |
+| `streaming-watch` | R->M | `boolean \| null` | Start (`true`) or stop (`false`) watching for streaming programs; answers what is known now, null before the first listing (see Streaming Programs) |
 | `check-accessibility` | R->M | `boolean` | macOS accessibility permission check |
 | `get-recovery-state` | R->M | `RecoveryState` | Recovery page reads initial state on mount |
 | `get-update-status` | R->M | `UpdateSnapshot` | Renderer reads the current snapshot on mount |
@@ -1015,6 +1016,7 @@ All handlers registered in `main.ts:registerIpcHandlers()`.
 | `update-error` | `{ message, releaseUrl }` | electron-updater (only after confirmed update) |
 | `screen-share-sources` | `ElectronScreenSource[]` | Display media handler |
 | `activity-detected` | `Activity \| null` | Activity detector poll |
+| `streaming-programs` | `boolean` | A streaming program started or stopped, while the page watches (`streaming-watch`) |
 | `keybind-action` | `{ actionId, pressed }` | KeybindManager match |
 | `accessibility-status` | `{ trusted }` | macOS accessibility check result |
 | `keybind-hook-error` | `{ message }` | uIOhook start failure |
@@ -1059,6 +1061,8 @@ Detection: `typeof window.backspace !== 'undefined'` (see `platform.ts:isElectro
 | `getCurrentActivity()` | invoke | R->M | Returns `Promise<Activity \| null>` |
 | `setCallActive(active)` | fire | R->M | Optional (shells before automatic installs lack it). Sends `set-call-active`; called by `callStateBridge.ts` |
 | `getGameDetection()`, `setGameDetectionEnabled(enabled)`, `removeDetectedGame(process)` | invoke | R->M | Optional (shells before game-detection settings lack them). The `game-detection-*` channels in Activity Detection; Settings → Games tells a shell without `getGameDetection` to update |
+| `watchStreamingPrograms(enabled)` | invoke | R->M | Optional (shells before 1.35.0 lack it). `streaming-watch`; returns `Promise<boolean \| null>` |
+| `onStreamingPrograms(cb)` | listen | M->R | Optional. `streaming-programs`; only a boolean reaches `cb`. Returns cleanup function |
 | `syncKeybinds(keybinds)` | fire | R->M | |
 | `onKeybindAction(cb)` | listen | M->R | Returns cleanup function |
 | `onAccessibilityStatus(cb)` | listen | M->R | Returns cleanup function |
@@ -1095,7 +1099,7 @@ Finds out which game the person is playing, every 15 seconds, in four ways, with
 3. **The game list** (`resources/games.json`) knows well-known games from everywhere else by their process names: Battle.net, Riot, Rockstar, Ubisoft, EA, HoYoverse, Roblox, and games without a launcher.
 4. **Window titles** tell the few games that run inside a program plenty of other things use: Minecraft Java Edition is `javaw.exe`.
 
-`gameMatching.ts` holds what is pure (reading the answers, the list, choosing a game), `gameLibraries.ts` what the launchers leave on this computer, `activityDetector.ts` the polling and the sync. All of it is read on the person's computer and nothing leaves it except the name of the game being shown.
+`gameMatching.ts` holds what is pure (reading the answers, the list, choosing a game), `gameLibraries.ts` what the launchers leave on this computer, `processWatch.ts` the listing of running programs (shared with Streaming Programs), `activityDetector.ts` the matching and the sync. All of it is read on the person's computer and nothing leaves it except the name of the game being shown.
 
 There is no picker. The app does not list the programs on someone's computer, not to them and not to anyone. **What it cannot find:** a game outside all four ways, for instance one from the Xbox app or one without a launcher that is not on the list. The way to fix that is a new entry in the list, which reaches every installed app (below). Steam, Epic, GOG and window titles are Windows only; on Mac and Linux, where no build is shipped yet, only process names count, and Minecraft Java Edition is not found.
 
@@ -1183,13 +1187,15 @@ Step 2: If remote version > the version in use → atomic write to the saved cop
 
 **Taking over a list** (`applyDictionary()`): Replaces the list in memory without touching `currentGameId` or `currentActivity`. A game being shown stays shown.
 
-### Process Polling
+### Process Polling (`processWatch.ts`)
 
-**Interval:** 15 seconds (`POLL_INTERVAL_MS`). First poll runs immediately on start.
+The listing of running programs is one, shared by everything that wants to know what runs: game detection here, and the streaming programs that turn on streamer mode (Streaming Programs, below). A machine that wants both is still asked once a round. `watchProcesses(watcher)` starts the listing with the first watcher and stops it with the last; a new watcher hears at once, then every round.
 
-**Guard:** `isPolling` flag prevents overlapping polls if a previous poll hasn't finished. `generation` moves on every start and stop, so a poll still running then writes nothing.
+**Interval:** 15 seconds (`PROCESS_POLL_MS`). A new watcher, and `listProcessesNow()` (a program added or removed by hand), list at once.
 
-**Error handling:** A listing that fails (an error, or no answer within `SCAN_TIMEOUT_MS`, 10 seconds, on a busy machine) is tried again at the next poll; detection never stops by itself. Of failures in a row, only the first is logged. After `FAILURES_BEFORE_CLEAR` (3) failures in a row the game shown last is no longer known to be running, so it is cleared and `activity-detected` null is sent. A listing that succeeds resets the count. A launcher that cannot be asked counts as having nothing running.
+**Guard:** a listing asked for while one runs runs right after it, never beside it. Game detection keeps its own `generation`, which moves on every start and stop, so its search through the launchers that was still running then writes nothing; a watcher that left while the listing ran is not told of it.
+
+**Error handling:** A listing that fails (an error, or no answer within `SCAN_TIMEOUT_MS`, 10 seconds, on a busy machine) is tried again at the next round; nothing stops by itself. Of failures in a row, only the first is logged. After `FAILURES_BEFORE_UNKNOWN` (3) failures in a row the watchers are told, once, that nothing is known to run (`null`): game detection then clears the game shown last and sends `activity-detected` null; streaming detection changes nothing, so streamer mode does not go off because the machine was too busy to say. A listing that succeeds resets the count. A launcher that cannot be asked counts as having nothing running.
 
 ### Platform Commands
 
@@ -1206,9 +1212,9 @@ Every command runs with `SCAN_OPTIONS`: `windowsHide: true`, so a packaged app d
 
 **Whose programs:** on Windows only the session this app runs in counts, told by the app's own row in the listing. Services and what another account on the computer has running are not what this person is playing.
 
-### Matching Algorithm (`poll()`)
+### Matching Algorithm (`onProcesses()`)
 
-1. Read the process list into a set of `processKey` names.
+1. Take the round's listing (`processWatch.ts`), a set of `processKey` names.
 2. Collect everything being played, in order of priority (`findRunningGames`): programs added by hand, then Steam's running games, then Epic and GOG games whose program runs, then entries of the list whose program runs or whose window rule holds.
 3. **Choose one** (`chooseGame`): a game not seen at the last poll wins, since that is what the person just turned to; while nothing new starts, the one showing stays, so the status does not jump; when it ends, the highest priority of what still runs takes over.
 4. **Another name than the one showing:** build the `Activity` with `timestamps.start` set to when that game was first seen, which survives another game coming and going in between (`runningSince`), and fire `onChangeCallback`.
@@ -1233,6 +1239,19 @@ interface Activity {
 - **Stop:** `stopActivityDetection()` — called from `before-quit` and when detection is turned off; it also forgets the current game
 - **Programs added by hand:** `setUserGames(games)` — called at startup and after a remove; a removed program that was being shown is cleared at once, and while detection runs the next poll runs at once
 - **Query:** `getCurrentActivity()` — exposed via `get-current-activity` IPC handle (null while detection is off)
+
+---
+
+## Streaming Programs
+
+Streamer mode in the web client may turn on by itself while a broadcasting program runs (`docs/systems/streamer-mode.md`). The app tells the page whether one does, and only while the page asks; main keeps no setting of its own and decides nothing.
+
+- **Which programs** (`streamingSoftware.ts`, `STREAMING_PROGRAMS`): OBS Studio (`obs64.exe`, `obs32.exe`, `obs.exe`; `OBS` on macOS; `obs` on Linux), Streamlabs Desktop (`Streamlabs Desktop.exe`, and `Streamlabs OBS.exe` from before its rename; `Streamlabs Desktop`, `Streamlabs OBS` on macOS) and XSplit Broadcaster (`XSplit.Core.exe`, `XSplitBroadcaster.exe`; Windows only). Compared as `processKey` gives them, from the same listing as the games (`processWatch.ts`), so on Windows only this person's session counts.
+- **Asking:** `streaming-watch` with `true` starts watching (`watchStreamingPrograms`), with `false` stops it; either way the answer is what is known now, null before the first listing. The page asks while its streamer mode is allowed to turn on by itself (the default) and stops when the person does not allow it.
+- **Telling:** `streaming-programs` with `true` or `false`, with the first listing and then only on a change. A listing that keeps failing (`null`) changes nothing.
+- **Quitting:** `before-quit` stops the watching.
+
+Nothing about this leaves the computer: the page uses it to hide things on its own screen.
 
 ---
 
@@ -1441,6 +1460,9 @@ interface Keybind {
 | `toggleCamera` | Toggle Camera | toggle |
 | `toggleScreenShare` | Toggle Screen Share | toggle |
 | `disconnect` | Disconnect | toggle |
+| `toggleStreamerMode` | Toggle Streamer Mode | toggle |
+
+The desktop's `KEYBIND_ACTIONS` (`keybindPolicy.ts`) and the Wayland portal's descriptions (`globalShortcutsPortal.ts`) name the same actions; an action missing there is never registered globally.
 
 ### useKeybinds Hook
 
@@ -1464,7 +1486,7 @@ Three parallel systems:
 
 ### Action Dispatch (`dispatchKeybindAction()`)
 
-Only dispatches when user is in a voice channel (`currentVoiceChannelId` exists).
+`toggleStreamerMode` works anywhere: on `pressed: true` it toggles streamer mode and says which way it went in a toast, since the shortcut is pressed while looking at something else. Every other action dispatches only when the user is in a voice channel (`currentVoiceChannelId` exists).
 
 Checks space mute/deafen enforcement state before dispatching mute/deafen actions (see `voice.md` for voice moderation details).
 
@@ -1701,8 +1723,9 @@ Electron's default `app.getName()` reads `package.json`'s `name`, which in this 
 ### Shutdown Sequence (`before-quit`)
 
 1. Set `isQuitting = true` (allows window close to proceed)
-2. Stop activity detection (clear interval, null callback)
-3. Stop keybind manager (release active actions, stop uIOhook)
+2. Stop activity detection (stop watching the listing, null callback)
+3. Stop watching for streaming programs (`stopWatchingStreams`); with nothing left watching, the listing stops
+4. Stop keybind manager (release active actions, stop uIOhook)
 
 ## The rename from Orbit (1.13.0)
 

@@ -20,6 +20,7 @@ import { BadgeList } from '../../../badges/BadgeList';
 import { Modal } from '../../ui/Modal';
 import { Avatar } from '../../ui/Avatar';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
+import { Sensitive } from '../../ui/Sensitive';
 import { ListingPreview, ReviewDecisionDialog, ReviewHistory, ReviewStatusChip } from '../../review/ReviewParts';
 import { PlatformAuditList } from './PlatformAuditList';
 
@@ -303,7 +304,7 @@ export function AdminSpaceDetailModal({
             <section className="space-y-2">
               <h3 className="label-mono">{t('admin:platform.vanity.title')}</h3>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="min-w-0 break-all font-mono text-ui text-txt-primary">{joinPath}</span>
+                <span className="min-w-0 break-all font-mono text-ui text-txt-primary"><Sensitive>{joinPath}</Sensitive></span>
                 <button type="button" onClick={() => setRevoking(true)} className="btn-outline btn-sm flex-shrink-0">
                   {t('admin:platform.vanity.revoke')}
                 </button>

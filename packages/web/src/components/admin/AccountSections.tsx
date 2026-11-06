@@ -9,6 +9,7 @@ import { describeError } from '../../i18n/errors';
 import { useFormatters } from '../../i18n/formatters';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Icon } from '../ui/Icon';
+import { Sensitive, SensitiveBlock } from '../ui/Sensitive';
 
 /**
  * Where this account is signed in, and the way to end that. It signs them out and shows in
@@ -67,7 +68,7 @@ export function AccountSessionsSection({ userId, isSelf, onChanged }: { userId: 
                 <span className="block truncate text-ui text-txt-primary">{session.clientLabel ?? t('admin:console.account.unknownDevice')}</span>
                 <span className="block truncate text-meta text-txt-tertiary">
                   {t('admin:console.account.lastActive', { date: f.formatDateTime(session.lastActiveAt) })}
-                  {session.addressHint ? ` · ${session.addressHint}` : ''}
+                  {session.addressHint && <>{' · '}<Sensitive>{session.addressHint}</Sensitive></>}
                 </span>
               </span>
               {!isSelf && (
@@ -128,7 +129,11 @@ export function AccountSecuritySection({ userId }: { userId: string }) {
                 <span className="flex-shrink-0 font-mono text-label text-txt-tertiary">{f.formatDateTime(event.createdAt)}</span>
               </div>
               {(event.clientLabel || event.addressHint) && (
-                <p className="truncate text-meta text-txt-tertiary">{[event.clientLabel, event.addressHint].filter(Boolean).join(' · ')}</p>
+                <p className="truncate text-meta text-txt-tertiary">
+                  {event.clientLabel}
+                  {event.clientLabel && event.addressHint && ' · '}
+                  {event.addressHint && <Sensitive>{event.addressHint}</Sensitive>}
+                </p>
               )}
             </li>
           ))}
@@ -275,48 +280,51 @@ export function AccountNotesSection({ userId, isDeleted, onChanged }: { userId: 
     <section className="space-y-2">
       <h3 className="label-mono">{t('admin:console.account.notes')}</h3>
       {error && <p role="alert" className="text-meta text-txt-danger">{error}</p>}
-      {notes !== null && notes.length > 0 && (
-        <ul className="surface-card divide-y divide-border-hard rounded-lg">
-          {notes.map((note) => (
-            <li key={note.id} className="flex items-start gap-2 px-3 py-2">
-              <div className="min-w-0 flex-1">
-                <p className="whitespace-pre-wrap break-words text-ui text-txt-primary">{note.body}</p>
-                <p className="mt-0.5 text-meta text-txt-tertiary">
-                  {note.author ? `${note.author.displayName || `@${note.author.username}`} · ` : ''}
-                  {f.formatDateTime(note.createdAt)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void remove(note.id)}
-                aria-label={t('admin:console.account.deleteNote')}
-                className="icon-btn flex-shrink-0"
-              >
-                <Icon name="trash" size={14} />
+      {/* What moderators wrote about a person: streamer mode hides the notes and the field for a new one. */}
+      <SensitiveBlock>
+        {notes !== null && notes.length > 0 && (
+          <ul className="surface-card divide-y divide-border-hard rounded-lg">
+            {notes.map((note) => (
+              <li key={note.id} className="flex items-start gap-2 px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="whitespace-pre-wrap break-words text-ui text-txt-primary">{note.body}</p>
+                  <p className="mt-0.5 text-meta text-txt-tertiary">
+                    {note.author ? `${note.author.displayName || `@${note.author.username}`} · ` : ''}
+                    {f.formatDateTime(note.createdAt)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void remove(note.id)}
+                  aria-label={t('admin:console.account.deleteNote')}
+                  className="icon-btn flex-shrink-0"
+                >
+                  <Icon name="trash" size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!isDeleted && (
+          <div className="space-y-2">
+            <label htmlFor={fieldId} className="sr-only">{t('admin:console.account.notes')}</label>
+            <textarea
+              id={fieldId}
+              value={body}
+              onChange={(event) => setBody(event.target.value.slice(0, ADMIN_NOTE_LIMITS.BODY_MAX_LENGTH))}
+              rows={2}
+              placeholder={t('admin:console.account.notePlaceholder')}
+              className="input-standard w-full resize-none"
+            />
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-meta text-txt-tertiary">{t('admin:console.account.notesHint')}</p>
+              <button type="button" onClick={() => void add()} disabled={!body.trim() || busy} aria-busy={busy} className="btn-outline btn-sm flex-shrink-0">
+                {t('admin:console.account.addNote')}
               </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {!isDeleted && (
-        <div className="space-y-2">
-          <label htmlFor={fieldId} className="sr-only">{t('admin:console.account.notes')}</label>
-          <textarea
-            id={fieldId}
-            value={body}
-            onChange={(event) => setBody(event.target.value.slice(0, ADMIN_NOTE_LIMITS.BODY_MAX_LENGTH))}
-            rows={2}
-            placeholder={t('admin:console.account.notePlaceholder')}
-            className="input-standard w-full resize-none"
-          />
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-meta text-txt-tertiary">{t('admin:console.account.notesHint')}</p>
-            <button type="button" onClick={() => void add()} disabled={!body.trim() || busy} aria-busy={busy} className="btn-outline btn-sm flex-shrink-0">
-              {t('admin:console.account.addNote')}
-            </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </SensitiveBlock>
     </section>
   );
 }

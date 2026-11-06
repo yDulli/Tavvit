@@ -6,12 +6,14 @@ import path from 'path';
 import { developerDocs } from './developers/plugin.mjs';
 import { devCspPreamble } from './src/build/devCsp';
 import { PRECACHE_GLOB_PATTERNS, PRECACHE_MAX_FILE_BYTES } from './src/build/precache';
+import { VISION_DIRECTORY, visionAssets } from './src/build/visionAssets.mjs';
 
 export default defineConfig({
   plugins: [
     devCspPreamble(),
     react(),
     developerDocs(),
+    visionAssets(),
     VitePWA({
       // 'prompt' keeps a new build waiting until SwAutoUpdate applies it, so an
       // update never reloads the page out from under a live voice session.
@@ -48,7 +50,9 @@ export default defineConfig({
           /^\/developers\/(?:docs|assets)(?:\/|$)/,
           /^\/\.well-known\//,
         ],
-        globIgnores: ['**/node_modules/**/*', 'developers/**'],
+        // The camera effects' WebAssembly (src/build/visionAssets.mjs) loads
+        // only when someone turns an effect on, never with the app.
+        globIgnores: ['**/node_modules/**/*', 'developers/**', `${VISION_DIRECTORY}/**`],
         // No skipWaiting: a new worker activates only on SwAutoUpdate's
         // SKIP_WAITING message. The one exception is replacing a worker from
         // before that flow, which public/sw-rollover.js handles.

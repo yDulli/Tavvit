@@ -86,7 +86,10 @@ describe('the YouTube player', () => {
   it('says nothing when told what it already does, so the player shows its marks only on a change', () => {
     const { player, posted, fromPlayer } = setUp();
     fromPlayer({ event: 'onReady' });
-    const commands = () => posted.filter((entry) => entry.message.event === 'command').map((entry) => entry.message.func);
+    // What the room's steering sends; the subtitles have their own test below.
+    const commands = () => posted
+      .filter((entry) => entry.message.event === 'command' && entry.message.func !== 'loadModule' && entry.message.func !== 'unloadModule')
+      .map((entry) => entry.message.func);
 
     // Paused already: no pause goes out, however often the room says so.
     fromPlayer({ event: 'onStateChange', info: 2 });
@@ -102,6 +105,36 @@ describe('the YouTube player', () => {
 
     player.pause();
     expect(commands()).toEqual(['setVolume', 'playVideo', 'pauseVideo']);
+    player.destroy();
+  });
+
+  it('keeps subtitles off unless the viewer turns them on, also each time the video starts', () => {
+    const { player, posted, fromPlayer } = setUp();
+    const modules = () => posted
+      .filter((entry) => entry.message.func === 'loadModule' || entry.message.func === 'unloadModule')
+      .map((entry) => `${String(entry.message.func)}:${String((entry.message.args as unknown[])[0])}`);
+
+    // YouTube turns them on by itself where the video's language is not the browser's.
+    fromPlayer({ event: 'onReady' });
+    expect(modules()).toEqual(['unloadModule:captions', 'unloadModule:cc']);
+    fromPlayer({ event: 'onStateChange', info: 1 });
+    expect(modules()).toEqual(['unloadModule:captions', 'unloadModule:cc', 'unloadModule:captions', 'unloadModule:cc']);
+    // Playing on: nothing new to say.
+    fromPlayer({ event: 'infoDelivery', info: { playerState: 1 } });
+    expect(modules()).toHaveLength(4);
+
+    player.setCaptions!(true);
+    expect(modules().at(-1)).toBe('loadModule:captions');
+    // Told what it already does, it says nothing.
+    player.setCaptions!(true);
+    expect(modules()).toHaveLength(5);
+    // After a pause the video starts again with the viewer's choice.
+    fromPlayer({ event: 'onStateChange', info: 2 });
+    fromPlayer({ event: 'onStateChange', info: 1 });
+    expect(modules().at(-1)).toBe('loadModule:captions');
+
+    player.setCaptions!(false);
+    expect(modules().slice(-2)).toEqual(['unloadModule:captions', 'unloadModule:cc']);
     player.destroy();
   });
 

@@ -6,6 +6,7 @@ import { describeError } from '../../../i18n/errors';
 import { useFormatters } from '../../../i18n/formatters';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
+import { SensitiveBlock } from '../../ui/Sensitive';
 import { FormError, SettingsField, SettingsSection } from './_shared/SettingsControls';
 
 /** The field for a second factor, on the forms that need one. An account without 2FA never sees it. */
@@ -93,9 +94,12 @@ function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void 
   return (
     <div className="space-y-4">
       <p className="text-ui leading-5 text-txt-secondary">{t('settings:security.twoFactor.recovery.intro')}</p>
-      <ul className="grid grid-cols-1 gap-x-6 gap-y-1 rounded-md bg-surface-input p-3 font-mono text-ui text-txt-primary desktop:grid-cols-2">
-        {codes.map((code) => <li key={code} className="select-all">{code}</li>)}
-      </ul>
+      {/* Each code opens the account: streamer mode hides the list. Copy and download still work. */}
+      <SensitiveBlock>
+        <ul className="grid grid-cols-1 gap-x-6 gap-y-1 rounded-md bg-surface-input p-3 font-mono text-ui text-txt-primary desktop:grid-cols-2">
+          {codes.map((code) => <li key={code} className="select-all">{code}</li>)}
+        </ul>
+      </SensitiveBlock>
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => { void copy(); }} className="btn-outline btn-sm">{t('settings:security.twoFactor.recovery.copy')}</button>
         <button type="button" onClick={download} className="btn-outline btn-sm">{t('settings:security.twoFactor.recovery.download')}</button>
@@ -213,13 +217,16 @@ export function TwoFactorSection({ overview, onChanged }: { overview: SecurityOv
         });
       }}>
         <p className="text-ui leading-5 text-txt-secondary">{t('settings:security.twoFactor.scan')}</p>
-        <div className="flex flex-col gap-4 desktop:flex-row desktop:items-start">
-          <QrCode text={step.setup.otpauthUrl} label={t('settings:security.twoFactor.qrLabel')} />
-          <div className="min-w-0 space-y-1.5">
-            <p className="text-meta leading-relaxed text-txt-tertiary">{t('settings:security.twoFactor.manual')}</p>
-            <p className="select-all break-all font-mono text-ui text-txt-primary">{step.setup.secret.replace(/(.{4})(?=.)/g, '$1 ')}</p>
+        {/* The secret makes the codes: anyone who scans it from a stream has the second factor. */}
+        <SensitiveBlock>
+          <div className="flex flex-col gap-4 desktop:flex-row desktop:items-start">
+            <QrCode text={step.setup.otpauthUrl} label={t('settings:security.twoFactor.qrLabel')} />
+            <div className="min-w-0 space-y-1.5">
+              <p className="text-meta leading-relaxed text-txt-tertiary">{t('settings:security.twoFactor.manual')}</p>
+              <p className="select-all break-all font-mono text-ui text-txt-primary">{step.setup.secret.replace(/(.{4})(?=.)/g, '$1 ')}</p>
+            </div>
           </div>
-        </div>
+        </SensitiveBlock>
         <SettingsField label={t('settings:security.twoFactor.firstCode')} htmlFor="two-factor-first-code">
           <input
             id="two-factor-first-code"

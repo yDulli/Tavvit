@@ -8,6 +8,7 @@ import { getApiForOrigin, useSpaceStore } from '../../../stores/spaceStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { spaceInviteUrl } from '../../../utils/inviteParser';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { Sensitive, SensitiveBlock } from '../../ui/Sensitive';
 import { SettingsPage, SettingsSection } from '../settingsPanels/_shared/SettingsControls';
 
 /** A space's own address: a link in words, which lets people in like any other and never runs out. */
@@ -53,34 +54,37 @@ function OwnAddressSection({ spaceId, origin, current }: { spaceId: string; orig
   return (
     <SettingsSection title={t('spaces:settings.invites.vanity.title')}>
       <p className="mb-3 text-ui text-txt-secondary">{t('spaces:settings.invites.vanity.intro')}</p>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (wanted && wanted !== saved) void save(wanted);
-        }}
-      >
-        <label htmlFor={`${fieldId}-code`} className="field-label">{t('spaces:settings.invites.vanity.label')}</label>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="max-w-full truncate font-mono text-meta text-txt-tertiary">{spaceInviteUrl(origin, '')}</span>
-          <input
-            id={`${fieldId}-code`}
-            type="text"
-            value={code}
-            onChange={(change) => setCode(change.target.value.slice(0, VANITY_CODE_LIMITS.MAX_LENGTH))}
-            autoCapitalize="none"
-            spellCheck={false}
-            aria-describedby={`${fieldId}-hint`}
-            className="input-standard min-w-[160px] flex-1 font-mono"
-          />
-          <button type="submit" disabled={!wanted || wanted === saved || busy} aria-busy={busy} className="btn-primary flex-shrink-0">
-            {t('common:actions.save')}
-          </button>
-        </div>
-        <p id={`${fieldId}-hint`} className="mt-1.5 text-meta text-txt-tertiary">
-          {t('spaces:settings.invites.vanity.hint', { min: VANITY_CODE_LIMITS.MIN_LENGTH, max: VANITY_CODE_LIMITS.MAX_LENGTH })}
-        </p>
-      </form>
-      {error && <p role="alert" className="mt-2 text-meta text-txt-danger">{error}</p>}
+      {/* The address lets anyone in: streamer mode hides it, and with it the field that holds it. Copy still works. */}
+      <SensitiveBlock>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (wanted && wanted !== saved) void save(wanted);
+          }}
+        >
+          <label htmlFor={`${fieldId}-code`} className="field-label">{t('spaces:settings.invites.vanity.label')}</label>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="max-w-full truncate font-mono text-meta text-txt-tertiary">{spaceInviteUrl(origin, '')}</span>
+            <input
+              id={`${fieldId}-code`}
+              type="text"
+              value={code}
+              onChange={(change) => setCode(change.target.value.slice(0, VANITY_CODE_LIMITS.MAX_LENGTH))}
+              autoCapitalize="none"
+              spellCheck={false}
+              aria-describedby={`${fieldId}-hint`}
+              className="input-standard min-w-[160px] flex-1 font-mono"
+            />
+            <button type="submit" disabled={!wanted || wanted === saved || busy} aria-busy={busy} className="btn-primary flex-shrink-0">
+              {t('common:actions.save')}
+            </button>
+          </div>
+          <p id={`${fieldId}-hint`} className="mt-1.5 text-meta text-txt-tertiary">
+            {t('spaces:settings.invites.vanity.hint', { min: VANITY_CODE_LIMITS.MIN_LENGTH, max: VANITY_CODE_LIMITS.MAX_LENGTH })}
+          </p>
+        </form>
+        {error && <p role="alert" className="mt-2 text-meta text-txt-danger">{error}</p>}
+      </SensitiveBlock>
       {saved && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <button type="button" onClick={() => void copy()} className="btn-outline btn-sm">
@@ -215,7 +219,7 @@ export function InvitesPanel({ spaceId }: { spaceId: string }) {
               <li key={invite.code} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3">
                 <div className="min-w-0 flex-1 basis-56">
                   <div className="flex items-center gap-2">
-                    <span className="truncate font-mono text-ui text-txt-primary">{invite.code}</span>
+                    <span className="truncate font-mono text-ui text-txt-primary"><Sensitive>{invite.code}</Sensitive></span>
                     {invite.standing && <span className="label-mono flex-shrink-0">{t('spaces:settings.invites.list.standing')}</span>}
                   </div>
                   <p className="mt-0.5 text-meta leading-snug text-txt-tertiary">

@@ -75,6 +75,34 @@ describe('turning it on', () => {
     expect(screen.queryByText(CODES[0]!)).toBeNull();
   });
 
+  it('keeps the secret and the recovery codes off the page while streamer mode is on, and still copies the codes', async () => {
+    const { useStreamerModeStore } = await import('../../../streamer/streamerModeStore');
+    useStreamerModeStore.setState({ on: true });
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    try {
+      vi.mocked(api.auth.twoFactorSetup).mockResolvedValue({ secret: 'JBSWY3DPEHPK3PXP', otpauthUrl: 'otpauth://totp/Tavvit:alice?secret=JBSWY3DPEHPK3PXP' });
+      vi.mocked(api.auth.twoFactorEnable).mockResolvedValue({ recoveryCodes: CODES });
+      const { container } = render(<TwoFactorSection overview={overview()} onChanged={onChanged} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+      await userEvent.type(screen.getByLabelText('Current Password'), 'secret-password');
+      await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+      expect(await screen.findByText('Hidden while streamer mode is on.')).toBeTruthy();
+      expect(screen.queryByRole('img', { name: /QR code/ })).toBeNull();
+      expect(container.textContent).not.toContain('JBSW');
+
+      await userEvent.type(screen.getByLabelText('Code from the app'), '123456');
+      await userEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Copy' })).toBeTruthy());
+      expect(container.textContent).not.toContain(CODES[0]!);
+      await userEvent.click(screen.getByRole('button', { name: 'Copy' }));
+      expect(writeText).toHaveBeenCalledWith(`${CODES.join('\n')}\n`);
+    } finally {
+      useStreamerModeStore.setState({ on: false });
+    }
+  });
+
   it('stays on the code step when the code is wrong, and says so', async () => {
     vi.mocked(api.auth.twoFactorSetup).mockResolvedValue({ secret: 'JBSWY3DPEHPK3PXP', otpauthUrl: 'otpauth://totp/Tavvit:alice?secret=JBSWY3DPEHPK3PXP' });
     vi.mocked(api.auth.twoFactorEnable).mockRejectedValue(new HttpError(400, 'No', undefined, 'mfa_code_invalid'));

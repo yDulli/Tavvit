@@ -122,8 +122,12 @@ export function FormError({ children }: { children: React.ReactNode }): React.JS
   );
 }
 
-/** Arrow keys move a radio group's choice to its neighbour, and focus with it. */
-function useRadioArrows<T extends string>(ids: readonly T[], value: T, onChange: (id: T) => void) {
+/**
+ * Arrow keys move a radio group's choice to its neighbour, and focus with it.
+ * For a choice laid out on its own (the camera backgrounds); the controls
+ * below use it themselves.
+ */
+export function useRadioArrows<T extends string>(ids: readonly T[], value: T, onChange: (id: T) => void) {
   const group = useRef<HTMLDivElement>(null);
   return {
     ref: group,

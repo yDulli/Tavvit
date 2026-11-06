@@ -221,7 +221,12 @@
     "select": "选择摄像头",
     "switch": "切换摄像头",
     "turnOn": "开启摄像头",
-    "turnOff": "关闭摄像头"
+    "turnOff": "关闭摄像头",
+    "background": {
+      "ownMissing": "你的背景图片已不在此设备上，因此你的房间改为模糊处理。",
+      "failed": "背景无法启动，因此摄像头保持关闭。如需不使用背景开启摄像头，请在“语音与视频”设置中关闭背景。",
+      "failedLive": "背景无法启动，因此摄像头已关闭。"
+    }
   },
   "joinSheet": {
     "peopleInVoice_other": "语音频道中有 {{count}} 人",
@@ -308,6 +313,7 @@
     "reactions": "回应",
     "sidebar": "正在观看：{{title}}",
     "seek": "视频进度",
-    "untitled": "一个 {{provider}} 视频"
+    "untitled": "一个 {{provider}} 视频",
+    "captions": "字幕"
   }
 }

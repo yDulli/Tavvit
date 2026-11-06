@@ -311,9 +311,12 @@ async function main(): Promise<void> {
       setHeaders: (reply, filePath) => {
         const served = path.relative(webDistPath, filePath);
         // Vite (assets/) and the website's build (_astro/) name these by their
-        // content, so a copy can never go stale. A typeface's file changes name
-        // when it changes. The rest is revalidated.
-        if (served.startsWith(`assets${path.sep}`) || served.startsWith(`_astro${path.sep}`)) reply.header('Cache-Control', 'public, max-age=31536000, immutable');
+        // content, and the camera effects' WebAssembly sits under the version
+        // of the package it comes from (mediapipe/<version>/, see
+        // packages/web/src/build/visionAssets.mjs), so a copy can never go
+        // stale. A typeface's file changes name when it changes. The rest is
+        // revalidated.
+        if (served.startsWith(`assets${path.sep}`) || served.startsWith(`_astro${path.sep}`) || served.startsWith(`mediapipe${path.sep}`)) reply.header('Cache-Control', 'public, max-age=31536000, immutable');
         else if (served.startsWith(`fonts${path.sep}`)) reply.header('Cache-Control', 'public, max-age=604800');
       },
     });

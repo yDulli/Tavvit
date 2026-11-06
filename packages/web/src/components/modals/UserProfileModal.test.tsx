@@ -129,6 +129,36 @@ describe('UserProfileModal', () => {
       expect(screen.queryByText('Add Friend')).toBeNull();
     });
 
+    it('shows no friends or spaces "in common" on the own profile, and does not ask for them', async () => {
+      const { loadFederatedMutuals } = await import('../../utils/mutuals');
+      vi.mocked(loadFederatedMutuals).mockClear();
+      useAuthStore.setState({ user: erinHere, myRowIds: new Map() });
+      useSocialStore.setState({ friends: [], requests: [] });
+      useUIStore.getState().openModal('userProfile', { userId: erinHere.id, user: erinHere, origin: '' });
+
+      render(<MemoryRouter><UserProfileModal /></MemoryRouter>);
+
+      expect(screen.queryByRole('tablist')).toBeNull();
+      expect(screen.queryByText('Mutual Friends')).toBeNull();
+      expect(screen.queryByText('Mutual Spaces')).toBeNull();
+      expect(loadFederatedMutuals).not.toHaveBeenCalled();
+    });
+
+    it('still shows the mutuals on someone else\'s profile', async () => {
+      const { loadFederatedMutuals } = await import('../../utils/mutuals');
+      vi.mocked(loadFederatedMutuals).mockClear();
+      const someone = makeUser({ id: 'someone', username: 'someone' });
+      useAuthStore.setState({ user: erinHere, myRowIds: new Map() });
+      useSocialStore.setState({ friends: [], requests: [] });
+      useUIStore.getState().openModal('userProfile', { userId: someone.id, user: someone, origin: '' });
+
+      render(<MemoryRouter><UserProfileModal /></MemoryRouter>);
+
+      expect(screen.getByRole('tablist')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Mutual Friends/ })).toBeInTheDocument();
+      await waitFor(() => expect(loadFederatedMutuals).toHaveBeenCalledWith('someone', null));
+    });
+
     it('never takes a different person with the same name for the signed-in user', () => {
       // The page's own native erin, as nova lists her: erin@<page host>, a
       // different person from the signed-in erin@nova.

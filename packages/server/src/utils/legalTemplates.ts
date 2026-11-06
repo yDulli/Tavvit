@@ -176,7 +176,9 @@ Wir speichern deine Nachrichten, Reaktionen, Lesestände und hochgeladenen Datei
 
 Sprach- und Videoverbindungen laufen über den eigenen Server des Betreibers (LiveKit). Sie werden in Echtzeit vermittelt und nicht aufgezeichnet. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
 
-Schaut ihr in einem Sprachkanal gemeinsam ein Video, hält unser Server dessen Link, Titel und die Warteschlange nur im Arbeitsspeicher, solange der Anruf läuft; gespeichert wird davon nichts. Wer den Sprachkanal sehen kann, sieht den Titel dessen, was gerade läuft; wer im Anruf ist, sieht die Links, die Warteschlange und wer die Sitzung gestartet hat. Den Titel fragt unser Server bei YouTube oder Vimeo ab; dorthin geht dabei nur der Link des Videos, nichts von dir. Das Video selbst lädt dein Gerät erst nach deiner Zustimmung (siehe „Inhalte von Dritten“).`,
+Schaut ihr in einem Sprachkanal gemeinsam ein Video, hält unser Server dessen Link, Titel und die Warteschlange nur im Arbeitsspeicher, solange der Anruf läuft; gespeichert wird davon nichts. Wer den Sprachkanal sehen kann, sieht den Titel dessen, was gerade läuft; wer im Anruf ist, sieht die Links, die Warteschlange und wer die Sitzung gestartet hat. Den Titel fragt unser Server bei YouTube oder Vimeo ab; dorthin geht dabei nur der Link des Videos, nichts von dir. Das Video selbst lädt dein Gerät erst nach deiner Zustimmung (siehe „Inhalte von Dritten“).
+
+Einen Hintergrund für deine Kamera (weichgezeichnet, eine Szene oder ein eigenes Bild) legt dein Gerät selbst über das Bild, mit einem Erkennungsmodell, das es von unserem Server lädt; in den Anruf geht nur das fertige Bild. Ein eigenes Bild bleibt in deinem Browser auf diesem Gerät, wird nie hochgeladen und wird gelöscht, wenn du dich dort abmeldest.`,
     `## 6. Status und Aktivität
 
 Andere sehen, ob du online bist, und auf Wunsch deinen Status. In der Desktop-App erkennt eine Prüfung auf deinem Computer laufende Spiele; nur der Name eines erkannten Spiels wird geteilt, und nur solange Aktivität teilen eingeschaltet ist. Beides stellst du in den Einstellungen ab. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.`,
@@ -246,7 +248,9 @@ We store your messages, reactions, read states and uploaded files in order to sh
 
 Voice and video connections run through the operator's own server (LiveKit). They are relayed in real time and not recorded. The legal basis is Art. 6(1)(b) GDPR.
 
-When you watch a video together in a voice channel, our server holds its link, its title and the queue in memory only, while the call lasts; none of it is stored. Whoever can see the voice channel sees the title of what is playing; those in the call see the links, the queue and who started the session. Our server asks YouTube or Vimeo for the title; only the video's link goes there, nothing of yours. Your device loads the video itself only once you agree (see "Content from third parties").`,
+When you watch a video together in a voice channel, our server holds its link, its title and the queue in memory only, while the call lasts; none of it is stored. Whoever can see the voice channel sees the title of what is playing; those in the call see the links, the queue and who started the session. Our server asks YouTube or Vimeo for the title; only the video's link goes there, nothing of yours. Your device loads the video itself only once you agree (see "Content from third parties").
+
+A background for your camera (blurred, a scene or a picture of your own) is laid over the picture by your device itself, with a recognition model it loads from our server; only the finished picture goes into the call. A picture of your own stays in your browser on that device, is never uploaded, and is deleted when you sign out there.`,
     `## 6. Status and activity
 
 Others see whether you are online and, if you wish, your status. In the desktop app, a check on your computer recognises running games; only the name of a recognised game is shared, and only while sharing activity is on. You can turn both off in the settings. The legal basis is Art. 6(1)(b) GDPR.`,

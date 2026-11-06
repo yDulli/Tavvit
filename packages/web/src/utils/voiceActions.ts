@@ -8,6 +8,9 @@ import { broadcastVoiceStatus, broadcastDeafenViaLiveKit, preArmMicrophone } fro
 import { dmCallOrigin, dmCallRoomKey, sendDmCallEnd } from './dmCall';
 import { CAMERA_PRESET, stopScreenShare } from './screenShare';
 import { openScreenShareSetup } from '../stores/screenShareSetupStore';
+import { turnCameraOn } from '../camera/call';
+import { CameraBackgroundFailed } from '../camera/errors';
+import i18n from '../i18n';
 
 /**
  * One-shot flag used to distinguish user-initiated camera-off from unexpected
@@ -84,10 +87,27 @@ export function toggleDeafenFromControl(): void {
 }
 
 /**
+ * The toggle in flight, if any. A second click while the camera is still
+ * turning on or off waits for the first rather than starting another: with a
+ * background the camera is published by hand (`turnCameraOn`), and two at once
+ * would publish two cameras.
+ */
+let cameraToggle: Promise<void> | null = null;
+
+/**
  * Toggle camera. Requires LiveKit room. Sole canonical camera-toggle path —
  * the voice-bar button, mobile button, and keybind all funnel through here.
+ * Turning it on goes through `turnCameraOn`, which lays the chosen background
+ * over the picture before anything is sent (camera/call.ts).
  */
-export async function handleCameraAction(): Promise<void> {
+export function handleCameraAction(): Promise<void> {
+  cameraToggle ??= toggleCamera().finally(() => {
+    cameraToggle = null;
+  });
+  return cameraToggle;
+}
+
+async function toggleCamera(): Promise<void> {
   const room = getActiveRoom();
   if (!room) return;
   const isCameraOn = useVoiceStore.getState().isCameraOn;
@@ -100,15 +120,12 @@ export async function handleCameraAction(): Promise<void> {
         frameRate: CAMERA_PRESET.encoding.maxFramerate,
       };
       if (cameraDeviceId) captureOpts.deviceId = cameraDeviceId;
-      await room.localParticipant.setCameraEnabled(
-        true,
-        captureOpts,
-        {
-          videoCodec: CAMERA_PRESET.codec,
-          videoEncoding: CAMERA_PRESET.encoding,
-          simulcast: true,
-        }
-      );
+      const { substituted } = await turnCameraOn(room, captureOpts, {
+        videoCodec: CAMERA_PRESET.codec,
+        videoEncoding: CAMERA_PRESET.encoding,
+        simulcast: true,
+      });
+      if (substituted) useUIStore.getState().addToast(i18n.t('voice:camera.background.ownMissing'), 'info');
     } else {
       // Mark this disable as intentional so the track-`ended` handler skips
       // its unplug/permission-revoke probe + toast.
@@ -125,6 +142,9 @@ export async function handleCameraAction(): Promise<void> {
     useVoiceStore.getState().toggleCamera();
     broadcastVoiceStatus();
   } catch (err) {
+    if (err instanceof CameraBackgroundFailed) {
+      useUIStore.getState().addToast(i18n.t('voice:camera.background.failed'), 'warning');
+    }
     console.error('[voiceActions] Failed to toggle camera:', err);
   }
 }

@@ -16,6 +16,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { startActivityDetection, stopActivityDetection, getCurrentActivity, setUserGames } from './activityDetector';
+import { watchStreamingPrograms } from './streamingSoftware';
 import { loadSettings as loadGameDetection, saveSettings as saveGameDetection, withoutUserGame, type GameDetectionSettings } from './gameDetectionSettings';
 import { KeybindManager } from './keybindManager';
 import { createKeybindSyncLimit } from './keybindPolicy';
@@ -91,6 +92,8 @@ const keybindManager = new KeybindManager();
 let tray: Tray | null = null;
 let isQuitting = false;
 let pendingDeepLink: string | null = null;
+/** Stops telling the page about streaming programs ("Streaming programs" below); nothing until the app is ready. */
+let stopWatchingStreams: () => void = () => {};
 
 const knownInstanceOrigins = new Set<string>();
 
@@ -1579,6 +1582,32 @@ if (!gotTheLock) {
       return gameDetectionState();
     });
 
+    // ─── Streaming programs ────────────────────────────────────────────────
+    // While the page asks (its streamer mode turns on by itself), it is told
+    // whether OBS, Streamlabs or XSplit runs (streamingSoftware.ts). The page
+    // decides what that means; main keeps no setting of its own. The answer
+    // to asking is what is known now, null before the first listing; changes
+    // come as 'streaming-programs'.
+    let stopStreamingWatch: (() => void) | null = null;
+    let streamingRunning: boolean | null = null;
+    stopWatchingStreams = () => {
+      stopStreamingWatch?.();
+      stopStreamingWatch = null;
+      streamingRunning = null;
+    };
+    ipcMain.handle('streaming-watch', (_event, enabled: unknown) => {
+      if (typeof enabled !== 'boolean') return streamingRunning;
+      if (enabled && !stopStreamingWatch) {
+        stopStreamingWatch = watchStreamingPrograms((running) => {
+          streamingRunning = running;
+          mainWindow?.webContents.send('streaming-programs', running);
+        });
+      } else if (!enabled) {
+        stopWatchingStreams();
+      }
+      return streamingRunning;
+    });
+
     migrateLegacyLoginItem();
 
     // Linux/AppImage path-refresh ONLY. On Windows and macOS the OS is the source
@@ -1639,6 +1668,7 @@ if (!gotTheLock) {
     systemAudio.stop();
     isQuitting = true;
     stopActivityDetection();
+    stopWatchingStreams();
     keybindManager.stop();
   });
 }

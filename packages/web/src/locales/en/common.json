@@ -305,5 +305,17 @@
     "required": "Confirm your email address to write and react in spaces, to create spaces and to start conversations with people who are not your friends.",
     "open": "Open settings",
     "dismiss": "Not now"
+  },
+  "streamerMode": {
+    "hidden": "Hidden in streamer mode",
+    "hiddenBlock": "Hidden while streamer mode is on.",
+    "turnOff": "Turn off streamer mode",
+    "badge": "Streamer mode",
+    "badgeLabel": "Streamer mode is on. Open its settings",
+    "notification": "You have a new notification.",
+    "onBySoftware": "Streamer mode is on: a streaming program started.",
+    "offBySoftware": "Streamer mode is off: the streaming program closed.",
+    "turnedOn": "Streamer mode is on.",
+    "turnedOff": "Streamer mode is off."
   }
 }

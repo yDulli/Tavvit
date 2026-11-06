@@ -5,6 +5,7 @@ import { AudioManager } from '../audio/AudioManager';
 import { useSpaceStore, getChannelOrigin, getMyUserIdForOrigin } from './spaceStore';
 import { useAuthStore } from './authStore';
 import { isElectron } from '../platform/platform';
+import { NO_BACKGROUND, parseCameraBackground, type CameraBackground } from '../camera/backgrounds';
 
 export interface ScreenShareConfig {
   height: number | 'native';
@@ -120,6 +121,8 @@ export interface VoiceState {
   inputDeviceId: string;
   outputDeviceId: string;
   cameraDeviceId: string | null; // null = auto-select on next camera enable
+  /** What the camera shows behind the person, on this device (camera/backgrounds.ts). */
+  cameraBackground: CameraBackground;
   focusedParticipantId: string | null;
   screenShareConfig: ScreenShareConfig;
   /**
@@ -195,6 +198,7 @@ export interface VoiceState {
   setInputDevice: (deviceId: string) => void;
   setOutputDevice: (deviceId: string) => void;
   setCameraDeviceId: (deviceId: string | null) => void;
+  setCameraBackground: (background: CameraBackground) => void;
   pruneStaleDevices: () => Promise<void>;
   pttActive: boolean;
   setMuted: (muted: boolean) => void;
@@ -313,6 +317,7 @@ export const useVoiceStore = create<VoiceState>()(
       inputDeviceId: 'default',
       outputDeviceId: 'default',
       cameraDeviceId: null,
+      cameraBackground: NO_BACKGROUND,
       focusedParticipantId: null,
       screenShareConfig: { height: 720, fps: 60, mode: 'gaming', customBitrateKbps: null, shareAudio: !isElectron(), codec: 'vp9' },
       lastScreenShareSourceId: null,
@@ -553,6 +558,8 @@ export const useVoiceStore = create<VoiceState>()(
       setOutputDevice: (deviceId) => set({ outputDeviceId: deviceId }),
 
       setCameraDeviceId: (deviceId) => set({ cameraDeviceId: deviceId }),
+
+      setCameraBackground: (background) => set({ cameraBackground: parseCameraBackground(background) }),
 
       pruneStaleDevices: async () => {
         try {
@@ -849,6 +856,7 @@ export const useVoiceStore = create<VoiceState>()(
         inputDeviceId: 'default',
         outputDeviceId: 'default',
         cameraDeviceId: null,
+        cameraBackground: NO_BACKGROUND,
         focusedParticipantId: null,
         participantVolumes: new Map(),
         participantMutes: new Map(),
@@ -953,6 +961,7 @@ export const useVoiceStore = create<VoiceState>()(
         inputDeviceId: state.inputDeviceId,
         outputDeviceId: state.outputDeviceId,
         cameraDeviceId: state.cameraDeviceId,
+        cameraBackground: state.cameraBackground,
         screenShareConfig: state.screenShareConfig,
         lastScreenShareSourceId: state.lastScreenShareSourceId,
         echoCancellation: state.echoCancellation,
@@ -971,6 +980,8 @@ export const useVoiceStore = create<VoiceState>()(
       }),
       merge: (persistedState: any, currentState: VoiceState) => {
         const merged = { ...currentState, ...persistedState };
+        // A stored background the app cannot use is the room as it is, never a guess.
+        merged.cameraBackground = parseCameraBackground(persistedState?.cameraBackground);
         // Reconstruct non-persisted Sets/Maps to their defaults
         merged.spaceMutedUserIds = currentState.spaceMutedUserIds;
         merged.spaceDeafenedUserIds = currentState.spaceDeafenedUserIds;

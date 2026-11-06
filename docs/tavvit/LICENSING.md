@@ -97,6 +97,7 @@ Tavvit includes or uses, each under its own license (see `NOTICE`):
 | Inter (font) | SIL OFL 1.1 | bundled, `packages/web/public/fonts/` |
 | npm dependencies (React, Fastify, Drizzle, ...) | mostly MIT / ISC / Apache-2.0 / BSD | `pnpm licenses list --prod` |
 | sharp / libvips | LGPL-3.0-or-later (libvips) | image processing, used unmodified |
+| MediaPipe (`@mediapipe/tasks-vision`, its WebAssembly) and the selfie segmentation model | Apache-2.0 | camera backgrounds, served unmodified from `/mediapipe/` and `packages/web/src/camera/` |
 | LiveKit server | Apache-2.0 | separate container, only if you enable voice |
 | Caddy | Apache-2.0 | separate container, only in `allinone` mode |
 | Node.js | MIT | base image |

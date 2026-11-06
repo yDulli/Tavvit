@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Modal } from '../ui/Modal';
 import { Avatar } from '../ui/Avatar';
+import { useSensitiveText } from '../ui/Sensitive';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useSelfIdentity } from '../../stores/authStore';
@@ -186,6 +187,8 @@ function InviteSelectFriendRow({
 
 export function InviteModal() {
   const { t } = useTranslation(['spaces', 'common']);
+  // Streamer mode hides the link in the field; Copy still copies it.
+  const sensitive = useSensitiveText();
   const activeModal = useUIStore((s) => s.activeModal);
   const closeModal = useUIStore((s) => s.closeModal);
   const generateInvite = useSpaceStore((s) => s.generateInvite);
@@ -509,7 +512,7 @@ export function InviteModal() {
           <div className="flex items-center gap-2">
             <input
               type="text"
-              value={codeLoading ? t('spaces:invite.generating') : inviteUrl}
+              value={codeLoading ? t('spaces:invite.generating') : sensitive(inviteUrl)}
               readOnly
               className="input-standard h-8 min-w-0 flex-1 px-2 py-0 font-mono text-meta"
             />

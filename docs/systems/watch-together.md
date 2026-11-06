@@ -61,7 +61,7 @@ The client keeps the offset between its clock and the server's from `serverNow` 
 
 ## The players
 
-`utils/watchPlayers/` gives the three kinds one interface (`WatchPlayer`: play, pause, seek, position, length, volume, destroy) and reports the end, a start the browser refused, and playing.
+`utils/watchPlayers/` gives the three kinds one interface (`WatchPlayer`: play, pause, seek, position, length, volume, subtitles where the player has them, destroy) and reports the end, a start the browser refused, and playing.
 
 - **YouTube** in an iframe from `www.youtube-nocookie.com` with `enablejsapi=1` and its own controls off, steered over postMessage only. Commands are posted to that origin alone, and only messages from that origin and that iframe's window are heard.
 - **Vimeo** in an iframe from `player.vimeo.com` with `dnt=1`, the same way.
@@ -73,6 +73,8 @@ No script of either provider runs on our page, and the CSP stays as it is: both 
 
 **Sound.** One's own volume for the video (kept on the device), times the call's output volume, quieter while someone else speaks when the setting that softens a stream for speech is on (`streamAttenuationEnabled`, by its strength), silent while deafened, by oneself or by the space.
 
+**Subtitles** (1.35.0). Off until the viewer turns them on with the subtitles button under the picture, a choice of their own kept on the device (`tavvit.watch.captions`) like the volume. Left to itself YouTube turns them on where the video's language is not the browser's, and with the providers' controls off nobody could turn them off again. `WatchPlayer.setCaptions` carries the choice: YouTube's player loads or unloads its captions module (`loadModule` / `unloadModule('captions')`, and `cc`, its older name) once ready and again each time the video starts to play, when YouTube loads the module anew; Vimeo's disables its text track once ready (also a track its owner made the default) and, turned on, enables the track in the browser's language, else English, else the first (`getTextTracks`, `chooseTrack`). A file has none, so the button is not there.
+
 ## The view
 
 The one player lives in `WatchPlayerHost`, mounted in `AppLayout` beside the call's audio, so it never unmounts while the call watches: an iframe moved in the page would load again. It is in one of three places (`data-watch-frame`):
@@ -83,7 +85,7 @@ The one player lives in `WatchPlayerHost`, mounted in `AppLayout` beside the cal
 
 "Hide the video" on the stage and the X of the float both put the video away for this person (`videoHiddenFor`, the call it was put away in): it stops for them, the call's floating window comes back, and the grid shows "Show the video". It is held by the call, not by the view, so a view rebuilt around the same call (the layout changing between phone and desktop remounts the host) keeps the choice, and another call starts with its video shown. The others watch on.
 
-On the stage, a bar above the picture names what plays and offers full screen (where the browser allows it) and hide; a bar under it holds the position, play or pause, next, the time, the reactions, one's own volume and the queue. They sit outside the picture because the providers draw marks of their own in it (title, logo, a symbol while a video starts or seeks) that cannot be turned off. The queue opens beside the picture, or over it in a frame narrower than 560 px: it lists what is coming, lets those who steer remove, those with `STREAM` add, the starter say who steers, and those allowed end it. Floating, only the way back and the way away show, under the pointer. Controls someone may not use are disabled, and the server refuses them anyway.
+On the stage, a bar above the picture names what plays and offers full screen (where the browser allows it) and hide; a bar under it holds the position, play or pause, next, the time, the reactions, the subtitles (YouTube and Vimeo), one's own volume and the queue. They sit outside the picture because the providers draw marks of their own in it (title, logo, a symbol while a video starts or seeks) that cannot be turned off. The queue opens beside the picture, or over it in a frame narrower than 560 px: it lists what is coming, lets those who steer remove, those with `STREAM` add, the starter say who steers, and those allowed end it. Floating, only the way back and the way away show, under the pointer. Controls someone may not use are disabled, and the server refuses them anyway.
 
 Reactions rise over the picture for 2.4 s (`REACTION_FLIGHT_MS`), at most 24 at once, and not at all with reduced motion.
 

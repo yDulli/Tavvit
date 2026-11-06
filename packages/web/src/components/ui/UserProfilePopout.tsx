@@ -91,11 +91,20 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
 
   const [mutualCounts, setMutualCounts] = useState<{ friends: number; spaces: number } | null>(null);
 
+  // One's own card has nothing in common with itself: no mutuals are asked for or shown.
   useEffect(() => {
+    setMutualCounts(null);
+    if (isYou) return undefined;
+    let live = true;
     loadFederatedMutuals(user.id, user.homeUserId)
-      .then((data) => setMutualCounts({ friends: data.mutualFriends.length, spaces: data.mutualSpaces.length }))
+      .then((data) => {
+        if (live) setMutualCounts({ friends: data.mutualFriends.length, spaces: data.mutualSpaces.length });
+      })
       .catch(() => {});
-  }, [user.id, user.homeUserId]);
+    return () => {
+      live = false;
+    };
+  }, [user.id, user.homeUserId, isYou]);
 
   // Placed off the card's *measured* size rather than a guessed height: the card
   // grows with the bio, the custom status and the mutuals row, so any constant
@@ -285,7 +294,7 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
               {f.formatMediumDate(user.createdAt)}
             </span>
           </div>
-          {mutualCounts && (mutualCounts.friends > 0 || mutualCounts.spaces > 0) && (
+          {!isYou && mutualCounts && (mutualCounts.friends > 0 || mutualCounts.spaces > 0) && (
             <div className="text-meta text-txt-tertiary">
               {mutualCounts.friends > 0 && (
                 <span>{t('social:mutuals.friends', { count: mutualCounts.friends })}</span>

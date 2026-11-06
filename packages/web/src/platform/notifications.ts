@@ -19,7 +19,24 @@ export function onNotificationClick(callback: (options: NotificationOptions) => 
   };
 }
 
+/** The words every notification shows instead of its own, while set (streamer mode). */
+let mask: { title: string; body: string } | null = null;
+
+/**
+ * While set, a notification says only this (`StreamerModeController` sets it
+ * while streamer mode is on): a stream captures the whole screen, the
+ * notifications of other conversations included. A tap still leads to the
+ * conversation, which is not shown until the person goes there.
+ */
+export function maskNotifications(text: { title: string; body: string } | null): void {
+  mask = text;
+}
+
 export function sendNotification(title: string, body: string, options?: NotificationOptions): void {
+  if (mask) {
+    title = mask.title;
+    body = mask.body;
+  }
   if (isElectron()) {
     window.backspace!.showNotification(title, body, options);
   } else if ('Notification' in window && Notification.permission === 'granted') {

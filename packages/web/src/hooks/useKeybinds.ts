@@ -4,6 +4,9 @@ import { useVoiceStore } from '../stores/voiceStore';
 import { isElectron } from '../platform/platform';
 import { toggleMuteFromControl, toggleDeafenFromControl, handleCameraAction, handleScreenShareAction, handleDisconnectAction } from '../utils/voiceActions';
 import { broadcastVoiceStatus } from '../utils/voice';
+import { useUIStore } from '../stores/uiStore';
+import { useStreamerModeStore } from '../streamer/streamerModeStore';
+import i18n from '../i18n';
 import { useKeybindPortalStatus } from './useKeybindPortalStatus';
 
 // ---------------------------------------------------------------------------
@@ -19,6 +22,16 @@ function dispatchKeybindAction(actionId: string, pressed: boolean, deduplicate =
   const key = `${actionId}:${pressed}`;
   if (deduplicate && now - (lastDispatch[key] || 0) < 100) return;
   lastDispatch[key] = now;
+
+  // Streamer mode is not about a call: it works anywhere, and says what it did,
+  // since the shortcut is pressed while looking at something else.
+  if (actionId === 'toggleStreamerMode') {
+    if (!pressed) return;
+    useStreamerModeStore.getState().toggle();
+    const on = useStreamerModeStore.getState().on;
+    useUIStore.getState().addToast(i18n.t(on ? 'common:streamerMode.turnedOn' : 'common:streamerMode.turnedOff'), 'info', 2500);
+    return;
+  }
 
   const voice = useVoiceStore.getState();
   if (!voice.currentVoiceChannelId) return;

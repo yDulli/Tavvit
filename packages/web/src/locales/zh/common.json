@@ -304,5 +304,17 @@
     "required": "确认你的邮箱地址后,才能在空间中发言和回应、创建空间,并与非好友开始对话。",
     "open": "打开设置",
     "dismiss": "以后再说"
+  },
+  "streamerMode": {
+    "hidden": "已在主播模式中隐藏",
+    "hiddenBlock": "主播模式开启期间已隐藏。",
+    "turnOff": "关闭主播模式",
+    "badge": "主播模式",
+    "badgeLabel": "主播模式已开启。打开设置",
+    "notification": "你有一条新通知。",
+    "onBySoftware": "主播模式已开启：一个直播程序已启动。",
+    "offBySoftware": "主播模式已关闭：直播程序已关闭。",
+    "turnedOn": "主播模式已开启。",
+    "turnedOff": "主播模式已关闭。"
   }
 }

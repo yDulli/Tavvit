@@ -27,6 +27,8 @@ import { deleteAccountOnRemotes } from '../utils/federationOps';
 import { homeHostOf, homeIdentityOf, isMine, ownRowAt, selfIdentityOf, type IdentityFields, type SelfIdentity } from '../utils/identity';
 import { myChosenStatus, statusAuthority, type OwnStatusReport } from '../utils/selfStatus';
 import i18n from '../i18n';
+import { forgetOwnImage } from '../camera/ownImage';
+import { NO_BACKGROUND } from '../camera/backgrounds';
 
 interface AuthState {
   token: string | null;
@@ -270,6 +272,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (token) void createApiClient('', () => token).auth.logout().catch(() => {});
     localStorage.removeItem('backspace_token');
     void dropThisDevicesPush().catch(() => {});
+    // The camera background picture is a person's own, not the device's: the
+    // next person on a shared device must not find it (camera/ownImage.ts).
+    void forgetOwnImage();
+    if (useVoiceStore.getState().cameraBackground.kind === 'own') useVoiceStore.getState().setCameraBackground(NO_BACKGROUND);
     resetUserStores();
     cancelKeptStatusExpiry();
     set({ token: null, user: null, trueHomeStatus: null, myRowIds: new Map() });

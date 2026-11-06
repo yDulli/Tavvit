@@ -221,7 +221,12 @@
     "select": "Kamera auswählen",
     "switch": "Kamera wechseln",
     "turnOn": "Kamera einschalten",
-    "turnOff": "Kamera ausschalten"
+    "turnOff": "Kamera ausschalten",
+    "background": {
+      "ownMissing": "Dein Hintergrundbild ist nicht mehr auf diesem Gerät, deshalb wird dein Raum stattdessen weichgezeichnet.",
+      "failed": "Der Hintergrund konnte nicht starten, deshalb bleibt deine Kamera aus. Um die Kamera ohne ihn zu nutzen, schalte den Hintergrund in den Einstellungen unter Sprache & Video aus.",
+      "failedLive": "Der Hintergrund konnte nicht starten, deshalb wurde deine Kamera ausgeschaltet."
+    }
   },
   "joinSheet": {
     "peopleInVoice_one": "{{count}} Person im Sprachkanal",
@@ -310,6 +315,7 @@
     "reactions": "Reaktionen",
     "sidebar": "Schaut: {{title}}",
     "seek": "Stelle im Video",
-    "untitled": "Ein {{provider}}-Video"
+    "untitled": "Ein {{provider}}-Video",
+    "captions": "Untertitel"
   }
 }

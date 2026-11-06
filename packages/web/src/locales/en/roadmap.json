@@ -5,14 +5,6 @@
     "next": {
       "title": "Next",
       "items": {
-        "cameraEffects": {
-          "title": "Background blur and backgrounds",
-          "text": "Blur your room on camera or put a picture behind you, worked out on your own device."
-        },
-        "streamerMode": {
-          "title": "Streamer mode",
-          "text": "Hides addresses, invites and other private details while you stream, and turns on by itself when the desktop app sees your streaming program."
-        },
         "profileDecor": {
           "title": "Profile decorations",
           "text": "Frames for your picture, effects for your profile and nameplates, free for everyone."

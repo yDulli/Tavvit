@@ -52,9 +52,9 @@ describe('a global shortcut the page asks for', () => {
 
   it('is refused for an action the app does not have, and only the first per action counts', () => {
     // Every action the settings offer is taken (web/src/stores/keybindStore.ts).
-    expect(accepted(...['toggleMute', 'toggleDeafen', 'pushToTalk', 'toggleCamera', 'toggleScreenShare', 'disconnect']
-      .map((id, i) => bind(id, [['F13'], ['CapsLock'], ['F5'], ['Home'], ['ControlLeft', 'KeyA'], ['MetaLeft', 'KeyB']][i]!))))
-      .toEqual(['toggleMute', 'toggleDeafen', 'pushToTalk', 'toggleCamera', 'toggleScreenShare', 'disconnect']);
+    expect(accepted(...['toggleMute', 'toggleDeafen', 'pushToTalk', 'toggleCamera', 'toggleScreenShare', 'disconnect', 'toggleStreamerMode']
+      .map((id, i) => bind(id, [['F13'], ['CapsLock'], ['F5'], ['Home'], ['ControlLeft', 'KeyA'], ['MetaLeft', 'KeyB'], ['ControlLeft', 'ShiftLeft', 'KeyQ']][i]!))))
+      .toEqual(['toggleMute', 'toggleDeafen', 'pushToTalk', 'toggleCamera', 'toggleScreenShare', 'disconnect', 'toggleStreamerMode']);
     expect(accepted(bind('keylog-a', ['ControlLeft', 'KeyA']))).toEqual([]);
     expect(acceptedKeybinds([bind('toggleMute', ['F13']), bind('toggleMute', ['ControlLeft', 'KeyM'])], codeOf))
       .toEqual([{ actionId: 'toggleMute', keys: [hashOf('F13')] }]);

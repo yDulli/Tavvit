@@ -33,6 +33,6 @@ describe('a desktop shortcut that types text on its own', () => {
   });
 
   it('covers the actions the desktop app accepts (desktop/src/keybindPolicy.ts, KEYBIND_ACTIONS)', () => {
-    expect(BINDABLE_ACTIONS.map((action) => action.id)).toEqual(['toggleMute', 'toggleDeafen', 'pushToTalk', 'toggleCamera', 'toggleScreenShare', 'disconnect']);
+    expect(BINDABLE_ACTIONS.map((action) => action.id)).toEqual(['toggleMute', 'toggleDeafen', 'pushToTalk', 'toggleCamera', 'toggleScreenShare', 'disconnect', 'toggleStreamerMode']);
   });
 });

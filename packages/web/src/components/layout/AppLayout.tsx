@@ -46,6 +46,7 @@ import { GlobalAudioRenderer } from '../voice/GlobalAudioRenderer';
 import { WatchPlayerHost } from '../voice/WatchPlayerHost';
 import { NotificationController } from '../NotificationController';
 import { PushController } from '../PushController';
+import { StreamerModeController } from '../StreamerModeController';
 import { UserProfilePopoutLayer } from '../ui/UserProfilePopoutLayer';
 import { ToastContainer } from '../ui/ToastContainer';
 import { ConnectionBanner } from '../ui/ConnectionBanner';
@@ -493,6 +494,7 @@ export function AppLayout() {
         <WatchPlayerHost />
         <NotificationController />
         <PushController />
+        <StreamerModeController />
         <SpaceWelcomeGate />
         <UpdateToast />
         <ToastContainer />
@@ -558,6 +560,7 @@ export function AppLayout() {
       <WatchPlayerHost />
       <NotificationController />
       <PushController />
+      <StreamerModeController />
       <SpaceWelcomeGate />
       <UpdateToast />
 

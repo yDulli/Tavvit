@@ -44,6 +44,7 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
   let ready = false;
   let wantPlaying = false;
   let volume = 100;
+  let captions = false;
   let destroyed = false;
   let blockTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -52,6 +53,21 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
   };
   const command = (func: string, args: unknown[] = []): void => {
     if (ready) post({ event: 'command', func, args });
+  };
+
+  /**
+   * The viewer's choice of subtitles, over YouTube's own: it turns them on by
+   * itself when the video's language is not the browser's. Told once ready and
+   * again each time the video starts to play, which is when YouTube loads its
+   * captions module anew. The module was called "cc" in older players.
+   */
+  const applyCaptions = (): void => {
+    if (captions) {
+      command('loadModule', ['captions']);
+      return;
+    }
+    command('unloadModule', ['captions']);
+    command('unloadModule', ['cc']);
   };
 
   const clearBlockTimer = (): void => {
@@ -66,11 +82,13 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
   };
 
   const onState = (next: number): void => {
+    const started = next === PLAYING && state !== PLAYING;
     state = next;
     if (next === PLAYING) {
       clearBlockTimer();
       events.onPlaying();
     }
+    if (started) applyCaptions();
     if (next === ENDED) events.onEnded();
   };
 
@@ -86,6 +104,7 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
       if (!ready) {
         ready = true;
         command('setVolume', [volume]);
+        applyCaptions();
         if (wantPlaying) {
           command('playVideo');
           watchStart();
@@ -136,6 +155,11 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
       volume = Math.round(Math.min(100, Math.max(0, next)));
       command('setVolume', [volume]);
       command(volume === 0 ? 'mute' : 'unMute');
+    },
+    setCaptions: (on) => {
+      if (on === captions) return;
+      captions = on;
+      applyCaptions();
     },
     destroy: () => {
       destroyed = true;

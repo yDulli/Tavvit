@@ -136,6 +136,36 @@ To regenerate the full, current dependency license inventory, run:
   pnpm licenses list --prod
 
 ================================================================================
+Camera backgrounds
+================================================================================
+
+The camera backgrounds (packages/web/src/camera/) find the person in the picture
+with Google's MediaPipe, through LiveKit's track processors:
+
+@livekit/track-processors
+  License:  Apache License 2.0 (https://github.com/livekit/track-processors-js)
+  An npm dependency, used unmodified.
+
+@mediapipe/tasks-vision
+  License:  Apache License 2.0 (https://github.com/google-ai-edge/mediapipe)
+  Its JavaScript is bundled; its WebAssembly (vision_wasm_internal.js and
+  vision_wasm_internal.wasm) is copied unmodified from the package into the
+  build under /mediapipe/<version>/ (packages/web/src/build/visionAssets.mjs).
+
+MediaPipe Selfie Segmentation model
+  File:     packages/web/src/camera/selfie_segmenter.tflite (float16, square)
+  License:  Apache License 2.0, as stated in its model card
+            (https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Selfie%20Segmentation.pdf)
+  Notice:   Copyright Google LLC
+  Downloaded unmodified from
+  https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite
+
+The text of the Apache License 2.0 is at https://www.apache.org/licenses/LICENSE-2.0.
+
+The scenes in packages/web/src/camera/scenes/ are drawn by scripts/camera-scenes/
+for Tavvit and are covered by the project license.
+
+================================================================================
 Emoji
 ================================================================================
 

@@ -221,7 +221,12 @@
     "select": "Selecionar câmera",
     "switch": "Trocar câmera",
     "turnOn": "Ligar câmera",
-    "turnOff": "Desligar câmera"
+    "turnOff": "Desligar câmera",
+    "background": {
+      "ownMissing": "Sua imagem de fundo não está mais neste dispositivo, então seu ambiente fica desfocado.",
+      "failed": "O fundo não pôde ser iniciado, então sua câmera ficou desligada. Para usar a câmera sem ele, desligue o fundo nas configurações de Voz e vídeo.",
+      "failedLive": "O fundo não pôde ser iniciado, então sua câmera foi desligada."
+    }
   },
   "joinSheet": {
     "peopleInVoice_one": "{{count}} pessoa na voz",
@@ -312,6 +317,7 @@
     "reactions": "Reações",
     "sidebar": "Assistindo: {{title}}",
     "seek": "Posição no vídeo",
-    "untitled": "Um vídeo do {{provider}}"
+    "untitled": "Um vídeo do {{provider}}",
+    "captions": "Legendas"
   }
 }

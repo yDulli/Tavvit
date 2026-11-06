@@ -124,7 +124,7 @@ The settings panels (user settings, instance administration, space settings, and
 
 The bundled Caddy compresses what it sends (`encode zstd gzip` in the `Caddyfile`) except `/api/*`, `/ws`, `/livekit/*`, `/downloads/*` and `/fonts/*`: API answers mix secrets with what a person typed, the shape a compression side channel needs, the updater wants the installers' exact bytes and ranges, and a `.woff2` is compressed already. A changed `Caddyfile` takes effect with `docker compose up -d` after the update, `update.sh` restarts only the app. Behind your own reverse proxy (`docker-compose.proxy.yml`) compression is that proxy's job.
 
-The app sets the cache lifetimes (`packages/server/src/index.ts`): files under `/assets/` are named by their content and stay for a year (`immutable`), typefaces for a week, the page and the manifest are revalidated on every load (`no-cache`).
+The app sets the cache lifetimes (`packages/server/src/index.ts`): files under `/assets/` are named by their content and stay for a year (`immutable`), and so do the camera backgrounds' WebAssembly files under `/mediapipe/<version>/`, which change only with that version (voice.md, "Camera backgrounds"); typefaces stay for a week, the page and the manifest are revalidated on every load (`no-cache`). The `/mediapipe/` files (about 9 MB) are not precached: they load the first time someone uses a camera background.
 
 ### Container hardening (non-root)
 

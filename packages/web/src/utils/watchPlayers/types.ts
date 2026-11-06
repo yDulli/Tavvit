@@ -27,6 +27,13 @@ export interface WatchPlayer {
   durationMs: () => number | null;
   /** 0 to 100. */
   setVolume: (volume: number) => void;
+  /**
+   * Subtitles on or off, for this viewer. Off until asked for: a provider left
+   * to itself turns them on (YouTube does when the video's language is not the
+   * browser's), and the room's own controls are the only ones there are.
+   * Missing where the player has none to show (a plain file).
+   */
+  setCaptions?: (on: boolean) => void;
   destroy: () => void;
 }
 

@@ -15,6 +15,8 @@ export const BINDABLE_ACTIONS = [
   { id: 'toggleCamera', label: 'Toggle Camera', type: 'toggle' as const },
   { id: 'toggleScreenShare', label: 'Toggle Screen Share', type: 'toggle' as const },
   { id: 'disconnect', label: 'Disconnect', type: 'toggle' as const },
+  // Works anywhere, in a call or not (useKeybinds.ts).
+  { id: 'toggleStreamerMode', label: 'Toggle Streamer Mode', type: 'toggle' as const },
 ] as const;
 
 /** Mouse buttons that must not be bound (would break OS interaction) */

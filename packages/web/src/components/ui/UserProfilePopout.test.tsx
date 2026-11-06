@@ -187,6 +187,36 @@ describe('UserProfilePopout', () => {
     }
   });
 
+  it("shows and asks for no mutuals on the user's own card, and does on someone else's", async () => {
+    const { loadFederatedMutuals } = await import('../../utils/mutuals');
+    const loader = vi.mocked(loadFederatedMutuals);
+    loader.mockClear();
+    loader.mockResolvedValue({ mutualFriends: [makeUser()], mutualSpaces: [] } as unknown as Awaited<ReturnType<typeof loadFederatedMutuals>>);
+    useAuthStore.setState({ user: makeUser(), myRowIds: new Map() });
+    try {
+      const own = render(
+        <MemoryRouter>
+          <UserProfilePopout user={makeUser()} origin="" onClose={() => {}} anchor={anchorAt(300, 200)} />
+        </MemoryRouter>,
+      );
+      expect(loader).not.toHaveBeenCalled();
+      expect(screen.queryByText('1 mutual friend')).toBeNull();
+      own.unmount();
+
+      const other: User = { ...makeUser(), id: 'u-2', username: 'bo', displayName: 'Bo' };
+      render(
+        <MemoryRouter>
+          <UserProfilePopout user={other} origin="" onClose={() => {}} anchor={anchorAt(300, 200)} />
+        </MemoryRouter>,
+      );
+      expect(await screen.findByText('1 mutual friend')).toBeInTheDocument();
+      expect(loader).toHaveBeenCalledWith('u-2', null);
+    } finally {
+      loader.mockResolvedValue({ mutualFriends: [], mutualSpaces: [] });
+      useAuthStore.setState({ user: null });
+    }
+  });
+
   it("offers Send Message on the card of another instance's user whose id equals the user's", () => {
     useAuthStore.setState({ user: makeUser(), myRowIds: new Map() });
     try {

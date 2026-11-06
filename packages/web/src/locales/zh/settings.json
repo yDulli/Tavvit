@@ -82,6 +82,39 @@
         "unavailable": "所选摄像头不可用。",
         "notFound": "未检测到摄像头。",
         "generic": "无法启动摄像头预览。"
+      },
+      "background": {
+        "label": "背景",
+        "choice": {
+          "none": "无",
+          "blur": {
+            "light": "轻度模糊",
+            "strong": "重度模糊"
+          },
+          "scene": {
+            "graphite": "石墨",
+            "tavern": "酒馆",
+            "library": "书房",
+            "nightWindow": "夜窗",
+            "greenhouse": "温室"
+          },
+          "own": "你的图片"
+        },
+        "own": {
+          "add": "添加图片",
+          "replace": "选择其他图片",
+          "remove": "移除图片",
+          "missing": "你的图片已不在此设备上。在你添加新图片之前，你的房间会被模糊处理。",
+          "problem": {
+            "tooLarge": "该文件超过 25 MB。",
+            "notAnImage": "此浏览器无法将该文件作为图片打开。",
+            "notKept": "此浏览器没有保存这张图片。在隐私窗口中通常无法保存。"
+          }
+        },
+        "preparing": "正在准备背景…",
+        "failed": "背景无法在此设备上启动。",
+        "strained": "此设备有些跟不上。轻度模糊或不使用背景可以让画面保持流畅。",
+        "private": "背景在此设备上生成。你的图片只留在这里，绝不会被上传。"
       }
     },
     "title": "语音与视频",
@@ -540,6 +573,28 @@
           "nobody": "没有人"
         }
       }
+    },
+    "streamer": {
+      "title": "主播模式",
+      "description": "在你直播或共享屏幕时，让个人信息不出现在屏幕上。此设置仅对此设备生效。",
+      "on": "主播模式",
+      "automatic": "自动开启",
+      "automaticDescription": "当 OBS、Streamlabs 或 XSplit 启动时开启，并在其关闭时再次关闭，除非你自己关闭了它。",
+      "automaticDesktopOnly": "在桌面应用中，当 OBS、Streamlabs 或 XSplit 启动时，它可以自动开启。",
+      "hidesTitle": "开启时，Tavvit 会隐藏",
+      "hides": {
+        "email": "你的电子邮件地址",
+        "invites": "邀请链接和邀请码（仍可复制）",
+        "instances": "你已连接的实例",
+        "twoFactor": "两步验证密钥和恢复码",
+        "sessions": "你的会话登录位置",
+        "tokens": "机器人令牌和 Webhook 地址",
+        "notes": "管理员对账号的备注",
+        "notifications": "通知的内容"
+      },
+      "shortcut": "快捷键：{{keys}}。",
+      "noShortcut": "尚未设置快捷键。",
+      "setShortcut": "在“按键绑定”中设置"
     }
   },
   "connections": {
@@ -569,7 +624,8 @@
       "pushToTalk": "按键发言",
       "toggleCamera": "切换摄像头",
       "toggleScreenShare": "切换屏幕共享",
-      "disconnect": "断开连接"
+      "disconnect": "断开连接",
+      "toggleStreamerMode": "切换主播模式"
     },
     "row": {
       "recordingPrompt": "请按下组合键…",

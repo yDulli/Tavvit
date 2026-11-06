@@ -221,7 +221,12 @@
     "select": "Select camera",
     "switch": "Switch camera",
     "turnOn": "Turn camera on",
-    "turnOff": "Turn camera off"
+    "turnOff": "Turn camera off",
+    "background": {
+      "ownMissing": "Your background picture is no longer on this device, so your room is blurred instead.",
+      "failed": "The background could not start, so your camera stayed off. To use the camera without it, turn the background off in Voice & Video settings.",
+      "failedLive": "The background could not start, so your camera was turned off."
+    }
   },
   "joinSheet": {
     "peopleInVoice_one": "{{count}} Person in Voice",
@@ -310,6 +315,7 @@
     "reactions": "Reactions",
     "sidebar": "Watching: {{title}}",
     "seek": "Position in the video",
-    "untitled": "A {{provider}} video"
+    "untitled": "A {{provider}} video",
+    "captions": "Subtitles"
   }
 }

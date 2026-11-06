@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ChannelFollowsSection } from './ChannelFollowsSection';
 import { Icon } from '../ui/Icon';
 import { InlineNameEditor } from '../ui/InlineNameEditor';
+import { useSensitiveText } from '../ui/Sensitive';
 
 /** The address as someone would paste it: on the instance that hosts the channel. */
 function addressOf(origin: string, made: WebhookWithToken): string {
@@ -31,6 +32,8 @@ export function WebhooksTab({ channelId, isAnnouncement = false }: { channelId: 
   const [error, setError] = useState('');
   const [fresh, setFresh] = useState<{ name: string; url: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  // The address holds the webhook's token: streamer mode keeps it off the page. Copy still copies it.
+  const sensitive = useSensitiveText();
   const [asking, setAsking] = useState<{ action: 'rotate' | 'remove'; webhook: WebhookInfo } | null>(null);
 
   useEffect(() => {
@@ -112,7 +115,7 @@ export function WebhooksTab({ channelId, isAnnouncement = false }: { channelId: 
           <div className="flex items-center gap-1.5">
             <input
               readOnly
-              value={fresh.url}
+              value={sensitive(fresh.url)}
               aria-label={t('spaces:channel.settings.webhooks.addressLabel')}
               onFocus={(focus) => focus.currentTarget.select()}
               className="input-standard min-w-0 flex-1 font-mono text-meta"
@@ -123,7 +126,7 @@ export function WebhooksTab({ channelId, isAnnouncement = false }: { channelId: 
           </div>
           <p className="text-meta text-txt-tertiary">{t('spaces:channel.settings.webhooks.howTo')}</p>
           <code className="block overflow-x-auto whitespace-nowrap rounded-sm bg-surface-input px-2 py-1.5 font-mono text-meta text-txt-secondary">
-            {curlExample(fresh.url)}
+            {curlExample(sensitive(fresh.url))}
           </code>
         </div>
       )}

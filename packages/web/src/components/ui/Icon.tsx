@@ -157,6 +157,12 @@ export const ICONS = {
   skip: ['M6 5.5v13l9.5-6.5L6 5.5Z', 'M18.5 5.5v13'],
   list: ['M9 6.5h11M9 12h11M9 17.5h11', { dot: [4.5, 6.5] }, { dot: [4.5, 12] }, { dot: [4.5, 17.5] }],
   maximize: ['M4 9V5a1 1 0 0 1 1-1h4', 'M15 4h4a1 1 0 0 1 1 1v4', 'M20 15v4a1 1 0 0 1-1 1h-4', 'M9 20H5a1 1 0 0 1-1-1v-4'],
+  // Subtitles: a screen with the two C's of closed captions.
+  captions: [
+    'M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z',
+    'M10.5 10.2a2.2 2.2 0 1 0 0 3.6',
+    'M16.5 10.2a2.2 2.2 0 1 0 0 3.6',
+  ],
 } as const satisfies Record<string, readonly Part[]>;
 
 export type IconName = keyof typeof ICONS;

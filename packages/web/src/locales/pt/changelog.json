@@ -4,6 +4,15 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.35.0": {
+      "title": "Fundos e modo streamer",
+      "items": {
+        "backgrounds": "Sua câmera pode desfocar seu ambiente, de leve ou com força, ou colocar você em uma de cinco cenas, entre elas uma taverna, ou diante de uma imagem sua. Tudo acontece no seu dispositivo, e sua imagem nunca sai dele.",
+        "streamer": "O modo streamer oculta seu e-mail, links de convite, instâncias conectadas, códigos de duas etapas, endereços de sessões, tokens e o que as notificações dizem enquanto você faz stream. Ligue-o em Configurações → Privacidade ou com um atalho; o aplicativo para desktop o liga sozinho quando o OBS, o Streamlabs ou o XSplit abre.",
+        "subtitles": "Assistir junto não liga mais as legendas sozinho. Um novo botão as liga só para você.",
+        "profile": "Seu próprio perfil não lista mais amigos e espaços em comum com você mesmo."
+      }
+    },
     "1.34.2": {
       "title": "Um lugar para percorrer",
       "items": {

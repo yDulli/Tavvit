@@ -5,7 +5,7 @@
 // typed in every program, passwords included (docs/systems/desktop-security.md, "Global shortcuts").
 
 /** The actions the web client binds (web/src/stores/keybindStore.ts, `BINDABLE_ACTIONS`). */
-export const KEYBIND_ACTIONS = ['toggleMute', 'toggleDeafen', 'pushToTalk', 'toggleCamera', 'toggleScreenShare', 'disconnect'] as const;
+export const KEYBIND_ACTIONS = ['toggleMute', 'toggleDeafen', 'pushToTalk', 'toggleCamera', 'toggleScreenShare', 'disconnect', 'toggleStreamerMode'] as const;
 
 /** More keys than anyone holds at once is not a shortcut. */
 export const MAX_KEYBIND_KEYS = 4;

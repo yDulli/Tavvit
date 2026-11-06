@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useHomeInstanceInfo } from '../../hooks/useHomeInstanceInfo';
 import { useAuthStore } from '../../stores/authStore';
 import { openUserSettings } from '../../utils/openUserSettings';
+import { useSensitiveText } from './Sensitive';
 
 const DISMISSED_KEY = 'tavvit-email-prompt-dismissed';
 const DISMISSED_FOR_MS = 30 * 24 * 60 * 60 * 1000;
@@ -27,6 +28,8 @@ export function EmailPromptBar() {
   const info = useHomeInstanceInfo();
   const user = useAuthStore((s) => s.user);
   const [dismissed, setDismissed] = useState(false);
+  // The bar stands at the top of every page: streamer mode hides the address in it.
+  const sensitive = useSensitiveText();
 
   if (!info?.email || !user || user.homeInstance || user.isDeleted || user.emailVerified) return null;
   const required = user.emailVerificationRequired === true;
@@ -44,7 +47,7 @@ export function EmailPromptBar() {
   const message = required
     ? t('emailPrompt.required')
     : user.email
-      ? t('emailPrompt.unconfirmed', { address: user.email })
+      ? t('emailPrompt.unconfirmed', { address: sensitive(user.email) })
       : t('emailPrompt.missing');
 
   return (

@@ -5,6 +5,45 @@
  * delivering them, so whatever arrives shows something.
  */
 (function registerPush(scope) {
+  /*
+   * While streamer mode is on, the page leaves the words a push may say in IndexedDB
+   * (src/streamer/pushMask.ts), and they stand in for the message's: a stream captures
+   * the whole screen, notifications included. Anything unreadable counts as not set.
+   */
+  function readStreamerMask() {
+    return new Promise((resolve) => {
+      let request;
+      try {
+        request = scope.indexedDB.open('tavvit-device', 1);
+      } catch {
+        resolve(null);
+        return;
+      }
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains('flags')) request.result.createObjectStore('flags');
+      };
+      request.onerror = () => resolve(null);
+      request.onsuccess = () => {
+        const db = request.result;
+        try {
+          const read = db.transaction('flags', 'readonly').objectStore('flags').get('streamerMode');
+          read.onsuccess = () => {
+            db.close();
+            const mask = read.result;
+            resolve(mask && typeof mask.title === 'string' && typeof mask.body === 'string' ? mask : null);
+          };
+          read.onerror = () => {
+            db.close();
+            resolve(null);
+          };
+        } catch {
+          db.close();
+          resolve(null);
+        }
+      };
+    });
+  }
+
   scope.addEventListener('push', (event) => {
     let message = {};
     try {
@@ -12,12 +51,12 @@
     } catch (error) {
       console.warn('[sw-push] Could not read a push message', error);
     }
-    event.waitUntil(scope.registration.showNotification(message.title || 'Tavvit', {
-      body: typeof message.body === 'string' ? message.body : '',
+    event.waitUntil(readStreamerMask().then((mask) => scope.registration.showNotification(mask ? mask.title : (message.title || 'Tavvit'), {
+      body: mask ? mask.body : (typeof message.body === 'string' ? message.body : ''),
       tag: typeof message.tag === 'string' ? message.tag : undefined,
       icon: '/icons/icon-192.png',
       data: { url: typeof message.url === 'string' ? message.url : '/' },
-    }));
+    })));
   });
 
   scope.addEventListener('notificationclick', (event) => {

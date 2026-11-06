@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Track } from 'livekit-client';
 import { useVoiceStore } from '../../../stores/voiceStore';
 import { getActiveRoom } from '../../../hooks/useLiveKit';
 import { isElectron, getElectronAPI } from '../../../platform/platform';
+import { cameraBackgroundsSupported } from '../../../camera/support';
+import { useBackgroundPreview } from '../../../camera/useBackgroundPreview';
 import { Icon } from '../../ui/Icon';
+import { CameraBackgroundPicker } from './CameraBackgroundPicker';
 import { DevicePicker, DropdownItem } from './_shared/SettingsPickerPrimitives';
 import { SettingsField, SettingsSection } from './_shared/SettingsControls';
 
@@ -108,6 +111,12 @@ export function VideoSection() {
   // Tracks whether the active in-flight preview-start request is still wanted
   // (cancellable by Stop preview, unmount, visibility change, or re-click).
   const startGenRef = useRef(0);
+  // The pre-call preview's camera track, while it runs: what the background
+  // preview processes. Never a call's track (in a call the published camera
+  // already carries its background, see camera/call.ts).
+  const [previewCamera, setPreviewCamera] = useState<MediaStreamTrack | null>(null);
+  const backgroundPreview = useBackgroundPreview(previewActive && !isCameraOn ? previewCamera : null);
+  const backgroundLabelId = useId();
 
   // Stop the user-owned pre-call getUserMedia stream and release the camera
   // light. macOS holds the LED on for ~2s after release (hardware debounce).
@@ -116,11 +125,23 @@ export function VideoSection() {
       previewStreamRef.current.getTracks().forEach((t) => t.stop());
       previewStreamRef.current = null;
     }
+    setPreviewCamera(null);
     const videoEl = previewVideoRef.current;
     if (videoEl && videoEl.srcObject instanceof MediaStream) {
       videoEl.srcObject = null;
     }
   };
+
+  // Show the pre-call preview with its background once the processor has a
+  // picture, and the camera as it is until then (or with no background).
+  useEffect(() => {
+    if (!previewActive) return;
+    const videoEl = previewVideoRef.current;
+    const stream = previewStreamRef.current;
+    if (!videoEl || !stream) return;
+    videoEl.srcObject = backgroundPreview.output ? new MediaStream([backgroundPreview.output]) : stream;
+    videoEl.play().catch(() => {});
+  }, [backgroundPreview.output, previewActive, previewCamera]);
 
   // Detach an in-call LK track. NEVER call mst.stop() — the publication is
   // still being consumed by other call participants.
@@ -282,8 +303,8 @@ export function VideoSection() {
     const camPub = Array.from(room.localParticipant.trackPublications.values()).find(
       (pub) => pub.source === Track.Source.Camera,
     );
-    const mst = camPub?.track?.mediaStreamTrack;
-    if (!mst || mst.readyState !== 'live') return;
+    const camTrack = camPub?.track;
+    if (!camTrack || camTrack.mediaStreamTrack.readyState !== 'live') return;
 
     // If a pre-call preview is running, stop it cleanly — the in-call track
     // takes over the tile. The LK track's LED is already on for the call.
@@ -295,15 +316,22 @@ export function VideoSection() {
 
     const videoEl = previewVideoRef.current;
     if (!videoEl) return;
-    // Wrap the LK MediaStreamTrack in a fresh MediaStream for srcObject.
-    // This mirrors LiveKit's `track.attach()` internally; the wrapper does
-    // not duplicate or take ownership of the track.
-    videoEl.srcObject = new MediaStream([mst]);
+    // LiveKit's attach, so the tile follows the track: when a background is
+    // laid over the camera or taken off mid-call, LiveKit moves every
+    // attached element to the new picture. Detaching never stops the track.
+    camTrack.attach(videoEl);
     videoEl.play().catch(() => {});
-    setActiveDeviceId(mst.getSettings().deviceId ?? null);
+    // The camera's own device: under a background `mediaStreamTrack` is the
+    // processor's picture, which belongs to no device.
+    let current = true;
+    void camTrack.getDeviceId(false).then((id) => {
+      if (current && mountedRef.current) setActiveDeviceId(id ?? null);
+    });
     setPreviewError(null);
 
     return () => {
+      current = false;
+      camTrack.detach(videoEl);
       detachInCall();
     };
     // We intentionally exclude `previewActive` from deps — its only role here
@@ -335,6 +363,7 @@ export function VideoSection() {
           return;
         }
         previewStreamRef.current = stream;
+        setPreviewCamera(stream.getVideoTracks()[0] ?? null);
         const videoEl = previewVideoRef.current;
         if (videoEl) {
           videoEl.srcObject = stream;
@@ -395,6 +424,7 @@ export function VideoSection() {
         return;
       }
       previewStreamRef.current = stream;
+      setPreviewCamera(stream.getVideoTracks()[0] ?? null);
       const videoEl = previewVideoRef.current;
       if (videoEl) {
         videoEl.srcObject = stream;
@@ -520,6 +550,12 @@ export function VideoSection() {
               <span className="text-meta">{t('voice.video.preview.testHint')}</span>
             </button>
           )}
+          {previewActive && !previewError && backgroundPreview.status === 'preparing' && (
+            <span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 text-label text-white/90" role="status">
+              <Icon name="hourglass" size={12} />
+              {t('voice.video.background.preparing')}
+            </span>
+          )}
           {previewActive && !previewError && (
             <button
               type="button"
@@ -575,6 +611,11 @@ export function VideoSection() {
           </SettingsField>
         </div>
       </div>
+      {cameraBackgroundsSupported() && (
+        <SettingsField label={t('voice.video.background.label')} labelId={backgroundLabelId}>
+          <CameraBackgroundPicker labelledBy={backgroundLabelId} preview={backgroundPreview.status} />
+        </SettingsField>
+      )}
     </SettingsSection>
   );
 }

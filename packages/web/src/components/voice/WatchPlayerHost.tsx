@@ -50,6 +50,25 @@ function storeVolume(value: number): void {
   }
 }
 
+/** Subtitles are one's own, like the volume: off until asked for, then kept for the next video. */
+const CAPTIONS_KEY = 'tavvit.watch.captions';
+
+function storedCaptions(): boolean {
+  try {
+    return localStorage.getItem(CAPTIONS_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+
+function storeCaptions(on: boolean): void {
+  try {
+    localStorage.setItem(CAPTIONS_KEY, on ? 'on' : 'off');
+  } catch {
+    // Without storage the choice holds for this page only.
+  }
+}
+
 /** A position as the video's clock shows it: m:ss, or h:mm:ss for a long one. */
 export function formatWatchTime(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -154,6 +173,7 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
   const [queueOpen, setQueueOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [volume, setVolume] = useState(storedVolume);
+  const [captions, setCaptions] = useState(storedCaptions);
   const [, setTick] = useState(0);
 
   const mayControl = session.control === 'everyone' || session.starterId === myId;
@@ -239,6 +259,11 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
   useEffect(() => {
     player?.setVolume(effectiveVolume);
   }, [player, effectiveVolume]);
+
+  // Subtitles as this viewer chose, on every player of the session (off unless asked for).
+  useEffect(() => {
+    player?.setCaptions?.(captions);
+  }, [player, captions]);
 
   // The clock under the picture moves on its own.
   useEffect(() => {
@@ -463,6 +488,22 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
                 </button>
               ))}
             </div>
+            {player?.setCaptions && (
+              <button
+                data-tooltip=""
+                type="button"
+                onClick={() => {
+                  setCaptions(!captions);
+                  storeCaptions(!captions);
+                }}
+                aria-pressed={captions}
+                data-active={captions ? 'true' : undefined}
+                className="icon-btn flex-shrink-0"
+                aria-label={t('voice:watch.captions')}
+              >
+                <Icon name="captions" size={16} />
+              </button>
+            )}
             {!narrow && (
               <label className="flex w-28 flex-shrink-0 items-center gap-1.5 text-txt-tertiary">
                 <Icon name="volume" size={14} className="flex-shrink-0" />

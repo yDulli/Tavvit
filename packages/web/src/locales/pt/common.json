@@ -306,5 +306,17 @@
     "required": "Confirme seu endereço de e-mail para escrever e reagir nos spaces, criar spaces e iniciar conversas com pessoas que não são suas amigas.",
     "open": "Abrir configurações",
     "dismiss": "Agora não"
+  },
+  "streamerMode": {
+    "hidden": "Oculto no modo streamer",
+    "hiddenBlock": "Oculto enquanto o modo streamer está ligado.",
+    "turnOff": "Desligar o modo streamer",
+    "badge": "Modo streamer",
+    "badgeLabel": "O modo streamer está ligado. Abrir as configurações",
+    "notification": "Você tem uma nova notificação.",
+    "onBySoftware": "Modo streamer ligado: um programa de transmissão foi aberto.",
+    "offBySoftware": "Modo streamer desligado: o programa de transmissão foi fechado.",
+    "turnedOn": "Modo streamer ligado.",
+    "turnedOff": "Modo streamer desligado."
   }
 }

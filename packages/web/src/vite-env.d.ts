@@ -20,3 +20,13 @@ declare module '@sapphi-red/web-noise-suppressor/rnnoise_simd.wasm?url' {
   const url: string;
   export default url;
 }
+
+/** Where the app serves MediaPipe's WebAssembly (`src/build/visionAssets.mjs`). */
+declare module 'virtual:vision-assets' {
+  export const VISION_WASM_BASE: string;
+}
+
+declare module '*.tflite?url' {
+  const url: string;
+  export default url;
+}

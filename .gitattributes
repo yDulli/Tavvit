@@ -28,6 +28,8 @@ Caddyfile text eol=lf
 *.ogg binary
 *.mp3 binary
 *.wav binary
+*.wasm binary
+*.tflite binary
 *.pdf binary
 *.zip binary
 

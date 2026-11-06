@@ -11,6 +11,8 @@ import { Icon } from '../../ui/Icon';
 import { Toggle } from '../../ui/Toggle';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { Modal } from '../../ui/Modal';
+import { Sensitive } from '../../ui/Sensitive';
+import { useStreamerMode } from '../../../streamer/streamerModeStore';
 
 interface RegistrationDraft {
   registrationOpen: boolean;
@@ -1169,6 +1171,8 @@ interface InviteRowProps {
 function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProps) {
   const { t } = useTranslation(['admin', 'common']);
   const f = useFormatters();
+  // The token is the invite: streamer mode hides even its end. Copy still works.
+  const streaming = useStreamerMode();
   const addToast = useUIStore((s) => s.addToast);
   const [showEdit, setShowEdit] = useState(false);
   const [showReinstate, setShowReinstate] = useState(false);
@@ -1342,8 +1346,8 @@ function InviteRow({ invite, expanded, onToggleExpand, onMutate }: InviteRowProp
                 </div>
                 <div>
                   <div className="label-mono mb-0.5">{t('admin:invites.row.token')}</div>
-                  <div className="text-meta font-mono text-txt-secondary" title={invite.token}>
-                    {tokenDisplay}
+                  <div className="text-meta font-mono text-txt-secondary" title={streaming ? undefined : invite.token}>
+                    <Sensitive>{tokenDisplay}</Sensitive>
                   </div>
                 </div>
                 <div>

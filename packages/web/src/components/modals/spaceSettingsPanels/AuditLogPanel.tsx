@@ -21,6 +21,7 @@ import { useFormatters } from '../../../i18n/formatters';
 import { Avatar } from '../../ui/Avatar';
 import { Icon } from '../../ui/Icon';
 import { usePermissionNames, type PermissionKey } from '../../ui/OverrideEntry';
+import { Sensitive } from '../../ui/Sensitive';
 import { PERMISSION_GROUPS } from '../../../utils/permissionGroups';
 import { normalizeUserAssets } from '../../../utils/assetUrls';
 import { spaceMemberName, userDisplayName } from '../../../utils/identity';
@@ -264,6 +265,8 @@ function useValueFormatter(): (key: string, value: AuditLogValue) => React.React
         ? t('spaces:settings.overview.notifications.builtIn')
         : t('common:states.none');
     }
+    // A code or the space's own address lets anyone in: streamer mode hides them.
+    if (key === 'inviteCode' || key === 'vanityCode') return <Sensitive>{String(value)}</Sensitive>;
     if (typeof value === 'boolean') return value ? t('common:states.on') : t('common:states.off');
     if (PERMISSION_FIELDS.has(key)) {
       const bits = permissionBits(value);

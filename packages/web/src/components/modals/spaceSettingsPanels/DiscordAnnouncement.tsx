@@ -7,6 +7,7 @@ import { getApiForOrigin, useSpaceStore } from '../../../stores/spaceStore';
 import { copyText } from '../../../utils/clipboard';
 import { buildDiscordAnnouncement } from '../../../utils/discordAnnouncement';
 import { spaceInviteUrl } from '../../../utils/inviteParser';
+import { STREAMER_MASK, useStreamerMode } from '../../../streamer/streamerModeStore';
 import { Icon } from '../../ui/Icon';
 import { SettingsField } from '../settingsPanels/_shared/SettingsControls';
 
@@ -34,6 +35,7 @@ export function DiscordAnnouncement({ spaceId, origin, withEmoji }: { spaceId: s
   const [facts, setFacts] = useState<AnnouncementFacts | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState<'text' | 'link' | null>(null);
+  const streaming = useStreamerMode();
 
   useEffect(() => {
     let live = true;
@@ -80,6 +82,9 @@ export function DiscordAnnouncement({ spaceId, origin, withEmoji }: { spaceId: s
     })
     : '';
 
+  // The link lets anyone in: streamer mode shows the text without it. The buttons copy the real one.
+  const shownText = streaming && facts ? text.split(facts.link).join(STREAMER_MASK) : text;
+
   const copy = async (what: 'text' | 'link') => {
     const value = what === 'text' ? text : facts?.link ?? '';
     if (!value) return;
@@ -107,7 +112,7 @@ export function DiscordAnnouncement({ spaceId, origin, withEmoji }: { spaceId: s
         <textarea
           id={textId}
           readOnly
-          value={text}
+          value={shownText}
           rows={8}
           onFocus={(event) => event.currentTarget.select()}
           className="input-standard w-full resize-none font-mono text-meta leading-relaxed"

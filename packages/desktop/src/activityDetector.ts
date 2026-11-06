@@ -9,13 +9,13 @@ import {
   chooseGame,
   isRunning,
   parseDictionary,
-  parseProcessList,
   parseWindowTitles,
   processKey,
   windowMatches,
   type GameDictionary,
   type GameEntry,
 } from './gameMatching';
+import { listProcessesNow, watchProcesses } from './processWatch';
 
 // ─── Local Activity type (structural match with @backspace/shared Activity) ─
 
@@ -32,9 +32,6 @@ interface Activity {
   timestamps?: ActivityTimestamps;
 }
 
-const POLL_INTERVAL_MS = 15_000;
-/** After this many failed listings in a row, nothing is known to be running any more. */
-const FAILURES_BEFORE_CLEAR = 3;
 /** How often the games installed through Epic and GOG are read again, so a new one is found without a restart. */
 const INSTALLED_REFRESH_MS = 10 * 60_000;
 const STEAM_PROCESS = processKey('steam.exe', 'win32');
@@ -59,9 +56,8 @@ let currentGameId: string | null = null;
 let currentActivity: Activity | null = null;
 /** Everything found running at the last poll, and since when. */
 const runningSince = new Map<string, number>();
-let intervalId: NodeJS.Timeout | null = null;
-let isPolling = false;
-let consecutiveFailures = 0;
+/** Stops reading the listing of running programs (processWatch.ts); set while detection runs. */
+let stopWatching: (() => void) | null = null;
 /**
  * Moves on every start and stop, so a scan that was still running when
  * detection stopped (or restarted) writes nothing: its answer is about a
@@ -264,18 +260,7 @@ async function syncDictionary(): Promise<void> {
   applyDictionary(remote);
 }
 
-// ─── Platform-specific process listing ──────────────────────────────────────
-
-function getProcessCommand(): { executable: string; args: string[] } {
-  if (process.platform === 'win32') {
-    return { executable: windowsTool('tasklist.exe'), args: ['/fo', 'csv', '/nh'] };
-  }
-  if (process.platform === 'darwin') {
-    return { executable: 'ps', args: ['-c', '-A', '-o', 'comm'] };
-  }
-  // Linux and other Unix
-  return { executable: 'ps', args: ['-A', '-o', 'comm'] };
-}
+// ─── Finding the games among the running programs ──────────────────────────
 
 /**
  * The games of the list that run inside a program plenty of other things use,
@@ -365,43 +350,20 @@ function showGame(running: readonly GameEntry[]): void {
   onChangeCallback?.(currentActivity);
 }
 
-async function poll(): Promise<void> {
-  if (isPolling) return; // Previous poll still in-flight
-  isPolling = true;
+/**
+ * One round of the listing (processWatch.ts). A listing that keeps failing
+ * (`null`) means the last game is no longer known to be running, so it is not
+ * shown; detection goes on and shows it again once a listing works.
+ */
+async function onProcesses(running: ReadonlySet<string> | null): Promise<void> {
   const scanGeneration = generation;
-
-  try {
-    const { executable, args } = getProcessCommand();
-    let stdout: string;
-    try {
-      stdout = await runScan(executable, args);
-    } catch (error) {
-      if (scanGeneration !== generation) return;
-      // A failed listing (a timeout, a busy machine) is tried again at the next
-      // poll; detection never stops on its own. After a few failures in a row
-      // the last game is no longer known to be running, so it is not shown.
-      consecutiveFailures += 1;
-      if (consecutiveFailures === 1) {
-        console.warn('[ActivityDetector] listing processes failed:', error instanceof Error ? error.message : error, '— trying again');
-      }
-      if (consecutiveFailures === FAILURES_BEFORE_CLEAR) clearCurrentGame();
-      return;
-    }
-    if (scanGeneration !== generation) return;
-    consecutiveFailures = 0;
-
-    const running = await findRunningGames(parseProcessList(stdout, process.platform, process.pid));
-    if (scanGeneration !== generation) return;
-    showGame(running);
-  } finally {
-    isPolling = false;
+  if (running === null) {
+    clearCurrentGame();
+    return;
   }
-}
-
-function pollInBackground(): void {
-  poll().catch((err: unknown) => {
-    console.warn('[ActivityDetector] Poll failed:', err);
-  });
+  const games = await findRunningGames(running);
+  if (scanGeneration !== generation) return;
+  showGame(games);
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
@@ -409,20 +371,16 @@ function pollInBackground(): void {
 export function startActivityDetection(
   onActivityChange: (activity: Activity | null) => void,
 ): void {
-  if (intervalId) return; // Already running
+  if (stopWatching) return; // Already running
 
   loadLocalDictionary();
 
   onChangeCallback = onActivityChange;
-  consecutiveFailures = 0;
   installedReadAt = 0;
   generation += 1;
 
-  // Run first poll immediately
-  pollInBackground();
-
-  // Then poll every 15 seconds
-  intervalId = setInterval(pollInBackground, POLL_INTERVAL_MS);
+  // The listing answers at once, then every round.
+  stopWatching = watchProcesses(onProcesses);
 
   // Fire-and-forget: sync from remote in background
   syncDictionary().catch((err) => {
@@ -432,10 +390,8 @@ export function startActivityDetection(
 
 export function stopActivityDetection(): void {
   generation += 1;
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
+  stopWatching?.();
+  stopWatching = null;
   onChangeCallback = null;
   // Nothing is being watched any more, so nothing is being played as far as anyone knows.
   currentGameId = null;
@@ -458,5 +414,5 @@ export function setUserGames(games: readonly UserGame[]): void {
   if (currentGameId?.startsWith('user:') && !userEntries.some((entry) => entry.id === currentGameId)) {
     clearCurrentGame();
   }
-  if (intervalId) pollInBackground();
+  if (stopWatching) listProcessesNow();
 }

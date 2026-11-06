@@ -218,6 +218,11 @@ interface BackspaceElectronAPI {
   getGameDetection?: () => Promise<GameDetectionState>;
   setGameDetectionEnabled?: (enabled: boolean) => Promise<GameDetectionState>;
   removeDetectedGame?: (process: string) => Promise<GameDetectionState>;
+  // Streaming programs (OBS, Streamlabs, XSplit), for streamer mode: watched
+  // while asked, answering with what is known now (null before the first
+  // listing). Optional: older shells lack them.
+  watchStreamingPrograms?: (enabled: boolean) => Promise<boolean | null>;
+  onStreamingPrograms?: (callback: (running: boolean) => void) => () => void;
 
   // Keybind support
   getKeybindPortalStatus?: () => Promise<KeybindPortalStatus | null>;

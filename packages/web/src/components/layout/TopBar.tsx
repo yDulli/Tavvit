@@ -10,6 +10,7 @@ import { switcherKeyShortcuts, switcherShortcut } from '../../utils/quickSwitche
 import { CountBadge } from '../ui/CountBadge';
 import { Icon } from '../ui/Icon';
 import { SpaceSidebar } from './SpaceSidebar';
+import { StreamerModeBadge } from './StreamerModeBadge';
 import { UserControls } from './UserControls';
 
 /**
@@ -52,6 +53,7 @@ export function TopBar() {
       <SpaceSidebar />
 
       <div className="flex flex-shrink-0 items-center gap-1 pl-2 pr-1">
+        <StreamerModeBadge />
         <button
           type="button"
           onClick={() => openSwitcher(true)}

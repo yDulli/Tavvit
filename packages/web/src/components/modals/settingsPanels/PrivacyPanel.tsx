@@ -4,6 +4,7 @@ import { useExternalMediaStore } from '../../../stores/externalMediaStore';
 import { api } from '../../../api/client';
 import { BlockedPeopleSection } from './BlockedPeopleSection';
 import { ContactRulesSection } from './ContactRulesSection';
+import { StreamerModeSection } from './StreamerModeSection';
 import { SettingsPage, SettingsSection, ToggleRow } from './_shared/SettingsControls';
 
 export function PrivacyPanel() {
@@ -14,6 +15,8 @@ export function PrivacyPanel() {
 
   return (
     <SettingsPage title={t('settings:privacy.title')}>
+      <StreamerModeSection />
+
       <ContactRulesSection />
 
       {/* Content from other servers */}

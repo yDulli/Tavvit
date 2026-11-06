@@ -39,6 +39,8 @@ The payload (`PushPayload`) is `{ title, body, tag, url }`. The same `tag` repla
 
 `public/sw-push.js` shows whatever arrives, because a browser takes a push that shows nothing as a reason to stop delivering them. A tap focuses an open window and tells it where to go (`tavvit-open`, handled by `PushController`) or opens one. It only ever goes to a path in this app.
 
+While streamer mode is on on this device (streamer-mode.md), the page leaves fixed words in IndexedDB (`tavvit-device`, store `flags`, key `streamerMode`: `{ title, body }` in the person's language), and `sw-push.js` shows those instead of the push's own: a push arrives exactly while someone streams another program, and a stream captures the screen. Anything unreadable there counts as not set. The tap still leads where the push said.
+
 ## Security
 
 - **SSRF.** The address comes from the client and the server posts to it. `isPushServiceAddress` takes only `https`, no port, no credentials, and a host on a fixed list: `fcm.googleapis.com`, `updates.push.services.mozilla.com`, `web.push.apple.com`, `*.push.apple.com`, `*.notify.windows.com`. The list is checked when a device registers, and `sendWebPush` uses `redirect: 'error'` so a service cannot point it elsewhere. A new browser's push service is not reachable until it is added here.

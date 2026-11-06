@@ -10,6 +10,7 @@ const INTERFACE = 'org.freedesktop.portal.GlobalShortcuts';
 const ACTIONS: Record<string, string> = {
   toggleMute: 'Toggle microphone', toggleDeafen: 'Toggle deafen', pushToTalk: 'Push to talk',
   toggleCamera: 'Toggle camera', toggleScreenShare: 'Toggle screen sharing', disconnect: 'Disconnect from voice',
+  toggleStreamerMode: 'Toggle streamer mode',
 };
 type Properties = Record<string, Variant<unknown>>;
 type Shortcut = [string, Properties];

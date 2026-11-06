@@ -67,6 +67,27 @@ describe('the address section', () => {
     await waitFor(() => expect(screen.queryByText(/Waiting for confirmation/)).toBeNull());
   });
 
+  it('keeps the addresses off the page while streamer mode is on', async () => {
+    const { useStreamerModeStore } = await import('../../../streamer/streamerModeStore');
+    useStreamerModeStore.setState({ on: true });
+    try {
+      vi.mocked(api.users.email).mockResolvedValue(status({ address: 'old@example.com', verified: true, pendingAddress: 'new@example.com' }));
+      const { container } = render(<EmailSection />);
+      expect(await screen.findByText('Confirmed')).toBeTruthy();
+      expect(screen.getByText(/Waiting for confirmation: •+/)).toBeTruthy();
+      expect(container.textContent).not.toContain('old@example.com');
+      expect(container.textContent).not.toContain('new@example.com');
+
+      cleanup();
+      state.auth.user = { ...baseUser, email: 'old@example.com', emailVerified: false };
+      const bar = render(<EmailPromptBar />);
+      await waitFor(() => expect(bar.container.textContent).toContain('••••'));
+      expect(bar.container.textContent).not.toContain('old@example.com');
+    } finally {
+      useStreamerModeStore.setState({ on: false });
+    }
+  });
+
   it('says when mail to the address failed, and offers nothing that cannot work', async () => {
     vi.mocked(api.users.email).mockResolvedValue(status({ address: 'gone@example.com', undeliverable: true, lastSend: 'failed' }));
     render(<EmailSection />);

@@ -82,6 +82,39 @@
         "unavailable": "Selected camera is unavailable.",
         "notFound": "No camera detected.",
         "generic": "Could not start camera preview."
+      },
+      "background": {
+        "label": "Background",
+        "choice": {
+          "none": "None",
+          "blur": {
+            "light": "Soft blur",
+            "strong": "Strong blur"
+          },
+          "scene": {
+            "graphite": "Graphite",
+            "tavern": "Tavern",
+            "library": "Library",
+            "nightWindow": "Night window",
+            "greenhouse": "Greenhouse"
+          },
+          "own": "Your picture"
+        },
+        "own": {
+          "add": "Add a picture",
+          "replace": "Choose another picture",
+          "remove": "Remove picture",
+          "missing": "Your picture is no longer on this device. Until you add one, your room is blurred.",
+          "problem": {
+            "tooLarge": "That file is over 25 MB.",
+            "notAnImage": "This browser cannot open that file as a picture.",
+            "notKept": "This browser would not keep the picture. A private window often can't."
+          }
+        },
+        "preparing": "Getting the background ready…",
+        "failed": "The background could not start on this device.",
+        "strained": "This device is struggling to keep up. Soft blur, or no background, keeps your picture smooth.",
+        "private": "Backgrounds are made on this device. Your picture stays here and is never uploaded."
       }
     },
     "title": "Voice & Video",
@@ -541,6 +574,28 @@
           "nobody": "Nobody"
         }
       }
+    },
+    "streamer": {
+      "title": "Streamer mode",
+      "description": "Keeps what is personal off your screen while you stream it or share it. It is this device's setting.",
+      "on": "Streamer mode",
+      "automatic": "Turn on by itself",
+      "automaticDescription": "When OBS, Streamlabs or XSplit starts, and off again when it closes, unless you turned it off yourself.",
+      "automaticDesktopOnly": "In the desktop app it can turn on by itself when OBS, Streamlabs or XSplit starts.",
+      "hidesTitle": "While it is on, Tavvit hides",
+      "hides": {
+        "email": "Your email address",
+        "invites": "Invite links and codes (copying them still works)",
+        "instances": "Your connected instances",
+        "twoFactor": "Two-factor secrets and recovery codes",
+        "sessions": "Where your sessions are signed in",
+        "tokens": "Bot tokens and webhook addresses",
+        "notes": "Moderator notes about accounts",
+        "notifications": "What notifications say"
+      },
+      "shortcut": "Shortcut: {{keys}}.",
+      "noShortcut": "No shortcut yet.",
+      "setShortcut": "Set one in Keybinds"
     }
   },
   "connections": {
@@ -570,7 +625,8 @@
       "pushToTalk": "Push to Talk",
       "toggleCamera": "Toggle Camera",
       "toggleScreenShare": "Toggle Screen Share",
-      "disconnect": "Disconnect"
+      "disconnect": "Disconnect",
+      "toggleStreamerMode": "Toggle Streamer Mode"
     },
     "row": {
       "recordingPrompt": "Press a key combo…",

@@ -8,6 +8,7 @@ import { describeError } from '../../../i18n/errors';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { Sensitive, useSensitiveText } from '../../ui/Sensitive';
 import { FormError, SettingsField, SettingsSection } from './_shared/SettingsControls';
 import { TwoFactorCodeField } from './TwoFactorSection';
 
@@ -18,6 +19,8 @@ import { TwoFactorCodeField } from './TwoFactorSection';
  */
 export function EmailSection() {
   const { t } = useTranslation(['settings', 'common']);
+  // The address is personal: streamer mode hides it (docs/systems/streamer-mode.md).
+  const sensitive = useSensitiveText();
   const info = useHomeInstanceInfo();
   const addToast = useUIStore((s) => s.addToast);
   const homeInstance = useAuthStore((s) => s.user?.homeInstance ?? null);
@@ -125,7 +128,7 @@ export function EmailSection() {
       {status !== null && hasAddress && (
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="break-all text-ui font-medium text-txt-primary">{status.address}</span>
+            <span className="break-all text-ui font-medium text-txt-primary"><Sensitive>{status.address}</Sensitive></span>
             <span className={`label-mono flex-shrink-0 ${status.verified ? '' : 'text-txt-warning'}`}>
               {status.verified ? t('settings:security.email.confirmed') : t('settings:security.email.unconfirmed')}
             </span>
@@ -145,8 +148,8 @@ export function EmailSection() {
         <div className="space-y-2">
           <p className="break-words text-ui leading-5 text-txt-secondary">
             {status?.pendingAddress
-              ? t('settings:security.email.pending', { address: waiting })
-              : t('settings:security.email.waiting', { address: waiting })}
+              ? t('settings:security.email.pending', { address: sensitive(waiting) })
+              : t('settings:security.email.waiting', { address: sensitive(waiting) })}
           </p>
           {status?.undeliverable && <FormError>{t('settings:security.email.undeliverable')}</FormError>}
           {!status?.undeliverable && (status?.lastSend === 'failed' || status?.lastSend === 'expired') && (

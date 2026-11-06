@@ -9,6 +9,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useHomeInstanceInfo } from '../../../hooks/useHomeInstanceInfo';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { Sensitive, useSensitiveText } from '../../ui/Sensitive';
 import { EmailSection } from './EmailSection';
 import { TwoFactorCodeField, TwoFactorSection } from './TwoFactorSection';
 import { Icon } from '../../ui/Icon';
@@ -41,6 +42,7 @@ function RevealButton({ shown, onToggle }: { shown: boolean; onToggle: () => voi
 
 function PasswordSection({ onChanged }: { onChanged: () => void }) {
   const { t } = useTranslation(['settings', 'common']);
+  const sensitive = useSensitiveText();
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const username = useAuthStore((s) => s.user?.username ?? '');
   const changePassword = useAuthStore((s) => s.changePassword);
@@ -53,7 +55,7 @@ function PasswordSection({ onChanged }: { onChanged: () => void }) {
     : !mailOn
       ? t('settings:security.passwordRecovery.noMail')
       : address
-        ? t('settings:security.passwordRecovery.confirmed', { address })
+        ? t('settings:security.passwordRecovery.confirmed', { address: sensitive(address) })
         : t('settings:security.passwordRecovery.none');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -251,7 +253,7 @@ function SessionsSection({ onChanged }: { onChanged: () => void }) {
                   {session.current && <span className="label-mono flex-shrink-0">{t('settings:security.sessions.thisDevice')}</span>}
                 </div>
                 <p className="mt-0.5 text-meta leading-snug text-txt-tertiary">
-                  {session.addressHint && <>{session.addressHint}{' · '}</>}
+                  {session.addressHint && <><Sensitive>{session.addressHint}</Sensitive>{' · '}</>}
                   {t('settings:security.sessions.signedIn', { date: f.formatDateTime(session.createdAt) })}{' · '}
                   {t('settings:security.sessions.lastActive', { date: f.formatDateTime(session.lastActiveAt) })}
                 </p>
@@ -363,7 +365,11 @@ function ActivitySection({ events }: { events: SecurityEventInfo[] }) {
                 <time className="flex-shrink-0 font-mono text-meta text-txt-tertiary">{f.formatDateTime(event.createdAt)}</time>
               </div>
               {(event.clientLabel || event.addressHint) && (
-                <p className="mt-0.5 text-meta leading-snug text-txt-tertiary">{[event.clientLabel, event.addressHint].filter(Boolean).join(' · ')}</p>
+                <p className="mt-0.5 text-meta leading-snug text-txt-tertiary">
+                  {event.clientLabel}
+                  {event.clientLabel && event.addressHint && ' · '}
+                  {event.addressHint && <Sensitive>{event.addressHint}</Sensitive>}
+                </p>
               )}
             </li>
           ))}

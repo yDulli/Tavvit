@@ -155,6 +155,18 @@ contextBridge.exposeInMainWorld('backspace', {
   setGameDetectionEnabled: (enabled: boolean) => ipcRenderer.invoke('game-detection-set-enabled', enabled),
   removeDetectedGame: (process: string) => ipcRenderer.invoke('game-detection-remove', process),
 
+  // Streaming programs (main.ts, "Streaming programs"): whether OBS, Streamlabs or
+  // XSplit runs, told while the page asks; it answers with what is known now
+  // (null before the first listing).
+  watchStreamingPrograms: (enabled: boolean) => ipcRenderer.invoke('streaming-watch', enabled),
+  onStreamingPrograms: (callback: (running: boolean) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, running: unknown) => {
+      if (typeof running === 'boolean') callback(running);
+    };
+    ipcRenderer.on('streaming-programs', handler);
+    return () => { ipcRenderer.removeListener('streaming-programs', handler); };
+  },
+
   // Keybind support
   getKeybindPortalStatus: () => ipcRenderer.invoke('keybind-portal-status'),
   retryKeybindPortal: () => ipcRenderer.send('keybind-portal-retry'),
