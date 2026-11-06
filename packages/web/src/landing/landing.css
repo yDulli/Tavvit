@@ -1,15 +1,9 @@
 /* The product page's own stylesheet, loaded with this page alone (docs/systems/landing.md, "Design").
-   The page is built from the app's own material, Graphite (docs/systems/design-system.md): deep
-   graphite surfaces told apart by a step in tone and a hairline, soft light behind the content in the
-   colour of the place, one violet signal, small corners, Geist for the words and Geist Mono for the
-   labels. It is a document of chapters on hairlines. Nothing moves by itself. */
-
-/* The colour of the place a chapter is in, registered so it can fade, as `--place-color` does in the app. */
-@property --lp-place {
-  syntax: '<color>';
-  inherits: false;
-  initial-value: rgb(116 102 232);
-}
+   The page is a set of drawn sheets for a place: its opening draws a space as a floor plan (Plan.tsx),
+   and every part after it is a numbered sheet of the same set. It is built from the app's own material,
+   Graphite (docs/systems/design-system.md): deep graphite surfaces told apart by a step in tone and a
+   hairline, soft light from above in the colour of the place, one violet signal, small corners, Geist
+   for the words and Geist Mono for the labels of the drawing. Nothing moves by itself. */
 
 #lp {
   --ground: var(--bg-base);
@@ -20,11 +14,11 @@
   --violet-soft: var(--accent-primary-soft);
   --gutter: clamp(20px, calc(4 * var(--app-vw)), 56px);
   --wrap: 1280px;
-  --section: clamp(80px, calc(8.5 * var(--app-vw)), 144px);
+  --section: clamp(88px, calc(9 * var(--app-vw)), 152px);
   --radius: 6px;
   --radius-frame: 8px;
   --cell: rgb(var(--ground));
-  --lp-place-target: rgb(var(--accent-primary));
+  --lp-place: rgb(var(--accent-primary));
   background: rgb(var(--ground));
   color: rgb(var(--text-primary));
   overflow-x: clip;
@@ -35,20 +29,18 @@
 #lp * { box-sizing: border-box; }
 #lp img { display: block; max-width: 100%; height: auto; }
 #lp a { text-decoration: none; }
-/* The page's `<i>` are marks (a status dot, a swatch), never italics: no italic face is fetched for them. */
+/* The page's `<i>` are marks (a status dot, a swatch, a person), never italics: no italic face is fetched for them. */
 #lp i { font-style: normal; }
 #lp a:focus-visible, #lp button:focus-visible, #lp summary:focus-visible, #lp select:focus-visible { outline: 2px solid rgb(var(--violet-soft)); outline-offset: 2px; border-radius: var(--radius); }
 #lp main { position: relative; z-index: 0; }
 .lp-wrap { width: min(var(--wrap), 100%); margin-inline: auto; padding-inline: var(--gutter); }
 .lp-band { --cell: rgb(var(--band)); background: rgb(var(--band)); }
-.lp-sec { position: relative; isolation: isolate; padding-block: var(--section); }
 
 /* ── Type: large type carries a little light of its own (`.ink` in the app); never a colour in a heading ── */
 .lp-ink { color: rgb(var(--text-primary)); background-image: linear-gradient(180deg, rgb(var(--text-primary)) 38%, color-mix(in srgb, rgb(var(--text-primary)) 72%, rgb(var(--bg-chat))) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.lp-stage-title { font-size: min(var(--fit, 5rem), clamp(2.6rem, calc(5.6 * var(--app-vw)), 5rem)); font-weight: 680; line-height: .94; letter-spacing: -.05em; padding-bottom: .08em; }
 .lp-display { font-size: min(var(--fit, 6rem), clamp(2.75rem, calc(6.4 * var(--app-vw)), 6rem)); font-weight: 680; line-height: .98; letter-spacing: -.045em; text-wrap: balance; padding-bottom: .08em; }
 .lp-h2 { font-size: min(var(--fit, 3.25rem), clamp(1.9rem, calc(3.5 * var(--app-vw)), 3.25rem)); font-weight: 640; line-height: 1.04; letter-spacing: -.035em; text-wrap: balance; padding-bottom: .08em; }
-.lp-h2-small { font-size: min(var(--fit, 2.25rem), clamp(1.5rem, calc(2.5 * var(--app-vw)), 2.25rem)); }
-.lp-h3 { font-size: 17px; font-weight: 600; line-height: 1.3; letter-spacing: -.015em; color: rgb(var(--text-primary)); }
 .lp-lead { max-width: 36em; font-size: clamp(1.0625rem, calc(1.3 * var(--app-vw)), 1.25rem); line-height: 1.5; color: rgb(var(--text-secondary)); text-wrap: pretty; }
 .lp-body { max-width: 32em; font-size: 16px; line-height: 1.55; color: rgb(var(--text-secondary)); text-wrap: pretty; }
 .lp-label { font-family: var(--font-mono); font-size: 11px; font-weight: 500; line-height: 1.3; letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--text-category)); }
@@ -56,18 +48,17 @@
 .lp-line { display: block; }
 .lp-cell-title { font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -.015em; color: rgb(var(--text-primary)); }
 .lp-cell-body { margin-top: 8px; font-size: 14px; line-height: 1.5; color: rgb(var(--text-secondary)); text-wrap: pretty; }
-:root:lang(zh) .lp-display, :root:lang(zh) .lp-h2 { letter-spacing: 0; line-height: 1.2; }
-:root:lang(zh) .lp-h3, :root:lang(zh) .lp-cell-title { letter-spacing: 0; }
-/* Russian and Portuguese headlines run longer: a step down keeps the opening at two lines. */
+:root:lang(zh) .lp-stage-title, :root:lang(zh) .lp-display, :root:lang(zh) .lp-h2 { letter-spacing: 0; line-height: 1.2; }
+:root:lang(zh) .lp-cell-title { letter-spacing: 0; }
+/* Russian and Portuguese headlines run longer: a step down keeps them on the lines the catalog gives. */
+:root:lang(ru) .lp-stage-title, :root:lang(pt) .lp-stage-title { font-size: min(var(--fit, 4.25rem), clamp(2.4rem, calc(4.8 * var(--app-vw)), 4.25rem)); }
 :root:lang(ru) .lp-display, :root:lang(pt) .lp-display { font-size: min(var(--fit, 5.25rem), clamp(2.5rem, calc(5.6 * var(--app-vw)), 5.25rem)); }
 
 /* ── One of two, by device: the page's HTML is written before anyone's device is known, so both
    stand in it and `data-lp-os` (landingPlatform, set before the first paint) shows the one that
    fits. Without it, as for a reader with no script, the general one stays. ── */
 :root:not([data-lp-os='windows']) #lp .lp-for-windows,
-:root[data-lp-os='windows'] #lp .lp-not-windows,
-:root:not([data-lp-os='apple']) #lp .lp-for-apple,
-:root[data-lp-os='apple'] #lp .lp-not-apple { display: none !important; }
+:root[data-lp-os='windows'] #lp .lp-not-windows { display: none !important; }
 
 /* ── Buttons: the app's geometry, larger. White for the one action of an opening, a hairline for the rest ── */
 .lp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 32px; }
@@ -105,57 +96,363 @@
 .lp-window { border-radius: 10px; box-shadow: 0 0 0 1px rgb(255 255 255 / .14), 0 50px 110px -40px rgb(0 0 0 / .9), 0 18px 40px -24px rgb(0 0 0 / .7); }
 .lp-device { border-radius: 30px; padding: 8px; background: rgb(var(--bg-elevated)); border: 1px solid rgb(var(--hair-soft)); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 40px 90px -40px rgb(0 0 0 / .9); }
 .lp-device > img { border-radius: 22px; }
-/* A part of the big window's picture: `WindowCrop` gives the rectangle (in the 1440-wide window's pixels) as custom properties, so a narrower window may take a narrower part. */
-.lp-crop { padding-top: 12px; }
-#lp .lp-crop img { max-width: none; width: calc(1440 / var(--crop-w) * 100%); margin-left: calc(-1 * var(--crop-x) / var(--crop-w) * 100%); margin-top: calc(-1 * var(--crop-y) / var(--crop-w) * 100%); }
 
-/* ── Light: grain and a bloom in the colour of the place, behind the content, fading as the place changes ── */
-.lp-light { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; --lp-place: var(--lp-place-target); transition: --lp-place var(--dur-slower) var(--ease-out); -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 100%); mask-image: linear-gradient(180deg, #000 50%, transparent 100%); }
-.lp-light::before { content: ''; position: absolute; inset: 0; background-image: var(--grain), radial-gradient(48% 44% at 72% 0%, color-mix(in srgb, var(--lp-place) 42%, transparent) 0%, color-mix(in srgb, var(--lp-place) 13%, transparent) 48%, transparent 76%), radial-gradient(34% 40% at 10% 6%, color-mix(in srgb, var(--lp-place) 11%, transparent) 0%, transparent 70%); background-size: 220px, auto, auto; background-repeat: repeat, no-repeat, no-repeat; }
+/* ── Light: grain and a bloom in the colour of the place, behind the content ── */
+.lp-light { position: absolute; z-index: -1; inset: 0; overflow: hidden; pointer-events: none; -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent 100%); mask-image: linear-gradient(180deg, #000 50%, transparent 100%); }
+.lp-light::before { content: ''; position: absolute; inset: 0; background-image: var(--grain), radial-gradient(48% 44% at 72% 0%, color-mix(in srgb, var(--lp-place) 40%, transparent) 0%, color-mix(in srgb, var(--lp-place) 12%, transparent) 48%, transparent 76%), radial-gradient(34% 40% at 10% 6%, color-mix(in srgb, var(--lp-place) 10%, transparent) 0%, transparent 70%); background-size: 220px, auto, auto; background-repeat: repeat, no-repeat, no-repeat; }
 /* The rings of the app's own openings, which are the ring of the logo. */
 .lp-light-rings::after { content: ''; position: absolute; top: -380px; right: -160px; width: 940px; height: 940px; border-radius: 50%; border: 1px solid rgb(255 255 255 / .07); outline: 1px solid rgb(255 255 255 / .045); outline-offset: -190px; }
 html[data-contrast='high'] .lp-light, html[data-light='off'] .lp-light { display: none; }
 html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-color: currentColor; }
-@media (forced-colors: active) {
-  .lp-light { display: none; }
-  .lp-ink { background-image: none; -webkit-text-fill-color: currentColor; }
-  /* Hairlines drawn with shadows and grid gaps vanish under forced colours; a border stays. */
-  .lp-grid > *, .lp-tile, .lp-frame, .lp-btn, .lp-tab, .lp-swatch, .lp-code, .lp-news { outline: 1px solid CanvasText; outline-offset: -1px; }
-  /* What is chosen keeps a mark of its own, in the system's colour for it; the swatches keep their colours, which are content. */
-  .lp-tab[aria-selected='true']::after { background: Highlight; }
-  .lp-swatch[aria-checked='true'], .lp-demo-reaction[aria-pressed='true'] { outline: 2px solid Highlight; outline-offset: -2px; }
-  .lp-swatch i { forced-color-adjust: none; }
-}
-/* A chapter's heading is aimed at from the contents while its arrival still holds it 18px lower, and its hairline and index stand up to 70px above it: the room keeps all of that clear of the nav. */
-.lp-h2[id], .lp-display[id] { scroll-margin-top: 88px; }
+/* A headline is aimed at from a link while its arrival still holds it lower: the room keeps it clear of the nav. */
+.lp-h2[id], .lp-display[id], #features { scroll-margin-top: 88px; }
 
 /* ── Hairline grids: cells on a 1px ground, the table of a precise document, never a stack of cards ── */
 .lp-grid { display: grid; gap: 1px; background: rgb(var(--hair)); box-shadow: 0 0 0 1px rgb(var(--hair)); }
 .lp-grid > * { min-width: 0; padding: 26px 28px 28px; background: var(--cell); }
 .lp-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.lp-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-/* As many columns as there are points: the two-factor point stays away where the server has none. */
-.lp-four { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .lp-under { margin-top: 40px; }
 
-/* ── Opening: the headline and the lead side by side, the real window under them, its parts named ── */
-.lp-hero { position: relative; isolation: isolate; overflow: clip; margin-top: -64px; padding-top: 148px; padding-bottom: var(--section); }
-.lp-hero-copy { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px 64px; align-items: end; }
-.lp-hero-copy .lp-lead { margin-bottom: 4px; }
-.lp-hero-copy .lp-actions { margin-top: 28px; }
-.lp-news { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin-bottom: 32px; padding: 5px 10px 5px 6px; border: 1px solid rgb(var(--hair-soft)); border-radius: var(--radius); font-size: 13px; font-weight: 500; color: rgb(var(--text-secondary)); background: rgb(var(--band) / .7); transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease; }
+/* ── Sheets: every part after the opening is a sheet of the set. A hairline with its corners ticked, as a
+   drawing's edge is; the sheet's number and name in Mono; then the heading and its lead ── */
+.lp-sheet { position: relative; isolation: isolate; padding-block: var(--section); }
+.lp-sheet-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; font: 500 11px/1.3 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.lp-sheet-meta > .lp-mono { color: rgb(var(--text-primary)); }
+.lp-sheet-meta > .lp-label::before { content: ''; display: inline-block; width: 28px; height: 1px; margin: 0 12px; vertical-align: middle; background: rgb(var(--hair-soft)); }
+.lp-sheet-head, .lp-stage-top { position: relative; padding-top: 18px; border-top: 1px solid rgb(var(--hair)); }
+.lp-sheet-head::before, .lp-sheet-head::after, .lp-stage-top::before, .lp-stage-top::after { content: ''; position: absolute; top: -5px; width: 1px; height: 9px; background: rgb(var(--text-tertiary) / .6); }
+.lp-sheet-head::before, .lp-stage-top::before { left: 0; }
+.lp-sheet-head::after, .lp-stage-top::after { right: 0; }
+.lp-sheet-head { display: grid; gap: 18px; }
+.lp-sheet-head .lp-h2 { margin-top: 8px; }
+.lp-sheet-head-split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 64px; align-items: end; }
+.lp-sheet-head-split > .lp-sheet-meta { grid-column: 1 / -1; }
+.lp-sheet-head-split > .lp-lead { margin-bottom: 8px; }
+
+/* ── The opening's stage (Stage.tsx): Tavvit on one screen, its list of channels drawn as a floor plan.
+   The head says what Tavvit is; under it the app's own window, the plan where the app has its sidebar
+   and the room chosen where it has its conversation; under that, what the server says of itself. The
+   window takes what the screen leaves, so the whole of it stands in the first screen of a laptop ── */
+.lp-stage { position: relative; isolation: isolate; overflow: clip; margin-top: -64px; padding-top: 92px; padding-bottom: 28px; }
+.lp-stage-in { display: flex; flex-direction: column; }
+.lp-stage-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.lp-stage-head { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px 56px; align-items: end; margin-top: clamp(20px, calc(2.4 * var(--app-vw)), 36px); }
+.lp-stage-aside .lp-lead { max-width: 34em; font-size: 16px; }
+.lp-stage-aside .lp-actions { margin-top: 18px; }
+.lp-app { display: flex; flex-direction: column; margin-top: clamp(20px, calc(2.4 * var(--app-vw)), 32px); overflow: hidden; border-radius: 12px; background: rgb(var(--bg-chat)); box-shadow: 0 0 0 1px rgb(255 255 255 / .14), 0 50px 110px -40px rgb(0 0 0 / .9), 0 18px 40px -24px rgb(0 0 0 / .7); }
+.lp-app-bar { display: flex; flex: none; align-items: center; gap: 10px; height: 46px; padding: 0 16px; border-bottom: 1px solid rgb(var(--hair)); background: rgb(var(--bg-base)); font-size: 14px; color: rgb(var(--text-primary)); }
+.lp-app-bar strong { font-weight: 600; }
+.lp-app-bar > span { font-size: 13px; color: rgb(var(--text-tertiary)); }
+.lp-app-bar .lp-plan-icon { width: 22px; height: 22px; border-radius: 6px; font-size: 11px; }
+.lp-app-bar .lp-app-address { margin-left: auto; font-size: 12px; }
+/* The window is as tall as the screen leaves it, within bounds, so a long conversation scrolls inside it. */
+.lp-app-body { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-rows: minmax(0, 1fr); height: clamp(470px, calc(100 * var(--app-vh) - 420px), 640px); }
+.lp-app-map { display: flex; flex-direction: column; justify-content: center; gap: 14px; min-width: 0; padding: 22px 24px 18px 34px; border-right: 1px solid rgb(var(--hair)); background: rgb(var(--bg-channel)); }
+.lp-app-hint { text-align: center; }
+.lp-app-room { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: rgb(var(--bg-chat)); }
+.lp-app-room > .lp-demo-cta { position: absolute; top: 56px; right: 14px; z-index: 1; }
+/* A room that can be chosen answers the pointer with a little of its light; the choice is the click. */
+button.lp-room:not([data-lit='true']):hover .lp-room-light { opacity: .45; }
+button.lp-room[data-locked='true']:hover .lp-room-light { opacity: .2; }
+/* The visitor: a point in the accent, the one thing on the plan that is theirs, and its name beside it. */
+.lp-you { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; visibility: hidden; }
+.lp-you[data-ready='true'] { visibility: visible; }
+.lp-you i { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; background: rgb(var(--violet)); box-shadow: 0 0 0 3px rgb(var(--bg-chat)), 0 0 0 4px rgb(var(--violet) / .55); }
+.lp-you b { position: absolute; left: 12px; top: -9px; padding: 0 5px; border-radius: 3px; background: rgb(var(--violet)); font: 600 10px/18px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; color: #fff; }
+
+/* ── The rooms of the stage (rooms.tsx, channels.tsx, gatherings.tsx, members.tsx), drawn as the app draws them ── */
+/* The window's bar: the member list and the looks, as the app's channel bar has its buttons. */
+.lp-app-button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 5px; font-size: 13px; font-weight: 500; color: rgb(var(--text-secondary)); cursor: pointer; transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease; }
+.lp-app-button:hover { color: rgb(var(--text-primary)); background: var(--interactive-hover); }
+.lp-app-button[aria-pressed='true'], .lp-app-button[aria-expanded='true'] { color: rgb(var(--text-primary)); background: var(--interactive-selected); }
+.lp-app-button svg { width: 16px; height: 16px; flex: none; }
+.lp-app-bar .lp-app-address + .lp-app-look { margin-left: 4px; }
+.lp-app-looks { display: flex; flex: none; flex-wrap: wrap; gap: 6px; padding: 10px 16px; border-bottom: 1px solid rgb(var(--hair)); background: rgb(var(--bg-base)); }
+/* The looks, and the chips they are drawn as. */
+.lp-chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 1px solid rgb(var(--hair-soft)); border-radius: var(--radius); background: transparent; font-size: 13px; font-weight: 500; color: rgb(var(--text-secondary)); cursor: pointer; transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease, background-color var(--dur-fast) ease; }
+.lp-chip:hover { color: rgb(var(--text-primary)); border-color: rgb(var(--interactive-muted)); background: var(--interactive-hover); }
+.lp-chip[aria-checked='true'] { color: rgb(var(--text-primary)); border-color: rgb(var(--violet)); background: var(--interactive-selected); }
+.lp-swatch { padding-left: 6px; }
+.lp-swatch i { position: relative; width: 20px; height: 20px; border-radius: 4px; background: var(--swatch); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14); }
+.lp-swatch i::after { content: ''; position: absolute; left: 6px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--swatch-accent); }
+/* What the rooms are made of: a conversation that does not move under the reader, a role's icon by a name, a list in a message. */
+.lp-room-feed { display: flex; flex-direction: column; gap: 14px; padding: 18px 14px; }
+.lp-demo-role-icon { margin-left: 6px; font-size: 12px; }
+.lp-demo-bullets { display: grid; gap: 3px; margin-top: 4px; padding-left: 18px; list-style: disc; font-size: 15px; line-height: 1.45; color: rgb(var(--text-message)); }
+.lp-room-back { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: -6px; border-radius: 5px; color: rgb(var(--text-secondary)); cursor: pointer; }
+.lp-room-back:hover { color: rgb(var(--text-primary)); background: var(--interactive-hover); }
+.lp-demo-bar .lp-room-toggle { display: inline-flex; flex: none; align-items: center; gap: 6px; height: 28px; margin-left: auto; padding: 0 10px; border: 1px solid rgb(var(--hair-soft)); border-radius: 5px; font-size: 12px; font-weight: 500; color: rgb(var(--text-secondary)); cursor: pointer; }
+.lp-demo-bar .lp-room-toggle:hover { color: rgb(var(--text-primary)); background: var(--interactive-hover); }
+.lp-demo-bar .lp-room-toggle[aria-pressed='true'] { border-color: rgb(var(--violet)); color: rgb(var(--text-primary)); background: var(--interactive-selected); }
+.lp-demo-bar .lp-room-toggle svg { width: 14px; height: 14px; color: inherit; }
+/* raid-planning's thread: the chip under the message it grew from, and the thread opened over the channel. */
+.lp-thread-chip { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; padding: 6px 12px 6px 10px; border: 1px solid rgb(var(--hair)); border-radius: var(--radius); background: rgb(var(--bg-base)); font-size: 13px; color: rgb(var(--text-secondary)); cursor: pointer; transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease; }
+.lp-thread-chip:hover { border-color: rgb(var(--interactive-muted)); background: var(--interactive-hover); }
+.lp-thread-chip strong { font-weight: 600; color: rgb(var(--text-primary)); }
+.lp-thread-chip svg { width: 15px; height: 15px; flex: none; color: rgb(var(--text-tertiary)); }
+.lp-thread-divider { display: flex; align-items: center; gap: 12px; }
+.lp-thread-divider::before, .lp-thread-divider::after { content: ''; flex: 1 1 auto; height: 1px; background: rgb(var(--hair)); }
+/* clips: an upload as the app shows a video, with its length and its name, and a spoiler's veil over it. */
+.lp-clip { position: relative; width: min(100%, 320px); margin: 8px 0 0; overflow: hidden; border: 1px solid rgb(var(--hair)); border-radius: 8px; background: rgb(var(--bg-base)); }
+.lp-clip-frame { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 9; background: radial-gradient(70% 90% at 30% 20%, rgb(var(--accent-coral) / .28), transparent 70%), radial-gradient(60% 80% at 80% 90%, rgb(var(--accent-sky) / .22), transparent 70%), rgb(13 14 17); }
+.lp-clip-frame i { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: rgb(0 0 0 / .55); color: #fff; box-shadow: 0 0 0 1px rgb(255 255 255 / .2); }
+.lp-clip-frame i svg { width: 18px; height: 18px; margin-left: 2px; fill: currentColor; }
+.lp-clip-frame > span { position: absolute; right: 8px; bottom: 8px; padding: 1px 6px; border-radius: 4px; background: rgb(0 0 0 / .6); font-size: 11px; color: #fff; }
+.lp-clip figcaption { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; font-size: 12px; color: rgb(var(--text-tertiary)); }
+.lp-clip figcaption .lp-mono { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgb(var(--text-secondary)); }
+.lp-clip[data-veiled='true'] .lp-clip-frame, .lp-clip[data-veiled='true'] figcaption { filter: blur(14px); }
+.lp-clip-veil { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgb(13 14 17 / .45); font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--text-primary)); cursor: pointer; }
+.lp-clip-veil:hover { background: rgb(13 14 17 / .3); }
+/* patch-notes' poll: answers to choose, then each one's share once the visitor has voted. */
+.lp-poll { display: grid; gap: 8px; width: min(100%, 360px); margin-top: 6px; padding: 14px; border: 1px solid rgb(var(--hair)); border-radius: 8px; background: rgb(var(--bg-elevated)); }
+.lp-poll-question { font-size: 15px; font-weight: 600; color: rgb(var(--text-primary)); }
+.lp-poll-option { height: 40px; padding: 0 14px; border: 1px solid rgb(var(--hair-soft)); border-radius: var(--radius); background: rgb(var(--bg-base)); text-align: left; font-size: 14px; color: rgb(var(--text-primary)); cursor: pointer; transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease; }
+.lp-poll-option:hover:not(:disabled) { border-color: rgb(var(--violet)); background: var(--interactive-hover); }
+.lp-poll-option:disabled { color: rgb(var(--text-tertiary)); cursor: default; }
+.lp-poll-result { display: grid; gap: 3px; }
+.lp-poll-result > p { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 40px; padding: 0 14px; overflow: hidden; border-radius: var(--radius); background: linear-gradient(90deg, rgb(255 255 255 / .1) var(--share), rgb(var(--bg-base)) var(--share)); font-size: 14px; color: rgb(var(--text-primary)); }
+.lp-poll-result[data-mine='true'] > p { box-shadow: inset 0 0 0 1px rgb(var(--violet)); background: linear-gradient(90deg, rgb(var(--violet) / .32) var(--share), rgb(var(--bg-base)) var(--share)); }
+.lp-poll-result > p > span:first-child { display: inline-flex; align-items: center; gap: 8px; }
+.lp-poll-result svg { width: 15px; height: 15px; color: rgb(var(--violet-soft)); }
+.lp-poll-votes { padding-left: 2px; font-size: 11px; color: rgb(var(--text-tertiary)); }
+.lp-poll-foot { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 2px; font-size: 12px; color: rgb(var(--text-tertiary)); }
+/* movie night: the video watched in step, a reaction rising over it, and who is watching. */
+.lp-watch { overflow: hidden; border: 1px solid rgb(var(--hair)); border-radius: 8px; background: rgb(var(--bg-base)); }
+.lp-watch-screen { position: relative; display: flex; align-items: flex-end; justify-content: flex-start; aspect-ratio: 16 / 9; padding: 14px; overflow: hidden; background: radial-gradient(80% 90% at 70% 10%, rgb(var(--accent-amber) / .3), transparent 70%), radial-gradient(70% 80% at 10% 100%, rgb(var(--accent-rose) / .22), transparent 70%), rgb(10 10 12); }
+.lp-watch-title { font-size: 14px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / .6); }
+.lp-watch-paused { position: absolute; top: 12px; left: 14px; color: #fff; }
+.lp-watch-consent { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; max-width: 30em; font-size: 13px; line-height: 1.45; color: rgb(255 255 255 / .82); }
+.lp-watch-consent .lp-demo-locked { margin: 0; background: rgb(0 0 0 / .4); }
+.lp-watch-rise { position: absolute; left: var(--x); bottom: 18px; font-size: 26px; line-height: 1; pointer-events: none; }
+.lp-watch-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; border-top: 1px solid rgb(var(--hair)); }
+.lp-watch-play { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 5px; background: var(--interactive-selected); color: rgb(var(--text-primary)); cursor: pointer; }
+.lp-watch-play svg { width: 16px; height: 16px; }
+.lp-watch-state { font-size: 13px; color: rgb(var(--text-secondary)); }
+.lp-watch-cheers { display: inline-flex; gap: 2px; margin-left: auto; }
+.lp-watch-cheers button { width: 32px; height: 32px; border-radius: 5px; font-size: 16px; cursor: pointer; }
+.lp-watch-cheers button:hover { background: var(--interactive-hover); }
+.lp-watchers { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-size: 13px; color: rgb(var(--text-secondary)); }
+.lp-watchers li { display: inline-flex; align-items: center; gap: 8px; }
+.lp-watchers i { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; font: 600 11px/1 var(--font-ui); color: #fff; }
+/* The events: Saturday's raid, with going, a reminder, and the way to its voice room. */
+.lp-event { display: grid; gap: 6px; padding: 16px; border: 1px solid rgb(var(--hair)); border-radius: 8px; background: rgb(var(--bg-elevated)); }
+.lp-event-title { font-size: 18px; font-weight: 600; letter-spacing: -.01em; color: rgb(var(--text-primary)); }
+.lp-event-when { font-size: 14px; color: rgb(var(--text-secondary)); }
+.lp-event-text { margin-top: 4px; font-size: 14px; line-height: 1.5; color: rgb(var(--text-message)); text-wrap: pretty; }
+.lp-event-count { margin-top: 4px; font-size: 13px; color: rgb(var(--text-tertiary)); }
+.lp-event-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+/* The member list: everyone under their role, as the app's has them. */
+.lp-members { padding: 12px 10px 16px; }
+.lp-members-hint { margin: 2px 8px 6px; font-size: 12px; line-height: 1.45; color: rgb(var(--text-tertiary)); }
+.lp-members-group { margin: 14px 8px 4px; }
+.lp-member { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 4px 8px; border-radius: 5px; text-align: left; cursor: pointer; transition: background-color var(--dur-fast) ease; }
+button.lp-member:hover { background: var(--interactive-hover); }
+.lp-member[aria-pressed='true'] { background: var(--interactive-selected); box-shadow: inset 2px 0 0 rgb(var(--violet)); }
+.lp-member-you { cursor: default; }
+.lp-member-avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: rgb(var(--violet)); font: 600 13px/1 var(--font-ui); color: #fff; }
+.lp-member-text { display: grid; min-width: 0; }
+.lp-member-name { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; font-weight: 500; color: rgb(var(--text-primary)); }
+.lp-member-name svg { width: 14px; height: 14px; flex: none; color: rgb(var(--accent-amber)); }
+.lp-member-line { min-width: 0; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; color: rgb(var(--text-tertiary)); }
+
+.lp-room-view { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.lp-room-view[hidden] { display: none; }
+.lp-room-body { flex: 1 1 auto; min-height: 0; padding: 20px; overflow-y: auto; overscroll-behavior: contain; }
+.lp-room-foot { display: flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px 16px; border-top: 1px solid rgb(var(--hair)); }
+.lp-room-note { flex: none; padding: 0 16px 14px; font-size: 12px; line-height: 1.45; text-align: center; color: rgb(var(--text-tertiary)); }
+.lp-room-foot + .lp-room-note { padding-top: 0; }
+.lp-room-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: var(--radius); background: rgb(var(--violet)); font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; transition: background-color var(--dur-fast) ease; }
+.lp-room-primary:hover { background: rgb(var(--accent-primary-hover)); }
+.lp-room-primary svg { width: 16px; height: 16px; flex: none; }
+.lp-demo-bar em { margin-left: 6px; padding-left: 12px; border-left: 1px solid rgb(var(--hair-soft)); font-size: 13px; font-style: normal; white-space: nowrap; color: rgb(var(--status-online)); }
+/* At the door: the invite, as the app's join page shows it. */
+.lp-invite { padding: 24px 24px 0; }
+.lp-invite-card { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 340px; margin: auto; text-align: center; }
+.lp-invite-icon { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; margin-top: 6px; border-radius: 14px; background: rgb(var(--accent-lavender)); font: 600 22px/1 var(--font-ui); color: rgb(13 14 17); }
+.lp-invite-name { font-size: 22px; font-weight: 640; letter-spacing: -.02em; color: rgb(var(--text-primary)); }
+.lp-invite-text { font-size: 14px; line-height: 1.5; color: rgb(var(--text-secondary)); text-wrap: pretty; }
+.lp-invite-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 13px; color: rgb(var(--text-tertiary)); }
+.lp-invite .lp-room-primary { min-width: 180px; margin-top: 8px; }
+.lp-invite .lp-room-note { padding-top: 20px; }
+/* The way in: the space's welcome, its rules and where to start. */
+.lp-welcome { display: flex; flex-direction: column; gap: 10px; }
+.lp-welcome-title { font-size: 19px; font-weight: 640; letter-spacing: -.02em; color: rgb(var(--text-primary)); }
+.lp-welcome-text { margin-bottom: 6px; font-size: 14px; line-height: 1.5; color: rgb(var(--text-secondary)); text-wrap: pretty; }
+.lp-welcome .lp-label { margin-top: 8px; }
+.lp-welcome-rules { display: grid; gap: 6px; padding-left: 20px; list-style: decimal; font-size: 14px; line-height: 1.45; color: rgb(var(--text-message)); }
+.lp-welcome-start { display: grid; gap: 2px; }
+.lp-welcome-start .nav-item { width: 100%; cursor: pointer; }
+.lp-welcome-start svg { width: 16px; height: 16px; flex: none; color: rgb(var(--text-tertiary)); }
+.lp-welcome-agreed { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: rgb(var(--text-positive)); }
+.lp-welcome-agreed svg { width: 16px; height: 16px; flex: none; }
+/* Held back until the rules are agreed to, as the app holds back a member: reading stays open. */
+.lp-demo-locked { display: flex; flex: none; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 10px; margin: 0 16px 16px; padding: 10px 12px; border: 1px dashed rgb(var(--hair-soft)); border-radius: var(--radius); font-size: 13px; color: rgb(var(--text-secondary)); }
+.lp-room-foot .lp-demo-locked { margin: 0; }
+.lp-demo-locked svg { width: 15px; height: 15px; flex: none; color: rgb(var(--text-tertiary)); }
+.lp-demo-locked button { height: 30px; padding: 0 12px; border-radius: 5px; background: rgb(var(--violet)); font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; }
+.lp-demo-locked button:hover { background: rgb(var(--accent-primary-hover)); }
+/* #general on the stage: the conversation alone, the plan and the window are its sidebar and frame. */
+.lp-demo-app-compact { flex: 1 1 auto; height: auto; min-height: 0; border-radius: 0; }
+/* The lounge: the people in the call as the app's voice grid has them, whoever speaks ringed. */
+.lp-voice-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lp-voice-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; aspect-ratio: 16 / 10; border-radius: 8px; background: rgb(var(--bg-base)); box-shadow: inset 0 0 0 1px rgb(var(--hair)); font-size: 13px; font-weight: 500; color: rgb(var(--text-primary)); }
+.lp-voice-tile > i { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 11px; background: var(--who); font: 600 18px/1 var(--font-ui); color: rgb(13 14 17); }
+.lp-voice-tile[data-speaking='true'] { box-shadow: inset 0 0 0 2px rgb(var(--status-online)); }
+.lp-voice-you > i { background: rgb(var(--violet)); color: #fff; }
+.lp-voice-you[data-camera='true'] { background: linear-gradient(160deg, rgb(var(--accent-lavender) / .16), rgb(var(--bg-base)) 72%); }
+.lp-voice-badge { position: absolute; left: 8px; top: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgb(0 0 0 / .45); font: 500 10px/1.4 var(--font-mono); font-style: normal; letter-spacing: .04em; text-transform: uppercase; color: rgb(var(--text-secondary)); }
+.lp-voice-badge svg { width: 12px; height: 12px; }
+.lp-voice-muted { position: absolute; right: 8px; bottom: 8px; display: inline-flex; padding: 3px; border-radius: 4px; background: rgb(var(--status-dnd) / .18); font-style: normal; color: rgb(var(--status-dnd)); }
+.lp-voice-muted svg { width: 14px; height: 14px; }
+.lp-voice-button { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid rgb(var(--hair-soft)); border-radius: var(--radius); font-size: 13px; font-weight: 500; color: rgb(var(--text-primary)); cursor: pointer; transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease; }
+.lp-voice-button:hover { background: var(--interactive-hover); }
+.lp-voice-button[aria-pressed='true'] { border-color: rgb(var(--violet)); background: var(--interactive-selected); }
+.lp-voice-button svg { width: 16px; height: 16px; flex: none; }
+.lp-voice-leave { border-color: rgb(var(--text-danger) / .45); color: rgb(var(--text-danger)); }
+.lp-voice-leave:hover { background: rgb(var(--text-danger) / .1); }
+/* A room with no interface of its own here: what it is, and its real screen. */
+.lp-room-note-body { display: flex; flex-direction: column; gap: 16px; }
+.lp-room-about { font-size: 15px; line-height: 1.55; color: rgb(var(--text-secondary)); text-wrap: pretty; }
+.lp-room-picture { flex: none; }
+.lp-room-picture[data-picture='thread'] { aspect-ratio: 16 / 10; }
+#lp .lp-room-picture[data-picture='thread'] img { width: calc(1700 / 1068 * 100%); max-width: none; margin-top: calc(-380 / 1068 * 100%); }
+.lp-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; width: 100%; margin-top: 14px; padding-top: 16px; border-top: 1px solid rgb(var(--hair)); font-size: 13px; color: rgb(var(--text-tertiary)); }
+.lp-facts li { display: inline-flex; align-items: center; gap: 6px; }
+.lp-facts a { display: inline-flex; align-items: center; gap: 8px; color: rgb(var(--text-secondary)); transition: color var(--dur-fast) ease; }
+.lp-facts a:hover { color: rgb(var(--text-primary)); }
+.lp-facts .lp-mono { color: rgb(var(--text-primary)); }
+.lp-facts i { width: 7px; height: 7px; border-radius: 50%; background: rgb(var(--status-online)); }
+.lp-facts [data-state='down'] i { background: rgb(var(--status-dnd)); }
+.lp-news { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; padding: 4px 10px 4px 5px; border: 1px solid rgb(var(--hair-soft)); border-radius: var(--radius); font-size: 13px; font-weight: 500; color: rgb(var(--text-secondary)); background: rgb(var(--band) / .7); transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease; }
 .lp-news:hover { color: rgb(var(--text-primary)); border-color: rgb(var(--interactive-muted)); }
 .lp-news-label { flex: none; padding: 3px 6px; border-radius: 4px; font: 500 10px/1.2 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--text-primary)); background: rgb(255 255 255 / .1); }
 .lp-news-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lp-news svg { width: 14px; height: 14px; flex: none; }
-.lp-hero-stage { margin-top: 72px; }
-.lp-hero-stage .lp-window { border-radius: 12px; }
-/* The keys on the window: small floating marks on empty patches of the picture, and the legend that answers them. */
-.lp-hero-stage .lp-window { container-type: inline-size; }
+
+/* ── The plan (Plan.tsx): a space drawn as a floor plan. Floors in the content's tone; walls are the
+   grid's gaps in a lighter one, the outer wall heavier; doors drawn as a plan draws them, an opening,
+   the leaf standing open and the arc it swings along; light falling into a lit room from above in its
+   colour; hatching where the visitor may not go. It sizes itself to its own width (a container), so a
+   laptop's window, a narrower one and a phone's each get the plan that fits them. ── */
+.lp-plan {
+  --floor: rgb(var(--bg-chat));
+  --wall: rgb(var(--text-tertiary) / .42);
+  --door: rgb(var(--text-secondary) / .6);
+  --swing: rgb(var(--text-tertiary) / .38);
+  container-type: inline-size;
+  position: relative;
+  margin: 0;
+}
+/* The space's icon, as the app draws a space without a picture: its initial on its colour. */
+.lp-plan-icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: rgb(var(--accent-lavender)); font: 600 11px/1 var(--font-ui); color: rgb(13 14 17); }
+/* The wings, measured over the plan as a drawing measures: a line between two ticks with its name on it. */
+.lp-plan-wings { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin: 0 2px 8px; }
+.lp-plan-wing { position: relative; display: flex; justify-content: center; height: 14px; }
+.lp-plan-wing::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgb(var(--text-tertiary) / .35); }
+.lp-plan-wing::after { content: ''; position: absolute; inset: 2px 0; border-inline: 1px solid rgb(var(--text-tertiary) / .55); }
+.lp-plan-wing + .lp-plan-wing::after { border-left: 0; }
+.lp-plan-wing > .lp-label { position: relative; z-index: 1; padding: 0 8px; background: rgb(var(--bg-channel)); font-size: 10px; line-height: 14px; }
+.lp-plan-floor {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: minmax(106px, auto) minmax(50px, auto) minmax(106px, auto);
+  grid-template-areas:
+    'gen gen gen gen clips clips raid raid raid raid raid raid'
+    'way way way way way way way way way way way way'
+    'lnge lnge lnge movie movie movie patch patch patch patch evts evts';
+  position: relative;
+  gap: 1px;
+  padding: 2px;
+  border-radius: 2px;
+  background: var(--wall);
+}
+.lp-room[data-room='general'] { grid-area: gen; }
+.lp-room[data-room='clips'] { grid-area: clips; }
+.lp-room[data-room='raid'] { grid-area: raid; }
+.lp-room[data-room='lounge'] { grid-area: lnge; }
+.lp-room[data-room='movie'] { grid-area: movie; }
+.lp-room[data-room='patch'] { grid-area: patch; }
+.lp-room[data-room='events'] { grid-area: evts; }
+.lp-room[data-room='entrance'] { grid-area: way; }
+.lp-room { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; padding: 12px 14px; border-radius: 0; background: var(--floor); font: inherit; text-align: left; color: rgb(var(--text-secondary)); }
+button.lp-room { cursor: pointer; }
+#lp button.lp-room:focus-visible { z-index: 1; outline-offset: -3px; border-radius: 3px; }
+.lp-room-light { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(120% 95% at 50% 0%, color-mix(in srgb, var(--plan-tint, var(--room)) 30%, transparent) 0%, color-mix(in srgb, var(--plan-tint, var(--room)) 9%, transparent) 55%, transparent 88%); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--plan-tint, var(--room)) 65%, transparent); }
+.lp-room[data-lit='true'] .lp-room-light { opacity: 1; }
+.lp-room-name, .lp-room-meta, .lp-room-address, .lp-room-people { position: relative; }
+.lp-room-name { display: flex; align-items: center; gap: 6px; max-width: 100%; font-size: 13px; font-weight: 500; line-height: 1.25; color: rgb(var(--text-secondary)); }
+.lp-room-name > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-room-name svg { width: 15px; height: 15px; flex: none; color: rgb(var(--text-tertiary)); }
+.lp-room[data-lit='true'] .lp-room-name { color: rgb(var(--text-primary)); }
+/* Unread, as the app shows it in a channel list: the name bright and heavier, and a dot. */
+.lp-room-name:has(.lp-room-unread) { font-weight: 600; color: rgb(var(--text-primary)); }
+.lp-room-unread { flex: none; width: 6px; height: 6px; margin-left: 2px; border-radius: 50%; background: rgb(var(--text-primary)); }
+.lp-room-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; font: 500 10px/1.3 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: rgb(var(--text-tertiary)); }
+.lp-room-state { display: inline-flex; align-items: center; gap: 4px; color: rgb(var(--text-secondary)); }
+.lp-room-state svg { width: 11px; height: 11px; flex: none; }
+.lp-room-address { max-width: 100%; overflow: hidden; font-size: 11px; color: rgb(var(--text-secondary)); text-overflow: ellipsis; white-space: nowrap; }
+/* The people in a room, drawn as the app draws a person without a picture; whoever speaks is ringed. */
+.lp-room-people { display: flex; gap: 4px; margin-top: auto; padding-top: 6px; align-self: flex-end; }
+.lp-room-people i { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 5px; background: var(--who); box-shadow: 0 0 0 2px var(--floor); font: 600 10px/1 var(--font-ui); color: rgb(13 14 17); }
+.lp-room-people i[data-speaking='true'] { box-shadow: 0 0 0 2px var(--floor), 0 0 0 3px rgb(var(--status-online)); }
+/* Someone looked for in the member list is ringed in the signal of what is chosen. */
+.lp-room-people i[data-found='true'] { box-shadow: 0 0 0 2px var(--floor), 0 0 0 3px rgb(var(--violet)); }
+/* The rooms below the hall are drawn the other way up: their door in the top wall, their people by it, their name at the foot. */
+.lp-room[data-door='top'] .lp-room-people { order: -1; margin-top: 0; padding-top: 0; padding-bottom: 6px; }
+.lp-room[data-door='top'] .lp-room-name { margin-top: auto; }
+/* The hall is the way in: the rules at its door, the invite address at its far end. */
+.lp-room[data-room='entrance'] { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 16px; padding: 10px 16px 10px 38px; }
+.lp-room[data-room='entrance'] .lp-room-address { margin-left: auto; }
+/* A thread is a nook of its channel: partitioned off in a corner, open to the room. */
+.lp-room-alcove { position: absolute; top: 0; right: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 3px 6px; max-width: 48%; padding: 10px 12px 12px; background: linear-gradient(var(--wall), var(--wall)) left top / 1px 100% no-repeat, linear-gradient(90deg, var(--wall) 0 18%, transparent 18% 58%, var(--wall) 58%) left bottom / 100% 1px no-repeat; font-size: 12px; font-weight: 500; line-height: 1.25; color: rgb(var(--text-secondary)); }
+.lp-room-alcove svg { width: 13px; height: 13px; color: rgb(var(--text-tertiary)); }
+.lp-room-alcove-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-room-alcove-count { grid-column: 2; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: rgb(var(--text-tertiary)); }
+.lp-room[data-lit='true'] .lp-room-alcove { color: rgb(var(--text-primary)); }
+/* Doors: an opening in the wall in the floor's tone, and over it the leaf and its arc. */
+.lp-door { position: absolute; pointer-events: none; background: var(--floor); }
+.lp-door::before, .lp-door::after { content: ''; position: absolute; }
+.lp-room[data-door='bottom'] .lp-door { left: 16px; bottom: -1px; width: 22px; height: 1px; }
+.lp-room[data-door='bottom'] .lp-door::before { left: 0; bottom: 1px; width: 22px; height: 22px; border-left: 1px solid var(--door); border-top: 1px solid var(--swing); border-right: 1px solid var(--swing); border-top-right-radius: 100%; }
+.lp-room[data-door='top'] .lp-door { left: 16px; top: -1px; width: 22px; height: 1px; }
+.lp-room[data-door='top'] .lp-door::before { left: 0; top: 1px; width: 22px; height: 22px; border-left: 1px solid var(--door); border-bottom: 1px solid var(--swing); border-right: 1px solid var(--swing); border-bottom-right-radius: 100%; }
+/* The way in: a pair of doors in the outer wall. */
+.lp-room[data-door='out'] .lp-door { left: -2px; top: 50%; width: 2px; height: 36px; margin-top: -18px; }
+.lp-room[data-door='out'] .lp-door::before, .lp-room[data-door='out'] .lp-door::after { left: 2px; width: 18px; height: 18px; border-right: 1px solid var(--swing); }
+.lp-room[data-door='out'] .lp-door::before { top: 0; border-top: 1px solid var(--door); border-bottom: 1px solid var(--swing); border-bottom-right-radius: 100%; }
+.lp-room[data-door='out'] .lp-door::after { bottom: 0; border-bottom: 1px solid var(--door); border-top: 1px solid var(--swing); border-top-right-radius: 100%; }
+/* Where the visitor may not go is hatched, as a plan marks a place without access, and says so. */
+.lp-room[data-locked='true']::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(135deg, rgb(var(--text-tertiary) / .2) 0 1px, transparent 1px 7px); }
+.lp-room[data-locked='true'] .lp-room-meta { opacity: 1; }
+/* Narrower (a window between a tablet's and a laptop's): the same plan in smaller type, the kinds left to the icons. */
+@container (max-width: 599px) {
+  .lp-plan-floor { grid-template-rows: minmax(96px, auto) minmax(46px, auto) minmax(96px, auto); }
+  .lp-room { gap: 4px; padding: 10px; }
+  .lp-room-name { gap: 5px; font-size: 12px; }
+  .lp-room-name svg { width: 13px; height: 13px; }
+  .lp-room-kind { display: none; }
+  .lp-room-people i { width: 18px; height: 18px; border-radius: 4px; }
+  .lp-room-alcove { max-width: 52%; padding: 8px 10px 10px; font-size: 11px; }
+  .lp-room-alcove-count { display: none; }
+  .lp-room[data-door='bottom'] .lp-door, .lp-room[data-door='top'] .lp-door { left: 12px; width: 18px; }
+  .lp-room[data-door='bottom'] .lp-door::before, .lp-room[data-door='top'] .lp-door::before { width: 18px; height: 18px; }
+  .lp-room[data-room='entrance'] { padding-left: 34px; }
+}
+/* A phone's: two rooms side by side, the hall across the middle. The rooms that do not touch it open
+   onto the room beside it, and their doors are left out. */
+@container (max-width: 439px) {
+  .lp-plan-wings { display: none; }
+  .lp-plan-floor { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(88px, auto) minmax(88px, auto) minmax(46px, auto) minmax(88px, auto) minmax(88px, auto); grid-template-areas: 'gen clips' 'raid raid' 'way way' 'lnge movie' 'patch evts'; margin-top: 12px; }
+  .lp-room:is([data-room='general'], [data-room='clips'], [data-room='patch'], [data-room='events']) .lp-door { display: none; }
+}
+
+/* ── Sheet 02, inside: the real window, its four parts keyed and a legend that answers them ── */
+.lp-inside-stage { margin-top: 56px; }
+.lp-inside-stage .lp-window { border-radius: 12px; container-type: inline-size; }
 .lp-key-layer { position: absolute; inset: 0; pointer-events: none; }
 .lp-mark { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; background: rgb(var(--bg-elevated)); box-shadow: 0 0 0 1px rgb(var(--hair-soft)), inset 0 1px 0 rgb(255 255 255 / .08); font: 600 11px/1 var(--font-mono); color: rgb(var(--text-primary)); }
 /* On the picture the marks shrink with the window, so they keep standing beside what they name. */
-.lp-key-layer .lp-mark { position: absolute; translate: -50% -50%; width: max(15px, 1.72cqw); height: max(15px, 1.72cqw); font-size: max(9px, .95cqw); box-shadow: 0 0 0 1px rgb(var(--hair-soft)), 0 0 0 3px rgb(var(--ground) / .9), inset 0 1px 0 rgb(255 255 255 / .08), var(--shadow-popover); }
+.lp-key-layer .lp-mark { position: absolute; translate: -50% -50%; width: max(15px, 1.72cqw); height: max(15px, 1.72cqw); font-size: max(10px, .95cqw); box-shadow: 0 0 0 1px rgb(var(--hair-soft)), 0 0 0 3px rgb(var(--ground) / .9), inset 0 1px 0 rgb(255 255 255 / .08), var(--shadow-popover); }
 /* The window answers: pointing at a part of it lights that part and dims the rest, and the part's key
    and its line in the legend take the violet of what is chosen. The light takes no clicks. */
 .lp-spot { position: absolute; left: var(--x); top: var(--y); width: var(--w); height: var(--h); border-radius: 6px; pointer-events: none; opacity: 0; box-shadow: 0 0 0 1px rgb(var(--violet) / .85), 0 0 32px -6px rgb(var(--violet) / .6), 0 0 0 4000px rgb(8 9 12 / .6); }
@@ -166,34 +463,9 @@ html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-c
 .lp-legend > div { padding-top: 14px; border-top: 1px solid rgb(var(--hair)); }
 .lp-legend-title { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: rgb(var(--text-primary)); }
 .lp-legend-body { margin-top: 8px; font-size: 13px; line-height: 1.5; color: rgb(var(--text-secondary)); text-wrap: pretty; }
-.lp-hero-phone { width: min(78%, 320px); margin: 56px auto 0; }
+.lp-inside-phone { width: min(78%, 320px); margin: 48px auto 0; }
 
-/* ── The statement: one line of display type, three facts on a hairline grid ── */
-.lp-statement { max-width: 22em; font-size: clamp(1.625rem, calc(3 * var(--app-vw)), 2.75rem); font-weight: 600; line-height: 1.15; letter-spacing: -.035em; text-wrap: balance; padding-bottom: .08em; }
-/* Six figures of the app's own: the number large, in Mono, its name under it. */
-.lp-figures { grid-template-columns: repeat(6, minmax(0, 1fr)); margin-top: 56px; }
-.lp-figures > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 10px; padding: 22px 24px 24px; }
-.lp-figure { font: 500 32px/1 var(--font-mono); letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: rgb(var(--text-primary)); }
-.lp-figures-note { margin-top: 16px; font-size: 13px; line-height: 1.5; color: rgb(var(--text-tertiary)); }
-/* The contents: the chapters by number, in the margin's own type. */
-.lp-contents { display: grid; grid-template-columns: 152px minmax(0, 1fr); gap: 16px 56px; align-items: start; margin-top: 56px; padding-top: 20px; border-top: 1px solid rgb(var(--hair)); }
-.lp-contents ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px 24px; }
-.lp-contents a { display: inline-flex; align-items: baseline; gap: 10px; padding: 5px 0; font-size: 13px; font-weight: 500; color: rgb(var(--text-secondary)); transition: color var(--dur-fast) ease; }
-.lp-contents a:hover { color: rgb(var(--text-primary)); }
-.lp-contents a .lp-mono { font-size: 12px; color: rgb(var(--text-tertiary)); }
-
-/* ── Chapters: a hairline, the index in the margin, the heading and its lead side by side ── */
-.lp-chapter { position: relative; isolation: isolate; padding-block: var(--section); }
-.lp-chapter-head { display: grid; grid-template-columns: 152px minmax(0, 1fr) minmax(0, 1fr); gap: 28px 56px; align-items: end; padding-top: 28px; border-top: 1px solid rgb(var(--hair)); }
-.lp-index { display: grid; align-self: start; gap: 10px; }
-.lp-index .lp-mono { font-size: 13px; color: rgb(var(--text-secondary)); }
-.lp-index-row { display: flex; justify-content: center; align-items: baseline; gap: 12px; }
-.lp-chapter-head .lp-lead { margin-bottom: 10px; }
-
-/* ── The channel to try: drawn here in the app's own look (DemoChat.tsx) ── */
-.lp-demo-stage { margin-top: 56px; }
-.lp-demo-after { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 32px; margin-top: 24px; }
-.lp-demo-note { max-width: 40em; font-size: 14px; line-height: 1.5; color: rgb(var(--text-tertiary)); }
+/* ── The channel to try (DemoChat.tsx), drawn in the app's own look: #general on the stage ── */
 .lp-demo-app { display: flex; height: 540px; overflow: hidden; border-radius: 10px; background: rgb(var(--bg-chat)); }
 .lp-demo-side, .lp-demo-people { flex: none; width: 224px; padding: 16px 12px; }
 .lp-demo-side { background: rgb(var(--bg-channel)); border-right: 1px solid rgb(var(--hair)); }
@@ -212,7 +484,7 @@ html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-c
 .lp-demo-main { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
 .lp-demo-bar { display: flex; flex: none; align-items: center; gap: 8px; height: 48px; padding: 0 18px; border-bottom: 1px solid rgb(var(--hair)); font-size: 14px; color: rgb(var(--text-primary)); }
 .lp-demo-bar svg { width: 16px; height: 16px; flex: none; color: rgb(var(--text-tertiary)); }
-.lp-demo-bar strong { font-weight: 600; }
+.lp-demo-bar strong { font-weight: 600; white-space: nowrap; }
 .lp-demo-bar span { min-width: 0; margin-left: 6px; padding-left: 12px; overflow: hidden; border-left: 1px solid rgb(var(--hair-soft)); font-size: 13px; color: rgb(var(--text-tertiary)); text-overflow: ellipsis; white-space: nowrap; }
 .lp-demo-list { display: flex; flex: 1 1 auto; flex-direction: column; gap: 12px; min-height: 0; padding: 20px 14px 8px; overflow-y: auto; overscroll-behavior: contain; }
 /* Pushed to the bottom while there is room, as a conversation stands. */
@@ -236,105 +508,74 @@ html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-c
 .lp-demo-form button:disabled { color: rgb(var(--text-tertiary)); background: rgb(255 255 255 / .06); cursor: default; }
 .lp-demo-form svg { width: 16px; height: 16px; }
 
-/* ── Spaces: who is at the table, and the room lit in the colour of the chosen space ── */
-.lp-crowds { margin-top: 56px; }
-.lp-tabs { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 16px; border-bottom: 1px solid rgb(var(--hair)); }
-.lp-tab { position: relative; display: inline-flex; align-items: center; height: 42px; padding: 0 14px; font-size: 14px; font-weight: 500; color: rgb(var(--text-secondary)); cursor: pointer; transition: color var(--dur-fast) ease; }
-.lp-tab:hover { color: rgb(var(--text-primary)); }
-.lp-tab[aria-selected='true'] { color: rgb(var(--text-primary)); }
-.lp-tab[aria-selected='true']::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 2px; background: rgb(var(--violet)); }
-.lp-crowd-stage { margin-top: 32px; }
-.lp-phones { display: flex; gap: 12px; margin: 40px calc(-1 * var(--gutter)) 0; padding-inline: var(--gutter); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
-.lp-phones > div { flex: 0 0 62%; border-radius: 20px; scroll-snap-align: center; }
-
-/* ── Conversations: the readable part of the window beside three marks on hairlines ── */
-.lp-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px 64px; align-items: center; margin-top: 56px; }
-.lp-marks > div { padding: 20px 0; border-top: 1px solid rgb(var(--hair)); }
-.lp-marks > div:last-child { border-bottom: 1px solid rgb(var(--hair)); }
-.lp-marks p { margin-top: 6px; max-width: 30em; font-size: 14px; line-height: 1.5; color: rgb(var(--text-secondary)); text-wrap: pretty; }
-.lp-marks h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.lp-keycaps { display: inline-flex; gap: 4px; }
-.lp-key { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border: 1px solid rgb(var(--hair-soft)); border-radius: 3px; font: 500 11px/1 var(--font-mono); color: rgb(var(--text-tertiary)); }
-
-/* ── Around the conversation: a mosaic of cells, each with its real screen at the foot ── */
-.lp-mosaic { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-areas: 'thread thread thread thread thread thread thread poll poll poll poll poll' 'thread thread thread thread thread thread thread welcome welcome welcome welcome welcome' 'event event event event event event event points points points points points'; gap: 1px; margin-top: 56px; background: rgb(var(--hair)); box-shadow: 0 0 0 1px rgb(var(--hair)); }
-.lp-tile { display: flex; flex-direction: column; min-width: 0; padding: 28px; background: var(--cell); }
-.lp-tile .lp-cell-body { max-width: 36em; }
-.lp-tile > .lp-frame { margin-top: 24px; }
-.lp-tile-thread { grid-area: thread; }
-/* The thread's picture fills what the two cells beside it leave, its panel kept in view. */
-.lp-tile-thread > .lp-frame { flex: 1 1 auto; min-height: 0; margin-top: 24px; }
-#lp .lp-thread-shot img { width: 100%; height: 100%; object-fit: cover; object-position: 100% 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 64px); mask-image: linear-gradient(90deg, transparent, #000 64px); }
-.lp-tile-poll { grid-area: poll; }
-.lp-tile-welcome { grid-area: welcome; }
-.lp-tile-event { grid-area: event; }
-.lp-tile-points { grid-area: points; padding-block: 6px; }
-.lp-tile-points > div { padding: 20px 0; border-top: 1px solid rgb(var(--hair)); }
-.lp-tile-points > div:first-child { border-top: 0; }
-.lp-thread-shot { border-radius: var(--radius-frame) var(--radius-frame) 0 0; }
-
-/* ── Voice ── */
-.lp-voice-shot { margin-top: 56px; }
-
-/* ── People: the list, with a whole profile lying over it ── */
-.lp-people-stage { position: relative; margin-top: 56px; padding-right: 12%; }
-.lp-people-card { position: absolute; right: 0; top: 10%; width: 25%; border-radius: 10px; box-shadow: 0 0 0 1px rgb(255 255 255 / .14), var(--shadow-modal); }
-
-/* ── Your way: seven swatches, and the room lit in the chosen theme's colour ── */
-.lp-looks { margin-top: 48px; }
-.lp-looks-bar { display: flex; flex-wrap: wrap; gap: 8px; }
-.lp-swatch { display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px 0 8px; border: 1px solid rgb(var(--hair-soft)); border-radius: var(--radius); font-size: 13px; font-weight: 500; color: rgb(var(--text-secondary)); background: var(--cell); cursor: pointer; transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease, background-color var(--dur-fast) ease; }
-.lp-swatch i { position: relative; width: 22px; height: 22px; border-radius: 4px; background: var(--swatch); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14); }
-.lp-swatch i::after { content: ''; position: absolute; left: 7px; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--swatch-accent); }
-.lp-swatch:hover { color: rgb(var(--text-primary)); border-color: rgb(var(--interactive-muted)); }
-.lp-swatch[aria-checked='true'] { color: rgb(var(--text-primary)); border-color: rgb(var(--violet)); background: var(--interactive-selected); }
-.lp-look-stage { margin-top: 28px; }
-
-/* ── Community: Explore beside its points, then the three steps ── */
-.lp-community { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 40px; align-items: start; margin-top: 56px; }
-.lp-moving { margin-top: 96px; }
-.lp-steps { margin-top: 32px; }
-.lp-step-number { display: block; margin-bottom: 36px; font-size: 13px; color: rgb(var(--text-secondary)); }
-
-/* ── Developers: the one piece of code, and what a bot looks like ── */
-.lp-dev-stage { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 24px; align-items: center; margin-top: 56px; }
-.lp-code { border: 1px solid rgb(var(--hair-soft)); border-radius: var(--radius-frame); background: rgb(var(--bg-input)); }
+/* ── Sheet 03, the workshop: the one request a bot really sends, and what a bot looks like ── */
+.lp-workshop-stage { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 24px; align-items: center; margin-top: 56px; }
+.lp-code { margin: 0; overflow: hidden; border: 1px solid rgb(var(--hair-soft)); border-radius: var(--radius-frame); background: rgb(var(--bg-input)); }
 .lp-code figcaption { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid rgb(var(--hair)); font: 500 12px/1.3 var(--font-mono); color: rgb(var(--text-secondary)); }
 .lp-code-method { color: rgb(var(--violet-soft)); }
-.lp-code pre { margin: 0; padding: 18px 18px 22px; overflow-x: auto; font: 400 13px/1.7 var(--font-mono); color: rgb(var(--text-message)); }
+.lp-code-body { display: flex; }
+.lp-code-gutter { flex: none; min-width: 44px; padding: 18px 12px 22px 0; border-right: 1px solid rgb(var(--hair)); font-size: 12px; line-height: calc(13px * 1.7); text-align: right; color: rgb(var(--text-tertiary) / .7); -webkit-user-select: none; user-select: none; }
+.lp-code pre { flex: 1 1 auto; min-width: 0; margin: 0; padding: 18px 18px 22px; overflow-x: auto; font: 400 13px/1.7 var(--font-mono); color: rgb(var(--text-message)); }
 .lp-code-command { font-weight: 600; color: rgb(var(--text-primary)); }
 .lp-code-flag { color: rgb(var(--text-tertiary)); }
 .lp-code-text { color: rgb(var(--violet-soft)); }
 
-/* ── No ads: a typographic moment, set on the axis ── */
-.lp-privacy .lp-wrap { text-align: center; }
-.lp-privacy .lp-display { font-size: min(var(--fit, 5.25rem), clamp(2.5rem, calc(5.6 * var(--app-vw)), 5.25rem)); margin: 16px auto 0; }
-.lp-privacy .lp-lead { margin: 24px auto 0; }
-.lp-privacy .lp-grid { margin-top: 56px; text-align: left; }
+/* ── Sheet 04, the house rules: what Tavvit will not do, as large as the opening, then the facts as a
+   datasheet: the app's own figures on one side, what protects an account on the other ── */
+.lp-rules .lp-sheet-head { gap: 0; }
+.lp-rules .lp-display { max-width: 14em; margin-top: 28px; }
+.lp-rules .lp-sheet-head > .lp-lead { margin-top: 24px; }
+.lp-spec { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 1px; margin-top: 64px; background: rgb(var(--hair)); box-shadow: 0 0 0 1px rgb(var(--hair)); }
+.lp-spec-figures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: rgb(var(--hair)); }
+.lp-spec-figures > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 10px; padding: 22px 24px 24px; background: var(--cell); }
+.lp-spec-figures dt { font-size: 13px; line-height: 1.35; color: rgb(var(--text-secondary)); }
+.lp-spec-figures dd { font: 500 36px/1 var(--font-mono); letter-spacing: -.02em; color: rgb(var(--text-primary)); }
+.lp-spec-points { background: var(--cell); }
+.lp-spec-points > div { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 6px 32px; padding: 22px 28px; }
+.lp-spec-points > div + div { border-top: 1px solid rgb(var(--hair)); }
+.lp-spec-points dt { font-size: 15px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; color: rgb(var(--text-primary)); }
+.lp-spec-points dd { font-size: 14px; line-height: 1.5; color: rgb(var(--text-secondary)); text-wrap: pretty; }
+.lp-figures-note { margin-top: 16px; font-size: 13px; line-height: 1.5; color: rgb(var(--text-tertiary)); }
 
-/* ── Where it runs ── */
-.lp-anywhere-copy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px; margin-top: 48px; }
+/* ── Sheet 05, anywhere ── */
+.lp-anywhere-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 48px 64px; align-items: center; }
+.lp-anywhere-copy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; margin-top: 40px; }
+.lp-anywhere-copy > div { padding-top: 16px; border-top: 1px solid rgb(var(--hair)); }
 .lp-qr { display: flex; align-items: center; gap: 14px; margin-top: 20px; }
 .lp-qr-code { flex: none; width: 76px; height: 76px; padding: 6px; border-radius: var(--radius); background: #fff; }
 .lp-qr-code svg { display: block; width: 100%; height: 100%; color: #000; }
 .lp-qr p { max-width: 15em; font-size: 13px; line-height: 1.4; color: rgb(var(--text-tertiary)); }
-.lp-anywhere-stage { position: relative; margin-top: 56px; padding-right: 16%; }
-.lp-anywhere-phone { position: absolute; right: 0; bottom: -28px; width: 22%; }
+.lp-anywhere-stage { display: flex; justify-content: center; }
+.lp-anywhere-stage .lp-device { width: min(100%, 288px); }
 
-/* ── The menu ── */
-.lp-menu { margin-top: 56px; }
-.lp-group dt { font-size: 16px; font-weight: 600; letter-spacing: -.015em; color: rgb(var(--text-primary)); }
-.lp-group ul { margin-top: 14px; display: grid; gap: 8px; font-size: 14px; line-height: 1.4; color: rgb(var(--text-secondary)); }
+/* ── Sheet 06, moving in: a place to find, or one of your own in three steps along a dimension line ── */
+.lp-community-shot { margin-top: 56px; }
+.lp-moving-title { margin-top: 72px; font-size: 20px; font-weight: 600; letter-spacing: -.02em; color: rgb(var(--text-primary)); }
+.lp-steps { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; margin-top: 24px; padding-top: 28px; }
+.lp-steps::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: rgb(var(--hair-soft)); }
+.lp-steps::after, .lp-steps > li::before { content: ''; position: absolute; width: 1px; height: 9px; background: rgb(var(--text-tertiary) / .7); }
+.lp-steps::after { right: 0; top: -4px; }
+.lp-steps > li { position: relative; }
+.lp-steps > li::before { left: 0; top: -32px; }
+.lp-step-n { display: block; margin-bottom: 14px; font-size: 13px; color: rgb(var(--text-secondary)); }
 
-/* ── Questions ── */
-.lp-faq { width: min(880px, 100%); margin-top: 48px; border-top: 1px solid rgb(var(--hair)); }
+/* ── Sheet 07, the index: everything in the app, at the back of the set ── */
+.lp-index { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 40px; margin-top: 48px; border-top: 1px solid rgb(var(--hair)); }
+.lp-index > div { padding: 22px 0 26px; border-bottom: 1px solid rgb(var(--hair)); }
+.lp-index dt { display: flex; align-items: baseline; gap: 12px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: rgb(var(--text-primary)); }
+.lp-index dt .lp-mono { flex: none; width: 16px; font-size: 11px; font-weight: 500; color: rgb(var(--text-tertiary)); }
+.lp-index ul { display: grid; gap: 6px; margin-top: 12px; padding-left: 28px; font-size: 14px; line-height: 1.4; color: rgb(var(--text-secondary)); }
+
+/* ── Sheet 08, questions ── */
+.lp-questions-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 32px 64px; align-items: start; }
+.lp-faq { border-top: 1px solid rgb(var(--hair)); }
 .lp-faq details { border-bottom: 1px solid rgb(var(--hair)); }
 .lp-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 4px; font-size: 17px; font-weight: 500; color: rgb(var(--text-primary)); cursor: pointer; list-style: none; }
 .lp-faq summary::-webkit-details-marker { display: none; }
 .lp-faq summary svg { width: 18px; height: 18px; flex: none; color: rgb(var(--text-tertiary)); }
 .lp-faq details[open] summary svg { transform: rotate(45deg); }
-.lp-faq p { padding: 0 4px 22px; max-width: 44em; font-size: 15px; line-height: 1.55; color: rgb(var(--text-secondary)); text-wrap: pretty; }
-.lp-questions-more { margin-top: 32px; }
+.lp-faq p { max-width: 44em; padding: 0 4px 22px; font-size: 15px; line-height: 1.55; color: rgb(var(--text-secondary)); text-wrap: pretty; }
+.lp-questions-more { margin-top: 28px; }
 
 /* ── The closing: lit, with the logo as a hairline behind it ── */
 .lp-final { position: relative; isolation: isolate; overflow: clip; padding-block: clamp(96px, calc(12 * var(--app-vw)), 184px); text-align: center; border-top: 1px solid rgb(var(--hair)); background: rgb(var(--band)); }
@@ -350,10 +591,10 @@ html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-c
 .lp-footer { padding: 56px 0 40px; border-top: 1px solid rgb(var(--hair)); }
 .lp-footer-grid { display: grid; grid-template-columns: 6fr 3fr 3fr; gap: 40px; }
 .lp-footer-title { font-size: 13px; font-weight: 600; color: rgb(var(--text-primary)); }
-.lp-footer ul { margin-top: 10px; display: grid; gap: 2px; font-size: 14px; }
+.lp-footer ul { display: grid; gap: 2px; margin-top: 10px; font-size: 14px; }
 .lp-footer ul a { display: inline-block; padding: 4px 0; color: rgb(var(--text-secondary)); transition: color var(--dur-fast) ease; }
 .lp-footer ul a:hover { color: rgb(var(--text-primary)); }
-.lp-footer-language { margin-top: 24px; max-width: 220px; }
+.lp-footer-language { max-width: 220px; margin-top: 24px; }
 .lp-life { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-top: 48px; padding-top: 20px; border-top: 1px solid rgb(var(--hair)); font-size: 13px; color: rgb(var(--text-tertiary)); }
 .lp-life a { display: inline-flex; align-items: center; gap: 8px; color: rgb(var(--text-secondary)); transition: color var(--dur-fast) ease; }
 .lp-life a:hover { color: rgb(var(--text-primary)); }
@@ -361,66 +602,23 @@ html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-c
 .lp-life [data-state='down'] i { background: rgb(var(--status-dnd)); }
 .lp-closer { margin-left: auto; }
 
-/* ── The page as a space: on a wide window its chapters stand beside it as a space's channels, the
-   open one selected and the unread ones bright; on a narrower one a pill at the foot names the
-   chapter. Both open the switcher that Ctrl K opens, which is the app's own ── */
-.lp-rail, .lp-pill { display: none; }
-.lp-rail-in { display: flex; flex-direction: column; gap: 2px; height: 100%; padding: 14px 10px 12px; overflow-y: auto; scrollbar-width: thin; }
-.lp-rail-jump { display: flex; align-items: center; gap: 8px; height: 34px; margin-bottom: 12px; padding: 0 6px 0 10px; border: 1px solid rgb(var(--hair-soft)); border-radius: var(--radius); background: rgb(var(--bg-input)); font-size: 13px; color: rgb(var(--text-tertiary)); cursor: pointer; transition: border-color var(--dur-fast) ease, color var(--dur-fast) ease; }
-.lp-rail-jump:hover { color: rgb(var(--text-secondary)); border-color: rgb(var(--interactive-muted)); }
-.lp-rail-jump svg, .lp-rail .nav-item svg, .lp-pill svg { width: 16px; height: 16px; flex: none; }
-.lp-rail-grow { flex: 1 1 auto; min-width: 0; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-.lp-rail-keys { display: inline-flex; flex: none; gap: 3px; }
-.lp-rail .nav-item svg { color: rgb(var(--text-tertiary)); }
-.lp-rail .nav-item[data-active='true'] svg, .lp-rail .nav-item[data-unread='true'] svg { color: rgb(var(--text-secondary)); }
-.lp-rail-category { display: flex; align-items: center; gap: 4px; height: 28px; margin-top: 14px; padding: 0 4px; font: 500 11px/1.3 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: rgb(var(--text-category)); }
-.lp-rail-category svg { width: 12px; height: 12px; flex: none; }
-.lp-rail-list { display: grid; gap: 2px; }
-.lp-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: rgb(var(--text-primary)); }
-.lp-rail-foot { margin-top: auto; padding: 14px 10px 2px; border-top: 1px solid rgb(var(--hair)); font-size: 12px; line-height: 1.4; color: rgb(var(--text-tertiary)); }
-.lp-rail-life { display: flex; align-items: center; gap: 8px; color: rgb(var(--text-secondary)); }
-.lp-rail-life i { width: 7px; height: 7px; flex: none; border-radius: 50%; background: rgb(var(--status-online)); }
-.lp-rail-life[data-state='down'] i { background: rgb(var(--status-dnd)); }
-.lp-rail-version { margin-top: 4px; font-size: 11px; }
-.lp-rail-foot > :first-child { margin-top: 0; }
-@media (min-width: 1280px) {
-  #lp { --rail: 248px; }
-  .lp-shell { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); }
-  .lp-rail { display: block; position: sticky; top: 64px; z-index: 2; align-self: start; height: calc(100 * var(--app-vh) - 64px); border-right: 1px solid rgb(var(--hair)); background: rgb(var(--band)); }
-  /* The brand stands over the rail, as the app's stands over its sidebar, and the links over the page. */
-  .lp-nav-in { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); width: 100%; padding-inline: 0; }
-  .lp-nav .lp-brand { margin-right: 0; padding-left: 20px; }
-  .lp-nav-links { width: min(var(--wrap), 100%); margin-inline: auto; padding-inline: calc(var(--gutter) - 10px) var(--gutter); }
-  /* The rail is the page's contents now, and a chapter's index stands over its heading. */
-  .lp-contents { display: none; }
-  .lp-chapter-head { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .lp-chapter-head .lp-index { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; }
+/* ── Higher contrast and colours the reader sets: no light, a line where light was the only sign ── */
+html[data-contrast='high'] .lp-room-light { background: none; }
+html[data-contrast='high'] .lp-room[data-lit='true'] .lp-room-light { box-shadow: inset 0 0 0 1px rgb(var(--text-primary)); }
+@media (forced-colors: active) {
+  .lp-light { display: none; }
+  .lp-ink { background-image: none; -webkit-text-fill-color: currentColor; }
+  /* Hairlines drawn with shadows and grid gaps vanish under forced colours; a border stays. */
+  .lp-grid > *, .lp-frame, .lp-btn, .lp-chip, .lp-code, .lp-news, .lp-plan, .lp-room, .lp-spec-figures > div, .lp-spec-points { outline: 1px solid CanvasText; outline-offset: -1px; }
+  .lp-room-light { display: none; }
+  .lp-room[data-lit='true'] { outline: 2px solid Highlight; outline-offset: -2px; }
+  /* What is chosen keeps a mark of its own, in the system's colour for it; the swatches and the people keep their colours, which are content. */
+  .lp-chip[aria-checked='true'], .lp-demo-reaction[aria-pressed='true'] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .lp-swatch i, .lp-room-people i { forced-color-adjust: none; }
 }
-@media (max-width: 1279px) {
-  .lp-pill { position: fixed; z-index: 40; left: 50%; bottom: calc(14px + var(--safe-bottom)); translate: -50% 0; display: inline-flex; align-items: center; gap: 10px; max-width: calc(100% - 32px); height: 42px; padding: 0 12px 0 14px; border-radius: calc(8px * var(--radius-scale)); font-size: 14px; font-weight: 500; color: rgb(var(--text-primary)); cursor: pointer; }
-}
-.lp-pill-n { font-size: 12px; color: rgb(var(--text-tertiary)); }
-.lp-pill svg { color: rgb(var(--text-tertiary)); }
 
-/* The switcher, as the app's: a scrim, the dialog, its field, the choices and the keys at its foot. */
-.lp-jump { position: fixed; inset: 0; z-index: 300; display: flex; align-items: flex-start; justify-content: center; padding: max(calc(12 * var(--app-vh)), var(--safe-top)) 16px 16px; }
-.lp-jump-panel { width: min(576px, 100%); overflow: hidden; border-radius: calc(8px * var(--radius-scale)); }
-.lp-jump-field { display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid rgb(var(--hair)); color: rgb(var(--text-tertiary)); }
-.lp-jump-field svg { width: 16px; height: 16px; flex: none; }
-.lp-jump-field input { flex: 1 1 auto; min-width: 0; height: 50px; font: 400 15px var(--font-ui); }
-.lp-jump-list { max-height: calc(50 * var(--app-vh)); overflow-y: auto; padding: 6px; }
-.lp-jump-list li { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: calc(6px * var(--radius-scale)); font-size: 13px; font-weight: 500; color: rgb(var(--text-primary)); cursor: pointer; }
-.lp-jump-list li[aria-selected='true'] { background: var(--interactive-selected); }
-.lp-jump-list li[data-unread='true'] { font-weight: 600; }
-.lp-jump-list svg { width: 18px; height: 18px; flex: none; color: rgb(var(--text-tertiary)); }
-.lp-jump-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lp-jump-none { padding: 32px 16px; text-align: center; font-size: 13px; color: rgb(var(--text-tertiary)); overflow-wrap: anywhere; }
-.lp-jump-hints { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 8px 16px; border-top: 1px solid rgb(var(--hair)); font-size: 11px; color: rgb(var(--text-tertiary)); }
-.lp-jump-hints span { display: inline-flex; align-items: center; gap: 4px; }
-/* A heading the switcher took the reader to holds the focus without a ring: the page has moved to it. */
-#lp [tabindex='-1']:focus { outline: none; }
-
-/* ── Motion: what scrolls into view arrives once, an answer folds open, a hover answers. Nothing moves by itself. ── */
+/* ── Motion: what scrolls into view arrives once, a room's light fades in, an answer folds open, a hover
+   answers. Nothing moves by itself. ── */
 @media (prefers-reduced-motion: no-preference) {
   html[data-page='landing'] { scroll-behavior: smooth; }
   .lp-faq summary svg { transition: transform var(--dur-base) var(--ease-out); }
@@ -430,9 +628,17 @@ html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-c
     .lp-faq details::details-content { height: 0; overflow: clip; transition: height var(--dur-slow) var(--ease-out), content-visibility var(--dur-slow) allow-discrete; }
     .lp-faq details[open]::details-content { height: auto; }
   }
-  .lp-crowd-shot, .lp-look-shot, .lp-demo-line { animation: lp-appear var(--dur-slow) var(--ease-out) both; }
+  /* The light falls into a room as the app's light fades over when you move; what steps back does so with it. */
+  .lp-room-light { transition: opacity var(--dur-slow) var(--ease-out); }
+  .lp-you { transition-property: transform; transition-timing-function: linear; }
+  .lp-room-view { animation: lp-appear var(--dur-base) var(--ease-out) both; }
+  /* A reaction at movie night rises over the picture once and fades, as the app lets it. */
+  .lp-watch-rise { animation: lp-rise 1.6s var(--ease-out) both; }
+  @keyframes lp-rise { from { opacity: 0; translate: 0 12px; } 15% { opacity: 1; } to { opacity: 0; translate: 0 -120px; } }
+  .lp-room :is(.lp-room-name, .lp-room-meta, .lp-room-address, .lp-room-people, .lp-room-alcove) { transition: opacity var(--dur-base) ease, color var(--dur-base) ease; }
+  .lp-demo-line { animation: lp-appear var(--dur-slow) var(--ease-out) both; }
   @keyframes lp-appear { from { opacity: 0; } }
-  /* Each part of a chapter arrives once, when it first comes into view (`useArrivals`): the animation
+  /* Each part of a sheet arrives once, when it first comes into view (`useArrivals`): the animation
      waits paused at its first frame until then. It is an animation and not a hidden state, so a page
      whose animations are stopped, a browser that cannot watch the viewport, and a reader who asks for
      less motion all see everything in place. */
@@ -442,46 +648,37 @@ html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-c
      stays where it is rather than vanishing and arriving again. */
   #lp[data-arrivals='on'] [data-arrive][data-in='shown'] { animation: none; }
   @keyframes lp-arrive { from { opacity: 0; translate: 0 18px; } to { opacity: 1; translate: 0 0; } }
-  /* The window's light moves to the part pointed at; the pill rises into place once. */
+  /* The window's light moves to the part pointed at. */
   .lp-spot { transition: opacity var(--dur-base) ease, left var(--dur-slow) var(--ease-out), top var(--dur-slow) var(--ease-out), width var(--dur-slow) var(--ease-out), height var(--dur-slow) var(--ease-out); }
   .lp-legend > div, .lp-mark { transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease, color var(--dur-fast) ease; }
-  .lp-pill { animation: lp-pill-in var(--dur-base) var(--ease-out) both; }
-  @keyframes lp-pill-in { from { opacity: 0; translate: -50% 10px; } }
 }
 
-/* ── Below 1280px the Explore picture takes the width, and its points stand in a row under it ── */
-@media (max-width: 1280px) {
-  .lp-community { grid-template-columns: minmax(0, 1fr); }
-  .lp-community .lp-two { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* For a reader who asks for less motion a reaction only shows and goes, where it was given. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-watch-rise { animation: lp-show 1.6s ease both; }
+  @keyframes lp-show { 0%, 100% { opacity: 0; } 15%, 80% { opacity: 1; } }
 }
 
-/* ── Smaller windows: a chapter's head stacks, a split stands one above the other ── */
+/* ── Smaller windows: the stage's head and window stack, a sheet's head stacks ── */
 @media (max-width: 1100px) {
-  .lp-hero-copy { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .lp-hero-copy .lp-lead { max-width: 32em; }
-  .lp-chapter-head { grid-template-columns: minmax(0, 1fr); gap: 20px; }
-  .lp-index { display: flex; align-items: baseline; gap: 12px; }
-  .lp-contents { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .lp-stage-head { grid-template-columns: minmax(0, 1fr); }
+  .lp-app-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; height: auto; }
+  .lp-app-map { border-right: 0; border-bottom: 1px solid rgb(var(--hair)); }
+  .lp-app-room { height: 520px; }
+  .lp-sheet-head-split { grid-template-columns: minmax(0, 1fr); row-gap: 18px; }
   .lp-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lp-figures { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .lp-split, .lp-community, .lp-dev-stage { grid-template-columns: minmax(0, 1fr); gap: 32px; }
-  .lp-split > div:first-child { order: 1; }
-  /* Stacked, a real screen stays near the size it has on the desktop, never blown up. */
-  .lp-split .lp-crop { max-width: 720px; }
+  .lp-workshop-stage { grid-template-columns: minmax(0, 1fr); }
   .lp-dev-card { max-width: 640px; }
-  .lp-mosaic { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'thread' 'poll' 'welcome' 'event' 'points'; }
-  .lp-thread-shot { flex: none; aspect-ratio: 5 / 4; }
-  #lp .lp-thread-shot img { width: 160%; height: auto; max-width: none; margin-left: -60%; object-fit: fill; }
-  .lp-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lp-menu { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  /* An odd last cell takes the whole row, so no track of the hairline colour stands empty. */
-  .lp-four > :last-child:nth-child(odd), .lp-menu > :last-child:nth-child(odd) { grid-column: 1 / -1; }
-  .lp-demo-people { display: none; }
+  .lp-spec { grid-template-columns: minmax(0, 1fr); }
+  .lp-spec-figures { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lp-anywhere-grid { grid-template-columns: minmax(0, 1fr); }
+  .lp-index { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-questions-grid { grid-template-columns: minmax(0, 1fr); }
   .lp-footer-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .lp-footer-grid > div:first-child { grid-column: 1 / -1; }
 }
 
-/* ── A narrow window: the nav keeps the brand and the two ways in; the footer keeps the links and the picker ── */
+/* ── A narrow window: the nav keeps the brand and the two ways in ── */
 @media (max-width: 840px) {
   .lp-nav .lp-hide-phone { display: none; }
   .lp-nav .lp-brand { margin-right: auto; }
@@ -489,57 +686,39 @@ html[data-contrast='high'] .lp-ink { background-image: none; -webkit-text-fill-c
 
 /* ── Phone ── */
 @media (max-width: 760px) {
-  #lp { --section: 64px; }
+  #lp { --section: 72px; }
   .lp-nav { height: 56px; }
-  .lp-hero { margin-top: -56px; padding-top: 104px; }
-  .lp-news { margin-bottom: 24px; }
+  .lp-stage { margin-top: -56px; padding-top: 76px; }
+  .lp-app-map { padding: 16px 12px 14px 28px; }
+  .lp-app-bar .lp-app-address { display: none; }
+  .lp-app-room { height: 480px; }
   .lp-actions { flex-direction: column; align-items: stretch; }
   .lp-actions .lp-btn { width: 100%; }
-  .lp-grid, .lp-community .lp-two { grid-template-columns: minmax(0, 1fr); }
+  .lp-grid, .lp-three { grid-template-columns: minmax(0, 1fr); }
   .lp-grid > * { padding: 22px 20px 24px; }
-  .lp-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lp-figure { font-size: 28px; }
-  .lp-contents ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-plan { padding: 14px 12px 12px; }
   .lp-demo-side { display: none; }
   .lp-demo-app { height: 460px; }
   .lp-demo-list { padding-inline: 8px; }
   .lp-demo-form { margin: 0 10px 10px; }
   .lp-demo-typing { padding-left: 54px; }
-  .lp-tabs { flex-wrap: nowrap; margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); overflow-x: auto; scroll-padding-inline: var(--gutter); scrollbar-width: none; }
-  .lp-tab { flex: none; height: 40px; padding: 0 12px; }
-  /* A wide screen shows the part this section is about, at a size that can be read. */
-  .lp-crowd-shot { aspect-ratio: 560 / 620; }
-  #lp .lp-crowd-shot img { width: calc(1440 / 560 * 100%); max-width: none; margin: calc(-48 / 560 * 100%) 0 0 calc(-248 / 560 * 100%); }
-  .lp-mosaic { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; }
-  .lp-mosaic > * { grid-area: auto; }
-  .lp-tile { padding: 22px 20px; }
-  .lp-thread-shot { flex: none; aspect-ratio: 400 / 620; }
-  #lp .lp-thread-shot img { width: calc(1072 / 400 * 100%); height: auto; max-width: none; margin-left: calc(-672 / 400 * 100%); object-fit: fill; }
-  .lp-tile-welcome .lp-frame { aspect-ratio: 4 / 3; }
-  #lp .lp-tile-welcome img { width: 150%; max-width: none; }
-  /* The conversation's crop narrows to the messages themselves, at a size that can be read. */
-  .lp-crop { --crop-w: 400; aspect-ratio: 400 / 540; }
+  .lp-code-gutter { display: none; }
   .lp-code pre { white-space: pre-wrap; overflow-wrap: anywhere; }
-  /* The voice room and a look show their middle, where the people and the conversation are. */
-  .lp-voice-shot { aspect-ratio: 2000 / 1650; }
-  #lp .lp-voice-shot img { width: 150%; max-width: none; margin-left: -25%; }
-  .lp-look-shot { aspect-ratio: 20 / 19; }
-  #lp .lp-look-shot img { width: 150%; max-width: none; margin-left: -25%; }
-  #lp .lp-event-shot img, #lp .lp-dev-card img { width: 520px; max-width: none; }
-  #lp .lp-community-shot img, #lp .lp-people-friends img { width: 170%; max-width: none; }
-  .lp-people-stage { padding-right: 0; }
-  .lp-people-card { position: static; width: 60%; margin: -40px 0 0 auto; }
-  .lp-looks-bar { gap: 6px; }
-  .lp-swatch { height: 36px; padding: 0 10px 0 6px; font-size: 12px; }
-  .lp-anywhere-copy { grid-template-columns: minmax(0, 1fr); gap: 32px; }
-  .lp-anywhere-stage { padding-right: 0; }
-  .lp-anywhere-window { aspect-ratio: 560 / 620; }
-  #lp .lp-anywhere-window img { width: calc(1440 / 560 * 100%); max-width: none; margin: calc(-48 / 560 * 100%) 0 0 calc(-248 / 560 * 100%); }
+  #lp .lp-dev-card img { width: 520px; max-width: none; }
+  .lp-spec-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-spec-figures > div { padding: 18px 16px 20px; }
+  .lp-spec-figures dd { font-size: 28px; }
+  .lp-spec-points > div { grid-template-columns: minmax(0, 1fr); padding: 20px 16px; }
+  .lp-anywhere-copy { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  #lp .lp-community-shot img { width: 170%; max-width: none; }
+  /* The dimension line stands up beside the steps. */
+  .lp-steps { grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 0 0 0 28px; }
+  .lp-steps::before { left: 0; right: auto; top: 0; bottom: 0; width: 1px; height: auto; }
+  .lp-steps::after { display: none; }
+  .lp-steps > li::before { left: -32px; top: 6px; width: 9px; height: 1px; }
+  .lp-index { grid-template-columns: minmax(0, 1fr); }
   .lp-footer-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
-  .lp-closer { margin-left: 0; width: 100%; }
-  /* A phone has no keys to name, and Safari zooms into a field smaller than 16px. */
-  .lp-jump-hints { display: none; }
-  .lp-jump-field input { font-size: 16px; }
+  .lp-closer { width: 100%; margin-left: 0; }
 }
 @media (min-width: 761px) { .lp-phone-only { display: none !important; } }
 @media (max-width: 760px) { .lp-desk-only { display: none !important; } }

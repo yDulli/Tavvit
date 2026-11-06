@@ -1,7 +1,8 @@
 # The product page's pictures
 
-`shoot.mjs` takes the pictures of the page at `/` (`packages/web/src/landing/`) from
-the running app, with invented people in it, and writes them optimised to
+`shoot.mjs` takes the five pictures of the page at `/` (`packages/web/src/landing/`) from
+the running app, with invented people in it (the window, the phone's conversation and channel list,
+a bot's card, the Explore page), and writes them optimised to
 `packages/web/src/landing/assets/`, their sizes to `imageSizes.ts` and the link
 preview to `packages/web/public/social-card.jpg` (`card.mjs`: the window just taken
 beside the logo and the headline, from `social-card.html`). Retake them when the
@@ -39,6 +40,3 @@ dev server in use), run the scratch pair on others and name them: `API_URL`
 (`http://localhost:3007/api`) for `seed.mjs`, `WS_URL` (`ws://localhost:3007/ws`) for
 `presence.mjs`, `WEB_URL` (`http://localhost:5174`) for `shoot.mjs`, with Vite's proxy
 pointed at that server.
-
-The voice room comes from `packages/web/dev-voice-room.html`: the real components
-with seeded stores, because a call would need a LiveKit server and other people.

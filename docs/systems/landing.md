@@ -90,11 +90,11 @@ the app's bundle carries, and the app does not change.
 - **What differs by visitor** comes after that, or is already in the HTML for the stylesheet to choose:
   the stored language (`applyStoredLandingLanguage`, after the take-over), the instance's facts (as
   before), the device (below), and this server's address (the origin token, below).
-- **The device.** The Windows download in the opening and Apple's Command key on the switcher are
-  both in the HTML (`.lp-for-windows`/`.lp-not-windows`, `.lp-for-apple`/`.lp-not-apple`);
-  `landing-gate.js` (or `boot.tsx` on the app's path) sets `data-lp-os` from `landingPlatform()`
-  before the first paint and `landing.css` hides the one that does not fit. Without it, as for a
-  reader with no script, the general one shows.
+- **The device.** The opening's second button, the Windows download or the way back in, is
+  in the HTML both ways (`.lp-for-windows`/`.lp-not-windows`); `landing-gate.js` (or `boot.tsx` on
+  the app's path) sets `data-lp-os` from `landingPlatform()` (windows, apple or other) before the
+  first paint and `landing.css` hides the one that does not fit. Without it, as for a reader with no
+  script, the general one shows.
 - **The origin.** The build cannot know the address a server answers at. Wherever a page needs it
   (its canonical address and `og:url`, the whole address of its preview picture, the example a bot
   would send, `<html data-origin>`) it writes `SITE_ORIGIN_TOKEN` (`shared/src/site.ts`), and the
@@ -151,27 +151,84 @@ the app's bundle carries, and the app does not change.
 
 ## What is on it
 
-In order: the opening with the newest line of `/changelog`, the headline and its lead side by side,
-and the real window with four keys on it and the legend that answers them; the statement, six figures
-of the app's own (no ads, no trackers, the languages, the themes, the people of a group message,
-the characters of a message; `figures.ts` holds the three limits, and the test holds them to their
-sources, so the page does not pay for the modules that define them) and the contents of the page (where "Features" and "Explore
-features" lead); then thirteen
-chapters, each with its number and name in the margin: the channel to try, spaces with who is at your
-table, conversations (the readable crop beside four marks, the switcher among them), everything around
-the conversation (threads, polls, the welcome and events as a mosaic, with voice messages, saved
-messages and alerts as points), voice, people (friends with a profile over them), your way (the seven
-looks to pick), community (Explore, its points and the three steps of moving in), developers, no ads
-with what protects an account, desktop and phone, the menu of features, questions; the closing call;
-and the footer with the status, the version and the closing line. Beside all of it, on a window at
-least 1280px wide, stands the rail of chapters, and Ctrl K opens the page's switcher (Design, "The page
-as a space").
+The opening is the product itself, to try ("The stage"); after it come numbered sheets, as a drawing
+set numbers its sheets (`SHEETS` in `LandingPage.tsx`):
 
-- **The channel to try** is `landing/DemoChat.tsx`: a channel drawn on this page, since the page may
-  not import the app, so a change of the app's look has to be followed there by hand. It runs in
-  that component alone: the people are invented, nothing is sent or stored, and what someone types
-  is shown as words, with no link made of it. The page says so, and `landing.test.tsx` holds it to
-  that (no request, nothing stored, no markup). Each line is said once; after that people only react.
+1. **The stage.** The newest line of `/changelog`, the headline ("Make room for your people."), the
+   lead and the buttons; under them a window of the app in which Night Shift can be walked through
+   and used; under it what the server says of itself (whether the chat runs, the version, no ads, no
+   trackers).
+2. **Inside:** the real window with four keys on it and the legend that answers them; a phone shows
+   the same space's channel list instead.
+3. **Developers:** the one piece of code, what a bot looks like, three points.
+4. **House rules:** "No ads. No trackers." as large as the opening, then a datasheet: six figures of
+   the app's own (no ads, no trackers, the languages, the themes, the people of a group message, the
+   characters of a message; `figures.ts` holds the three limits and the test holds them to their
+   sources, so the page does not pay for the modules that define them) beside what protects an account.
+5. **Where it runs:** desktop and phone, with a code that opens this server on a phone.
+6. **Moving in:** the app's Explore page, and opening a place of your own in three steps.
+7. **Index** (`#features`, where the nav's "Features" leads): everything in the app, the menu of features.
+8. **Questions**; then the closing call, and the footer with the status, the version and the closing line.
+
+### The stage
+
+`landing/Stage.tsx`: a window of the app in which the list of channels is drawn as a floor plan of
+Night Shift, the demo space of the pictures ("The plan"), and the room chosen stands where the app has
+its conversation. The window's bar names the space and holds two buttons: its members (the member list,
+`members.tsx`) and its looks.
+
+- **Arrival.** The visitor starts outside the door, a point in the accent with "You" beside it, and the
+  invite stands beside the plan, as the app's join page shows one. Every room but the way in is
+  hatched: someone who is not a member sees none of them.
+- **Walking.** Choosing a room on the plan (a click, a tap, or Enter on its button) walks the visitor
+  there (`useWalk.ts`: out through a door, along the hall, in through a door, at a walking pace), lights
+  the room in its colour and opens it. Choosing any room from outside walks in through the door first.
+  On a narrow window, where the room stands under the plan, it is brought into view.
+- **The rules.** The way in shows the welcome with its rules and where to start. Until the visitor
+  agrees, the text rooms are read only and writing, voting and joining a call give way to the rules, as
+  the app holds back a member who has not agreed to required rules (`rules_not_accepted`, spaces.md);
+  agreeing opens them.
+- **The rooms**, each with what it is for, drawn as the app draws it (`rooms.tsx`, `channels.tsx`,
+  `gatherings.tsx`): #general to write in (`DemoChat.tsx`, kept once opened, so the conversation is
+  still there on coming back); raid-planning with its thread, which opens over the channel and can be
+  followed; clips with an upload behind a spoiler; patch-notes with a poll whose results stay hidden
+  until one has voted; the lounge to join, mute and turn a camera on in; movie night to watch along, pause
+  for everyone and react, a reaction rising over the picture; and the events, to go to, to be reminded
+  of, and to walk on from to the lounge.
+- **What the rooms say** follows the visitor (`roomsSay`): the text room they stand in counts them, the
+  lounge counts them while they are in the call and movie night while they watch, and clips is no longer
+  new once looked into.
+- **The member list** has everyone under their role, in the role's colour with its icon, the owner's
+  crown and the seed's statuses; choosing someone lights the room they are in and rings their mark.
+- **The looks** lay a theme on the window: its surface in the app's steps of tone and its accent
+  (`lookStyle`, from `LOOKS`), the first being the page's own.
+- **Nothing leaves the page.** The people are invented and the page says so; nothing is sent, stored,
+  recorded or played: the voice room uses no microphone and no camera, movie night loads no video, and
+  both say so.
+
+### The plan
+
+`landing/Plan.tsx`, with `landing/planData.ts` as its data, draws Night Shift as a floor plan: the page's
+own picture of what Tavvit is, a place of its own for a group. Its rooms are the space's channels in
+the wings of their categories (Hangout, Games); its hall is the way in, with the invite address and the
+rules, and every room opens onto it; its events are a room of their own; the people in it are initials
+on their colours in the rooms they are in, whoever speaks in a voice room ringed; a room says what is
+going on in it (here, talking, watching, new, upcoming), and the thread of raid-planning is a nook
+partitioned off in its corner.
+
+- **It stays true.** The channels, categories, roles, people, statuses, thread and poll are those of
+  `scripts/landing-shots/seed.mjs`, so the plan, the rooms and the pictures show the same place: when
+  the seed changes, `planData.ts` (`PLAN_ROOMS`, `MEMBERS`, `ROLES`) follows. Every kind of room is a
+  part of a space the app has.
+- **Its rooms are buttons**, named by their name, their kind and what goes on in them; the room the
+  visitor is in is `aria-current="location"`, and a line only a screen reader reads says where they are.
+- **It fits its own width** (a container, `container-type: inline-size`): twelve columns in three rows
+  with the hall across the middle, in smaller type from 600px down, and two columns from 440px down (a
+  phone), where the rooms that do not touch the hall open onto the room beside them and their doors are
+  not drawn.
+
+### The rest
+
 - **The one piece of code** is `landing/example.ts`: how a bot says something, as the quickstart has
   it, with the address of the server the visitor is on. `landing.test.tsx` holds its route to
   `BOT_ROUTES`, so it cannot name a route a bot does not have.
@@ -182,120 +239,119 @@ as a space").
   and since 1.34.0 its emoji and stickers with a bot of the person's own (spaces.md, "Importing
   emoji and stickers from Discord"). The question "Can I bring my Discord server along?"
   (`questions.items.moving`) answers the same: its structure and its emoji, yes; messages and
-  members cannot come, so people are invited with a link. The community chapter's point
-  (`community.points.template`) and the menu (`features.items.template`) name the template alone.
-- **The second button of the hero** is the Windows download on Windows, the only desktop app there
-  is, and a look around the page everywhere else.
-- **The voice.** The headline says what the product is ("Where your group talks."), and the chapter
-  names in the margin (`chapters.*`) are plain. The tavern the page came from stays in the lines that
-  earned it: the demo's welcome, the third step of moving in, the features as "the menu", the closing
-  ("There's a seat free.") and the footer's last line. Translate those by sense, not by word.
+  members cannot come, so people are invited with a link. The index (`features.items.template`)
+  names the template alone.
+- **The second button of the opening** is the Windows download on Windows, the only desktop app
+  there is, and the way back in (Log in) everywhere else.
+- **The voice.** The headline says what Tavvit gives a group, a place of its own ("Make room for your
+  people."), and the stage lets it be walked into. The sheets' names (`chapters.*`) are plain. The
+  tavern the page came from stays in the lines that earned it: the demo's welcome, the third step of
+  moving in, the closing ("There's a seat free.") and the footer's last line. Translate those by
+  sense, not by word.
 
 ## Design
 
 The page is built from the app's own material, Graphite (design-system.md), and from nothing else:
-it is what the app looks like, at the size of a document. It no longer takes anything from
-rootapp.com; the colour cards, glass plates and pill buttons of the earlier page are gone, and with
-them the question of that closeness. All of it stays inside `#lp` and the `.lp-*` classes of
-`landing.css`, which loads with this page alone. The tokens are the app's, from `globals.css`
-(`--bg-*`, `--border-*`, `--text-*`, `--accent-*`, `--grain`, the fonts, the easings), whose base
-layer also resets margins, lists and buttons for the page: `landing.css` adds no reset of its own,
-because an `#lp` selector would outrank every class.
+it is what the app looks like, at the size of a document. All of it stays inside `#lp` and the
+`.lp-*` classes of `landing.css`, which loads with this page alone. The tokens are the app's, from
+`globals.css` (`--bg-*`, `--border-*`, `--text-*`, `--accent-*`, `--grain`, the fonts, the easings),
+whose base layer also resets margins, lists and buttons for the page: `landing.css` adds no reset of
+its own, because an `#lp` selector would outrank every class.
 
-- **A document of chapters.** After the opening and the statement come thirteen chapters. Each is a
-  hairline across the page with its number and name in the margin (`Chapter`, `.lp-chapter-head`:
-  the Geist Mono index, the heading and its lead side by side, stacked below 1100px) and a
-  composition of its own under them: a window; tabs and a window; a split of marks and a crop; a
-  mosaic; a window and three cells; two frames lying over each other; swatches and a window; a
-  picture, six cells and three steps; code and a card; one line of display type on the axis; a
-  window with a phone over it; a table; a list of questions. Sections alternate between the frame
-  tone (`--bg-base`) and the sidebar tone (`.lp-band`, `--bg-channel`), told apart by a step and a
-  hairline, as the app's panels are.
-- **The page as a space.** What sets the page apart is that it reads as Tavvit does. On a window
-  1280px or wider the chapters stand in a rail beside the page (`Rail`, `.lp-rail`, sticky under the
-  nav), drawn with the app's own `.nav-item`: a mark for each, as a channel has its icon, the open
-  chapter selected with the violet edge, one not yet read bright with its dot, and the category's
-  count of what is left. `useReading` keeps that as the app keeps a channel's state: a chapter is
-  read once it has been the open one (its section's top past a third of the window), so one skipped by
-  a jump stays unread; nothing is stored. The brand stands over the rail as the app's stands over its
-  sidebar, the statement's contents list gives way to the rail, and a chapter's index stands over its
-  heading. At the rail's foot the status and the version are said in words; the footer links them, and
-  the tests find each link once. "Jump to…" at the rail's top, and Ctrl K (Command K on an Apple
-  device) anywhere, open the page's switcher (`Jump`): the app's `QuickSwitcher` written again in the
-  page's own code, with `.modal-scrim`, `.glass-modal` and `.input-embedded`, the chapters (unread ones
-  with their dot) and the pages, the arrows, Enter and Escape. A chapter is scrolled to and its heading
-  takes the focus; a page is opened. Below 1280px a pill at the foot of the screen (`JumpPill`,
-  `.glass-bubble`) names the open chapter and opens the same switcher. It is rendered only between the
-  opening and the footer, so it never stands on the page's last links, and the release check's hit
-  test never meets it hidden.
-- **The window answers.** Pointing at a part of the opening's window with a mouse, or at its line in
+- **The stage's window** (`.lp-app`) is the app's: the frame tone for its bar, the sidebar tone under
+  the plan (`.lp-app-map`), the content tone for the room (`.lp-app-room`), one deep shadow because a
+  window floats. Its body is as tall as the screen leaves it, within bounds, so the whole stage stands
+  in the first screen of a laptop and a long conversation scrolls inside it. The rooms are drawn with
+  the demo channel's own pieces (`.lp-demo-bar`, `.lp-demo-line`, `.lp-demo-reaction`) and a few of
+  their own (`.lp-room-*`, `.lp-thread-chip`, `.lp-clip`, `.lp-poll`, `.lp-watch`, `.lp-event`,
+  `.lp-member`).
+- **A set of drawings.** Every part after the stage is a sheet (`SheetHead`, `.lp-sheet-head`): a
+  hairline across the page with its corners ticked, as a drawing's edge is, the sheet's number and
+  name in Geist Mono, and the heading with its lead, side by side where there is room
+  (`.lp-sheet-head-split`) and stacked below 1100px. Under it, a composition of its own: a window with
+  a legend; code beside a card over three cells; display type over a datasheet; words beside a phone;
+  a picture over three steps on a dimension line; an index; words beside a list of questions. Sections
+  alternate between the frame tone (`--bg-base`) and the sidebar tone (`.lp-band`, `--bg-channel`),
+  told apart by a step and a hairline, as the app's panels are.
+- **The plan's drawing.** Floors in the content tone (`--bg-chat`); walls are the grid's 1px gaps in
+  a lighter tone, the outer wall 2px; a door is an opening in the wall in the floor's tone with the
+  leaf standing open and the arc it swings along (borders and one rounded corner), a pair of them in
+  the outer wall at the way in; light falls into a lit room from above in its colour (`--room`, the
+  accent family), with the lit top edge of the app's surfaces, and a little of it answers the pointer;
+  a room the visitor may not enter is hatched. The wings are measured over the plan as a drawing
+  measures: a line between ticks with the name on it. The people are the app's avatars without a picture.
+- **The window answers.** Pointing at a part of the inside window with a mouse, or at its line in
   the legend, lights that part (`.lp-spot`: a violet hairline, the rest of the window dimmed) and marks
   its key and its legend line in the violet of what is chosen. The parts are `WINDOW_KEYS[].part`,
   shares of `window.webp` like the keys, and are looked at again when it is retaken. A touch scrolls as
   it always did, and the legend says the same in words.
-- **Surfaces.** No card is a rounded tinted box. Points, facts, steps and the menu are cells of a
-  hairline grid (`.lp-grid`: 1px of `--border-hard` between cells of the section's own tone; the
-  mosaic of "Around the conversation" is the same with named areas). A real screen stands in
-  `.lp-frame` (8px, a hairline, a lit top edge); the big windows are `.lp-window` (10px, the one
-  deep shadow on the page, because a window floats); a phone is `.lp-device`, a graphite rim at
-  30px, the one large radius, since it is a device and not a control. Controls keep the app's
-  corners: 6px buttons, 5px nav links, 4px marks and swatches, 3px keycaps.
+- **Surfaces.** No card is a rounded tinted box. Points are cells of a hairline grid (`.lp-grid`: 1px
+  of `--border-hard` between cells of the section's own tone), and so are the house rules' figures
+  and points (`.lp-spec`); the index is rows on hairlines (`.lp-index`); the three steps stand on a
+  dimension line (`.lp-steps`), which stands up beside them on a phone. A real screen stands in
+  `.lp-frame` (8px, a hairline, a lit top edge); the big windows are `.lp-window` and `.lp-app` (10 to
+  12px, the one deep shadow, because a window floats); a phone is `.lp-device`, a graphite rim at 30px,
+  the one large radius, since it is a device and not a control. Controls keep the app's corners: 6px
+  buttons and chips, 5px nav links, 4px marks and swatches.
 - **Light.** `.lp-light` is the app's own construction: grain and a bloom behind the content, never
-  on text, in `--lp-place`, a registered property that fades over `--dur-slower` as `--place-color`
-  does in the app, with the rings of the app's openings behind the hero (`.lp-light-rings`). It
-  falls in four places: the opening and the closing in the accent; the spaces chapter in the colour
-  of the chosen space (`PLACES`, the accent family, as the app lights a space); the looks chapter in
-  the chosen theme's accent (`LOOKS[].accent`). Nowhere else; off under higher contrast, forced
-  colours and `data-light='off'`.
-- **The violet** is the signal only: the open chapter in the rail, the lit part of the window and its
-  key, the chosen tab's edge and the chosen swatch's border, the
-  demo's open channel bar, own avatar, pressed reaction and send button, the focus ring, and the glow
-  under the white button. Never a heading, never a label (the "New" mark is neutral), never the fill
-  of a surface.
-- **Type.** `.lp-display` (680, up to 96px) for the headline, "No ads" and the closing; `.lp-h2`
-  (640, up to 52px) for chapters; both painted with `.lp-ink`, the app's `.ink`. Then `.lp-lead`,
-  `.lp-body`, `.lp-h3`, the cells' `.lp-cell-title` and `.lp-cell-body`, and `.lp-label`, which is
-  `.label-mono`'s recipe. Weights 400, 500 and 600, with 640 and 680 for display. Sentence case; no
-  colour in a heading. `useFitHeadings` brings a heading with one long word down to its column, and
-  a card's heading breaks where the catalog has its `\n` (`Lines`).
+  on text. It falls in three places, in the accent: the stage (with the rings of the app's openings,
+  `.lp-light-rings`), the house rules and the closing. The plan's rooms carry their own. Off under
+  higher contrast, forced colours and `data-light='off'`; under higher contrast a lit room is outlined
+  instead.
+- **The violet** is the signal only: the visitor's point on the plan, the ring of someone looked for
+  and the edge of the member chosen, the chosen look's border, the main action of a room (agreeing,
+  walking in, joining, watching along) and the pressed state of a control, the lit part of the inside
+  window and its key, the demo's own avatar, pressed reaction and send button, the focus ring, and the
+  glow under the white button. On the plan it is otherwise only the light of #general, whose colour is
+  the accent. Never a heading, never a label (the "New" mark is neutral), never the fill of a surface.
+- **Type.** `.lp-stage-title` (680, up to 80px) for the headline; `.lp-display` (680, up to 96px) for
+  the house rules and the closing; `.lp-h2` (640, up to 52px) for the sheets; all painted with
+  `.lp-ink`, the app's `.ink`. Then `.lp-lead`, `.lp-body`, the cells' `.lp-cell-title` and
+  `.lp-cell-body`, and `.lp-label`, which is `.label-mono`'s recipe; the plan speaks in 13px names and
+  10px Mono, the rooms in the app's own sizes. Weights 400, 500 and 600, with 640 and 680 for display.
+  Sentence case; no colour in a heading. `useFitHeadings` brings a heading with one long word down to
+  its column, and a heading breaks where the catalog has its `\n` (`Lines`).
 - **Buttons.** `.lp-btn-hero` is the app's `.btn-hero`, white with the accent's glow, one per
-  screen: the hero's and the closing's. The nav's "Get started", "Keep your seat" and the links to
-  the docs and the help are `.lp-btn-quiet` outlines. No pills, no arrow discs.
-- **The keys.** Four marks (`WINDOW_KEYS`, `.lp-mark`) stand on empty patches of the hero's window
+  screen: the stage's and the closing's. The nav's "Get started", "Keep your seat" and the links to
+  the docs and the help are `.lp-btn-quiet` outlines; a room's own controls are the app's
+  (`.lp-room-primary`, `.lp-voice-button`). No pills, no arrow discs.
+- **The keys.** Four marks (`WINDOW_KEYS`, `.lp-mark`) stand on empty patches of the inside window
   (the tabs, the open channel's row, beside a message, the members' first group) and the legend under
-  the window answers them (`hero.keys.*`): this is what says what Tavvit is in one look. They are
-  percentages of `window.webp`; when the pictures are retaken, look at them again. Their layer takes
-  no clicks.
-- **Pictures** stand straight, never on a slant. `WindowCrop` shows the readable part of the big
-  window, and below 760px every wide picture shows the part that can be read: the conversation
-  column of a window, the panel of the thread, the middle of the voice room and of a look.
+  the window answers them (`hero.keys.*`). They are percentages of `window.webp`; when the pictures
+  are retaken, look at them again. Their layer takes no clicks.
+- **Pictures** stand straight, never on a slant: the inside window, the phone's channel list and its
+  conversation, the bot's card and the app's Explore page. Below 760px a wide picture shows the part
+  that can be read.
 - **Motion.** Nothing moves by itself and nothing loops: `landing.test.tsx` holds `landing.css` to
-  no `infinite`. Each part of a chapter arrives once, when it first comes into view: `useArrivals`
+  no `infinite`. What moves, moves because the visitor did something: the visitor walks to a room
+  they chose (`useWalk.ts`, a CSS transition per stretch), a room's light fades in, a room opens with a
+  fade, a reaction at movie night rises over the picture once and goes. For a reader under
+  `prefers-reduced-motion` the visitor stands in the room at once, and a reaction only shows and goes
+  where it was given. Each part of a sheet arrives once, when it first comes into view: `useArrivals`
   sets `data-arrivals` on the page and `data-in` on a `[data-arrive]` element the first time it
   intersects, watches what the page mounts later too (a change of language mounts what it
-  translates anew), and the stylesheet keeps such an element at the first frame of a paused animation until
-  then. It is an animation and not a hidden state, so a page whose animations are stopped (the
+  translates anew), and the stylesheet keeps such an element at the first frame of a paused animation
+  until then. It is an animation and not a hidden state, so a page whose animations are stopped (the
   release check's pictures), a browser without `IntersectionObserver` and a reader under
   `prefers-reduced-motion` all see everything in place. The prerendered page is on screen before the
   script comes, so when it is taken over (`prerendered`) what is already in sight, or scrolled past,
-  is marked `data-in="shown"` and stays where it is, with no animation, instead of vanishing and
-  arriving again; only the parts further down arrive. A hover answers (the white button rises, a
-  hairline steps up, a nav link brightens), an answer folds open, a chosen picture cross-fades, the
-  light fades to the chosen colour. No parallax, no scroll-linked transform, no autoplay, and so
-  nothing WCAG 2.2.2 would ask to be stoppable.
-- **Clicks.** Whatever is laid over the page (the key layer, the light, the window's spot) takes none:
-  `release-check-browser.mjs` asks the browser's hit test about each thing that can be used.
+  is marked `data-in="shown"` and stays where it is; only the parts further down arrive. A hover
+  answers (the white button rises, a hairline steps up, a nav link brightens), an answer folds open.
+  No parallax, no scroll-linked transform, no autoplay, and so nothing WCAG 2.2.2 would ask to be
+  stoppable.
+- **Clicks.** Whatever is laid over the page (the key layer, the light, the window's spot, a room's
+  light, the visitor's point) takes none, and what stands in a room (its people, its nook, its door) is
+  part of its button: `release-check-browser.mjs` asks the browser's hit test about each thing that can
+  be used.
 - **Size tokens.** No raw `vh` or `vw`: the page uses `--app-vh` and `--app-vw` like the app
   (`platform/viewportTokens.test.ts`). The nav lets what passes under it show through, blurred, and
-  draws its hairline once the page has moved (`useScrolled`). A heading the contents aim at keeps `scroll-margin-top`,
-  because its arrival still holds it a little lower when the scroll is measured.
-- **Below 1280px** the rail gives way to the pill and the statement's contents list, and the
-  Explore picture takes the width with its points in a row under it. **Below
-  1100px** a chapter's head stacks, a split stands one above the other, the demo loses its member
-  list, the legend has two columns, and the language picker stays in the footer. **Below 760px** the
-  phone screenshot in a device frame stands in the hero, a strip of phone screens to swipe opens
-  Spaces, buttons stand under each other, every grid is one column, the tabs scroll sideways, and
-  the wide pictures show the part that can be read.
+  draws its hairline once the page has moved (`useScrolled`). A heading a link aims at, and
+  `#features`, keep `scroll-margin-top`, because an arrival still holds them a little lower when the
+  scroll is measured.
+- **Below 1100px** the stage's head stacks and its window stands the plan over the room, a sheet's head
+  stacks, the legend has two columns, the datasheet stacks, and the language picker stays in the footer.
+  **Below 760px** a phone shows the space's channel list where the inside window was, buttons stand
+  under each other, every grid is one column, and the wide pictures show the part that can be read.
 
 ## The pictures
 
@@ -309,13 +365,14 @@ light from above with its grain, the logo's rings, the display type with its ink
 look changes**, or the page shows an app that no longer exists. The screens are in English; the alt
 texts are translated.
 
-Its community also holds a thread, a poll, an event, a welcome with rules and a bot, and Night Shift has a banner (painted by `seed.mjs` itself, so no picture of it lives in the repository), which heads its channel column in the window. The four keys and the parts they light (`WINDOW_KEYS`) were measured on that window. A space's
-welcome opens over everything until it is answered, so it sits in Bookshelf, which is answered before
-its picture is taken. The poll and the bot have channels of their own, so the big window stays calm.
-The other spaces hold conversations of their own for the tabs under "Who's at your table?".
-
-The voice room is `packages/web/dev-voice-room.html`: the real `VoiceGrid` and `VoiceControlBar`
-with seeded stores, because a call needs a LiveKit server and other people.
+There are five: the inside window (`window`), the phone's conversation (`phone`) and channel list
+(`phone-channels`), the bot's card (`bot-card`) and the app's Explore page (`community`). Night Shift
+has a banner (painted by `seed.mjs` itself, so no picture of it lives in the repository), which heads
+its channel column in the window. The four keys and the parts they light (`WINDOW_KEYS`) were measured
+on that window. The bot has a channel of its own, so the big window stays calm. Night Shift is also
+the space the stage draws and lets be walked through (`planData.ts`): its rooms, people, roles,
+statuses, thread, poll and event are the seed's, so when the seed changes the stage follows. The
+other spaces hold conversations of their own, which the window's tabs name.
 
 ## What it may say
 
@@ -331,6 +388,8 @@ need turning on (Admin console → Bots) and two-factor sign-in needs `TOTP_ENCR
 "No ads, no trackers" and "pictures from
 other websites load only after you click" describe the code as it is (`docs/systems/legal.md`):
 whoever changes that changes this page too.
+
+The stage uses each feature as the app has it, the rules' hold on a member included, and says plainly what it leaves out on this page: its people are invented, nothing is sent or stored, the voice room touches no microphone or camera, and movie night loads no video, showing instead the consent the real feature asks before a video from another website loads.
 
 It shows no number of users, no testimonials and no logos of customers, because there are none to
 show, and it compares itself with no other app by name. What shows the product is alive comes from

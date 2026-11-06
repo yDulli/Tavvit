@@ -4,6 +4,14 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.34.2": {
+      "title": "Ein Ort zum Durchgehen",
+      "items": {
+        "stage": "Die Produktseite beginnt jetzt in Night Shift, einem Demo-Space zum Durchgehen: seine Kanäle als Grundriss gezeichnet, und jeden Raum kannst du ausprobieren, vom Schreiben in #general und dem Beitreten in der Lounge bis zur Umfrage und zum gemeinsamen Schauen am Filmabend.",
+        "rules": "Der Eingang zeigt, wie ein Space neue Leute begrüßt: seine Begrüßung, seine Regeln und was sich öffnet, sobald du zustimmst.",
+        "window": "Die Mitgliederliste des Space mit allen unter ihrer Rolle und die sieben Looks sind gleich im Fenster."
+      }
+    },
     "1.34.1": {
       "title": "Eine richtige Karte für geteilte Links",
       "items": {

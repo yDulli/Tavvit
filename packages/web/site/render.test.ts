@@ -20,10 +20,14 @@ describe('the website, rendered while building', () => {
     expect(typeof window).toBe('undefined');
     const html = renderLanding();
     expect(html).toContain('<div id="lp">');
-    expect(html).toContain(`>${en.hero.title}</h1>`);
+    // The opening's two lines, as the catalog breaks them.
+    for (const line of en.hero.title.split('\n')) expect(html).toContain(`<span class="lp-line">${line}</span>`);
+    expect(html).toMatch(/<h1 [^>]*id="landing-title"[^>]*><span class="lp-line">/);
     expect(html).toContain(en.questions.title);
     // Both of the choices by device are in it; the stylesheet shows one.
-    for (const name of ['lp-for-windows', 'lp-not-windows', 'lp-for-apple', 'lp-not-apple']) expect(html).toContain(name);
+    for (const name of ['lp-for-windows', 'lp-not-windows']) expect(html).toContain(name);
+    // The plan of the opening can be walked through: its eight rooms are buttons, in the HTML before any script.
+    expect(html.match(/<button type="button" class="lp-room"/g) ?? []).toHaveLength(8);
     // The example a bot would send names this server, which fills in its own address.
     expect(html).toContain(`${SITE_ORIGIN_TOKEN}/api/`);
     // Nothing is hidden until a script runs: a reader without one sees every part.

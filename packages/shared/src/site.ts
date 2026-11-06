@@ -46,5 +46,5 @@ export const SOCIAL_CARD = {
   type: 'image/jpeg',
   width: 1200,
   height: 630,
-  alt: 'Tavvit: where your group talks. Channels, voice, screen sharing and direct messages in one app.',
+  alt: 'Tavvit: make room for your people. Channels, voice, screen sharing and direct messages in one app.',
 } as const;

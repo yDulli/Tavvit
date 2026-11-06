@@ -176,11 +176,11 @@ describe('the page', () => {
     expect(screen.getAllByRole('link', { name: en.nav.register })[0]).toHaveAttribute('href', '/register');
   });
 
-  it('shows what is new around the conversation and leads to the docs and the help', async () => {
+  it('shows its sheets and leads to the docs and the help', async () => {
     answerInfo({ registrationOpen: true, sourceCodeUrl: null });
     render(<LandingPage />);
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    for (const title of [en.around.title, en.developers.title, en.questions.title]) {
+    for (const title of [en.inside.title, en.developers.title, en.privacy.title, en.questions.title]) {
       expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument();
     }
     expect(screen.getByRole('link', { name: en.developers.link })).toHaveAttribute('href', '/developers');
@@ -195,7 +195,15 @@ describe('the page', () => {
     expect(screen.getByText(en.questions.items.moving.q).closest('summary')).not.toBeNull();
   });
 
+  /** A room on the stage, by the start of its button's name (its name, its kind, what goes on in it). */
+  const roomButton = (name: string) => within(screen.getByRole('figure', { name: en.plan.label })).getByRole('button', { name: new RegExp(`^${name}, `) });
+
   describe('the channel to try', () => {
+    /** Walks into #general, which shows the rules in place of the composer, and agrees to them. */
+    const enter = () => {
+      fireEvent.click(roomButton('general'));
+      fireEvent.click(screen.getByRole('button', { name: en.stage.locked.agree }));
+    };
     const composer = () => screen.getByRole('textbox', { name: en.demo.placeholder });
     const say = (text: string) => {
       fireEvent.change(composer(), { target: { value: text } });
@@ -214,6 +222,7 @@ describe('the page', () => {
     it('answers someone who writes, and sends nothing anywhere', async () => {
       render(<LandingPage />);
       await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      enter();
       const before = vi.mocked(fetch).mock.calls.length;
       const stored = window.localStorage.length;
       say('Hello from a visitor');
@@ -229,6 +238,7 @@ describe('the page', () => {
     it('says each line once: when everyone has answered, people only react', async () => {
       render(<LandingPage />);
       await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      enter();
       for (let turn = 0; turn < 8; turn += 1) {
         say(`Message ${turn}`);
         await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
@@ -240,6 +250,7 @@ describe('the page', () => {
     it('shows what someone types as words, never as markup or a link', async () => {
       const { container } = render(<LandingPage />);
       await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      enter();
       say('<img src=x onerror=alert(1)> https://example.org');
       expect(screen.getByText('<img src=x onerror=alert(1)> https://example.org')).toBeInTheDocument();
       expect(container.querySelector('.lp-demo-list img, .lp-demo-list a')).toBeNull();
@@ -248,6 +259,7 @@ describe('the page', () => {
     it('takes no empty message, and offers a seat only after a first one', async () => {
       render(<LandingPage />);
       await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      enter();
       const lines = document.querySelectorAll('.lp-demo-line').length;
       say('   ');
       expect(document.querySelectorAll('.lp-demo-line').length).toBe(lines);
@@ -259,6 +271,7 @@ describe('the page', () => {
     it('lets a reaction be added and taken back', async () => {
       render(<LandingPage />);
       await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      enter();
       const wave = screen.getByRole('button', { name: /👋/ });
       expect(wave).toHaveAttribute('aria-pressed', 'false');
       fireEvent.click(wave);
@@ -269,16 +282,78 @@ describe('the page', () => {
     });
   });
 
-  it('shows a group\'s picture when its chip is chosen, and goes on with the arrow keys', async () => {
+  it('lets the visitor walk in, agree to the rules and drop into the lounge', async () => {
     answerInfo({ registrationOpen: true, sourceCodeUrl: null });
     render(<LandingPage />);
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    expect(screen.getByRole('img', { name: en.crowds.alts.raid })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('tab', { name: en.crowds.books }));
-    expect(screen.getByRole('img', { name: en.crowds.alts.books })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: en.crowds.alts.raid })).not.toBeInTheDocument();
-    fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' });
-    expect(screen.getByRole('tab', { name: en.crowds.raid })).toHaveAttribute('aria-selected', 'true');
+    const plan = screen.getByRole('figure', { name: en.plan.label });
+    expect(within(plan).getAllByRole('button')).toHaveLength(8);
+    // Outside the door every room but the way in is shut, and the invite waits beside the plan.
+    expect(roomButton('general')).toHaveAccessibleName(`general, ${en.plan.kinds.text}, ${en.plan.states.locked}`);
+    fireEvent.click(screen.getByRole('button', { name: en.stage.invite.enter }));
+    expect(screen.getByRole('heading', { level: 3, name: en.stage.welcome.title })).toBeInTheDocument();
+    expect(roomButton(en.plan.kinds.entrance)).toHaveAttribute('aria-current', 'location');
+    // In, but not yet agreed: the text rooms may be read and not written in, as the app holds a member back.
+    expect(roomButton('general')).toHaveAccessibleName(`general, ${en.plan.kinds.text}, ${en.plan.states.readOnly}`);
+    fireEvent.click(screen.getByRole('button', { name: en.stage.welcome.agree }));
+    expect(screen.getByRole('status')).toHaveTextContent(en.stage.welcome.agreed);
+    expect(roomButton('general')).toHaveAccessibleName(`general, ${en.plan.kinds.text}, ${en.plan.states.here} 3`);
+    // The lounge: joining counts the visitor in, there and on the plan.
+    fireEvent.click(roomButton('lounge'));
+    fireEvent.click(screen.getByRole('button', { name: en.stage.voice.join }));
+    expect(screen.getByText('3 in the room')).toBeInTheDocument();
+    expect(roomButton('lounge')).toHaveAccessibleName(`lounge, ${en.plan.kinds.voice}, ${en.plan.states.talking} 3`);
+    fireEvent.click(screen.getByRole('button', { name: en.stage.voice.mute }));
+    expect(screen.getByRole('button', { name: en.stage.voice.unmute })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('lets every room be used for what it is for, and keeps a poll\'s results until one has voted', async () => {
+    answerInfo({ registrationOpen: true, sourceCodeUrl: null });
+    render(<LandingPage />);
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: en.stage.invite.enter }));
+    fireEvent.click(screen.getByRole('button', { name: en.stage.welcome.agree }));
+    // raid-planning's thread opens over the channel, with its replies.
+    fireEvent.click(roomButton('raid-planning'));
+    fireEvent.click(screen.getByRole('button', { name: /^Fight notes/ }));
+    expect(screen.getByText(en.stage.thread.r7)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: en.stage.thread.follow }));
+    expect(screen.getByRole('button', { name: en.stage.thread.following })).toHaveAttribute('aria-pressed', 'true');
+    // clips: a spoiler stays veiled until it is lifted.
+    fireEvent.click(roomButton('clips'));
+    fireEvent.click(screen.getByRole('button', { name: en.stage.clips.spoiler }));
+    expect(screen.queryByRole('button', { name: en.stage.clips.spoiler })).not.toBeInTheDocument();
+    // patch-notes: no share before the visitor's vote, every share after it.
+    fireEvent.click(roomButton('patch-notes'));
+    expect(screen.getByText(en.stage.poll.hidden)).toBeInTheDocument();
+    expect(screen.queryByText('4 votes')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: en.stage.poll.skill }));
+    expect(screen.getByText('5 votes')).toBeInTheDocument();
+    expect(screen.getByText('8 people voted')).toBeInTheDocument();
+    // movie night: watching along counts the visitor in.
+    fireEvent.click(roomButton('movie-night'));
+    fireEvent.click(screen.getByRole('button', { name: en.stage.watch.join }));
+    expect(roomButton('movie-night')).toHaveAccessibleName(`movie-night, ${en.plan.kinds.voice}, ${en.plan.states.watching} 2`);
+    // The events: going counts the visitor in, and the event leads on to the lounge.
+    fireEvent.click(roomButton(en.plan.kinds.events));
+    fireEvent.click(screen.getByRole('button', { name: en.stage.event.rsvp }));
+    expect(screen.getByText('7 going')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: en.stage.event.lounge }));
+    expect(roomButton('lounge')).toHaveAttribute('aria-current', 'location');
+  });
+
+  it('shows from the member list who is where, and lays a look on the window', async () => {
+    answerInfo({ registrationOpen: true, sourceCodeUrl: null });
+    const { container } = render(<LandingPage />);
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: '8 people' }));
+    expect(screen.getByText('Raid Lead — 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Lena Hoffmann/ }));
+    expect(container.querySelector('[data-room="raid"]')).toHaveAttribute('data-lit', 'true');
+    expect(container.querySelector('[data-room="raid"] [data-found="true"]')).toHaveTextContent('L');
+    fireEvent.click(screen.getByRole('button', { name: en.stage.looks }));
+    fireEvent.click(screen.getByRole('radio', { name: en.themes.names.clay }));
+    expect((container.querySelector('.lp-app') as HTMLElement).style.getPropertyValue('--accent-primary')).toBe('224 80 31');
   });
 
   describe('signs of life', () => {
@@ -292,14 +367,15 @@ describe('the page', () => {
     it('says the chat runs and which version, each with a way to read more', async () => {
       answerBy({ registrationOpen: true, sourceCodeUrl: null, version: '9.9.9' }, { services: { chat: 'ok' } });
       render(<LandingPage />);
-      expect(await screen.findByRole('link', { name: en.life.ok })).toHaveAttribute('href', '/status');
-      expect(await screen.findByRole('link', { name: 'Version 9.9.9' })).toHaveAttribute('href', '/changelog');
+      // In the opening, and again in the footer.
+      for (const link of await screen.findAllByRole('link', { name: en.life.ok })) expect(link).toHaveAttribute('href', '/status');
+      for (const link of await screen.findAllByRole('link', { name: 'Version 9.9.9' })) expect(link).toHaveAttribute('href', '/changelog');
     });
 
     it('says so when the chat is down', async () => {
       answerBy({ registrationOpen: true, sourceCodeUrl: null }, { services: { chat: 'down' } });
       render(<LandingPage />);
-      expect(await screen.findByRole('link', { name: en.life.down })).toBeInTheDocument();
+      expect((await screen.findAllByRole('link', { name: en.life.down })).length).toBeGreaterThan(0);
     });
 
     it('claims nothing when the server does not answer', async () => {
@@ -314,8 +390,8 @@ describe('the page', () => {
   it('names two-factor sign-in only where the server has it', async () => {
     answerInfo({ registrationOpen: true, sourceCodeUrl: null, twoFactor: false });
     render(<LandingPage />);
-    expect(screen.getByRole('heading', { level: 3, name: en.privacy.points.twoFactor.title })).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByRole('heading', { level: 3, name: en.privacy.points.twoFactor.title })).not.toBeInTheDocument());
+    expect(screen.getByText(en.privacy.points.twoFactor.title)).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(en.privacy.points.twoFactor.title)).not.toBeInTheDocument());
     expect(screen.queryByText(en.features.items.twoFactor)).not.toBeInTheDocument();
   });
 
@@ -325,23 +401,16 @@ describe('the page', () => {
     answerInfo({ registrationOpen: true, sourceCodeUrl: null });
     const { container } = render(<LandingPage />);
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    const opening = container.querySelector('.lp-hero') as HTMLElement;
+    const opening = container.querySelector('.lp-stage') as HTMLElement;
     expect(opening.querySelector('a.lp-for-windows')).toHaveAttribute('href', '/download');
-    expect(opening.querySelector('a.lp-not-windows')).toHaveAttribute('href', '#features');
+    expect(opening.querySelector('a.lp-not-windows')).toHaveAttribute('href', '/login');
     const css = readFileSync(join(here, 'landing.css'), 'utf8');
     expect(css).toMatch(/:root:not\(\[data-lp-os='windows'\]\) #lp \.lp-for-windows,/);
-    expect(css).toMatch(/:root\[data-lp-os='windows'\] #lp \.lp-not-windows,/);
+    expect(css).toMatch(/:root\[data-lp-os='windows'\] #lp \.lp-not-windows\s*[,{]/);
     expect(landingPlatform('Mozilla/5.0 (Windows NT 10.0; Win64; x64)')).toBe('windows');
     expect(landingPlatform('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5)')).toBe('apple');
     expect(landingPlatform('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)')).toBe('apple');
     expect(landingPlatform('Mozilla/5.0 (X11; Linux x86_64)')).toBe('other');
-  });
-
-  it('says the switcher\'s keys as an Apple keyboard has them there, and as the app does elsewhere', () => {
-    answerInfo({ registrationOpen: true, sourceCodeUrl: null });
-    const { container } = render(<LandingPage />);
-    expect(container.querySelector('.lp-rail-keys.lp-not-apple')?.textContent).toBe('CtrlK');
-    expect(container.querySelector('.lp-rail-keys.lp-for-apple')?.textContent).toBe('⌘K');
   });
 
   it('keeps every way out of the page', async () => {
@@ -349,6 +418,8 @@ describe('the page', () => {
     const { container } = render(<LandingPage />);
     await screen.findByRole('link', { name: en.footer.source });
     const links = [...container.querySelectorAll('a')].map((link) => link.getAttribute('href'));
+    // The one link inside the page leads to a part that is there.
+    expect(container.querySelector('#features')).not.toBeNull();
     for (const address of ['/', '#features', '/download', '/developers', '/help', '/changelog', '/status', '/login', '/register', '/imprint', '/privacy', '/terms', '/report', 'https://example.org/source.tar.gz']) {
       expect(links).toContain(address);
     }
@@ -361,22 +432,6 @@ describe('the page', () => {
     expect(BOT_ROUTES.some((route) => route.method === EXAMPLE_ROUTE.method && route.path === EXAMPLE_ROUTE.path)).toBe(true);
     expect(exampleRequest('https://chat.example')).toContain('https://chat.example/api/channels/<channel id>/messages');
     expect(container.querySelector('.lp-code code')?.textContent).toBe(exampleRequest(window.location.origin));
-  });
-
-  // The page reads as a space, and Ctrl K opens its switcher as it does in the app.
-  it('opens its own switcher with Ctrl K, narrows it by typing and closes it with Escape', async () => {
-    answerInfo({ registrationOpen: true, sourceCodeUrl: null });
-    render(<LandingPage />);
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
-    const dialog = await screen.findByRole('dialog', { name: en.jump.open });
-    const field = within(dialog).getByRole('combobox');
-    await waitFor(() => expect(field).toHaveFocus());
-    fireEvent.change(field, { target: { value: en.chapters.voice } });
-    expect(within(dialog).getAllByRole('option').map((option) => option.textContent)).toEqual([expect.stringContaining(en.chapters.voice)]);
-    fireEvent.change(field, { target: { value: 'nothing by this name' } });
-    expect(within(dialog).getByRole('status')).toHaveTextContent('nothing by this name');
-    fireEvent.keyDown(field, { key: 'Escape' });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
 

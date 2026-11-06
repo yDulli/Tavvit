@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { MEMBERS, ROLES } from './planData';
+import { Locked } from './rooms';
 
 /**
  * A channel to try on the product page: the visitor types, invented people answer. It runs in
@@ -7,6 +9,11 @@ import { useTranslation } from 'react-i18next';
  * and no link is made of what someone types. It is drawn here and is no piece of the app, since
  * this page may not import the app (`landing.test.tsx`), so a change of the app's look has to
  * be followed here by hand.
+ *
+ * On the opening's stage (Stage.tsx) it is the room #general of the plan: `compact`, with no list of
+ * channels or people of its own, since the plan and the frame around it are those, and `locked` until
+ * the visitor has agreed to the space's rules, as the app holds back someone who has not
+ * (`rules_not_accepted`): they may read, and the composer gives way to the rules.
  */
 
 const SPACE_NAME = 'Night Shift';
@@ -18,15 +25,14 @@ const MAX_MESSAGES = 40;
 const TYPING_AFTER_MS = 500;
 const ANSWER_AFTER_MS = 1700;
 
-/** The demo community of the page's pictures (`scripts/landing-shots/seed.mjs`). */
-const PEOPLE = {
-  lena: { name: 'Lena Hoffmann', colour: '#b8861f', role: '#c084fc' },
-  sam: { name: 'Sam Okafor', colour: '#d9593d', role: '#60a5e6' },
-  noor: { name: 'Noor Haddad', colour: '#c9507c', role: '#5cc491' },
-  theo: { name: 'Theo Marchetti', colour: '#2f9e77', role: '#5cc491' },
-  yuki: { name: 'Yuki Tanaka', colour: '#b0761c', role: '#5cc491' },
-} as const;
-type Person = keyof typeof PEOPLE;
+/** Who speaks here: the demo community of the page's pictures (`scripts/landing-shots/seed.mjs`, planData.ts). */
+const SPEAKERS = ['lena', 'sam', 'noor', 'theo', 'yuki'] as const;
+type Person = (typeof SPEAKERS)[number];
+
+function personOf(who: Person): { name: string; colour: string; role: string | undefined } {
+  const member = MEMBERS[who];
+  return { name: member.name, colour: member.avatar, role: member.role ? ROLES[member.role].color : undefined };
+}
 
 const SEED_KEYS = { sam: 'demo.seed.sam', lena: 'demo.seed.lena', noor: 'demo.seed.noor' } as const;
 const ANSWERS = [
@@ -56,7 +62,15 @@ const SEED: readonly Line[] = [
 
 const HEADER_ICON = 'M9 3 7 21M17 3l-2 18M4 8h17M3 16h17';
 
-export function DemoChat({ onFirstMessage }: { onFirstMessage: () => void }): React.JSX.Element {
+export interface DemoChatProps {
+  onFirstMessage: () => void;
+  /** Without its own list of channels and of people. */
+  compact?: boolean;
+  /** The visitor may read and not write until they agree; `onAgree` agrees for them. */
+  locked?: { onAgree: () => void };
+}
+
+export function DemoChat({ onFirstMessage, compact = false, locked }: DemoChatProps): React.JSX.Element {
   const { t } = useTranslation('landing');
   const [lines, setLines] = useState<readonly Line[]>(SEED);
   const [draft, setDraft] = useState('');
@@ -123,17 +137,56 @@ export function DemoChat({ onFirstMessage }: { onFirstMessage: () => void }): Re
     })));
   };
 
-  return (
-    <div className="lp-demo-app" role="group" aria-label={t('demo.label')}>
-      <div className="lp-demo-side" aria-hidden="true">
-        <p className="lp-demo-space">{SPACE_NAME}</p>
-        <p className="lp-demo-heading">{t('demo.channels')}</p>
-        {TEXT_CHANNELS.map((channel) => (
-          <p key={channel} className={channel === CHANNEL_NAME ? 'lp-demo-channel lp-demo-channel-on' : 'lp-demo-channel'}>
-            <span>#</span>{channel}
+  const side = (
+    <div className="lp-demo-side" aria-hidden="true">
+      <p className="lp-demo-space">{SPACE_NAME}</p>
+      <p className="lp-demo-heading">{t('demo.channels')}</p>
+      {TEXT_CHANNELS.map((channel) => (
+        <p key={channel} className={channel === CHANNEL_NAME ? 'lp-demo-channel lp-demo-channel-on' : 'lp-demo-channel'}>
+          <span>#</span>{channel}
+        </p>
+      ))}
+    </div>
+  );
+
+  const people = (
+    <div className="lp-demo-people" aria-hidden="true">
+      <p className="lp-demo-heading">{t('demo.online')}</p>
+      {SPEAKERS.map((key) => {
+        const person = personOf(key);
+        return (
+          <p key={key} className="lp-demo-person">
+            <span className="lp-demo-avatar" style={{ background: person.colour }}>{person.name.charAt(0)}<i /></span>
+            <span style={{ color: person.role }}>{person.name}</span>
           </p>
-        ))}
-      </div>
+        );
+      })}
+    </div>
+  );
+
+  const composer = locked ? (
+    <Locked text={t('stage.locked.write')} onAgree={locked.onAgree} />
+  ) : (
+    <form className="lp-demo-form" onSubmit={send}>
+      <input
+        type="text"
+        value={draft}
+        maxLength={MAX_LENGTH}
+        autoComplete="off"
+        enterKeyHint="send"
+        aria-label={t('demo.placeholder')}
+        placeholder={t('demo.placeholder')}
+        onChange={(event) => setDraft(event.target.value)}
+      />
+      <button type="submit" disabled={!draft.trim()} aria-label={t('demo.send')}>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5" /></svg>
+      </button>
+    </form>
+  );
+
+  return (
+    <div className={compact ? 'lp-demo-app lp-demo-app-compact' : 'lp-demo-app'} role="group" aria-label={t('demo.label')}>
+      {!compact && side}
       <div className="lp-demo-main">
         <div className="lp-demo-bar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d={HEADER_ICON} /></svg>
@@ -142,7 +195,7 @@ export function DemoChat({ onFirstMessage }: { onFirstMessage: () => void }): Re
         </div>
         <div ref={list} className="lp-demo-list" role="log" aria-live="polite">
           {lines.map((line) => {
-            const person = line.who === 'you' ? null : PEOPLE[line.who];
+            const person = line.who === 'you' ? null : personOf(line.who);
             const name = person ? person.name : t('demo.you');
             return (
               <div key={line.id} className="lp-demo-line">
@@ -166,32 +219,10 @@ export function DemoChat({ onFirstMessage }: { onFirstMessage: () => void }): Re
             );
           })}
         </div>
-        <p className="lp-demo-typing" aria-live="polite">{typing ? t('demo.typing', { name: PEOPLE[typing].name.split(' ')[0] }) : ''}</p>
-        <form className="lp-demo-form" onSubmit={send}>
-          <input
-            type="text"
-            value={draft}
-            maxLength={MAX_LENGTH}
-            autoComplete="off"
-            enterKeyHint="send"
-            aria-label={t('demo.placeholder')}
-            placeholder={t('demo.placeholder')}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <button type="submit" disabled={!draft.trim()} aria-label={t('demo.send')}>
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5" /></svg>
-          </button>
-        </form>
+        <p className="lp-demo-typing" aria-live="polite">{typing ? t('demo.typing', { name: MEMBERS[typing].name.split(' ')[0] }) : ''}</p>
+        {composer}
       </div>
-      <div className="lp-demo-people" aria-hidden="true">
-        <p className="lp-demo-heading">{t('demo.online')}</p>
-        {(Object.keys(PEOPLE) as Person[]).map((key) => (
-          <p key={key} className="lp-demo-person">
-            <span className="lp-demo-avatar" style={{ background: PEOPLE[key].colour }}>{PEOPLE[key].name.charAt(0)}<i /></span>
-            <span style={{ color: PEOPLE[key].role }}>{PEOPLE[key].name}</span>
-          </p>
-        ))}
-      </div>
+      {!compact && people}
     </div>
   );
 }

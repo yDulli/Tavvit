@@ -4,6 +4,14 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.34.2": {
+      "title": "Um lugar para percorrer",
+      "items": {
+        "stage": "A página do produto agora abre no Night Shift, um espaço de demonstração para percorrer: os canais desenhados como uma planta, e cada sala para experimentar, de escrever no #general e entrar na lounge a votar numa enquete e assistir junto na noite de cinema.",
+        "rules": "A entrada mostra como um espaço recebe gente nova: as boas-vindas, as regras e o que se abre quando você concorda com elas.",
+        "window": "A lista de membros do espaço, com todo mundo sob o seu cargo, e os sete visuais estão ali mesmo na janela."
+      }
+    },
     "1.34.1": {
       "title": "Um cartão de verdade para links compartilhados",
       "items": {

@@ -13,9 +13,9 @@
     "help": "Help"
   },
   "hero": {
-    "title": "Where your group talks.",
-    "lead": "Channels, direct messages, voice and screen sharing for your friends and communities, in one quick, quiet app. No ads, no trackers.",
-    "explore": "Explore features",
+    "kicker": "A place of your own",
+    "title": "Make room\nfor your people.",
+    "lead": "A place of your own for your friends, your community, your crew: rooms to write and talk in, roles that keep order, bots that lend a hand. No ads, no trackers.",
     "alt": "The Tavvit app: a space's channels on the left, a conversation in the middle and its members on the right.",
     "keys": {
       "spaces": {
@@ -36,42 +36,177 @@
       }
     }
   },
+  "plan": {
+    "label": "Floor plan",
+    "hint": "Pick a room",
+    "kinds": {
+      "text": "Text",
+      "voice": "Voice",
+      "events": "Events",
+      "entrance": "Way in"
+    },
+    "states": {
+      "here": "Here",
+      "talking": "Talking",
+      "watching": "Watching",
+      "unread": "New",
+      "upcoming": "Upcoming",
+      "rules": "Rules",
+      "locked": "Locked",
+      "readOnly": "Read only",
+      "replies": "Replies"
+    },
+    "block": {
+      "sheet": "Sheet"
+    }
+  },
+  "stage": {
+    "label": "Night Shift, a demo space to walk through",
+    "people_one": "{{count}} person",
+    "people_other": "{{count}} people",
+    "you": "You",
+    "where": {
+      "outside": "You are at the door of Night Shift.",
+      "in": "You are in {{room}}."
+    },
+    "invite": {
+      "label": "You have an invite",
+      "enter": "Walk in",
+      "note": "A demo space: the people are invented, and nothing you do here leaves this page."
+    },
+    "welcome": {
+      "title": "Welcome to Night Shift",
+      "description": "A late-night crew for co-op games, ranked grinds and bad movies. New players welcome.",
+      "rules": "Rules",
+      "rule1": "Be kind on voice, even after a wipe.",
+      "rule2": "Spoilers belong in threads.",
+      "rule3": "Sign up for raids with a reaction.",
+      "start": "Start here",
+      "agree": "Agree and come in",
+      "agreed": "You're in. Every room is open to you now."
+    },
+    "locked": {
+      "write": "Agree to the rules to write here.",
+      "join": "Agree to the rules to join.",
+      "agree": "Agree",
+      "vote": "Agree to the rules to vote."
+    },
+    "voice": {
+      "connected": "Voice connected",
+      "inRoom_one": "{{count}} in the room",
+      "inRoom_other": "{{count}} in the room",
+      "join": "Join voice",
+      "leave": "Leave",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "cameraOn": "Turn camera on",
+      "cameraOff": "Turn camera off",
+      "camera": "Camera on",
+      "speaking": "speaking",
+      "muted": "Muted",
+      "note": "A demo room: no microphone and no camera are used."
+    },
+    "topics": {
+      "clips": "Your best and worst moments.",
+      "raid": "Saturday, 20:00. Sign up here.",
+      "patch": "What changed and why it hurts."
+    },
+    "looks": "Looks",
+    "members": {
+      "title": "Members",
+      "online": "Online",
+      "hint": "Choose someone to see where they are on the plan.",
+      "in": "In {{room}}"
+    },
+    "raid": {
+      "title": "Saturday raid, 20:00",
+      "tanks": "Tanks: Lena, Sam",
+      "healers": "Healers: Noor",
+      "rest": "Everyone else: please read the fight notes this time",
+      "timeline": "Added the boss timeline to the topic. Sign up with a reaction.",
+      "first": "My first raid. Is there anything I should read before Saturday?",
+      "answer": "Start with the fight notes. Ask anything you like in there."
+    },
+    "thread": {
+      "back": "Back to the channel",
+      "replies_one": "{{count}} reply",
+      "replies_other": "{{count}} replies",
+      "follow": "Follow",
+      "following": "Following",
+      "r1": "Phase two starts at 60 percent, not 50. I checked the logs twice.",
+      "r2": "So I stop saving the cooldown for the end?",
+      "r3": "Use it on the second add. I will call it in voice.",
+      "r4": "What does the second add do?",
+      "r5": "Silences healers for ten seconds. Noor, stay at range for that one.",
+      "r6": "Noted. I will say when I am back in.",
+      "r7": "Good. Adding that to the sheet."
+    },
+    "clips": {
+      "sam": "Clutch of the week. Do not ask how.",
+      "theo": "That was luck and you know it.",
+      "yuki": "Phase two, before anyone has seen it.",
+      "spoiler": "Spoiler",
+      "video": "Video: {{name}}",
+      "size": "{{value, number}} MB"
+    },
+    "poll": {
+      "question": "Did the last patch ruin tanks?",
+      "completely": "Completely",
+      "little": "A little",
+      "skill": "Skill issue",
+      "share": "{{value, number(style: percent)}}",
+      "votes_one": "{{count}} vote",
+      "votes_other": "{{count}} votes",
+      "total_one": "{{count}} person voted",
+      "total_other": "{{count}} people voted",
+      "hidden": "The results show once you have voted.",
+      "left": "3 days left"
+    },
+    "watch": {
+      "label": "Watching together",
+      "consent": "This video comes from another website. It loads only when you choose to watch along.",
+      "join": "Watch along",
+      "playing": "Playing in step for everyone here",
+      "paused": "Paused",
+      "pausedBy": "Paused for everyone",
+      "play": "Play",
+      "pause": "Pause",
+      "react": "React with {{emoji}}",
+      "note": "A demo: no video is loaded, and nothing plays."
+    },
+    "event": {
+      "upcoming_one": "{{count}} upcoming",
+      "upcoming_other": "{{count}} upcoming",
+      "soon": "In 2 days",
+      "title": "Saturday raid",
+      "when": "Saturday, 20:00 to 23:00",
+      "text": "Two bosses and one break. Read the fight notes, bring flasks, and be in voice ten minutes early.",
+      "going_one": "{{count}} going",
+      "going_other": "{{count}} going",
+      "rsvp": "I'm going",
+      "rsvped": "Going",
+      "remind": "Remind me",
+      "reminded": "Reminder set",
+      "lounge": "Join the lounge"
+    }
+  },
   "news": {
     "label": "New"
   },
   "chapters": {
-    "demo": "Try it",
-    "spaces": "Spaces",
-    "messages": "Conversations",
-    "around": "Around the conversation",
-    "voice": "Voice",
-    "people": "People",
-    "looks": "Your way",
-    "community": "Community",
+    "community": "Moving in",
     "developers": "Developers",
-    "privacy": "Privacy",
+    "privacy": "House rules",
     "anywhere": "Where it runs",
-    "features": "Everything",
+    "features": "Index",
     "questions": "Questions"
   },
-  "contents": {
-    "label": "In this page"
+  "inside": {
+    "label": "Inside",
+    "title": "Step inside.",
+    "body": "The same place in the app. Its rooms are channels, sorted into categories; the conversation fills the middle, and everyone in it stands under their role.",
+    "alt": "A space on a phone: its events, and its channels sorted into categories."
   },
-  "rail": {
-    "welcome": "Welcome",
-    "unread_one": "{{count}} chapter unread",
-    "unread_other": "{{count}} chapters unread"
-  },
-  "jump": {
-    "open": "Jump to…",
-    "placeholder": "Where to?",
-    "none": "Nothing here is called “{{query}}”.",
-    "page": "Page",
-    "move": "to choose",
-    "go": "to open",
-    "close": "to close"
-  },
-  "statement": "Everything your group needs in one place, and nothing that follows you around. Quick to open, quiet to live in, and yours to shape.",
   "figures": {
     "value": "{{value, number}}",
     "ads": "ads",
@@ -84,9 +219,6 @@
   },
   "demo": {
     "label": "A demo channel",
-    "title": "Go on,\nsay something.",
-    "body": "This is what a channel feels like. Type a message and see who answers.",
-    "note": "A demo: the people are invented, and nothing you type leaves this page.",
     "topic": "Say hi. Nobody bites.",
     "placeholder": "Message #general",
     "send": "Send",
@@ -109,115 +241,8 @@
       "end": "You are getting the hang of this. The real thing has voice, threads and a lot more."
     }
   },
-  "spaces": {
-    "title": "A space for every group.",
-    "body": "The raid team, the book club, the people you build things with. Each gets its own space, with channels sorted into categories and a member list that shows who does what.",
-    "alt": "A space's channel list next to its member list, grouped by coloured roles."
-  },
-  "crowds": {
-    "title": "Who's at your table?",
-    "raid": "The raid team",
-    "photo": "The photo club",
-    "dev": "The dev crew",
-    "books": "The book club",
-    "alts": {
-      "raid": "A gaming group's space: a conversation about one more round, with a code block and reactions.",
-      "photo": "A photo club's space: a channel where people give feedback on a roll of film.",
-      "dev": "A developer group's space: a code review channel with a message from a build bot.",
-      "books": "A book club's space: a conversation about this month's book."
-    }
-  },
-  "messages": {
-    "title": "Conversations\nthat stay readable.",
-    "body": "A channel you can read in the morning and still follow. Nothing jumps, nothing shouts, and a message that mentions you is easy to spot.",
-    "alt": "A conversation with replies, a code block, mentions and reactions.",
-    "marks": {
-      "replies": {
-        "title": "Replies show what they answer",
-        "body": "A reply carries a line of the message it answers, so you never scroll back to find out."
-      },
-      "reactions": {
-        "title": "Reactions stay small",
-        "body": "A row of small counts under a message, never a wall of them."
-      },
-      "content": {
-        "title": "Code, links and files sit where they belong",
-        "body": "A code block keeps its colours, a link shows a preview, and a file shows what it is."
-      },
-      "switcher": {
-        "title": "Back to where you left off",
-        "body": "Unread channels stand out, the inbox gathers what is waiting for you, and Ctrl+K takes you to any channel or conversation in a few keystrokes."
-      }
-    }
-  },
-  "around": {
-    "title": "Everything around the conversation.",
-    "body": "A group does more than talk. Side conversations, plans, votes and house rules sit right beside the chat.",
-    "thread": {
-      "title": "Threads",
-      "body": "Pull a side conversation out of the channel. Follow the ones you care about, and the rest stay out of your way.",
-      "alt": "A channel with a thread open beside it."
-    },
-    "poll": {
-      "title": "Polls",
-      "body": "Ask the room. Results stay hidden until you have voted, so the first votes do not steer the rest.",
-      "alt": "A poll with three answers and the share of votes for each."
-    },
-    "welcome": {
-      "title": "A welcome and rules",
-      "body": "Greet new people, point them to the right channels and, if you like, ask them to agree to your rules first.",
-      "alt": "A space's welcome with its rules and the channels to start in."
-    },
-    "event": {
-      "title": "Events",
-      "body": "Plan the raid or the book club, see who is going, get a reminder and add it to your calendar.",
-      "alt": "An event with its date, who is going and a button to join the voice channel."
-    },
-    "points": {
-      "voice": {
-        "title": "Voice messages and a soundboard",
-        "body": "Say it instead of typing it, and play a sound to the whole voice channel when the moment calls for one."
-      },
-      "saved": {
-        "title": "Saved messages and reminders",
-        "body": "Keep what matters in one list, and have a message brought back to you later."
-      },
-      "alerts": {
-        "title": "Keyword alerts and push",
-        "body": "Choose the words that should reach you, and get a notification even when the app is closed."
-      }
-    }
-  },
-  "profiles": {
-    "body": "A banner, a bio, pronouns, links and colours of your choice, and if you like a different picture and bio for each space.",
-    "alt": "A profile card with a banner, a bio and a role."
-  },
-  "friends": {
-    "title": "Your people,\none click away.",
-    "body": "Add friends by their username, see who is online and what they are up to, and start a direct message or a group of up to ten.",
-    "alt": "The friends page, listing who is online and what they are doing."
-  },
-  "voice": {
-    "title": "Talk when typing\nis too slow.",
-    "body": "Drop into a voice channel, turn on your camera, share your screen or ring a friend directly. Noise suppression filters out your keyboard, and push to talk is one setting away.",
-    "alt": "A voice channel with several people in it and the call controls below.",
-    "points": {
-      "screen": {
-        "title": "Screen sharing",
-        "body": "Show the game, the slides or the bug, at the quality you choose."
-      },
-      "noise": {
-        "title": "Noise suppression",
-        "body": "Your keyboard, your fan and the street stay out of the call."
-      },
-      "calls": {
-        "title": "Calls in direct messages",
-        "body": "Ring one person or a group, with video if you like."
-      }
-    }
-  },
   "features": {
-    "title": "The menu.",
+    "title": "Everything,\nat a glance.",
     "groups": {
       "messages": "Messages",
       "voice": "Voice and video",
@@ -292,33 +317,7 @@
   "community": {
     "title": "Find a space,\nor open your own.",
     "body": "Browse public spaces on Explore and join with one click or a request. A verified mark means the platform team has reviewed a space, and no space can list itself without that review.",
-    "alt": "The Explore page with cards for public spaces.",
-    "points": {
-      "explore": {
-        "title": "Listed after review",
-        "body": "A space appears on Explore only after the platform team has approved it."
-      },
-      "moderation": {
-        "title": "Tools for moderators",
-        "body": "Timeouts, slow mode, automatic moderation and an audit log of who did what."
-      },
-      "reports": {
-        "title": "Reports that are answered",
-        "body": "Anyone can report a message or a space, and people affected are told the decision and the reason."
-      },
-      "rights": {
-        "title": "Rights down to the channel",
-        "body": "Roles with their own colours and permissions, and exceptions for any category or channel."
-      },
-      "invites": {
-        "title": "Invites on your terms",
-        "body": "Links with an end date and a limit, or join requests you approve one by one."
-      },
-      "template": {
-        "title": "Start from a template",
-        "body": "Paste a Discord server template and get its roles, categories, channels and permissions. Messages and members stay where they are."
-      }
-    }
+    "alt": "The Explore page with cards for public spaces."
   },
   "moving": {
     "title": "Opening your own takes three steps.",
@@ -378,9 +377,6 @@
     }
   },
   "themes": {
-    "title": "Your colours,\nyour density.",
-    "body": "Seven themes or your own colours, three message styles, sharp or round corners, and the text size you read best. Tavvit stays out of the way, in whichever look you like.",
-    "alt": "The same conversation in the {{name}} theme.",
     "pick": "Pick a theme",
     "names": {
       "carbon": "Carbon",

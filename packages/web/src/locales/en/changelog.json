@@ -4,6 +4,14 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.34.2": {
+      "title": "A place to walk through",
+      "items": {
+        "stage": "The product page now opens on Night Shift, a demo space to walk through: its channels drawn as a floor plan, and every room to try, from writing in #general and joining the lounge to voting in a poll and watching along at movie night.",
+        "rules": "The way in shows how a space greets new people: its welcome, its rules, and what opens once you agree to them.",
+        "window": "The space's member list, with everyone under their role, and the seven looks are right there in its window."
+      }
+    },
     "1.34.1": {
       "title": "A proper card for shared links",
       "items": {

@@ -13,9 +13,9 @@
     "help": "Ajuda"
   },
   "hero": {
-    "title": "Onde o seu grupo conversa.",
-    "lead": "Canais, mensagens diretas, voz e compartilhamento de tela para seus amigos e comunidades, em um app rápido e tranquilo. Sem anúncios, sem rastreadores.",
-    "explore": "Ver os recursos",
+    "kicker": "Um lugar só seu",
+    "title": "Abra espaço\npara a sua turma.",
+    "lead": "Um lugar só de vocês para seus amigos, sua comunidade, sua equipe: salas para escrever e conversar, cargos que mantêm a ordem, bots que dão uma mão. Sem anúncios, sem rastreadores.",
     "alt": "O app Tavvit: os canais de um espaço à esquerda, uma conversa no meio e os membros à direita.",
     "keys": {
       "spaces": {
@@ -36,43 +36,184 @@
       }
     }
   },
+  "plan": {
+    "label": "Planta",
+    "hint": "Escolha uma sala",
+    "kinds": {
+      "text": "Texto",
+      "voice": "Voz",
+      "events": "Eventos",
+      "entrance": "Entrada"
+    },
+    "states": {
+      "here": "Aqui",
+      "talking": "Conversando",
+      "watching": "Assistindo",
+      "unread": "Novo",
+      "upcoming": "Em breve",
+      "rules": "Regras",
+      "locked": "Fechado",
+      "readOnly": "Só leitura",
+      "replies": "Respostas"
+    },
+    "block": {
+      "sheet": "Folha"
+    }
+  },
+  "stage": {
+    "label": "Night Shift, um espaço de demonstração para percorrer",
+    "people_one": "{{count}} pessoa",
+    "people_many": "{{count}} pessoas",
+    "people_other": "{{count}} pessoas",
+    "you": "Você",
+    "where": {
+      "outside": "Você está na porta do Night Shift.",
+      "in": "Você está em {{room}}."
+    },
+    "invite": {
+      "label": "Você tem um convite",
+      "enter": "Entrar",
+      "note": "Um espaço de demonstração: as pessoas são inventadas, e nada do que você faz aqui sai desta página."
+    },
+    "welcome": {
+      "title": "Boas-vindas ao Night Shift",
+      "description": "Uma turma das madrugadas: jogos cooperativos, partidas ranqueadas e filmes ruins. Gente nova é bem-vinda.",
+      "rules": "Regras",
+      "rule1": "Seja gentil na voz, mesmo depois de um wipe.",
+      "rule2": "Spoilers ficam nos tópicos.",
+      "rule3": "Inscreva-se nas raids com uma reação.",
+      "start": "Comece por aqui",
+      "agree": "Concordar e entrar",
+      "agreed": "Você está dentro. Todas as salas estão abertas para você agora."
+    },
+    "locked": {
+      "write": "Concorde com as regras para escrever aqui.",
+      "join": "Concorde com as regras para entrar.",
+      "agree": "Concordar",
+      "vote": "Concorde com as regras para votar."
+    },
+    "voice": {
+      "connected": "Voz conectada",
+      "inRoom_one": "{{count}} na sala",
+      "inRoom_many": "{{count}} na sala",
+      "inRoom_other": "{{count}} na sala",
+      "join": "Entrar na voz",
+      "leave": "Sair",
+      "mute": "Silenciar",
+      "unmute": "Reativar microfone",
+      "cameraOn": "Ligar câmera",
+      "cameraOff": "Desligar câmera",
+      "camera": "Câmera ligada",
+      "speaking": "falando",
+      "muted": "Silenciado",
+      "note": "Uma sala de demonstração: nenhum microfone e nenhuma câmera são usados."
+    },
+    "topics": {
+      "clips": "Seus melhores e piores momentos.",
+      "raid": "Sábado, 20:00. Inscreva-se aqui.",
+      "patch": "O que mudou e por que dói."
+    },
+    "looks": "Visuais",
+    "members": {
+      "title": "Membros",
+      "online": "Online",
+      "hint": "Escolha alguém para ver onde a pessoa está na planta.",
+      "in": "Em {{room}}"
+    },
+    "raid": {
+      "title": "Raid de sábado, 20:00",
+      "tanks": "Tanques: Lena, Sam",
+      "healers": "Curandeiros: Noor",
+      "rest": "Todo o resto: por favor, leiam as notas da luta desta vez",
+      "timeline": "Coloquei a linha do tempo do chefe no tema. Inscrevam-se com uma reação.",
+      "first": "Minha primeira raid. Tem algo que eu deva ler antes de sábado?",
+      "answer": "Comece pelas notas da luta. Pergunte o que quiser por lá."
+    },
+    "thread": {
+      "back": "Voltar ao canal",
+      "replies_one": "{{count}} resposta",
+      "replies_many": "{{count}} respostas",
+      "replies_other": "{{count}} respostas",
+      "follow": "Seguir",
+      "following": "Seguindo",
+      "r1": "A fase dois começa em 60 por cento, não em 50. Conferi os logs duas vezes.",
+      "r2": "Então eu paro de guardar o cooldown para o final?",
+      "r3": "Use no segundo add. Eu aviso na voz.",
+      "r4": "O que o segundo add faz?",
+      "r5": "Silencia os curandeiros por dez segundos. Noor, fique à distância nesse.",
+      "r6": "Anotado. Aviso quando voltar.",
+      "r7": "Boa. Vou colocar isso na planilha."
+    },
+    "clips": {
+      "sam": "Clutch da semana. Não perguntem como.",
+      "theo": "Foi sorte, e você sabe.",
+      "yuki": "A fase dois, antes de alguém ter visto.",
+      "spoiler": "Spoiler",
+      "video": "Vídeo: {{name}}",
+      "size": "{{value, number}} MB"
+    },
+    "poll": {
+      "question": "O último patch acabou com os tanques?",
+      "completely": "Completamente",
+      "little": "Um pouco",
+      "skill": "Falta de habilidade",
+      "share": "{{value, number(style: percent)}}",
+      "votes_one": "{{count}} voto",
+      "votes_many": "{{count}} votos",
+      "votes_other": "{{count}} votos",
+      "total_one": "{{count}} pessoa votou",
+      "total_many": "{{count}} pessoas votaram",
+      "total_other": "{{count}} pessoas votaram",
+      "hidden": "Os resultados aparecem depois que você votar.",
+      "left": "Faltam 3 dias"
+    },
+    "watch": {
+      "label": "Assistindo junto",
+      "consent": "Este vídeo vem de outro site. Ele só carrega quando você escolhe assistir junto.",
+      "join": "Assistir junto",
+      "playing": "Tocando em sincronia para todos aqui",
+      "paused": "Pausado",
+      "pausedBy": "Pausado para todos",
+      "play": "Reproduzir",
+      "pause": "Pausar",
+      "react": "Reagir com {{emoji}}",
+      "note": "Uma demonstração: nenhum vídeo é carregado, e nada toca."
+    },
+    "event": {
+      "upcoming_one": "{{count}} em breve",
+      "upcoming_many": "{{count}} em breve",
+      "upcoming_other": "{{count}} em breve",
+      "soon": "Em 2 dias",
+      "title": "Raid de sábado",
+      "when": "Sábado, 20:00 às 23:00",
+      "text": "Dois chefes e um intervalo. Leiam as notas da luta, tragam frascos e estejam na voz dez minutos antes.",
+      "going_one": "{{count}} vai",
+      "going_many": "{{count}} vão",
+      "going_other": "{{count}} vão",
+      "rsvp": "Eu vou",
+      "rsvped": "Vou",
+      "remind": "Lembrar-me",
+      "reminded": "Lembrete criado",
+      "lounge": "Entrar na lounge"
+    }
+  },
   "news": {
     "label": "Novo"
   },
   "chapters": {
-    "demo": "Experimente",
-    "spaces": "Espaços",
-    "messages": "Conversas",
-    "around": "Em volta da conversa",
-    "voice": "Voz",
-    "people": "Pessoas",
-    "looks": "Do seu jeito",
-    "community": "Comunidade",
+    "community": "Mudança",
     "developers": "Desenvolvedores",
-    "privacy": "Privacidade",
+    "privacy": "Regras da casa",
     "anywhere": "Onde funciona",
-    "features": "Tudo",
+    "features": "Índice",
     "questions": "Perguntas"
   },
-  "contents": {
-    "label": "Nesta página"
+  "inside": {
+    "label": "Por dentro",
+    "title": "Entre.",
+    "body": "O mesmo lugar no app. As salas são canais, organizados em categorias; a conversa ocupa o meio, e todo mundo aparece sob o seu cargo.",
+    "alt": "Um espaço no celular: os eventos e os canais organizados em categorias."
   },
-  "rail": {
-    "welcome": "Boas-vindas",
-    "unread_one": "{{count}} capítulo não lido",
-    "unread_many": "{{count}} capítulos não lidos",
-    "unread_other": "{{count}} capítulos não lidos"
-  },
-  "jump": {
-    "open": "Ir para…",
-    "placeholder": "Para onde?",
-    "none": "Nada aqui se chama “{{query}}”.",
-    "page": "Página",
-    "move": "para escolher",
-    "go": "para abrir",
-    "close": "para fechar"
-  },
-  "statement": "Tudo o que o seu grupo precisa em um só lugar, e nada seguindo você por aí. Rápido de abrir, tranquilo de usar e do seu jeito.",
   "figures": {
     "value": "{{value, number}}",
     "ads": "anúncios",
@@ -85,9 +226,6 @@
   },
   "demo": {
     "label": "Um canal de demonstração",
-    "title": "Vai,\ndiz alguma coisa.",
-    "body": "É assim que um canal funciona. Escreva uma mensagem e veja quem responde.",
-    "note": "É uma demonstração: as pessoas são inventadas e nada do que você digita sai desta página.",
     "topic": "Diga oi. Ninguém morde.",
     "placeholder": "Mensagem em #general",
     "send": "Enviar",
@@ -110,115 +248,8 @@
       "end": "Você pegou o jeito. No app de verdade tem canais de voz, tópicos e muito mais."
     }
   },
-  "spaces": {
-    "title": "Um espaço para cada grupo.",
-    "body": "O time da raid, o clube do livro, as pessoas com quem você constrói coisas. Cada grupo tem o próprio espaço, com canais organizados em categorias e uma lista de membros que mostra quem faz o quê.",
-    "alt": "A lista de canais de um espaço ao lado da lista de membros, agrupada por cargos coloridos."
-  },
-  "crowds": {
-    "title": "Quem senta à sua mesa?",
-    "raid": "O time da raid",
-    "photo": "O clube de fotografia",
-    "dev": "O time de devs",
-    "books": "O clube do livro",
-    "alts": {
-      "raid": "O espaço de um grupo de jogos: uma conversa sobre mais uma rodada, com um bloco de código e reações.",
-      "photo": "O espaço de um clube de fotografia: um canal onde as pessoas comentam um rolo de filme.",
-      "dev": "O espaço de um grupo de desenvolvedores: um canal de revisão de código com uma mensagem de um bot de build.",
-      "books": "O espaço de um clube do livro: uma conversa sobre o livro do mês."
-    }
-  },
-  "messages": {
-    "title": "Conversas que\ncontinuam legíveis.",
-    "body": "Um canal que você lê de manhã e ainda consegue acompanhar. Nada pula, nada grita, e uma mensagem que menciona você é fácil de notar.",
-    "alt": "Uma conversa com respostas, um bloco de código, menções e reações.",
-    "marks": {
-      "replies": {
-        "title": "As respostas mostram o que estão respondendo",
-        "body": "Uma resposta traz uma linha da mensagem que ela responde, então você nunca precisa rolar para trás para descobrir."
-      },
-      "reactions": {
-        "title": "As reações ficam pequenas",
-        "body": "Uma fileira de contagens pequenas embaixo da mensagem, nunca uma parede delas."
-      },
-      "content": {
-        "title": "Código, links e arquivos ficam no lugar certo",
-        "body": "Um bloco de código mantém as cores, um link mostra uma prévia, e um arquivo mostra o que ele é."
-      },
-      "switcher": {
-        "title": "De volta de onde você parou",
-        "body": "Os canais não lidos se destacam, a caixa de entrada reúne o que está esperando por você, e Ctrl+K leva você a qualquer canal ou conversa em poucas teclas."
-      }
-    }
-  },
-  "around": {
-    "title": "Tudo em volta da conversa.",
-    "body": "Um grupo faz mais do que conversar. Conversas paralelas, planos, votações e regras da casa ficam bem ao lado do chat.",
-    "thread": {
-      "title": "Tópicos",
-      "body": "Tire uma conversa paralela do canal. Acompanhe os que interessam, e o resto não atrapalha.",
-      "alt": "Um canal com um tópico aberto ao lado."
-    },
-    "poll": {
-      "title": "Enquetes",
-      "body": "Pergunte ao grupo. O resultado fica oculto até você votar, para os primeiros votos não influenciarem os outros.",
-      "alt": "Uma enquete com três respostas e a parcela de votos de cada uma."
-    },
-    "welcome": {
-      "title": "Boas-vindas e regras",
-      "body": "Receba quem chega, mostre os canais certos e, se quiser, peça que aceitem as regras primeiro.",
-      "alt": "As boas-vindas de um espaço, com as regras e os canais para começar."
-    },
-    "event": {
-      "title": "Eventos",
-      "body": "Planeje a raid ou o clube do livro, veja quem vai, receba um lembrete e adicione à sua agenda.",
-      "alt": "Um evento com a data, quem vai e um botão para entrar no canal de voz."
-    },
-    "points": {
-      "voice": {
-        "title": "Mensagens de voz e soundboard",
-        "body": "Fale em vez de digitar, e toque um som para todo o canal de voz quando o momento pedir."
-      },
-      "saved": {
-        "title": "Mensagens salvas e lembretes",
-        "body": "Guarde o que importa em uma lista e receba um lembrete de uma mensagem mais tarde."
-      },
-      "alerts": {
-        "title": "Palavras-chave e notificações push",
-        "body": "Escolha as palavras que devem chegar até você e receba uma notificação mesmo com o app fechado."
-      }
-    }
-  },
-  "profiles": {
-    "body": "Um banner, uma bio, pronomes, links e as cores que você quiser e, se preferir, uma foto e uma bio diferentes para cada espaço.",
-    "alt": "Um cartão de perfil com banner, bio e cargo."
-  },
-  "friends": {
-    "title": "Sua turma a um\nclique de distância.",
-    "body": "Adicione amigos pelo nome de usuário, veja quem está on-line e o que cada um está fazendo, e comece uma mensagem direta ou um grupo de até dez pessoas.",
-    "alt": "A página de amigos, com quem está on-line e o que está fazendo."
-  },
-  "voice": {
-    "title": "Fale quando digitar\nfor lento demais.",
-    "body": "Entre em um canal de voz, ligue a câmera, compartilhe a tela ou ligue direto para um amigo. A supressão de ruído filtra o seu teclado, e o aperte para falar está a uma configuração de distância.",
-    "alt": "Um canal de voz com várias pessoas e os controles da chamada embaixo.",
-    "points": {
-      "screen": {
-        "title": "Compartilhamento de tela",
-        "body": "Mostre o jogo, os slides ou o bug, na qualidade que você escolher."
-      },
-      "noise": {
-        "title": "Supressão de ruído",
-        "body": "Seu teclado, seu ventilador e a rua ficam fora da chamada."
-      },
-      "calls": {
-        "title": "Chamadas em mensagens diretas",
-        "body": "Ligue para uma pessoa ou um grupo, com vídeo se quiser."
-      }
-    }
-  },
   "features": {
-    "title": "O cardápio.",
+    "title": "Tudo,\nnum relance.",
     "groups": {
       "messages": "Mensagens",
       "voice": "Voz e vídeo",
@@ -293,33 +324,7 @@
   "community": {
     "title": "Encontre um espaço\nou abra o seu.",
     "body": "Navegue pelos espaços públicos em Explorar e entre com um clique ou um pedido. O selo de verificado significa que a equipe da plataforma analisou o espaço, e nenhum espaço pode se listar sem essa análise.",
-    "alt": "A página Explorar com cartões de espaços públicos.",
-    "points": {
-      "explore": {
-        "title": "Listado depois da análise",
-        "body": "Um espaço só aparece em Explorar depois que a equipe da plataforma o aprova."
-      },
-      "moderation": {
-        "title": "Ferramentas para moderadores",
-        "body": "Suspensões temporárias, modo lento, moderação automática e um registro de auditoria de quem fez o quê."
-      },
-      "reports": {
-        "title": "Denúncias com resposta",
-        "body": "Qualquer pessoa pode denunciar uma mensagem ou um espaço, e quem é afetado fica sabendo a decisão e o motivo."
-      },
-      "rights": {
-        "title": "Permissões até o canal",
-        "body": "Cargos com cores e permissões próprias, e exceções para qualquer categoria ou canal."
-      },
-      "invites": {
-        "title": "Convites do seu jeito",
-        "body": "Links com data final e limite, ou pedidos para entrar que você aprova um a um."
-      },
-      "template": {
-        "title": "Comece de um modelo",
-        "body": "Cole um modelo de servidor do Discord e receba os cargos, categorias, canais e permissões. Mensagens e membros ficam onde estão."
-      }
-    }
+    "alt": "A página Explorar com cartões de espaços públicos."
   },
   "moving": {
     "title": "Abrir o seu leva três passos.",
@@ -379,9 +384,6 @@
     }
   },
   "themes": {
-    "title": "Suas cores,\nsua densidade.",
-    "body": "Sete temas ou as suas próprias cores, três estilos de mensagem, cantos retos ou arredondados e o tamanho de texto que você lê melhor. O Tavvit não atrapalha, seja qual for o visual.",
-    "alt": "A mesma conversa no tema {{name}}.",
     "pick": "Escolha um tema",
     "names": {
       "carbon": "Carbono",

@@ -125,5 +125,6 @@
   "#{{channel}} in {{space}}",
   "Roadmap",
   "Passkeys",
-  "Icons"
+  "Icons",
+  "{{value, number}} MB"
 ]

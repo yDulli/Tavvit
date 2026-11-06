@@ -208,7 +208,8 @@ for (const url of ['/', '/login']) {
   check('  with its size and what it shows', /og:image:width" content="1200"/.test(html) && /og:image:height" content="630"/.test(html) && /og:image:alt" content="[^"]+"/.test(html));
   check('the page names its own whole address', /rel="canonical" href="https?:\/\/[^"]+\/"/.test(html) && /og:url" content="https?:\/\/[^"]+\/"/.test(html), html.match(/rel="canonical" href="[^"]*"/)?.[0]);
   check('  and the build\'s token is gone everywhere', !html.includes('%%TAVVIT_ORIGIN%%'));
-  check('the page is in its HTML, for a preview, a search engine and a reader without a script', /<h1[^>]*>Where your group talks\.<\/h1>/.test(html) && html.includes('id="lp"'));
+  check('the page is in its HTML, for a preview, a search engine and a reader without a script', /<h1[^>]*><span class="lp-line">Make room<\/span>\s*<span class="lp-line">for your people\.<\/span><\/h1>/.test(html) && html.includes('id="lp"'));
+  check('  with its plan to walk through, before any script', /<figure class="lp-plan" aria-label="Floor plan">/.test(html) && (html.match(/<button type="button" class="lp-room"/g) ?? []).length === 8);
   check('  with the site\'s name for search engines', /"@type":"WebSite"/.test(html));
   for (const path of ['/status', '/help', '/changelog', '/roadmap']) {
     const page = await fetch(WEB + path).then((r) => r.text());
@@ -492,6 +493,9 @@ for (const url of ['/api/admin/dashboard', '/api/admin/system', '/api/admin/anno
   });
   check('everything on the product page can be clicked', covered.blocked.length === 0 && covered.count > 20, `${covered.count}: ${covered.blocked.slice(0, 3).join('; ')}`);
 
+  // #general on the stage: walked into, and written in once the space's rules are agreed to.
+  await page.locator('.lp-plan button.lp-room[data-room="general"]').click();
+  await page.locator('.lp-demo-locked button').click();
   const input = page.locator('.lp-demo-form input');
   await input.scrollIntoViewIfNeeded();
   const requests = [];
