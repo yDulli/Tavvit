@@ -4,6 +4,13 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.36.0": {
+      "title": "Profil-Dekorationen",
+      "items": {
+        "decorations": "Verziere dein Profil unter Einstellungen → Dekorationen: ein Rahmen für dein Bild, ein Effekt über deinem Banner, ein Namensschild in Mitgliederlisten, und eine Schrift und ein Effekt für deinen Namen. Kostenlos für alle, und vor dem Speichern in einer Vorschau anprobiert.",
+        "where": "Sie erscheinen auf deiner Profilkarte, in Mitgliederlisten, in deinen Direktnachrichten und neben deinen Nachrichten, und bewegen sich, solange jemand auf dich zeigt. Wo eine Rolle deinem Namen seine Farbe gibt, bleibt die Farbe, und nur die Schrift wechselt."
+      }
+    },
     "1.35.1": {
       "title": "Verknüpfte Konten",
       "items": {

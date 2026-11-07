@@ -20,6 +20,7 @@ import { connectionManager } from '../ws/handler.js';
 import type { UpdateUserRequest, VerifyPasswordRequest, VerifyPasswordResponse, ChangePasswordRequest, ChangeUsernameRequest, ChangePasswordResponse, DeleteAccountRequest, FederationCredentialRequest, FederationCredentialResponse, ReplicatedInstance, SpaceLayoutItem, SpaceFolder, FederationIdentityDeleteRequest, FederationIdentityDeleteResponse, FederationIdentityDeleteResult, FederationProfileUpdatePayload } from '@backspace/shared';
 import { AVATAR_COLORS, PROFILE_LIMITS, isChosenUserStatus, isProfileLayout, type ChosenUserStatus } from '@backspace/shared';
 import { hasUnsafeCharacters, normalizePronouns, normalizeProfileLinks } from '@backspace/shared/src/profileFields.js';
+import { DECORATION_FIELDS, decorationUpdateOf } from '@backspace/shared/src/decorations.js';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@backspace/shared/src/constants.js';
 import { sanitizeUser } from '../utils/sanitize.js';
 import { isValidExpiryMinutes } from '../utils/customStatusExpiry.js';
@@ -507,6 +508,13 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       }
       updateData.profileLayout = profileLayout === 'standard' ? null : profileLayout;
     }
+    // Decorations (docs/systems/decorations.md): the name of one of the client's designs each, or
+    // null for none. Kept here like the card's fields above; anything else is refused, never stored.
+    const decorations = decorationUpdateOf(request.body as Partial<Record<(typeof DECORATION_FIELDS)[number], unknown>>);
+    if (!decorations.ok) {
+      return sendError(reply, 400, 'profile_decoration_invalid', { field: decorations.field });
+    }
+    Object.assign(updateData, decorations.values);
 
     if (customStatus !== undefined) {
       if (customStatus !== null && typeof customStatus === 'string') {
@@ -626,7 +634,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Detect profile changes and stamp timestamp
-    const hasProfileChange = ['displayName', 'avatar', 'banner', 'accentColor', 'accentColorSecondary', 'avatarColor', 'bio', 'pronouns', 'profileLinks', 'profileLayout', 'customStatus', 'customStatusExpiresAt'].some(f => f in updateData);
+    const hasProfileChange = ['displayName', 'avatar', 'banner', 'accentColor', 'accentColorSecondary', 'avatarColor', 'bio', 'pronouns', 'profileLinks', 'profileLayout', ...DECORATION_FIELDS, 'customStatus', 'customStatusExpiresAt'].some(f => f in updateData);
     const hasDurableChange = DURABLE_PROFILE_FIELDS.some(f => f in updateData);
     if (hasDurableChange) {
       (updateData as Record<string, unknown>).profileUpdatedAt = Date.now();

@@ -33,6 +33,8 @@ import { ProfileSpaceNickname } from './ProfileSpaceNickname';
 import { BlockUserButton } from '../social/BlockUserButton';
 import { ProfileLinks } from './ProfileLinks';
 import { ProfileBanner } from './ProfileBanner';
+import { CardTopEffect, DecoratedName } from './Decorations';
+import { personDecorations } from '../../utils/decorations';
 
 /** Gap between the card and the element it was opened from. */
 const ANCHOR_OFFSET = 8;
@@ -75,6 +77,7 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
   // their account's picture, banner and bio.
   const spaceProfile = useSpaceProfile(member);
   const look = profileHeaderLook(profileLayoutOf(user), 'card');
+  const decorations = personDecorations(user, displayName);
   const pronouns = normalizePronouns(user.pronouns) ?? null;
   const bio = spaceProfile.bio ?? user.bio;
   const isMobile = useUIStore((s) => s.isMobile);
@@ -208,11 +211,13 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
     <div
       ref={cardRef}
       data-user-profile-popout
-      className="fixed z-[200] w-[340px] rounded-lg overflow-hidden animate-pop select-none glass-modal"
+      className="fixed z-[200] isolate w-[340px] rounded-lg overflow-hidden animate-pop select-none glass-modal"
       style={cardStyle}
     >
-      {/* Banner; the compact layout has none */}
-      {look.banner && <ProfileBanner className={look.banner} src={bannerSrc} fallback={bannerFallback} />}
+      {/* Banner, with the profile's effect over it; the compact layout has none, and its effect plays across the top */}
+      {look.banner
+        ? <ProfileBanner className={look.banner} src={bannerSrc} fallback={bannerFallback} effect={decorations.profileEffect} effectHeight={look.effectHeight} />
+        : <CardTopEffect effect={decorations.profileEffect} height={look.effectHeight} />}
 
       {/* Body */}
       <div className="px-4 pb-4 relative">
@@ -231,13 +236,24 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
             user={user}
             onClick={handleAvatarClick}
             ring={{ width: 5, color: 'rgb(var(--bg-elevated))' }}
+            frame={decorations.avatarFrame}
+            frameMotion="on"
             className={look.avatar}
           />
 
           {/* Name & info */}
           <div className="min-w-0">
             <ProfileSpaceNickname member={member} />
-            <span className="text-title font-semibold tracking-[-0.02em] leading-tight" style={nameStyle}>{displayName}</span>
+            <DecoratedName
+              font={decorations.nameFont}
+              effect={decorations.nameEffect}
+              colors={decorations.colors}
+              roleColored={nameStyle !== undefined}
+              className="text-title font-semibold tracking-[-0.02em] leading-tight"
+              style={nameStyle}
+            >
+              {displayName}
+            </DecoratedName>
             {/* The badges sit beside the handle, in its line (badges.md). */}
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-ui text-txt-tertiary">
               <Username username={user.username} showAt className="text-ui text-txt-tertiary" />

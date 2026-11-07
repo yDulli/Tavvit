@@ -9,6 +9,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import {
   AccountPanel,
+  DecorationsPanel,
   SecurityPanel,
   AccessibilityPanel,
   AppearancePanel,
@@ -39,6 +40,7 @@ import { SlidingMark } from '../ui/SlidingMark';
  */
 const USER_SETTINGS_TABS = [
   { id: 'account', group: 'user', label: 'settings:nav.tabs.account' },
+  { id: 'decorations', group: 'user', label: 'settings:nav.tabs.decorations' },
   { id: 'security', group: 'user', label: 'settings:nav.tabs.security' },
   { id: 'privacy', group: 'user', label: 'settings:nav.tabs.privacy' },
   { id: 'linkedAccounts', group: 'user', label: 'settings:nav.tabs.linkedAccounts' },
@@ -191,6 +193,7 @@ export function UserSettingsModal() {
 
   const panels: Record<UserSettingsTab, () => ReactNode> = {
     account: () => <AccountPanel />,
+    decorations: () => <DecorationsPanel />,
     security: () => <SecurityPanel />,
     appearance: () => <AppearancePanel />,
     accessibility: () => <AccessibilityPanel />,

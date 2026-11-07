@@ -573,3 +573,15 @@ Every floating surface places itself with `computeFloatingPosition` (`hooks/useF
 `.spoiler` is text covered until a reader asks (`data-revealed` once they did), `.spoiler-cover` and `.spoiler-cover-label` the same for a picture or video, in the box the real one will take so nothing moves. `.poll-option` is one answer of a poll: `--poll-share` draws its share behind it once the count may be seen, `data-mine` marks the reader's own in the accent. `.msg-pick` is a row's box while messages are being picked (`data-selecting`, `data-picked` on `.msg-row`). The icons `pin`, `forward`, `poll` and `eye-off` are in `ui/Icon`.
 
 `.thread-chip` is the way into a thread, under the message it grew from: its name, how much was said and when. A count of upcoming events uses `CountBadge muted`: it is no unread state, so it does not take the signal colour.
+
+## Profile decorations (1.36.0)
+
+Frames, profile effects, nameplates and name styles are drawn in `styles/decorations.css` (decorations.md). They keep to the rules above: light that sits behind content, never a glow round text, small and still in a list until it is pointed at.
+
+- `.deco-frame` (+ `.deco-frame-ring`, `.deco-frame-sparks`) is a frame round an `Avatar` (`frame`, `frameMotion`), following `--avatar-roundness`.
+- `.deco-effect` lies over a profile's banner and fades out before the text (`ProfileEffectLayer`, `CardTopEffect` on the compact layout).
+- `.deco-nameplate` lies at `z-index: -1` in a row that is `relative isolate`: over the row's background, hover and selection, under its content (`NameplateLayer`).
+- `.deco-name` carries `data-name-font` and `data-name-effect` (`DecoratedName`). A role's colour wins over the effect; the typeface stays.
+- `data-motion`: `on` (a profile, a preview), `hover` (inside a `.deco-hover` row or message, moving only while it is pointed at or focused), `off`.
+
+Reduce motion stills all of them. Higher contrast and forced colours leave out effects and nameplates and show a name in its plain colour. Nothing here takes the violet: "Your colours" are the person's own.

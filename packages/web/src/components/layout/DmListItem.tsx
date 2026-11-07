@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { DmChannel, User } from '@backspace/shared';
 import { Avatar } from '../ui/Avatar';
+import { DecoratedName, NameplateLayer } from '../ui/Decorations';
+import { personDecorations } from '../../utils/decorations';
 import { AvatarStack } from '../ui/AvatarStack';
 import { Tooltip } from '../ui/Tooltip';
 import { Icon } from '../ui/Icon';
@@ -91,6 +93,8 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
   // The close button sits over the time: the time steps aside whenever it shows.
   const timeHidden = isActive ? 'invisible' : 'group-hover:invisible group-focus-within:invisible';
   const fedBadgeClass = `flex-shrink-0 ${lit ? 'text-txt-secondary' : 'text-txt-tertiary'}`;
+  // A conversation with one person shows their decorations (docs/systems/decorations.md); a group shows none.
+  const decorations = personDecorations(isGroup ? null : firstOther, displayName);
 
   return (
     <div className="group relative" onContextMenu={onContextMenu ? (e) => onContextMenu(e, dm.id) : undefined}>
@@ -100,19 +104,35 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
         data-active={isActive ? 'true' : undefined}
         data-unread={isUnread ? 'true' : undefined}
         aria-current={isActive ? 'page' : undefined}
-        className="nav-item h-11 w-full text-left"
+        className="nav-item deco-hover isolate h-11 w-full text-left"
       >
+        <NameplateLayer nameplate={decorations.nameplate} colors={decorations.colors} motion="hover" />
         {isGroup ? (
           <AvatarStack members={otherMembers} origin={viewer.origin} size={32} border="channel" iconUrl={dm.icon} />
         ) : (
-          <Avatar src={firstOther?.avatar} name={displayName} size={32} status={firstOther?.status} userId={firstOther?.homeUserId ?? firstOther?.id} user={firstOther ?? undefined} />
+          <Avatar
+            src={firstOther?.avatar}
+            name={displayName}
+            size={32}
+            status={firstOther?.status}
+            userId={firstOther?.homeUserId ?? firstOther?.id}
+            user={firstOther ?? undefined}
+            frame={decorations.avatarFrame}
+            frameMotion="hover"
+          />
         )}
 
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1">
-            <span className={`min-w-0 truncate text-ui leading-[18px] ${lit ? 'font-semibold text-txt-primary' : 'font-medium'}`}>
+            <DecoratedName
+              font={decorations.nameFont}
+              effect={decorations.nameEffect}
+              colors={decorations.colors}
+              motion="hover"
+              className={`min-w-0 truncate text-ui leading-[18px] ${lit ? 'font-semibold text-txt-primary' : 'font-medium'}`}
+            >
               {displayName}
-            </span>
+            </DecoratedName>
             {showGroupGlobe && (
               <Tooltip content={groupFederatedMembers.map(m => m.username).join(', ')} position="top">
                 <Icon name="globe" size={12} className={fedBadgeClass} />

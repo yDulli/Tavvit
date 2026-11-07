@@ -281,6 +281,7 @@
   "pronouns_too_long": "Pronouns can be at most {{max}} characters.",
   "profile_links_invalid": "Add at most {{max}} links, each a web address starting with https:// and a short label.",
   "profile_layout_invalid": "That profile layout does not exist.",
+  "profile_decoration_invalid": "That decoration does not exist.",
   "discord_template_code_invalid": "That is not a Discord template link or code.",
   "discord_template_not_found": "Discord doesn't know that template. It may have been deleted.",
   "discord_rate_limited": "Discord asked us to slow down. Try again in {{retryAfterSeconds}} seconds.",

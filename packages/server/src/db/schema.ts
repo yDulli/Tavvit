@@ -49,6 +49,17 @@ export const users = sqliteTable('users', {
   /** The profile card's layout (ProfileLayout); null for the standard one. */
   profileLayout: text('profile_layout'),
   /**
+   * Profile decorations (shared/src/decorations.ts, docs/systems/decorations.md):
+   * the name of one of the client's own designs each, null for none. Kept on
+   * this instance like the card's other fields; not relayed to peers.
+   */
+  avatarFrame: text('avatar_frame'),
+  profileEffect: text('profile_effect'),
+  nameplate: text('nameplate'),
+  /** Null for the interface's own typeface (`classic`). */
+  nameFont: text('name_font'),
+  nameEffect: text('name_effect'),
+  /**
    * JSON array of the badges an instance admin gave the person
    * (GrantedUserBadgeId, docs/systems/badges.md); null without. Staff is not
    * stored: it comes from is_admin.

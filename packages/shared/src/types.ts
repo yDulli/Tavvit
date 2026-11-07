@@ -10,6 +10,7 @@ import type { SpaceEvent } from './events.js';
 import type { SavedItem } from './saved.js';
 import type { ThreadInfo, ThreadSummary } from './threads.js';
 import type { ForumTag } from './forums.js';
+import type { AvatarFrame, NameEffect, NameFont, Nameplate, ProfileEffect } from './decorations.js';
 import type { SignupChallengeSolution } from './signupChallenge.js';
 import type { WatchPosition, WatchPresence, WatchReaction, WatchSession } from './watch.js';
 
@@ -58,6 +59,18 @@ export interface User {
   linkedAccounts?: ProfileLinkedAccount[];
   /** How the profile card is laid out; absent or null for `standard`. */
   profileLayout?: ProfileLayout | null;
+  /**
+   * Profile decorations (docs/systems/decorations.md): the frame round the
+   * picture, the effect over the banner, the nameplate in lists, and the
+   * name's font and effect. Null for none, sent as null so that an update
+   * merged over an older row clears one; absent from hosts that predate them.
+   * A client shows only the names it knows (`decorationsOf`).
+   */
+  avatarFrame?: AvatarFrame | null;
+  profileEffect?: ProfileEffect | null;
+  nameplate?: Nameplate | null;
+  nameFont?: NameFont | null;
+  nameEffect?: NameEffect | null;
   /**
    * The person's badges on the instance that sent the row (badges.ts): staff
    * for an instance admin, and those its admins gave. Absent from hosts that
@@ -1645,6 +1658,15 @@ export interface UpdateUserRequest {
   /** The whole list, replacing the stored one; an empty list or null clears it. */
   profileLinks?: ProfileLink[] | null;
   profileLayout?: ProfileLayout | null;
+  /**
+   * Profile decorations (decorations.ts); null clears one. A value that is not
+   * one of the designs is refused, and the classic font is stored as none.
+   */
+  avatarFrame?: AvatarFrame | null;
+  profileEffect?: ProfileEffect | null;
+  nameplate?: Nameplate | null;
+  nameFont?: NameFont | null;
+  nameEffect?: NameEffect | null;
   displayName?: string;
   avatar?: string;
   banner?: string;

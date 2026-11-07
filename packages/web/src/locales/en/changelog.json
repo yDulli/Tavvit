@@ -4,6 +4,13 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.36.0": {
+      "title": "Profile decorations",
+      "items": {
+        "decorations": "Decorate your profile in Settings → Decorations: a frame for your picture, an effect over your banner, a nameplate in member lists, and a typeface and an effect for your name. Free for everyone, and tried on in a preview before you save.",
+        "where": "They show on your profile card, in member lists, in your DMs and beside your messages, and move while someone points at you. Where a role gives your name its colour, the colour stays and only the typeface changes."
+      }
+    },
     "1.35.1": {
       "title": "Linked accounts",
       "items": {

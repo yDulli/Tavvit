@@ -3,6 +3,7 @@ import { isDmPolicy, isFriendRequestPolicy } from './contactPolicy.js';
 import { isAvatarColor, isProfileLayout, type User } from '@backspace/shared';
 import { parseStoredProfileLinks, withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { parseStoredProfileLinkedAccounts } from '@backspace/shared/src/linkedAccounts.js';
+import { decorationsOf } from '@backspace/shared/src/decorations.js';
 import { users } from '../db/schema.js';
 import { userBadgesOf } from './badges.js';
 import { needsVerifiedEmail } from '../email/gate.js';
@@ -28,6 +29,11 @@ export const PUBLIC_USER_COLUMNS = {
   profileLinks: users.profileLinks,
   profileLinkedAccounts: users.profileLinkedAccounts,
   profileLayout: users.profileLayout,
+  avatarFrame: users.avatarFrame,
+  profileEffect: users.profileEffect,
+  nameplate: users.nameplate,
+  nameFont: users.nameFont,
+  nameEffect: users.nameEffect,
   badges: users.badges,
   status: users.status,
   customStatus: users.customStatus,
@@ -62,6 +68,11 @@ export function publicUserOf(row: PublicUserRow): User {
       profileLinks: [],
       linkedAccounts: [],
       profileLayout: null,
+      avatarFrame: null,
+      profileEffect: null,
+      nameplate: null,
+      nameFont: null,
+      nameEffect: null,
       badges: [],
       status: 'offline',
       customStatus: null,
@@ -95,6 +106,9 @@ export function publicUserOf(row: PublicUserRow): User {
     // Read by the same rule a client reads it by: a handle the service would give, a link only to its page.
     linkedAccounts: parseStoredProfileLinkedAccounts(row.profileLinkedAccounts),
     profileLayout: isProfileLayout(row.profileLayout) ? row.profileLayout : null,
+    // Only names this server knows; null for none, so that a client merging this over an older
+    // copy of the row drops a decoration that was taken off.
+    ...decorationsOf(row),
     badges: userBadgesOf(row),
     status: (row.status ?? 'offline') as User['status'],
     customStatus: row.customStatus === null ? null : withoutUnsafeCharacters(row.customStatus),

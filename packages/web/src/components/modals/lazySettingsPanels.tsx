@@ -42,6 +42,7 @@ export function lazyPanel<M, P extends object>(
 }
 
 export const AccountPanel = lazyPanel(() => import('./settingsPanels/AccountPanel'), (m) => m.AccountPanel);
+export const DecorationsPanel = lazyPanel(() => import('./settingsPanels/DecorationsPanel'), (m) => m.DecorationsPanel);
 export const AppearancePanel = lazyPanel(() => import('./settingsPanels/AppearancePanel'), (m) => m.AppearancePanel);
 export const SecurityPanel = lazyPanel(() => import('./settingsPanels/SecurityPanel'), (m) => m.SecurityPanel);
 export const AccessibilityPanel = lazyPanel(() => import('./settingsPanels/AccessibilityPanel'), (m) => m.AccessibilityPanel);

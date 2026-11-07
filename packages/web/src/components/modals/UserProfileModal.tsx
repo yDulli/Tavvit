@@ -36,6 +36,8 @@ import { ProfileRoles } from '../ui/ProfileRoles';
 import { Icon } from '../ui/Icon';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ProfileBanner } from '../ui/ProfileBanner';
+import { CardTopEffect, DecoratedName } from '../ui/Decorations';
+import { personDecorations } from '../../utils/decorations';
 import { GatedPicture } from '../ui/ExternalMedia';
 
 type Tab = 'about' | 'friends' | 'spaces';
@@ -175,6 +177,7 @@ export function UserProfileModal() {
   const { baseName } = parseFederatedUsername(user.username);
   const displayName = user.displayName ?? baseName;
   const look = profileHeaderLook(profileLayoutOf(user), 'full');
+  const decorations = personDecorations(user, displayName);
   const pronouns = normalizePronouns(user.pronouns) ?? null;
   const bio = spaceProfile.bio ?? user.bio;
 
@@ -302,11 +305,14 @@ export function UserProfileModal() {
     <div className="fixed inset-0 z-[200] flex items-center justify-center">
       <div className="modal-scrim absolute inset-0" onClick={closeModal} />
       <div
-        className="relative max-w-lg w-full mx-4 max-h-[calc(calc(100*var(--app-vh))-2rem)] flex flex-col glass-modal rounded-lg modal-panel overflow-hidden"
+        className="relative isolate max-w-lg w-full mx-4 max-h-[calc(calc(100*var(--app-vh))-2rem)] flex flex-col glass-modal rounded-lg modal-panel overflow-hidden"
         style={theme ? { backgroundImage: cardTint(theme), borderColor: cardEdge(theme) } : undefined}
       >
-        {/* Banner; the compact layout has none, and its close button sits on the header */}
-        {look.banner && <ProfileBanner className={`${look.banner} flex-shrink-0`} src={bannerSrc} fallback={bannerFallback} />}
+        {/* Banner, with the profile's effect over it; the compact layout has none, its effect plays
+            across the top and its close button sits on the header */}
+        {look.banner
+          ? <ProfileBanner className={`${look.banner} flex-shrink-0`} src={bannerSrc} fallback={bannerFallback} effect={decorations.profileEffect} effectHeight={look.effectHeight} />
+          : <CardTopEffect effect={decorations.profileEffect} height={look.effectHeight} />}
         {/* Over a banner, which can be any picture, the close control carries its own dark ground. */}
         <button
           data-tooltip=""
@@ -330,12 +336,23 @@ export function UserProfileModal() {
             userId={user.homeUserId ?? user.id}
             user={user}
             ring={{ width: 5, color: 'rgb(var(--bg-elevated))' }}
+            frame={decorations.avatarFrame}
+            frameMotion="on"
             className={look.avatar}
           />
 
           <div className={look.banner ? 'mb-3 min-w-0' : 'min-w-0 pr-10'}>
             <ProfileSpaceNickname member={memberContext} />
-            <span className="text-title font-semibold tracking-[-0.02em] leading-tight" style={nameStyle}>{displayName}</span>
+            <DecoratedName
+              font={decorations.nameFont}
+              effect={decorations.nameEffect}
+              colors={decorations.colors}
+              roleColored={nameStyle !== undefined}
+              className="text-title font-semibold tracking-[-0.02em] leading-tight"
+              style={nameStyle}
+            >
+              {displayName}
+            </DecoratedName>
             {/* The badges sit beside the handle, in its line (badges.md). */}
             <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-body text-txt-tertiary">
               <Username username={user.username} showAt className="text-body text-txt-tertiary" />

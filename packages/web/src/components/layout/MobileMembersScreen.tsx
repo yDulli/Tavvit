@@ -7,6 +7,8 @@ import { useSpaceStore } from '../../stores/spaceStore';
 import { useActivityStore, activitiesFor } from '../../stores/activityStore';
 import { useUIStore } from '../../stores/uiStore';
 import { Avatar } from '../ui/Avatar';
+import { DecoratedName, NameplateLayer } from '../ui/Decorations';
+import { personDecorations } from '../../utils/decorations';
 import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
 import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
 import { parseFederatedUsername, isFederationGlobeApplicable, spaceMemberName } from '../../utils/identity';
@@ -45,16 +47,20 @@ function MobileMemberRow({
   const origin = useSpaceOrigin(member.spaceId);
   const canonical = useCanonicalUserView(member.user, origin);
   const displayName = spaceMemberName(member, canonical);
+  // The person's decorations (docs/systems/decorations.md); a touch screen shows them still.
+  const decorations = personDecorations(canonical, displayName);
+  const nameInked = colorStyle !== undefined || decorations.nameEffect !== null;
 
   const rowClass = isRichActivity
-    ? `list-row gap-2.5 px-2 py-2 mb-1 cursor-pointer glass-pill border-l-2 ${accentClass}`
-    : 'list-row gap-2.5 px-2 py-2 cursor-pointer';
+    ? `list-row deco-hover relative isolate gap-2.5 px-2 py-2 mb-1 cursor-pointer glass-pill border-l-2 ${accentClass}`
+    : 'list-row deco-hover relative isolate gap-2.5 px-2 py-2 cursor-pointer';
 
   return (
     <div
       onClick={() => onClickMember(member)}
       className={rowClass}
     >
+      <NameplateLayer nameplate={decorations.nameplate} colors={decorations.colors} motion="hover" className={isOffline ? 'opacity-50' : ''} />
       <Avatar
         src={(member.avatar ? resolveAssetUrl(member.avatar, origin) : null) ?? canonical.avatar}
         name={displayName}
@@ -62,15 +68,22 @@ function MobileMemberRow({
         status={isOffline ? 'offline' : canonical.status}
         className={isOffline ? 'opacity-60' : undefined}
         user={canonical}
+        frame={decorations.avatarFrame}
+        frameMotion="hover"
       />
       <div className="flex-1 min-w-0">
         <span className="flex min-w-0 items-center gap-1">
-          <span
-            className={`min-w-0 text-ui leading-[1.2] font-medium truncate ${colorStyle ? (isOffline ? 'opacity-60' : '') : (isOffline ? 'text-txt-tertiary' : 'text-txt-primary')}`}
+          <DecoratedName
+            font={decorations.nameFont}
+            effect={decorations.nameEffect}
+            colors={decorations.colors}
+            motion="hover"
+            roleColored={colorStyle !== undefined}
+            className={`min-w-0 text-ui leading-[1.2] font-medium truncate ${nameInked ? (isOffline ? 'opacity-60' : '') : (isOffline ? 'text-txt-tertiary' : 'text-txt-primary')}`}
             style={colorStyle}
           >
             {displayName}
-          </span>
+          </DecoratedName>
           {ownerMark && (
             <span role="img" aria-label={ownerMark} title={ownerMark} className="inline-flex flex-shrink-0 text-accent-amber">
               <Icon name="crown" size={13} />

@@ -18,6 +18,8 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { InlineMessageText } from './InlineMessageText';
 import { Avatar } from '../ui/Avatar';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
+import { DecoratedName } from '../ui/Decorations';
+import { personDecorations, type PersonDecorations } from '../../utils/decorations';
 import { useAppearanceStore } from '../../stores/appearanceStore';
 import { menuPositionFor, useContextMenuStore } from '../../stores/contextMenuStore';
 import { buildMessageMenuItems } from './messageMenuItems';
@@ -102,17 +104,30 @@ function PendingAttachmentTile({ transferId }: PendingAttachmentTileProps) {
  * A person's name in a message row (author, reply preview): the name as
  * plain text, followed by the federation globe exactly when the person is
  * from another instance (`isFederationGlobeApplicable`), with the full
- * username as its tooltip. The same rule as the DM list and header.
+ * username as its tooltip. The same rule as the DM list and header. The
+ * author's name wears their name style (`decorations`, docs/systems/decorations.md),
+ * which moves while the message is pointed at; a role's colour wins over its effect.
  */
-function PersonName({ name, person, className, style }: {
+function PersonName({ name, person, className, style, decorations, roleColored = false }: {
   name: string;
   person: Pick<User, 'username'>;
   className: string;
   style?: React.CSSProperties;
+  decorations?: PersonDecorations;
+  roleColored?: boolean;
 }) {
   return (
     <span className={`inline-flex min-w-0 items-center gap-0.5 ${className}`} style={style}>
-      <span className="min-w-0 truncate">{name}</span>
+      <DecoratedName
+        font={decorations?.nameFont ?? null}
+        effect={decorations?.nameEffect ?? null}
+        colors={decorations?.colors ?? NO_COLORS}
+        motion="hover"
+        roleColored={roleColored}
+        className="min-w-0 truncate"
+      >
+        {name}
+      </DecoratedName>
       {isFederationGlobeApplicable(person) && (
         <Tooltip content={person.username} position="top">
           <FederationGlobeIcon />
@@ -174,6 +189,8 @@ const JUST_ARRIVED_MS = 4000;
 
 /** The name of someone with no role colour (and of everyone in a DM). */
 const AUTHOR_DEFAULT_COLOR: React.CSSProperties = { color: 'rgb(var(--text-primary))' };
+/** A name without decorations has no colours of its own to give. */
+const NO_COLORS = { a: 'transparent', b: 'transparent' };
 
 export function Message({ message, isCompact, isFirstInGroup, previousMessageId }: MessageProps) {
   const { t } = useTranslation(['chat', 'common']);
@@ -522,6 +539,8 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   };
 
   const roleColor = getMemberDisplayColor(message.userId);
+  // The author's frame and name style (docs/systems/decorations.md), still until the message is pointed at.
+  const authorDecorations = personDecorations(displayIdentity, displayName);
 
   // A space message's author is a member of the space it was posted in; the
   // profile opened from it shows their roles there. message.userId is the id
@@ -619,7 +638,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
         useMessageSelection.getState().toggle(message.id);
       } : undefined}
       // Mine came up when I sent it; the row the server's copy replaces it with stays put.
-      className={`msg-row ${justArrived && (pending || !isOwnMessage) ? 'msg-new ' : ''}group relative flex gap-3 mx-2 px-3 rounded-md transition-colors duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-primary/60 ${isFirstInGroup || message.replyTo ? 'msg-first' : ''}`}
+      className={`msg-row deco-hover ${justArrived && (pending || !isOwnMessage) ? 'msg-new ' : ''}group relative flex gap-3 mx-2 px-3 rounded-md transition-colors duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-primary/60 ${isFirstInGroup || message.replyTo ? 'msg-first' : ''}`}
       onMouseEnter={(e) => {
         const list = e.currentTarget.closest('.overflow-y-auto');
         setToolbarInside(!!list && e.currentTarget.getBoundingClientRect().top - list.getBoundingClientRect().top < TOOLBAR_OVERHANG_PX);
@@ -667,6 +686,8 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
               user={displayIdentity}
               origin={displayOrigin}
               member={authorMember}
+              frame={authorDecorations.avatarFrame}
+              frameMotion="hover"
               className="transition-transform active:translate-y-[1px]"
             />
           </div>
@@ -731,6 +752,8 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                 person={displayIdentity}
                 className={`font-medium text-body leading-tight ${writesForChannel ? '' : 'cursor-pointer hover:underline'}`}
                 style={roleColor}
+                decorations={authorDecorations}
+                roleColored={roleColor !== AUTHOR_DEFAULT_COLOR}
               />
             </span>
             {message.user?.accountKind && (

@@ -7,6 +7,9 @@ import i18n, { initI18n } from './i18n';
 import { initializeInterfaceScale } from './platform/interfaceScale';
 import { startPointerLight } from './utils/pointerLight';
 import { waitForEmojiShortcodeNames } from './utils/emojiShortcodes';
+// Profile decorations and their typefaces belong to the app alone, never to the product page's bundle (docs/systems/decorations.md).
+import './styles/decorations.css';
+import './styles/nameFonts.css';
 
 /**
  * The app's start: what `main.tsx` loads for everyone but a visitor at the front

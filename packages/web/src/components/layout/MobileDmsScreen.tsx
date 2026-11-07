@@ -8,6 +8,8 @@ import { useSocialStore } from '../../stores/socialStore';
 import { useContextMenuStore } from '../../stores/contextMenuStore';
 import { Avatar } from '../ui/Avatar';
 import { AvatarStack } from '../ui/AvatarStack';
+import { DecoratedName, NameplateLayer } from '../ui/Decorations';
+import { personDecorations } from '../../utils/decorations';
 import { resolveAssetUrl } from '../../utils/assetUrls';
 import { useNavigate } from 'react-router-dom';
 import { useFriendBuckets } from '../../hooks/useFriendBuckets';
@@ -115,6 +117,8 @@ function MobileDmRow({
   const previewTime = dm.lastMessage?.createdAt;
 
   const avatarUrl = mainUser?.avatar ? `/api/uploads/${mainUser.avatar}` : null;
+  // A conversation with one person shows their decorations (docs/systems/decorations.md), still on a phone.
+  const decorations = personDecorations(isGroup ? null : mainUser, name);
 
   return (
     <button
@@ -122,8 +126,9 @@ function MobileDmRow({
       data-context-menu
       onClick={() => onTap(dm.id)}
       onContextMenu={(e) => onContextMenu(e, dm.id, isGroup)}
-      className="list-row w-full rounded-none px-4 py-2.5"
+      className="list-row deco-hover relative isolate w-full rounded-none px-4 py-2.5"
     >
+      <NameplateLayer nameplate={decorations.nameplate} colors={decorations.colors} motion="hover" />
       <div className="relative shrink-0">
         {isGroup ? (
           // Reuse the shared AvatarStack so group rows match the rest of the
@@ -143,15 +148,24 @@ function MobileDmRow({
             name={name}
             avatarColor={mainUser?.avatarColor}
             size={40}
+            user={mainUser ?? undefined}
+            frame={decorations.avatarFrame}
+            frameMotion="hover"
           />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1 min-w-0">
-            <span className={`truncate text-body text-txt-primary ${isUnread ? 'font-semibold' : ''}`}>
+            <DecoratedName
+              font={decorations.nameFont}
+              effect={decorations.nameEffect}
+              colors={decorations.colors}
+              motion="hover"
+              className={`truncate text-body text-txt-primary ${isUnread ? 'font-semibold' : ''}`}
+            >
               {name}
-            </span>
+            </DecoratedName>
             {groupHasFederatedMember && (
               <svg
                 data-dm-row-globe

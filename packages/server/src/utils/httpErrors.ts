@@ -371,6 +371,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   pronouns_too_long: 'Pronouns can be at most {{max}} characters',
   profile_links_invalid: 'Profile links must be at most {{max}} web addresses with short labels',
   profile_layout_invalid: 'That profile layout does not exist',
+  profile_decoration_invalid: 'That decoration does not exist',
   discord_template_code_invalid: 'That is not a Discord template link or code',
   discord_template_not_found: 'Discord does not know that template, or it was deleted',
   discord_rate_limited: 'Discord asked to wait. Try again in {{retryAfterSeconds}} seconds',

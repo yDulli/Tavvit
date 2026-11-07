@@ -281,6 +281,7 @@
   "pronouns_too_long": "Pronomen dürfen höchstens {{max}} Zeichen lang sein.",
   "profile_links_invalid": "Höchstens {{max}} Links, jeweils eine Webadresse mit https:// und eine kurze Bezeichnung.",
   "profile_layout_invalid": "Dieses Profillayout gibt es nicht.",
+  "profile_decoration_invalid": "Diese Dekoration gibt es nicht.",
   "discord_template_code_invalid": "Das ist kein Discord-Vorlagenlink und kein Vorlagencode.",
   "discord_template_not_found": "Discord kennt diese Vorlage nicht. Vielleicht wurde sie gelöscht.",
   "discord_rate_limited": "Discord bittet um eine Pause. Versuch es in {{retryAfterSeconds}} Sekunden noch mal.",

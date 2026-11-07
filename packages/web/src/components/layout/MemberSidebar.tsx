@@ -12,6 +12,8 @@ import { useUIStore } from '../../stores/uiStore';
 import { selectPeoplePanelOpen } from '../../stores/peoplePanel';
 import { useActivityStore, activitiesFor } from '../../stores/activityStore';
 import { Avatar, avatarRadius } from '../ui/Avatar';
+import { DecoratedName, NameplateLayer } from '../ui/Decorations';
+import { personDecorations } from '../../utils/decorations';
 import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
 import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
 import { parseFederatedUsername, isFederationGlobeApplicable, spaceMemberName } from '../../utils/identity';
@@ -51,10 +53,13 @@ function MemberSidebarRow({
   const origin = useSpaceOrigin(member.spaceId);
   const canonical = useCanonicalUserView(member.user, origin);
   const displayName = spaceMemberName(member, canonical);
+  // The person's decorations (docs/systems/decorations.md) move while the row is pointed at.
+  const decorations = personDecorations(canonical, displayName);
+  const nameInked = colorStyle !== undefined || decorations.nameEffect !== null;
 
   const rowClass = isRichActivity
-    ? `list-row gap-2.5 py-2 pl-1.5 pr-2 mb-px cursor-pointer rounded-l-none border-l-2 ${accentClass}`
-    : 'list-row gap-2.5 px-2 py-1.5 cursor-pointer group';
+    ? `list-row deco-hover relative isolate gap-2.5 py-2 pl-1.5 pr-2 mb-px cursor-pointer rounded-l-none border-l-2 ${accentClass}`
+    : 'list-row deco-hover relative isolate gap-2.5 px-2 py-1.5 cursor-pointer group';
 
   // The row is a control: Enter and Space open the profile like a click, and
   // the menu key or Shift+F10 open the member menu like a right click.
@@ -81,6 +86,7 @@ function MemberSidebarRow({
       data-context-menu
       className={rowClass}
     >
+      <NameplateLayer nameplate={decorations.nameplate} colors={decorations.colors} motion="hover" className={isOffline ? 'opacity-50' : ''} />
       <Avatar
         src={(member.avatar ? resolveAssetUrl(member.avatar, origin) : null) ?? canonical.avatar}
         name={displayName}
@@ -88,15 +94,22 @@ function MemberSidebarRow({
         status={isOffline ? 'offline' : canonical.status}
         className={isOffline ? 'opacity-60' : undefined}
         user={canonical}
+        frame={decorations.avatarFrame}
+        frameMotion="hover"
       />
       <div className="flex-1 min-w-0">
         <div className="flex min-w-0 items-center gap-1">
-          <span
-            className={`text-ui leading-[1.2] font-medium truncate ${colorStyle ? (isOffline ? 'opacity-60' : '') : (isOffline ? 'text-txt-tertiary' : 'text-txt-primary')}`}
+          <DecoratedName
+            font={decorations.nameFont}
+            effect={decorations.nameEffect}
+            colors={decorations.colors}
+            motion="hover"
+            roleColored={colorStyle !== undefined}
+            className={`text-ui leading-[1.2] font-medium truncate ${nameInked ? (isOffline ? 'opacity-60' : '') : (isOffline ? 'text-txt-tertiary' : 'text-txt-primary')}`}
             style={colorStyle}
           >
             {displayName}
-          </span>
+          </DecoratedName>
           {ownerMark && (
             <span role="img" aria-label={ownerMark} title={ownerMark} className="inline-flex flex-shrink-0 text-accent-amber">
               <Icon name="crown" size={13} />

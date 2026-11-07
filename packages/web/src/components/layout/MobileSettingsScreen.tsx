@@ -6,6 +6,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import {
   AccountPanel,
+  DecorationsPanel,
   SecurityPanel,
   AccessibilityPanel,
   AppearancePanel,
@@ -37,6 +38,7 @@ interface MobileSettingsScreenProps {
 
 type PanelTitleKey =
   | 'settings:nav.tabs.account'
+  | 'settings:nav.tabs.decorations'
   | 'settings:nav.tabs.security'
   | 'settings:nav.tabs.appearance'
   | 'settings:nav.tabs.accessibility'
@@ -60,6 +62,7 @@ const panelConfig: Record<
   { titleKey: PanelTitleKey; body: () => React.ReactNode }
 > = {
   account: { titleKey: 'settings:nav.tabs.account', body: () => <AccountPanel /> },
+  decorations: { titleKey: 'settings:nav.tabs.decorations', body: () => <DecorationsPanel /> },
   security: { titleKey: 'settings:nav.tabs.security', body: () => <SecurityPanel /> },
   appearance: { titleKey: 'settings:nav.tabs.appearance', body: () => <AppearancePanel /> },
   accessibility: { titleKey: 'settings:nav.tabs.accessibility', body: () => <AccessibilityPanel /> },
@@ -78,6 +81,7 @@ const panelConfig: Record<
 
 const sectionIcons: Record<string, IconName> = {
   account: 'user',
+  decorations: 'sparkle',
   security: 'lock',
   appearance: 'palette',
   accessibility: 'info',
@@ -135,6 +139,7 @@ export function MobileSettingsScreen({ initialPanel }: MobileSettingsScreenProps
   // is that app's own settings.
   const sections = [
     { id: 'account', label: t('settings:nav.tabs.account') },
+    { id: 'decorations', label: t('settings:nav.tabs.decorations') },
     { id: 'security', label: t('settings:nav.tabs.security') },
     { id: 'privacy', label: t('settings:nav.tabs.privacy') },
     ...(linkedAccounts ? [{ id: 'linkedAccounts', label: t('settings:nav.tabs.linkedAccounts') }] : []),

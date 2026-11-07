@@ -512,6 +512,13 @@
       "when": 1794053145785,
       "tag": "0072_tavvit_linked_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "6",
+      "when": 1794057933723,
+      "tag": "0073_tavvit_profile_decorations",
+      "breakpoints": true
     }
   ]
 }

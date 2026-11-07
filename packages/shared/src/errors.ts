@@ -482,6 +482,8 @@ export const ERROR_CODES = [
   // details: { max }
   'profile_links_invalid',
   'profile_layout_invalid',
+  // details: { field } (avatarFrame, profileEffect, nameplate, nameFont or nameEffect)
+  'profile_decoration_invalid',
 
   // Discord template import (docs/systems/spaces.md, "Importing a Discord template")
   'discord_template_code_invalid',

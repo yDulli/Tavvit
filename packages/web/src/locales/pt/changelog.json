@@ -4,6 +4,13 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.36.0": {
+      "title": "Decorações de perfil",
+      "items": {
+        "decorations": "Decore o seu perfil em Configurações → Decorações: uma moldura para a sua foto, um efeito sobre o seu banner, uma placa de nome nas listas de membros, e uma fonte e um efeito para o seu nome. Grátis para todos, e experimentados numa prévia antes de salvar.",
+        "where": "Eles aparecem no cartão do seu perfil, nas listas de membros, nas suas mensagens diretas e ao lado das suas mensagens, e se movem enquanto alguém aponta para você. Onde um cargo dá a cor ao seu nome, a cor fica e só a fonte muda."
+      }
+    },
     "1.35.1": {
       "title": "Contas vinculadas",
       "items": {

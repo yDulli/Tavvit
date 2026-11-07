@@ -102,6 +102,7 @@ export const mobileScreenMap: Readonly<Record<string, (params?: Record<string, s
   'friends': () => <FriendsPage mobile />,
   'settings': () => <MobileSettingsScreen />,
   'settings-account': () => <MobileSettingsScreen initialPanel="account" />,
+  'settings-decorations': () => <MobileSettingsScreen initialPanel="decorations" />,
   'settings-security': () => <MobileSettingsScreen initialPanel="security" />,
   'settings-appearance': () => <MobileSettingsScreen initialPanel="appearance" />,
   'settings-accessibility': () => <MobileSettingsScreen initialPanel="accessibility" />,

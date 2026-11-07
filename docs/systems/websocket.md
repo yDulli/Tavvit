@@ -430,7 +430,10 @@ every `Space` carries `ownerGroup`; every `MemberWithUser` carries `avatar`,
 member change (spaces.md, "Space profiles"). A Discord template import into an
 existing space ends with `space_access_changed` to every member (spaces.md,
 "Importing a Discord template"). Every `User` carries `pronouns`,
-`profileLinks` and `profileLayout` (auth.md, "Profile fields").
+`profileLinks` and `profileLayout` (auth.md, "Profile fields"), and the five
+decoration fields `avatarFrame`, `profileEffect`, `nameplate`, `nameFont` and
+`nameEffect`, null for none, so that a `user_updated` merged over an older copy
+takes a decoration off (decorations.md).
 
 **Badges.** No event type is new for badges either (registry:
 `packages/shared/src/badges.ts`; api.md, "Users" and "Spaces"). Every `User`

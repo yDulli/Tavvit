@@ -82,6 +82,73 @@ Space Grotesk
   The full license text is shipped alongside the font file at
   packages/web/public/fonts/SpaceGrotesk-OFL.txt.
 
+Typefaces of the name styles (profile decorations, docs/systems/decorations.md)
+  The files are the web subsets Google Fonts serves for each family, unchanged,
+  served by the app itself under the family names in
+  packages/web/src/styles/nameFonts.css.
+
+Fraunces
+  Files:    packages/web/public/fonts/names/Fraunces-Latin.woff2
+            packages/web/public/fonts/names/Fraunces-LatinExt.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2018 The Fraunces Project Authors
+            (https://github.com/undercasetype/Fraunces)
+  The full license text is shipped alongside the font files at
+  packages/web/public/fonts/names/Fraunces-OFL.txt.
+
+Comfortaa
+  Files:    packages/web/public/fonts/names/Comfortaa-Latin.woff2
+            packages/web/public/fonts/names/Comfortaa-LatinExt.woff2
+            packages/web/public/fonts/names/Comfortaa-Cyrillic.woff2
+            packages/web/public/fonts/names/Comfortaa-CyrillicExt.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2011 The Comfortaa Project Authors
+            (https://github.com/alexeiva/comfortaa),
+            with Reserved Font Name "Comfortaa"
+  The full license text is shipped alongside the font files at
+  packages/web/public/fonts/names/Comfortaa-OFL.txt.
+
+Caveat
+  Files:    packages/web/public/fonts/names/Caveat-Latin.woff2
+            packages/web/public/fonts/names/Caveat-LatinExt.woff2
+            packages/web/public/fonts/names/Caveat-Cyrillic.woff2
+            packages/web/public/fonts/names/Caveat-CyrillicExt.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2014 The Caveat Project Authors
+            (https://github.com/googlefonts/caveat)
+  The full license text is shipped alongside the font files at
+  packages/web/public/fonts/names/Caveat-OFL.txt.
+
+Pixelify Sans
+  Files:    packages/web/public/fonts/names/PixelifySans-Latin.woff2
+            packages/web/public/fonts/names/PixelifySans-LatinExt.woff2
+            packages/web/public/fonts/names/PixelifySans-Cyrillic.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2021 The Pixelify Sans Project Authors
+            (https://github.com/eifetx/Pixelify-Sans)
+  The full license text is shipped alongside the font files at
+  packages/web/public/fonts/names/PixelifySans-OFL.txt.
+
+Cinzel
+  Files:    packages/web/public/fonts/names/Cinzel-Latin.woff2
+            packages/web/public/fonts/names/Cinzel-LatinExt.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2020 The Cinzel Project Authors
+            (https://github.com/NDISCOVER/Cinzel)
+  The full license text is shipped alongside the font files at
+  packages/web/public/fonts/names/Cinzel-OFL.txt.
+
+Unbounded
+  Files:    packages/web/public/fonts/names/Unbounded-Latin.woff2
+            packages/web/public/fonts/names/Unbounded-LatinExt.woff2
+            packages/web/public/fonts/names/Unbounded-Cyrillic.woff2
+            packages/web/public/fonts/names/Unbounded-CyrillicExt.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2022 The Unbounded Project Authors
+            (https://github.com/googlefonts/unbounded)
+  The full license text is shipped alongside the font files at
+  packages/web/public/fonts/names/Unbounded-OFL.txt.
+
 ================================================================================
 Sound effects
 ================================================================================

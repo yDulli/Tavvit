@@ -281,6 +281,7 @@
   "pronouns_too_long": "Os pronomes podem ter no máximo {{max}} caracteres.",
   "profile_links_invalid": "Adicione no máximo {{max}} links, cada um com um endereço https:// e um rótulo curto.",
   "profile_layout_invalid": "Esse layout de perfil não existe.",
+  "profile_decoration_invalid": "Essa decoração não existe.",
   "discord_template_code_invalid": "Isso não é um link nem um código de modelo do Discord.",
   "discord_template_not_found": "O Discord não conhece esse modelo. Talvez ele tenha sido excluído.",
   "discord_rate_limited": "O Discord pediu uma pausa. Tente novamente em {{retryAfterSeconds}} segundos.",

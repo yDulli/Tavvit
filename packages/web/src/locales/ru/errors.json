@@ -281,6 +281,7 @@
   "pronouns_too_long": "Местоимения могут быть не длиннее {{max}} символов.",
   "profile_links_invalid": "Не больше {{max}} ссылок: каждая — адрес с https:// и короткая подпись.",
   "profile_layout_invalid": "Такого оформления профиля нет.",
+  "profile_decoration_invalid": "Такого украшения нет.",
   "discord_template_code_invalid": "Это не ссылка и не код шаблона Discord.",
   "discord_template_not_found": "Discord не знает этот шаблон. Возможно, его удалили.",
   "discord_rate_limited": "Discord просит подождать. Попробуйте снова через {{retryAfterSeconds}} с.",

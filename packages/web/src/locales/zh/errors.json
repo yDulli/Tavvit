@@ -281,6 +281,7 @@
   "pronouns_too_long": "代词最多 {{max}} 个字符。",
   "profile_links_invalid": "最多添加 {{max}} 个链接，每个链接需以 https:// 开头并带有简短标签。",
   "profile_layout_invalid": "不存在这种个人资料布局。",
+  "profile_decoration_invalid": "不存在这种装饰。",
   "discord_template_code_invalid": "这不是 Discord 模板链接或模板代码。",
   "discord_template_not_found": "Discord 找不到这个模板，它可能已被删除。",
   "discord_rate_limited": "Discord 要求稍候，请在 {{retryAfterSeconds}} 秒后重试。",
