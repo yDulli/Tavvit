@@ -1851,3 +1851,35 @@ export const voiceOverlays = sqliteTable('voice_overlays', {
   tokenHashUnique: uniqueIndex('voice_overlays_token_hash_unique').on(table.tokenHash),
   channelUserUnique: uniqueIndex('voice_overlays_channel_user_unique').on(table.channelId, table.userId),
 }));
+
+/**
+ * Decorations people make (docs/systems/decorations.md, "Made by people"): a frame, an effect or a
+ * nameplate as a picture its maker uploaded, stored as WebP under `UPLOAD_DIR/decorations/`, or a
+ * name style built from colours. A profile wears one by reference (`custom:<id>`) in the column a
+ * built-in design takes. `shared` puts it in the community's gallery. Removing one, by its maker,
+ * an administrator or a report's decision, deletes the row and its files and takes it off everyone
+ * who wore it (utils/customDecorations.ts).
+ */
+export const customDecorations = sqliteTable('custom_decorations', {
+  id: text('id').primaryKey(),
+  /** `frame`, `effect`, `nameplate` or `name`. */
+  kind: text('kind').notNull(),
+  name: text('name').notNull(),
+  /** Its maker. Deleting an account removes its designs first (utils/userDeletion.ts). */
+  creatorId: text('creator_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** Whether the picture moves; a still first frame is kept beside a moving one. 0 for a name style. */
+  animated: integer('animated').notNull().default(0),
+  /** The stored bytes, picture and still frame together, counted on the maker's storage; 0 for a name style. */
+  size: integer('size').notNull().default(0),
+  width: integer('width'),
+  height: integer('height'),
+  /** A name style as JSON (`NameStyle`); null for a picture. */
+  style: text('style'),
+  /** 1 while it is in the community's gallery. */
+  shared: integer('shared').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  creatorIdx: index('custom_decorations_creator_idx').on(table.creatorId),
+  galleryIdx: index('custom_decorations_gallery_idx').on(table.kind, table.shared, table.createdAt),
+}));

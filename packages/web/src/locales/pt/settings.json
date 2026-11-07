@@ -541,7 +541,7 @@
   },
   "decorations": {
     "title": "Decorações",
-    "intro": "Uma moldura para sua foto, um efeito sobre seu banner, uma placa de nome e um estilo para seu nome. Grátis para todos, e visíveis onde quer que este servidor mostre você.",
+    "intro": "Uma moldura para sua foto, um efeito sobre o seu perfil, uma placa de nome e um estilo para o seu nome: do Tavvit, da comunidade ou feitos por você. Grátis para todos, e visíveis onde quer que este servidor mostre você.",
     "preview": {
       "list": "Em listas de membros",
       "chat": "No chat",
@@ -637,6 +637,90 @@
       "ember": "Brasa",
       "prism": "Prisma",
       "theme": "Suas cores"
+    },
+    "sources": {
+      "label": "De onde vêm os designs",
+      "tavvit": "Tavvit",
+      "community": "Comunidade",
+      "mine": "Meus"
+    },
+    "made": {
+      "createTitle": {
+        "frame": "Criar moldura",
+        "effect": "Criar efeito",
+        "nameplate": "Criar placa de nome",
+        "name": "Criar estilo de nome"
+      },
+      "noPicture": "Escolha uma imagem para vê-la aqui.",
+      "picture": "Imagem",
+      "pictureChoose": "Escolher imagem",
+      "pictureOther": "Escolher outra imagem",
+      "pictureInvalid": "Escolha uma imagem PNG, WebP ou GIF de no máximo {{max}} MB.",
+      "template": {
+        "frame": "Desenhe em {{width}} × {{height}} pixels sobre fundo transparente. Sua foto fica no meio, em cinco sétimos da área; o que vai em volta, orelhas, uma coroa, folhas, fica por fora. O meio fica livre, para que nada cubra sua foto. PNG, WebP ou GIF, animado ou não, até {{max}} MB.",
+        "effect": "Desenhe uma peça pequena em {{width}} × {{height}} pixels sobre fundo transparente: um coração, uma folha, uma estrela. Algumas delas passam pelo seu perfil do jeito que você escolher abaixo, pequenas o bastante para que tudo continue legível. PNG, WebP ou GIF, animado ou não, até {{max}} MB.",
+        "nameplate": "Desenhe em {{width}} × {{height}} pixels. Ela preenche a linha atrás do nome e some em direção à esquerda, então coloque o que importa na ponta direita. PNG, WebP ou GIF, animado ou não, até {{max}} MB."
+      },
+      "look": "Visual",
+      "looks": {
+        "gradient": "Degradê",
+        "flow": "Fluindo",
+        "wave": "Onda",
+        "sticker": "Adesivo",
+        "comic": "Quadrinhos",
+        "retro": "Retrô",
+        "glitch": "Glitch"
+      },
+      "colors": "Cores",
+      "motion": "Como se move",
+      "motions": {
+        "fall": "Cair",
+        "tumble": "Rodopiar",
+        "rise": "Subir",
+        "float": "Flutuar",
+        "twinkle": "Cintilar"
+      },
+      "colorNumber": "Cor {{number}}",
+      "name": "Nome",
+      "shareLabel": "Compartilhar com a comunidade",
+      "shareHint": "Vai para a galeria deste servidor com o seu nome, e qualquer pessoa aqui pode usá-lo. Você pode tirá-lo de lá a qualquer momento.",
+      "create": "Criar",
+      "removeTitle": "Remover “{{name}}”",
+      "removeText": "Sai da galeria e de todos que o usam. Quem o criou fica sabendo o motivo e como contestar.",
+      "removeGround": "Viola",
+      "removeReason": "Motivo para quem o criou",
+      "remove": "Remover",
+      "search": "Buscar pelo nome",
+      "sortLabel": "Ordem",
+      "sort": {
+        "popular": "Populares",
+        "new": "Novos"
+      },
+      "noMatches": "Nada na galeria tem isso no nome.",
+      "galleryEmpty": "Ninguém compartilhou um ainda. Crie um em “Meus” e compartilhe.",
+      "more": "Mostrar mais",
+      "by": "por {{name}}",
+      "wearers_one": "{{formatted}} usando",
+      "wearers_many": "{{formatted}} usando",
+      "wearers_other": "{{formatted}} usando",
+      "report": "Denunciar",
+      "count": "{{made}} de {{max}} criados",
+      "full": "Você criou {{max}}, o máximo que pode manter. Exclua um para criar outro.",
+      "mineEmpty": {
+        "frame": "Você ainda não criou uma moldura.",
+        "effect": "Você ainda não criou um efeito.",
+        "nameplate": "Você ainda não criou uma placa de nome.",
+        "name": "Você ainda não criou um estilo de nome."
+      },
+      "sharedWearers_one": "Compartilhado · {{formatted}} usando",
+      "sharedWearers_many": "Compartilhado · {{formatted}} usando",
+      "sharedWearers_other": "Compartilhado · {{formatted}} usando",
+      "private": "Só você",
+      "share": "Compartilhar com a comunidade",
+      "unshare": "Tirar da galeria",
+      "delete": "Excluir",
+      "deleteTitle": "Excluir “{{name}}”?",
+      "deleteText": "Sai de todos que o usam e não pode ser recuperado."
     }
   },
   "privacy": {

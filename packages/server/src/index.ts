@@ -17,6 +17,7 @@ import { discordImportRoutes } from './routes/discordImport.js';
 import { discordExpressionImportRoutes } from './routes/discordExpressionImport.js';
 import { spaceExpressionRoutes } from './routes/spaceExpressions.js';
 import { removeUnusedEmojiFiles } from './utils/spaceExpressions.js';
+import { removeUnusedDecorationFiles } from './utils/customDecorations.js';
 import { channelRoutes } from './routes/channels.js';
 import { messageRoutes } from './routes/messages.js';
 import { pinRoutes } from './routes/pins.js';
@@ -43,6 +44,7 @@ import { pathForLog, removeUnusedWebhookAccounts } from './utils/webhookAccounts
 import { welcomeRoutes } from './routes/welcome.js';
 import { startEventReminderSweeper } from './utils/eventReminders.js';
 import { stickerRoutes } from './routes/stickers.js';
+import { customDecorationRoutes } from './routes/customDecorations.js';
 import { uploadRoutes } from './routes/uploads.js';
 import { filesRoutes } from './routes/files.js';
 import { dmRoutes } from './routes/dm.js';
@@ -372,6 +374,7 @@ async function main(): Promise<void> {
   await app.register(welcomeRoutes);
   await app.register(uploadRoutes);
   await app.register(stickerRoutes);
+  await app.register(customDecorationRoutes);
   await app.register(filesRoutes);
   await app.register(dmRoutes);
   await app.register(livekitRoutes);
@@ -466,6 +469,7 @@ async function main(): Promise<void> {
   removeUnusedWebhookAccounts();
   removeUnusedSoundFiles();
   removeUnusedEmojiFiles();
+  removeUnusedDecorationFiles();
   startSessionSweeper();
   startDataExportSweeper();
   startLegalRecordSweeper();

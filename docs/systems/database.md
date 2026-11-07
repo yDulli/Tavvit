@@ -37,7 +37,7 @@ IDs: Snowflake text, permissions: bigint decimal strings
 | nameplate | text | | The nameplate behind the name in lists, a name in `NAMEPLATES`; NULL for none. Migration 0073 |
 | nameFont | text | | The name's typeface, a name in `NAME_FONTS` other than `classic`; NULL for the interface's own. Migration 0073 |
 | spaceTag | text | | The space tag the person wears: JSON `{ spaceId, text, glyph, color }`, a copy of a space's tag of this instance, kept in step with it (utils/spaceTags.ts); NULL for none. Migration `0074_tavvit_space_tags_voice_overlays`. See space-tags.md |
-| nameEffect | text | | The light inside the name's letters, a name in `NAME_EFFECTS`; NULL for none. Migration 0073. Only `PATCH /api/users/@me` writes these five, each checked against its list (`decorationUpdateOf`); read back through `decorationsOf`, which shows a name it does not know as none; cleared by `tombstoneUser` |
+| nameEffect | text | | The light inside the name's letters, a name in `NAME_EFFECTS`; NULL for none. Migration 0073. Only `PATCH /api/users/@me` writes these five, each checked against its list (`decorationUpdateOf`); read back through `decorationsOf`, which shows a name it does not know as none; cleared by `tombstoneUser`. Since 1.38.0 `avatarFrame`, `profileEffect`, `nameplate` and `nameEffect` may also hold `custom:<id>`, a design someone made (`custom_decorations` below), which every `User` carries drawn out in `customDecorations` |
 | badges | text | | JSON array of the badges an instance admin granted the person (`GrantedUserBadgeId`, the registry in `packages/shared/src/badges.ts`), in the registry's order, each once; NULL for none. Written only by `PUT /api/admin/users/:id/badges`. Read through `grantedUserBadgesOf` (`utils/badges.ts`), which drops anything the registry does not know as a granted user badge, so a hand-edited row cannot hand out `staff`; staff is not stored but derived from `isAdmin` (`userBadgesOf`). Migration `0041_orbit_platform_admin` |
 | suspendedAt | integer | | When an instance admin suspended the account (epoch ms); NULL when no suspension is recorded. The account is suspended while this is set and `suspendedUntil` is NULL or later than now (`activeSuspension`, `utils/suspension.ts`; `suspendedNow` is the same condition in SQL): it cannot sign in, call an authenticated route or hold a socket (auth.md, "Suspensions"). Migration 0041 |
 | suspendedUntil | integer | | When the suspension ends by itself (epoch ms); NULL until an admin lifts it. Nothing runs when it passes: every check compares it with the clock, and the three columns stay set until `/unsuspend` clears them |
@@ -1248,6 +1248,25 @@ Indexes: `linked_accounts_user_provider_unique` UNIQUE (user_id, provider): one 
 | Column | Notes |
 |--------|-------|
 | `users.profile_linked_accounts` | text, null. What the profile shows of the person's linked accounts: the rows with `show_on_profile`, as a JSON list of `{ provider, login, name }`, written whenever they change (`writeProfileLinkedAccounts`). In `PUBLIC_USER_COLUMNS`, read into `User.linkedAccounts` by the shared rules. Cleared by the tombstone |
+
+## custom_decorations
+
+Frames, effects, nameplates and name styles people make (decorations.md, "Made by people"). Migration `0075_tavvit_custom_decorations`, additive. A profile wears one by its reference, `custom:<id>`, in the column of its kind on `users` (`avatar_frame`, `profile_effect`, `nameplate`, `name_effect`; never `name_font`); `PATCH /api/users/@me` takes one only when it exists, is of that kind, and is shared or the person's own.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| id | text | PK | Snowflake |
+| kind | text | NOT NULL | `frame`, `effect`, `nameplate` or `name` |
+| name | text | NOT NULL | 1 to 32 characters, one line, no hidden characters (`normalizeDecorationName`) |
+| creator_id | text | FK → users, cascade | Who made it. Account deletion removes their designs by hand first (`removeDecorationsOfUser`), as the tombstone keeps the user's row, and takes them off everyone who wore them |
+| animated | integer | NOT NULL, default 0 | 1 when the picture moves; its still first frame is then kept beside it |
+| size | integer | NOT NULL, default 0 | Bytes of its pictures, counted in its maker's storage (`storageUsedByAccount`) |
+| width, height | integer | | The stored picture's size; NULL for a name style |
+| style | text | | JSON: a name style's `{ look, colors }`, an effect's `{ motion }`; NULL for a frame or a nameplate |
+| shared | integer | NOT NULL, default 0 | 1 when it is in the gallery and others may wear it |
+| created_at, updated_at | integer | NOT NULL | Epoch ms |
+
+Indexes: `custom_decorations_creator_idx` (creator_id); `custom_decorations_gallery_idx` (kind, shared, created_at). The pictures are files, `UPLOAD_DIR/decorations/<id>.webp` and `<id>-still.webp`, removed with the row.
 
 ## voice_overlays
 

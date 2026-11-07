@@ -7,6 +7,7 @@ import { decorationsOf } from '@backspace/shared/src/decorations.js';
 import { parseStoredWornSpaceTag } from '@backspace/shared/src/spaceTags.js';
 import { users } from '../db/schema.js';
 import { userBadgesOf } from './badges.js';
+import { wornCustomDecorationsOf } from './customDecorations.js';
 import { needsVerifiedEmail } from '../email/gate.js';
 import { shownAccountPicture } from './remoteMedia.js';
 import { storedReplicatedInstances } from './replicatedInstances.js';
@@ -112,6 +113,8 @@ export function publicUserOf(row: PublicUserRow): User {
     // Only names this server knows; null for none, so that a client merging this over an older
     // copy of the row drops a decoration that was taken off.
     ...decorationsOf(row),
+    // The designs people made that it wears, with what a client needs to draw them; null for none.
+    customDecorations: wornCustomDecorationsOf(row),
     // The tag as the space last had it (utils/spaceTags.ts); null for none, so a merge takes it off.
     spaceTag: parseStoredWornSpaceTag(row.spaceTag),
     badges: userBadgesOf(row),

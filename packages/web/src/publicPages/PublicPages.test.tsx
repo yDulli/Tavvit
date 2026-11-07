@@ -10,6 +10,7 @@ import creators from '../locales/en/creators.json';
 import roadmap from '../locales/en/roadmap.json';
 import help from '../locales/en/help.json';
 import status from '../locales/en/status.json';
+import webPackage from '../../package.json';
 import { publicPageAt } from './entry';
 import { PublicPage } from './PublicPages';
 
@@ -109,7 +110,8 @@ describe('the pages', () => {
     render(<PublicPage path="/changelog" />);
     const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(headings).toEqual(Object.values(changelog.versions).map((entry) => entry.title));
-    expect(Object.keys(changelog.versions)[0]).toBe('1.37.1');
+    // The newest entry is the version this build is (packages/web/package.json): no release without one.
+    expect(Object.keys(changelog.versions)[0]).toBe(webPackage.version);
   });
 
   it('roadmap: shows what comes, in its sections, and what was just finished', () => {

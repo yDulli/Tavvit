@@ -83,13 +83,13 @@ The dialog is the client's. The API does not refuse requests from someone who ha
 | Asked | Check |
 |-------|-------|
 | Why it is illegal | `explanation`, 20 to 4000 characters: `400 report_explanation_invalid` |
-| Where it is | A `targetId` of a message, DM message, person or space for someone signed in; a `targetUrl` from the public form: `400 report_target_invalid` |
+| Where it is | A `targetId` of a message, DM message, person, space or decoration someone made for someone signed in; a `targetUrl` from the public form: `400 report_target_invalid` |
 | Who reports | The account, or `reporterName` and `reporterEmail`: `400 report_contact_required`. Only `child_safety` may stay unsigned (Art. 16(2)(c)) |
 | Good faith | `goodFaith: true`: `400 report_good_faith_required` |
 
 `report_duplicate` (409) stops one person reporting the same open target twice. A message the reporter cannot see answers `404 report_target_not_found`, the same as one that does not exist, so a report tells nobody what is in a channel they cannot read. A request without a token is anonymous; a token that no longer holds answers 401 as anywhere else.
 
-`content_reports` keeps a **snapshot** of the target (author, text, attachment names, place, time), because the content may be gone when an admin reads it. The attachments' files are not copied.
+`content_reports` keeps a **snapshot** of the target (author, text, attachment names, place, time), because the content may be gone when an admin reads it. The attachments' files are not copied. A **decoration someone made** (decorations.md, "Made by people") can be reported by anyone who can see it: shared in the gallery, worn on a profile, or their own; a private one nobody wears answers `404 report_target_not_found`. Its snapshot is its maker, its name as the text, its kind as the place and the address of its picture, which the admin area shows.
 
 **Deciding** (`POST /api/admin/reports/:id/decide { decision, ground, note, durationHours? }`) is behind `requireAdmin`:
 
@@ -98,14 +98,17 @@ The dialog is the client's. The API does not refuse requests from someone who ha
 | `no_action` | anything | Closes it. `ground` not needed |
 | `handled` | anything | Closes one that was dealt with elsewhere in the admin area, such as a deleted space. `ground` not needed; the reporter hears that the operator acted |
 | `content_removed` | a message or DM message | Removes it like any delete: attachments go, members see it vanish. The relay names the author, because a peer accepts a delete only from them, so a local author's message goes from peers too; a remote author's goes only from this instance. Already gone is fine |
+| `content_removed` | a decoration someone made | `removeCustomDecoration`: the design and its pictures go, every profile that wore it shows nothing in its place (announced at once), and its maker gets the notice. Already gone is fine |
 | `account_suspended` | a message's author, a person | `applySuspension`, with the same rules as the admin's route: not oneself, not an admin, a known duration, a reason of at most 500 characters. Not for a space, whose owner may have changed since the report |
 | `listing_withdrawn` | a space with a listing or a request (`AdminReport.listingStatus`) | `decideDiscovery(withdraw)`, with its usual announcement |
 
 Each writes `report_decide` to the platform audit log with the reason, and `report_queue_count` tells the admins' clients. A report outside these decisions (a space that should be deleted, say) is closed as `handled` after acting in the admin area.
 
+An administrator can also take a made decoration away without a report, from its tile in the gallery (`POST /api/admin/decorations/:id/remove { reason, ground }`): the same removal, `decoration_remove` in the platform audit log, and the same `content_removed` notice to its maker with the reason, the ground and how to object.
+
 **No mail about reports.** Mail is about accounts (email.md), so someone who reported without an account gets their confirmation on the page (Art. 16(4)) and the outcome from the operator's own mailbox; the admin area says so beside their address.
 
-**What the app's "Report" sits on:** the message menu (`buildMessageMenuItems`), the author menu (`useAuthorMenu`), the member and user menus (`reportUserMenuItem`), the space menu (`useSpaceContextMenu`). A report goes to the instance that holds the thing (`getApiForOrigin`), whose operator decides.
+**What the app's "Report" sits on:** the message menu (`buildMessageMenuItems`), the author menu (`useAuthorMenu`), the member and user menus (`reportUserMenuItem`), the space menu (`useSpaceContextMenu`), a design's tile in the decorations gallery (`CommunityGallery`). A report goes to the instance that holds the thing (`getApiForOrigin`), whose operator decides.
 
 ---
 
@@ -137,6 +140,8 @@ Each writes `report_decide` to the platform audit log with the reason, and `repo
 **Sessions.** Each signed-in device has a row with its browser and system, its address cut short and when it was last active, so a person can recognise and end it in Settings → Security (auth.md, "Tokens and sessions"). The row goes with the session, after 30 days at the latest. The address never goes in whole, and no location is derived from it. The privacy draft states this.
 
 **Voice overlay.** A link for a streaming program shows the names, pictures, mute state and who speaks of the people in a voice channel to whoever has it, possibly a public stream; the channel shows that it has one, and only a hash of the link, its maker and its last use are stored (voice-overlay.md). The privacy draft's voice section says this, and its profile list names the space tag.
+
+**Decorations people make.** A picture someone uploads as a decoration is stored, encoded again, with the design's name, its maker, when it was made and whether it is shared, and counts on the maker's storage. A shared one is in the instance's gallery for everyone signed in, under its maker's name (the display name, or else the username) with how many wear it; any one is seen wherever a profile that wears it is shown, and its picture can be fetched at its address without a session. It goes when its maker deletes it or their account, or when the operator removes it after a report or for breaking the terms, and then from everyone who wore it (decorations.md, "Made by people"). The privacy draft says this in its profile section (1.38.0): insert and publish the draft again after the update.
 
 **Logs.** The request log holds method and path only: `serializers.req` in `index.ts` leaves out the address and the query string, which carries search terms. Compose bounds the app's log to 3 files of 10 MB. The privacy draft says that addresses are used in memory and not written down, so a change here changes the draft.
 

@@ -11,6 +11,7 @@ import type { SavedItem } from './saved.js';
 import type { ThreadInfo, ThreadSummary } from './threads.js';
 import type { ForumTag } from './forums.js';
 import type { AvatarFrame, NameEffect, NameFont, Nameplate, ProfileEffect } from './decorations.js';
+import type { CustomDecorationRef, WornCustomDecorations } from './customDecorations.js';
 import type { SpaceTag, WornSpaceTag } from './spaceTags.js';
 import type { SignupChallengeSolution } from './signupChallenge.js';
 import type { WatchPosition, WatchPresence, WatchReaction, WatchSession } from './watch.js';
@@ -72,6 +73,13 @@ export interface User {
   nameplate?: Nameplate | null;
   nameFont?: NameFont | null;
   nameEffect?: NameEffect | null;
+  /**
+   * The designs someone made that the profile wears (customDecorations.ts), by field, with what a
+   * client needs to draw them; the field itself is then null. Null for none, sent as null so that an
+   * update merged over an older row takes them off; absent from hosts that predate them and from a
+   * copy of a person another instance holds.
+   */
+  customDecorations?: WornCustomDecorations | null;
   /**
    * The space tag the person wears beside their name (docs/systems/space-tags.md): a space of the
    * instance that sent the row, and its tag as it was when they put it on or the space last
@@ -1687,13 +1695,15 @@ export interface UpdateUserRequest {
   profileLayout?: ProfileLayout | null;
   /**
    * Profile decorations (decorations.ts); null clears one. A value that is not
-   * one of the designs is refused, and the classic font is stored as none.
+   * one of the designs is refused, and the classic font is stored as none. A
+   * design someone made is sent as its reference (`custom:<id>`), and must be
+   * of the field's kind and shared, or the caller's own.
    */
-  avatarFrame?: AvatarFrame | null;
-  profileEffect?: ProfileEffect | null;
-  nameplate?: Nameplate | null;
+  avatarFrame?: AvatarFrame | CustomDecorationRef | null;
+  profileEffect?: ProfileEffect | CustomDecorationRef | null;
+  nameplate?: Nameplate | CustomDecorationRef | null;
   nameFont?: NameFont | null;
-  nameEffect?: NameEffect | null;
+  nameEffect?: NameEffect | CustomDecorationRef | null;
   /**
    * The id of a space of this instance whose tag to wear, or null to wear none. The space must
    * have a tag and the person must be its member; anything else is `400 space_tag_unavailable`.

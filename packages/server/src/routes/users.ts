@@ -21,6 +21,8 @@ import type { UpdateUserRequest, VerifyPasswordRequest, VerifyPasswordResponse, 
 import { AVATAR_COLORS, PROFILE_LIMITS, isChosenUserStatus, isProfileLayout, type ChosenUserStatus } from '@backspace/shared';
 import { hasUnsafeCharacters, normalizePronouns, normalizeProfileLinks } from '@backspace/shared/src/profileFields.js';
 import { DECORATION_FIELDS, decorationUpdateOf } from '@backspace/shared/src/decorations.js';
+import { customDecorationIdOf } from '@backspace/shared/src/customDecorations.js';
+import { forgetWearerCounts, mayWearCustomDecoration } from '../utils/customDecorations.js';
 import { wornSpaceTagFor } from '../utils/spaceTags.js';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@backspace/shared/src/constants.js';
 import { sanitizeUser } from '../utils/sanitize.js';
@@ -515,6 +517,14 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     if (!decorations.ok) {
       return sendError(reply, 400, 'profile_decoration_invalid', { field: decorations.field });
     }
+    // A design someone made (utils/customDecorations.ts): of the field's kind, and shared or the caller's own.
+    for (const field of DECORATION_FIELDS) {
+      const value = decorations.values[field];
+      if (field === 'nameFont' || typeof value !== 'string' || customDecorationIdOf(value) === null) continue;
+      if (!mayWearCustomDecoration(field, value, request.userId)) {
+        return sendError(reply, 400, 'profile_decoration_invalid', { field });
+      }
+    }
     Object.assign(updateData, decorations.values);
     // A space's tag beside the name (docs/systems/space-tags.md): a space of this instance that has
     // one, and only while the person is in it; null takes it off.
@@ -665,6 +675,8 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     if (Object.keys(updateData).length > 0) {
       db.update(schema.users).set(updateData).where(eq(schema.users.id, request.userId)).run();
     }
+    // What is worn changed: the gallery counts again, now that it is stored (utils/customDecorations.ts).
+    if (Object.keys(decorations.values).length > 0) forgetWearerCounts();
 
     // Bootstrap: the new remote origins get a profile_update, now that the list is stored.
     // preUpdateUser already has the full row including all profile fields.

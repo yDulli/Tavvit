@@ -144,7 +144,7 @@ export function isReportCategory(value: unknown): value is ReportCategory {
 }
 
 /** What a report points at. `link` is the public form's: an address or a description of the place. */
-export const REPORT_TARGET_TYPES = ['message', 'dm_message', 'user', 'space', 'link'] as const;
+export const REPORT_TARGET_TYPES = ['message', 'dm_message', 'user', 'space', 'link', 'decoration'] as const;
 export type ReportTargetType = (typeof REPORT_TARGET_TYPES)[number];
 
 export function isReportTargetType(value: unknown): value is ReportTargetType {

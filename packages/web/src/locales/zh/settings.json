@@ -539,7 +539,7 @@
   },
   "decorations": {
     "title": "装饰",
-    "intro": "为头像加一个边框，为横幅加一个特效，再加一个名牌和名字样式。人人免费，本服务器展示你的地方都能看到。",
+    "intro": "为你的头像加框，为个人资料加特效，再配上名牌和名字样式：来自 Tavvit、来自社区，或由你亲手制作。所有人免费使用，在此服务器展示你的任何地方都可见。",
     "preview": {
       "list": "在成员列表中",
       "chat": "在聊天中",
@@ -635,6 +635,86 @@
       "ember": "余烬",
       "prism": "棱镜",
       "theme": "你的颜色"
+    },
+    "sources": {
+      "label": "设计来源",
+      "tavvit": "Tavvit",
+      "community": "社区",
+      "mine": "我的"
+    },
+    "made": {
+      "createTitle": {
+        "frame": "制作头像框",
+        "effect": "制作特效",
+        "nameplate": "制作名牌",
+        "name": "制作名字样式"
+      },
+      "noPicture": "选择一张图片即可在此预览。",
+      "picture": "图片",
+      "pictureChoose": "选择图片",
+      "pictureOther": "选择其他图片",
+      "pictureInvalid": "请选择不超过 {{max}} MB 的 PNG、WebP 或 GIF 图片。",
+      "template": {
+        "frame": "请按 {{width}} × {{height}} 像素、透明背景绘制。头像位于中央，占画面的七分之五；耳朵、王冠、叶子等装饰放在外圈。中央部分会保持空白，不会遮住头像。支持 PNG、WebP 或 GIF，静态或动态均可，最大 {{max}} MB。",
+        "effect": "请按 {{width}} × {{height}} 像素、透明背景绘制一个小图案：一颗心、一片叶子或一颗星星。几个这样的图案会按你在下方选择的方式在个人资料上移动，尺寸很小，不会影响阅读。支持 PNG、WebP 或 GIF，静态或动态均可，最大 {{max}} MB。",
+        "nameplate": "请按 {{width}} × {{height}} 像素绘制。名牌铺满名字后方的整行，并向左渐隐，因此请把重点放在右端。支持 PNG、WebP 或 GIF，静态或动态均可，最大 {{max}} MB。"
+      },
+      "look": "外观",
+      "looks": {
+        "gradient": "渐变",
+        "flow": "流光",
+        "wave": "波浪",
+        "sticker": "贴纸",
+        "comic": "漫画",
+        "retro": "复古",
+        "glitch": "故障"
+      },
+      "colors": "颜色",
+      "motion": "移动方式",
+      "motions": {
+        "fall": "飘落",
+        "tumble": "翻滚",
+        "rise": "上升",
+        "float": "漂浮",
+        "twinkle": "闪烁"
+      },
+      "colorNumber": "颜色 {{number}}",
+      "name": "名称",
+      "shareLabel": "分享到社区",
+      "shareHint": "它会以你的名字出现在此服务器的画廊中，这里的任何人都可以佩戴。你可以随时将其撤下。",
+      "create": "制作",
+      "removeTitle": "移除“{{name}}”",
+      "removeText": "它将从画廊中消失，所有佩戴者也将失去它。制作者会收到原因及申诉方式。",
+      "removeGround": "违反了",
+      "removeReason": "告知制作者的原因",
+      "remove": "移除",
+      "search": "按名称搜索",
+      "sortLabel": "排序",
+      "sort": {
+        "popular": "热门",
+        "new": "最新"
+      },
+      "noMatches": "画廊中没有名称包含该内容的设计。",
+      "galleryEmpty": "还没有人分享过。去“我的”里制作一个并分享吧。",
+      "more": "显示更多",
+      "by": "作者：{{name}}",
+      "wearers_other": "{{formatted}} 人佩戴",
+      "report": "举报",
+      "count": "已制作 {{made}}/{{max}}",
+      "full": "你已制作 {{max}} 个，已达上限。删除一个后才能制作新的。",
+      "mineEmpty": {
+        "frame": "你还没有制作头像框。",
+        "effect": "你还没有制作特效。",
+        "nameplate": "你还没有制作名牌。",
+        "name": "你还没有制作名字样式。"
+      },
+      "sharedWearers_other": "已分享 · {{formatted}} 人佩戴",
+      "private": "仅自己可用",
+      "share": "分享到社区",
+      "unshare": "从画廊撤下",
+      "delete": "删除",
+      "deleteTitle": "删除“{{name}}”？",
+      "deleteText": "它将从所有佩戴者身上消失，且无法恢复。"
     }
   },
   "privacy": {

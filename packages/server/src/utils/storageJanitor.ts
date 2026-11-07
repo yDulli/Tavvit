@@ -17,6 +17,7 @@ import { profileImageFilenames } from './profileImageRefs.js';
 import { renameLegacyUploads } from './legacyUploadNames.js';
 import { removeUnusedSoundFiles } from './soundFiles.js';
 import { removeUnusedEmojiFiles } from './spaceExpressions.js';
+import { removeUnusedDecorationFiles } from './customDecorations.js';
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico', '.bmp', '.avif']);
 const VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.avi', '.mkv']);
@@ -959,6 +960,15 @@ export async function runFederationJanitor(): Promise<void> {
       if (emoji > 0) console.log(`[storage-janitor] Removed ${emoji} emoji file(s) without an emoji`);
     } catch (err) {
       console.error('[storage-janitor] Removing unused emoji files failed:', err);
+    }
+
+    // Pictures of decorations people made that no design names: the same hour first, as a design
+    // being made has its files before its row.
+    try {
+      const decorations = removeUnusedDecorationFiles(60 * 60 * 1000);
+      if (decorations > 0) console.log(`[storage-janitor] Removed ${decorations} decoration file(s) without a design`);
+    } catch (err) {
+      console.error('[storage-janitor] Removing unused decoration files failed:', err);
     }
 
     // Expire approval requests:

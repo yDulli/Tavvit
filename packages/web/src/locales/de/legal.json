@@ -206,7 +206,8 @@
         "dm_message": "Direktnachricht",
         "user": "Person",
         "space": "Space",
-        "link": "Adresse"
+        "link": "Adresse",
+        "decoration": "Dekoration"
       },
       "unknownAuthor": "Unbekannter Verfasser",
       "attachments": "Anhänge: {{names}}",

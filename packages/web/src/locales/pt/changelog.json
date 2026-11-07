@@ -4,6 +4,15 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.38.0": {
+      "title": "Decorações feitas por você",
+      "items": {
+        "make": "Crie suas próprias decorações: uma moldura ou uma placa de nome a partir de uma imagem que você envia (PNG, WebP ou GIF, animada ou não), um efeito a partir de uma peça pequena que atravessa seu perfil do jeito que você escolher (caindo, rodopiando, subindo, flutuando ou cintilando) e um estilo de nome a partir de um visual e das suas cores.",
+        "share": "Compartilhe-as na galeria da comunidade do seu servidor, ordenada por populares ou novas e com busca por nome, onde todos podem usá-las com um clique. Cada uma mostra quem a fez e quantas pessoas a usam.",
+        "safe": "Nada do que você cria pode cobrir um perfil: uma moldura deixa a foto livre, as peças de um efeito são pequenas e poucas, e uma placa de nome some antes do nome.",
+        "report": "Qualquer pessoa pode denunciar um design, e administradores podem removê-lo com um motivo que é informado a quem o fez. Um design removido some na hora de todos que o usavam."
+      }
+    },
     "1.37.1": {
       "title": "Decorações, desenhadas",
       "items": {

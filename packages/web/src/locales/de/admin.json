@@ -606,7 +606,8 @@
         "accounts_export": "Konten exportiert",
         "audit_export": "Audit-Log exportiert",
         "peer_trust": "Vertrauen zu einer anderen Instanz geändert",
-        "space_vanity_revoke": "Einladungsadresse entzogen"
+        "space_vanity_revoke": "Einladungsadresse entzogen",
+        "decoration_remove": "Selbst gestaltete Dekoration entfernt"
       },
       "details": {
         "until": "Bis {{date}}",

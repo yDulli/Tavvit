@@ -206,7 +206,8 @@
         "dm_message": "私信",
         "user": "用户",
         "space": "空间",
-        "link": "地址"
+        "link": "地址",
+        "decoration": "装饰"
       },
       "unknownAuthor": "作者未知",
       "attachments": "附件：{{names}}",

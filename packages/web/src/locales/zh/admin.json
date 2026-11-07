@@ -590,7 +590,8 @@
         "accounts_export": "导出了账号",
         "audit_export": "导出了审计日志",
         "peer_trust": "更改了对其他实例的信任",
-        "space_vanity_revoke": "收回了一个邀请地址"
+        "space_vanity_revoke": "收回了一个邀请地址",
+        "decoration_remove": "移除了用户制作的装饰"
       },
       "details": {
         "until": "直至 {{date}}",

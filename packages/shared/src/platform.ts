@@ -319,6 +319,8 @@ export const PLATFORM_AUDIT_ACTIONS = [
   'backup_create',
   'accounts_export',
   'audit_export',
+  /** A decoration someone made, taken out of the gallery and off everyone who wore it (decorations.md). */
+  'decoration_remove',
 ] as const;
 export type PlatformAuditAction = (typeof PLATFORM_AUDIT_ACTIONS)[number];
 

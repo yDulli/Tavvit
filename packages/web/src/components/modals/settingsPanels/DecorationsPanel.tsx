@@ -1,67 +1,94 @@
-import { useId, useState, type CSSProperties, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { User } from '@backspace/shared';
 import {
   AVATAR_FRAMES,
-  DECORATION_FIELDS,
   NAME_EFFECTS,
   NAME_FONTS,
   NAMEPLATES,
   PROFILE_EFFECTS,
-  decorationsOf,
-  type AvatarFrame,
   type DecorationsUpdate,
-  type NameEffect,
   type NameFont,
-  type Nameplate,
-  type ProfileDecorations,
-  type ProfileEffect,
 } from '@backspace/shared/src/decorations';
+import { customDecorationRef, type CustomDecorationKind, type CustomDecorationRef } from '@backspace/shared/src/customDecorations';
 import { api } from '../../../api/client';
 import { describeError } from '../../../i18n/errors';
 import { useAuthStore } from '../../../stores/authStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { cssUrl } from '../../../utils/cssUrl';
-import { decorationColors } from '../../../utils/decorations';
+import {
+  decorationColors,
+  isMadeDesign,
+  personDecorations,
+  type EffectChoice,
+  type FrameChoice,
+  type NameEffectChoice,
+  type NameplateChoice,
+  type PersonDecorations,
+} from '../../../utils/decorations';
 import { getAvatarGradient } from '../../../utils/gradients';
 import { bannerFill } from '../../../utils/placeLight';
 import { bannerBackground, profileThemeOf } from '../../../utils/profileTheme';
 import { Avatar } from '../../ui/Avatar';
 import { DecoratedName, NameplateLayer, ProfileEffectLayer } from '../../ui/Decorations';
 import { FormError, OptionCards, SegmentedControl, SettingsField, SettingsPage, type ChoiceOption } from './_shared/SettingsControls';
+import { DesignPreview, type DesignChoice, type PreviewLook } from './decorations/DesignPreview';
+import { CommunityGallery, MyDesigns } from './decorations/MadeDesigns';
 
 const NONE = 'none';
-type Choice<T extends string> = T | typeof NONE;
 
-const fromChoice = <T extends string>(choice: Choice<T>): T | null => (choice === NONE ? null : choice as T);
-
-/** Each picker's choices, "none" first; the classic font is the name's "none". */
-const FRAME_CHOICES: readonly Choice<AvatarFrame>[] = [NONE, ...AVATAR_FRAMES];
-const EFFECT_CHOICES: readonly Choice<ProfileEffect>[] = [NONE, ...PROFILE_EFFECTS];
-const NAMEPLATE_CHOICES: readonly Choice<Nameplate>[] = [NONE, ...NAMEPLATES];
-const NAME_EFFECT_CHOICES: readonly Choice<NameEffect>[] = [NONE, ...NAME_EFFECTS];
-
-type Category = 'frame' | 'effect' | 'nameplate' | 'name';
+type Category = CustomDecorationKind;
 const CATEGORIES: readonly Category[] = ['frame', 'effect', 'nameplate', 'name'];
 
-/** What the person tries on. */
+/** Where the designs offered come from: Tavvit's own, the community's gallery, the person's own. */
+type Source = 'tavvit' | 'community' | 'mine';
+const SOURCES: readonly Source[] = ['tavvit', 'community', 'mine'];
+
+/** What the person tries on: Tavvit's designs by name, or designs someone made. */
 interface Trying {
-  frame: AvatarFrame | null;
-  effect: ProfileEffect | null;
-  nameplate: Nameplate | null;
+  frame: FrameChoice | null;
+  effect: EffectChoice | null;
+  nameplate: NameplateChoice | null;
   font: NameFont | null;
-  nameEffect: NameEffect | null;
+  nameEffect: NameEffectChoice | null;
 }
 
-/** The person as the previews draw them. */
-interface Look {
-  user: User;
-  name: string;
-  banner: CSSProperties;
-  colors: { a: string; b: string };
+/** The field each category tries a design on in. */
+const FIELD_OF: Readonly<Record<Category, 'frame' | 'effect' | 'nameplate' | 'nameEffect'>> = {
+  frame: 'frame',
+  effect: 'effect',
+  nameplate: 'nameplate',
+  name: 'nameEffect',
+};
+
+/** Tavvit's designs of each kind, "none" first. */
+const BUILT_IN: Readonly<Record<Category, readonly string[]>> = {
+  frame: [NONE, ...AVATAR_FRAMES],
+  effect: [NONE, ...PROFILE_EFFECTS],
+  nameplate: [NONE, ...NAMEPLATES],
+  name: [NONE, ...NAME_EFFECTS],
+};
+
+/** Where each kind's labels are in the catalog. */
+const LABELS: Readonly<Record<Category, string>> = { frame: 'frames', effect: 'effects', nameplate: 'nameplates', name: 'nameEffects' };
+
+/** How a choice is stored and compared: a design's name, or a made design's reference. */
+function keyOf(choice: DesignChoice | null): string | null {
+  if (choice === null) return null;
+  return isMadeDesign(choice) ? customDecorationRef(choice.id) : choice;
 }
 
-function lookOf(user: User): Look {
+function tryingOf(decorations: PersonDecorations): Trying {
+  return {
+    frame: decorations.avatarFrame,
+    effect: decorations.profileEffect,
+    nameplate: decorations.nameplate,
+    font: decorations.nameFont,
+    nameEffect: decorations.nameEffect,
+  };
+}
+
+function lookOf(user: User): PreviewLook {
   const name = user.displayName?.trim() || user.username;
   const tile = getAvatarGradient(user.homeUserId ?? user.id, name, user.avatarColor);
   const theme = profileThemeOf(user);
@@ -76,7 +103,7 @@ function lookOf(user: User): Look {
 }
 
 /** The three places a decoration shows: the profile, a member list, a conversation. */
-function Preview({ look, trying }: { look: Look; trying: Trying }) {
+function Preview({ look, trying }: { look: PreviewLook; trying: Trying }) {
   const { t } = useTranslation(['settings', 'common']);
   const name = (motion: 'on' | 'hover') => (
     <DecoratedName font={trying.font} effect={trying.nameEffect} colors={look.colors} motion={motion}>{look.name}</DecoratedName>
@@ -133,9 +160,10 @@ function Preview({ look, trying }: { look: Look; trying: Trying }) {
 }
 
 /**
- * Settings → Decorations (docs/systems/decorations.md): a frame for the picture, an effect over
- * the banner, a nameplate in lists and a style for the name, each tried on in the preview before
- * it is chosen. Free for everyone; the designs are Tavvit's own and drawn from a name.
+ * Settings → Decorations (docs/systems/decorations.md): a frame for the picture, an effect over the
+ * profile, a nameplate in lists and a style for the name, each tried on in the preview before it is
+ * chosen. Free for everyone: Tavvit's own designs, the community's gallery of designs people made
+ * and shared, and the person's own, which they make here.
  */
 export function DecorationsPanel() {
   const { t } = useTranslation(['settings', 'common']);
@@ -143,49 +171,52 @@ export function DecorationsPanel() {
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const addToast = useUIStore((s) => s.addToast);
   const categoryLabel = useId();
+  const sourceLabel = useId();
   const pickerLabel = useId();
   const fontLabel = useId();
-  const stored = decorationsOf(user);
-  const storedKey = DECORATION_FIELDS.map((field) => stored[field] ?? '').join('|');
+  const stored = personDecorations(user, user?.displayName?.trim() || user?.username || '');
+  const storedKey = [keyOf(stored.avatarFrame), keyOf(stored.profileEffect), keyOf(stored.nameplate), stored.nameFont, keyOf(stored.nameEffect)].join('|');
   const [category, setCategory] = useState<Category>('frame');
-  const [frame, setFrame] = useState<Choice<AvatarFrame>>(stored.avatarFrame ?? NONE);
-  const [effect, setEffect] = useState<Choice<ProfileEffect>>(stored.profileEffect ?? NONE);
-  const [nameplate, setNameplate] = useState<Choice<Nameplate>>(stored.nameplate ?? NONE);
-  const [font, setFont] = useState<NameFont>(stored.nameFont ?? 'classic');
-  const [nameEffect, setNameEffect] = useState<Choice<NameEffect>>(stored.nameEffect ?? NONE);
+  const [sources, setSources] = useState<Record<Category, Source>>({ frame: 'tavvit', effect: 'tavvit', nameplate: 'tavvit', name: 'tavvit' });
+  const [trying, setTrying] = useState<Trying>(() => tryingOf(stored));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  const resetTo = (source: ProfileDecorations) => {
-    setFrame(source.avatarFrame ?? NONE);
-    setEffect(source.profileEffect ?? NONE);
-    setNameplate(source.nameplate ?? NONE);
-    setFont(source.nameFont ?? 'classic');
-    setNameEffect(source.nameEffect ?? NONE);
-  };
 
   // What is stored changed (this save, or another device's): the choices start from it again.
   const [seenKey, setSeenKey] = useState(storedKey);
   if (seenKey !== storedKey) {
     setSeenKey(storedKey);
-    resetTo(stored);
+    setTrying(tryingOf(stored));
   }
 
   if (!user) return null;
   const look = lookOf(user);
-  const trying: Trying = {
-    frame: fromChoice(frame),
-    effect: fromChoice(effect),
-    nameplate: fromChoice(nameplate),
-    font: font === 'classic' ? null : font,
-    nameEffect: fromChoice(nameEffect),
+  const source = sources[category];
+  const field = FIELD_OF[category];
+  const current = trying[field];
+
+  const tryOn = (kind: Category, choice: DesignChoice | null) => {
+    setTrying((now) => ({ ...now, [FIELD_OF[kind]]: choice }));
   };
+  // A design that went lets go of whatever tried it on.
+  const gone = (id: string) => {
+    setTrying((now) => {
+      const next = { ...now };
+      for (const key of ['frame', 'effect', 'nameplate', 'nameEffect'] as const) {
+        const choice = next[key];
+        if (isMadeDesign(choice) && choice.id === id) next[key] = null;
+      }
+      return next;
+    });
+  };
+
+  const wire = (choice: DesignChoice | null) => keyOf(choice) as CustomDecorationRef | null;
   const changes: DecorationsUpdate = {};
-  if (trying.frame !== stored.avatarFrame) changes.avatarFrame = trying.frame;
-  if (trying.effect !== stored.profileEffect) changes.profileEffect = trying.effect;
-  if (trying.nameplate !== stored.nameplate) changes.nameplate = trying.nameplate;
+  if (keyOf(trying.frame) !== keyOf(stored.avatarFrame)) changes.avatarFrame = wire(trying.frame) as DecorationsUpdate['avatarFrame'];
+  if (keyOf(trying.effect) !== keyOf(stored.profileEffect)) changes.profileEffect = wire(trying.effect) as DecorationsUpdate['profileEffect'];
+  if (keyOf(trying.nameplate) !== keyOf(stored.nameplate)) changes.nameplate = wire(trying.nameplate) as DecorationsUpdate['nameplate'];
   if (trying.font !== stored.nameFont) changes.nameFont = trying.font;
-  if (trying.nameEffect !== stored.nameEffect) changes.nameEffect = trying.nameEffect;
+  if (keyOf(trying.nameEffect) !== keyOf(stored.nameEffect)) changes.nameEffect = wire(trying.nameEffect) as DecorationsUpdate['nameEffect'];
   const hasChanges = Object.keys(changes).length > 0;
 
   const handleSave = async () => {
@@ -202,98 +233,46 @@ export function DecorationsPanel() {
   };
 
   const handleReset = () => {
-    resetTo(stored);
+    setTrying(tryingOf(stored));
     setError('');
   };
 
-  const option = <T extends string>(id: T, label: string, preview: ReactNode): ChoiceOption<T> => ({ id, label, preview });
-  const avatarProps = { src: user.avatar, name: look.name, userId: user.homeUserId ?? user.id, user };
+  const option = (id: string, label: string, preview: ReactNode): ChoiceOption<string> => ({ id, label, preview });
+  const builtInValue = current !== null && !isMadeDesign(current) ? current : NONE;
+  const hints: Record<Category, string> = {
+    frame: t('settings:decorations.frameHint'),
+    effect: t('settings:decorations.effectHint'),
+    nameplate: t('settings:decorations.nameplateHint'),
+    name: t('settings:decorations.nameEffectHint'),
+  };
+  const designsProps = {
+    kind: category,
+    look,
+    font: trying.font,
+    selectedId: isMadeDesign(current) ? current.id : null,
+    onSelect: (design: DesignChoice) => tryOn(category, design),
+    onGone: gone,
+  };
 
-  let picker: ReactNode;
-  switch (category) {
-    case 'frame':
-      picker = (
-        <SettingsField label={t('settings:decorations.categories.frame')} hint={t('settings:decorations.frameHint')} labelId={pickerLabel}>
-          <OptionCards
-            labelledBy={pickerLabel}
-            value={frame}
-            onChange={setFrame}
-            columns={4}
-            options={FRAME_CHOICES.map((id) => option(id, t(`settings:decorations.frames.${id}`), (
-              <Avatar {...avatarProps} size={32} frame={fromChoice<AvatarFrame>(id)} frameMotion="on" />
-            )))}
-          />
-        </SettingsField>
-      );
-      break;
-    case 'effect':
-      picker = (
-        <SettingsField label={t('settings:decorations.categories.effect')} hint={t('settings:decorations.effectHint')} labelId={pickerLabel}>
-          <OptionCards
-            labelledBy={pickerLabel}
-            value={effect}
-            onChange={setEffect}
-            columns={4}
-            options={EFFECT_CHOICES.map((id) => option(id, t(`settings:decorations.effects.${id}`), (
-              <span className="relative block h-full w-full" style={{ ...look.banner, '--deco-scale': 0.5 } as CSSProperties}>
-                <ProfileEffectLayer effect={fromChoice<ProfileEffect>(id)} />
-              </span>
-            )))}
-          />
-        </SettingsField>
-      );
-      break;
-    case 'nameplate':
-      picker = (
-        <SettingsField label={t('settings:decorations.categories.nameplate')} hint={t('settings:decorations.nameplateHint')} labelId={pickerLabel}>
-          <OptionCards
-            labelledBy={pickerLabel}
-            value={nameplate}
-            onChange={setNameplate}
-            columns={3}
-            options={NAMEPLATE_CHOICES.map((id) => option(id, t(`settings:decorations.nameplates.${id}`), (
-              <span className="relative isolate flex h-full w-full items-center gap-2 bg-surface-channel px-2.5">
-                <NameplateLayer nameplate={fromChoice<Nameplate>(id)} colors={look.colors} />
-                <Avatar {...avatarProps} size={22} />
-                <span className="truncate text-meta font-medium text-txt-primary">{look.name}</span>
-              </span>
-            )))}
-          />
-        </SettingsField>
-      );
-      break;
-    case 'name':
-      picker = (
-        <>
-          <SettingsField label={t('settings:decorations.nameFont')} hint={t('settings:decorations.nameFontHint')} labelId={fontLabel}>
-            <OptionCards
-              labelledBy={fontLabel}
-              value={font}
-              onChange={setFont}
-              columns={4}
-              options={NAME_FONTS.map((id) => option(id, t(`settings:decorations.fonts.${id}`), (
-                <DecoratedName font={id === 'classic' ? null : id} effect={null} colors={look.colors} className="truncate px-2 text-ui font-semibold text-txt-primary">
-                  {look.name}
-                </DecoratedName>
-              )))}
-            />
-          </SettingsField>
-          <SettingsField label={t('settings:decorations.nameEffect')} hint={t('settings:decorations.nameEffectHint')} labelId={pickerLabel}>
-            <OptionCards
-              labelledBy={pickerLabel}
-              value={nameEffect}
-              onChange={setNameEffect}
-              columns={4}
-              options={NAME_EFFECT_CHOICES.map((id) => option(id, t(`settings:decorations.nameEffects.${id}`), (
-                <DecoratedName font={trying.font} effect={fromChoice<NameEffect>(id)} colors={look.colors} className="truncate px-2 text-ui font-semibold text-txt-primary">
-                  {look.name}
-                </DecoratedName>
-              )))}
-            />
-          </SettingsField>
-        </>
-      );
-      break;
+  let designs: ReactNode;
+  if (source === 'community') {
+    designs = <CommunityGallery key={category} {...designsProps} />;
+  } else if (source === 'mine') {
+    designs = <MyDesigns key={category} {...designsProps} />;
+  } else {
+    designs = (
+      <OptionCards
+        labelledBy={pickerLabel}
+        value={builtInValue}
+        onChange={(id) => tryOn(category, id === NONE ? null : (id as DesignChoice))}
+        columns={category === 'nameplate' ? 3 : 4}
+        options={BUILT_IN[category].map((id) => option(
+          id,
+          t(`settings:decorations.${LABELS[category]}.${id}` as 'settings:decorations.frames.none'),
+          <DesignPreview kind={category} design={id === NONE ? null : (id as DesignChoice)} look={look} font={trying.font} />,
+        ))}
+      />
+    );
   }
 
   return (
@@ -312,7 +291,45 @@ export function DecorationsPanel() {
             options={CATEGORIES.map((id) => ({ id, label: t(`settings:decorations.categories.${id}`) }))}
           />
         </div>
-        {picker}
+
+        {category === 'name' && (
+          <SettingsField label={t('settings:decorations.nameFont')} hint={t('settings:decorations.nameFontHint')} labelId={fontLabel}>
+            <OptionCards
+              labelledBy={fontLabel}
+              value={trying.font ?? 'classic'}
+              onChange={(id) => setTrying((now) => ({ ...now, font: id === 'classic' ? null : id }))}
+              columns={4}
+              options={NAME_FONTS.map((id) => ({
+                id,
+                label: t(`settings:decorations.fonts.${id}`),
+                preview: (
+                  <DecoratedName font={id === 'classic' ? null : id} effect={null} colors={look.colors} className="truncate px-2 text-ui font-semibold text-txt-primary">
+                    {look.name}
+                  </DecoratedName>
+                ),
+              }))}
+            />
+          </SettingsField>
+        )}
+
+        <SettingsField
+          label={category === 'name' ? t('settings:decorations.nameEffect') : t(`settings:decorations.categories.${category}`)}
+          hint={hints[category]}
+          labelId={pickerLabel}
+        >
+          <div className="space-y-3">
+            <div>
+              <div id={sourceLabel} className="sr-only">{t('settings:decorations.sources.label')}</div>
+              <SegmentedControl
+                labelledBy={sourceLabel}
+                value={source}
+                onChange={(next) => setSources((now) => ({ ...now, [category]: next }))}
+                options={SOURCES.map((id) => ({ id, label: t(`settings:decorations.sources.${id}`) }))}
+              />
+            </div>
+            {designs}
+          </div>
+        </SettingsField>
       </div>
 
       {/* What is unsaved, and what went wrong saving it, stay in view while the choices scroll. */}

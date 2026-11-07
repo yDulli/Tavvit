@@ -30,6 +30,7 @@ import { generateSnowflake } from '../utils/snowflake.js';
 import { platformActors, recordPlatformAudit } from '../utils/platformAudit.js';
 import { applySuspension } from '../utils/accountActions.js';
 import { decideDiscovery, isReviewRefusal } from '../utils/spaceReview.js';
+import { removeCustomDecoration } from '../utils/customDecorations.js';
 import { announceReviewStep } from '../utils/reviewNotify.js';
 import { SOURCE_DOWNLOAD_PREFIX, sourceDownloadDir } from '../utils/sourceOffer.js';
 import {
@@ -333,7 +334,15 @@ export async function legalRoutes(app: FastifyInstance): Promise<void> {
     let subject: string | null = snapshot?.content ? snapshot.content.slice(0, NOTICE_EXCERPT_MAX) : null;
     let until: number | null = null;
 
-    if (decision === 'content_removed') {
+    if (decision === 'content_removed' && report.targetType === 'decoration') {
+      // A design someone made: it goes from the gallery and from everyone who wore it. Already gone is fine.
+      if (!report.targetId) return sendError(reply, 400, 'report_decision_invalid');
+      await removeCustomDecoration(report.targetId);
+      const maker = snapshot?.authorId
+        ? db.select({ id: schema.users.id, isDeleted: schema.users.isDeleted }).from(schema.users).where(eq(schema.users.id, snapshot.authorId)).get()
+        : undefined;
+      affectedUser = maker && maker.isDeleted !== 1 ? maker.id : null;
+    } else if (decision === 'content_removed') {
       if ((report.targetType !== 'message' && report.targetType !== 'dm_message') || !report.targetId) {
         return sendError(reply, 400, 'report_decision_invalid');
       }

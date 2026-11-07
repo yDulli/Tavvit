@@ -47,6 +47,8 @@ import type {
   UserNoticeListResponse,
 } from '@backspace/shared/src/legal';
 import type { PersonalSticker } from '@backspace/shared/src/stickers';
+import type { CreateCustomDecorationRequest, CustomDecoration, CustomDecorationKind, CustomDecorationPage, CustomDecorationSort, UpdateCustomDecorationRequest } from '@backspace/shared/src/customDecorations';
+import type { ReportGround } from '@backspace/shared/src/legal';
 import type { ProfileImageRequest, ProfileImageResponse } from '@backspace/shared/src/profileImage';
 import type { CustomEmoji } from '@backspace/shared/src/customEmoji';
 import type { DiscordImportApplyRequest, DiscordImportPreview, DiscordImportPreviewRequest, DiscordImportResult } from '@backspace/shared/src/discordImport';
@@ -900,6 +902,17 @@ export class BackspaceApiClient {
     remove: (id: string) => Promise<{ success: boolean }>;
   };
 
+  /** Decorations people make, and the community's gallery of them (docs/systems/decorations.md). */
+  decorations: {
+    gallery: (query: { kind: CustomDecorationKind; sort: CustomDecorationSort; q?: string; offset?: number }) => Promise<CustomDecorationPage>;
+    mine: () => Promise<{ items: CustomDecoration[]; max: number }>;
+    create: (data: CreateCustomDecorationRequest) => Promise<CustomDecoration>;
+    update: (id: string, data: UpdateCustomDecorationRequest) => Promise<CustomDecoration>;
+    remove: (id: string) => Promise<{ success: boolean }>;
+    /** An administrator takes someone's design away, with the reason told to its maker. */
+    adminRemove: (id: string, data: { reason: string; ground: ReportGround }) => Promise<{ success: boolean }>;
+  };
+
   constructor(baseUrl: string, getToken: () => string | null, onUnauthorized?: () => void) {
     /** Send a request and return the successful response; a failure throws. */
     async function send(
@@ -988,6 +1001,20 @@ export class BackspaceApiClient {
       collect: ({ id, token, name }) => request('POST', `/stickers/${encodeURIComponent(id)}/collect`, { token, name }),
       rename: (id, name) => request('PATCH', `/stickers/${encodeURIComponent(id)}`, { name }),
       remove: (id) => request('DELETE', `/stickers/${encodeURIComponent(id)}`),
+    };
+
+    this.decorations = {
+      gallery: ({ kind, sort, q, offset }) => {
+        const params = new URLSearchParams({ kind, sort });
+        if (q) params.set('q', q);
+        if (offset) params.set('offset', String(offset));
+        return request('GET', `/decorations?${params.toString()}`);
+      },
+      mine: () => request('GET', '/decorations/mine'),
+      create: (data) => request('POST', '/decorations', data),
+      update: (id, data) => request('PATCH', `/decorations/${encodeURIComponent(id)}`, data),
+      remove: (id) => request('DELETE', `/decorations/${encodeURIComponent(id)}`),
+      adminRemove: (id, data) => request('POST', `/admin/decorations/${encodeURIComponent(id)}/remove`, data),
     };
 
     this.bots = {

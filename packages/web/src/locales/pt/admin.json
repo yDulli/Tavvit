@@ -623,7 +623,8 @@
         "accounts_export": "Exportou as contas",
         "audit_export": "Exportou o registro de auditoria",
         "peer_trust": "Alterou a confiança em outra instância",
-        "space_vanity_revoke": "Retirou um endereço de convite"
+        "space_vanity_revoke": "Retirou um endereço de convite",
+        "decoration_remove": "Removeu uma decoração criada por alguém"
       },
       "details": {
         "until": "Até {{date}}",

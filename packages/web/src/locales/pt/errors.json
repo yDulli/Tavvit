@@ -456,5 +456,11 @@
   "space_sticker_name_taken": "Este espaço já tem uma figurinha com esse nome.",
   "space_emoji_not_found": "Esse emoji não existe mais.",
   "space_sticker_not_found": "Essa figurinha não existe mais.",
-  "emoji_unavailable": "Este emoji pertence a um espaço do qual você não faz parte."
+  "emoji_unavailable": "Este emoji pertence a um espaço do qual você não faz parte.",
+  "decoration_not_found": "Essa decoração não existe mais.",
+  "decoration_name_invalid": "Dê à decoração um nome de 1 a {{max}} caracteres em uma linha.",
+  "decoration_image_invalid": "Envie uma imagem PNG, WebP ou GIF de no máximo {{max}} MB.",
+  "decoration_limit_reached": "Você pode manter no máximo {{max}} decorações próprias. Exclua uma para criar outra.",
+  "decoration_style_invalid": "Esse estilo de nome não pode ser desenhado. Escolha o visual e as cores de novo.",
+  "decoration_reason_invalid": "Informe um motivo de {{min}} a {{max}} caracteres."
 }

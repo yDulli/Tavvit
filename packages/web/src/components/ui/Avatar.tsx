@@ -4,6 +4,8 @@ import type { AvatarFrame } from '@backspace/shared/src/decorations';
 import { decorationColors } from '../../utils/decorations';
 import { getAvatarGradient, getSpaceGradient } from '../../utils/gradients';
 import { FRAME_LAYERS, FRAME_VIEW, frameArt, type FrameLayer } from './decorationArt';
+import { MadeFrame } from './MadeDecorationArt';
+import { isMadeDesign, type FrameChoice } from '../../utils/decorations';
 import { useGatedPicture } from './ExternalMedia';
 
 interface AvatarProps {
@@ -28,7 +30,7 @@ interface AvatarProps {
    * picture (headphones, ears, a crown, a wreath), partly behind it and partly
    * in front, drawn over the space around it without taking any.
    */
-  frame?: AvatarFrame | null;
+  frame?: FrameChoice | null;
   /**
    * When the frame moves: `on` always (a profile, the picker), `hover` while the
    * row or card around it (`.deco-hover`) is pointed at (a list, a message),
@@ -39,6 +41,18 @@ interface AvatarProps {
 
 /** When a decoration moves (`styles/decorations.css`, "Where they move"). */
 export type DecorationMotion = 'on' | 'hover' | 'off';
+
+/**
+ * The status dot's cutout in a frame's view (a fifth larger than the avatar on every side), so a
+ * frame, drawn or made, never covers the dot. Undefined without a dot.
+ */
+function frameDotMask(size: number, outerSize: number, ringWidth: number, status: AvatarProps['status']): string | undefined {
+  if (!status) return undefined;
+  const { dot, gap, inset } = getDotMetrics(size, ringWidth);
+  const centre = outerSize - inset + outerSize * 0.2;
+  const hole = dot / 2 + gap;
+  return `radial-gradient(circle at ${centre}px ${centre}px, transparent ${hole}px, black ${hole + 0.5}px)`;
+}
 
 /**
  * One layer of a frame's drawing (`decorationArt.tsx`): a view a fifth larger
@@ -57,13 +71,7 @@ function FrameArt({ frame, layer, size, outerSize, ringWidth, status, motion, co
   motion: DecorationMotion;
   colors: { a: string; b: string };
 }) {
-  let mask: string | undefined;
-  if (status) {
-    const { dot, gap, inset } = getDotMetrics(size, ringWidth);
-    const centre = outerSize - inset + outerSize * 0.2;
-    const hole = dot / 2 + gap;
-    mask = `radial-gradient(circle at ${centre}px ${centre}px, transparent ${hole}px, black ${hole + 0.5}px)`;
-  }
+  const mask = frameDotMask(size, outerSize, ringWidth, status);
   return (
     <svg
       aria-hidden="true"
@@ -163,11 +171,16 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
     : undefined;
 
   const { dot: dotDiameter, inset: dotInset } = getDotMetrics(size, ringWidth);
-  // A frame's drawing has a layer behind the picture, one over it, or both.
-  const frameColors = frame ? decorationColors({ accentColor: user?.accentColor, accentColorSecondary: user?.accentColorSecondary }, gradient) : null;
-  const artLayer = (layer: FrameLayer) => frame && frameColors && FRAME_LAYERS[frame].includes(layer) && (
-    <FrameArt frame={frame} layer={layer} size={size} outerSize={outerSize} ringWidth={ringWidth} status={status} motion={frameMotion} colors={frameColors} />
+  // A drawn frame has a layer behind the picture, one over it, or both; a frame someone made is one
+  // picture over it (MadeDecorationArt.tsx).
+  const drawn = frame !== null && !isMadeDesign(frame) ? frame : null;
+  const frameColors = drawn ? decorationColors({ accentColor: user?.accentColor, accentColorSecondary: user?.accentColorSecondary }, gradient) : null;
+  const artLayer = (layer: FrameLayer) => drawn && frameColors && FRAME_LAYERS[drawn].includes(layer) && (
+    <FrameArt frame={drawn} layer={layer} size={size} outerSize={outerSize} ringWidth={ringWidth} status={status} motion={frameMotion} colors={frameColors} />
   );
+  const madeFrame = isMadeDesign(frame) ? (
+    <MadeFrame view={frame} motion={frameMotion} mask={frameDotMask(size, outerSize, ringWidth, status)} />
+  ) : null;
 
   return (
     <div
@@ -212,6 +225,7 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
         </div>
       </div>
       {artLayer('front')}
+      {madeFrame}
       {/* Status dot — outside the masked div so it isn't clipped */}
       {status && (
         <svg

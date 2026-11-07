@@ -52,6 +52,23 @@ describe('DecorationsPanel', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Save' })).toBeNull());
   });
 
+  it('wears a design from the community by its reference', async () => {
+    const design = {
+      id: '77', kind: 'frame' as const, name: 'Ruby ring', image: '/api/decorations/77.webp', still: null, style: null, motion: null,
+      creator: { id: 'bob', username: 'bob', displayName: 'Bob' }, shared: true, wearers: 3, createdAt: 1, mine: false,
+    };
+    const gallery = vi.spyOn(api.decorations, 'gallery').mockResolvedValue({ items: [design], total: 1 });
+    const user = userEvent.setup();
+    render(<DecorationsPanel />);
+    await user.click(within(screen.getByRole('radiogroup', { name: 'Where the designs come from' })).getByRole('radio', { name: 'Community' }));
+    await waitFor(() => expect(gallery).toHaveBeenCalledWith(expect.objectContaining({ kind: 'frame' })));
+    await user.click(await screen.findByRole('button', { name: /Ruby ring/ }));
+    await user.click(await screen.findByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(update).toHaveBeenCalledOnce());
+    expect(update.mock.calls[0]![0]).toEqual({ avatarFrame: 'custom:77' });
+  });
+
   it('starts from what the person has, takes one off with null, and resets to it', async () => {
     useAuthStore.setState({ user: self({ avatarFrame: 'crown', nameplate: 'vinyl' }) });
     const user = userEvent.setup();

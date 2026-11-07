@@ -206,7 +206,8 @@
         "dm_message": "личное сообщение",
         "user": "человек",
         "space": "пространство",
-        "link": "адрес"
+        "link": "адрес",
+        "decoration": "украшение"
       },
       "unknownAuthor": "Автор неизвестен",
       "attachments": "Вложения: {{names}}",

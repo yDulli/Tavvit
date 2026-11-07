@@ -3,6 +3,7 @@ import { eq, or, and, inArray, isNotNull } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { forgetReplicaProjection } from '../ws/replicaPresence.js';
 import { attachmentHeldByMessage, profileImageFilenames, uploadNameOf } from './profileImageRefs.js';
+import { removeDecorationsOfUser } from './customDecorations.js';
 
 export interface DeletionBroadcastTargets {
   /** Space IDs the user is a member of (for member_left broadcasts) */
@@ -114,6 +115,10 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
 
   const user = db.select().from(schema.users).where(eq(schema.users.id, uid)).get();
   if (!user) return [];
+
+  // The decorations they made go from the gallery and from everyone who wore them; the tombstone
+  // keeps the row, so the foreign key's cascade never fires (utils/customDecorations.ts).
+  removeDecorationsOfUser(uid);
 
   // Their bots stop with them: a program must not outlive the person who answers for it. Open
   // sockets go at the next check (`revalidateSockets`), which finds no bot any more.

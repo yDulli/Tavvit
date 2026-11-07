@@ -4,6 +4,15 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.38.0": {
+      "title": "Decorations you make",
+      "items": {
+        "make": "Make your own decorations: a frame or a nameplate from a picture you upload (PNG, WebP or GIF, moving or still), an effect from one small piece that moves across your profile the way you choose (falling, tumbling, rising, floating or twinkling), and a name style from a look and your colours.",
+        "share": "Share them in your server's community gallery, sorted by popular or new and searchable by name, where everyone can wear them with one click. Each shows who made it and how many wear it.",
+        "safe": "Nothing you make can cover a profile: a frame keeps clear of the picture, an effect's pieces are small and few, and a nameplate fades out before the name.",
+        "report": "Anyone can report a design, and administrators can remove one with a reason its maker is told. A removed design disappears from everyone who wore it at once."
+      }
+    },
     "1.37.1": {
       "title": "Decorations, drawn",
       "items": {

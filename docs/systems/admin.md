@@ -807,6 +807,7 @@ No foreign keys: an entry outlives its actor and its target. No retention: unlik
 | `settings_update` | `PATCH /api/settings/instance` and `PATCH /api/settings/streaming`, when a value changed | instance, id `settings` | -- | `{ fields }`: the names of the changed columns, never their values |
 | `invite_create`, `invite_update`, `invite_revoke`, `invite_reinstate`, `invite_delete` | `routes/invites.ts` | instance, the invite's id (labelled with its name, except on delete) | -- | reinstate: `{ tokenRotated }` |
 | `storage_cleanup` | `POST /api/admin/storage/cleanup` and `/cleanup-media`, not on a dry run | instance, id `storage` | -- | `{ kind, maxAgeDays?, deletedFiles, freedBytes }` |
+| `decoration_remove` | `POST /api/admin/decorations/:id/remove`, an administrator taking a decoration someone made away from its tile in the gallery ([decorations.md](decorations.md), "Made by people") | user, its maker (labelled with the design's name) | the reason its maker is told | `{ decoration, kind, ground }` |
 
 The owner's requests and withdrawals and the instance's own steps (an edit that moved a Discovery status, the migration) are not in this log; they are in the space's review history.
 

@@ -239,6 +239,13 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   sticker_elsewhere: 'A sticker can only come from this instance or from the instance the account lives on',
   sticker_collection_full: 'A sticker collection holds at most {{max}} stickers',
   sticker_name_invalid: 'Sticker names can be 1 to {{max}} characters on one line, with at least one visible character and no control characters.',
+  // decorations people make
+  decoration_not_found: 'Decoration not found',
+  decoration_name_invalid: 'A decoration needs a name of 1 to {{max}} characters on one line',
+  decoration_image_invalid: 'Upload a PNG, WebP or GIF picture of at most {{max}} MB',
+  decoration_limit_reached: 'You can keep at most {{max}} decorations of your own',
+  decoration_style_invalid: 'That is not a name style that can be drawn',
+  decoration_reason_invalid: 'Give a reason of {{min}} to {{max}} characters',
 
   federation_disabled: 'Federation is disabled on this instance',
   accent_color_low_contrast: 'The accent colour does not have enough contrast to be readable',

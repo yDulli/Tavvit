@@ -4,6 +4,15 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.38.0": {
+      "title": "Dekorationen selbst gemacht",
+      "items": {
+        "make": "Gestalte eigene Dekorationen: einen Rahmen oder ein Namensschild aus einem Bild, das du hochlädst (PNG, WebP oder GIF, bewegt oder still), einen Effekt aus einer kleinen Figur, die so über dein Profil zieht, wie du es wählst (fallend, taumelnd, steigend, schwebend oder funkelnd), und einen Namens-Stil aus einem Aussehen und deinen Farben.",
+        "share": "Teile sie in der Community-Galerie deines Servers, sortiert nach beliebt oder neu und nach Namen durchsuchbar; alle können sie dort mit einem Klick tragen. Bei jedem steht, wer es gemacht hat und wie viele es tragen.",
+        "safe": "Nichts davon kann ein Profil verdecken: Ein Rahmen lässt das Bild frei, die Figuren eines Effekts sind klein und wenige, und ein Namensschild läuft vor dem Namen aus.",
+        "report": "Jedes Design kann gemeldet werden, und Admins können eins mit einer Begründung entfernen, die der Ersteller erfährt. Ein entferntes Design verschwindet sofort bei allen, die es getragen haben."
+      }
+    },
     "1.37.1": {
       "title": "Dekorationen, gezeichnet",
       "items": {

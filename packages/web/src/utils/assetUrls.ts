@@ -1,3 +1,4 @@
+import { PICTURE_PATH, type WornCustomDecorations } from '@backspace/shared/src/customDecorations';
 import { getApiForOrigin } from '../stores/spaceStore';
 
 /**
@@ -25,17 +26,30 @@ export function resolveAssetUrl(filename: string | null | undefined, origin: str
   return getApiForOrigin(origin).uploads.url(stripUploadPrefix(filename));
 }
 
+/** A made design's picture as its instance sends it (a path there), made absolute on that instance. */
+function madePictureOn(address: string | null, origin: string): string | null {
+  return address !== null && PICTURE_PATH.test(address) ? `${origin}${address}` : address;
+}
+
 /**
- * Rewrite the avatar field on a user-like object for remote origins.
+ * Rewrite the avatar field on a user-like object for remote origins, and the pictures of the
+ * decorations it made itself and wears.
  * Mutates in-place for efficiency (called on arrays of members/messages).
  */
-export function normalizeUserAssets<T extends { avatar?: string | null; banner?: string | null }>(user: T, origin: string): T {
+export function normalizeUserAssets<T extends { avatar?: string | null; banner?: string | null; customDecorations?: WornCustomDecorations | null }>(user: T, origin: string): T {
   if (!origin) return user;
   if (user.avatar) {
     user.avatar = resolveAssetUrl(user.avatar, origin) ?? user.avatar;
   }
   if (user.banner) {
     user.banner = resolveAssetUrl(user.banner, origin) ?? user.banner;
+  }
+  if (user.customDecorations) {
+    for (const view of Object.values(user.customDecorations)) {
+      if (!view) continue;
+      view.image = madePictureOn(view.image, origin);
+      view.still = madePictureOn(view.still, origin);
+    }
   }
   // Qualify users local to the remote instance with their origin domain.
   // These users have no homeInstance (they're native there), so the client

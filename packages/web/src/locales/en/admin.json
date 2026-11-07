@@ -606,7 +606,8 @@
         "accounts_export": "Exported the accounts",
         "audit_export": "Exported the audit log",
         "peer_trust": "Changed trust in another instance",
-        "space_vanity_revoke": "Took an invite address away"
+        "space_vanity_revoke": "Took an invite address away",
+        "decoration_remove": "Removed a decoration someone made"
       },
       "details": {
         "until": "Until {{date}}",

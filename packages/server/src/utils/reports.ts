@@ -1,4 +1,5 @@
-import { and, desc, eq, inArray, isNotNull, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, lt, or, sql } from 'drizzle-orm';
+import { customDecorationRef } from '@backspace/shared/src/customDecorations.js';
 import { PermissionBits } from '@backspace/shared/src/permissions.js';
 import {
   REPORT_LIMITS,
@@ -23,6 +24,7 @@ import { hasPermission } from './permissions.js';
 import { platformActors } from './platformAudit.js';
 import { openReportCount } from './reportCount.js';
 import { generateSnowflake } from './snowflake.js';
+import { viewOf as decorationViewOf } from './customDecorations.js';
 
 // Reports of illegal content (DSA Art. 16) and what an instance's admins decide
 // about them (docs/systems/legal.md). A report keeps what it pointed at as it
@@ -114,6 +116,27 @@ function snapshotOf(type: ReportTargetType, id: string, reporterId: string): Rep
     const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
     if (!space) return undefined;
     return { authorId: space.ownerId, authorName: authorName(space.ownerId), content: space.description, attachments: [], place: space.name, createdAt: null };
+  }
+  if (type === 'decoration') {
+    // A design someone made (utils/customDecorations.ts), as anyone can see it: in the gallery, or
+    // on a profile that wears it. Its name, kind and maker, and the address of its picture, which
+    // goes with it if it is removed.
+    const design = db.select().from(schema.customDecorations).where(eq(schema.customDecorations.id, id)).get();
+    if (!design) return undefined;
+    const ref = customDecorationRef(design.id);
+    const worn = design.shared === 1 || design.creatorId === reporterId || db.select({ id: schema.users.id }).from(schema.users).where(or(
+      eq(schema.users.avatarFrame, ref), eq(schema.users.profileEffect, ref), eq(schema.users.nameplate, ref), eq(schema.users.nameEffect, ref),
+    )).get() !== undefined;
+    if (!worn) return undefined;
+    const view = decorationViewOf(design);
+    return {
+      authorId: design.creatorId,
+      authorName: authorName(design.creatorId),
+      content: design.name,
+      attachments: view.image ? [view.image] : [],
+      place: design.kind,
+      createdAt: design.createdAt,
+    };
   }
   return undefined;
 }

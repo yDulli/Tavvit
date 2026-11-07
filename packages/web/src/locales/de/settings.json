@@ -540,7 +540,7 @@
   },
   "decorations": {
     "title": "Dekorationen",
-    "intro": "Ein Rahmen für dein Bild, ein Effekt über deinem Banner, ein Namensschild und ein Stil für deinen Namen. Kostenlos für alle, und zu sehen überall, wo dieser Server dich zeigt.",
+    "intro": "Ein Rahmen für dein Bild, ein Effekt über deinem Profil, ein Namensschild und ein Stil für deinen Namen: von Tavvit, aus der Community oder selbst gestaltet. Kostenlos für alle, und zu sehen überall, wo dieser Server dich zeigt.",
     "preview": {
       "list": "In Mitgliederlisten",
       "chat": "Im Chat",
@@ -636,6 +636,88 @@
       "ember": "Glut",
       "prism": "Prisma",
       "theme": "Deine Farben"
+    },
+    "sources": {
+      "label": "Woher die Designs kommen",
+      "tavvit": "Tavvit",
+      "community": "Community",
+      "mine": "Meine"
+    },
+    "made": {
+      "createTitle": {
+        "frame": "Rahmen gestalten",
+        "effect": "Effekt gestalten",
+        "nameplate": "Namensschild gestalten",
+        "name": "Namens-Stil gestalten"
+      },
+      "noPicture": "Wähl ein Bild, dann siehst du es hier.",
+      "picture": "Bild",
+      "pictureChoose": "Bild auswählen",
+      "pictureOther": "Anderes Bild auswählen",
+      "pictureInvalid": "Wähl ein PNG-, WebP- oder GIF-Bild mit höchstens {{max}} MB.",
+      "template": {
+        "frame": "Zeichne es in {{width}} × {{height}} Pixeln auf transparentem Grund. Dein Profilbild sitzt in der Mitte, auf fünf Siebteln der Fläche; was drumherum gehört, Ohren, eine Krone, Blätter, kommt außen herum. Die Mitte selbst bleibt frei, damit nichts dein Profilbild verdeckt. PNG, WebP oder GIF, bewegt oder still, bis {{max}} MB.",
+        "effect": "Zeichne ein kleines Stück in {{width}} × {{height}} Pixeln auf transparentem Grund: ein Herz, ein Blatt, einen Stern. Ein paar davon ziehen so über dein Profil, wie du es unten wählst, klein genug, dass alles lesbar bleibt. PNG, WebP oder GIF, bewegt oder still, bis {{max}} MB.",
+        "nameplate": "Zeichne es in {{width}} × {{height}} Pixeln. Es füllt die Zeile hinter dem Namen und läuft nach links aus, setz das Wichtige also ans rechte Ende. PNG, WebP oder GIF, bewegt oder still, bis {{max}} MB."
+      },
+      "look": "Aussehen",
+      "looks": {
+        "gradient": "Verlauf",
+        "flow": "Fließend",
+        "wave": "Welle",
+        "sticker": "Sticker",
+        "comic": "Comic",
+        "retro": "Retro",
+        "glitch": "Glitch"
+      },
+      "colors": "Farben",
+      "motion": "So bewegt es sich",
+      "motions": {
+        "fall": "Fallen",
+        "tumble": "Taumeln",
+        "rise": "Steigen",
+        "float": "Schweben",
+        "twinkle": "Funkeln"
+      },
+      "colorNumber": "Farbe {{number}}",
+      "name": "Name",
+      "shareLabel": "Mit der Community teilen",
+      "shareHint": "Es kommt unter deinem Namen in die Galerie dieses Servers, und alle hier können es tragen. Du kannst es jederzeit wieder herausnehmen.",
+      "create": "Erstellen",
+      "removeTitle": "„{{name}}“ entfernen",
+      "removeText": "Es verschwindet aus der Galerie und bei allen, die es tragen. Wer es gestaltet hat, erfährt den Grund und wie man widersprechen kann.",
+      "removeGround": "Es verstößt gegen",
+      "removeReason": "Grund für die Person, die es gestaltet hat",
+      "remove": "Entfernen",
+      "search": "Nach Namen suchen",
+      "sortLabel": "Reihenfolge",
+      "sort": {
+        "popular": "Beliebt",
+        "new": "Neu"
+      },
+      "noMatches": "Kein Design in der Galerie hat das im Namen.",
+      "galleryEmpty": "Noch hat niemand eins geteilt. Gestalte eins unter „Meine“ und teile es.",
+      "more": "Mehr anzeigen",
+      "by": "von {{name}}",
+      "wearers_one": "{{formatted}} trägt es",
+      "wearers_other": "{{formatted}} tragen es",
+      "report": "Melden",
+      "count": "{{made}} von {{max}} gestaltet",
+      "full": "Du hast {{max}} gestaltet, mehr gehen nicht. Lösch eins, um ein neues zu machen.",
+      "mineEmpty": {
+        "frame": "Du hast noch keinen Rahmen gestaltet.",
+        "effect": "Du hast noch keinen Effekt gestaltet.",
+        "nameplate": "Du hast noch kein Namensschild gestaltet.",
+        "name": "Du hast noch keinen Namens-Stil gestaltet."
+      },
+      "sharedWearers_one": "Geteilt · {{formatted}} trägt es",
+      "sharedWearers_other": "Geteilt · {{formatted}} tragen es",
+      "private": "Nur für dich",
+      "share": "Mit der Community teilen",
+      "unshare": "Aus der Galerie nehmen",
+      "delete": "Löschen",
+      "deleteTitle": "„{{name}}“ löschen?",
+      "deleteText": "Es verschwindet bei allen, die es tragen, und lässt sich nicht wiederherstellen."
     }
   },
   "privacy": {

@@ -540,7 +540,7 @@
   },
   "decorations": {
     "title": "Decorations",
-    "intro": "A frame for your picture, an effect over your banner, a nameplate and a style for your name. Free for everyone, and seen wherever this server shows you.",
+    "intro": "A frame for your picture, an effect across your profile, a nameplate and a style for your name: Tavvit's own, the community's, or ones you make yourself. Free for everyone, and seen wherever this server shows you.",
     "preview": {
       "list": "In member lists",
       "chat": "In chat",
@@ -636,6 +636,88 @@
       "ember": "Ember",
       "prism": "Prism",
       "theme": "Your colours"
+    },
+    "sources": {
+      "label": "Where the designs come from",
+      "tavvit": "Tavvit",
+      "community": "Community",
+      "mine": "Mine"
+    },
+    "made": {
+      "createTitle": {
+        "frame": "Make a frame",
+        "effect": "Make an effect",
+        "nameplate": "Make a nameplate",
+        "name": "Make a name style"
+      },
+      "noPicture": "Choose a picture to see it here.",
+      "picture": "Picture",
+      "pictureChoose": "Choose a picture",
+      "pictureOther": "Choose another picture",
+      "pictureInvalid": "Choose a PNG, WebP or GIF picture of at most {{max}} MB.",
+      "template": {
+        "frame": "Draw it at {{width}} × {{height}} pixels on a transparent background. Your picture sits in the middle five sevenths, so whatever goes round it, ears, a crown, leaves, fits around that; the middle itself stays clear, so nothing covers your picture. PNG, WebP or GIF, moving or still, up to {{max}} MB.",
+        "effect": "Draw one small piece at {{width}} × {{height}} pixels on a transparent background: a heart, a leaf, a star. A few of them move across your profile the way you choose below, small enough that everything stays readable. PNG, WebP or GIF, moving or still, up to {{max}} MB.",
+        "nameplate": "Draw it at {{width}} × {{height}} pixels. It fills the row behind the name and fades out towards the left, so put what matters at the right end. PNG, WebP or GIF, moving or still, up to {{max}} MB."
+      },
+      "look": "Look",
+      "looks": {
+        "gradient": "Gradient",
+        "flow": "Flowing",
+        "wave": "Wave",
+        "sticker": "Sticker",
+        "comic": "Comic",
+        "retro": "Retro",
+        "glitch": "Glitch"
+      },
+      "colors": "Colours",
+      "motion": "How it moves",
+      "motions": {
+        "fall": "Fall",
+        "tumble": "Tumble",
+        "rise": "Rise",
+        "float": "Float",
+        "twinkle": "Twinkle"
+      },
+      "colorNumber": "Colour {{number}}",
+      "name": "Name",
+      "shareLabel": "Share with the community",
+      "shareHint": "It goes into this server's gallery under your name, and anyone here can wear it. You can take it out again at any time.",
+      "create": "Make it",
+      "removeTitle": "Remove “{{name}}”",
+      "removeText": "It goes from the gallery and from everyone who wears it. Its maker is told why, and how to object.",
+      "removeGround": "It breaks",
+      "removeReason": "Reason for its maker",
+      "remove": "Remove",
+      "search": "Search by name",
+      "sortLabel": "Order",
+      "sort": {
+        "popular": "Popular",
+        "new": "New"
+      },
+      "noMatches": "Nothing in the gallery has that in its name.",
+      "galleryEmpty": "Nobody has shared one yet. Make one under Mine and share it.",
+      "more": "Show more",
+      "by": "by {{name}}",
+      "wearers_one": "{{formatted}} wearing",
+      "wearers_other": "{{formatted}} wearing",
+      "report": "Report",
+      "count": "{{made}} of {{max}} made",
+      "full": "You have made {{max}}, as many as you can keep. Delete one to make another.",
+      "mineEmpty": {
+        "frame": "You have not made a frame yet.",
+        "effect": "You have not made an effect yet.",
+        "nameplate": "You have not made a nameplate yet.",
+        "name": "You have not made a name style yet."
+      },
+      "sharedWearers_one": "Shared · {{formatted}} wearing",
+      "sharedWearers_other": "Shared · {{formatted}} wearing",
+      "private": "Only you",
+      "share": "Share with the community",
+      "unshare": "Take out of the gallery",
+      "delete": "Delete",
+      "deleteTitle": "Delete “{{name}}”?",
+      "deleteText": "It goes from everyone who wears it, and cannot be brought back."
     }
   },
   "privacy": {

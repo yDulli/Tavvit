@@ -1,5 +1,14 @@
 import type { User } from '@backspace/shared';
-import { decorationsOf, type DecorationField, type Nameplate, type ProfileDecorations, type ProfileEffect } from '@backspace/shared/src/decorations';
+import {
+  decorationsOf,
+  type AvatarFrame,
+  type DecorationField,
+  type NameEffect,
+  type NameFont,
+  type Nameplate,
+  type ProfileEffect,
+} from '@backspace/shared/src/decorations';
+import { wornCustomDecorationsFrom, type CustomDecorationView, type EffectMotion } from '@backspace/shared/src/customDecorations';
 import { getAvatarGradient, type GradientEntry } from './gradients';
 import { profileThemeOf } from './profileTheme';
 
@@ -22,25 +31,50 @@ export function decorationColors(
   return { a: tile.from, b: tile.to };
 }
 
+/** What a field wears: one of Tavvit's designs by its name, or one someone made (customDecorations.ts). */
+export type FrameChoice = AvatarFrame | CustomDecorationView;
+export type EffectChoice = ProfileEffect | CustomDecorationView;
+export type NameplateChoice = Nameplate | CustomDecorationView;
+export type NameEffectChoice = NameEffect | CustomDecorationView;
+
 /** A person's decorations as a surface draws them, with the colours "your colours" takes there. */
-export interface PersonDecorations extends ProfileDecorations {
+export interface PersonDecorations {
+  avatarFrame: FrameChoice | null;
+  profileEffect: EffectChoice | null;
+  nameplate: NameplateChoice | null;
+  nameFont: NameFont | null;
+  nameEffect: NameEffectChoice | null;
   colors: { a: string; b: string };
 }
 
 /** The fields of a person that their decorations are drawn from. */
 export type DecoratedPerson = Partial<Record<DecorationField, unknown>>
   & Pick<User, 'id'>
-  & Partial<Pick<User, 'homeUserId' | 'avatarColor' | 'accentColor' | 'accentColorSecondary'>>;
+  & Partial<Pick<User, 'homeUserId' | 'avatarColor' | 'accentColor' | 'accentColorSecondary' | 'customDecorations'>>;
 
 /**
- * What a person's profile shows of its decorations, on any surface: the designs this client knows
- * (a retired one as its successor, a name it does not know as nothing) and the person's colours,
- * from the same tile their picture falls back to.
+ * What a person's profile shows of its decorations, on any surface: a design someone made where it
+ * wears one and it passes (`wornCustomDecorationsFrom`), else the designs this client knows (a
+ * retired one as its successor, a name it does not know as nothing), and the person's colours, from
+ * the same tile their picture falls back to.
  */
 export function personDecorations(person: DecoratedPerson | null | undefined, name: string): PersonDecorations {
-  const decorations = decorationsOf(person);
+  const builtIn = decorationsOf(person);
+  const made = wornCustomDecorationsFrom(person?.customDecorations);
   const tile = getAvatarGradient(person?.homeUserId ?? person?.id, name, person?.avatarColor);
-  return { ...decorations, colors: decorationColors(person ?? {}, tile) };
+  return {
+    avatarFrame: made.avatarFrame ?? builtIn.avatarFrame,
+    profileEffect: made.profileEffect ?? builtIn.profileEffect,
+    nameplate: made.nameplate ?? builtIn.nameplate,
+    nameFont: builtIn.nameFont,
+    nameEffect: made.nameEffect ?? builtIn.nameEffect,
+    colors: decorationColors(person ?? {}, tile),
+  };
+}
+
+/** Whether a field wears a design someone made rather than one of Tavvit's. */
+export function isMadeDesign(choice: FrameChoice | EffectChoice | NameplateChoice | NameEffectChoice | null): choice is CustomDecorationView {
+  return typeof choice === 'object' && choice !== null;
 }
 
 /** One particle: where it starts (per cent of its box), when (a negative delay starts it part way) and how long (seconds), its size and drift (px). */
@@ -144,6 +178,24 @@ export function effectParticles(effect: ProfileEffect): Particle[] {
 
 export function nameplateParticles(nameplate: Nameplate): Particle[] {
   return cached(`nameplate:${nameplate}`, NAMEPLATE_SHAPES[nameplate]);
+}
+
+/**
+ * What moves across a profile that wears an effect someone made: their piece, in one of the
+ * motions of Tavvit's own effects (`EFFECT_MOTIONS`), as many and as large as Tavvit decides, so
+ * that no picture covers the profile. A little fewer and larger than the drawn ones, because a
+ * piece someone drew carries more detail of its own.
+ */
+const MADE_EFFECT_SHAPES: Record<EffectMotion, Shape> = {
+  fall: { count: 14, span: [0, 100], size: [16, 26], duration: [7, 12], sway: [-24, 24] },
+  tumble: { count: 12, span: [0, 100], size: [18, 28], duration: [6, 11], sway: [-56, 56] },
+  rise: { count: 12, span: [0, 100], size: [16, 26], duration: [4, 7], sway: [-28, 28] },
+  float: { count: 9, span: [4, 96], size: [20, 30], duration: [9, 14], sway: [-20, 20] },
+  twinkle: { count: 12, span: [0, 100], size: [12, 22], duration: [2.4, 4.6], sway: [0, 0] },
+};
+
+export function madeEffectParticles(motion: EffectMotion): Particle[] {
+  return cached(`made:${motion}`, MADE_EFFECT_SHAPES[motion]);
 }
 
 /** The custom properties a particle's element carries. */

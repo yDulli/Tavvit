@@ -6,8 +6,11 @@
  * profile and looks the same on every screen.
  *
  * A design that was retired keeps working as its nearest successor (`RETIRED_*`), so nobody who
- * chose one loses their look and nothing stored has to change.
+ * chose one loses their look and nothing stored has to change. A design someone made is worn by
+ * reference (customDecorations.ts) and is not one of these names.
  */
+
+import { customDecorationIdOf, customDecorationRef, type CustomDecorationRef } from './customDecorations.js';
 
 /**
  * Frames around the picture, in the order the picker offers them. Every one is a drawing of a thing
@@ -151,10 +154,15 @@ export type DecorationUpdate =
   | { ok: true; values: Partial<Record<DecorationField, string | null>> }
   | { ok: false; field: DecorationField };
 
+/** The fields that can wear a design someone made (customDecorations.ts); a typeface cannot. */
+const CUSTOM_FIELDS: ReadonlySet<DecorationField> = new Set<DecorationField>(['avatarFrame', 'profileEffect', 'nameplate', 'nameEffect']);
+
 /**
  * What a profile update asks of the decorations: each field it names, as it is stored (null for
- * none, the classic font stored as none, and a retired design stored as its successor), or else
- * the first field whose value is not a design. A field the update leaves out is not in `values`.
+ * none, the classic font stored as none, a retired design stored as its successor, and a design
+ * someone made as its reference, `custom:<id>`, which the server still has to find and allow), or
+ * else the first field whose value is not a design. A field the update leaves out is not in
+ * `values`.
  */
 export function decorationUpdateOf(body: Partial<Record<DecorationField, unknown>>): DecorationUpdate {
   const values: Partial<Record<DecorationField, string | null>> = {};
@@ -165,6 +173,11 @@ export function decorationUpdateOf(body: Partial<Record<DecorationField, unknown
       values[field] = null;
       continue;
     }
+    const custom = CUSTOM_FIELDS.has(field) ? customDecorationIdOf(value) : null;
+    if (custom !== null) {
+      values[field] = customDecorationRef(custom);
+      continue;
+    }
     const resolved = DECORATION_RESOLVERS[field](value);
     if (resolved === null) return { ok: false, field };
     values[field] = field === 'nameFont' && resolved === 'classic' ? null : resolved;
@@ -172,5 +185,11 @@ export function decorationUpdateOf(body: Partial<Record<DecorationField, unknown
   return { ok: true, values };
 }
 
-/** An update's decoration fields: a design, or null to clear it. */
-export type DecorationsUpdate = { [Field in DecorationField]?: ProfileDecorations[Field] };
+/** An update's decoration fields: a design, one someone made by its reference, or null to clear it. */
+export interface DecorationsUpdate {
+  avatarFrame?: AvatarFrame | CustomDecorationRef | null;
+  profileEffect?: ProfileEffect | CustomDecorationRef | null;
+  nameplate?: Nameplate | CustomDecorationRef | null;
+  nameFont?: NameFont | null;
+  nameEffect?: NameEffect | CustomDecorationRef | null;
+}

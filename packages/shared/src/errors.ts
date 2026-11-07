@@ -448,6 +448,18 @@ export const ERROR_CODES = [
   'sticker_collection_full',
   'sticker_name_invalid',
 
+  // Decorations people make (docs/systems/decorations.md)
+  'decoration_not_found',
+  // details: { max }
+  'decoration_name_invalid',
+  // details: { max } (in MB)
+  'decoration_image_invalid',
+  // details: { max }
+  'decoration_limit_reached',
+  'decoration_style_invalid',
+  // details: { min, max }
+  'decoration_reason_invalid',
+
   // Tavvit
   'federation_disabled',
   'accent_color_low_contrast',

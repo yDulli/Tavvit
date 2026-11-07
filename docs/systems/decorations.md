@@ -2,8 +2,9 @@
 
 A frame round the picture, an effect across the profile card, a nameplate behind the name in
 lists, and a style for the name itself: a typeface and an effect in or on the letters. Free for
-everyone. Every design is Tavvit's own, drawn by the client from a name the profile stores; nothing
-is uploaded, and nothing loads from another server.
+everyone. Tavvit's own designs are drawn by the client from a name the profile stores. People can
+also make their own, from a picture or a name style, and share them with everyone on their
+instance ("Made by people" below).
 
 ## Files
 
@@ -24,6 +25,26 @@ is uploaded, and nothing loads from another server.
   `DecoratedName`
 - `packages/web/src/components/ui/Avatar.tsx`: the `frame` and `frameMotion` props, `FrameArt`
 - `packages/web/src/components/modals/settingsPanels/DecorationsPanel.tsx`: Settings → Decorations
+
+Made by people:
+
+- `packages/shared/src/customDecorations.ts`: the kinds and the field each is worn in, the
+  reference (`custom:<id>`), the limits, the picture boxes and templates, the effect motions
+  (`EFFECT_MOTIONS`), the name style looks and their colours, `normalizeNameStyle`,
+  `normalizeDecorationName`, the client's guard (`customDecorationViewOf`,
+  `wornCustomDecorationsFrom`, `PICTURE_PATH`)
+- `packages/server/drizzle/0075_tavvit_custom_decorations.sql`: the `custom_decorations` table
+- `packages/server/src/routes/customDecorations.ts`: the gallery, one's own, making, changing,
+  deleting, an administrator's removal, the pictures
+- `packages/server/src/utils/customDecorations.ts`: what a profile wears (`wornCustomDecorationsOf`),
+  who may wear what (`mayWearCustomDecoration`), the wearer counts, the gallery, taking a design
+  away (`removeCustomDecoration`, `removeDecorationsOfUser`)
+- `packages/server/src/utils/decorationImage.ts`: the picture, decoded and encoded again
+- `packages/web/src/components/ui/MadeDecorationArt.tsx`: `MadePicture`, `MadeFrame`, `MadeEffect`
+- `packages/web/src/components/modals/settingsPanels/decorations/`: `DesignPreview` and
+  `DesignTile`, `CommunityGallery` and `MyDesigns` (`MadeDesigns.tsx`), `CreateDecorationDialog`
+- `packages/web/src/utils/assetUrls.ts`: `normalizeUserAssets` makes a made design's picture
+  absolute for a person read from another instance
 
 ## The designs
 
@@ -53,9 +74,11 @@ Five text columns on `users` (`avatar_frame`, `profile_effect`, `nameplate`, `na
 `name_effect`, migration 0073), NULL for none. Only the account itself writes them, with
 `PATCH /api/users/@me` (api.md, "Decorations"): a name of a design, or null to clear it; the classic
 typeface is stored as NULL, and a retired name (from a client older than the change) is stored as
-its successor. Anything else, a name the server does not know, a number, an empty string, is
-refused with `400 profile_decoration_invalid` and `details.field`, and nothing of that update is
-stored. The server checks; the picker only offers what the server takes.
+its successor. A design someone made is stored as its reference, `custom:<id>`, in the same
+column (frame, effect, nameplate and name effect; never the typeface), when the server finds it and
+the person may wear it ("Made by people"). Anything else, a name the server does not know, a
+number, an empty string, is refused with `400 profile_decoration_invalid` and `details.field`, and
+nothing of that update is stored. The server checks; the picker only offers what the server takes.
 
 Every `User` the server sends carries the five fields, null for none, read through
 `decorationsOf`: a retired name stored before the change shows as its successor (the row itself is
@@ -140,10 +163,101 @@ fall back to the interface's typeface.
 ## Settings → Decorations
 
 A preview at the top that stays in view (the profile card with its effect, a member row, a chat
-line), four categories (frame, effect, nameplate, name), and a grid of every design, each tried on
-in the preview before anything is saved. The save bar sends only what changed; Reset goes back to
-what is stored. A change saved on another device resets the choices to it. A retired design stored
-before shows as its successor, chosen, with nothing to save.
+line), four categories (frame, effect, nameplate, name), and in each, three sources: **Tavvit** (a
+grid of every design), **Community** (the instance's gallery) and **Mine** (what the person made,
+and making one). Every design is tried on in the preview before anything is saved. The save bar
+sends only what changed (a made design by its reference); Reset goes back to what is stored. A
+change saved on another device resets the choices to it. A retired design stored before shows as
+its successor, chosen, with nothing to save. A design tried on that is deleted or removed meanwhile
+is let go of.
+
+## Made by people
+
+Anyone with an account can make a frame, an effect, a nameplate or a name style, wear it, and share
+it in their instance's gallery, where everyone can wear it with one click. A shared design is
+visible at once; anyone can report it, and an administrator can take it away.
+
+**What one is made of:**
+
+| Kind | Worn in | Made from | Stored within | The maker is told to draw at |
+|------|---------|-----------|---------------|------------------------------|
+| Frame | `avatarFrame` | A picture (PNG, WebP or GIF, still or moving) | 512 × 512, set in the middle of a transparent square | 420 × 420 |
+| Effect | `profileEffect` | One small piece, and the motion it moves in | 256 × 256, never enlarged | 128 × 128 |
+| Nameplate | `nameplate` | A picture | 960 × 160, never enlarged | 720 × 120 |
+| Name style | `nameEffect` | A look and its colours | (no picture) | |
+
+**None of them can cover what it decorates.** A picture can be anything, so each kind is drawn
+inside a rule that keeps the profile readable whatever it holds:
+
+- A **frame** lies over the picture in the view a drawn frame takes, a fifth larger on every side,
+  and its middle is masked clear (`.deco-made-frame .deco-made-fill`, a radial mask to 60% of the
+  way out, where the avatar's edge lies at 71%): it may reach over the outer sixth of the picture,
+  as ears, a crown or a headset do, never over the person.
+- An **effect** is never one picture over the card. The maker uploads one small piece (a heart, a
+  leaf, a star) and chooses one of Tavvit's motions (`EFFECT_MOTIONS`): `fall` (as snow), `tumble`
+  (as leaves), `rise` (as hearts), `float` (as lanterns) or `twinkle` (as stars). Tavvit sends a few
+  of the piece across the card with that motion's keyframes, as particles like a drawn effect's
+  (`madeEffectParticles`: at most 14, at most 30 pixels): the piece is every particle's drawing
+  (`--sprite-a` from `--made-moving`, or `--made-still` under Reduce motion). The motion is stored
+  in the row's `style` as `{"motion": …}` and is required: an effect without one is
+  `400 decoration_style_invalid`.
+- A **nameplate** lies behind the row's content and fades out towards the picture and the name,
+  with the same mask a drawn one has; its picture fills the row from the far end.
+- A **name style** is one of seven looks (`gradient` and `flow` with 2 or 3 colours, `wave` with 2,
+  `sticker` and `comic` with 1, `retro` and `glitch` with 3; `#rrggbb`, stored in lower case,
+  `normalizeNameStyle`), drawn by decorations.css with the colours as `--c1` to `--c3`
+  (`data-name-made`). A role's colour wins over it, as over a drawn effect.
+
+**The pictures.** The server decodes every picture and encodes it again as WebP (quality 85), so
+what it stores is always a picture it made; only PNG, WebP and GIF (a decoration needs
+transparency, which JPEG lacks), at most 6 MB as sent, 40 million decoded pixels and 300 frames. A
+moving one keeps its first frame beside it, for where it must stand still. They live in
+`UPLOAD_DIR/decorations/<id>.webp` and `<id>-still.webp` (written through a temporary file, out of
+the attachment janitor's way) and count towards the maker's storage. `GET /api/decorations/<file>`
+serves them to anyone, cached as immutable, as a picture that never runs (uploads.md). A `User`
+names them by **path** (`/api/decorations/<id>.webp`, `PICTURE_PATH`): this instance's own client
+fetches them from the page's origin, and a client that reads the person while signed into another
+instance makes the path absolute on that instance as it arrives (`normalizeUserAssets`), like an
+avatar; drawing it still goes through the consent a picture from another server needs
+(`useGatedPicture`). The client's guard draws a picture only from such a path or that path on an
+origin, nothing else.
+
+**Wearing one.** A field takes `custom:<id>` when the design exists, is of that field's kind, and
+is shared or the person's own (`mayWearCustomDecoration`); else `400 profile_decoration_invalid`.
+A private design is wearable by its maker alone, and others then see it on the maker's profile; it
+is only out of the gallery. Sharing is what lets others wear it: when its maker takes a design out
+of the gallery, it goes from the others' profiles (their reference stays, and it comes back if it
+is shared again), and they are announced anew (`announceWearers`). Every `User` carries `customDecorations`: what a client needs to draw
+each made design it wears (`CustomDecorationView`: id, kind, name, picture, still frame, style,
+motion), null for none; a reference to a design that is gone or no longer allowed is not in it, and
+the field then shows nothing. The server keeps the rows it has read in memory (at most 5000) and
+forgets one when it changes.
+
+**The gallery** (`GET /api/decorations?kind&sort&q&offset`) lists the shared designs of one kind,
+24 at a time: `popular` (most worn first, counted at most every 30 seconds and again as soon as
+someone changes what they wear) or `new`, and a search in the names. Each shows its maker and how
+many wear it. **Mine** (`GET /api/decorations/mine`) is everything the person made, shared or not.
+The maker can rename one, share it or take it out of the gallery (`PATCH`), and delete it
+(`DELETE`).
+
+**Limits:** 30 designs per account (instance administrators have none), a name of 1 to 32
+characters on one line without hidden characters (`normalizeDecorationName`), 10 pictures per
+minute and 40 new designs per day per account.
+
+**Taking one away.** Deleting a design, an administrator's removal and a report's `content_removed`
+all do the same (`removeCustomDecoration`): the row goes, its pictures go, and every profile that
+wore it shows nothing in its place, announced to everyone who sees it (`user_updated`), so it goes
+from screens at once. An administrator removes one from the gallery's tile
+(`POST /api/admin/decorations/:id/remove { reason, ground }`): the platform audit log gets
+`decoration_remove`, and its maker a `content_removed` notice with the reason, the ground and how to
+object (legal.md). Anyone can report a design they can see, shared or worn by someone (report
+target `decoration`): the snapshot keeps its name, kind, maker and picture address. Deleting an
+account removes everything it made, from everyone who wore it.
+
+**Between instances.** A design lives on the instance where it was made, and a reference means
+something only there: like the rest of the decorations it is not relayed, and a copy of the person
+on another instance wears none. A client signed into that instance reads the person there and draws
+it from there.
 
 ## Adding a design
 
@@ -166,3 +280,10 @@ design that takes its place.
   they do pass over the text.
 - In a narrow member list a long name, its tag or its badges can reach the nameplate's scene.
 - The name typefaces have no Chinese, Japanese or Korean glyphs.
+- The gallery reads every shared design of a kind for each page and sorts in memory: fine for
+  thousands, not for millions.
+- A removed design's pictures are cached as immutable: a browser that fetched one may keep its copy,
+  though nothing names it any more and no screen draws it.
+- Removing a design worn by many announces each wearer's profile in turn, while the request waits.
+- A made frame's picture lies in front of the avatar only; it has no layer behind the head, as the
+  drawn ones have.

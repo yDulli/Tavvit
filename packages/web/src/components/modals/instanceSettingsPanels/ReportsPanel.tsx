@@ -17,10 +17,10 @@ import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { Modal } from '../../ui/Modal';
 import { durationKey } from './AdminUserDetailModal';
 
-/** What can be done about what was reported: only a message can be removed, only a listed space unlisted. */
+/** What can be done about what was reported: a message or a decoration someone made can be removed, only a listed space unlisted. */
 function decisionsFor(report: AdminReport): ReportDecision[] {
   const decisions: ReportDecision[] = ['no_action', 'handled'];
-  if (report.targetType === 'message' || report.targetType === 'dm_message') decisions.push('content_removed');
+  if (report.targetType === 'message' || report.targetType === 'dm_message' || report.targetType === 'decoration') decisions.push('content_removed');
   if (report.targetType !== 'link' && report.targetType !== 'space') decisions.push('account_suspended');
   if (report.targetType === 'space' && discoveryDecisionApplies('withdraw', report.listingStatus)) decisions.push('listing_withdrawn');
   return decisions;
@@ -89,7 +89,11 @@ function ReportDetail({ report, onClose, onDecided }: { report: AdminReport; onC
                 {snapshot.createdAt ? ` · ${formatDateTime(snapshot.createdAt)}` : ''}
               </div>
               {snapshot.content && <p className="mt-1 whitespace-pre-wrap break-words text-txt-primary">{snapshot.content}</p>}
-              {snapshot.attachments.length > 0 && (
+              {/* A decoration's picture, while it is there; a removed one no longer answers. */}
+              {report.targetType === 'decoration' && snapshot.attachments[0] && (
+                <img src={snapshot.attachments[0]} alt="" className="mt-2 max-h-40 rounded-md border border-border-soft bg-surface-chat object-contain" />
+              )}
+              {report.targetType !== 'decoration' && snapshot.attachments.length > 0 && (
                 <p className="mt-1 break-words text-meta text-txt-secondary">{t('legal:admin.reports.attachments', { names: snapshot.attachments.join(', ') })}</p>
               )}
             </div>
