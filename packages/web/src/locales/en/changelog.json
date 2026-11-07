@@ -9,6 +9,7 @@
       "items": {
         "backgrounds": "Your camera can blur your room, softly or strongly, or put you in one of five scenes, among them a tavern, or in front of a picture of your own. It all happens on your device, and your picture never leaves it.",
         "streamer": "Streamer mode hides your email, invite links, connected instances, two-factor codes, session addresses, tokens and what notifications say while you stream. Turn it on in Settings → Privacy or with a shortcut; the desktop app turns it on by itself when OBS, Streamlabs or XSplit starts.",
+        "twitch": "Link your Twitch channel on your profile, and people see when you're live, like a game you're playing, with a button to your stream. The server's operator turns this on.",
         "subtitles": "Watching together no longer turns subtitles on by itself. A new button turns them on for you alone.",
         "profile": "Your own profile no longer lists friends and spaces in common with yourself."
       }

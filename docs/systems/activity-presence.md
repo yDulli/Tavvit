@@ -3,6 +3,8 @@
 Source files:
 - `packages/shared/src/types.ts` — Activity, ActivityType, ActivityTimestamps, ActivityAssets type definitions
 - `packages/shared/src/activities.ts` — ACTIVITY_LIMITS, ACTIVITY_PRIORITY, getPrimaryActivity()
+- `packages/shared/src/twitch.ts` — the Twitch channel a profile links (`twitchChannelOf`, `twitchChannelOfLinks`), the way to a stream (`twitchChannelUrl`, `isTwitchStreamUrl`, `twitchStreamOf`)
+- `packages/server/src/utils/twitchApi.ts`, `utils/twitchLive.ts` — Live on Twitch: asking Twitch, and the check that shows people as live (see "Live on Twitch")
 - `packages/web/src/stores/activityStore.ts` — Client-side activity state (Zustand), debounced push, visibility toggle
 - `packages/web/src/platform/activityBridge.ts` — Electron IPC bridge: subscribes to desktop activity events
 - `packages/web/src/hooks/useWebSocket.ts` — Ready payload handling, presence_update reception, reconnect re-push
@@ -48,7 +50,11 @@ interface Activity {
   timestamps?: ActivityTimestamps;
   assets?: ActivityAssets;
   url?: string;
+  /** Given only by the person's home instance, for an activity it derived itself. */
+  source?: ActivitySource;
 }
+
+const ACTIVITY_SOURCES = ['twitch'] as const;  // isActivitySource(value)
 ```
 
 ---
@@ -78,6 +84,7 @@ The server validates every incoming `activity_update` payload, and the activitie
 6. `timestamps.start` and `timestamps.end` accepted if numbers in range `[0, 4102444800000]` (epoch ms cap ~2100)
 7. `assets` fields (`largeImage`, `smallImage`) validated against `MAX_URL_LENGTH`; text fields against `MAX_ASSET_TEXT_LENGTH`
 8. If any item fails validation, the entire payload is rejected (returns `null`)
+9. `source` is dropped from what a client sends, and kept, when it is one of `ACTIVITY_SOURCES`, from a peer relaying its own person's presence (`validateActivities(raw, { allowSource: true })` in `processPresenceUpdateEvent`, after its attribution check). A client never says it derived an activity; a home's mark has to reach every instance, or the way to the stream would not
 
 ---
 
@@ -231,7 +238,7 @@ Desktop Process Scanner (15s poll)
 
 | Map | Key | Value | Lifecycle |
 |-----|-----|-------|-----------|
-| `userActivities` | userId | `Activity[]` | Native/connected row: set on `activity_update`, cleared on disconnect or `showActivity=false`. Replicated row: set from each relayed `presence_update`, cleared by a `[]` or `offline` relay or peer deactivation; a relay without the field leaves it |
+| `userActivities` | userId | `Activity[]` | Two parts, the client's (no `source`) and the home's derived one (with `source`), see "Live on Twitch". Native/connected row: the client's part written on `activity_update` (`setReportedActivities`), the derived part by the Twitch check (`setDerivedActivities`), all cleared on disconnect or `showActivity=false`. Replicated row: replaced whole by each relayed `presence_update` (`setUserActivities`), cleared by a `[]` or `offline` relay or peer deactivation; a relay without the field leaves it, and a direct `activity_update` replaces only the client's part |
 | `userShowActivity` | userId | boolean | Cached from DB at auth, updated via REST `PATCH /users/me` |
 | `userStatuses` | userId | string | Cached from DB at auth, updated on `presence_update` |
 | `lastActivityUpdate` | userId | timestamp (ms) | Used for 3s rate limiting |
@@ -269,6 +276,30 @@ After receiving a `ready` event, the client performs two re-push operations (`us
 1. **Electron re-query:** If running in desktop and this is the home connection, calls `window.backspace.getCurrentActivity()` and pushes the result. This handles sleep/wake scenarios where the process scanner didn't fire a change event.
 
 2. **Multi-instance fan-out:** Reads `myActivities` from the activity store and sends `activity_update` to the newly connected instance via `wsSend(event, origin)`. This ensures remote instances have the user's current activities in their in-memory store immediately.
+
+---
+
+## Live on Twitch
+
+Someone who links a Twitch channel on their profile is shown as live while they stream there, the way a game the desktop app found is shown, with the way to the stream (1.35.0). Off unless the operator gave `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`, from an application registered at dev.twitch.tv (`config.twitch`; one without the other refuses to boot). The instance says whether it has the check in `InstanceInfoResponse.twitchLive`.
+
+**Who is asked about.** Once a minute (`TWITCH_CHECK_INTERVAL_MS`), `checkTwitchLive` (`utils/twitchLive.ts`) takes the people with an open socket here who are native (`home_instance IS NULL`), people (`account_kind = 'person'`), share their activity (`show_activity = 1`) and have a Twitch channel among their profile links: the first link `twitchChannelOf` reads a channel from (`twitch.tv`, `www.twitch.tv` or `m.twitch.tv`, a first path segment of 4 to 25 letters, digits or underscores that is not one of Twitch's own pages, in lower case). With nobody to ask about, nothing is sent. A peer's people are their home's to ask about; the home relays what it found.
+
+**What is asked.** `askTwitch` (`utils/twitchApi.ts`) signs in as the application (client credentials, `POST https://id.twitch.tv/oauth2/token`), keeps the token in memory until an hour before it ends, and asks `GET https://api.twitch.tv/helix/streams?first=100&user_login=…` about up to 100 channels per question (`Client-Id` and `Authorization: Bearer`); a 401 renews the token once. Only channel names and the application's own credentials go to Twitch, with a 10 s timeout and no redirects. A partial answer is no answer: when one question fails, the round fails, so a missing answer never reads as "not live".
+
+**What a live stream becomes.** `liveActivityOf`: `{ type: 'streaming', name: <title>, details: <game>, url: 'https://www.twitch.tv/<channel>', timestamps: { start: <started_at, never after now> }, source: 'twitch' }`. The texts lose the characters that disguise a status and are cut, with `…` and without splitting a character, to the limits every receiver holds a list to; without a title the name is Twitch's shown name, then the channel. No thumbnail and no picture: nothing in it loads from Twitch. A client that knows nothing of `source` reads "Streaming <title>" with the game below.
+
+**Two parts of one list.** `ConnectionManager` holds one list per person (`userActivities`): what the client reports (no `source`) and what the home derived (with `source`). `setReportedActivities` (`activity_update`) replaces the first part and keeps the second, `setDerivedActivities` (the check) the reverse, and `setUserActivities` (a relayed `presence_update`) replaces the whole list, which is the home's whole list. The derived part comes first and the list is cut to `MAX_ACTIVITIES_PER_USER`, so a peer never refuses it and the stream is the last thing cut. On a peer, a direct `activity_update` from the person's client therefore keeps the stream the home relayed, until the home says it ended. Everything reading the list (`ready`, the friendship snapshot, the connect relay) sees both parts.
+
+**Showing a change.** Only when the derived part changed (compared as JSON): a `presence_update` with the whole list to the profile audience and to the person's own sockets, and `queuePresenceRelay` to peers. A stream that ended or a link that was removed is taken away on the next round. Turning sharing off clears the list at once (`routes/users.ts`), and a round that was asking Twitch meanwhile skips that person. The check only ever takes away what it gave (`derivedFor`); a replicated row's derived part is its home's.
+
+**When Twitch does not answer.** What was shown stays, as one missed answer is not the end of a stream; after `STALE_AFTER_MS` (5 minutes) without an answer it goes. The log says so once when the answers stop, with a hint to the two variables when Twitch refused the application, and once when they come back. The admin console's system page shows `services.twitchLive`: `off`, `ok` or `failing` (admin.md).
+
+**On the client.** `ActivityCard` draws a marked activity as "Live on Twitch", the title, then the game and how long; `useFriendDoing` says "Live on Twitch" with the title as its detail. `ProfileActivity` adds a "Watch on Twitch" button (`.btn-outline .btn-sm`, a link with `target="_blank"` and `rel="noopener noreferrer nofollow"`, which the desktop app opens in the system browser) only for `twitchStreamOf(primary)`: a marked activity whose address is exactly the channel's own page, never any other address an activity names. One's own profile shows the derived part the home delivered beside `myActivities`. The profile links editor says under the first Twitch link what follows from it when the home has the check, and that nobody sees it while sharing is off.
+
+**What the privacy draft says.** With the check on, `twitch` is among the facts (`routes/legal.ts`), and the draft's "Status and activity" gains a paragraph: what goes to Twitch Interactive, Inc. (USA) and when, that Twitch sees the server and not the person, what is shown and that it is held in memory only (legal.md).
+
+**Known limits.** Linking a channel proves nothing: anyone can link any channel and be shown as live while its owner streams. Proving it would take signing in with Twitch (OAuth), which is not built. A stream shows up to a minute late and stays up to a minute after it ends. The person has to be signed in here: a stream with every Tavvit window closed is not shown.
 
 ---
 
@@ -391,7 +422,8 @@ Renders the primary activity for a user. Used inside `MemberSidebar`, `MobileMem
 1. Get primary activity via `getPrimaryActivity(activities)`
 2. If no primary and `fallbackCustomStatus` exists → render custom status as plain text
 3. If primary is `custom` → render `primary.name` as plain text
-4. If primary is rich (non-custom) → render `primary.name` + elapsed time (if `timestamps.start` set)
+4. If primary is marked `source: 'twitch'` → "Live on Twitch", the title (`primary.name`), then the game and the elapsed time on one line (see "Live on Twitch")
+5. If primary is rich (non-custom) → render the line ("Playing X"), the details line and the elapsed time (if `timestamps.start` is given)
 
 **Elapsed time format** (`formatElapsed`): `"Xh Ym"` if hours > 0, otherwise `"Xm"`.
 
@@ -424,7 +456,10 @@ one of the activities is not `custom`, since the profile shows the custom
 status itself: an "Activity" label over an `ActivityCard` of the activities,
 which draws the primary one ("Playing X", the details line, the elapsed time).
 A game the desktop app detected therefore shows on the profile the same way it
-shows in the member list.
+shows in the member list. One's own profile adds the derived part the home
+delivered (Live on Twitch) to `myActivities`; a stream found live comes with a
+"Watch on Twitch" button, only for `twitchStreamOf(primary)` (see "Live on
+Twitch").
 
 ### Row Rendering Pattern
 
@@ -455,7 +490,8 @@ header is "Active now" with the online count.
 Each row is a `.list-row` with the avatar and its presence glyph, the name,
 `@domain` for a federated friend, and what the friend is doing in words from
 `useFriendDoing` (`components/home/friendDoing.ts`): "In voice · {space}",
-"Playing X" with a details line, the custom status, or the presence label.
+"Live on Twitch" with the stream's title, "Playing X" with a details line,
+the custom status, or the presence label.
 Pressing a row opens the profile card to the left.
 
 ### User ID Resolution

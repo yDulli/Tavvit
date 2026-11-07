@@ -40,6 +40,7 @@ import { sendNotice } from '../utils/reports.js';
 import { emailState } from '../email/service.js';
 import { normalizeEmail } from '../email/address.js';
 import { twoFactorAvailable } from '../security/twoFactor.js';
+import { twitchLiveState } from '../utils/twitchLive.js';
 import { listSecurityEvents, recordSecurityEvent } from '../security/events.js';
 import { endOtherSessions, endSession, listSessions } from '../utils/sessions.js';
 import { listSignupRules, normalizeRuleValue } from '../utils/signupRules.js';
@@ -292,6 +293,7 @@ export async function adminConsoleRoutes(app: FastifyInstance): Promise<void> {
         email: emailState(),
         twoFactor: twoFactorAvailable(),
         translation: config.translation.provider === 'none' ? null : config.translation.provider,
+        twitchLive: twitchLiveState(),
         voice: !!config.livekit.url,
         federation: config.federation.enabled,
       },

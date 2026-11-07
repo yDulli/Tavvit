@@ -157,7 +157,8 @@
       "listening": "Ouvindo {{name}}",
       "watching": "Assistindo {{name}}",
       "streaming": "Transmitindo {{name}}"
-    }
+    },
+    "liveOnTwitch": "Ao vivo na Twitch"
   },
   "contextMenu": {
     "cut": "Recortar",

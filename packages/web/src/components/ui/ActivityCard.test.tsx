@@ -43,6 +43,28 @@ describe('ActivityCard', () => {
     expect(screen.getByText('Nauvis')).toBeInTheDocument();
   });
 
+  it('says a stream found on Twitch is live, with its title, game and how long', () => {
+    const activity: Activity = {
+      type: 'streaming',
+      name: 'Any% attempts',
+      details: 'Celeste',
+      url: 'https://www.twitch.tv/mara',
+      timestamps: { start: Date.now() - 65 * 60 * 1000 },
+      source: 'twitch',
+    };
+    render(<ActivityCard activities={[activity]} />);
+    expect(screen.getByText('Live on Twitch')).toBeInTheDocument();
+    expect(screen.getByText('Any% attempts')).toBeInTheDocument();
+    expect(screen.getByText('Celeste · 1h 5m elapsed')).toBeInTheDocument();
+    expect(screen.queryByText(/^Streaming/)).not.toBeInTheDocument();
+  });
+
+  it('reads a stream without the mark as any other activity', () => {
+    render(<ActivityCard activities={[{ type: 'streaming', name: 'Any% attempts', url: 'https://www.twitch.tv/mara' }]} />);
+    expect(screen.getByText('Streaming Any% attempts')).toBeInTheDocument();
+    expect(screen.queryByText('Live on Twitch')).not.toBeInTheDocument();
+  });
+
   it('renders emoji shortcodes in a custom status (issue #252)', () => {
     render(<ActivityCard activities={[{ type: 'custom', name: 'on call :pager:' }]} />);
     expect(screen.getByText('on call 📟')).toBeInTheDocument();

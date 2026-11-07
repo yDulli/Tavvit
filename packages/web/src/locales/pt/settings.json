@@ -401,6 +401,8 @@
       "links": {
         "label": "Links",
         "hint": "Até {{max}} endereços da web no seu cartão de perfil, cada um com um rótulo opcional.",
+        "twitchLive": "Enquanto você estiver ao vivo neste canal, isso aparece no seu status de atividade, com um link para a transmissão.",
+        "twitchLiveSharingOff": "“Compartilhar status de atividade” está desligado em Privacidade, então ninguém vê quando você está ao vivo neste canal.",
         "url": "Endereço do link",
         "urlPlaceholder": "https://…",
         "labelField": "Rótulo do link",

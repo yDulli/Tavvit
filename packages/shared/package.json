@@ -63,6 +63,8 @@
     "./src/usernames.js": "./src/usernames.ts",
     "./src/translation": "./src/translation.ts",
     "./src/translation.js": "./src/translation.ts",
+    "./src/twitch": "./src/twitch.ts",
+    "./src/twitch.js": "./src/twitch.ts",
     "./src/forums": "./src/forums.ts",
     "./src/forums.js": "./src/forums.ts",
     "./src/channelFollows": "./src/channelFollows.ts",

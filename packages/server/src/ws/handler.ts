@@ -1,4 +1,5 @@
 import { BOT_SOCKET_EVENTS } from '@backspace/shared/src/bots.js';
+import { ACTIVITY_LIMITS } from '@backspace/shared/src/activities.js';
 import { shownCategories } from '../utils/categoryVisibility.js';
 import { checkBotAccess, verifyBotToken } from '../utils/botAccess.js';
 import type { MessageWithUser } from '@backspace/shared';
@@ -460,13 +461,51 @@ class ConnectionManager implements ReplicaSessionHost {
   }
 
   // ─── Activity accessors ─────────────────────────────────────────────────
+  //
+  // A person's set holds what their client reports and what their home
+  // instance derived itself, marked by `source` (Live on Twitch,
+  // docs/systems/activity-presence.md). Each writer replaces its own part only.
 
+  /**
+   * Replace the whole set: a peer relaying its own person's presence, which
+   * is that person's whole set as their home holds it, derived part included.
+   */
   setUserActivities(userId: string, activities: Activity[]): void {
     if (activities.length === 0) {
       this.userActivities.delete(userId);
     } else {
       this.userActivities.set(userId, activities);
     }
+  }
+
+  /**
+   * What the person's client reports. The derived part stays: the client knows
+   * nothing of it, and a replicated row's derived part, relayed by the home,
+   * must not drop until the home says so. Returns the set now held.
+   */
+  setReportedActivities(userId: string, reported: Activity[]): Activity[] {
+    return this.composeActivities(userId, reported.filter((activity) => activity.source === undefined), this.getDerivedActivities(userId));
+  }
+
+  /** What this instance derived for one of its own people. Returns the set now held. */
+  setDerivedActivities(userId: string, derived: Activity[]): Activity[] {
+    const reported = this.getUserActivities(userId).filter((activity) => activity.source === undefined);
+    return this.composeActivities(userId, reported, derived);
+  }
+
+  /** The derived part of a person's set. */
+  getDerivedActivities(userId: string): Activity[] {
+    return this.getUserActivities(userId).filter((activity) => activity.source !== undefined);
+  }
+
+  /**
+   * Derived first, within the limit every receiver holds a set to: a peer
+   * refuses a longer one whole, and a live stream is the last thing to cut.
+   */
+  private composeActivities(userId: string, reported: Activity[], derived: Activity[]): Activity[] {
+    const composed = [...derived, ...reported].slice(0, ACTIVITY_LIMITS.MAX_ACTIVITIES_PER_USER);
+    this.setUserActivities(userId, composed);
+    return composed;
   }
 
   getUserActivities(userId: string): Activity[] {

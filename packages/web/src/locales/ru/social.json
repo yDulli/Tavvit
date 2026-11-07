@@ -85,7 +85,8 @@
     "links": "Ссылки",
     "editProfile": "Редактировать профиль",
     "editSpaceProfile": "Профиль в пространстве",
-    "activity": "Активность"
+    "activity": "Активность",
+    "watchOnTwitch": "Смотреть на Twitch"
   },
   "activity": {
     "title": "Сейчас активны",

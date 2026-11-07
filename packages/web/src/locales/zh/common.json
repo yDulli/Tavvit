@@ -157,7 +157,8 @@
       "listening": "正在听 {{name}}",
       "watching": "正在观看 {{name}}",
       "streaming": "正在直播 {{name}}"
-    }
+    },
+    "liveOnTwitch": "正在 Twitch 直播"
   },
   "contextMenu": {
     "cut": "剪切",

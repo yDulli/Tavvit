@@ -252,7 +252,8 @@ export function processPresenceUpdateEvent(
   if (payload.status === 'offline') {
     activities = [];
   } else if (payload.activities !== undefined) {
-    const valid = validateActivities(payload.activities);
+    // The home's whole set, its own derived activities (Live on Twitch) with their mark.
+    const valid = validateActivities(payload.activities, { allowSource: true });
     if (valid) activities = valid;
     else console.warn(`[federation] presence_update for ${localUser.id}: activities over the limits, status applied, activities ignored`);
   }

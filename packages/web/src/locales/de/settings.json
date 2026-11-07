@@ -401,6 +401,8 @@
       "links": {
         "label": "Links",
         "hint": "Bis zu {{max}} Webadressen auf deiner Profilkarte, jeweils mit optionaler Beschriftung.",
+        "twitchLive": "Während du auf diesem Kanal live bist, steht das in deinem Aktivitätsstatus, mit einem Link zum Stream.",
+        "twitchLiveSharingOff": "„Aktivitätsstatus teilen“ ist unter Privatsphäre aus, also sieht niemand, wenn du auf diesem Kanal live bist.",
         "url": "Linkadresse",
         "urlPlaceholder": "https://…",
         "labelField": "Linkbeschriftung",

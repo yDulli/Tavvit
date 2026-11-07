@@ -283,6 +283,22 @@ function readTranslationConfig() {
 }
 
 /**
+ * Live on Twitch (docs/systems/activity-presence.md, "Live on Twitch"). Off unless both
+ * `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` are set, from an application registered at
+ * dev.twitch.tv; then this server asks Twitch whether the channels its signed-in people link on
+ * their profiles are live. One without the other refuses to boot rather than running with a
+ * check that cannot sign in.
+ */
+function readTwitchConfig() {
+  const clientId = envOptional('TWITCH_CLIENT_ID') ?? '';
+  const clientSecret = envOptional('TWITCH_CLIENT_SECRET') ?? '';
+  if ((clientId === '') !== (clientSecret === '')) {
+    throw new Error('Set both TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET (from an application at https://dev.twitch.tv/console/apps), or neither.');
+  }
+  return { clientId, clientSecret } as const;
+}
+
+/**
  * Mail (docs/systems/email.md). Off unless `EMAIL_TRANSPORT` says otherwise: no worker, no
  * webhook, no outbound connection, and the features that need mail disappear. A half-filled
  * setting refuses to boot rather than running with mail that cannot go out.
@@ -360,6 +376,7 @@ export const config = {
 
   email: readEmailConfig(),
   translation: readTranslationConfig(),
+  twitch: readTwitchConfig(),
   twoFactorKey: readTwoFactorKey(),
 
   livekit: {

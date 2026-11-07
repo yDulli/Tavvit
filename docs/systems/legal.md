@@ -200,6 +200,10 @@ The draft's paragraph on the account says that the old name stays reserved for 3
 
 The draft's section on content from third parties says that a person's browser translates where it can, that the text goes to the provider on request where one is set up (`LegalTemplateFacts.translation`, named), and what the link to Google does. **Setting or changing `TRANSLATION_PROVIDER` changes the draft, so publish it again.** See [translation.md](translation.md), "Privacy", on which provider fits a server for other people.
 
+## Live on Twitch
+
+With `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` set, `LegalTemplateFacts.twitch` is true and the draft's "Status and activity" gains a paragraph: while a person is signed in, shares their activity and links a Twitch channel, the server asks Twitch Interactive, Inc. (USA) once a minute whether that channel is live; only the channel's name goes there, Twitch sees the server and not the person, and what is shown (title, game, start, a link to the stream) is held in memory only. **Turning it on or off changes the draft, so publish it again.** Nothing from Twitch loads in a person's browser until they open the link. See activity-presence.md, "Live on Twitch".
+
 ## What the admin console stores
 
 The privacy draft (`utils/legalTemplates.ts`, section "Reports and moderation") says that administrators can keep short notes about an account, that they are part of that account's data export and that they are deleted with it. It also says that administrators can see an account's sessions and security list and find an account by its whole confirmed address, that a new account can start in spaces the operator chose, how long backups made by hand are kept, and that a deleted account's messages in spaces go with it while direct messages stay under "Deleted User". An operator who published the policy before 1.22.0 has to insert the draft again, compare and publish, because a published text does not change by itself. Announcements hold no personal data beyond the admin's id; the sign-up rules hold a domain or a name somebody may want, not anyone's account; the CSV of accounts holds no addresses.

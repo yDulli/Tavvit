@@ -144,6 +144,8 @@ export interface AdminSystemInfo {
     twoFactor: boolean;
     /** Who translates messages on request. Null: only a person's own browser, or a link out. */
     translation: 'deepl' | 'libretranslate' | null;
+    /** Live on Twitch: 'off' (not set up), 'ok', or 'failing' (Twitch did not answer the last check). */
+    twitchLive: 'off' | 'ok' | 'failing';
     voice: boolean;
     federation: boolean;
   };

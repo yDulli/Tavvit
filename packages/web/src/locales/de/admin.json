@@ -915,7 +915,13 @@
         "offsite_failed": "Die Kopie auf einen anderen Rechner ist fehlgeschlagen: {{detail}}",
         "restart_loop": "Der Server ist innerhalb einer Viertelstunde {{detail}}-mal gestartet. Schau in sein Log."
       },
-      "translation": "Nachrichten übersetzen"
+      "translation": "Nachrichten übersetzen",
+      "twitchLive": "Live auf Twitch",
+      "twitchLiveStates": {
+        "off": "Aus",
+        "ok": "Läuft",
+        "failing": "Twitch antwortet nicht"
+      }
     },
     "account": {
       "tabs": {

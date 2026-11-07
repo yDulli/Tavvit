@@ -207,6 +207,9 @@ function productionLikeEnv(folder, port) {
     RESEND_WEBHOOK_SECRET: `whsec_${randomBytes(24).toString('base64')}`,
     TRANSLATION_PROVIDER: 'deepl',
     DEEPL_API_KEY: `${randomBytes(16).toString('hex')}:fx`,
+    // Nobody is signed in to the boot's empty database, so Twitch is never asked.
+    TWITCH_CLIENT_ID: randomBytes(15).toString('hex'),
+    TWITCH_CLIENT_SECRET: randomBytes(15).toString('hex'),
     LIVEKIT_URL: 'ws://127.0.0.1:9',
     LIVEKIT_API_URL: nowhere,
     LIVEKIT_API_KEY: 'release-check',

@@ -933,7 +933,13 @@
         "offsite_failed": "A cópia para outra máquina falhou: {{detail}}",
         "restart_loop": "O servidor iniciou {{detail}} vezes em quinze minutos. Veja o log."
       },
-      "translation": "Tradução de mensagens"
+      "translation": "Tradução de mensagens",
+      "twitchLive": "Ao vivo na Twitch",
+      "twitchLiveStates": {
+        "off": "Desligado",
+        "ok": "Funcionando",
+        "failing": "A Twitch não responde"
+      }
     },
     "account": {
       "tabs": {

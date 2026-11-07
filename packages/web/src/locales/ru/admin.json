@@ -951,7 +951,13 @@
         "offsite_failed": "Копирование на другой компьютер не удалось: {{detail}}",
         "restart_loop": "Сервер запускался {{detail}} раз за пятнадцать минут. Посмотрите журнал."
       },
-      "translation": "Перевод сообщений"
+      "translation": "Перевод сообщений",
+      "twitchLive": "Эфиры на Twitch",
+      "twitchLiveStates": {
+        "off": "Выключено",
+        "ok": "Работает",
+        "failing": "Twitch не отвечает"
+      }
     },
     "account": {
       "tabs": {

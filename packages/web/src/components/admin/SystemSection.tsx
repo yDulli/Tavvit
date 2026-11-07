@@ -143,6 +143,7 @@ export function SystemSection() {
               <Service label={t('admin:console.system.mail')} on={info.services.email === 'ok'} detail={t(`admin:console.system.mailStates.${info.services.email === 'held' || info.services.email === 'blocked' || info.services.email === 'ok' ? info.services.email : 'off'}`)} />
               <Service label={t('admin:console.system.twoFactor')} on={info.services.twoFactor} detail={onOff(info.services.twoFactor)} />
               <Service label={t('admin:console.system.translation')} on={info.services.translation !== null} detail={info.services.translation === 'deepl' ? 'DeepL' : info.services.translation === 'libretranslate' ? 'LibreTranslate' : onOff(false)} />
+              <Service label={t('admin:console.system.twitchLive')} on={info.services.twitchLive === 'ok'} detail={t(`admin:console.system.twitchLiveStates.${info.services.twitchLive === 'ok' || info.services.twitchLive === 'failing' ? info.services.twitchLive : 'off'}`)} />
               <Service label={t('admin:console.system.voice')} on={info.services.voice} detail={onOff(info.services.voice)} />
               <Service label={t('admin:console.system.federation')} on={info.services.federation} detail={onOff(info.services.federation)} />
             </ul>

@@ -57,6 +57,20 @@ export function ActivityCard({ activities, fallbackCustomStatus }: ActivityCardP
     return <div className="text-label leading-[1.3] text-txt-tertiary truncate">{replaceEmojiShortcodes(primary.name)}</div>;
   }
 
+  // Live on Twitch, as the person's home found it (docs/systems/activity-presence.md):
+  // where, what the stream is called, then the game and how long.
+  if (primary.source === 'twitch') {
+    const elapsed = primary.timestamps?.start ? formatElapsed(primary.timestamps.start, t) : null;
+    const below = [primary.details, elapsed].filter(Boolean).join(' · ');
+    return (
+      <>
+        <div className="text-label leading-[1.3] text-txt-secondary truncate">{t('activity.liveOnTwitch')}</div>
+        <div className="text-label leading-[1.3] text-txt-tertiary truncate" title={primary.name}>{primary.name}</div>
+        {below && <div className="text-2xs leading-[1.3] text-txt-tertiary truncate">{below}</div>}
+      </>
+    );
+  }
+
   // Rich activity — what they do and to what, details, elapsed (card wrapper is on the parent row)
   return (
     <>

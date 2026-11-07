@@ -588,13 +588,14 @@ function handleActivityUpdate(event: Record<string, unknown>, userId: string): v
     return;
   }
 
-  const activities = validateActivities(event.activities);
-  if (!activities) {
+  const reported = validateActivities(event.activities);
+  if (!reported) {
     connectionManager.sendToUser(userId, { type: 'error', message: 'Invalid activity payload' });
     return;
   }
 
-  connectionManager.setUserActivities(userId, activities);
+  // What this instance or the person's home derived (Live on Twitch) stays beside it.
+  const activities = connectionManager.setReportedActivities(userId, reported);
   const status = connectionManager.getUserStatus(userId);
 
   const payload = presenceUpdateFor(userId, status, activities);

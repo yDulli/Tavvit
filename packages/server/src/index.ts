@@ -74,6 +74,7 @@ import { blockRoutes } from './routes/blocks.js';
 import { profileImageRoutes } from './routes/profileImages.js';
 import { emojiRoutes } from './routes/emojis.js';
 import { startCustomStatusSweeper, stopCustomStatusSweeper } from './utils/customStatusExpiry.js';
+import { startTwitchLive, stopTwitchLive } from './utils/twitchLive.js';
 import { federationRoutes } from './routes/federation.js';
 import { cspReportRoutes } from './routes/cspReport.js';
 import { buildCspHeaderValue, CSP_REPORT_GROUP, CSP_REPORT_PATH } from './utils/csp.js';
@@ -465,6 +466,8 @@ async function main(): Promise<void> {
   startLegalRecordSweeper();
   startEmailWorker();
   startSecuritySweeper();
+  // Only with TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET set (utils/twitchLive.ts).
+  startTwitchLive();
 
   // The space directory pinger stays outside the workers guard on purpose:
   // the two-instance harness disables the workers and still needs the pinger,
@@ -483,6 +486,7 @@ async function main(): Promise<void> {
     stopDataExportSweeper();
     stopEmailWorker();
     stopSecuritySweeper();
+    stopTwitchLive();
     await app.close();
     closeDatabase(); // checkpoints WAL — leaves a complete on-disk file
     process.exit(0);

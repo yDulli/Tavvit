@@ -2,6 +2,9 @@ import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PROFILE_LAYOUTS, PROFILE_LIMITS, type ProfileLayout, type ProfileLink } from '@backspace/shared';
 import { normalizeProfileLinkUrl } from '@backspace/shared/src/profileFields';
+import { twitchChannelOf } from '@backspace/shared/src/twitch';
+import { useHomeInstanceInfo } from '../../../hooks/useHomeInstanceInfo';
+import { useActivityStore } from '../../../stores/activityStore';
 import { Icon } from '../../ui/Icon';
 import { OptionCards, SettingsField } from './_shared/SettingsControls';
 
@@ -71,6 +74,13 @@ interface ProfileDetailsEditorProps {
 export function ProfileDetailsEditor({ pronouns, onPronouns, links, onLinks, invalidLinks, layout, onLayout }: ProfileDetailsEditorProps) {
   const { t } = useTranslation(['settings']);
   const layoutLabelId = useId();
+  // Live on Twitch (docs/systems/activity-presence.md): the home asks about the first
+  // Twitch channel among the links, so the row of that one says what follows from it.
+  const twitchLive = useHomeInstanceInfo()?.twitchLive === true;
+  const sharing = useActivityStore((s) => s.showActivity);
+  const twitchRowId = twitchLive
+    ? links.find((link) => twitchChannelOf(normalizeProfileLinkUrl(link.url) ?? '') !== null)?.id ?? null
+    : null;
 
   const updateLink = (id: number, change: Partial<Pick<ProfileLinkDraft, 'url' | 'label'>>) => {
     onLinks(links.map((link) => (link.id === id ? { ...link, ...change } : link)));
@@ -146,6 +156,11 @@ export function ProfileDetailsEditor({ pronouns, onPronouns, links, onLinks, inv
                     </button>
                   </div>
                   {invalid && <p role="alert" className="mt-1 text-meta text-txt-danger">{t('settings:account.profile.links.invalid', { max: PROFILE_LIMITS.MAX_LINK_URL_LENGTH })}</p>}
+                  {!invalid && link.id === twitchRowId && (
+                    <p className="mt-1 text-meta text-txt-tertiary">
+                      {sharing ? t('settings:account.profile.links.twitchLive') : t('settings:account.profile.links.twitchLiveSharingOff')}
+                    </p>
+                  )}
                 </li>
               );
             })}

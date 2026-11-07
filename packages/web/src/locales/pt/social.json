@@ -83,7 +83,8 @@
     "links": "Links",
     "editProfile": "Editar perfil",
     "editSpaceProfile": "Editar perfil do espaço",
-    "activity": "Atividade"
+    "activity": "Atividade",
+    "watchOnTwitch": "Assistir na Twitch"
   },
   "activity": {
     "title": "Ativos agora",

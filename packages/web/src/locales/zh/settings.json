@@ -401,6 +401,8 @@
       "links": {
         "label": "链接",
         "hint": "资料卡上最多可放 {{max}} 个网址，每个都可以加上标签。",
+        "twitchLive": "您在这个频道直播时，其他人会在您的活动状态中看到，并可通过链接前往直播。",
+        "twitchLiveSharingOff": "“分享活动状态”已在隐私中关闭，因此您在这个频道直播时，其他人看不到。",
         "url": "链接地址",
         "urlPlaceholder": "https://…",
         "labelField": "链接标签",

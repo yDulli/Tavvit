@@ -79,7 +79,8 @@
     "links": "链接",
     "editProfile": "编辑个人资料",
     "editSpaceProfile": "编辑空间资料",
-    "activity": "动态"
+    "activity": "动态",
+    "watchOnTwitch": "在 Twitch 上观看"
   },
   "activity": {
     "title": "当前活跃",

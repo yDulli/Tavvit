@@ -579,7 +579,7 @@ See [translation.md](translation.md). Not for bots.
 |--------|------|--------------|
 | POST | `/api/messages/:id/translate` | Who can read the message, in a channel or a conversation; 404 otherwise. `{ target }`, one of `TRANSLATION_TARGETS`. `TranslateMessageResponse`. 503 `translation_unavailable` without a provider, 502 `translation_failed`, 429 `translation_limit_reached`. |
 
-`GET /api/instance/info` has `translation`: whether this server has a provider.
+`GET /api/instance/info` has `translation`: whether this server has a provider. It also has `twitchLive`: whether this server asks Twitch whether the channels its people link are live (activity-presence.md, "Live on Twitch").
 
 ## Threads (`routes/threads.ts`) — auth required
 

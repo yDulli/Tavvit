@@ -1824,12 +1824,13 @@ Native users' status (and optional rich activities) is projected to peers via th
 **Payload:** `FederationPresenceUpdatePayload`:
 - `homeUserId`, `homeInstance`
 - `status: 'online' | 'idle' | 'dnd' | 'offline'`
-- `activities?: Activity[]`. Current senders always include it (`[]` for none). The receiver reads a list as the full set and an absent field as "unchanged": peers that predate this send status-only relays on every connect and in their activation snapshot, also while the user is playing.
+- `activities?: Activity[]`. Current senders always include it (`[]` for none). The receiver reads a list as the full set and an absent field as "unchanged": peers that predate this send status-only relays on every connect and in their activation snapshot, also while the user is playing. An activity the home derived itself carries `source` (`'twitch'`, Live on Twitch), which the receiver keeps (`validateActivities(…, { allowSource: true })`, after the attribution check) and a client's own `activity_update` can never give; a direct `activity_update` from the person's client on the peer replaces only the part without it (activity-presence.md, "Live on Twitch").
 - `ts: number` — emitter clock (last-write-wins per stub if needed)
 
 **Outbox-only — never written to mutation log.** Presence is ephemeral. Replaying old presence on peer activation would be wrong (stale state). The outbox queues directly without `appendMutationLog`. Stale entries that fail delivery beyond retry budget are dropped.
 
 **Sender call sites** (all in `utils/federationPresence.ts:queuePresenceRelay`):
+- `utils/twitchLive.ts` (`checkTwitchLive`) — the whole activity list when a stream found live on Twitch starts, changes or ends
 - `ws/handler.ts` (auth path) — the user's chosen status (`users.chosen_status`)
 - `ws/handler.ts` (`finalizeDisconnect`) — `offline` (native rows; a replicated row returns to its home's projection and relays nothing, `activity-presence.md` "DB Persistence")
 - `ws/presence.ts` (`applyChosenStatus`) — manual `online`/`idle`/`dnd`, from REST `PATCH /api/users/@me` and the WS `presence_update` client event

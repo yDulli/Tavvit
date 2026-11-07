@@ -157,7 +157,8 @@
       "listening": "Слушает {{name}}",
       "watching": "Смотрит {{name}}",
       "streaming": "Стримит {{name}}"
-    }
+    },
+    "liveOnTwitch": "В эфире на Twitch"
   },
   "contextMenu": {
     "cut": "Вырезать",

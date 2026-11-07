@@ -157,7 +157,8 @@
       "listening": "Listening to {{name}}",
       "watching": "Watching {{name}}",
       "streaming": "Streaming {{name}}"
-    }
+    },
+    "liveOnTwitch": "Live on Twitch"
   },
   "contextMenu": {
     "cut": "Cut",

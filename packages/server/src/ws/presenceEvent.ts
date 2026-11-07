@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { isActivitySource } from '@backspace/shared';
 import type { Activity, ActivityAssets, ActivityTimestamps, ActivityType, PresenceIdentity, ServerEvent } from '@backspace/shared';
 import { ACTIVITY_LIMITS } from '@backspace/shared/src/activities.js';
 import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
@@ -77,8 +78,14 @@ const MAX_TIMESTAMP = 4102444800000;
 /**
  * Validate and normalize an activity list from a client or a peer. Null when
  * anything in it is malformed or over the limits in `ACTIVITY_LIMITS`.
+ *
+ * `source` marks an activity a person's home instance derived itself (Live on
+ * Twitch, docs/systems/activity-presence.md). A client never says that of its
+ * own activities, so it is dropped from what a client sends; it is kept from a
+ * peer relaying its own person's presence (`allowSource`), so the mark, and
+ * with it the way to the stream, reaches every instance.
  */
-export function validateActivities(raw: unknown): Activity[] | null {
+export function validateActivities(raw: unknown, options: { allowSource?: boolean } = {}): Activity[] | null {
   if (!Array.isArray(raw)) return null;
   if (raw.length > ACTIVITY_LIMITS.MAX_ACTIVITIES_PER_USER) return null;
 
@@ -121,6 +128,8 @@ export function validateActivities(raw: unknown): Activity[] | null {
       if (typeof aObj.smallText === 'string' && aObj.smallText.length <= ACTIVITY_LIMITS.MAX_ASSET_TEXT_LENGTH) assets.smallText = withoutUnsafeCharacters(aObj.smallText);
       if (Object.keys(assets).length > 0) activity.assets = assets;
     }
+
+    if (options.allowSource && isActivitySource(obj.source)) activity.source = obj.source;
 
     validated.push(activity);
   }

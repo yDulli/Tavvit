@@ -46,6 +46,10 @@ export function useFriendDoing(row: HomeFriend, person: Pick<User, 'status' | 'c
     };
   }
   const activity = row.activity;
+  if (activity && activity.source === 'twitch') {
+    // Live on Twitch, as their home found it; the line below is what the stream is called.
+    return { line: t('common:activity.liveOnTwitch'), detail: activity.name, busy: true };
+  }
   if (activity && activity.type !== 'custom') {
     return {
       line: t(`common:activity.line.${activity.type}`, { name: activity.name }),

@@ -915,7 +915,13 @@
         "offsite_failed": "The copy to another machine failed: {{detail}}",
         "restart_loop": "The server has started {{detail}} times within a quarter of an hour. Look at its log."
       },
-      "translation": "Translating messages"
+      "translation": "Translating messages",
+      "twitchLive": "Live on Twitch",
+      "twitchLiveStates": {
+        "off": "Off",
+        "ok": "Working",
+        "failing": "Twitch is not answering"
+      }
     },
     "account": {
       "tabs": {

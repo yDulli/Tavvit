@@ -75,8 +75,27 @@ vi.mock('../../../stores/spaceStore', () => ({
 vi.mock('../../../api/client', () => ({
   // reattach is wrapped so the top-level `mockReattach` const is dereferenced
   // lazily at call time (vi.mock factories are hoisted above const init).
-  api: { uploads: { url: (f: string) => `/api/uploads/${f}` }, users: { reattach: (...args: unknown[]) => mockReattach(...args) } },
+  // dataExportStatus is asked by the data export section on mount; it never answers
+  // here, so that section stays waiting instead of reporting an error nobody renders.
+  api: {
+    uploads: { url: (f: string) => `/api/uploads/${f}` },
+    users: {
+      reattach: (...args: unknown[]) => mockReattach(...args),
+      dataExportStatus: () => new Promise<never>(() => undefined),
+    },
+  },
 }));
+
+// The links editor says what a Twitch link does (Live on Twitch): it reads whether
+// activity is shared and whether the home has the check. Stub both, so this
+// isolated render loads neither the socket's audio import chain nor the info request.
+vi.mock('../../../stores/activityStore', () => ({
+  useActivityStore: Object.assign(
+    (selector: (s: unknown) => unknown) => selector({ showActivity: true }),
+    { getState: () => ({ showActivity: true }), setState: vi.fn(), subscribe: vi.fn() },
+  ),
+}));
+vi.mock('../../../hooks/useHomeInstanceInfo', () => ({ useHomeInstanceInfo: () => null }));
 
 // Child modals are closed in these render cases; stub them so their transitive
 // store imports don't participate in this isolated component render.

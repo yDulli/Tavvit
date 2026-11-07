@@ -9,6 +9,7 @@
       "items": {
         "backgrounds": "Sua câmera pode desfocar seu ambiente, de leve ou com força, ou colocar você em uma de cinco cenas, entre elas uma taverna, ou diante de uma imagem sua. Tudo acontece no seu dispositivo, e sua imagem nunca sai dele.",
         "streamer": "O modo streamer oculta seu e-mail, links de convite, instâncias conectadas, códigos de duas etapas, endereços de sessões, tokens e o que as notificações dizem enquanto você faz stream. Ligue-o em Configurações → Privacidade ou com um atalho; o aplicativo para desktop o liga sozinho quando o OBS, o Streamlabs ou o XSplit abre.",
+        "twitch": "Coloque o link do seu canal da Twitch no perfil, e as pessoas veem quando você está ao vivo, como um jogo que você está jogando, com um botão para a sua transmissão. Quem opera o servidor ativa isso.",
         "subtitles": "Assistir junto não liga mais as legendas sozinho. Um novo botão as liga só para você.",
         "profile": "Seu próprio perfil não lista mais amigos e espaços em comum com você mesmo."
       }

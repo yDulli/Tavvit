@@ -98,7 +98,7 @@ nothing is stored or broadcast.
 | type | fields | notes |
 |------|--------|-------|
 | `presence_update` | status: online/idle/dnd | stored as the user's chosen status and published while connected; same path as `PATCH /api/users/@me { status }` (activity-presence.md "DB Persistence") |
-| `activity_update` | activities: Activity[] | rate-limited 3s, respects showActivity |
+| `activity_update` | activities: Activity[] | rate-limited 3s, respects showActivity; `source` is dropped, and what the home derived (Live on Twitch) stays beside it (activity-presence.md) |
 
 ### Voice (Space Channels)
 | type | fields | notes |

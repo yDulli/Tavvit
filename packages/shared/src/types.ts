@@ -1090,6 +1090,18 @@ export interface ActivityAssets {
   smallText?: string;
 }
 
+/**
+ * Where an activity came from when the person's home instance worked it out
+ * rather than their device reporting it (docs/systems/activity-presence.md,
+ * "Live on Twitch"): `twitch`, the person's Twitch channel being live.
+ */
+export const ACTIVITY_SOURCES = ['twitch'] as const;
+export type ActivitySource = (typeof ACTIVITY_SOURCES)[number];
+
+export function isActivitySource(value: unknown): value is ActivitySource {
+  return typeof value === 'string' && (ACTIVITY_SOURCES as readonly string[]).includes(value);
+}
+
 export interface Activity {
   type: ActivityType;
   name: string;
@@ -1098,6 +1110,12 @@ export interface Activity {
   timestamps?: ActivityTimestamps;
   assets?: ActivityAssets;
   url?: string;
+  /**
+   * Set only by the person's home instance, for an activity it derived
+   * (`ACTIVITY_SOURCES`). A client never sends one: a server drops it from
+   * an `activity_update` and takes it only from another instance.
+   */
+  source?: ActivitySource;
 }
 
 // ─── WebSocket Event Types ──────────────────────────────────────────────────
@@ -1978,6 +1996,12 @@ export interface InstanceInfoResponse {
   twoFactor?: boolean;
   /** Someone set up a translator for messages on this server (docs/systems/translation.md). Missing on older servers. */
   translation?: boolean;
+  /**
+   * This server asks Twitch whether a channel linked on a profile is live, and
+   * shows it as the person's activity (docs/systems/activity-presence.md,
+   * "Live on Twitch"). Missing on older servers.
+   */
+  twitchLive?: boolean;
   emojiPolicy: InstanceEmojiPolicy;
   federatedRegistrationOpen: boolean;
   // Persistent per-instance epoch (incarnation UUID). Minted by ensureDefaults on

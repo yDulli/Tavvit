@@ -157,7 +157,8 @@
       "listening": "Hört {{name}}",
       "watching": "Schaut {{name}}",
       "streaming": "Streamt {{name}}"
-    }
+    },
+    "liveOnTwitch": "Live auf Twitch"
   },
   "contextMenu": {
     "cut": "Ausschneiden",

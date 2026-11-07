@@ -9,6 +9,7 @@
       "items": {
         "backgrounds": "Deine Kamera kann deinen Raum leicht oder stark weichzeichnen oder dich in eine von fünf Szenen setzen, darunter eine Taverne, oder vor ein eigenes Bild. Das alles passiert auf deinem Gerät, und dein Bild verlässt es nie.",
         "streamer": "Der Streamer-Modus verbirgt beim Streamen deine E-Mail, Einladungslinks, verbundene Instanzen, Zwei-Faktor-Codes, Sitzungsadressen, Tokens und was Benachrichtigungen sagen. Schalte ihn unter Einstellungen → Privatsphäre oder per Tastenkürzel ein; die Desktop-App schaltet ihn von selbst ein, wenn OBS, Streamlabs oder XSplit startet.",
+        "twitch": "Verlinkst du deinen Twitch-Kanal im Profil, sehen andere, wenn du live bist, wie bei einem Spiel, mit einem Knopf zu deinem Stream. Der Betreiber des Servers schaltet das ein.",
         "subtitles": "Beim gemeinsamen Schauen gehen Untertitel nicht mehr von selbst an. Ein neuer Knopf schaltet sie nur für dich ein.",
         "profile": "Dein eigenes Profil zeigt keine gemeinsamen Freunde und Spaces mit dir selbst mehr."
       }
