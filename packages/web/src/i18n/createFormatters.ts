@@ -47,6 +47,11 @@ export interface Formatters {
   formatList: (items: readonly string[]) => string;
   /** `German`, in the language of the interface; the code itself when the browser has no name for it. */
   formatLanguageName: (code: string) => string;
+  /**
+   * The letters of a text as a reader sees them: a letter with its accents, an emoji with its
+   * joiners, by the language's rules (for drawing a name letter by letter).
+   */
+  splitGraphemes: (text: string) => string[];
 }
 
 type DateTimeOptions = Intl.DateTimeFormatOptions;
@@ -78,6 +83,7 @@ export function createFormatters(getLocale: () => string, getClock: () => TimeFo
   const numberCache = new Map<string, Intl.NumberFormat>();
   const relativeCache = new Map<string, Intl.RelativeTimeFormat>();
   const listCache = new Map<string, Intl.ListFormat>();
+  const graphemeCache = new Map<string, Intl.Segmenter>();
 
   function dateFormat(options: DateTimeOptions): Intl.DateTimeFormat {
     const locale = getLocale();
@@ -127,6 +133,18 @@ export function createFormatters(getLocale: () => string, getClock: () => TimeFo
       listCache.set(locale, formatter);
     }
     return formatter;
+  }
+
+  /** The language's grapheme segmenter, or null where the runtime has none. */
+  function graphemeSegmenter(): Intl.Segmenter | null {
+    if (typeof Intl.Segmenter !== 'function') return null;
+    const locale = getLocale();
+    let segmenter = graphemeCache.get(locale);
+    if (!segmenter) {
+      segmenter = new Intl.Segmenter(locale, { granularity: 'grapheme' });
+      graphemeCache.set(locale, segmenter);
+    }
+    return segmenter;
   }
 
   return {
@@ -222,6 +240,12 @@ export function createFormatters(getLocale: () => string, getClock: () => TimeFo
       } catch {
         return code;
       }
+    },
+
+    splitGraphemes: (text) => {
+      const segmenter = graphemeSegmenter();
+      // Without a segmenter, code points: an accent or a joined emoji may come apart, a letter never does.
+      return segmenter ? Array.from(segmenter.segment(text), (part) => part.segment) : Array.from(text);
     },
   };
 }

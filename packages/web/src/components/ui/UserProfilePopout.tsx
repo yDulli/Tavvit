@@ -33,7 +33,7 @@ import { ProfileSpaceNickname } from './ProfileSpaceNickname';
 import { BlockUserButton } from '../social/BlockUserButton';
 import { ProfileLinks } from './ProfileLinks';
 import { ProfileBanner } from './ProfileBanner';
-import { CardTopEffect, DecoratedName } from './Decorations';
+import { DecoratedName, ProfileEffectLayer } from './Decorations';
 import { personDecorations } from '../../utils/decorations';
 import { SpaceTagChip, shownSpaceTag } from './SpaceTag';
 
@@ -217,10 +217,8 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
       className="fixed z-[200] isolate w-[340px] rounded-lg overflow-hidden animate-pop select-none glass-modal"
       style={cardStyle}
     >
-      {/* Banner, with the profile's effect over it; the compact layout has none, and its effect plays across the top */}
-      {look.banner
-        ? <ProfileBanner className={look.banner} src={bannerSrc} fallback={bannerFallback} effect={decorations.profileEffect} effectHeight={look.effectHeight} />
-        : <CardTopEffect effect={decorations.profileEffect} height={look.effectHeight} />}
+      {/* Banner; the compact layout has none */}
+      {look.banner && <ProfileBanner className={look.banner} src={bannerSrc} fallback={bannerFallback} />}
 
       {/* Body */}
       <div className="px-4 pb-4 relative">
@@ -376,6 +374,8 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
           />
         </div>
       </div>
+      {/* The profile's effect, over the whole card (decorations.md) */}
+      <ProfileEffectLayer effect={decorations.profileEffect} className="z-20" />
     </div>
   );
 }

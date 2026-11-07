@@ -36,7 +36,7 @@ import { ProfileRoles } from '../ui/ProfileRoles';
 import { Icon } from '../ui/Icon';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ProfileBanner } from '../ui/ProfileBanner';
-import { CardTopEffect, DecoratedName } from '../ui/Decorations';
+import { DecoratedName, ProfileEffectLayer } from '../ui/Decorations';
 import { personDecorations } from '../../utils/decorations';
 import { SpaceTagChip, shownSpaceTag } from '../ui/SpaceTag';
 import { GatedPicture } from '../ui/ExternalMedia';
@@ -310,11 +310,8 @@ export function UserProfileModal() {
         className="relative isolate max-w-lg w-full mx-4 max-h-[calc(calc(100*var(--app-vh))-2rem)] flex flex-col glass-modal rounded-lg modal-panel overflow-hidden"
         style={theme ? { backgroundImage: cardTint(theme), borderColor: cardEdge(theme) } : undefined}
       >
-        {/* Banner, with the profile's effect over it; the compact layout has none, its effect plays
-            across the top and its close button sits on the header */}
-        {look.banner
-          ? <ProfileBanner className={`${look.banner} flex-shrink-0`} src={bannerSrc} fallback={bannerFallback} effect={decorations.profileEffect} effectHeight={look.effectHeight} />
-          : <CardTopEffect effect={decorations.profileEffect} height={look.effectHeight} />}
+        {/* Banner; the compact layout has none, and its close button sits on the header */}
+        {look.banner && <ProfileBanner className={`${look.banner} flex-shrink-0`} src={bannerSrc} fallback={bannerFallback} />}
         {/* Over a banner, which can be any picture, the close control carries its own dark ground. */}
         <button
           data-tooltip=""
@@ -608,6 +605,8 @@ export function UserProfileModal() {
             />
           </div>
         )}
+        {/* The profile's effect, over the whole panel (decorations.md) */}
+        <ProfileEffectLayer effect={decorations.profileEffect} className="z-20" />
       </div>
 
     </div>

@@ -4,6 +4,15 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.37.1": {
+      "title": "Decorações, desenhadas",
+      "items": {
+        "drawn": "Toda moldura, efeito de perfil e placa de nome agora é um desenho: fones de ouvido, orelhas de gato, uma coroa, auréola e asas de anjo, chifres, uma coroa de louros, flores, chamas, neve, estrelas, corações e bolhas em volta da sua foto; um disco, uma cidade, flores de cerejeira, pinheiros nevados, uma nuvem de chuva, uma fogueira, uma noite estrelada, um barco no mar, montanhas, uma floresta e bandeirinhas no fim da sua linha.",
+        "effects": "Os efeitos de perfil agora passam por todo o seu cartão: borboletas, música, céu noturno, neve, flores de cerejeira, folhas de outono, corações, confete, bolhas e lanternas.",
+        "names": "Dez novos efeitos de nome: Onda, Glitch, Adesivo, Quadrinhos, Retrô, Bengala doce, Galáxia, Tóxico, Lagoa e Frutas vermelhas.",
+        "kept": "Se você usava um dos designs anteriores, agora usa o desenho mais parecido com ele. Não precisa fazer nada."
+      }
+    },
     "1.37.0": {
       "title": "Para criadores",
       "items": {

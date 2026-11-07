@@ -83,10 +83,8 @@ function Preview({ look, trying }: { look: Look; trying: Trying }) {
   );
   return (
     <div className="grid gap-3 desktop:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-      <div className="overflow-hidden rounded-lg border border-border-hard bg-surface-elevated">
-        <div className="relative h-[84px]" style={look.banner}>
-          <ProfileEffectLayer effect={trying.effect} height={84} />
-        </div>
+      <div className="relative isolate overflow-hidden rounded-lg border border-border-hard bg-surface-elevated">
+        <div className="h-[84px]" style={look.banner} />
         <div className="px-4 pb-4">
           <div className="mt-[-34px] mb-2">
             <Avatar
@@ -104,6 +102,7 @@ function Preview({ look, trying }: { look: Look; trying: Trying }) {
           <div className="truncate text-lead font-semibold leading-tight text-txt-primary">{name('on')}</div>
           <div className="truncate text-meta text-txt-tertiary">@{look.user.username}</div>
         </div>
+        <ProfileEffectLayer effect={trying.effect} className="z-20" />
       </div>
 
       <div className="flex min-w-0 flex-col gap-3">
@@ -236,8 +235,8 @@ export function DecorationsPanel() {
             onChange={setEffect}
             columns={4}
             options={EFFECT_CHOICES.map((id) => option(id, t(`settings:decorations.effects.${id}`), (
-              <span className="relative block h-full w-full" style={look.banner}>
-                <ProfileEffectLayer effect={fromChoice<ProfileEffect>(id)} height={56} />
+              <span className="relative block h-full w-full" style={{ ...look.banner, '--deco-scale': 0.5 } as CSSProperties}>
+                <ProfileEffectLayer effect={fromChoice<ProfileEffect>(id)} />
               </span>
             )))}
           />

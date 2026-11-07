@@ -41,25 +41,26 @@ describe('DecorationsPanel', () => {
     render(<DecorationsPanel />);
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
 
-    await user.click(within(picker('Frame')).getByRole('radio', { name: 'Aurora' }));
+    await user.click(within(picker('Frame')).getByRole('radio', { name: 'Headphones' }));
     await user.click(within(screen.getByRole('radiogroup', { name: 'What to decorate' })).getByRole('radio', { name: 'Name' }));
     await user.click(within(picker('Font')).getByRole('radio', { name: 'Serif' }));
+    await user.click(within(picker('Effect')).getByRole('radio', { name: 'Wave' }));
     await user.click(await screen.findByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(update).toHaveBeenCalledOnce());
-    expect(update.mock.calls[0]![0]).toEqual({ avatarFrame: 'aurora', nameFont: 'serif' });
+    expect(update.mock.calls[0]![0]).toEqual({ avatarFrame: 'headphones', nameFont: 'serif', nameEffect: 'wave' });
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Save' })).toBeNull());
   });
 
   it('starts from what the person has, takes one off with null, and resets to it', async () => {
-    useAuthStore.setState({ user: self({ avatarFrame: 'gilded', nameplate: 'holo' }) });
+    useAuthStore.setState({ user: self({ avatarFrame: 'crown', nameplate: 'vinyl' }) });
     const user = userEvent.setup();
     render(<DecorationsPanel />);
-    expect(within(picker('Frame')).getByRole('radio', { name: 'Gilded' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(picker('Frame')).getByRole('radio', { name: 'Crown' })).toHaveAttribute('aria-checked', 'true');
 
     await user.click(within(picker('Frame')).getByRole('radio', { name: 'None' }));
     await user.click(screen.getByRole('button', { name: 'Reset' }));
-    expect(within(picker('Frame')).getByRole('radio', { name: 'Gilded' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(picker('Frame')).getByRole('radio', { name: 'Crown' })).toHaveAttribute('aria-checked', 'true');
 
     await user.click(within(picker('Frame')).getByRole('radio', { name: 'None' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -67,13 +68,20 @@ describe('DecorationsPanel', () => {
     expect(update.mock.calls[0]![0]).toEqual({ avatarFrame: null });
   });
 
+  it('shows a retired design as the drawing that took its place, with nothing to save', () => {
+    useAuthStore.setState({ user: self({ avatarFrame: 'gilded' as User['avatarFrame'] }) });
+    render(<DecorationsPanel />);
+    expect(within(picker('Frame')).getByRole('radio', { name: 'Crown' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+  });
+
   it('says what went wrong and keeps the choice when the server refuses it', async () => {
     update.mockRejectedValue(new HttpError(400, 'That decoration does not exist', undefined, 'profile_decoration_invalid', { field: 'avatarFrame' }));
     const user = userEvent.setup();
     render(<DecorationsPanel />);
-    await user.click(within(picker('Frame')).getByRole('radio', { name: 'Prism' }));
+    await user.click(within(picker('Frame')).getByRole('radio', { name: 'Angel' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('That decoration does not exist.');
-    expect(within(picker('Frame')).getByRole('radio', { name: 'Prism' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(picker('Frame')).getByRole('radio', { name: 'Angel' })).toHaveAttribute('aria-checked', 'true');
   });
 });

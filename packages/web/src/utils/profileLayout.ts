@@ -10,11 +10,6 @@ export type ProfileSurface = 'card' | 'full' | 'preview';
 export interface ProfileHeaderLook {
   /** Height class of the banner; null when the layout has no banner area. */
   banner: string | null;
-  /**
-   * How tall the profile's effect is, in pixels (docs/systems/decorations.md): the banner's height,
-   * and on a layout without one the same height across the top of the card.
-   */
-  effectHeight: number;
   avatarSize: number;
   /** Places the picture: over the banner's edge, or in the header's row. */
   avatar: string;
@@ -24,19 +19,19 @@ export interface ProfileHeaderLook {
 
 const LOOKS: Record<ProfileSurface, Record<ProfileLayout, ProfileHeaderLook>> = {
   card: {
-    standard: { banner: 'h-[96px]', effectHeight: 96, avatarSize: 80, avatar: 'mt-[-48px] mb-3', header: '' },
-    centered: { banner: 'h-[96px]', effectHeight: 96, avatarSize: 80, avatar: 'mt-[-48px] mb-3', header: 'flex flex-col items-center text-center' },
-    compact: { banner: null, effectHeight: 96, avatarSize: 56, avatar: 'flex-shrink-0', header: 'flex items-center gap-3 pt-4' },
+    standard: { banner: 'h-[96px]', avatarSize: 80, avatar: 'mt-[-48px] mb-3', header: '' },
+    centered: { banner: 'h-[96px]', avatarSize: 80, avatar: 'mt-[-48px] mb-3', header: 'flex flex-col items-center text-center' },
+    compact: { banner: null, avatarSize: 56, avatar: 'flex-shrink-0', header: 'flex items-center gap-3 pt-4' },
   },
   full: {
-    standard: { banner: 'h-[120px]', effectHeight: 120, avatarSize: 96, avatar: 'mt-[-56px] mb-2', header: '' },
-    centered: { banner: 'h-[120px]', effectHeight: 120, avatarSize: 96, avatar: 'mt-[-56px] mb-2', header: 'flex flex-col items-center text-center' },
-    compact: { banner: null, effectHeight: 120, avatarSize: 64, avatar: 'flex-shrink-0', header: 'flex items-center gap-4 pt-6 mb-3' },
+    standard: { banner: 'h-[120px]', avatarSize: 96, avatar: 'mt-[-56px] mb-2', header: '' },
+    centered: { banner: 'h-[120px]', avatarSize: 96, avatar: 'mt-[-56px] mb-2', header: 'flex flex-col items-center text-center' },
+    compact: { banner: null, avatarSize: 64, avatar: 'flex-shrink-0', header: 'flex items-center gap-4 pt-6 mb-3' },
   },
   preview: {
-    standard: { banner: 'h-[80px]', effectHeight: 80, avatarSize: 56, avatar: 'mt-[-32px] mb-2', header: '' },
-    centered: { banner: 'h-[80px]', effectHeight: 80, avatarSize: 56, avatar: 'mt-[-32px] mb-2', header: 'flex flex-col items-center text-center' },
-    compact: { banner: null, effectHeight: 80, avatarSize: 44, avatar: 'flex-shrink-0', header: 'flex items-center gap-3 pt-3 mb-1' },
+    standard: { banner: 'h-[80px]', avatarSize: 56, avatar: 'mt-[-32px] mb-2', header: '' },
+    centered: { banner: 'h-[80px]', avatarSize: 56, avatar: 'mt-[-32px] mb-2', header: 'flex flex-col items-center text-center' },
+    compact: { banner: null, avatarSize: 44, avatar: 'flex-shrink-0', header: 'flex items-center gap-3 pt-3 mb-1' },
   },
 };
 

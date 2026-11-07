@@ -23,7 +23,7 @@ import { ProfileDetailsEditor, invalidLinkDrafts, linkDrafts, linksOfDrafts, typ
 import { FormError, SettingsField, SettingsPage, SettingsSection, SWATCH_ROW, SwatchButton } from './_shared/SettingsControls';
 import { UsernameSection } from './UsernameSection';
 import { ProfileLinks } from '../../ui/ProfileLinks';
-import { CardTopEffect, DecoratedName, ProfileEffectLayer } from '../../ui/Decorations';
+import { DecoratedName, ProfileEffectLayer } from '../../ui/Decorations';
 import { personDecorations } from '../../../utils/decorations';
 import { profileHeaderLook, profileLayoutOf } from '../../../utils/profileLayout';
 import { AVATAR_COLORS, PROFILE_LIMITS, detachedHomeOf } from '@backspace/shared';
@@ -444,19 +444,15 @@ export function AccountPanel() {
         lead={
           // Live preview: the layout, pronouns and links as the card will show them.
           <div className="relative isolate overflow-hidden rounded-lg border border-border-hard bg-surface-channel">
-            {/* Banner area, with the profile's effect; the compact layout has none, and its effect plays across the top */}
-            {look.banner ? (
+            {/* Banner area; the compact layout has none */}
+            {look.banner && (
               <div
-                className={`relative ${look.banner}`}
+                className={look.banner}
                 style={displayBannerSrc
                   ? { backgroundImage: cssUrl(displayBannerSrc), backgroundSize: 'cover', backgroundPosition: 'center' }
                   : { background: bannerFallback }
                 }
-              >
-                <ProfileEffectLayer effect={decorations.profileEffect} height={look.effectHeight} />
-              </div>
-            ) : (
-              <CardTopEffect effect={decorations.profileEffect} height={look.effectHeight} />
+              />
             )}
             {/* Avatar + info */}
             <div className="px-4 pb-3">
@@ -495,6 +491,8 @@ export function AccountPanel() {
                 </div>
               )}
             </div>
+            {/* The profile's effect, over the whole card */}
+            <ProfileEffectLayer effect={decorations.profileEffect} className="z-20" />
           </div>
         }
       >

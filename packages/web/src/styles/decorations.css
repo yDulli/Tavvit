@@ -1,574 +1,401 @@
 /* ── Profile decorations (docs/systems/decorations.md) ─────────────────────
  * A frame around the picture, an effect over the profile's banner, a nameplate
  * behind the name in a list, and a style for the name itself: Tavvit's own
- * designs, drawn here from a name.
+ * designs, drawn from a name.
  *
- * They keep the design system's rule for light: it lies behind things, and no
- * word wears a glow. A frame is a ring outside the picture, in the picture's
- * own shape (the person's avatar roundness), light moving along it like light
- * on metal; some bring particles around it. An effect lies behind the card's
- * content and fades out before the text begins. A nameplate gathers at the far
- * end of a row, away from the name. A name style carries its light inside the
- * letters. Colours come from the accent family, never the violet, which marks
- * what is selected.
+ * Every frame, effect and nameplate is a drawing of a thing, never light or
+ * glow (components/ui/decorationArt.tsx): flat shapes in two or three tones
+ * with a darker outline, lit from the upper left. A frame sits on the picture,
+ * partly behind it and partly in front; an effect is drawn things flying,
+ * falling or rising across the whole profile card, over its content; a
+ * nameplate is a small scene at the far end of a row, away from the name. What
+ * moves in them is a small drawing too (a sprite, `--sprite-a/b/c`). A name
+ * style is a typeface, and colour, a printed look or motion in the letters.
  *
- * Where they move (`data-motion`): `on` always (a profile, the picker), `hover`
- * only while the row or card around them (`.deco-hover`) is pointed at or
- * focused (a list, a message), `off` never. Everything stands still under
- * Reduce motion, and under Higher contrast or forced colours what lies behind
- * text goes and a name shows plain. */
-
-/* The angle a frame's light has travelled, a breath, and a position along a band: registered so they can move. */
-@property --deco-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 30deg;
-}
-
-@property --deco-pulse {
-  syntax: '<number>';
-  inherits: false;
-  initial-value: 0.55;
-}
+ * Things move only where a movement says something: a note leaving the
+ * headphones, an ear twitching, a flame flickering, a petal falling. Where they
+ * move (`data-motion`): `on` always (a profile, the picker), `hover` only while
+ * the row or card around them (`.deco-hover`) is pointed at or focused (a list,
+ * a message), `off` never. Everything stands still under Reduce motion, and
+ * under Higher contrast or forced colours what lies behind text goes and a
+ * name shows plain. */
 
 /* ═══ Frames ════════════════════════════════════════════════════════════ */
 
-.deco-frame {
+/* A frame's drawing: a view a fifth larger than the avatar on every side. The
+ * layer behind the head lies under the picture (the avatar isolates itself). */
+.deco-art {
   position: absolute;
+  top: -20%;
+  left: -20%;
+  width: 140%;
+  height: 140%;
+  overflow: visible;
   pointer-events: none;
 }
 
-/* The ring: the frame's box painted, its inside cut away, so any corner the
- * avatar has is the ring's corner too. */
-.deco-frame-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: var(--deco-w, 2px);
-  background: var(--deco-paint);
-  -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
-  -webkit-mask-clip: content-box, border-box;
-  -webkit-mask-composite: xor;
-  mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
-  mask-clip: content-box, border-box;
-  mask-composite: exclude;
-  animation: decoTurn var(--deco-turn, 12s) linear infinite;
+.deco-art[data-layer='back'] {
+  z-index: -1;
 }
 
-@keyframes decoTurn {
-  from { --deco-angle: 30deg; }
-  to { --deco-angle: 390deg; }
+/* What moves turns about a point of its own drawing; the groups that place and
+ * mirror the drawings keep the view's own origin. */
+.deco-art-note,
+.deco-art-ear,
+.deco-art-crown,
+.deco-art-pop,
+.deco-art-wing,
+.deco-art-float,
+.deco-art-bow,
+.deco-art-drift,
+.deco-art-flame,
+.deco-art-sway,
+.deco-art-twinkle,
+.deco-art-rise,
+.deco-art-disc-turn,
+.deco-art-boat,
+.deco-art-tree,
+.deco-art-pennant,
+.deco-art-birds,
+.deco-art-waves-back,
+.deco-art-waves-front {
+  transform-box: fill-box;
 }
 
-@keyframes decoBeat {
-  0%, 100% { --deco-pulse: 0.42; }
-  14% { --deco-pulse: 1; }
-  24% { --deco-pulse: 0.55; }
-  34% { --deco-pulse: 0.95; }
-  52% { --deco-pulse: 0.42; }
-}
-
-/* Metal: one light travelling round, slowly. */
-.deco-frame[data-frame='silver'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), #f3f4f8, #a3a7b3 16%, #5c5f6a 30%, #c4c7d0 45%, #fbfbfd 52%, #858996 66%, #4b4e58 80%, #b6b9c3 92%, #f3f4f8);
-  --deco-turn: 15s;
-}
-
-.deco-frame[data-frame='gilded'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), #f6e3a6, #c9932d 18%, #8a5f17 32%, #e8c164 47%, #fff4d1 53%, #b07a22 68%, #7a5214 82%, #dcb257 93%, #f6e3a6);
-  --deco-turn: 17s;
-}
-
-.deco-frame[data-frame='rosegold'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), #f8d9cd, #cf917c 18%, #8f5848 33%, #ecbcab 48%, #fff1eb 54%, #b97a66 69%, #7d4a3c 83%, #e2ab98 94%, #f8d9cd);
-  --deco-turn: 16s;
-}
-
-/* Black glass with one cold light crossing it. */
-.deco-frame[data-frame='obsidian'] {
-  --deco-paint:
-    conic-gradient(from var(--deco-angle), transparent 0deg 285deg, rgb(150 190 255 / 0.25) 320deg, rgb(225 238 255 / 0.95) 354deg, transparent 360deg),
-    conic-gradient(from 210deg, #34363f, #121318 30%, #2a2c35 55%, #0d0e12 80%, #34363f);
-  --deco-turn: 7s;
-}
-
-/* Colour: the band of colour turning. */
-.deco-frame[data-frame='ember'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), rgb(var(--accent-amber)), rgb(var(--accent-coral)) 34%, rgb(var(--accent-rose)) 67%, rgb(var(--accent-amber)));
-  --deco-turn: 10s;
-}
-
-.deco-frame[data-frame='tide'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), rgb(var(--accent-sky)), rgb(var(--accent-mint)) 40%, #e9fbff 52%, rgb(var(--accent-sky)) 70%, rgb(var(--accent-sky)));
-  --deco-turn: 11s;
-}
-
-.deco-frame[data-frame='bloom'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), rgb(var(--accent-rose)), rgb(var(--accent-peach)) 33%, rgb(var(--accent-lavender)) 66%, rgb(var(--accent-rose)));
-  --deco-turn: 13s;
-}
-
-.deco-frame[data-frame='aurora'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), rgb(var(--accent-mint)), rgb(var(--accent-mint) / 0.55) 14%, rgb(var(--accent-sky)) 31%, #dff6ff 39%, rgb(var(--accent-lavender)) 55%, rgb(var(--accent-sky) / 0.6) 74%, rgb(var(--accent-mint)));
-  --deco-turn: 19s;
-}
-
-.deco-frame[data-frame='prism'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), rgb(var(--accent-mint)), rgb(var(--accent-sky)) 17%, rgb(var(--accent-lavender)) 33%, rgb(var(--accent-rose)) 50%, rgb(var(--accent-coral)) 67%, rgb(var(--accent-amber)) 83%, rgb(var(--accent-mint)));
-  --deco-turn: 22s;
-}
-
-/* The person's own colours: their profile theme, or their picture's tile. */
-.deco-frame[data-frame='theme'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), var(--deco-a), var(--deco-b) 50%, var(--deco-a));
-  --deco-turn: 12s;
-}
-
-/* Pattern: a hairline with something moving on it. */
-.deco-frame[data-frame='orbit'] {
-  --deco-paint:
-    conic-gradient(from var(--deco-angle), transparent 0deg 240deg, rgb(var(--accent-lavender) / 0.35) 300deg, rgb(255 255 255 / 0.95) 357deg, transparent 360deg),
-    linear-gradient(rgb(var(--border-soft)), rgb(var(--border-soft)));
-  --deco-turn: 5s;
-}
-
-.deco-frame[data-frame='binary'] {
-  --deco-paint:
-    conic-gradient(from var(--deco-angle), transparent 0deg 110deg, rgb(var(--accent-mint) / 0.4) 150deg, #e6fff3 178deg, transparent 180deg 290deg, rgb(var(--accent-rose) / 0.4) 330deg, #ffe9ef 358deg, transparent 360deg),
-    linear-gradient(rgb(var(--border-soft)), rgb(var(--border-soft)));
-  --deco-turn: 6s;
-}
-
-/* Ticks round a bezel, turning as slowly as a minute hand would like to. */
-.deco-frame[data-frame='dial'] {
-  --deco-paint:
-    repeating-conic-gradient(from var(--deco-angle), rgb(240 242 248 / 0.9) 0deg 4deg, transparent 4deg 15deg),
-    linear-gradient(rgb(var(--border-soft) / 0.9), rgb(var(--border-soft) / 0.9));
-  --deco-turn: 40s;
-}
-
-/* A ring that beats like a heart: two beats, then rest. */
-.deco-frame[data-frame='pulse'] {
-  --deco-paint:
-    linear-gradient(rgb(var(--accent-rose) / var(--deco-pulse)), rgb(var(--accent-coral) / var(--deco-pulse))),
-    linear-gradient(rgb(var(--accent-rose) / 0.25), rgb(var(--accent-rose) / 0.25));
-}
-
-.deco-frame[data-frame='pulse'] .deco-frame-ring {
-  animation: decoBeat 1.6s ease-in-out infinite;
-}
-
-/* With particles: the ring, and something living around it. */
-.deco-frame[data-frame='stardust'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), #eef0ff, rgb(var(--accent-lavender)) 25%, #ffffff 50%, rgb(var(--accent-sky)) 75%, #eef0ff);
-  --deco-turn: 14s;
-}
-
-.deco-frame[data-frame='frost'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), #f4fbff, #9fd4f2 25%, #e3f5ff 50%, #6fb4dd 75%, #f4fbff);
-  --deco-turn: 16s;
-}
-
-.deco-frame[data-frame='kindling'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), rgb(var(--accent-amber)), #ffe3a8 20%, rgb(var(--accent-coral)) 50%, rgb(var(--accent-amber)) 80%, rgb(var(--accent-amber)));
-  --deco-turn: 9s;
-}
-
-.deco-frame[data-frame='blossom'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), #ffd6e2, rgb(var(--accent-rose)) 30%, #fff0f4 55%, rgb(var(--accent-peach)) 80%, #ffd6e2);
-  --deco-turn: 14s;
-}
-
-.deco-frame[data-frame='fizz'] {
-  --deco-paint: conic-gradient(from var(--deco-angle), rgb(var(--accent-sky)), #dff4ff 30%, rgb(var(--accent-mint)) 60%, rgb(var(--accent-sky)));
-  --deco-turn: 12s;
-}
-
-/* The particles of a frame: a box a little wider than the frame, so they can stray past it. */
-.deco-frame-sparks {
-  position: absolute;
-  inset: -22%;
-  pointer-events: none;
-}
-
-.deco-frame-sparks i {
-  position: absolute;
-  display: block;
-  left: var(--x);
-  top: var(--y);
-  width: var(--s);
-  height: var(--s);
-  will-change: transform, opacity;
-}
-
-/* Four-pointed stars appearing and going round the ring. */
-.deco-frame[data-frame='stardust'] .deco-frame-sparks i {
-  background: radial-gradient(circle, #ffffff 0 30%, rgb(var(--accent-lavender)) 70%);
-  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+/* Headphones: now and then a note leaves the right cup. */
+.deco-art-note {
   opacity: 0;
-  animation: decoSparkle var(--t) ease-in-out var(--d) infinite;
+  transform-origin: 50% 100%;
+  animation: decoNote 3.6s ease-out infinite;
 }
 
-@keyframes decoSparkle {
-  0%, 100% { opacity: 0; transform: scale(0.2) rotate(0deg); }
-  45% { opacity: 1; transform: scale(1) rotate(45deg); }
-  70% { opacity: 0; transform: scale(0.4) rotate(90deg); }
+.deco-art-note.deco-art-late {
+  animation-delay: 1.8s;
 }
 
-/* Flakes falling past the picture's sides. */
-.deco-frame[data-frame='frost'] .deco-frame-sparks i {
-  top: -4%;
-  border-radius: 50%;
-  background: rgb(240 250 255 / 0.95);
-  animation: decoFrameFall var(--t) linear var(--d) infinite;
+@keyframes decoNote {
+  0% { opacity: 0; transform: translate(0, 4px) rotate(-8deg) scale(0.7); }
+  14% { opacity: 1; transform: translate(1px, 0) rotate(-4deg) scale(1); }
+  62% { opacity: 1; }
+  100% { opacity: 0; transform: translate(9px, -24px) rotate(10deg) scale(0.9); }
 }
 
-@keyframes decoFrameFall {
-  0% { transform: translate3d(0, 0, 0); opacity: 0; }
-  12% { opacity: 1; }
-  88% { opacity: 1; }
-  100% { transform: translate3d(var(--sway), var(--travel, 120px), 0); opacity: 0; }
+/* Cat ears: each twitches now and then, never both at once. */
+.deco-art-ear {
+  transform-origin: 46% 92%;
+  animation: decoEar 5.2s ease-in-out infinite;
 }
 
-/* Sparks rising from below and going out. */
-.deco-frame[data-frame='kindling'] .deco-frame-sparks i {
-  top: auto;
-  bottom: -2%;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff0d0 0 25%, rgb(var(--accent-amber)) 45%, rgb(var(--accent-coral) / 0) 72%);
+.deco-art-ear.deco-art-late {
+  animation-delay: 2.6s;
+}
+
+@keyframes decoEar {
+  0%, 84%, 100% { transform: rotate(0deg); }
+  87% { transform: rotate(-11deg); }
+  90% { transform: rotate(3deg); }
+  93% { transform: rotate(-4deg); }
+  96% { transform: rotate(0deg); }
+}
+
+/* Crown: it sits a little loosely; a jewel catches the light now and then. */
+.deco-art-crown {
+  transform-origin: 50% 100%;
+  animation: decoCrown 5s ease-in-out infinite;
+}
+
+@keyframes decoCrown {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-3deg); }
+}
+
+.deco-art-pop {
+  transform-origin: 50% 50%;
+  animation: decoPop 3.4s ease-in-out infinite;
+}
+
+.deco-art-pop.deco-art-late {
+  animation-delay: 1.7s;
+}
+
+@keyframes decoPop {
+  0%, 60%, 100% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  72% { opacity: 1; transform: scale(1) rotate(20deg); }
+  86% { opacity: 0; transform: scale(0.3) rotate(45deg); }
+}
+
+/* Angel: the wings beat slowly, the halo floats. */
+.deco-art-wing {
+  transform-origin: 92% 80%;
+  animation: decoWing 2.8s ease-in-out infinite;
+}
+
+@keyframes decoWing {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-6deg); }
+}
+
+.deco-art-float {
+  transform-origin: 50% 50%;
+  animation: decoHover 3.6s ease-in-out infinite;
+}
+
+@keyframes decoHover {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(0, -2px); }
+}
+
+/* Laurel: still; the ribbon's ends lift a little in a breeze. */
+.deco-art-bow {
+  transform-origin: 50% 30%;
+  animation: decoBow 4.8s ease-in-out infinite;
+}
+
+@keyframes decoBow {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-2.5deg); }
+}
+
+/* Blossoms and frost: now and then a petal or a flake drifts down beside the picture. */
+.deco-art-drift {
   opacity: 0;
-  animation: decoFrameRise var(--t) ease-out var(--d) infinite;
+  transform-origin: 50% 50%;
+  animation: decoDrift 4.6s ease-in infinite;
 }
 
-@keyframes decoFrameRise {
-  0% { transform: translate3d(0, 0, 0); opacity: 0; }
-  15% { opacity: 1; }
-  100% { transform: translate3d(var(--sway), calc(var(--travel, 120px) * -1), 0); opacity: 0; }
-}
-
-/* Petals drifting down past the picture, turning. */
-.deco-frame[data-frame='blossom'] .deco-frame-sparks i {
-  top: -4%;
-  height: calc(var(--s) * 0.7);
-  border-radius: 80% 0 80% 0;
-  background: rgb(var(--accent-rose) / 0.9);
-  animation: decoFramePetal var(--t) ease-in-out var(--d) infinite;
-}
-
-.deco-frame[data-frame='blossom'] .deco-frame-sparks i:nth-child(2n) {
-  background: rgb(255 214 226 / 0.95);
-}
-
-@keyframes decoFramePetal {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+@keyframes decoDrift {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
   12% { opacity: 1; }
-  88% { opacity: 1; }
-  100% { transform: translate3d(var(--sway), var(--travel, 120px), 0) rotate(300deg); opacity: 0; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-4px, 34px) rotate(160deg); }
 }
 
-/* Bubbles rising past the picture, and bursting at the top. */
-.deco-frame[data-frame='fizz'] .deco-frame-sparks i {
-  top: auto;
-  bottom: -2%;
-  border-radius: 50%;
-  border: 1px solid rgb(225 245 255 / 0.85);
-  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.85) 0 18%, rgb(var(--accent-sky) / 0.15) 40%, transparent 70%);
+/* Flames: each tongue flickers at its own pace (its duration is drawn with it). */
+.deco-art-flame {
+  transform-origin: 50% 100%;
+  animation: decoFlicker 1s ease-in-out infinite alternate;
+}
+
+.deco-art-flame.deco-art-late {
+  animation-delay: -0.5s;
+}
+
+@keyframes decoFlicker {
+  from { transform: scale(1, 1); }
+  to { transform: scale(0.94, 1.1); }
+}
+
+/* Stars: the big one rocks, the small ones come and go. */
+.deco-art-sway {
+  transform-origin: 50% 50%;
+  animation: decoRock 4.4s ease-in-out infinite;
+}
+
+@keyframes decoRock {
+  0%, 100% { transform: rotate(-6deg) scale(1); }
+  50% { transform: rotate(8deg) scale(1.06); }
+}
+
+.deco-art-twinkle {
+  transform-origin: 50% 50%;
+  animation: decoTwinkleShape 2.8s ease-in-out infinite;
+}
+
+.deco-art-twinkle.deco-art-late {
+  animation-delay: 1.4s;
+}
+
+@keyframes decoTwinkleShape {
+  0%, 100% { transform: scale(0.78); }
+  50% { transform: scale(1.08); }
+}
+
+/* Hearts and bubbles: now and then one rises past the picture. */
+.deco-art-rise {
   opacity: 0;
-  animation: decoFrameBubble var(--t) ease-in var(--d) infinite;
+  transform-origin: 50% 50%;
+  animation: decoRiseBy 3.8s ease-out infinite;
 }
 
-@keyframes decoFrameBubble {
-  0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
-  12% { opacity: 1; }
-  86% { opacity: 1; transform: translate3d(var(--sway), calc(var(--travel, 120px) * -0.86), 0) scale(1); }
-  100% { opacity: 0; transform: translate3d(var(--sway), calc(var(--travel, 120px) * -1), 0) scale(1.4); }
+.deco-art-rise.deco-art-late {
+  animation-delay: 1.9s;
+}
+
+@keyframes decoRiseBy {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  14% { opacity: 1; transform: translate(-1px, -6px) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(3px, -44px) scale(0.9); }
+}
+
+/* Your colours: the loop draws itself once, where the profile opens. */
+.deco-art[data-motion='on'] .deco-art-doodle {
+  stroke-dasharray: 100;
+  animation: decoDraw 1.1s var(--ease-out, ease-out) both;
+}
+
+@keyframes decoDraw {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
 }
 
 /* ═══ Effects ═══════════════════════════════════════════════════════════ */
 
+/* The layer measures itself (`cqh`), so what falls crosses a card or a tile
+ * alike; a tile draws its things smaller (`--deco-scale`). */
 .deco-effect {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
   border-radius: inherit;
-  /* Gone before the card's words begin. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+  container-type: size;
 }
 
-.deco-effect i {
+/* What moves: a small drawing, the first, every second and every third of
+ * them each wearing their own. */
+.deco-effect i,
+.deco-nameplate i {
   position: absolute;
   display: block;
   left: var(--x);
   top: var(--y);
   width: var(--s);
   height: var(--s);
+  background: var(--sprite-a) center / contain no-repeat;
   will-change: transform, opacity;
 }
 
-.deco-effect::before,
-.deco-effect::after {
-  will-change: transform;
+.deco-effect i {
+  --fall: calc(100cqh + 48px);
+  width: calc(var(--s) * var(--deco-scale, 1));
+  height: calc(var(--s) * var(--deco-scale, 1));
 }
 
-/* Stars: points of light, each breathing at its own pace; a few larger ones with four points. */
+.deco-effect i:nth-child(2n),
+.deco-nameplate i:nth-child(2n) {
+  background-image: var(--sprite-b, var(--sprite-a));
+}
+
+.deco-effect i:nth-child(3n),
+.deco-nameplate i:nth-child(3n) {
+  background-image: var(--sprite-c, var(--sprite-a));
+}
+
+/* Butterflies: fluttering up across the card, their wings beating. */
+.deco-effect[data-effect='butterflies'] i {
+  top: auto;
+  bottom: -30px;
+  opacity: 0;
+  animation: decoFlutter var(--t) ease-in-out var(--d) infinite, decoFlap 0.24s ease-in-out infinite alternate;
+}
+
+@keyframes decoFlutter {
+  0% { translate: 0 0; rotate: -8deg; opacity: 0; }
+  8% { opacity: 1; }
+  25% { translate: calc(var(--sway) * 1.2) calc(var(--fall) * -0.22); rotate: 10deg; }
+  50% { translate: calc(var(--sway) * -0.5) calc(var(--fall) * -0.48); rotate: -12deg; }
+  75% { translate: calc(var(--sway) * 1.5) calc(var(--fall) * -0.72); rotate: 8deg; }
+  92% { opacity: 1; }
+  100% { translate: calc(var(--sway) * 0.6) calc(var(--fall) * -1); rotate: -4deg; opacity: 0; }
+}
+
+@keyframes decoFlap {
+  from { scale: 1 1; }
+  to { scale: 0.3 1; }
+}
+
+/* Music: notes rising and rocking as they go. */
+.deco-effect[data-effect='notes'] i {
+  top: auto;
+  bottom: -26px;
+  opacity: 0;
+  animation: decoNotes var(--t) ease-out var(--d) infinite;
+}
+
+@keyframes decoNotes {
+  0% { transform: translate3d(0, 0, 0) rotate(-12deg) scale(0.7); opacity: 0; }
+  12% { opacity: 1; }
+  40% { transform: translate3d(calc(var(--sway) * 0.4), calc(var(--fall) * -0.32), 0) rotate(12deg) scale(1); }
+  70% { transform: translate3d(calc(var(--sway) * -0.3), calc(var(--fall) * -0.58), 0) rotate(-10deg) scale(1); opacity: 1; }
+  100% { transform: translate3d(var(--sway), calc(var(--fall) * -0.85), 0) rotate(8deg) scale(0.9); opacity: 0; }
+}
+
+/* Night sky: stars that come and go, the moon, and now and then one falling. */
 .deco-effect[data-effect='stars'] i {
-  border-radius: 50%;
-  background: #fff;
+  top: calc(var(--y) * 0.92);
   animation: decoTwinkle var(--t) ease-in-out var(--d) infinite;
 }
 
-.deco-effect[data-effect='stars'] i:nth-child(6n) {
-  width: calc(var(--s) * 3);
-  height: calc(var(--s) * 3);
-  border-radius: 0;
-  clip-path: polygon(50% 0%, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0% 50%, 42% 42%);
-}
-
 @keyframes decoTwinkle {
-  0%, 100% { opacity: 0.12; transform: scale(0.6); }
-  50% { opacity: 0.95; transform: scale(1); }
+  0%, 100% { opacity: 0.35; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
-/* Sparkles: four-pointed stars appearing, turning, gone. */
-.deco-effect[data-effect='sparkles'] i {
-  width: calc(var(--s) * 3);
-  height: calc(var(--s) * 3);
-  background: radial-gradient(circle, #ffffff 0 35%, #ffe9b8 80%);
-  clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
-  opacity: 0;
-  animation: decoSparkle var(--t) ease-in-out var(--d) infinite;
-}
-
-/* Shooting stars: now and then a streak across the sky. */
-.deco-effect[data-effect='shooting'] i {
-  top: calc(var(--y) * 0.6);
-  left: calc(var(--x) * 0.5 + 40%);
-  width: 72px;
-  height: 1.5px;
-  border-radius: 2px;
-  background: linear-gradient(to left, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0));
-  opacity: 0;
-  transform-origin: right center;
-  animation: decoShoot var(--t) ease-in var(--d) infinite;
-}
-
-.deco-effect[data-effect='shooting']::before {
-  content: '';
+.deco-art-shooting {
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(1px 1px at 12% 30%, rgb(255 255 255 / 0.7), transparent),
-    radial-gradient(1px 1px at 34% 62%, rgb(255 255 255 / 0.55), transparent),
-    radial-gradient(1.4px 1.4px at 58% 22%, rgb(255 255 255 / 0.8), transparent),
-    radial-gradient(1px 1px at 76% 48%, rgb(255 255 255 / 0.6), transparent),
-    radial-gradient(1.2px 1.2px at 90% 18%, rgb(255 255 255 / 0.7), transparent);
-}
-
-@keyframes decoShoot {
-  0%, 82% { opacity: 0; transform: translate3d(0, 0, 0) rotate(-24deg) scaleX(0.3); }
-  86% { opacity: 1; transform: translate3d(-40px, 18px, 0) rotate(-24deg) scaleX(1); }
-  94% { opacity: 0; transform: translate3d(-150px, 67px, 0) rotate(-24deg) scaleX(0.8); }
-  100% { opacity: 0; transform: translate3d(-150px, 67px, 0) rotate(-24deg) scaleX(0.8); }
-}
-
-/* Nebula: clouds of colour turning slowly round each other. */
-.deco-effect[data-effect='nebula']::before,
-.deco-effect[data-effect='nebula']::after {
-  content: '';
-  position: absolute;
-  inset: -60%;
-}
-
-.deco-effect[data-effect='nebula']::before {
-  background:
-    radial-gradient(28% 22% at 38% 46%, rgb(var(--accent-lavender) / 0.5), transparent 70%),
-    radial-gradient(22% 18% at 62% 56%, rgb(var(--accent-rose) / 0.4), transparent 70%);
-  animation: decoSwirl 24s linear infinite;
-}
-
-.deco-effect[data-effect='nebula']::after {
-  background:
-    radial-gradient(20% 16% at 56% 40%, rgb(var(--accent-sky) / 0.42), transparent 70%),
-    radial-gradient(1px 1px at 30% 60%, #fff, transparent),
-    radial-gradient(1px 1px at 68% 38%, #fff, transparent),
-    radial-gradient(1.4px 1.4px at 48% 52%, #fff, transparent);
-  animation: decoSwirl 36s linear infinite reverse;
-}
-
-@keyframes decoSwirl {
-  to { transform: rotate(360deg); }
-}
-
-/* Aurora: veils of light drifting past each other. */
-.deco-effect[data-effect='aurora']::before,
-.deco-effect[data-effect='aurora']::after {
-  content: '';
-  position: absolute;
-  inset: -45%;
-}
-
-.deco-effect[data-effect='aurora']::before {
-  background:
-    radial-gradient(38% 26% at 30% 52%, rgb(var(--accent-mint) / 0.42), transparent 70%),
-    radial-gradient(30% 22% at 68% 42%, rgb(var(--accent-sky) / 0.36), transparent 70%);
-  animation: decoDrift 15s ease-in-out infinite alternate;
-}
-
-.deco-effect[data-effect='aurora']::after {
-  background: radial-gradient(34% 24% at 55% 62%, rgb(var(--accent-lavender) / 0.34), transparent 70%);
-  animation: decoDrift 19s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes decoDrift {
-  from { transform: translate3d(-14%, -5%, 0) rotate(-4deg); }
-  to { transform: translate3d(14%, 6%, 0) rotate(4deg); }
-}
-
-/* Sunbeams: soft rays from above, swaying, their edges soft. */
-.deco-effect[data-effect='sunbeams'] i {
-  top: -40%;
-  left: calc(var(--x) * 0.8);
+  top: 6%;
+  left: 12%;
   width: 30%;
-  height: 190%;
-  background: linear-gradient(90deg, rgb(255 246 222 / 0), rgb(255 246 222 / 0.26) 50%, rgb(255 246 222 / 0));
-  -webkit-mask-image: linear-gradient(to bottom, #000, transparent 70%);
-  mask-image: linear-gradient(to bottom, #000, transparent 70%);
-  transform-origin: top center;
-  animation: decoBeam var(--t) ease-in-out var(--d) infinite alternate;
+  height: auto;
+  aspect-ratio: 40 / 20;
+  opacity: 0;
+  animation: decoShooting 6s ease-in 1.2s infinite;
 }
 
-@keyframes decoBeam {
-  from { transform: rotate(-18deg); opacity: 0.4; }
-  to { transform: rotate(12deg); opacity: 1; }
+@keyframes decoShooting {
+  0%, 70% { opacity: 0; transform: translate(0, 0); }
+  74% { opacity: 1; }
+  90% { opacity: 0; transform: translate(150%, 140%); }
+  100% { opacity: 0; transform: translate(150%, 140%); }
 }
 
-/* Snow: slow flakes, a little wind. */
-.deco-effect[data-effect='snow'] i {
-  top: -8px;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.85);
-  animation: decoFall var(--t) linear var(--d) infinite;
+/* A piece in the top corner (the moon), as wide as a share of the card. */
+.deco-art-corner {
+  position: absolute;
+  top: 3%;
+  right: 4%;
+  width: 24%;
+  max-width: 120px;
+  height: auto;
+  aspect-ratio: 1;
+  overflow: visible;
 }
 
-@keyframes decoFall {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(var(--sway), var(--fall, 190px), 0); }
-}
-
-/* Rain: fine, slanted, quiet. */
-.deco-effect[data-effect='rain'] i {
-  top: -24px;
-  width: 1px;
-  height: calc(var(--s) * 7);
-  background: linear-gradient(to bottom, rgb(255 255 255 / 0), rgb(220 235 255 / 0.55));
-  animation: decoRain var(--t) linear var(--d) infinite;
-}
-
-@keyframes decoRain {
-  from { transform: translate3d(0, 0, 0) rotate(14deg); }
-  to { transform: translate3d(-44px, calc(var(--fall, 190px) + 10px), 0) rotate(14deg); }
-}
-
-/* Waves: three swells, each a curve of water, rolling along the bottom at its own pace. */
-.deco-effect[data-effect='waves'] {
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-
-.deco-effect[data-effect='waves'] i {
-  top: auto;
-  left: -80px;
+/* Cherry blossoms: a branch in the corner, swaying a little. */
+.deco-art-branch {
+  position: absolute;
+  top: 0;
   right: 0;
-  width: auto;
-  height: 24px;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='24' viewBox='0 0 80 24'%3E%3Cpath d='M0 8Q20 1 40 8T80 8V24H0Z' fill='%23fff'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='24' viewBox='0 0 80 24'%3E%3Cpath d='M0 8Q20 1 40 8T80 8V24H0Z' fill='%23fff'/%3E%3C/svg%3E");
-  -webkit-mask-size: 80px 24px;
-  mask-size: 80px 24px;
-  -webkit-mask-repeat: repeat-x;
-  mask-repeat: repeat-x;
-  animation: decoSwell 7s linear infinite;
+  width: 52%;
+  max-width: 280px;
+  height: auto;
+  aspect-ratio: 64 / 36;
+  overflow: visible;
+  transform-origin: 100% 0;
+  animation: decoBranch 6s ease-in-out infinite;
 }
 
-.deco-effect[data-effect='waves'] i:nth-child(1) { bottom: 12px; background: rgb(var(--accent-sky) / 0.22); animation-duration: 11s; }
-.deco-effect[data-effect='waves'] i:nth-child(2) { bottom: 5px; background: rgb(var(--accent-mint) / 0.26); animation-duration: 8s; animation-direction: reverse; }
-.deco-effect[data-effect='waves'] i:nth-child(3) { bottom: -4px; background: linear-gradient(rgb(var(--accent-sky) / 0.4), rgb(var(--accent-sky) / 0.28)); animation-duration: 6s; }
-
-@keyframes decoSwell {
-  from { -webkit-mask-position: 0 0; mask-position: 0 0; }
-  to { -webkit-mask-position: 80px 0; mask-position: 80px 0; }
+@keyframes decoBranch {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-2deg); }
 }
 
-/* Bubbles: rising, and bursting near the top. */
-.deco-effect[data-effect='bubbles'] i {
-  top: auto;
-  bottom: -14px;
-  width: calc(var(--s) * 2.2);
-  height: calc(var(--s) * 2.2);
-  border-radius: 50%;
-  border: 1px solid rgb(230 246 255 / 0.7);
-  background: radial-gradient(circle at 34% 30%, rgb(255 255 255 / 0.7) 0 14%, rgb(var(--accent-sky) / 0.12) 40%, transparent 72%);
-  opacity: 0;
-  animation: decoBubble var(--t) ease-in var(--d) infinite;
+/* Snow: flakes drifting down, turning slowly. */
+.deco-effect[data-effect='snow'] i {
+  top: -16px;
+  animation: decoFlake var(--t) linear var(--d) infinite;
 }
 
-@keyframes decoBubble {
-  0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
-  10% { opacity: 0.95; }
-  85% { opacity: 0.95; transform: translate3d(var(--sway), calc(var(--fall, 190px) * -0.85), 0) scale(1); }
-  100% { opacity: 0; transform: translate3d(var(--sway), calc(var(--fall, 190px) * -0.95), 0) scale(1.5); }
+@keyframes decoFlake {
+  from { transform: translate3d(0, 0, 0) rotate(0deg); }
+  to { transform: translate3d(var(--sway), var(--fall, 190px), 0) rotate(200deg); }
 }
 
-/* Fireflies: warm lights wandering, each on its own errand. */
-.deco-effect[data-effect='fireflies'] i {
-  width: calc(var(--s) * 2);
-  height: calc(var(--s) * 2);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 246 200) 0 22%, rgb(var(--accent-amber) / 0.55) 45%, rgb(var(--accent-amber) / 0) 72%);
-  animation: decoWander var(--t) ease-in-out var(--d) infinite;
-}
-
-@keyframes decoWander {
-  0% { transform: translate3d(0, 0, 0); opacity: 0.2; }
-  25% { transform: translate3d(calc(var(--sway) * 0.6), -12px, 0); opacity: 1; }
-  50% { transform: translate3d(var(--sway), 6px, 0); opacity: 0.45; }
-  75% { transform: translate3d(calc(var(--sway) * 0.3), 14px, 0); opacity: 0.95; }
-  100% { transform: translate3d(0, 0, 0); opacity: 0.2; }
-}
-
-/* Embers: sparks rising from below and going out. */
-.deco-effect[data-effect='embers'] i {
-  top: auto;
-  bottom: -6px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 236 200) 0 25%, rgb(var(--accent-amber)) 45%, rgb(var(--accent-coral) / 0) 72%);
-  opacity: 0;
-  animation: decoRise var(--t) ease-out var(--d) infinite;
-}
-
-.deco-effect[data-effect='embers'] i:nth-child(3n) {
-  background: radial-gradient(circle, rgb(255 220 200) 0 25%, rgb(var(--accent-coral)) 45%, rgb(var(--accent-rose) / 0) 72%);
-}
-
-@keyframes decoRise {
-  0% { transform: translate3d(0, 0, 0); opacity: 0; }
-  15% { opacity: 0.95; }
-  100% { transform: translate3d(var(--sway), calc(var(--fall, 190px) * -0.8), 0); opacity: 0; }
-}
-
-/* Petals: drifting down, turning as they go. */
+/* Petals: drifting down from the branch, turning as they go. */
 .deco-effect[data-effect='petals'] i {
-  top: -12px;
-  height: calc(var(--s) * 0.7);
-  border-radius: 80% 0 80% 0;
-  background: rgb(var(--accent-rose) / 0.8);
+  top: -14px;
   animation: decoPetal var(--t) ease-in-out var(--d) infinite;
-}
-
-.deco-effect[data-effect='petals'] i:nth-child(2n) {
-  background: rgb(var(--accent-peach) / 0.8);
 }
 
 @keyframes decoPetal {
@@ -577,17 +404,11 @@
   100% { transform: translate3d(var(--sway), var(--fall, 190px), 0) rotate(330deg); }
 }
 
-/* Leaves: autumn, falling and tumbling. */
+/* Leaves: autumn, falling and tumbling over. */
 .deco-effect[data-effect='leaves'] i {
-  top: -14px;
-  height: calc(var(--s) * 0.62);
-  border-radius: 0 100% 0 100%;
-  background: rgb(var(--accent-amber) / 0.85);
+  top: -18px;
   animation: decoLeaf var(--t) ease-in-out var(--d) infinite;
 }
-
-.deco-effect[data-effect='leaves'] i:nth-child(3n) { background: rgb(var(--accent-coral) / 0.85); }
-.deco-effect[data-effect='leaves'] i:nth-child(3n + 1) { background: rgb(196 120 52 / 0.9); }
 
 @keyframes decoLeaf {
   0% { transform: translate3d(0, 0, 0) rotate(0deg) scaleX(1); }
@@ -596,58 +417,60 @@
   100% { transform: translate3d(var(--sway), var(--fall, 190px), 0) rotate(260deg) scaleX(-1); }
 }
 
-/* Hearts: rising softly and fading. */
+/* Hearts: rising and fading. */
 .deco-effect[data-effect='hearts'] i {
   top: auto;
-  bottom: -12px;
-  width: var(--s);
-  height: var(--s);
-  background: rgb(var(--accent-rose) / 0.85);
+  bottom: -16px;
   opacity: 0;
-  animation: decoHeart var(--t) ease-out var(--d) infinite;
+  animation: decoHeartRise var(--t) ease-out var(--d) infinite;
 }
 
-.deco-effect[data-effect='hearts'] i::before,
-.deco-effect[data-effect='hearts'] i::after {
-  content: '';
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: inherit;
-}
-
-/* A square turned a quarter back with a round top and a round right side: a heart, point down. */
-.deco-effect[data-effect='hearts'] i::before { top: 0; left: 50%; }
-.deco-effect[data-effect='hearts'] i::after { top: -50%; left: 0; }
-
-.deco-effect[data-effect='hearts'] i:nth-child(2n) { background: rgb(var(--accent-peach) / 0.85); }
-
-@keyframes decoHeart {
-  0% { transform: translate3d(0, 0, 0) rotate(-45deg) scale(0.6); opacity: 0; }
-  15% { opacity: 0.95; }
-  100% { transform: translate3d(var(--sway), calc(var(--fall, 190px) * -0.85), 0) rotate(-45deg) scale(1.1); opacity: 0; }
+@keyframes decoHeartRise {
+  0% { transform: translate3d(0, 0, 0) scale(0.6) rotate(-8deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translate3d(var(--sway), calc(var(--fall, 190px) * -0.85), 0) scale(1) rotate(8deg); opacity: 0; }
 }
 
 /* Confetti: falling, turning over. */
 .deco-effect[data-effect='confetti'] i {
-  top: -12px;
-  width: calc(var(--s) * 0.9);
-  height: calc(var(--s) * 1.6);
-  border-radius: 1px;
-  background: rgb(var(--accent-amber));
+  top: -14px;
   animation: decoConfetti var(--t) linear var(--d) infinite;
 }
-
-.deco-effect[data-effect='confetti'] i:nth-child(6n + 1) { background: rgb(var(--accent-mint)); }
-.deco-effect[data-effect='confetti'] i:nth-child(6n + 2) { background: rgb(var(--accent-sky)); }
-.deco-effect[data-effect='confetti'] i:nth-child(6n + 3) { background: rgb(var(--accent-rose)); }
-.deco-effect[data-effect='confetti'] i:nth-child(6n + 4) { background: rgb(var(--accent-lavender)); }
-.deco-effect[data-effect='confetti'] i:nth-child(6n + 5) { background: rgb(var(--accent-peach)); }
 
 @keyframes decoConfetti {
   0% { transform: translate3d(0, 0, 0) rotateZ(0deg) rotateY(0deg); }
   100% { transform: translate3d(var(--sway), var(--fall, 190px), 0) rotateZ(380deg) rotateY(720deg); }
+}
+
+/* Bubbles: rising, wobbling, and bursting near the top. */
+.deco-effect[data-effect='bubbles'] i {
+  top: auto;
+  bottom: -18px;
+  opacity: 0;
+  animation: decoBubble var(--t) ease-in var(--d) infinite;
+}
+
+@keyframes decoBubble {
+  0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+  10% { opacity: 1; }
+  85% { opacity: 1; transform: translate3d(var(--sway), calc(var(--fall, 190px) * -0.85), 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(var(--sway), calc(var(--fall, 190px) * -0.95), 0) scale(1.4); }
+}
+
+/* Lanterns: paper lanterns rising slowly into the night. */
+.deco-effect[data-effect='lanterns'] i {
+  top: auto;
+  bottom: -22px;
+  opacity: 0;
+  animation: decoLantern var(--t) ease-in-out var(--d) infinite;
+}
+
+@keyframes decoLantern {
+  0% { transform: translate3d(0, 0, 0) rotate(-3deg); opacity: 0; }
+  12% { opacity: 1; }
+  50% { transform: translate3d(calc(var(--sway) * 0.6), calc(var(--fall, 190px) * -0.5), 0) rotate(3deg); }
+  88% { opacity: 1; }
+  100% { transform: translate3d(var(--sway), calc(var(--fall, 190px) * -0.95), 0) rotate(-2deg); opacity: 0; }
 }
 
 /* ═══ Nameplates ════════════════════════════════════════════════════════ */
@@ -661,294 +484,214 @@
   overflow: hidden;
   pointer-events: none;
   border-radius: inherit;
-  /* Nothing where the picture and the name are; the colour gathers at the far end. */
+  /* Nothing where the picture and the name are; the scene stands at the far end. */
   -webkit-mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 0.25) 30%, #000 78%);
   mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 0.25) 30%, #000 78%);
 }
 
-.deco-nameplate i {
+/* A scene at the end of the row, as tall as the row. */
+.deco-art-scene {
   position: absolute;
+  right: 0;
+  bottom: 0;
   display: block;
-  left: var(--x);
-  top: var(--y);
-  width: var(--s);
-  height: var(--s);
-  will-change: transform, opacity;
+  height: 100%;
+  width: auto;
+  aspect-ratio: 70 / 40;
+  overflow: visible;
 }
 
-.deco-nameplate::before,
-.deco-nameplate::after {
-  will-change: transform;
-}
-
-/* Gradients that drift slowly back and forth. */
-.deco-nameplate[data-nameplate='dusk'],
-.deco-nameplate[data-nameplate='tide'],
-.deco-nameplate[data-nameplate='ember'],
-.deco-nameplate[data-nameplate='moss'],
-.deco-nameplate[data-nameplate='theme'],
-.deco-nameplate[data-nameplate='sunset'],
-.deco-nameplate[data-nameplate='holo'] {
-  background-size: 220% 100%;
-  animation: decoPlateDrift 9s ease-in-out infinite alternate;
-}
-
-@keyframes decoPlateDrift {
-  from { background-position: 0% 50%; }
-  to { background-position: 100% 50%; }
-}
-
-.deco-nameplate[data-nameplate='dusk'] {
-  background-image: linear-gradient(100deg, rgb(var(--accent-lavender) / 0.3), rgb(var(--accent-rose) / 0.34), rgb(var(--accent-lavender) / 0.24));
-}
-
-.deco-nameplate[data-nameplate='tide'] {
-  background-image: linear-gradient(100deg, rgb(var(--accent-sky) / 0.26), rgb(var(--accent-mint) / 0.32), rgb(var(--accent-sky) / 0.22));
-}
-
-.deco-nameplate[data-nameplate='ember'] {
-  background-image: linear-gradient(100deg, rgb(var(--accent-amber) / 0.24), rgb(var(--accent-coral) / 0.34), rgb(var(--accent-rose) / 0.22));
-}
-
-.deco-nameplate[data-nameplate='moss'] {
-  background-image: linear-gradient(100deg, rgb(var(--accent-mint) / 0.16), rgb(46 120 92 / 0.42), rgb(var(--accent-mint) / 0.2));
-}
-
-.deco-nameplate[data-nameplate='theme'] {
-  background-image: linear-gradient(100deg, var(--deco-a), var(--deco-b), var(--deco-a));
-  opacity: 0.34;
-}
-
-/* Sunset: the sky going warm, and the sun breathing at the edge. */
-.deco-nameplate[data-nameplate='sunset'] {
-  background-image: linear-gradient(100deg, rgb(var(--accent-lavender) / 0.18), rgb(var(--accent-rose) / 0.3), rgb(var(--accent-amber) / 0.34));
-}
-
-.deco-nameplate[data-nameplate='sunset']::after {
-  content: '';
+/* What falls or rises in a scene stays in a box the scene's size. */
+.deco-plate-field {
   position: absolute;
-  right: 6%;
-  top: 50%;
-  width: 34px;
-  height: 34px;
-  margin-top: -17px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 226 170 / 0.85) 0 32%, rgb(var(--accent-amber) / 0.3) 55%, transparent 72%);
-  animation: decoSun 5s ease-in-out infinite alternate;
+  top: 0;
+  right: 0;
+  height: 100%;
+  aspect-ratio: 70 / 40;
 }
 
-@keyframes decoSun {
-  from { transform: scale(0.85); opacity: 0.6; }
-  to { transform: scale(1.1); opacity: 1; }
+/* The sky or the light behind each scene, gathering at the end of the row. */
+.deco-nameplate[data-nameplate='vinyl'] { background: linear-gradient(100deg, transparent 40%, rgb(var(--accent-peach) / 0.14)); }
+.deco-nameplate[data-nameplate='skyline'] { background: linear-gradient(100deg, transparent 36%, rgb(48 58 128 / 0.42)); }
+.deco-nameplate[data-nameplate='sakura'] { background: linear-gradient(100deg, transparent 40%, rgb(var(--accent-rose) / 0.16)); }
+.deco-nameplate[data-nameplate='snow'] { background: linear-gradient(100deg, transparent 40%, rgb(150 190 230 / 0.2)); }
+.deco-nameplate[data-nameplate='rain'] { background: linear-gradient(100deg, transparent 40%, rgb(90 120 170 / 0.24)); }
+.deco-nameplate[data-nameplate='embers'] { background: linear-gradient(100deg, transparent 40%, rgb(var(--accent-coral) / 0.18)); }
+.deco-nameplate[data-nameplate='starlit'] { background: linear-gradient(100deg, transparent 36%, rgb(40 52 120 / 0.44)); }
+.deco-nameplate[data-nameplate='waves'] { background: linear-gradient(100deg, transparent 40%, rgb(var(--accent-sky) / 0.18)); }
+.deco-nameplate[data-nameplate='sunset'] { background: linear-gradient(100deg, transparent 30%, rgb(var(--accent-rose) / 0.16) 65%, rgb(var(--accent-amber) / 0.26)); }
+.deco-nameplate[data-nameplate='moss'] { background: linear-gradient(100deg, transparent 40%, rgb(46 120 92 / 0.26)); }
+.deco-nameplate[data-nameplate='theme'] { background: linear-gradient(100deg, transparent 40%, color-mix(in srgb, var(--deco-a) 14%, transparent), color-mix(in srgb, var(--deco-b) 22%, transparent)); }
+
+/* Vinyl: a record half out of its sleeve; pointed at, it turns. */
+.deco-art-vinyl {
+  right: 3%;
+  top: 11%;
+  bottom: auto;
+  height: 78%;
 }
 
-/* Holographic: pastel bands with a light running over them. */
-.deco-nameplate[data-nameplate='holo'] {
-  background-image:
-    linear-gradient(100deg, transparent 0 40%, rgb(255 255 255 / 0.28) 50%, transparent 60% 100%),
-    linear-gradient(100deg, rgb(var(--accent-mint) / 0.24), rgb(var(--accent-sky) / 0.24), rgb(var(--accent-lavender) / 0.26), rgb(var(--accent-rose) / 0.24), rgb(var(--accent-amber) / 0.22));
-  animation-duration: 5s;
+.deco-art-disc-turn {
+  transform-origin: 50% 50%;
+  animation: decoSpin 2.4s linear infinite;
 }
 
-/* Aurora and nebula: veils and clouds moving behind the row. */
-.deco-nameplate[data-nameplate='aurora']::before,
-.deco-nameplate[data-nameplate='nebula']::before,
-.deco-nameplate[data-nameplate='nebula']::after {
-  content: '';
-  position: absolute;
-  inset: -120% -30%;
+@keyframes decoSpin {
+  to { transform: rotate(360deg); }
 }
 
-.deco-nameplate[data-nameplate='aurora']::before {
-  background:
-    radial-gradient(30% 34% at 60% 50%, rgb(var(--accent-mint) / 0.42), transparent 70%),
-    radial-gradient(26% 30% at 80% 46%, rgb(var(--accent-sky) / 0.38), transparent 70%),
-    radial-gradient(22% 26% at 92% 56%, rgb(var(--accent-lavender) / 0.36), transparent 70%);
-  animation: decoDrift 12s ease-in-out infinite alternate;
+/* Skyline: a city at night; pointed at, a few windows go on and off and the mast blinks. */
+.deco-art-skyline { aspect-ratio: 100 / 40; }
+
+.deco-art-window {
+  animation: decoWindow 4.2s steps(1, end) infinite;
 }
 
-.deco-nameplate[data-nameplate='nebula'] {
-  background: linear-gradient(100deg, transparent, rgb(32 26 64 / 0.4));
+@keyframes decoWindow {
+  0%, 100% { opacity: 1; }
+  45% { opacity: 0.15; }
+  70% { opacity: 1; }
 }
 
-.deco-nameplate[data-nameplate='nebula']::before {
-  background:
-    radial-gradient(22% 30% at 70% 50%, rgb(var(--accent-lavender) / 0.45), transparent 70%),
-    radial-gradient(16% 24% at 84% 44%, rgb(var(--accent-rose) / 0.38), transparent 70%);
-  animation: decoSwirl 20s linear infinite;
+.deco-art-beacon {
+  animation: decoBeacon 2s ease-in-out infinite;
 }
 
-.deco-nameplate[data-nameplate='nebula']::after {
-  background:
-    radial-gradient(14% 20% at 78% 58%, rgb(var(--accent-sky) / 0.38), transparent 70%),
-    radial-gradient(1px 1px at 66% 48%, #fff, transparent),
-    radial-gradient(1px 1px at 88% 52%, #fff, transparent);
-  animation: decoSwirl 28s linear infinite reverse;
+@keyframes decoBeacon {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
 }
 
-/* Starlit: a deep blue sky at the end of the row, its stars breathing. */
-.deco-nameplate[data-nameplate='starlit'] {
-  background: linear-gradient(100deg, rgb(40 52 120 / 0.08), rgb(58 76 168 / 0.44));
+/* Sakura: a branch reaching in from the corner, petals falling under it. */
+.deco-art-sakura {
+  top: 0;
+  bottom: auto;
+  height: 82%;
+  aspect-ratio: 64 / 36;
 }
 
-.deco-nameplate[data-nameplate='starlit'] i {
-  border-radius: 50%;
-  background: #fff;
-  animation: decoTwinkle var(--t) ease-in-out var(--d) infinite;
-}
-
-/* Snow, rain, petals and sparks at the end of the row. */
-.deco-nameplate[data-nameplate='snow'] {
-  background: linear-gradient(100deg, transparent, rgb(150 190 230 / 0.2));
-}
-
-.deco-nameplate[data-nameplate='snow'] i {
-  top: -6px;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 0.9);
-  animation: decoPlateFall var(--t) linear var(--d) infinite;
-}
-
-.deco-nameplate[data-nameplate='rain'] {
-  background: linear-gradient(100deg, transparent, rgb(90 120 170 / 0.24));
-}
-
-.deco-nameplate[data-nameplate='rain'] i {
-  top: -16px;
-  width: 1px;
-  height: calc(var(--s) * 4);
-  background: linear-gradient(to bottom, rgb(255 255 255 / 0), rgb(220 235 255 / 0.65));
-  animation: decoPlateRain var(--t) linear var(--d) infinite;
-}
-
-.deco-nameplate[data-nameplate='sakura'] {
-  background: linear-gradient(100deg, transparent, rgb(var(--accent-rose) / 0.18));
-}
+.deco-nameplate[data-nameplate='sakura'] .deco-plate-field { aspect-ratio: 64 / 36; }
 
 .deco-nameplate[data-nameplate='sakura'] i {
-  top: -8px;
-  height: calc(var(--s) * 0.7);
-  border-radius: 80% 0 80% 0;
-  background: rgb(var(--accent-rose) / 0.85);
+  top: -6px;
   animation: decoPlatePetal var(--t) ease-in-out var(--d) infinite;
-}
-
-.deco-nameplate[data-nameplate='sakura'] i:nth-child(2n) {
-  background: rgb(255 214 226 / 0.9);
-}
-
-.deco-nameplate[data-nameplate='embers'] {
-  background: linear-gradient(100deg, transparent, rgb(var(--accent-coral) / 0.2));
-}
-
-.deco-nameplate[data-nameplate='embers'] i {
-  top: auto;
-  bottom: -4px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 236 200) 0 25%, rgb(var(--accent-amber)) 45%, rgb(var(--accent-coral) / 0) 72%);
-  opacity: 0;
-  animation: decoPlateRise var(--t) ease-out var(--d) infinite;
-}
-
-@keyframes decoPlateFall {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(var(--sway), 60px, 0); }
-}
-
-@keyframes decoPlateRain {
-  from { transform: translate3d(0, 0, 0) rotate(14deg); }
-  to { transform: translate3d(-14px, 70px, 0) rotate(14deg); }
 }
 
 @keyframes decoPlatePetal {
   0% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  100% { transform: translate3d(var(--sway), 64px, 0) rotate(240deg); }
+  100% { transform: translate3d(var(--sway), 56px, 0) rotate(240deg); }
 }
 
-@keyframes decoPlateRise {
-  0% { transform: translate3d(0, 0, 0); opacity: 0; }
-  20% { opacity: 1; }
-  100% { transform: translate3d(var(--sway), -52px, 0); opacity: 0; }
+/* Snow: pines under snow, flakes falling past them. */
+.deco-nameplate[data-nameplate='snow'] i {
+  top: -8px;
+  animation: decoPlateFlake var(--t) linear var(--d) infinite;
 }
 
-/* Pinstripe: fine lines moving along. */
-.deco-nameplate[data-nameplate='pinstripe'] {
-  background-image:
-    repeating-linear-gradient(125deg, rgb(var(--accent-lavender) / 0.32) 0 1px, transparent 1px 7px),
-    linear-gradient(100deg, transparent, rgb(var(--accent-lavender) / 0.14));
-  animation: decoStripes 2.4s linear infinite;
+@keyframes decoPlateFlake {
+  from { transform: translate3d(0, 0, 0) rotate(0deg); }
+  to { transform: translate3d(var(--sway), 56px, 0) rotate(160deg); }
 }
 
-@keyframes decoStripes {
-  from { background-position: 0 0, 0 0; }
-  to { background-position: 12.2px 0, 0 0; }
+/* Rain: a cloud, and the rain under it. */
+.deco-art-rainplate { aspect-ratio: 50 / 40; }
+.deco-nameplate[data-nameplate='rain'] .deco-plate-field { aspect-ratio: 50 / 40; }
+
+.deco-nameplate[data-nameplate='rain'] i {
+  top: 40%;
+  animation: decoPlateDrop var(--t) linear var(--d) infinite;
 }
 
-/* Waves: two lines of water rolling along the row. */
-.deco-nameplate[data-nameplate='waves'] {
-  background: linear-gradient(100deg, transparent, rgb(var(--accent-sky) / 0.16));
+@keyframes decoPlateDrop {
+  from { transform: translate3d(0, 0, 0) rotate(10deg); opacity: 1; }
+  80% { opacity: 1; }
+  to { transform: translate3d(-4px, 26px, 0) rotate(10deg); opacity: 0; }
 }
 
-.deco-nameplate[data-nameplate='waves']::before,
-.deco-nameplate[data-nameplate='waves']::after {
-  content: '';
-  position: absolute;
-  /* Only past the name: the lines must not run through its letters. */
-  left: 50%;
-  right: 0;
-  height: 12px;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='12' viewBox='0 0 48 12'%3E%3Cpath d='M0 6Q12 1 24 6T48 6' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='12' viewBox='0 0 48 12'%3E%3Cpath d='M0 6Q12 1 24 6T48 6' fill='none' stroke='%23fff' stroke-width='1.6'/%3E%3C/svg%3E");
-  -webkit-mask-size: 48px 12px;
-  mask-size: 48px 12px;
-  -webkit-mask-repeat: repeat-x;
-  mask-repeat: repeat-x;
-  animation: decoPlateSwell 4s linear infinite;
+/* Embers: a campfire, its flames flickering and sparks rising from it. */
+.deco-art-campfire { right: 4%; aspect-ratio: 50 / 40; }
+.deco-nameplate[data-nameplate='embers'] .deco-plate-field { right: 4%; aspect-ratio: 50 / 40; }
+
+.deco-nameplate[data-nameplate='embers'] i {
+  top: auto;
+  bottom: 40%;
+  opacity: 0;
+  animation: decoSpark var(--t) ease-out var(--d) infinite;
 }
 
-.deco-nameplate[data-nameplate='waves']::before { top: 26%; background: rgb(var(--accent-sky) / 0.6); }
-.deco-nameplate[data-nameplate='waves']::after { top: 54%; background: rgb(var(--accent-mint) / 0.5); animation-duration: 6s; animation-direction: reverse; }
-
-@keyframes decoPlateSwell {
-  from { -webkit-mask-position: 0 0; mask-position: 0 0; }
-  to { -webkit-mask-position: 48px 0; mask-position: 48px 0; }
+@keyframes decoSpark {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translate3d(var(--sway), -24px, 0) scale(0.5); opacity: 0; }
 }
 
-/* Circuit: traces with their nodes, and a pulse of light running along them. */
-.deco-nameplate[data-nameplate='circuit'] {
-  background: linear-gradient(100deg, transparent, rgb(20 70 60 / 0.32));
+/* Starlit: hills under the moon, and stars over them. */
+.deco-nameplate[data-nameplate='starlit'] i {
+  top: calc(var(--y) * 0.5);
+  animation: decoTwinkle var(--t) ease-in-out var(--d) infinite;
 }
 
-.deco-nameplate[data-nameplate='circuit']::before,
-.deco-nameplate[data-nameplate='circuit']::after {
-  content: '';
-  position: absolute;
-  /* Only past the name: the traces must not run through its letters. */
-  inset: 0 0 0 50%;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='40' viewBox='0 0 72 40'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.3' stroke-linejoin='round'%3E%3Cpath d='M0 11H22L30 19H48L56 11H72'/%3E%3Cpath d='M0 29H14L20 23H38L44 29H72'/%3E%3Cpath d='M30 19V23'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='22' cy='11' r='2'/%3E%3Ccircle cx='48' cy='19' r='2'/%3E%3Ccircle cx='20' cy='23' r='2'/%3E%3Ccircle cx='44' cy='29' r='2'/%3E%3C/g%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='40' viewBox='0 0 72 40'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.3' stroke-linejoin='round'%3E%3Cpath d='M0 11H22L30 19H48L56 11H72'/%3E%3Cpath d='M0 29H14L20 23H38L44 29H72'/%3E%3Cpath d='M30 19V23'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='22' cy='11' r='2'/%3E%3Ccircle cx='48' cy='19' r='2'/%3E%3Ccircle cx='20' cy='23' r='2'/%3E%3Ccircle cx='44' cy='29' r='2'/%3E%3C/g%3E%3C/svg%3E");
-  -webkit-mask-size: 72px 40px;
-  mask-size: 72px 40px;
-  -webkit-mask-position: 0 50%;
-  mask-position: 0 50%;
-  -webkit-mask-repeat: repeat-x;
-  mask-repeat: repeat-x;
+/* Waves: the sea rolling along, a boat rocking on it. */
+.deco-art-sea { aspect-ratio: 80 / 40; }
+
+.deco-art-waves-back { animation: decoSwell 6s linear infinite; }
+.deco-art-waves-front { animation: decoSwell 4s linear infinite; }
+
+@keyframes decoSwell {
+  from { transform: translateX(0); }
+  to { transform: translateX(-30px); }
 }
 
-.deco-nameplate[data-nameplate='circuit']::before {
-  background: rgb(var(--accent-mint) / 0.32);
+.deco-art-boat {
+  transform-origin: 50% 100%;
+  animation: decoBoat 3.2s ease-in-out infinite;
 }
 
-.deco-nameplate[data-nameplate='circuit']::after {
-  background: linear-gradient(90deg, transparent 0 44%, rgb(220 255 240 / 0.95) 50%, transparent 56% 100%);
-  background-size: 250% 100%;
-  background-repeat: no-repeat;
-  animation: decoCurrent 2.8s linear infinite;
+@keyframes decoBoat {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(1px) rotate(3deg); }
 }
 
-@keyframes decoCurrent {
-  from { background-position: 100% 0; }
-  to { background-position: 0% 0; }
+/* Sunset: the sun behind the mountains, two birds crossing. */
+.deco-art-mountains { aspect-ratio: 80 / 40; }
+
+.deco-art-birds {
+  animation: decoBirds 3s ease-in-out infinite alternate;
+}
+
+@keyframes decoBirds {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-6px, -2px); }
+}
+
+/* Moss: a forest, its pines leaning a little in the wind. */
+.deco-art-forest { aspect-ratio: 80 / 40; }
+
+.deco-art-tree {
+  transform-origin: 50% 100%;
+  animation: decoTree 4s ease-in-out infinite;
+}
+
+.deco-art-tree:nth-of-type(2n) {
+  animation-delay: -1.6s;
+}
+
+@keyframes decoTree {
+  0%, 100% { transform: rotate(-1.4deg); }
+  50% { transform: rotate(1.6deg); }
+}
+
+/* Your colours: bunting in them, its pennants swinging. */
+.deco-art-bunting { aspect-ratio: 80 / 40; }
+
+.deco-art-pennant {
+  transform-origin: 50% 0;
+  animation: decoPennant 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes decoPennant {
+  from { transform: rotate(-7deg); }
+  to { transform: rotate(7deg); }
 }
 
 /* ═══ Name styles ═══════════════════════════════════════════════════════ */
@@ -1038,96 +781,197 @@
   --deco-ink: linear-gradient(100deg, var(--deco-a), var(--deco-b), var(--deco-a));
 }
 
+.deco-name[data-name-effect='lagoon'] {
+  --deco-ink: linear-gradient(100deg, #2ec4b6, #8ef0d8, #3a86ff, #2ec4b6);
+  --deco-flow: 7s;
+}
+
+.deco-name[data-name-effect='berry'] {
+  --deco-ink: linear-gradient(100deg, #e0457b, #ff9bbd, #9b5de5, #e0457b);
+}
+
+.deco-name[data-name-effect='toxic'] {
+  --deco-ink: linear-gradient(100deg, #a3ff12, #3be37a, #e9ff70, #a3ff12);
+  --deco-flow: 4s;
+}
+
+/* Galaxy: deep space flowing through the letters, with stars in it. */
+.deco-name[data-name-effect='galaxy'] {
+  background-image:
+    radial-gradient(circle at 30% 40%, #ffffff 0 0.7px, transparent 1.2px),
+    radial-gradient(circle at 70% 70%, #ffffff 0 0.6px, transparent 1.1px),
+    linear-gradient(100deg, #6e5cff, #c56bff 30%, #4fa8ff 60%, #6e5cff);
+  background-size: 13px 11px, 17px 14px, 200% 100%;
+  animation: decoGalaxy 8s linear infinite;
+}
+
+@keyframes decoGalaxy {
+  from { background-position: 0 0, 0 0, 0% 50%; }
+  to { background-position: -26px 0, -34px 0, -200% 50%; }
+}
+
+/* Candy cane: red and white stripes inside the letters, sliding along. */
+.deco-name[data-name-effect='candycane'] {
+  background-image: repeating-linear-gradient(-45deg, #ff4f68 0 3.5px, #ffffff 3.5px 7px);
+  background-size: auto;
+  animation: decoStripes 1.4s linear infinite;
+}
+
+@keyframes decoStripes {
+  from { background-position: 0 0; }
+  to { background-position: 9.9px 0; }
+}
+
+/* The printed looks: the letters in a colour of their own, with an edge or a shadow round them. */
+.deco-name[data-name-effect='sticker'],
+.deco-name[data-name-effect='comic'],
+.deco-name[data-name-effect='retro'],
+.deco-name[data-name-effect='glitch'],
+.deco-name[data-name-effect='wave'] {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  animation: none;
+}
+
+/* Sticker: the name cut out of a sticker, a white edge round it and its shadow under it. */
+.deco-name[data-name-effect='sticker'] {
+  color: var(--deco-a);
+  -webkit-text-fill-color: var(--deco-a);
+  text-shadow:
+    1.5px 0 0 #fff, -1.5px 0 0 #fff, 0 1.5px 0 #fff, 0 -1.5px 0 #fff,
+    1.1px 1.1px 0 #fff, -1.1px 1.1px 0 #fff, 1.1px -1.1px 0 #fff, -1.1px -1.1px 0 #fff,
+    0 3px 0 rgb(0 0 0 / 0.45);
+}
+
+/* Comic: yellow letters inked black, with a hard shadow. */
+.deco-name[data-name-effect='comic'] {
+  color: #ffd84d;
+  -webkit-text-fill-color: #ffd84d;
+  text-shadow:
+    1.2px 0 0 #17140c, -1.2px 0 0 #17140c, 0 1.2px 0 #17140c, 0 -1.2px 0 #17140c,
+    0.9px 0.9px 0 #17140c, -0.9px 0.9px 0 #17140c, 0.9px -0.9px 0 #17140c, -0.9px -0.9px 0 #17140c,
+    2.2px 2.6px 0 #17140c;
+}
+
+/* Retro: cream letters with two hard shadows, rose and sky, as on an old record sleeve. */
+.deco-name[data-name-effect='retro'] {
+  color: #fff3d6;
+  -webkit-text-fill-color: #fff3d6;
+  text-shadow: 1px 1px 0 rgb(var(--accent-rose)), 2px 2px 0 rgb(var(--accent-sky));
+}
+
+/* Glitch: the name with its colours split, jumping now and then. */
+.deco-name[data-name-effect='glitch'] {
+  color: rgb(var(--text-primary));
+  -webkit-text-fill-color: rgb(var(--text-primary));
+  text-shadow: 1.4px 0 0 rgb(255 60 120 / 0.85), -1.4px 0 0 rgb(40 220 255 / 0.85);
+  animation: decoGlitch 2.8s steps(1, end) infinite;
+}
+
+@keyframes decoGlitch {
+  0%, 84%, 100% { text-shadow: 1.4px 0 0 rgb(255 60 120 / 0.85), -1.4px 0 0 rgb(40 220 255 / 0.85); }
+  86% { text-shadow: -2.6px 0 0 rgb(255 60 120 / 0.9), 2.6px 0 0 rgb(40 220 255 / 0.9); }
+  89% { text-shadow: 3px -1px 0 rgb(255 60 120 / 0.9), -3px 1px 0 rgb(40 220 255 / 0.9); }
+  92% { text-shadow: -1px 1px 0 rgb(255 60 120 / 0.9), 1px -1px 0 rgb(40 220 255 / 0.9); }
+}
+
+/* Wave: each letter rises and falls in turn, coloured from the person's first colour to their second. */
+.deco-name[data-name-effect='wave'] {
+  color: var(--deco-a);
+  -webkit-text-fill-color: currentColor;
+}
+
+.deco-name-letter {
+  display: inline-block;
+  color: color-mix(in srgb, var(--deco-a) calc(100% - var(--p, 0) * 100%), var(--deco-b));
+  animation: decoWave 1.8s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.07s);
+}
+
+@keyframes decoWave {
+  0%, 55%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-0.24em); }
+}
+
 /* ═══ Where they move ═══════════════════════════════════════════════════ */
 
 /* `off`: never. */
-.deco-frame[data-motion='off'] .deco-frame-ring,
-.deco-name[data-motion='off'] {
+.deco-art[data-motion='off'] *,
+.deco-name[data-motion='off'],
+.deco-name[data-motion='off'] .deco-name-letter {
   animation: none;
 }
 
 /* `hover`: only while the row or card around it is pointed at or focused. */
-.deco-frame[data-motion='hover'] .deco-frame-ring,
-.deco-frame[data-motion='hover'] .deco-frame-sparks i,
-.deco-nameplate[data-motion='hover'],
-.deco-nameplate[data-motion='hover']::before,
-.deco-nameplate[data-motion='hover']::after,
-.deco-nameplate[data-motion='hover'] i,
-.deco-name[data-motion='hover'] {
+.deco-art[data-motion='hover'] *,
+.deco-nameplate[data-motion='hover'] *,
+.deco-name[data-motion='hover'],
+.deco-name[data-motion='hover'] .deco-name-letter {
   animation-play-state: paused;
 }
 
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-frame[data-motion='hover'] .deco-frame-ring,
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-frame[data-motion='hover'] .deco-frame-sparks i,
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-nameplate[data-motion='hover'],
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-nameplate[data-motion='hover']::before,
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-nameplate[data-motion='hover']::after,
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-nameplate[data-motion='hover'] i,
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-name[data-motion='hover'] {
+.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-art[data-motion='hover'] *,
+.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-nameplate[data-motion='hover'] *,
+.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-name[data-motion='hover'],
+.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-name[data-motion='hover'] .deco-name-letter {
   animation-play-state: running;
 }
 
-/* At rest a frame's particles would be specks round every picture of a list: they come with the pointer. */
-.deco-frame[data-motion='hover'] .deco-frame-sparks {
+/* At rest, a note would hang in the air beside every picture of a list, a petal
+ * or a flake beside it: what passes by comes with the pointer. */
+.deco-art[data-motion='hover'] .deco-art-passing,
+.deco-art[data-motion='off'] .deco-art-passing {
   opacity: 0;
   transition: opacity var(--dur-base) var(--ease-out);
 }
 
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-frame[data-motion='hover'] .deco-frame-sparks {
+.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-art[data-motion='hover'] .deco-art-passing {
   opacity: 1;
 }
 
 /* ═══ Still, and plainer ════════════════════════════════════════════════ */
 
-/* Particles rest where they are scattered; a frame keeps its paint, a name its colours. */
-html[data-motion='reduce'] .deco-frame-ring,
-html[data-motion='reduce'] .deco-frame-sparks i,
-html[data-motion='reduce'] .deco-effect i,
-html[data-motion='reduce'] .deco-effect::before,
-html[data-motion='reduce'] .deco-effect::after,
-html[data-motion='reduce'] .deco-nameplate,
-html[data-motion='reduce'] .deco-nameplate i,
-html[data-motion='reduce'] .deco-nameplate::before,
-html[data-motion='reduce'] .deco-nameplate::after,
-html[data-motion='reduce'] .deco-name {
+/* Under Reduce motion everything stands where it is drawn; what falls or rises
+ * rests where it was scattered, and what only passes by is not shown. */
+html[data-motion='reduce'] .deco-art *,
+html[data-motion='reduce'] .deco-effect *,
+html[data-motion='reduce'] .deco-nameplate *,
+html[data-motion='reduce'] .deco-name,
+html[data-motion='reduce'] .deco-name-letter {
   animation: none !important;
 }
 
 html[data-motion='reduce'] .deco-effect i,
-html[data-motion='reduce'] .deco-frame-sparks i,
 html[data-motion='reduce'] .deco-nameplate i {
   top: var(--y);
   bottom: auto;
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
-html[data-motion='reduce'] .deco-effect[data-effect='shooting'] i {
+html[data-motion='reduce'] .deco-art-passing,
+html[data-motion='reduce'] .deco-art-shooting {
   display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .deco-frame-ring,
-  .deco-frame-sparks i,
-  .deco-effect i,
-  .deco-effect::before,
-  .deco-effect::after,
-  .deco-nameplate,
-  .deco-nameplate i,
-  .deco-nameplate::before,
-  .deco-nameplate::after,
-  .deco-name {
+  .deco-art *,
+  .deco-effect *,
+  .deco-nameplate *,
+  .deco-name,
+  .deco-name-letter {
     animation: none !important;
   }
 
   .deco-effect i,
-  .deco-frame-sparks i,
   .deco-nameplate i {
     top: var(--y);
     bottom: auto;
-    opacity: 0.6;
+    opacity: 0.85;
   }
 
-  .deco-effect[data-effect='shooting'] i {
+  .deco-art-passing,
+  .deco-art-shooting {
     display: none;
   }
 }
@@ -1138,27 +982,27 @@ html[data-contrast='high'] .deco-nameplate {
   display: none;
 }
 
-html[data-contrast='high'] .deco-name[data-name-effect] {
+html[data-contrast='high'] .deco-name[data-name-effect],
+html[data-contrast='high'] .deco-name-letter {
   background: none;
   color: inherit;
   -webkit-text-fill-color: currentColor;
+  text-shadow: none;
   animation: none;
 }
 
 @media (forced-colors: active) {
   .deco-effect,
   .deco-nameplate,
-  .deco-frame-sparks {
+  .deco-art {
     display: none;
   }
 
-  .deco-frame-ring {
-    background: CanvasText;
-  }
-
-  .deco-name[data-name-effect] {
+  .deco-name[data-name-effect],
+  .deco-name-letter {
     background: none;
     color: inherit;
     -webkit-text-fill-color: currentColor;
+    text-shadow: none;
   }
 }

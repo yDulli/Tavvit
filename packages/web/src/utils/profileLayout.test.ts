@@ -23,14 +23,6 @@ describe('profileHeaderLook', () => {
     }
   });
 
-  it("plays the profile's effect at the banner's height, and at the same height without a banner", () => {
-    for (const surface of ['card', 'full', 'preview'] as const) {
-      const standard = profileHeaderLook('standard', surface);
-      expect(standard.banner).toBe(`h-[${standard.effectHeight}px]`);
-      expect(profileHeaderLook('compact', surface).effectHeight).toBe(standard.effectHeight);
-    }
-  });
-
   it('centres only the centered layout', () => {
     expect(profileHeaderLook('centered', 'card').header).toContain('items-center');
     expect(profileHeaderLook('standard', 'card').header).not.toContain('items-center');

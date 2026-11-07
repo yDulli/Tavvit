@@ -1,8 +1,9 @@
 import React from 'react';
 import type { User } from '@backspace/shared';
-import { PARTICLE_FRAMES, type AvatarFrame } from '@backspace/shared/src/decorations';
-import { decorationColors, frameParticles, particleStyle } from '../../utils/decorations';
+import type { AvatarFrame } from '@backspace/shared/src/decorations';
+import { decorationColors } from '../../utils/decorations';
 import { getAvatarGradient, getSpaceGradient } from '../../utils/gradients';
+import { FRAME_LAYERS, FRAME_VIEW, frameArt, type FrameLayer } from './decorationArt';
 import { useGatedPicture } from './ExternalMedia';
 
 interface AvatarProps {
@@ -23,8 +24,9 @@ interface AvatarProps {
    */
   palette?: 'user' | 'space';
   /**
-   * The person's frame (docs/systems/decorations.md): a ring just outside the
-   * picture, in its shape, drawn over the space around it without taking any.
+   * The person's frame (docs/systems/decorations.md): a drawing around the
+   * picture (headphones, ears, a crown, a wreath), partly behind it and partly
+   * in front, drawn over the space around it without taking any.
    */
   frame?: AvatarFrame | null;
   /**
@@ -38,22 +40,16 @@ interface AvatarProps {
 /** When a decoration moves (`styles/decorations.css`, "Where they move"). */
 export type DecorationMotion = 'on' | 'hover' | 'off';
 
-/** How thick a frame is and how far it stands off the picture, by the picture's size. */
-function frameMetrics(size: number): { width: number; gap: number } {
-  return {
-    width: Math.min(5, Math.max(2, Math.round(size * 0.045))),
-    gap: Math.min(4, Math.max(2, Math.round(size * 0.035))),
-  };
-}
-
 /**
- * A frame around an avatar: a box `ext` larger on every side, its corner the
- * avatar's corner plus `ext` so the two curves run side by side, the ring cut
- * out of it in CSS (`.deco-frame-ring`). It shares the status dot's cutout, so
- * the dot sits in the frame as it sits in the picture.
+ * One layer of a frame's drawing (`decorationArt.tsx`): a view a fifth larger
+ * than the avatar on every side, `back` under the picture (the avatar is its own
+ * stacking context, so it stays above whatever the avatar sits on) and `front`
+ * over it. It shares the status dot's cutout, so the dot is never covered, and
+ * carries the person's colours for a design drawn in them.
  */
-function FrameRing({ frame, size, outerSize, ringWidth, status, motion, colors }: {
+function FrameArt({ frame, layer, size, outerSize, ringWidth, status, motion, colors }: {
   frame: AvatarFrame;
+  layer: FrameLayer;
   size: number;
   outerSize: number;
   ringWidth: number;
@@ -61,35 +57,26 @@ function FrameRing({ frame, size, outerSize, ringWidth, status, motion, colors }
   motion: DecorationMotion;
   colors: { a: string; b: string };
 }) {
-  const { width, gap } = frameMetrics(size);
-  const ext = width + gap;
-  // Particles only where the frame can move; they cross a box 44% taller than the frame.
-  const sparks = motion !== 'off' && PARTICLE_FRAMES.has(frame) ? frameParticles(frame) : [];
-  const travel = Math.round((outerSize + ext * 2) * 1.44);
   let mask: string | undefined;
   if (status) {
-    const { dot, gap: dotGap, inset } = getDotMetrics(size, ringWidth);
-    const centre = outerSize - inset + ext;
-    const hole = dot / 2 + dotGap;
+    const { dot, gap, inset } = getDotMetrics(size, ringWidth);
+    const centre = outerSize - inset + outerSize * 0.2;
+    const hole = dot / 2 + gap;
     mask = `radial-gradient(circle at ${centre}px ${centre}px, transparent ${hole}px, black ${hole + 0.5}px)`;
   }
-  const style = {
-    inset: -ext,
-    borderRadius: `calc(${outerSize}px * var(--avatar-roundness, 0.3) + ${ext}px)`,
-    '--deco-w': `${width}px`,
-    '--deco-a': colors.a,
-    '--deco-b': colors.b,
-    ...(mask ? { maskImage: mask, WebkitMaskImage: mask } : {}),
-  } as React.CSSProperties;
   return (
-    <span aria-hidden="true" className="deco-frame" data-frame={frame} data-motion={motion} style={style}>
-      <span className="deco-frame-ring" />
-      {sparks.length > 0 && (
-        <span className="deco-frame-sparks">
-          {sparks.map((particle, index) => <i key={index} style={particleStyle(particle, travel) as React.CSSProperties} />)}
-        </span>
-      )}
-    </span>
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      className="deco-art"
+      data-frame={frame}
+      data-layer={layer}
+      data-motion={motion}
+      viewBox={FRAME_VIEW}
+      style={{ '--deco-a': colors.a, '--deco-b': colors.b, ...(mask ? { maskImage: mask, WebkitMaskImage: mask } : {}) } as React.CSSProperties}
+    >
+      {frameArt(frame, layer)}
+    </svg>
   );
 }
 
@@ -176,25 +163,20 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
     : undefined;
 
   const { dot: dotDiameter, inset: dotInset } = getDotMetrics(size, ringWidth);
+  // A frame's drawing has a layer behind the picture, one over it, or both.
+  const frameColors = frame ? decorationColors({ accentColor: user?.accentColor, accentColorSecondary: user?.accentColorSecondary }, gradient) : null;
+  const artLayer = (layer: FrameLayer) => frame && frameColors && FRAME_LAYERS[frame].includes(layer) && (
+    <FrameArt frame={frame} layer={layer} size={size} outerSize={outerSize} ringWidth={ringWidth} status={status} motion={frameMotion} colors={frameColors} />
+  );
 
   return (
     <div
       data-avatar
-      className={`relative inline-flex flex-shrink-0 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`relative inline-flex flex-shrink-0 ${frame ? 'isolate' : ''} ${onClick ? 'cursor-pointer' : ''} ${className}`}
       style={{ width: outerSize, height: outerSize }}
       onClick={onClick}
     >
-      {frame && (
-        <FrameRing
-          frame={frame}
-          size={size}
-          outerSize={outerSize}
-          ringWidth={ringWidth}
-          status={status}
-          motion={frameMotion}
-          colors={decorationColors({ accentColor: user?.accentColor, accentColorSecondary: user?.accentColorSecondary }, gradient)}
-        />
-      )}
+      {artLayer('back')}
       {/* Inner masked square — ring background + avatar content */}
       <div
         className="w-full h-full"
@@ -229,6 +211,7 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
           {initials}
         </div>
       </div>
+      {artLayer('front')}
       {/* Status dot — outside the masked div so it isn't clipped */}
       {status && (
         <svg

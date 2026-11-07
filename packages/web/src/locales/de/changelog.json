@@ -4,6 +4,15 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.37.1": {
+      "title": "Dekorationen, gezeichnet",
+      "items": {
+        "drawn": "Jeder Rahmen, jeder Profil-Effekt und jedes Namensschild ist jetzt eine Zeichnung: Kopfhörer, Katzenohren, eine Krone, Heiligenschein und Flügel, Hörner, ein Lorbeerkranz, Blüten, Flammen, Schnee, Sterne, Herzen und Seifenblasen um dein Bild; eine Schallplatte, eine Stadt, Kirschblüten, verschneite Tannen, eine Regenwolke, ein Lagerfeuer, eine Sternennacht, ein Boot auf See, Berge, ein Wald und eine Wimpelkette am Ende deiner Zeile.",
+        "effects": "Profil-Effekte laufen jetzt über deine ganze Karte: Schmetterlinge, Musik, Nachthimmel, Schnee, Kirschblüten, Herbstlaub, Herzen, Konfetti, Seifenblasen und Laternen.",
+        "names": "Zehn neue Namens-Effekte: Welle, Glitch, Sticker, Comic, Retro, Zuckerstange, Galaxie, Toxic, Lagune und Beere.",
+        "kept": "Wer eins der bisherigen Designs trug, trägt jetzt die Zeichnung, die ihm am nächsten kommt. Du musst nichts tun."
+      }
+    },
     "1.37.0": {
       "title": "Für Creator",
       "items": {

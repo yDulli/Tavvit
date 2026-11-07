@@ -109,7 +109,7 @@ describe('the pages', () => {
     render(<PublicPage path="/changelog" />);
     const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(headings).toEqual(Object.values(changelog.versions).map((entry) => entry.title));
-    expect(Object.keys(changelog.versions)[0]).toBe('1.37.0');
+    expect(Object.keys(changelog.versions)[0]).toBe('1.37.1');
   });
 
   it('roadmap: shows what comes, in its sections, and what was just finished', () => {

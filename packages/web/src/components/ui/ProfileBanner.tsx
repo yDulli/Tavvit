@@ -1,20 +1,16 @@
-import type { ProfileEffect } from '@backspace/shared/src/decorations';
 import { cssUrl } from '../../utils/cssUrl';
-import { ProfileEffectLayer } from './Decorations';
 import { useGatedPicture } from './ExternalMedia';
 
 /**
  * A profile's banner: its picture once the page may fetch it (useGatedPicture), and the profile's
  * colours without one or until then, so a banner on a server this client does not talk to tells
- * that server nothing about who looked. The profile's effect, if it has one, plays over it
- * (docs/systems/decorations.md); `effectHeight` is the banner's height in pixels.
+ * that server nothing about who looked. The profile's effect lies over the whole card, not here
+ * (`ProfileEffectLayer`, docs/systems/decorations.md).
  */
-export function ProfileBanner({ src, fallback, className, effect = null, effectHeight = 96 }: {
+export function ProfileBanner({ src, fallback, className }: {
   src: string | null;
   fallback: string;
   className: string;
-  effect?: ProfileEffect | null;
-  effectHeight?: number;
 }) {
   const shown = useGatedPicture(src);
   return (
@@ -24,8 +20,6 @@ export function ProfileBanner({ src, fallback, className, effect = null, effectH
         ? { backgroundImage: cssUrl(shown), backgroundSize: 'cover', backgroundPosition: 'center' }
         : { background: fallback }
       }
-    >
-      <ProfileEffectLayer effect={effect} height={effectHeight} />
-    </div>
+    />
   );
 }

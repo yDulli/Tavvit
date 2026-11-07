@@ -98,14 +98,20 @@ beforeEach(async () => {
 
 describe('choosing decorations', () => {
   it('stores each design by its name and shows it in the reply', async () => {
-    const res = await update({ avatarFrame: 'aurora', profileEffect: 'snow', nameplate: 'circuit', nameFont: 'serif', nameEffect: 'gold' });
+    const res = await update({ avatarFrame: 'catears', profileEffect: 'snow', nameplate: 'skyline', nameFont: 'serif', nameEffect: 'glitch' });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ avatarFrame: 'aurora', profileEffect: 'snow', nameplate: 'circuit', nameFont: 'serif', nameEffect: 'gold' });
-    expect(stored()).toMatchObject({ avatarFrame: 'aurora', profileEffect: 'snow', nameplate: 'circuit', nameFont: 'serif', nameEffect: 'gold' });
+    expect(res.json()).toMatchObject({ avatarFrame: 'catears', profileEffect: 'snow', nameplate: 'skyline', nameFont: 'serif', nameEffect: 'glitch' });
+    expect(stored()).toMatchObject({ avatarFrame: 'catears', profileEffect: 'snow', nameplate: 'skyline', nameFont: 'serif', nameEffect: 'glitch' });
+  });
+
+  it('stores a retired design, sent by a client older than the change, as its successor', async () => {
+    const res = await update({ avatarFrame: 'aurora', profileEffect: 'fireflies', nameplate: 'circuit' });
+    expect(res.statusCode).toBe(200);
+    expect(stored()).toMatchObject({ avatarFrame: 'stardust', profileEffect: 'lanterns', nameplate: 'skyline' });
   });
 
   it('changes only the fields an update names, and clears one with null', async () => {
-    await update({ avatarFrame: 'gilded', nameEffect: 'prism' });
+    await update({ avatarFrame: 'crown', nameEffect: 'prism' });
     const res = await update({ avatarFrame: null });
     expect(res.statusCode).toBe(200);
     expect(stored()).toMatchObject({ avatarFrame: null, nameEffect: 'prism' });
@@ -125,7 +131,7 @@ describe('choosing decorations', () => {
     ['nameEffect', { name: 'gold' }],
     ['nameEffect', 'constructor'],
   ])('refuses %s %j and stores nothing of the update', async (field, value) => {
-    const res = await update({ avatarFrame: 'silver', [field]: value });
+    const res = await update({ avatarFrame: 'crown', [field]: value });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ code: 'profile_decoration_invalid', details: { field } });
     expect(stored()?.avatarFrame).toBeNull();
@@ -150,8 +156,15 @@ describe('what others see', () => {
     expect(publicUserOf(row!)).toMatchObject({ avatarFrame: null, nameEffect: 'gold' });
   });
 
+  it('shows a retired design stored before the change as its successor, without rewriting it', async () => {
+    testDb.update(schema.users).set({ avatarFrame: 'obsidian', profileEffect: 'sparkles', nameplate: 'tide' }).where(eq(schema.users.id, 'alice')).run();
+    const { publicUserOf } = await import('../utils/sanitize.js');
+    expect(publicUserOf(stored()!)).toMatchObject({ avatarFrame: 'horns', profileEffect: 'stars', nameplate: 'waves' });
+    expect(stored()).toMatchObject({ avatarFrame: 'obsidian', profileEffect: 'sparkles', nameplate: 'tide' });
+  });
+
   it('takes the decorations off an account that is deleted', async () => {
-    await update({ avatarFrame: 'pulse', profileEffect: 'hearts', nameplate: 'holo', nameFont: 'hand', nameEffect: 'candy' });
+    await update({ avatarFrame: 'hearts', profileEffect: 'hearts', nameplate: 'sakura', nameFont: 'hand', nameEffect: 'candy' });
     const { tombstoneUser } = await import('../utils/userDeletion.js');
     tombstoneUser('alice', { purgeContent: false });
     expect(stored()).toMatchObject({ avatarFrame: null, profileEffect: null, nameplate: null, nameFont: null, nameEffect: null });

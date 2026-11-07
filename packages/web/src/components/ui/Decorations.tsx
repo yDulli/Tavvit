@@ -1,42 +1,33 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { NameEffect, NameFont, Nameplate, ProfileEffect } from '@backspace/shared/src/decorations';
+import { formatters } from '../../i18n/formatters';
 import { effectParticles, nameplateParticles, particleStyle } from '../../utils/decorations';
 import type { DecorationMotion } from './Avatar';
+import { effectArt, effectSprites, nameplateArt, nameplateSprites } from './decorationArt';
 
 /**
- * A profile's effect (docs/systems/decorations.md): a layer over its banner, behind the card's
- * content, fading out before the text. The parent is `relative` and gives it its size; `height`
- * is that size in pixels, so what falls or rises crosses the whole of it, on a card as in a
- * picker's tile. It never takes a pointer.
+ * A profile's effect (docs/systems/decorations.md): drawn things bursting, flying, falling or
+ * rising across the whole profile card, over its content and never taking a pointer. The parent
+ * is `relative` and gives it its size; what moves crosses all of it, on a card as in a picker's
+ * tile (the layer measures itself: `container-type: size`). A card puts it last, over everything
+ * (`className="z-20"`); a picker's tile can draw it smaller (`--deco-scale`).
  */
-export function ProfileEffectLayer({ effect, height = 96, className = '' }: { effect: ProfileEffect | null; height?: number; className?: string }) {
+export function ProfileEffectLayer({ effect, className = '' }: { effect: ProfileEffect | null; className?: string }) {
   if (!effect) return null;
   return (
-    <div aria-hidden="true" className={`deco-effect ${className}`} data-effect={effect} style={{ '--fall': `${height + 24}px` } as CSSProperties}>
+    <div aria-hidden="true" className={`deco-effect ${className}`} data-effect={effect} style={effectSprites(effect) ?? undefined}>
       {effectParticles(effect).map((particle, index) => <i key={index} style={particleStyle(particle) as CSSProperties} />)}
+      {effectArt(effect)}
     </div>
   );
 }
 
 /**
- * A profile's effect on a layout without a banner (docs/systems/decorations.md): across the top of
- * the card, under everything on it. The card is `relative` and `isolate`, so the layer lies over
- * its background and under its content.
- */
-export function CardTopEffect({ effect, height }: { effect: ProfileEffect | null; height: number }) {
-  if (!effect) return null;
-  return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10" style={{ height }}>
-      <ProfileEffectLayer effect={effect} height={height} />
-    </div>
-  );
-}
-
-/**
- * A nameplate (docs/systems/decorations.md): colour and movement gathered at the far end of a row
- * of a list of people, behind the row's content and away from the name. The row is `relative`,
- * `isolate` (so the plate lies under its content and over its background) and rounded; this takes
- * its corners. In a list it moves while the row (`.deco-hover`) is pointed at.
+ * A nameplate (docs/systems/decorations.md): a small scene at the far end of a row of a list of
+ * people, behind the row's content and away from the name, with what falls or rises in it kept to
+ * a box the scene's size (`.deco-plate-field`). The row is `relative`, `isolate` (so the plate lies
+ * under its content and over its background) and rounded; this takes its corners. In a list it
+ * moves while the row (`.deco-hover`) is pointed at.
  */
 export function NameplateLayer({ nameplate, colors, motion = 'on', className = '' }: {
   nameplate: Nameplate | null;
@@ -45,25 +36,35 @@ export function NameplateLayer({ nameplate, colors, motion = 'on', className = '
   className?: string;
 }) {
   if (!nameplate) return null;
+  const particles = nameplateParticles(nameplate);
   return (
     <span
       aria-hidden="true"
       className={`deco-nameplate ${className}`}
       data-nameplate={nameplate}
       data-motion={motion}
-      style={{ '--deco-a': colors.a, '--deco-b': colors.b } as CSSProperties}
+      style={{ '--deco-a': colors.a, '--deco-b': colors.b, ...nameplateSprites(nameplate) } as CSSProperties}
     >
-      {nameplateParticles(nameplate).map((particle, index) => <i key={index} style={particleStyle(particle) as CSSProperties} />)}
+      {nameplateArt(nameplate)}
+      {particles.length > 0 && (
+        <span className="deco-plate-field">
+          {particles.map((particle, index) => <i key={index} style={particleStyle(particle) as CSSProperties} />)}
+        </span>
+      )}
     </span>
   );
 }
 
+/** Effects that move each letter on its own: the name is drawn letter by letter. */
+const LETTER_EFFECTS: ReadonlySet<NameEffect> = new Set<NameEffect>(['wave']);
+
 /**
- * A name in the person's chosen style (docs/systems/decorations.md): a typeface, and light inside
- * the letters. Without either it is the text as it is. The colours of "your colours" come from the
- * person (`colors`). Where the name wears a role's colour (`roleColored`: a space's members and
- * messages), that colour says something about the person there and wins over the effect; the
- * typeface stays.
+ * A name in the person's chosen style (docs/systems/decorations.md): a typeface, and an effect in
+ * or on the letters. Without either it is the text as it is. The colours of "your colours" come
+ * from the person (`colors`). Where the name wears a role's colour (`roleColored`: a space's
+ * members and messages), that colour says something about the person there and wins over the
+ * effect; the typeface stays. An effect that moves each letter (`wave`) draws the name letter by
+ * letter for the eye and keeps it whole for a screen reader.
  */
 export function DecoratedName({ font, effect, colors, motion = 'on', roleColored = false, className = '', style, children }: {
   font: NameFont | null;
@@ -77,6 +78,7 @@ export function DecoratedName({ font, effect, colors, motion = 'on', roleColored
 }) {
   const shownEffect = roleColored ? null : effect;
   if (!font && !shownEffect) return <span className={className} style={style}>{children}</span>;
+  const letters = shownEffect && LETTER_EFFECTS.has(shownEffect) && typeof children === 'string' ? formatters.splitGraphemes(children) : null;
   return (
     <span
       className={`deco-name ${className}`}
@@ -85,7 +87,22 @@ export function DecoratedName({ font, effect, colors, motion = 'on', roleColored
       data-motion={motion}
       style={{ ...style, '--deco-a': colors.a, '--deco-b': colors.b } as CSSProperties}
     >
-      {children}
+      {letters ? (
+        <>
+          <span className="sr-only">{children}</span>
+          <span aria-hidden="true">
+            {letters.map((letter, index) => (
+              <span
+                key={index}
+                className="deco-name-letter"
+                style={{ '--i': index, '--p': letters.length > 1 ? index / (letters.length - 1) : 0 } as CSSProperties}
+              >
+                {letter === ' ' ? ' ' : letter}
+              </span>
+            ))}
+          </span>
+        </>
+      ) : children}
     </span>
   );
 }

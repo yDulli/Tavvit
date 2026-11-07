@@ -574,17 +574,17 @@ Every floating surface places itself with `computeFloatingPosition` (`hooks/useF
 
 `.thread-chip` is the way into a thread, under the message it grew from: its name, how much was said and when. A count of upcoming events uses `CountBadge muted`: it is no unread state, so it does not take the signal colour.
 
-## Profile decorations (1.36.0)
+## Profile decorations (1.36.0, drawn since 1.37.1)
 
-Frames, profile effects, nameplates and name styles are drawn in `styles/decorations.css` (decorations.md). They keep to the rules above: light that sits behind content, never a glow round text, small and still in a list until it is pointed at.
+Frames, profile effects and nameplates are drawings of things (`components/ui/decorationArt.tsx`, decorations.md), placed and moved by `styles/decorations.css`: flat shapes in two or three tones with a darker outline of the same hue, lit from the upper left like the rest of the app. They are the one place the interface draws pictures rather than surfaces, and they keep the rule against light: no glow, no blur, no neon, nothing generated-looking; a sparkle or a star is a drawn shape with an outline. Name styles are a typeface and colour, a printed look or motion in the letters, never a glow round them.
 
-- `.deco-frame` (+ `.deco-frame-ring`, `.deco-frame-sparks`) is a frame round an `Avatar` (`frame`, `frameMotion`), following `--avatar-roundness`.
-- `.deco-effect` lies over a profile's banner and fades out before the text (`ProfileEffectLayer`, `CardTopEffect` on the compact layout).
-- `.deco-nameplate` lies at `z-index: -1` in a row that is `relative isolate`: over the row's background, hover and selection, under its content (`NameplateLayer`).
-- `.deco-name` carries `data-name-font` and `data-name-effect` (`DecoratedName`). A role's colour wins over the effect; the typeface stays.
+- `.deco-art` is a frame's drawing round an `Avatar` (`frame`, `frameMotion`), a view a fifth larger than the picture, in a layer behind it (`data-layer="back"`, `z-index: -1` in the avatar, which is `isolate` while it wears one) and one in front.
+- `.deco-effect` lies over the whole profile card, last in it (`ProfileEffectLayer` with `z-20`), taking no pointer; it measures itself (`container-type: size`) and a picker's tile halves it (`--deco-scale`). What moves in it wears a sprite (`--sprite-a/b/c`).
+- `.deco-nameplate` lies at `z-index: -1` in a row that is `relative isolate`: over the row's background, hover and selection, under its content (`NameplateLayer`); its scene stands at the far end (`.deco-art-scene`, `.deco-plate-field`).
+- `.deco-name` carries `data-name-font` and `data-name-effect` (`DecoratedName`); `.deco-name-letter` is one letter of a `wave`. A role's colour wins over the effect; the typeface stays.
 - `data-motion`: `on` (a profile, a preview), `hover` (inside a `.deco-hover` row or message, moving only while it is pointed at or focused), `off`.
 
-Reduce motion stills all of them. Higher contrast and forced colours leave out effects and nameplates and show a name in its plain colour. Nothing here takes the violet: "Your colours" are the person's own.
+Reduce motion stills all of them and leaves out what only passes by. Higher contrast and forced colours leave out effects and nameplates and show a name in its plain colour; forced colours leave out frames too. Nothing here takes the violet: "Your colours" are the person's own.
 
 ## Space tags and the voice overlay (1.37.0)
 

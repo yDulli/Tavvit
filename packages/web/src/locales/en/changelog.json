@@ -4,6 +4,15 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.37.1": {
+      "title": "Decorations, drawn",
+      "items": {
+        "drawn": "Every frame, profile effect and nameplate is now a drawing: headphones, cat ears, a crown, an angel's halo and wings, horns, a laurel wreath, flowers, flames, snow, stars, hearts and bubbles round your picture; a record, a city, cherry blossoms, snowy pines, a rain cloud, a campfire, a starry night, a boat at sea, mountains, a forest and bunting at the end of your row.",
+        "effects": "Profile effects now play across your whole card: butterflies, music, a night sky, snow, cherry blossoms, autumn leaves, hearts, confetti, bubbles and lanterns.",
+        "names": "Ten new name effects: Wave, Glitch, Sticker, Comic, Retro, Candy cane, Galaxy, Toxic, Lagoon and Berry.",
+        "kept": "If you wore one of the earlier designs, you now wear the drawing closest to it. Nothing to do."
+      }
+    },
     "1.37.0": {
       "title": "For creators",
       "items": {
