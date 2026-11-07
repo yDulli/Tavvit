@@ -268,10 +268,10 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
           </>
         )}
 
-        {(user.profileLinks?.length ?? 0) > 0 && (
+        {((user.profileLinks?.length ?? 0) > 0 || (user.linkedAccounts?.length ?? 0) > 0) && (
           <>
             <div className={divider} />
-            <ProfileLinks links={user.profileLinks} variant="chips" />
+            <ProfileLinks links={user.profileLinks} linkedAccounts={user.linkedAccounts} variant="chips" />
           </>
         )}
 

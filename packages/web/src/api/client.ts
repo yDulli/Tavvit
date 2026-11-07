@@ -22,6 +22,13 @@ import { solveSignupChallenge } from '../utils/signupChallenge';
 import type { CreatePollRequest, PollInfo } from '@backspace/shared/src/polls';
 import type { CreateSpaceInviteRequest, DataExportStatus, SessionsResponse, SecurityEventInfo, SessionInfo, SpaceInviteLink } from '@backspace/shared';
 import type {
+  LinkedAccountCompleteRequest,
+  LinkedAccountProvider,
+  LinkedAccountsResponse,
+  LinkedAccountStartResponse,
+  LinkedAccountUpdateRequest,
+} from '@backspace/shared';
+import type {
   AdminLegalDocument,
   AdminLegalResponse,
   AdminReport,
@@ -386,6 +393,14 @@ export class BackspaceApiClient {
     verifyPassword: (password: string) => Promise<VerifyPasswordResponse>;
     storage: () => Promise<StorageUsage>;
     dataExportStatus: () => Promise<DataExportStatus>;
+    /** Linked accounts (docs/systems/linked-accounts.md): what this server can link, and what the person linked. */
+    linkedAccounts: () => Promise<LinkedAccountsResponse>;
+    /** Where to sign in at the service to link an account there. */
+    startLinkedAccount: (provider: LinkedAccountProvider) => Promise<LinkedAccountStartResponse>;
+    /** Complete a link with what the service handed back on the way back. */
+    completeLinkedAccount: (provider: LinkedAccountProvider, data: LinkedAccountCompleteRequest) => Promise<LinkedAccountsResponse>;
+    updateLinkedAccount: (provider: LinkedAccountProvider, data: LinkedAccountUpdateRequest) => Promise<LinkedAccountsResponse>;
+    unlinkAccount: (provider: LinkedAccountProvider) => Promise<LinkedAccountsResponse>;
     requestDataExport: (password: string, twoFactorCode?: string) => Promise<DataExportStatus>;
     downloadDataExport: () => Promise<Blob>;
     email: () => Promise<AccountEmailStatus>;
@@ -1110,6 +1125,15 @@ export class BackspaceApiClient {
         request<VerifyPasswordResponse>('POST', '/users/@me/verify-password', { password }),
       storage: () => request<StorageUsage>('GET', '/users/@me/storage'),
       dataExportStatus: () => request<DataExportStatus>('GET', '/users/@me/data-export'),
+      linkedAccounts: () => request<LinkedAccountsResponse>('GET', '/users/@me/linked-accounts'),
+      startLinkedAccount: (provider: LinkedAccountProvider) =>
+        request<LinkedAccountStartResponse>('POST', `/users/@me/linked-accounts/${provider}/start`),
+      completeLinkedAccount: (provider: LinkedAccountProvider, data: LinkedAccountCompleteRequest) =>
+        request<LinkedAccountsResponse>('POST', `/users/@me/linked-accounts/${provider}`, data),
+      updateLinkedAccount: (provider: LinkedAccountProvider, data: LinkedAccountUpdateRequest) =>
+        request<LinkedAccountsResponse>('PATCH', `/users/@me/linked-accounts/${provider}`, data),
+      unlinkAccount: (provider: LinkedAccountProvider) =>
+        request<LinkedAccountsResponse>('DELETE', `/users/@me/linked-accounts/${provider}`),
       requestDataExport: (password: string, twoFactorCode?: string) => request<DataExportStatus>('POST', '/users/@me/data-export', { password, ...(twoFactorCode ? { twoFactorCode } : {}) }),
       downloadDataExport: async () => (await send('GET', '/users/@me/data-export/download')).blob(),
       email: () => request<AccountEmailStatus>('GET', '/users/@me/email'),

@@ -2,6 +2,7 @@ import { config as dotenvConfig } from 'dotenv';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { linkedAccountReturnPath } from '@backspace/shared/src/linkedAccounts.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -283,11 +284,18 @@ function readTranslationConfig() {
 }
 
 /**
- * Live on Twitch (docs/systems/activity-presence.md, "Live on Twitch"). Off unless both
- * `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` are set, from an application registered at
- * dev.twitch.tv; then this server asks Twitch whether the channels its signed-in people link on
- * their profiles are live. One without the other refuses to boot rather than running with a
- * check that cannot sign in.
+ * Where people reach this app in a browser, without a trailing slash: `APP_BASE_URL`, else
+ * `PUBLIC_ORIGIN`, else `https://DOMAIN`; empty when none is set. Links in mail and the page a
+ * service returns a person to after they signed in there are built from it, never from a request.
+ */
+const appBaseUrl = (envOptional('APP_BASE_URL') ?? publicOrigin ?? (envOptional('DOMAIN') ? `https://${envOptional('DOMAIN')}` : '')).replace(/\/+$/, '');
+
+/**
+ * Twitch (docs/systems/linked-accounts.md): linking a Twitch account by signing in there, and
+ * showing its owner as live while they stream (activity-presence.md, "Live on Twitch"). Off unless
+ * both `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` are set, from an application registered at
+ * dev.twitch.tv, whose OAuth redirect URL must be `redirectUri`. One without the other, or either
+ * without an address for the app, refuses to boot rather than running with a link that cannot work.
  */
 function readTwitchConfig() {
   const clientId = envOptional('TWITCH_CLIENT_ID') ?? '';
@@ -295,7 +303,10 @@ function readTwitchConfig() {
   if ((clientId === '') !== (clientSecret === '')) {
     throw new Error('Set both TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET (from an application at https://dev.twitch.tv/console/apps), or neither.');
   }
-  return { clientId, clientSecret } as const;
+  if (clientId !== '' && !/^https?:\/\//i.test(appBaseUrl)) {
+    throw new Error('TWITCH_CLIENT_ID needs APP_BASE_URL or DOMAIN: Twitch sends people back to a page of this app, and its address is built from them.');
+  }
+  return { clientId, clientSecret, redirectUri: clientId === '' ? '' : `${appBaseUrl}${linkedAccountReturnPath('twitch')}` } as const;
 }
 
 /**
@@ -311,7 +322,7 @@ function readEmailConfig() {
   const from = envOptional('EMAIL_FROM');
   const resendApiKey = envOptional('RESEND_API_KEY');
   const smtpHost = envOptional('SMTP_HOST');
-  const baseUrl = (envOptional('APP_BASE_URL') ?? publicOrigin ?? (envOptional('DOMAIN') ? `https://${envOptional('DOMAIN')}` : '')).replace(/\/+$/, '');
+  const baseUrl = appBaseUrl;
   if (transport !== 'none') {
     if (!from) throw new Error(`EMAIL_TRANSPORT=${transport} needs EMAIL_FROM, for example: Tavvit <no-reply@example.com>`);
     if (!/^https?:\/\//i.test(baseUrl)) {

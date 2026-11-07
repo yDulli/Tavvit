@@ -206,6 +206,8 @@ async function buildArchive(userId: string, target: string): Promise<void> {
       readPositions: raw.prepare('SELECT * FROM read_states WHERE user_id = ?').all(userId),
       otherInstances: raw.prepare(`SELECT origin, label, username, status, added_at AS addedAt, last_connected_at AS lastConnectedAt
         FROM user_federation_registry WHERE user_id = ?`).all(userId),
+      linkedAccounts: raw.prepare(`SELECT provider, provider_user_id AS accountId, login, display_name AS name, show_on_profile AS showOnProfile,
+        show_live AS showLive, created_at AS linkedAt FROM linked_accounts WHERE user_id = ?`).all(userId),
     });
     await addJson('reports-and-notices.json', {
       reportsYouMade: raw.prepare(`SELECT id, status, category, explanation, target_type AS targetType, target_url AS targetUrl, created_at AS createdAt
@@ -308,7 +310,7 @@ async function buildArchive(userId: string, target: string): Promise<void> {
       'account.json                 your profile and account settings',
       'people.json                  your friends, friend requests and the people you blocked',
       'spaces.json                  the spaces you are in, bans and join requests',
-      'settings.json                notification settings, folders, connected servers',
+      'settings.json                notification settings, folders, connected servers, linked accounts',
       'reports-and-notices.json     reports you made, notices you were sent, what administrators noted and logged about your account',
       'security.json                your sign-ins and what happened around them',
       'messages.jsonl               what you wrote in spaces, one message per line',

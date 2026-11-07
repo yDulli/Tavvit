@@ -1218,3 +1218,26 @@ Indexes: `space_stickers_space_name_unique` UNIQUE (space_id, name); `space_stic
 | Column | Notes |
 |--------|-------|
 | `spaces.discord_imported_at` | integer, null. When something was last brought over from Discord: set by a template import, into a new space or an existing one, and by an emoji and sticker import that brought anything. Read only into the invite preview (`movedFromDiscord`, `utils/spaceInviteSnapshot.ts`), so the welcome for people coming from Discord never claims a move that did not happen. Null while nothing was. |
+
+### linked_accounts (0072)
+
+Accounts elsewhere a person proved are theirs by signing in there (linked-accounts.md). No token is stored.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text PK NOT NULL | Snowflake |
+| user_id | text NOT NULL | FK → users.id CASCADE. Account deletion deletes the rows by hand, as the tombstone keeps the user's row |
+| provider | text NOT NULL | `LinkedAccountProvider`: `twitch` |
+| provider_user_id | text NOT NULL | The account's id at the service (Twitch: digits), what the live check asks by and what stays across a rename |
+| login | text NOT NULL | Its handle there (Twitch: the login, lower case), as the service last named it; a live answer brings a renamed one |
+| display_name | text NOT NULL | How the service writes its name, at most 64 characters |
+| show_on_profile | integer NOT NULL, default 1 | The profile shows it (`users.profile_linked_accounts`) |
+| show_live | integer NOT NULL, default 1 | Its owner is shown live while they stream there (activity-presence.md, "Live on Twitch") |
+| created_at | integer NOT NULL | When it was linked; a different account at the same service is a new date |
+| updated_at | integer NOT NULL | |
+
+Indexes: `linked_accounts_user_provider_unique` UNIQUE (user_id, provider): one per service per person; `linked_accounts_provider_account_unique` UNIQUE (provider, provider_user_id): one person per account elsewhere on this instance.
+
+| Column | Notes |
+|--------|-------|
+| `users.profile_linked_accounts` | text, null. What the profile shows of the person's linked accounts: the rows with `show_on_profile`, as a JSON list of `{ provider, login, name }`, written whenever they change (`writeProfileLinkedAccounts`). In `PUBLIC_USER_COLUMNS`, read into `User.linkedAccounts` by the shared rules. Cleared by the tombstone |

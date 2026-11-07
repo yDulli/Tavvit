@@ -34,9 +34,9 @@ Source files:
 
 Nothing to do for the browser's own translator and the link to Google. For a server-side translator, set `TRANSLATION_PROVIDER` and what it needs in `.env` and restart; LibreTranslate on this server is a service with the profile `translate`: [translation.md](translation.md). `update.sh` never writes `.env`. Then publish the privacy draft again, as it names the provider.
 
-## Live on Twitch
+## Twitch: linked accounts and Live on Twitch
 
-Off until both `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` are in `.env` (one without the other refuses to boot). Register an application at https://dev.twitch.tv/console/apps (category "Website Integration"; Twitch wants an OAuth redirect address, which this never uses, so `https://localhost` does), copy its Client ID, make a new secret, put both in `.env` and run `docker compose up -d`. The log says `[twitch] Asking Twitch every 60s …` at start, and once if Twitch refuses the application. Then publish the privacy draft again, as it gains a paragraph. activity-presence.md, "Live on Twitch".
+Off until both `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` are in `.env` (one without the other, or either without `APP_BASE_URL` or `DOMAIN`, refuses to boot). Register an application at https://dev.twitch.tv/console/apps: category "Website Integration", client type "Confidential", and as OAuth redirect URL exactly `https://<DOMAIN>/linked-accounts/twitch` (with `APP_BASE_URL` set: `<APP_BASE_URL>/linked-accounts/twitch`). Copy its Client ID, make a new secret, put both in `.env` and run `docker compose up -d`. The log names the redirect URL at start (`[twitch] … Linking returns to …`), and says so once if Twitch refuses the application. Then publish the privacy draft again, as it gains a paragraph. linked-accounts.md, "Setting it up".
 
 ## Mail
 

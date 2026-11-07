@@ -9,6 +9,7 @@ import { LoginPage } from './components/auth/LoginPage';
 import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
 import { VerifyEmailPage } from './components/auth/VerifyEmailPage';
+import { LinkedAccountReturnPage } from './components/linkedAccounts/LinkedAccountReturnPage';
 import { MailLanguageController } from './components/MailLanguageController';
 import { MfaPromptDialog } from './components/modals/MfaPromptDialog';
 import { RegisterPage } from './components/auth/RegisterPage';
@@ -110,6 +111,8 @@ export function App() {
           {/* Public, and not behind AuthRedirect: a link works whoever is signed in on this browser. */}
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          {/* Where a service sends a person back after they signed in there; signs them in here first if needed. */}
+          <Route path="/linked-accounts/:provider" element={<LinkedAccountReturnPage />} />
           <Route
             path="/channels/:spaceId/events"
             element={

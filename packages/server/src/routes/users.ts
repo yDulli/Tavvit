@@ -28,7 +28,8 @@ import { presenceUpdateFor } from '../ws/presenceEvent.js';
 import { deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
 import { pictureFileReleasable, profilePictureOf, uploadNameOf } from '../utils/profileImageRefs.js';
 import { mediaOriginsFor, shownPicture } from '../utils/remoteMedia.js';
-import { tombstoneUser, collectDeletionBroadcastTargets, collectProfileBroadcastTargetIds } from '../utils/userDeletion.js';
+import { tombstoneUser, collectDeletionBroadcastTargets } from '../utils/userDeletion.js';
+import { announceProfileChange } from '../utils/profileBroadcast.js';
 import { queueOutboxEvent, isFederationRelayEnabled, appendMutationLog } from '../utils/federationOutbox.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { federationFetch } from '../utils/federationFetch.js';
@@ -56,21 +57,6 @@ type UserRow = typeof schema.users.$inferSelect;
 const SPACE_LAYOUT_LIMITS = { ITEMS: 500, FOLDERS: 50, SPACES_PER_FOLDER: 200, ID_LENGTH: 128, NAME_LENGTH: 100 } as const;
 /** A folder's colour as the sidebar sets it: one of the accent family, by value or by token. */
 const FOLDER_COLOR = /^(#[0-9a-fA-F]{6}|rgb\(var\(--accent-[a-z]+\)\))$/;
-
-/**
- * The new look of a profile for everyone who can see it. The account's own fields (when its
- * status ends, its activity switch, its federation state) are its owner's business: everyone
- * else gets the public view.
- */
-function announceProfileChange(user: UserRow): void {
-  const own = { type: 'user_updated' as const, user: sanitizeUser(user, true) };
-  const others = { type: 'user_updated' as const, user: sanitizeUser(user) };
-  const targetUserIds = collectProfileBroadcastTargetIds(user.id);
-  targetUserIds.add(user.id); // Include self (for other tabs/connections)
-  for (const uid of targetUserIds) {
-    connectionManager.sendToUser(uid, uid === user.id ? own : others);
-  }
-}
 
 /**
  * A picture as other instances get it: a file here by its full address, and never an address

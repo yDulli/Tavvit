@@ -23,6 +23,7 @@ import { useInboxStore } from './inboxStore';
 import { useKeywordStore } from './keywordStore';
 import { useSavedStore } from './savedStore';
 import { useReviewStore } from './reviewStore';
+import { useLinkedAccountsStore } from './linkedAccountsStore';
 import { deleteAccountOnRemotes } from '../utils/federationOps';
 import { homeHostOf, homeIdentityOf, isMine, ownRowAt, selfIdentityOf, type IdentityFields, type SelfIdentity } from '../utils/identity';
 import { myChosenStatus, statusAuthority, type OwnStatusReport } from '../utils/selfStatus';
@@ -106,6 +107,7 @@ function resetUserStores() {
   useKeywordStore.getState().reset();
   useSettingsStore.getState().resetSessionState();
   useReviewStore.getState().reset();
+  useLinkedAccountsStore.getState().reset();
 }
 
 const TRUE_HOME_STATUS_KEY_PREFIX = 'backspace_true_home_status';

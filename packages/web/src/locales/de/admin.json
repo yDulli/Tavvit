@@ -916,7 +916,7 @@
         "restart_loop": "Der Server ist innerhalb einer Viertelstunde {{detail}}-mal gestartet. Schau in sein Log."
       },
       "translation": "Nachrichten übersetzen",
-      "twitchLive": "Live auf Twitch",
+      "twitchLive": "Twitch verknüpfen",
       "twitchLiveStates": {
         "off": "Aus",
         "ok": "Läuft",

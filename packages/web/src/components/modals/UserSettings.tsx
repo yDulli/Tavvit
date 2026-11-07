@@ -18,6 +18,7 @@ import {
   GamesPanel,
   EmojiSettingsPanel,
   PrivacyPanel,
+  LinkedAccountsPanel,
   ConnectionsPanel,
   DesktopPanel,
   KeybindsPanel,
@@ -25,6 +26,8 @@ import {
 } from './lazySettingsPanels';
 import { isElectron } from '../../platform/platform';
 import { useFederationEnabled } from '../../hooks/useFederationEnabled';
+import { useHomeInstanceInfo } from '../../hooks/useHomeInstanceInfo';
+import { useLinkedAccountsStore } from '../../stores/linkedAccountsStore';
 import { Icon } from '../ui/Icon';
 import { SlidingMark } from '../ui/SlidingMark';
 
@@ -38,6 +41,7 @@ const USER_SETTINGS_TABS = [
   { id: 'account', group: 'user', label: 'settings:nav.tabs.account' },
   { id: 'security', group: 'user', label: 'settings:nav.tabs.security' },
   { id: 'privacy', group: 'user', label: 'settings:nav.tabs.privacy' },
+  { id: 'linkedAccounts', group: 'user', label: 'settings:nav.tabs.linkedAccounts' },
   { id: 'notifications', group: 'user', label: 'settings:nav.tabs.notifications' },
   { id: 'appearance', group: 'app', label: 'settings:nav.tabs.appearance' },
   { id: 'accessibility', group: 'app', label: 'settings:nav.tabs.accessibility' },
@@ -71,11 +75,14 @@ interface TabAccess {
   federation: boolean;
   /** Running inside the desktop app; the Desktop tab holds that app's own settings. */
   electron: boolean;
+  /** The home links accounts elsewhere, or the person still has one linked to unlink (linked-accounts.md). */
+  linkedAccounts: boolean;
 }
 
 function tabVisible(tab: UserSettingsTab, access: TabAccess): boolean {
   if (tab === 'connections') return access.federation;
   if (tab === 'desktop') return access.electron;
+  if (tab === 'linkedAccounts') return access.linkedAccounts;
   return true;
 }
 
@@ -117,7 +124,10 @@ export function UserSettingsModal() {
   const logout = useAuthStore((s) => s.logout);
   const federation = useFederationEnabled() === true;
   const electron = isElectron();
-  const access: TabAccess = { federation, electron };
+  const linkable = (useHomeInstanceInfo()?.linkedAccounts?.length ?? 0) > 0;
+  const stillLinked = (useLinkedAccountsStore((s) => s.accounts)?.length ?? 0) > 0;
+  const linkedAccounts = linkable || stillLinked || (user?.linkedAccounts?.length ?? 0) > 0;
+  const access: TabAccess = { federation, electron, linkedAccounts };
 
   const [tab, setTab] = useState<UserSettingsTab>('account');
   const [mobileView, setMobileView] = useState<'tabs' | 'content'>('tabs');
@@ -129,11 +139,12 @@ export function UserSettingsModal() {
   useEffect(() => {
     if (isOpen) {
       const requested = modalData.tab;
-      const deepLinked = isUserSettingsTab(requested) && tabVisible(requested, { federation, electron });
+      const deepLinked = isUserSettingsTab(requested) && tabVisible(requested, access);
       setTab(deepLinked ? requested : 'account');
       setMobileView(deepLinked ? 'content' : 'tabs');
     }
-    // `federation` is read when the modal opens; the answer is cached by then.
+    // `federation` and the home's linked-account services are read when the modal
+    // opens; both answers are cached by then.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, modalData.tab]);
 
@@ -189,6 +200,7 @@ export function UserSettingsModal() {
     games: () => <GamesPanel />,
     emoji: () => <EmojiSettingsPanel />,
     privacy: () => <PrivacyPanel />,
+    linkedAccounts: () => <LinkedAccountsPanel />,
     connections: () => <ConnectionsPanel />,
     developers: () => <DevelopersPanel />,
     keybinds: () => <KeybindsPanel />,

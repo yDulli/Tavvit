@@ -2,6 +2,7 @@ import { DEFAULT_DM_POLICY, DEFAULT_FRIEND_REQUEST_POLICY } from '@backspace/sha
 import { isDmPolicy, isFriendRequestPolicy } from './contactPolicy.js';
 import { isAvatarColor, isProfileLayout, type User } from '@backspace/shared';
 import { parseStoredProfileLinks, withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
+import { parseStoredProfileLinkedAccounts } from '@backspace/shared/src/linkedAccounts.js';
 import { users } from '../db/schema.js';
 import { userBadgesOf } from './badges.js';
 import { needsVerifiedEmail } from '../email/gate.js';
@@ -25,6 +26,7 @@ export const PUBLIC_USER_COLUMNS = {
   bio: users.bio,
   pronouns: users.pronouns,
   profileLinks: users.profileLinks,
+  profileLinkedAccounts: users.profileLinkedAccounts,
   profileLayout: users.profileLayout,
   badges: users.badges,
   status: users.status,
@@ -58,6 +60,7 @@ export function publicUserOf(row: PublicUserRow): User {
       bio: null,
       pronouns: null,
       profileLinks: [],
+      linkedAccounts: [],
       profileLayout: null,
       badges: [],
       status: 'offline',
@@ -89,6 +92,8 @@ export function publicUserOf(row: PublicUserRow): User {
     bio: row.bio ?? null,
     pronouns: row.pronouns ?? null,
     profileLinks: parseStoredProfileLinks(row.profileLinks),
+    // Read by the same rule a client reads it by: a handle the service would give, a link only to its page.
+    linkedAccounts: parseStoredProfileLinkedAccounts(row.profileLinkedAccounts),
     profileLayout: isProfileLayout(row.profileLayout) ? row.profileLayout : null,
     badges: userBadgesOf(row),
     status: (row.status ?? 'offline') as User['status'],

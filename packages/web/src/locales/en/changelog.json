@@ -4,6 +4,12 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.35.1": {
+      "title": "Linked accounts",
+      "items": {
+        "linked": "Link your Twitch account in Settings → Linked accounts by signing in at Twitch, so only your own can be linked. Your profile shows it, and while you're live people see it, with a button to your stream. A Twitch link among your profile links no longer does that."
+      }
+    },
     "1.35.0": {
       "title": "Backgrounds and streamer mode",
       "items": {

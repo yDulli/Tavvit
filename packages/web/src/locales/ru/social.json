@@ -83,6 +83,7 @@
     "viewFull": "Открыть полный профиль",
     "addFriend": "Добавить в друзья",
     "links": "Ссылки",
+    "linkedAccount": "{{service}}: {{name}}, связанный аккаунт",
     "editProfile": "Редактировать профиль",
     "editSpaceProfile": "Профиль в пространстве",
     "activity": "Активность",

@@ -505,6 +505,13 @@
       "when": 1793894126280,
       "tag": "0071_tavvit_space_expressions",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "6",
+      "when": 1794053145785,
+      "tag": "0072_tavvit_linked_accounts",
+      "breakpoints": true
     }
   ]
 }

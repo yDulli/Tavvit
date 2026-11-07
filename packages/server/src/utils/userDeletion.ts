@@ -198,6 +198,8 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
     tx.delete(schema.retiredUsernames).where(eq(schema.retiredUsernames.userId, uid)).run();
     tx.delete(schema.knownDevices).where(eq(schema.knownDevices.userId, uid)).run();
     tx.delete(schema.userFederationRegistry).where(eq(schema.userFederationRegistry.userId, uid)).run();
+    // The tombstone keeps the row, so its cascade never fires: the accounts elsewhere go by hand.
+    tx.delete(schema.linkedAccounts).where(eq(schema.linkedAccounts.userId, uid)).run();
     tx.delete(schema.userBlocks).where(or(eq(schema.userBlocks.blockerId, uid), eq(schema.userBlocks.blockedId, uid))).run();
     tx.delete(schema.notificationSettings).where(eq(schema.notificationSettings.userId, uid)).run();
     tx.delete(schema.userSpaceLayout).where(eq(schema.userSpaceLayout.userId, uid)).run();
@@ -358,6 +360,7 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
       bio: null,
       pronouns: null,
       profileLinks: null,
+      profileLinkedAccounts: null,
       profileLayout: null,
       customStatus: null,
       accentColor: null,

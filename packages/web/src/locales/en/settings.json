@@ -159,6 +159,7 @@
       "appearance": "Appearance",
       "voice": "Voice & Video",
       "privacy": "Privacy",
+      "linkedAccounts": "Linked accounts",
       "connections": "Connections",
       "keybinds": "Keybinds",
       "developers": "Developers",
@@ -401,8 +402,6 @@
       "links": {
         "label": "Links",
         "hint": "Up to {{max}} web addresses on your profile card, each with an optional label.",
-        "twitchLive": "While you're live on this channel, it shows in your activity status, with a link to the stream.",
-        "twitchLiveSharingOff": "“Share Activity Status” is off in Privacy, so nobody sees when you're live on this channel.",
         "url": "Link address",
         "urlPlaceholder": "https://…",
         "labelField": "Link label",
@@ -598,6 +597,37 @@
       "shortcut": "Shortcut: {{keys}}.",
       "noShortcut": "No shortcut yet.",
       "setShortcut": "Set one in Keybinds"
+    }
+  },
+  "linkedAccounts": {
+    "title": "Linked accounts",
+    "intro": "Accounts you have elsewhere. You link one by signing in there, so only your own can be linked.",
+    "noneOffered": "This server links no accounts elsewhere.",
+    "link": "Link {{service}}",
+    "linking": "Opening {{service}}…",
+    "openedInBrowser": "{{service}} opened in your browser. Sign in there; the account shows here once it is linked. If your browser is not signed in to Tavvit, it asks you to sign in first.",
+    "twitch": {
+      "offer": "Shows when you're live, like a game you're playing, with a button to your stream, and your channel on your profile."
+    },
+    "verified": "Linked by signing in",
+    "linkedOn": "Linked {{date}}",
+    "unlink": "Unlink",
+    "unlinking": "Unlinking…",
+    "showOnProfile": "Show on my profile",
+    "showOnProfileDescription": "Your profile shows this account, with a link to it.",
+    "showLive": "Show when I'm live",
+    "showLiveDescription": "While you stream, people see it as your activity, with a button to your stream.",
+    "showLiveSharingOff": "“Share Activity Status” is off in Privacy, so nobody sees it for now.",
+    "return": {
+      "working": "Linking your {{service}} account…",
+      "linkedTitle": "{{service}} is linked",
+      "linkedBody": "{{name}} is linked to your account now.",
+      "desktopNote": "Started this in the desktop app? You can close this page and go back to it.",
+      "notLinkedTitle": "Nothing was linked",
+      "cancelled": "You stopped at {{service}}, so nothing was linked.",
+      "incomplete": "The service did not say who signed in. Start again from Settings → Linked accounts.",
+      "nothing": "There is nothing to link here. Start from Settings → Linked accounts.",
+      "back": "Back to settings"
     }
   },
   "connections": {

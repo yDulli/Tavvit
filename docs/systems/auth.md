@@ -796,6 +796,8 @@ The rules live in packages/shared/src/profileFields.ts and are applied three tim
 
 Only the account itself writes these fields (`PATCH /users/@me` acts on the caller's own row). Like `accentColorSecondary` they are not relayed to federation peers: another instance shows them for its own users only. Deleting the account (`tombstoneUser`) clears all of them, the second accent colour included, and hands the pictures of the person's space profiles to the caller for deletion with the rest.
 
+A Twitch address among the links is only a link. An account elsewhere shows as the person's own only when they linked it by signing in there: **linked accounts** (`users.profile_linked_accounts`, written from `linked_accounts`; linked-accounts.md), shown first under the same "Links" heading, marked as linked. Deleting the account deletes them too, and they are in the personal export.
+
 
 ## 13. Suspensions
 

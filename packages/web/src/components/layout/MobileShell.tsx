@@ -111,6 +111,7 @@ export const mobileScreenMap: Readonly<Record<string, (params?: Record<string, s
   'settings-games': () => <MobileSettingsScreen initialPanel="games" />,
   'settings-emoji': () => <MobileSettingsScreen initialPanel="emoji" />,
   'settings-privacy': () => <MobileSettingsScreen initialPanel="privacy" />,
+  'settings-linkedAccounts': () => <MobileSettingsScreen initialPanel="linkedAccounts" />,
   'settings-connections': () => <MobileSettingsScreen initialPanel="connections" />,
   'settings-keybinds': () => <MobileSettingsScreen initialPanel="keybinds" />,
   'settings-developers': () => <MobileSettingsScreen initialPanel="developers" />,

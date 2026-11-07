@@ -1,6 +1,6 @@
 {
   "name": "@backspace/shared",
-  "version": "1.35.0",
+  "version": "1.35.1",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Jannis Braun",
@@ -65,6 +65,8 @@
     "./src/translation.js": "./src/translation.ts",
     "./src/twitch": "./src/twitch.ts",
     "./src/twitch.js": "./src/twitch.ts",
+    "./src/linkedAccounts": "./src/linkedAccounts.ts",
+    "./src/linkedAccounts.js": "./src/linkedAccounts.ts",
     "./src/forums": "./src/forums.ts",
     "./src/forums.js": "./src/forums.ts",
     "./src/channelFollows": "./src/channelFollows.ts",

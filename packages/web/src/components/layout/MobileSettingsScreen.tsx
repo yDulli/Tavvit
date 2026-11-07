@@ -16,6 +16,7 @@ import {
   GamesPanel,
   EmojiSettingsPanel,
   PrivacyPanel,
+  LinkedAccountsPanel,
   KeybindsPanel,
   DesktopPanel,
   SettingsPanelSuspense,
@@ -27,6 +28,8 @@ import { PANEL_BODY } from './mobileClasses';
 import { TransferIndicator } from './TransferIndicator';
 import { isElectron } from '../../platform/platform';
 import { useFederationEnabled } from '../../hooks/useFederationEnabled';
+import { useHomeInstanceInfo } from '../../hooks/useHomeInstanceInfo';
+import { useLinkedAccountsStore } from '../../stores/linkedAccountsStore';
 
 interface MobileSettingsScreenProps {
   initialPanel?: string;
@@ -43,6 +46,7 @@ type PanelTitleKey =
   | 'settings:nav.tabs.games'
   | 'settings:nav.tabs.emoji'
   | 'settings:nav.tabs.privacy'
+  | 'settings:nav.tabs.linkedAccounts'
   | 'settings:nav.tabs.connections'
   | 'settings:nav.tabs.keybinds'
   | 'settings:nav.tabs.developers'
@@ -65,6 +69,7 @@ const panelConfig: Record<
   games: { titleKey: 'settings:nav.tabs.games', body: () => <GamesPanel /> },
   emoji: { titleKey: 'settings:nav.tabs.emoji', body: () => <EmojiSettingsPanel /> },
   privacy: { titleKey: 'settings:nav.tabs.privacy', body: () => <PrivacyPanel /> },
+  linkedAccounts: { titleKey: 'settings:nav.tabs.linkedAccounts', body: () => <LinkedAccountsPanel /> },
   connections: { titleKey: 'settings:nav.tabs.connections', body: () => <ConnectionsPanel /> },
   developers: { titleKey: 'settings:nav.tabs.developers', body: () => <DevelopersPanel /> },
   keybinds: { titleKey: 'settings:nav.tabs.keybinds', body: () => <KeybindsPanel /> },
@@ -82,6 +87,7 @@ const sectionIcons: Record<string, IconName> = {
   games: 'play',
   emoji: 'smile',
   privacy: 'shield',
+  linkedAccounts: 'check',
   connections: 'link',
   keybinds: 'grid',
   developers: 'link',
@@ -100,6 +106,11 @@ export function MobileSettingsScreen({ initialPanel }: MobileSettingsScreenProps
   const pushMobileScreen = useUIStore((s) => s.pushMobileScreen);
   const isAdmin = useAuthStore((s) => s.user?.isAdmin);
   const federation = useFederationEnabled() === true;
+  // As in the settings modal: while the home links accounts elsewhere, or one is still linked.
+  const linkable = (useHomeInstanceInfo()?.linkedAccounts?.length ?? 0) > 0;
+  const stillLinked = (useLinkedAccountsStore((s) => s.accounts)?.length ?? 0) > 0;
+  const showsLinked = (useAuthStore((s) => s.user?.linkedAccounts)?.length ?? 0) > 0;
+  const linkedAccounts = linkable || stillLinked || showsLinked;
 
   // If initialPanel is set, render that panel directly
   if (initialPanel) {
@@ -126,6 +137,7 @@ export function MobileSettingsScreen({ initialPanel }: MobileSettingsScreenProps
     { id: 'account', label: t('settings:nav.tabs.account') },
     { id: 'security', label: t('settings:nav.tabs.security') },
     { id: 'privacy', label: t('settings:nav.tabs.privacy') },
+    ...(linkedAccounts ? [{ id: 'linkedAccounts', label: t('settings:nav.tabs.linkedAccounts') }] : []),
     { id: 'notifications', label: t('settings:nav.tabs.notifications') },
     { id: 'appearance', label: t('settings:nav.tabs.appearance') },
     { id: 'accessibility', label: t('settings:nav.tabs.accessibility') },

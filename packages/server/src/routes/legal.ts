@@ -44,7 +44,7 @@ import {
   upcomingDocument,
 } from '../utils/legal.js';
 import { legalTemplate } from '../utils/legalTemplates.js';
-import { twitchLiveAvailable } from '../utils/twitchApi.js';
+import { twitchAvailable } from '../utils/twitchApi.js';
 import { openReportCount } from '../utils/reportCount.js';
 import {
   adminReports,
@@ -234,7 +234,7 @@ export async function legalRoutes(app: FastifyInstance): Promise<void> {
       voice: Boolean(config.livekit.url && config.livekit.apiKey && config.livekit.apiSecret),
       gifs: Boolean(settings?.gifApiKey),
       translation: config.translation.provider === 'none' ? null : config.translation.provider,
-      twitch: twitchLiveAvailable(),
+      twitch: twitchAvailable(),
       federation: config.federation.enabled,
       directory: config.directory.endpoint !== '' && settings?.directoryEnabled === 1,
       backupDays: config.backup.keepScheduled,

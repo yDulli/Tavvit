@@ -159,6 +159,7 @@
       "appearance": "Darstellung",
       "voice": "Sprache & Video",
       "privacy": "Privatsphäre",
+      "linkedAccounts": "Verknüpfte Konten",
       "connections": "Verbindungen",
       "keybinds": "Tastenkürzel",
       "developers": "Entwickler",
@@ -401,8 +402,6 @@
       "links": {
         "label": "Links",
         "hint": "Bis zu {{max}} Webadressen auf deiner Profilkarte, jeweils mit optionaler Beschriftung.",
-        "twitchLive": "Während du auf diesem Kanal live bist, steht das in deinem Aktivitätsstatus, mit einem Link zum Stream.",
-        "twitchLiveSharingOff": "„Aktivitätsstatus teilen“ ist unter Privatsphäre aus, also sieht niemand, wenn du auf diesem Kanal live bist.",
         "url": "Linkadresse",
         "urlPlaceholder": "https://…",
         "labelField": "Linkbeschriftung",
@@ -598,6 +597,37 @@
       "shortcut": "Tastenkürzel: {{keys}}.",
       "noShortcut": "Noch kein Tastenkürzel.",
       "setShortcut": "Unter Tastenkürzel festlegen"
+    }
+  },
+  "linkedAccounts": {
+    "title": "Verknüpfte Konten",
+    "intro": "Konten, die du woanders hast. Du verknüpfst eines, indem du dich dort anmeldest, also nur dein eigenes.",
+    "noneOffered": "Dieser Server verknüpft keine Konten von anderen Diensten.",
+    "link": "{{service}} verknüpfen",
+    "linking": "{{service}} wird geöffnet …",
+    "openedInBrowser": "{{service}} ist in deinem Browser aufgegangen. Melde dich dort an; das Konto erscheint hier, sobald es verknüpft ist. Ist dein Browser nicht bei Tavvit angemeldet, fragt er dich zuerst danach.",
+    "twitch": {
+      "offer": "Zeigt, wenn du live bist, wie ein Spiel, das du spielst, mit einem Knopf zu deinem Stream, und deinen Kanal in deinem Profil."
+    },
+    "verified": "Durch Anmeldung verknüpft",
+    "linkedOn": "Verknüpft am {{date}}",
+    "unlink": "Verknüpfung lösen",
+    "unlinking": "Wird gelöst …",
+    "showOnProfile": "Im Profil zeigen",
+    "showOnProfileDescription": "Dein Profil zeigt dieses Konto, mit einem Link dorthin.",
+    "showLive": "Zeigen, wenn ich live bin",
+    "showLiveDescription": "Während du streamst, sehen andere das als deine Aktivität, mit einem Knopf zu deinem Stream.",
+    "showLiveSharingOff": "„Aktivitätsstatus teilen“ ist unter Privatsphäre aus, also sieht es gerade niemand.",
+    "return": {
+      "working": "Dein {{service}}-Konto wird verknüpft …",
+      "linkedTitle": "{{service}} ist verknüpft",
+      "linkedBody": "{{name}} ist jetzt mit deinem Konto verknüpft.",
+      "desktopNote": "Hast du das in der Desktop-App gestartet? Dann kannst du diese Seite schließen und dorthin zurückgehen.",
+      "notLinkedTitle": "Nichts verknüpft",
+      "cancelled": "Du hast bei {{service}} abgebrochen, also wurde nichts verknüpft.",
+      "incomplete": "Der Dienst hat nicht gesagt, wer sich angemeldet hat. Fang unter Einstellungen → Verknüpfte Konten noch einmal an.",
+      "nothing": "Hier gibt es nichts zu verknüpfen. Fang unter Einstellungen → Verknüpfte Konten an.",
+      "back": "Zurück zu den Einstellungen"
     }
   },
   "connections": {

@@ -899,7 +899,7 @@
         "restart_loop": "服务器在十五分钟内启动了 {{detail}} 次。请查看日志。"
       },
       "translation": "消息翻译",
-      "twitchLive": "Twitch 直播",
+      "twitchLive": "关联 Twitch",
       "twitchLiveStates": {
         "off": "关闭",
         "ok": "正常",

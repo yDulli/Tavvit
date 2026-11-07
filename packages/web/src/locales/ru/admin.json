@@ -952,7 +952,7 @@
         "restart_loop": "Сервер запускался {{detail}} раз за пятнадцать минут. Посмотрите журнал."
       },
       "translation": "Перевод сообщений",
-      "twitchLive": "Эфиры на Twitch",
+      "twitchLive": "Связь с Twitch",
       "twitchLiveStates": {
         "off": "Выключено",
         "ok": "Работает",

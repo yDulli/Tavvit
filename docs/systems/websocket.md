@@ -372,6 +372,7 @@ its next follow-up or the next `ready`; its unread dot shows meanwhile.
 |------|--------|-------|
 | `presence_update` | userId, status, activities?, homeUserId?, homeInstance? | friends + DM co-members + space co-members of the user (via `collectProfileBroadcastTargetIds`), plus self for multi-tab sync. For federated stubs, the local instance receives status and activities via S2S `presence_update` relay from the home (see `federation.md` §10 — Presence Sync) and re-broadcasts to the same recipient set, with `activities` whenever the relay changed them (empty clears). `activities` absent = unchanged. `homeUserId`/`homeInstance` are the subject row's federated identity, both null for a row native to this instance; the client keys activities and friend status by that identity (activity-presence.md "Keying"). Every emitter builds the event with `presenceUpdateFor`/`presenceUpdateEvent` (`ws/presenceEvent.ts`). Also sent when a friendship is created: each side gets the other's current status and activities (activity-presence.md "Friendship Snapshot"). Servers that predate the identity fields omit them. |
 | `user_updated` | user | user |
+| `linked_accounts_update` | accounts: `LinkedAccountView[]` | only to the person, after any change to their linked accounts (linked-accounts.md); a client takes it from its home only |
 
 ### Space / Channel Management
 | type | fields | scope |

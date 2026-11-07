@@ -934,7 +934,7 @@
         "restart_loop": "O servidor iniciou {{detail}} vezes em quinze minutos. Veja o log."
       },
       "translation": "Tradução de mensagens",
-      "twitchLive": "Ao vivo na Twitch",
+      "twitchLive": "Vincular Twitch",
       "twitchLiveStates": {
         "off": "Desligado",
         "ok": "Funcionando",

@@ -579,7 +579,21 @@ See [translation.md](translation.md). Not for bots.
 |--------|------|--------------|
 | POST | `/api/messages/:id/translate` | Who can read the message, in a channel or a conversation; 404 otherwise. `{ target }`, one of `TRANSLATION_TARGETS`. `TranslateMessageResponse`. 503 `translation_unavailable` without a provider, 502 `translation_failed`, 429 `translation_limit_reached`. |
 
-`GET /api/instance/info` has `translation`: whether this server has a provider. It also has `twitchLive`: whether this server asks Twitch whether the channels its people link are live (activity-presence.md, "Live on Twitch").
+`GET /api/instance/info` has `translation`: whether this server has a provider.
+
+## Linked accounts (`routes/linkedAccounts.ts`) — auth required
+
+See [linked-accounts.md](linked-accounts.md). For the person's own account, homed here (`403 linked_account_home_only` for a copy of an account homed elsewhere); not for bots. `:provider` is one of `LINKED_ACCOUNT_PROVIDERS` (`twitch`), else `404 linked_account_not_found`. Every answer but `start` is `LinkedAccountsResponse` (`{ available, accounts }`).
+
+| Method | Path | Who and what |
+|--------|------|--------------|
+| GET | `/api/users/@me/linked-accounts` | What this server can link, and what the person linked. |
+| POST | `/api/users/@me/linked-accounts/:provider/start` | 10 in 10 minutes. `{ url }`: the service's sign-in address, with a state bound to this account for ten minutes. `503 linked_account_unavailable` when the service is not set up. |
+| POST | `/api/users/@me/linked-accounts/:provider` | 10 in 10 minutes. `{ code, state }` from the page the service returned to. `400 linked_account_expired` (state unknown, expired or used, or a code the service refused), `403 linked_account_other_account` (another account started it), `409 linked_account_taken` (linked to another account here), `502 linked_account_failed` (the service did not answer), `400 validation_failed` for the shape, `503 linked_account_unavailable`. |
+| PATCH | `/api/users/@me/linked-accounts/:provider` | 60 a minute. `{ showOnProfile?, showLive? }`, booleans, at least one (`400 no_fields_to_update`). Works also after the service stopped being offered. |
+| DELETE | `/api/users/@me/linked-accounts/:provider` | 30 a minute. Unlinks; works also after the service stopped being offered. |
+
+`GET /api/instance/info` has `linkedAccounts`: the services people can link on this server (`[]` without any).
 
 ## Threads (`routes/threads.ts`) — auth required
 

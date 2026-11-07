@@ -86,17 +86,6 @@ vi.mock('../../../api/client', () => ({
   },
 }));
 
-// The links editor says what a Twitch link does (Live on Twitch): it reads whether
-// activity is shared and whether the home has the check. Stub both, so this
-// isolated render loads neither the socket's audio import chain nor the info request.
-vi.mock('../../../stores/activityStore', () => ({
-  useActivityStore: Object.assign(
-    (selector: (s: unknown) => unknown) => selector({ showActivity: true }),
-    { getState: () => ({ showActivity: true }), setState: vi.fn(), subscribe: vi.fn() },
-  ),
-}));
-vi.mock('../../../hooks/useHomeInstanceInfo', () => ({ useHomeInstanceInfo: () => null }));
-
 // Child modals are closed in these render cases; stub them so their transitive
 // store imports don't participate in this isolated component render.
 vi.mock('../../ui/ImageCropModal', () => ({ ImageCropModal: () => null }));

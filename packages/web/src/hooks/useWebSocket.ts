@@ -3,6 +3,7 @@ import { useSoundboardStore } from '../stores/soundboardStore';
 import { channelOfOrigin, channelOfSpace, useWatchStore } from '../stores/watchStore';
 import { useKeywordStore } from '../stores/keywordStore';
 import { useSavedStore } from '../stores/savedStore';
+import { useLinkedAccountsStore } from '../stores/linkedAccountsStore';
 import { sendNotification } from '../platform/notifications';
 import { alertsAllowed } from '../utils/alerts';
 import { useEventStore } from '../stores/eventStore';
@@ -929,6 +930,12 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       if (event.activities) {
         useActivityStore.getState().setUserActivities(subject, origin, event.activities);
       }
+      break;
+    }
+
+    case 'linked_accounts_update': {
+      // One's own accounts elsewhere, linked at the home: another instance has no say in them.
+      if (isHome) useLinkedAccountsStore.getState().setAccounts(event.accounts);
       break;
     }
 

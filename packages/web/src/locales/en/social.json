@@ -79,6 +79,7 @@
     "viewFull": "View Full Profile",
     "addFriend": "Add Friend",
     "links": "Links",
+    "linkedAccount": "{{service}}: {{name}}, linked account",
     "editProfile": "Edit profile",
     "editSpaceProfile": "Edit space profile",
     "activity": "Activity",

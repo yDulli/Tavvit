@@ -1,21 +1,26 @@
-import type { Activity, ProfileLink } from './types.js';
+import type { Activity } from './types.js';
 
 /**
- * A Twitch channel as a profile names it (docs/systems/activity-presence.md,
- * "Live on Twitch"): a link to `twitch.tv/<channel>` among the profile's
- * links. Twitch's own rule for a channel's name: 4 to 25 letters, digits or
- * underscores. Read the same way by the instance that asks Twitch and by the
- * client that offers the way to the stream.
+ * Twitch accounts and the way to their streams (docs/systems/linked-accounts.md,
+ * activity-presence.md "Live on Twitch"). An account is only ever named by what
+ * Twitch itself answered when its owner linked it, and its stream only ever
+ * reached at the channel's own page, built here from its login.
  */
 
 const TWITCH_HOSTS: ReadonlySet<string> = new Set(['twitch.tv', 'www.twitch.tv', 'm.twitch.tv']);
-const CHANNEL_NAME = /^[a-z0-9_]{4,25}$/;
+/** A Twitch login: letters, digits and underscores, in lower case, at most 25. */
+const LOGIN = /^[a-z0-9_]{1,25}$/;
 
 /** Pages of Twitch that are not a channel, though their address looks like one. */
 const NOT_CHANNELS: ReadonlySet<string> = new Set([
   'directory', 'downloads', 'jobs', 'login', 'messages', 'p', 'payments', 'prime', 'search', 'settings', 'signup',
   'store', 'subscriptions', 'turbo', 'videos', 'wallet', 'friends', 'inventory', 'drops',
 ]);
+
+/** Whether a value is a Twitch login as Twitch writes one. */
+export function isTwitchLogin(value: unknown): value is string {
+  return typeof value === 'string' && LOGIN.test(value);
+}
 
 /** The channel a Twitch address names, in lower case, or null when it names no channel. */
 export function twitchChannelOf(url: string): string | null {
@@ -30,23 +35,13 @@ export function twitchChannelOf(url: string): string | null {
   const segments = parsed.pathname.split('/').filter((segment) => segment.length > 0);
   // A channel's own page, its about page or its videos: the first segment is the channel.
   const first = segments[0]?.toLowerCase();
-  if (!first || !CHANNEL_NAME.test(first) || NOT_CHANNELS.has(first)) return null;
+  if (!first || !LOGIN.test(first) || NOT_CHANNELS.has(first)) return null;
   return first;
 }
 
-/** The first Twitch channel among a profile's links, or null. */
-export function twitchChannelOfLinks(links: readonly ProfileLink[] | null | undefined): string | null {
-  if (!Array.isArray(links)) return null;
-  for (const link of links) {
-    const channel = link && typeof link.url === 'string' ? twitchChannelOf(link.url) : null;
-    if (channel) return channel;
-  }
-  return null;
-}
-
 /** The address of a channel's stream, the one way to it the app offers. */
-export function twitchChannelUrl(channel: string): string {
-  return `https://www.twitch.tv/${channel}`;
+export function twitchChannelUrl(login: string): string {
+  return `https://www.twitch.tv/${login}`;
 }
 
 /** Whether an address is exactly that of a channel's stream (what a live activity may link to). */

@@ -50,6 +50,12 @@ export interface User {
   pronouns?: string | null;
   /** Links on the profile card (a site, a social profile), in the person's order. */
   profileLinks?: ProfileLink[];
+  /**
+   * Accounts elsewhere the person proved are theirs by signing in there, and
+   * chose to show (docs/systems/linked-accounts.md). Absent from hosts that
+   * predate them, and from a copy of a person another instance holds.
+   */
+  linkedAccounts?: ProfileLinkedAccount[];
   /** How the profile card is laid out; absent or null for `standard`. */
   profileLayout?: ProfileLayout | null;
   /**
@@ -391,6 +397,60 @@ export interface Role {
 export interface ProfileLink {
   url: string;
   label?: string | null;
+}
+
+// ─── Linked accounts ────────────────────────────────────────────────────────
+
+/**
+ * The services a person can link an account of (docs/systems/linked-accounts.md).
+ * Linking means signing in at the service, so only one's own account can be
+ * linked. Which ones an instance offers: `InstanceInfoResponse.linkedAccounts`.
+ */
+export const LINKED_ACCOUNT_PROVIDERS = ['twitch'] as const;
+export type LinkedAccountProvider = (typeof LINKED_ACCOUNT_PROVIDERS)[number];
+
+export function isLinkedAccountProvider(value: unknown): value is LinkedAccountProvider {
+  return typeof value === 'string' && (LINKED_ACCOUNT_PROVIDERS as readonly string[]).includes(value);
+}
+
+/** What a profile shows of an account its owner linked (`User.linkedAccounts`). */
+export interface ProfileLinkedAccount {
+  provider: LinkedAccountProvider;
+  /** The account's handle at the service (Twitch: its login, in lower case). */
+  login: string;
+  /** How the service writes the account's name. */
+  name: string;
+}
+
+/** One's own linked account, as the settings show it. */
+export interface LinkedAccountView extends ProfileLinkedAccount {
+  /** The profile shows it, with a link to it. */
+  showOnProfile: boolean;
+  /** While the person streams there, they are shown as live (activity-presence.md, "Live on Twitch"). */
+  showLive: boolean;
+  linkedAt: number;
+}
+
+export interface LinkedAccountsResponse {
+  /** The services this instance can link; empty when its operator set none up. */
+  available: LinkedAccountProvider[];
+  accounts: LinkedAccountView[];
+}
+
+/** Where to send the person to sign in at the service. */
+export interface LinkedAccountStartResponse {
+  url: string;
+}
+
+/** What the service handed back on the page it returned to (`/linked-accounts/<provider>`). */
+export interface LinkedAccountCompleteRequest {
+  code: string;
+  state: string;
+}
+
+export interface LinkedAccountUpdateRequest {
+  showOnProfile?: boolean;
+  showLive?: boolean;
 }
 
 /**
@@ -1298,6 +1358,8 @@ export type ServerEvent =
   | { type: 'voice_moved'; userId: string; oldChannelId: string; newChannelId: string }
   | { type: 'voice_disconnected'; userId: string; channelId: string; reason?: 'displaced' | 'session_closed' | 'rejected' }
   | { type: 'user_updated'; user: User }
+  /** Only to the person: their linked accounts changed, on this device or another (linked-accounts.md). */
+  | { type: 'linked_accounts_update'; accounts: LinkedAccountView[] }
   | { type: 'member_banned'; spaceId: string; reason: string | null }
   | { type: 'category_created'; category: ChannelCategory; spaceId: string }
   | { type: 'category_updated'; category: ChannelCategory; spaceId: string }
@@ -1997,11 +2059,11 @@ export interface InstanceInfoResponse {
   /** Someone set up a translator for messages on this server (docs/systems/translation.md). Missing on older servers. */
   translation?: boolean;
   /**
-   * This server asks Twitch whether a channel linked on a profile is live, and
-   * shows it as the person's activity (docs/systems/activity-presence.md,
-   * "Live on Twitch"). Missing on older servers.
+   * The services whose accounts people can link on this server
+   * (docs/systems/linked-accounts.md); a linked Twitch account shows when its
+   * owner is live. Empty when the operator set none up; missing on older servers.
    */
-  twitchLive?: boolean;
+  linkedAccounts?: LinkedAccountProvider[];
   emojiPolicy: InstanceEmojiPolicy;
   federatedRegistrationOpen: boolean;
   // Persistent per-instance epoch (incarnation UUID). Minted by ensureDefaults on

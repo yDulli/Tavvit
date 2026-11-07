@@ -4,6 +4,12 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.35.1": {
+      "title": "Verknüpfte Konten",
+      "items": {
+        "linked": "Verknüpfe dein Twitch-Konto unter Einstellungen → Verknüpfte Konten, indem du dich bei Twitch anmeldest; so lässt sich nur dein eigenes verknüpfen. Dein Profil zeigt es, und während du live bist, sehen andere das, mit einem Knopf zu deinem Stream. Ein Twitch-Link unter deinen Profil-Links tut das nicht mehr."
+      }
+    },
     "1.35.0": {
       "title": "Hintergründe und Streamer-Modus",
       "items": {

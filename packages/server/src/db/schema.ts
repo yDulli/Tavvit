@@ -1,4 +1,4 @@
-import type { AccountKind } from '@backspace/shared';
+import type { AccountKind, LinkedAccountProvider } from '@backspace/shared';
 import { sqliteTable, text, integer, primaryKey, foreignKey, real, unique, index, uniqueIndex, type AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
@@ -39,6 +39,13 @@ export const users = sqliteTable('users', {
   pronouns: text('pronouns'),
   /** JSON array of ProfileLink ({ url, label }), at most PROFILE_LIMITS.MAX_LINKS; null without. */
   profileLinks: text('profile_links'),
+  /**
+   * What the profile shows of the person's linked accounts: JSON array of
+   * ProfileLinkedAccount ({ provider, login, name }), null without. Written from
+   * `linked_accounts` whenever those change (utils/linkedAccounts.ts), so that
+   * every list of people reads it with the rest of the profile.
+   */
+  profileLinkedAccounts: text('profile_linked_accounts'),
   /** The profile card's layout (ProfileLayout); null for the standard one. */
   profileLayout: text('profile_layout'),
   /**
@@ -1770,4 +1777,32 @@ export const botCommands = sqliteTable('bot_commands', {
   options: text('options'),
 }, (table) => ({
   pk: primaryKey({ columns: [table.botId, table.name] }),
+}));
+
+/**
+ * An account elsewhere a person proved is theirs by signing in there
+ * (docs/systems/linked-accounts.md, utils/linkedAccounts.ts): a Twitch account,
+ * linked through Twitch's own sign-in. One per service per person, and one
+ * person per account elsewhere on this instance. No token is kept: the one the
+ * service gave is used for the single question who signed in, then revoked.
+ * What the profile shows of these is written to `users.profile_linked_accounts`.
+ */
+export const linkedAccounts = sqliteTable('linked_accounts', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: text('provider').$type<LinkedAccountProvider>().notNull(),
+  /** The account's id at the service: what stays when its name there changes. */
+  providerUserId: text('provider_user_id').notNull(),
+  /** Its handle there (Twitch: the login, lower case), as the service last named it. */
+  login: text('login').notNull(),
+  /** How the service writes its name. */
+  displayName: text('display_name').notNull(),
+  showOnProfile: integer('show_on_profile').notNull().default(1),
+  /** While its owner streams there, they are shown as live (activity-presence.md, "Live on Twitch"). */
+  showLive: integer('show_live').notNull().default(1),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (table) => ({
+  userProviderUnique: uniqueIndex('linked_accounts_user_provider_unique').on(table.userId, table.provider),
+  providerAccountUnique: uniqueIndex('linked_accounts_provider_account_unique').on(table.provider, table.providerUserId),
 }));

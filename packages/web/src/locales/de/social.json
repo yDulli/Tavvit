@@ -79,6 +79,7 @@
     "viewFull": "Ganzes Profil ansehen",
     "addFriend": "Freund hinzufügen",
     "links": "Links",
+    "linkedAccount": "{{service}}: {{name}}, verknüpftes Konto",
     "editProfile": "Profil bearbeiten",
     "editSpaceProfile": "Space-Profil bearbeiten",
     "activity": "Aktivität",

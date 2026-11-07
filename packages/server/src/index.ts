@@ -26,6 +26,7 @@ import { pushRoutes } from './routes/push.js';
 import { threadRoutes } from './routes/threads.js';
 import { forumRoutes } from './routes/forums.js';
 import { translationRoutes } from './routes/translation.js';
+import { linkedAccountRoutes } from './routes/linkedAccounts.js';
 import { channelFollowRoutes } from './routes/channelFollows.js';
 import { eventRoutes } from './routes/events.js';
 import { webhookRoutes } from './routes/webhooks.js';
@@ -356,6 +357,7 @@ async function main(): Promise<void> {
   await app.register(threadRoutes);
   await app.register(forumRoutes);
   await app.register(translationRoutes);
+  await app.register(linkedAccountRoutes);
   await app.register(channelFollowRoutes);
   await app.register(eventRoutes);
   await app.register(webhookRoutes);
@@ -467,7 +469,7 @@ async function main(): Promise<void> {
   startEmailWorker();
   startSecuritySweeper();
   // Only with TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET set (utils/twitchLive.ts).
-  startTwitchLive();
+  startTwitchLive(config.twitch.redirectUri);
 
   // The space directory pinger stays outside the workers guard on purpose:
   // the two-instance harness disables the workers and still needs the pinger,

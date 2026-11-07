@@ -159,6 +159,7 @@
       "appearance": "外观",
       "voice": "语音与视频",
       "privacy": "隐私",
+      "linkedAccounts": "关联账号",
       "connections": "连接",
       "keybinds": "按键绑定",
       "developers": "开发者",
@@ -401,8 +402,6 @@
       "links": {
         "label": "链接",
         "hint": "资料卡上最多可放 {{max}} 个网址，每个都可以加上标签。",
-        "twitchLive": "您在这个频道直播时，其他人会在您的活动状态中看到，并可通过链接前往直播。",
-        "twitchLiveSharingOff": "“分享活动状态”已在隐私中关闭，因此您在这个频道直播时，其他人看不到。",
         "url": "链接地址",
         "urlPlaceholder": "https://…",
         "labelField": "链接标签",
@@ -597,6 +596,37 @@
       "shortcut": "快捷键：{{keys}}。",
       "noShortcut": "尚未设置快捷键。",
       "setShortcut": "在“按键绑定”中设置"
+    }
+  },
+  "linkedAccounts": {
+    "title": "关联账号",
+    "intro": "您在其他服务上的账号。关联时需要在那里登录，因此只能关联您自己的账号。",
+    "noneOffered": "此服务器不支持关联其他服务的账号。",
+    "link": "关联 {{service}}",
+    "linking": "正在打开 {{service}}…",
+    "openedInBrowser": "已在浏览器中打开 {{service}}。请在那里登录；关联完成后，账号会显示在这里。如果浏览器尚未登录 Tavvit，会先要求您登录。",
+    "twitch": {
+      "offer": "在您直播时显示出来，就像显示您正在玩的游戏一样，并附有前往直播的按钮；您的频道也会显示在个人资料中。"
+    },
+    "verified": "已通过登录关联",
+    "linkedOn": "关联于 {{date}}",
+    "unlink": "取消关联",
+    "unlinking": "正在取消关联…",
+    "showOnProfile": "在我的个人资料中显示",
+    "showOnProfileDescription": "您的个人资料会显示此账号，并附上链接。",
+    "showLive": "在我直播时显示",
+    "showLiveDescription": "您直播时，其他人会在您的活动状态中看到，并可通过按钮前往直播。",
+    "showLiveSharingOff": "“分享活动状态”已在隐私中关闭，因此目前没有人能看到。",
+    "return": {
+      "working": "正在关联您的 {{service}} 账号…",
+      "linkedTitle": "{{service}} 已关联",
+      "linkedBody": "{{name}} 现已关联到您的账号。",
+      "desktopNote": "是在桌面应用中开始的吗？您可以关闭此页面并返回应用。",
+      "notLinkedTitle": "未关联任何账号",
+      "cancelled": "您在 {{service}} 取消了操作，因此没有关联任何账号。",
+      "incomplete": "该服务没有告知登录的是谁。请在 设置 → 关联账号 中重新开始。",
+      "nothing": "这里没有可关联的内容。请从 设置 → 关联账号 开始。",
+      "back": "返回设置"
     }
   },
   "connections": {

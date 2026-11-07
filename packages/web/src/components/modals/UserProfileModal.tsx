@@ -395,7 +395,7 @@ export function UserProfileModal() {
                 </div>
               )}
 
-              <ProfileLinks links={user.profileLinks} variant="list" />
+              <ProfileLinks links={user.profileLinks} linkedAccounts={user.linkedAccounts} variant="list" />
 
               <ProfileRoles roles={roles} />
 

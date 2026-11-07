@@ -159,6 +159,7 @@
       "appearance": "Aparência",
       "voice": "Voz e vídeo",
       "privacy": "Privacidade",
+      "linkedAccounts": "Contas vinculadas",
       "connections": "Conexões",
       "keybinds": "Atalhos",
       "developers": "Desenvolvedores",
@@ -401,8 +402,6 @@
       "links": {
         "label": "Links",
         "hint": "Até {{max}} endereços da web no seu cartão de perfil, cada um com um rótulo opcional.",
-        "twitchLive": "Enquanto você estiver ao vivo neste canal, isso aparece no seu status de atividade, com um link para a transmissão.",
-        "twitchLiveSharingOff": "“Compartilhar status de atividade” está desligado em Privacidade, então ninguém vê quando você está ao vivo neste canal.",
         "url": "Endereço do link",
         "urlPlaceholder": "https://…",
         "labelField": "Rótulo do link",
@@ -599,6 +598,37 @@
       "shortcut": "Atalho: {{keys}}.",
       "noShortcut": "Nenhum atalho ainda.",
       "setShortcut": "Defina um em Atalhos"
+    }
+  },
+  "linkedAccounts": {
+    "title": "Contas vinculadas",
+    "intro": "Contas que você tem em outros lugares. Você vincula uma entrando nela, então só dá para vincular as suas.",
+    "noneOffered": "Este servidor não vincula contas de outros serviços.",
+    "link": "Vincular {{service}}",
+    "linking": "Abrindo {{service}}…",
+    "openedInBrowser": "{{service}} abriu no seu navegador. Entre por lá; a conta aparece aqui assim que for vinculada. Se o seu navegador não estiver conectado ao Tavvit, ele pede para você entrar primeiro.",
+    "twitch": {
+      "offer": "Mostra quando você está ao vivo, como um jogo que você está jogando, com um botão para a sua transmissão, e o seu canal no seu perfil."
+    },
+    "verified": "Vinculada ao entrar",
+    "linkedOn": "Vinculada em {{date}}",
+    "unlink": "Desvincular",
+    "unlinking": "Desvinculando…",
+    "showOnProfile": "Mostrar no meu perfil",
+    "showOnProfileDescription": "O seu perfil mostra esta conta, com um link para ela.",
+    "showLive": "Mostrar quando eu estiver ao vivo",
+    "showLiveDescription": "Enquanto você transmite, as pessoas veem isso como a sua atividade, com um botão para a sua transmissão.",
+    "showLiveSharingOff": "“Compartilhar status de atividade” está desligado em Privacidade, então ninguém vê isso por enquanto.",
+    "return": {
+      "working": "Vinculando a sua conta {{service}}…",
+      "linkedTitle": "Conta {{service}} vinculada",
+      "linkedBody": "A conta {{name}} agora está vinculada à sua.",
+      "desktopNote": "Começou isso no aplicativo para computador? Você pode fechar esta página e voltar para ele.",
+      "notLinkedTitle": "Nada foi vinculado",
+      "cancelled": "Você parou na {{service}}, então nada foi vinculado.",
+      "incomplete": "O serviço não disse quem entrou. Comece de novo em Configurações → Contas vinculadas.",
+      "nothing": "Não há nada para vincular aqui. Comece em Configurações → Contas vinculadas.",
+      "back": "Voltar para as configurações"
     }
   },
   "connections": {

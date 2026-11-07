@@ -4,6 +4,12 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.35.1": {
+      "title": "Contas vinculadas",
+      "items": {
+        "linked": "Vincule a sua conta da Twitch em Configurações → Contas vinculadas entrando na Twitch, assim só dá para vincular a sua. O seu perfil mostra a conta e, enquanto você estiver ao vivo, as pessoas veem isso, com um botão para a sua transmissão. Um link da Twitch entre os links do seu perfil não faz mais isso."
+      }
+    },
     "1.35.0": {
       "title": "Fundos e modo streamer",
       "items": {
