@@ -1332,17 +1332,16 @@
     cursor: not-allowed;
   }
 
-  /* A badge by a name: quiet, a little larger under the pointer, and it answers a click. */
+  /* A badge by a name: quiet, a little larger under the pointer, and it answers a click. No light. */
   .badge-mark {
     display: inline-flex;
     cursor: pointer;
     border-radius: 3px;
-    transition: transform 160ms cubic-bezier(.34, 1.56, .64, 1), filter 160ms ease;
+    transition: transform var(--dur-fast) var(--ease-spring);
   }
   .badge-mark:hover,
   .badge-mark[aria-expanded='true'] {
-    transform: scale(1.18);
-    filter: brightness(1.2);
+    transform: scale(1.12);
   }
   .badge-mark:active {
     transform: scale(.94);

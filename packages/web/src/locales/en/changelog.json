@@ -4,6 +4,12 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.36.1": {
+      "title": "New badges",
+      "items": {
+        "look": "Badges have a new look: matte metal marks, a little larger, and without the glow, on profiles, on spaces and on a badge's card."
+      }
+    },
     "1.36.0": {
       "title": "Profile decorations",
       "items": {

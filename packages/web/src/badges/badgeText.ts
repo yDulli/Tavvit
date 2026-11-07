@@ -1,21 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { BadgeId, BadgeTone } from '@backspace/shared/src/badges';
+import type { BadgeId } from '@backspace/shared/src/badges';
 
 /** A badge's name and what it means, in the reader's language. */
 export interface BadgeText {
   name: string;
   description: string;
 }
-
-/** The text colour of each badge tone (docs/systems/design-system.md: the accent family, violet sparingly). */
-export const BADGE_TONE_CLASS: Record<BadgeTone, string> = {
-  neutral: 'text-txt-secondary',
-  violet: 'text-accent-soft',
-  amber: 'text-accent-amber',
-  sky: 'text-accent-sky',
-  mint: 'text-accent-mint',
-};
 
 /** Every badge's name and description, by id. */
 export function useBadgeText(): Record<BadgeId, BadgeText> {

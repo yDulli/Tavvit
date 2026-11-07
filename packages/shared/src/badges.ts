@@ -23,36 +23,32 @@ export type BadgeScope =
 
 export type BadgeSource = 'derived' | 'granted';
 
-/** The colour a badge is drawn in, from the design tokens (docs/systems/design-system.md). */
-export type BadgeTone = 'neutral' | 'violet' | 'amber' | 'sky' | 'mint';
-
 export interface BadgeDefinition {
   id: string;
   scope: BadgeScope;
   source: BadgeSource;
-  tone: BadgeTone;
 }
 
 export const BADGES = [
   // Staff and ownership
-  { id: 'staff', scope: 'user', source: 'derived', tone: 'violet' },
-  { id: 'bot', scope: 'user', source: 'derived', tone: 'neutral' },
-  { id: 'server_owner', scope: 'member', source: 'derived', tone: 'amber' },
-  { id: 'administrator', scope: 'member', source: 'derived', tone: 'neutral' },
-  { id: 'moderator', scope: 'member', source: 'derived', tone: 'sky' },
-  { id: 'helper', scope: 'user', source: 'granted', tone: 'mint' },
+  { id: 'staff', scope: 'user', source: 'derived' },
+  { id: 'bot', scope: 'user', source: 'derived' },
+  { id: 'server_owner', scope: 'member', source: 'derived' },
+  { id: 'administrator', scope: 'member', source: 'derived' },
+  { id: 'moderator', scope: 'member', source: 'derived' },
+  { id: 'helper', scope: 'user', source: 'granted' },
   // Community and support
-  { id: 'founder', scope: 'user', source: 'granted', tone: 'amber' },
-  { id: 'early_supporter', scope: 'user', source: 'granted', tone: 'neutral' },
-  { id: 'bug_hunter', scope: 'user', source: 'granted', tone: 'neutral' },
-  { id: 'developer', scope: 'user', source: 'granted', tone: 'neutral' },
-  { id: 'creator', scope: 'user', source: 'granted', tone: 'neutral' },
-  { id: 'event_participant', scope: 'user', source: 'granted', tone: 'neutral' },
-  { id: 'community_contributor', scope: 'user', source: 'granted', tone: 'neutral' },
-  { id: 'beta_tester', scope: 'user', source: 'granted', tone: 'neutral' },
+  { id: 'founder', scope: 'user', source: 'granted' },
+  { id: 'early_supporter', scope: 'user', source: 'granted' },
+  { id: 'bug_hunter', scope: 'user', source: 'granted' },
+  { id: 'developer', scope: 'user', source: 'granted' },
+  { id: 'creator', scope: 'user', source: 'granted' },
+  { id: 'event_participant', scope: 'user', source: 'granted' },
+  { id: 'community_contributor', scope: 'user', source: 'granted' },
+  { id: 'beta_tester', scope: 'user', source: 'granted' },
   // Spaces
-  { id: 'verified', scope: 'space', source: 'derived', tone: 'neutral' },
-  { id: 'partner', scope: 'space', source: 'granted', tone: 'neutral' },
+  { id: 'verified', scope: 'space', source: 'derived' },
+  { id: 'partner', scope: 'space', source: 'granted' },
 ] as const satisfies readonly BadgeDefinition[];
 
 export type BadgeId = (typeof BADGES)[number]['id'];

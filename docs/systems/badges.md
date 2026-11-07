@@ -1,7 +1,7 @@
 # Badges
 
 Source files:
-- `packages/shared/src/badges.ts` -- The registry (`BADGES`): scopes, sources, tones, the id types, `orderedBadges()`, the granted lists
+- `packages/shared/src/badges.ts` -- The registry (`BADGES`): scopes, sources, the id types, `orderedBadges()`, the granted lists
 - `packages/server/src/utils/badges.ts` -- `userBadgesOf()`, `spaceBadgesOf()`, `grantedUserBadgesOf()`, `grantedSpaceBadgesOf()`
 - `packages/server/src/utils/spaceWire.ts` -- `memberStaffBadges()` (administrator and moderator from role bits), `spaceToWire()`, `memberToWire()`
 - `packages/server/src/utils/sanitize.ts` -- `sanitizeUser()` puts `badges` on every user the server sends
@@ -9,13 +9,14 @@ Source files:
 - `packages/server/src/routes/platformAdmin.ts` -- The two grant routes, the admin area's space summaries
 - `packages/server/src/routes/explore.ts` -- `ExploreSpace.badges`
 - `packages/server/src/utils/reviewNotify.ts` -- `announceUserUpdate()`, `announceSpaceUpdate()`
-- `packages/web/src/badges/BadgeGlyph.tsx` -- One SVG drawing per badge
+- `packages/web/src/badges/BadgeGlyph.tsx` -- One picture per badge (`images/<id>.webp`)
 - `packages/web/src/badges/BadgeList.tsx` -- `BadgeList`, `memberBadgeIds()`
 - `packages/web/src/badges/BadgeCard.tsx` -- What a badge says when clicked
-- `packages/web/src/badges/badgeText.ts` -- `useBadgeText()`, `BADGE_TONE_CLASS`
+- `packages/web/src/badges/badgeText.ts` -- `useBadgeText()`
 - `packages/web/src/hooks/useProfileMember.ts` -- `useProfileBadges()`
 - `packages/web/src/locales/*/common.json` -- `common:badges.<id>.name` and `.description`
-- `assets/brand/badge sheet.png` -- The badge icon style sheet the glyphs follow
+- `assets/brand/badge sheet.png` -- The badge sheet: 8 rows of 8 metal marks, the pictures are cut from it
+- `scripts/badges/cut.mjs` -- Cuts the registry's pictures out of the sheet (`BADGE_CELLS`: which mark is which badge)
 
 ---
 
@@ -40,26 +41,26 @@ The badge columns are new with migration 0041. They have nothing to do with the 
 
 ## The registry
 
-`BADGES` in `packages/shared/src/badges.ts` is the one definition. Each entry is `{ id, scope, source, tone }`; the array order is the display order everywhere.
+`BADGES` in `packages/shared/src/badges.ts` is the one definition. Each entry is `{ id, scope, source }`; the array order is the display order everywhere.
 
-| Id | Scope | Source | Tone | Name (en) | Comes from |
-|----|-------|--------|------|-----------|------------|
-| `staff` | user | derived | violet | Staff | `users.is_admin = 1` on the instance that sends the row |
-| `bot` | user | derived | neutral | Bot | `users.account_kind = 'bot'` on the instance that sends the row ([bots.md](bots.md)) |
-| `server_owner` | member | derived | amber | Space owner | The member's id is the space's `ownerId` (added by the client, `memberBadgeIds()`) |
-| `administrator` | member | derived | neutral | Administrator | One of the member's roles, @everyone left out, holds `ADMINISTRATOR` |
-| `moderator` | member | derived | sky | Moderator | One of those roles holds `KICK_MEMBERS`, `BAN_MEMBERS`, `MODERATE_MEMBERS` or `MANAGE_MESSAGES`, and none holds `ADMINISTRATOR` |
-| `helper` | user | granted | mint | Helper | An admin's grant |
-| `founder` | user | granted | amber | Founder | An admin's grant |
-| `early_supporter` | user | granted | neutral | Early supporter | An admin's grant |
-| `bug_hunter` | user | granted | neutral | Bug hunter | An admin's grant |
-| `developer` | user | granted | neutral | Developer | An admin's grant |
-| `creator` | user | granted | neutral | Creator | An admin's grant |
-| `event_participant` | user | granted | neutral | Event participant | An admin's grant |
-| `community_contributor` | user | granted | neutral | Community contributor | An admin's grant |
-| `beta_tester` | user | granted | neutral | Beta tester | An admin's grant |
-| `verified` | space | derived | neutral | Verified | `spaces.verification_status = 'verified'` ([admin.md](admin.md), "Verification") |
-| `partner` | space | granted | neutral | Partner | An admin's grant |
+| Id | Scope | Source | Name (en) | Comes from |
+|----|-------|--------|-----------|------------|
+| `staff` | user | derived | Staff | `users.is_admin = 1` on the instance that sends the row |
+| `bot` | user | derived | Bot | `users.account_kind = 'bot'` on the instance that sends the row ([bots.md](bots.md)) |
+| `server_owner` | member | derived | Space owner | The member's id is the space's `ownerId` (added by the client, `memberBadgeIds()`) |
+| `administrator` | member | derived | Administrator | One of the member's roles, @everyone left out, holds `ADMINISTRATOR` |
+| `moderator` | member | derived | Moderator | One of those roles holds `KICK_MEMBERS`, `BAN_MEMBERS`, `MODERATE_MEMBERS` or `MANAGE_MESSAGES`, and none holds `ADMINISTRATOR` |
+| `helper` | user | granted | Helper | An admin's grant |
+| `founder` | user | granted | Founder | An admin's grant |
+| `early_supporter` | user | granted | Early supporter | An admin's grant |
+| `bug_hunter` | user | granted | Bug hunter | An admin's grant |
+| `developer` | user | granted | Developer | An admin's grant |
+| `creator` | user | granted | Creator | An admin's grant |
+| `event_participant` | user | granted | Event participant | An admin's grant |
+| `community_contributor` | user | granted | Community contributor | An admin's grant |
+| `beta_tester` | user | granted | Beta tester | An admin's grant |
+| `verified` | space | derived | Verified | `spaces.verification_status = 'verified'` ([admin.md](admin.md), "Verification") |
+| `partner` | space | granted | Partner | An admin's grant |
 
 **Types:** `BadgeId`; `UserBadgeId`, `MemberBadgeId`, `SpaceBadgeId` (every badge of a scope); `GrantedUserBadgeId`, `GrantedSpaceBadgeId` (the ones an admin gives). They are derived from the array, so a new entry widens them.
 
@@ -135,12 +136,11 @@ Read through `grantedUserBadgesOf()` and `grantedSpaceBadgesOf()`, which keep on
 
 `packages/web/src/badges/`:
 
-- **`BadgeGlyph({ id, size })`**: an inline SVG, `viewBox="0 0 24 24"`, `aria-hidden`, not focusable. A badge is a list of parts, each a filled path (`evenOdd` cuts inner contours out) or a stroked line (2px, round caps and joins), all in `currentColor`. `GLYPHS` is a `Record<BadgeId, ...>`, so a registry entry without a drawing does not compile.
-- **`BadgeList({ badges, size = 'sm', max, notes })`**: the badges in registry order (`orderedBadges`), nothing when there are none. Sizes `sm` 14px, `md` 16px, `lg` 18px, 4px apart. Each glyph says its name in a `Tooltip` and, when clicked or pressed, opens `BadgeCard`. It is a `listitem` of a `list` and carries its name as `aria-label`. `max` shows the first badges and a mono `+N` for the rest (hidden from assistive technology). `notes` adds a word to a badge's name, used for the owner title on the crown.
-- **`BadgeCard({ id, name, description, anchorRef, onClose })`**: the small card a click opens: the glyph at 24px on a tile lit in its tone, the name and what it means. It portals above whatever opened it and leaves that open; a press anywhere else or Escape closes only the card. A badge is a `span` with `role="button"`, not a `button`, because it can sit inside one (a space's header), and its click goes no further than itself.
+- **`BadgeGlyph({ id, size })`**: the badge's picture, an `<img>` of `size` pixels with an empty `alt` and `aria-hidden` (what holds it carries the name). `PICTURES` is a `Record<BadgeId, string>` of the files in `badges/images/`, bundled with a hash in their names, so a registry entry without a picture does not compile.
+- **`BadgeList({ badges, size = 'sm', max, notes })`**: the badges in registry order (`orderedBadges`), nothing when there are none. Sizes `sm` 16px, `md` 18px, `lg` 20px, 4px apart. Each glyph says its name in a `Tooltip` and, when clicked or pressed, opens `BadgeCard`. It is a `listitem` of a `list` and carries its name as `aria-label`. `max` shows the first badges and a mono `+N` for the rest (hidden from assistive technology). `notes` adds a word to a badge's name, used for the owner title on the crown.
+- **`BadgeCard({ id, name, description, anchorRef, onClose })`**: the small card a click opens: the picture at 28px on a plain sunken tile (`bg-surface-input`, a `border-soft` hairline), the name and what it means. It portals above whatever opened it and leaves that open; a press anywhere else or Escape closes only the card. A badge is a `span` with `role="button"`, not a `button`, because it can sit inside one (a space's header), and its click goes no further than itself.
 - **`memberBadgeIds(member, space)`**: every badge a person shows inside a space: their own (`member.user.badges`), the ones their roles give (`member.badges`), and the crown for the owner (see above).
 - **`useBadgeText()`**: each badge's name and description from `common:badges.<id>.name` and `.description`, a `Record<BadgeId, BadgeText>`, so a badge without text does not compile.
-- **`BADGE_TONE_CLASS`**: the text colour of each tone.
 
 `useProfileBadges(user, member)` (`hooks/useProfileMember.ts`) decides what a profile shows: opened for a member of the space that is loaded, `memberBadgeIds()` with the owner title; opened anywhere else, the person's own badges.
 
@@ -156,7 +156,7 @@ Read through `grantedUserBadgesOf()` and `grantedSpaceBadgesOf()`, which keep on
 | Explore card (Inner Space) | `SpaceCard` | `space.badges` | `md` |
 | Listing preview | `ListingPreview` (`components/review/ReviewParts.tsx`): the owner's Discovery tab and the admin's space detail | the space's badges | `sm` |
 | Admin area | `ReviewQueuePanel`, `PlatformSpacesPanel`, `AdminSpaceDetailModal` | `AdminSpaceSummary.badges` | `sm` |
-| Admin grant forms | `AdminUserDetailModal`, `AdminSpaceDetailModal` | a checkbox per badge that can be given, with a 16px glyph and its name | -- |
+| Admin grant forms | `AdminUserDetailModal`, `AdminSpaceDetailModal` | a checkbox per badge that can be given, with its 16px picture and its name | -- |
 | Platform audit log | `PlatformAuditList` | badge names in "added" and "removed" lines | text |
 
 Outside the admin area, a person's badges show on their profile and nowhere else. The member lists (`MemberSidebar`, `MobileMembersScreen`) and a message's author line (`Message.tsx`) carry none: there a name is marked by its top role's colour or gradient (`memberNameStyle`, `utils/memberGroups.ts`) and the role's emoji. The one mark the member lists keep is the owner's crown while the owner is listed among the roles (`ownerGroup` off): an `Icon`, not a badge, named with the owner title or "Owner". A profile opened from a space shows the name in the same role colour or gradient (`useProfileNameStyle`, `hooks/useProfileMember.ts`) and each role chip's name in its role's (`ProfileRoles`, `roleTextStyle`).
@@ -165,17 +165,8 @@ Outside the admin area, a person's badges show on their profile and nowhere else
 
 ## Design rules
 
-- **Small SVG glyphs, drawn for this system.** No icon font, emoji or image: each badge is one drawing on a 24px grid, mostly solid shapes with the occasional 2px line, so it keeps its shape at 14px next to a name and stays crisp at 18px on a profile. The drawings follow `assets/brand/badge sheet.png`; the sheet draws more marks than the registry holds, and only registry entries exist in the product.
-- **A tone, not a chip.** A badge is a glyph coloured by its tone: no fill behind it, no pill, no border, nothing like a count badge.
-
-  | Tone | Class | Badges |
-  |------|-------|--------|
-  | `neutral` | `text-txt-secondary` | administrator, verified, partner and most granted badges |
-  | `violet` | `text-accent-soft` | staff only: the violet stays rare ([design-system.md](design-system.md)) |
-  | `amber` | `text-accent-amber` | server_owner, founder |
-  | `sky` | `text-accent-sky` | moderator |
-  | `mint` | `text-accent-mint` | helper |
-
+- **Pictures cut from the sheet.** Each badge is one mark of `assets/brand/badge sheet.png`, matte metal on a dark face, cut out by `scripts/badges/cut.mjs` and written as a 72px WebP into `packages/web/src/badges/images/`, sharp from 16px next to a name to 28px on the card. The script finds each mark by its crisp edges and takes the sheet's ground, its light, the shadows and the glows away as one soft field, so a badge lies flat on any surface; whatever a rim encloses stays whole. The sheet draws more marks than the registry holds (flags, months and years, more shields): only registry entries exist in the product, and `node scripts/badges/cut.mjs --preview <dir>` shows every mark cut out, to choose from.
+- **No light, no chip.** A badge is its picture: no glow, no colour of a tone, no pill, no border. Under the pointer it grows a little and nothing lights up; on its card it sits on a plain sunken tile.
 - **Every badge names itself.** A tooltip gives the name and so does the accessible label; a click opens the card with its meaning, also on a touch screen. A person's badges stand in one place on a profile, beside the handle, and are not repeated further down.
 - **A fixed order, short rows.** The registry decides the order on every surface. A dense row can cap the count (`max`) and show `+N`; the profile shows all.
 - **On the profile, not on the name.** Lists and messages, where names repeat, stay free of badges; a person's badges are read on their profile.
@@ -184,8 +175,8 @@ Outside the admin area, a person's badges show on their profile and nowhere else
 
 ## Adding a badge
 
-1. Add an entry to `BADGES` in `packages/shared/src/badges.ts` (`id` in snake_case, `scope`, `source`, `tone`) where it should sort.
-2. Draw its glyph in `GLYPHS` (`packages/web/src/badges/BadgeGlyph.tsx`) on the 24px grid, after the style sheet.
+1. Add an entry to `BADGES` in `packages/shared/src/badges.ts` (`id` in snake_case, `scope`, `source`) where it should sort.
+2. Choose its mark on the sheet: its row and column in `BADGE_CELLS` (`scripts/badges/cut.mjs`). Run `node scripts/badges/cut.mjs`, and import the new picture into `PICTURES` (`packages/web/src/badges/BadgeGlyph.tsx`). A mark the sheet does not have is drawn into the sheet first.
 3. Give it text: an entry in `useBadgeText()` (`badgeText.ts`) and `common:badges.<id>.name` and `.description` in every catalog (`packages/web/src/locales/{en,de,pt,ru,zh}/common.json`).
 4. A **granted** badge needs nothing more: the admin area's checkboxes list `GRANTED_USER_BADGES` or `GRANTED_SPACE_BADGES`, the grant routes accept it through `isGrantedUserBadge` or `isGrantedSpaceBadge`, the stored list keeps it, and the audit log names it.
 5. A **derived** badge is worked out on the server from server state only: in `userBadgesOf()` or `spaceBadgesOf()` (`utils/badges.ts`) for a person or a space, in `memberStaffBadges()` (`utils/spaceWire.ts`) for a member. Never from a role's name, never from a field a client sends; a space's roles may give member-scope badges only.

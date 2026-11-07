@@ -1,23 +1,13 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { badgeDefinition, type BadgeId, type BadgeTone } from '@backspace/shared/src/badges';
+import type { BadgeId } from '@backspace/shared/src/badges';
 import { useDismissOnEscape } from '../hooks/useDismissOnEscape';
 import { useFloatingPosition } from '../hooks/useFloatingPosition';
 import { usePortalContainer } from '../hooks/usePortalContainer';
 import { BadgeGlyph } from './BadgeGlyph';
-import { BADGE_TONE_CLASS } from './badgeText';
-
-/** The colour of each tone as channels, for the light behind the drawing. */
-const TONE_CHANNELS: Record<BadgeTone, string> = {
-  neutral: 'var(--text-secondary)',
-  violet: 'var(--accent-primary-soft)',
-  amber: 'var(--accent-amber)',
-  sky: 'var(--accent-sky)',
-  mint: 'var(--accent-mint)',
-};
 
 /**
- * What a badge says when someone clicks it: the drawing large, its name and what it means.
+ * What a badge says when someone clicks it: the picture large, its name and what it means.
  * Above whatever it was opened from, and it leaves that open: a press anywhere else and Escape
  * close only this.
  */
@@ -31,7 +21,6 @@ export function BadgeCard({ id, name, description, anchorRef, onClose }: {
   const cardRef = useRef<HTMLDivElement>(null);
   const portalContainer = usePortalContainer();
   const { style } = useFloatingPosition(anchorRef, cardRef, { placement: 'bottom', offset: 8, enabled: true });
-  const tone = badgeDefinition(id)?.tone ?? 'neutral';
 
   useDismissOnEscape(true, onClose);
 
@@ -56,13 +45,9 @@ export function BadgeCard({ id, name, description, anchorRef, onClose }: {
     >
       <span
         aria-hidden="true"
-        className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg ${BADGE_TONE_CLASS[tone]}`}
-        style={{
-          background: `radial-gradient(100% 100% at 50% 0%, rgb(${TONE_CHANNELS[tone]} / .26), rgb(${TONE_CHANNELS[tone]} / .07))`,
-          boxShadow: `inset 0 0 0 1px rgb(${TONE_CHANNELS[tone]} / .24), 0 8px 24px -10px rgb(${TONE_CHANNELS[tone]} / .6)`,
-        }}
+        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md border border-border-soft bg-surface-input"
       >
-        <BadgeGlyph id={id} size={24} />
+        <BadgeGlyph id={id} size={28} />
       </span>
       <span className="min-w-0">
         <span className="block text-body font-semibold tracking-[-0.01em] text-txt-primary">{name}</span>

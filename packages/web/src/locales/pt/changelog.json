@@ -4,6 +4,12 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.36.1": {
+      "title": "Novas insígnias",
+      "items": {
+        "look": "As insígnias têm um visual novo: marcas de metal fosco, um pouco maiores e sem brilho, nos perfis, nos espaços e no cartão de cada insígnia."
+      }
+    },
     "1.36.0": {
       "title": "Decorações de perfil",
       "items": {

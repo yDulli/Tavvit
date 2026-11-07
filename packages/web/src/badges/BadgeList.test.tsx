@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { BADGES } from '@backspace/shared/src/badges';
 import { setLanguage } from '../i18n';
 import { BadgeList } from './BadgeList';
 
@@ -77,5 +78,27 @@ describe('a row of badges', () => {
 
   it('is nothing without any', () => {
     expect(render(<BadgeList badges={[]} />).container.textContent).toBe('');
+  });
+});
+
+describe('a badge\'s picture', () => {
+  it('is a picture of its own for every badge, at the size asked, and silent', () => {
+    const { container } = render(<BadgeList badges={[...BADGES.map((badge) => badge.id)]} size="md" />);
+    const pictures = [...container.querySelectorAll('img')];
+    expect(pictures).toHaveLength(BADGES.length);
+    expect(new Set(pictures.map((picture) => picture.getAttribute('src'))).size).toBe(BADGES.length);
+    for (const picture of pictures) {
+      expect(picture.getAttribute('width')).toBe('18');
+      expect(picture.getAttribute('alt')).toBe('');
+      expect(picture.getAttribute('aria-hidden')).toBe('true');
+    }
+  });
+
+  it('sits on its card without a light of its own', async () => {
+    render(<BadgeList badges={['founder']} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Founder' }));
+    const tile = screen.getByRole('dialog', { name: 'Founder' }).querySelector('img')?.parentElement;
+    expect(tile?.getAttribute('style')).toBeNull();
+    expect(tile?.className).toContain('bg-surface-input');
   });
 });

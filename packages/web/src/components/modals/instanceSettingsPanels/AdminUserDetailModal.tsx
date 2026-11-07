@@ -6,12 +6,12 @@ import {
   type AdminUserDetail,
   type SuspensionDuration,
 } from '@backspace/shared/src/platform';
-import { badgeDefinition, GRANTED_USER_BADGES, type GrantedUserBadgeId } from '@backspace/shared/src/badges';
+import { GRANTED_USER_BADGES, type GrantedUserBadgeId } from '@backspace/shared/src/badges';
 import { api } from '../../../api/client';
 import { describeError } from '../../../i18n/errors';
 import { useFormatters } from '../../../i18n/formatters';
 import { useAuthStore } from '../../../stores/authStore';
-import { BADGE_TONE_CLASS, useBadgeText } from '../../../badges/badgeText';
+import { useBadgeText } from '../../../badges/badgeText';
 import { BadgeGlyph } from '../../../badges/BadgeGlyph';
 import { Modal } from '../../ui/Modal';
 import { Avatar } from '../../ui/Avatar';
@@ -294,7 +294,7 @@ export function AdminUserDetailModal({
                       checked={badges.includes(badge)}
                       onChange={(e) => setBadges((current) => e.target.checked ? [...current, badge] : current.filter((entry) => entry !== badge))}
                     />
-                    <span className={`inline-flex ${BADGE_TONE_CLASS[badgeDefinition(badge)?.tone ?? 'neutral']}`}>
+                    <span className="inline-flex">
                       <BadgeGlyph id={badge} size={16} />
                     </span>
                     <span className="truncate text-ui text-txt-primary" title={badgeText[badge].description}>{badgeText[badge].name}</span>

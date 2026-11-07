@@ -1,12 +1,13 @@
-import { badgeDefinition, orderedBadges, type BadgeId } from '@backspace/shared/src/badges';
+import { orderedBadges, type BadgeId } from '@backspace/shared/src/badges';
 import type { MemberWithUser, Space, User } from '@backspace/shared';
 import { useCallback, useRef, useState } from 'react';
 import { Tooltip } from '../components/ui/Tooltip';
 import { BadgeCard } from './BadgeCard';
 import { BadgeGlyph } from './BadgeGlyph';
-import { BADGE_TONE_CLASS, useBadgeText } from './badgeText';
+import { useBadgeText } from './badgeText';
 
-const SIZES = { 'sm': 14, 'md': 16, 'lg': 18 } as const;
+/** A picture with a metal rim needs a little more room than a flat glyph did to read at a glance. */
+const SIZES = { 'sm': 16, 'md': 18, 'lg': 20 } as const;
 
 /** One badge: its name on the pointer, and when clicked what it means. */
 function BadgeMark({ id, size, name, description }: { id: BadgeId; size: number; name: string; description: string }) {
@@ -29,7 +30,7 @@ function BadgeMark({ id, size, name, description }: { id: BadgeId; size: number;
       aria-expanded={open}
       onClick={toggle}
       onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') toggle(event); }}
-      className={`badge-mark ${BADGE_TONE_CLASS[badgeDefinition(id)?.tone ?? 'neutral']}`}
+      className="badge-mark"
     >
       <BadgeGlyph id={id} size={size} />
     </span>

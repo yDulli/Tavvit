@@ -4,6 +4,12 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.36.1": {
+      "title": "Neue Abzeichen",
+      "items": {
+        "look": "Abzeichen sehen neu aus: matte Metall-Abzeichen, etwas größer und ohne Leuchten, auf Profilen, bei Spaces und auf der Karte eines Abzeichens."
+      }
+    },
     "1.36.0": {
       "title": "Profil-Dekorationen",
       "items": {
