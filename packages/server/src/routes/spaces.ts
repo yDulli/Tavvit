@@ -1,3 +1,5 @@
+import { SPACE_TAG_LIMITS, checkSpaceTag } from '@backspace/shared/src/spaceTags.js';
+import { announceSpaceTagChange, refreshSpaceTagWearers, releaseSpaceTag } from '../utils/spaceTags.js';
 import { spaceLimitReached } from '../utils/accountLimits.js';
 import { shownCategories } from '../utils/categoryVisibility.js';
 import { accountNeedsVerifiedEmail } from '../email/gate.js';
@@ -636,7 +638,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, icon, banner, avatarColor, visibility, description, directoryListed, ownerTitle, ownerGroup, defaultNotificationLevel } = request.body;
+    const { name, icon, banner, avatarColor, visibility, description, directoryListed, ownerTitle, ownerGroup, defaultNotificationLevel, tag } = request.body;
     const db = getDb();
 
     const server = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
@@ -722,6 +724,21 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     if (description !== undefined) {
       const trimmed = description.trim().slice(0, 200);
       updates.description = trimmed || null;
+    }
+
+    // The tag members can wear (docs/systems/space-tags.md); null takes it away from everyone wearing it.
+    if (tag !== undefined) {
+      if (tag === null) {
+        updates.tag = null;
+      } else {
+        const checked = checkSpaceTag(tag);
+        if (!checked.ok) {
+          return checked.reason === 'reserved'
+            ? sendError(reply, 400, 'space_tag_reserved')
+            : sendError(reply, 400, 'space_tag_invalid', { min: SPACE_TAG_LIMITS.MIN_LENGTH, max: SPACE_TAG_LIMITS.MAX_LENGTH, reason: checked.reason });
+        }
+        updates.tag = JSON.stringify(checked.tag);
+      }
     }
 
     // The level members start with until they choose their own; null brings
@@ -822,6 +839,11 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       type: 'space_updated',
       space: spaceData,
     });
+
+    // Everyone wearing the tag wears it as it is now, or no longer.
+    if (tag !== undefined && updates.tag !== server.tag) {
+      announceSpaceTagChange(refreshSpaceTagWearers(id));
+    }
 
     return reply.code(200).send(spaceData);
   });
@@ -1183,6 +1205,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       .from(schema.spaceMembers).where(departing).all();
     db.delete(schema.spaceMembers).where(departing).run();
     releaseMemberPictures(departingPictures);
+    if (releaseSpaceTag(uid, id)) announceSpaceTagChange([uid]);
 
     // Clean up any voice restrictions for the removed member
     db.delete(schema.voiceRestrictions).where(
@@ -1807,6 +1830,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
       // A ban drops a timeout, one held from an earlier leave included.
       dropHeldTimeout(id, targetId, tx);
     });
+    if (releaseSpaceTag(targetId, id)) announceSpaceTagChange([targetId]);
     releaseMemberPictures(bannedPictures);
 
     recordAudit({

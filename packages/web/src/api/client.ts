@@ -21,6 +21,8 @@ import type { SignupChallengeLevel, SignupChallengeResponse } from '@backspace/s
 import { solveSignupChallenge } from '../utils/signupChallenge';
 import type { CreatePollRequest, PollInfo } from '@backspace/shared/src/polls';
 import type { CreateSpaceInviteRequest, DataExportStatus, SessionsResponse, SecurityEventInfo, SessionInfo, SpaceInviteLink } from '@backspace/shared';
+import type { SpaceTagCardResponse } from '@backspace/shared';
+import type { CreateVoiceOverlayResponse, VoiceOverlayLinkResponse } from '@backspace/shared/src/voiceOverlay';
 import type {
   LinkedAccountCompleteRequest,
   LinkedAccountProvider,
@@ -761,6 +763,15 @@ export class BackspaceApiClient {
     getJoinRequests: (spaceId: string, status?: string) => Promise<{ requests: JoinRequest[] }>;
     decideJoinRequest: (spaceId: string, requestId: string, action: 'accept' | 'decline') => Promise<JoinRequest>;
     myJoinRequests: (status?: string) => Promise<{ requests: JoinRequest[] }>;
+    /** What a click on a worn space tag shows (docs/systems/space-tags.md). */
+    spaceTag: (spaceId: string) => Promise<SpaceTagCardResponse>;
+  };
+
+  /** The asker's own overlay link of a voice channel (docs/systems/voice-overlay.md). */
+  readonly voiceOverlay: {
+    get: (channelId: string) => Promise<VoiceOverlayLinkResponse>;
+    create: (channelId: string) => Promise<CreateVoiceOverlayResponse>;
+    remove: (channelId: string) => Promise<void>;
   };
 
   /** The public space directory, read through this instance's proxy (never the hub directly). */
@@ -1531,6 +1542,15 @@ export class BackspaceApiClient {
         const params = new URLSearchParams();
         if (status) params.set('status', status);
         return request<{ requests: JoinRequest[] }>('GET', `/users/@me/join-requests?${params}`);
+      },
+      spaceTag: (spaceId: string) => request<SpaceTagCardResponse>('GET', `/spaces/${spaceId}/tag`),
+    };
+
+    this.voiceOverlay = {
+      get: (channelId: string) => request<VoiceOverlayLinkResponse>('GET', `/channels/${channelId}/overlay`),
+      create: (channelId: string) => request<CreateVoiceOverlayResponse>('POST', `/channels/${channelId}/overlay`),
+      remove: async (channelId: string) => {
+        await request<{ success: boolean }>('DELETE', `/channels/${channelId}/overlay`);
       },
     };
 

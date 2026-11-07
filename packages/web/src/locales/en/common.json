@@ -108,7 +108,8 @@
     "rose": "Rose",
     "teal": "Teal",
     "amber": "Amber",
-    "peach": "Peach"
+    "peach": "Peach",
+    "silver": "Silver"
   },
   "language": {
     "label": "Language",
@@ -240,6 +241,22 @@
     "partner": {
       "name": "Partner",
       "description": "A community this instance works with"
+    }
+  },
+  "spaceTag": {
+    "label": "Space tag {{tag}}",
+    "card": {
+      "members_one": "{{formatted}} member",
+      "members_other": "{{formatted}} members",
+      "open": "Open space",
+      "join": "Join",
+      "request": "Ask to join",
+      "requested": "Request sent",
+      "inviteOnly": "By invitation only",
+      "wear": "Wear this tag",
+      "takeOff": "Take it off",
+      "wearFailed": "The tag could not be changed.",
+      "gone": "This space has no tag any more."
     }
   },
   "review": {

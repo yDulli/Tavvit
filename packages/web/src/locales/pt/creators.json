@@ -1,0 +1,71 @@
+{
+  "title": "Para criadores",
+  "lead": "Um lugar para a sua comunidade que não custa nada para o seu pessoal, funciona com a sua transmissão e é rápido de mudar.",
+  "sections": {
+    "community": {
+      "title": "Sua comunidade",
+      "items": {
+        "free": {
+          "title": "Grátis para todos lá dentro",
+          "text": "Molduras, efeitos de perfil, placas de nome e estilos de nome não custam nada. Ninguém precisa de assinatura para se destacar no seu espaço."
+        },
+        "tag": {
+          "title": "Sua tag ao lado dos nomes",
+          "text": "Dê uma tag ao seu espaço. Os membros podem usá-la ao lado do nome onde quer que esta instância os mostre, e um clique nela leva ao seu espaço."
+        },
+        "events": {
+          "title": "Eventos e sessões juntos",
+          "text": "Planeje transmissões e noites da comunidade como eventos com lembretes, e assistam a vídeos juntos num canal de voz."
+        },
+        "moderation": {
+          "title": "Espaço para moderar",
+          "text": "Modo lento, filtros de palavras, castigos temporários, banimentos, pedidos de entrada e regras que as pessoas aceitam antes de escrever."
+        }
+      }
+    },
+    "stream": {
+      "title": "Feito para transmitir",
+      "items": {
+        "twitch": {
+          "title": "Ao vivo na Twitch",
+          "text": "Vincule sua conta da Twitch nas configurações. Enquanto você estiver ao vivo, o seu perfil mostra isso, com um botão para a sua transmissão."
+        },
+        "streamerMode": {
+          "title": "Modo streamer",
+          "text": "Oculta endereços de e-mail, links e códigos de convite e o conteúdo das notificações: manualmente, com um atalho, ou sozinho no app para desktop enquanto o OBS, o Streamlabs ou o XSplit estiver aberto."
+        },
+        "overlay": {
+          "title": "Overlay de voz para o OBS",
+          "text": "Mostre na transmissão quem está num canal de voz e quem está falando: um link, adicionado como fonte de navegador."
+        },
+        "camera": {
+          "title": "Fundos de câmera",
+          "text": "Desfoque o seu quarto ou entre numa cena, feito no seu próprio aparelho."
+        }
+      }
+    },
+    "move": {
+      "title": "Mudança",
+      "items": {
+        "discord": {
+          "title": "Traga o seu Discord",
+          "text": "Copie os canais e cargos do seu servidor a partir de um modelo, e traga os emojis e figurinhas."
+        },
+        "invite": {
+          "title": "Seu próprio endereço de convite",
+          "text": "Dê ao seu espaço um endereço só dele, fácil de colocar num painel ou numa bio."
+        },
+        "start": {
+          "title": "Pronto em minutos",
+          "text": "Crie um espaço, defina a tag e o endereço de convite, e compartilhe o link com o seu chat."
+        }
+      }
+    }
+  },
+  "cta": {
+    "title": "Traga sua comunidade",
+    "text": "Abra o Tavvit e crie o seu espaço com o + no topo. Quer ajuda na mudança, uma insígnia de criador ou um espaço verificado? Escreva para a equipe desta instância, veja Contato.",
+    "open": "Abrir o Tavvit",
+    "contact": "Contato"
+  }
+}

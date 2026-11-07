@@ -245,6 +245,10 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   login_throttled: 'Too many failed sign-in attempts for this account; try again in {{minutes}} min',
   // spaces
   space_owner_title_invalid: 'Owner titles can be 1 to {{max}} characters on one line, with at least one visible character and no control characters.',
+  space_tag_invalid: 'A tag is {{min}} to {{max}} letters or digits from one alphabet, with a symbol and a colour',
+  space_tag_reserved: 'That tag would read like a mark of the platform',
+  space_tag_unavailable: 'That space has no tag you can wear',
+  voice_overlay_unavailable: 'This overlay link no longer works',
   member_nickname_invalid: 'Nicknames can be at most {{max}} characters on one line, with at least one visible character and no control characters.',
   space_name_required: 'Space name is required',
   space_name_length: 'Space name must be between {{min}} and {{max}} characters',

@@ -27,6 +27,8 @@ import { threadRoutes } from './routes/threads.js';
 import { forumRoutes } from './routes/forums.js';
 import { translationRoutes } from './routes/translation.js';
 import { linkedAccountRoutes } from './routes/linkedAccounts.js';
+import { voiceOverlayRoutes } from './routes/voiceOverlay.js';
+import { loadVoiceOverlayChannels } from './utils/voiceOverlays.js';
 import { channelFollowRoutes } from './routes/channelFollows.js';
 import { eventRoutes } from './routes/events.js';
 import { webhookRoutes } from './routes/webhooks.js';
@@ -358,6 +360,7 @@ async function main(): Promise<void> {
   await app.register(forumRoutes);
   await app.register(translationRoutes);
   await app.register(linkedAccountRoutes);
+  await app.register(voiceOverlayRoutes);
   await app.register(channelFollowRoutes);
   await app.register(eventRoutes);
   await app.register(webhookRoutes);
@@ -468,6 +471,8 @@ async function main(): Promise<void> {
   startLegalRecordSweeper();
   startEmailWorker();
   startSecuritySweeper();
+  // Which voice channels have an overlay link, for every channel sent from now on (utils/voiceOverlays.ts).
+  loadVoiceOverlayChannels();
   // Only with TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET set (utils/twitchLive.ts).
   startTwitchLive(config.twitch.redirectUri);
 

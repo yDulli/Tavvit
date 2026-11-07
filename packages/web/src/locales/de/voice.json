@@ -317,5 +317,35 @@
     "seek": "Stelle im Video",
     "untitled": "Ein {{provider}}-Video",
     "captions": "Untertitel"
+  },
+  "overlay": {
+    "menu": "Overlay für OBS",
+    "title": "Overlay für OBS",
+    "intro": "Zeigt, wer in {{channel}} ist und wer gerade spricht, auf durchsichtigem Hintergrund. Füge den Link in OBS als Browserquelle hinzu.",
+    "notice": "Alle im Kanal sehen, dass er in einem Stream gezeigt werden kann.",
+    "layout": "Anordnung",
+    "layouts": {
+      "list": "Untereinander",
+      "row": "Nebeneinander"
+    },
+    "show": "Zeigen",
+    "shows": {
+      "everyone": "Alle im Kanal",
+      "speaking": "Nur wer spricht"
+    },
+    "names": "Namen",
+    "create": "Link erstellen",
+    "copy": "Link kopieren",
+    "copied": "Link kopiert",
+    "renew": "Neuer Link",
+    "renewHint": "Der alte Link funktioniert dann nicht mehr.",
+    "remove": "Link entfernen",
+    "removed": "Link entfernt",
+    "existing": "Du hast einen Link für diesen Kanal. Seine Adresse wird nur beim Erstellen gezeigt: Erstelle einen neuen, um sie wieder zu kopieren.",
+    "steps": "In OBS: Quellen, +, Browser, Link einfügen. Breite 400, Höhe 600.",
+    "preview": "Vorschau",
+    "streamed": "Wird in einem Stream gezeigt",
+    "unavailable": "Auf dieser Instanz ist Voice nicht eingerichtet.",
+    "failed": "Der Link ließ sich nicht erstellen."
   }
 }

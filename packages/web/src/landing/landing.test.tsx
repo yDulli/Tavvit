@@ -112,7 +112,7 @@ describe('what a visitor is sent', () => {
   it('main.tsx asks for the app only by a dynamic import', () => {
     const source = readFileSync(join(here, '..', 'main.tsx'), 'utf8');
     const staticImports = [...source.matchAll(/^import\s+(?:[^'"]*from\s+)?['"]([^'"]+)['"]/gm)].map((match) => match[1]);
-    expect(staticImports).toEqual(['./styles/globals.css', './landing/entry', './publicPages/entry']);
+    expect(staticImports).toEqual(['./styles/globals.css', './landing/entry', './publicPages/entry', './overlay/entry']);
   });
 });
 

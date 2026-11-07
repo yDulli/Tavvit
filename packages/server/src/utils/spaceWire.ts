@@ -10,6 +10,8 @@ import { publicUserOf, type PublicUserRow } from './sanitize.js';
 import { activeTimeoutUntil } from './spaceModeration.js';
 import { spaceBadgesOf } from './badges.js';
 import { mediaOriginsFor, shownPicture } from './remoteMedia.js';
+import { parseStoredSpaceTag } from '@backspace/shared/src/spaceTags.js';
+import { channelHasVoiceOverlay } from './voiceOverlayChannels.js';
 
 // The wire shapes of a space, a channel and a member, built in one place for
 // every route and event that sends them (the ready payload, the space detail
@@ -45,6 +47,7 @@ export function spaceToWire(row: SpaceRow): Space {
     directoryListed: row.directoryListed === 1,
     description: row.description ?? null,
     badges: spaceBadgesOf(row),
+    tag: parseStoredSpaceTag(row.tag),
     defaultNotificationLevel: storedSpaceDefaultLevel(row.defaultNotificationLevel),
     createdAt: row.createdAt,
   };
@@ -62,6 +65,7 @@ export function channelToWire(row: ChannelRow): Channel {
     categoryId: row.categoryId ?? null,
     slowmodeSeconds: row.slowmodeSeconds ?? 0,
     icon: row.icon ?? null,
+    ...(row.type === 'voice' ? { streamOverlay: channelHasVoiceOverlay(row.id) } : {}),
     createdAt: row.createdAt,
   };
 }

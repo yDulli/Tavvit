@@ -60,6 +60,14 @@ export const users = sqliteTable('users', {
   nameFont: text('name_font'),
   nameEffect: text('name_effect'),
   /**
+   * The space tag the person wears (shared/src/spaceTags.ts, docs/systems/space-tags.md): JSON
+   * `{ spaceId, text, glyph, color }`, a space of this instance they are a member of and its tag
+   * as it is now, null for none. Written when they put it on, and again whenever the space changes
+   * or takes away its tag and when they leave it (utils/spaceTags.ts), so that every list of
+   * people reads it with the rest of the profile.
+   */
+  spaceTag: text('space_tag'),
+  /**
    * JSON array of the badges an instance admin gave the person
    * (GrantedUserBadgeId, docs/systems/badges.md); null without. Staff is not
    * stored: it comes from is_admin.
@@ -167,6 +175,11 @@ export const spaces = sqliteTable('spaces', {
    * from `verification_status`.
    */
   badges: text('badges'),
+  /**
+   * The tag its members can wear beside their name (shared/src/spaceTags.ts): JSON
+   * `{ text, glyph, color }`, null for none. Set with `PATCH /api/spaces/:id` (MANAGE_SPACE).
+   */
+  tag: text('tag'),
   /**
    * The platform's verification of the space (docs/systems/admin.md,
    * "Verification"): null when never requested, else 'pending',
@@ -1816,4 +1829,25 @@ export const linkedAccounts = sqliteTable('linked_accounts', {
 }, (table) => ({
   userProviderUnique: uniqueIndex('linked_accounts_user_provider_unique').on(table.userId, table.provider),
   providerAccountUnique: uniqueIndex('linked_accounts_provider_account_unique').on(table.provider, table.providerUserId),
+}));
+
+/**
+ * Links that show a voice channel in a stream (docs/systems/voice-overlay.md): a page an
+ * OBS browser source opens, showing who is in the channel and who speaks. One per person and
+ * channel; only a hash of the link's secret is kept, and the link works only while its maker may
+ * still stream in the channel.
+ */
+export const voiceOverlays = sqliteTable('voice_overlays', {
+  id: text('id').primaryKey(),
+  channelId: text('channel_id').notNull().references(() => channels.id, { onDelete: 'cascade' }),
+  spaceId: text('space_id').notNull().references(() => spaces.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** SHA-256 of the link's secret, hex. */
+  tokenHash: text('token_hash').notNull(),
+  createdAt: integer('created_at').notNull(),
+  /** When a page last asked with the link, to the minute; null before it ever did. */
+  lastUsedAt: integer('last_used_at'),
+}, (table) => ({
+  tokenHashUnique: uniqueIndex('voice_overlays_token_hash_unique').on(table.tokenHash),
+  channelUserUnique: uniqueIndex('voice_overlays_channel_user_unique').on(table.channelId, table.userId),
 }));

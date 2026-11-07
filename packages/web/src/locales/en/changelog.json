@@ -4,6 +4,14 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.37.0": {
+      "title": "For creators",
+      "items": {
+        "tags": "Spaces can have a tag: two to four letters with a symbol and a colour. Members wear it beside their name, and a click on it shows the space. Set it in Space settings → Tag, wear it in Your settings.",
+        "overlay": "Show a voice channel in your stream: right-click it, Overlay for OBS, and add the link as a browser source. It shows who is there and who is speaking, and everyone in the channel sees that it can be shown.",
+        "page": "A new page at /creators says what Tavvit offers a community and how to move in."
+      }
+    },
     "1.36.1": {
       "title": "New badges",
       "items": {

@@ -367,6 +367,7 @@ export function tombstoneUser(uid: string, options?: TombstoneOptions): string[]
       nameplate: null,
       nameFont: null,
       nameEffect: null,
+      spaceTag: null,
       customStatus: null,
       accentColor: null,
       accentColorSecondary: null,

@@ -444,7 +444,8 @@
     "status": "状态",
     "source": "源代码",
     "language": "语言",
-    "roadmap": "路线图"
+    "roadmap": "路线图",
+    "creators": "创作者"
   },
   "life": {
     "ok": "一切正常",

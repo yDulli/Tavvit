@@ -38,6 +38,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ProfileBanner } from '../ui/ProfileBanner';
 import { CardTopEffect, DecoratedName } from '../ui/Decorations';
 import { personDecorations } from '../../utils/decorations';
+import { SpaceTagChip, shownSpaceTag } from '../ui/SpaceTag';
 import { GatedPicture } from '../ui/ExternalMedia';
 
 type Tab = 'about' | 'friends' | 'spaces';
@@ -178,6 +179,7 @@ export function UserProfileModal() {
   const displayName = user.displayName ?? baseName;
   const look = profileHeaderLook(profileLayoutOf(user), 'full');
   const decorations = personDecorations(user, displayName);
+  const spaceTag = shownSpaceTag(user);
   const pronouns = normalizePronouns(user.pronouns) ?? null;
   const bio = spaceProfile.bio ?? user.bio;
 
@@ -353,6 +355,7 @@ export function UserProfileModal() {
             >
               {displayName}
             </DecoratedName>
+            {spaceTag && <SpaceTagChip tag={spaceTag} origin={userOrigin} className="ml-2" />}
             {/* The badges sit beside the handle, in its line (badges.md). */}
             <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-body text-txt-tertiary">
               <Username username={user.username} showAt className="text-body text-txt-tertiary" />

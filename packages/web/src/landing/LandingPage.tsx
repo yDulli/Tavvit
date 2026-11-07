@@ -643,6 +643,7 @@ function Footer({ sourceUrl, version, chat }: { sourceUrl: string | null; versio
               <li><a href="#features">{t('nav.features')}</a></li>
               <li><a href="/download">{t('nav.download')}</a></li>
               <li><a href="/developers">{t('footer.developers')}</a></li>
+              <li><a href="/creators">{t('footer.creators')}</a></li>
               <li><a href="/help">{t('footer.help')}</a></li>
               <li><a href="/roadmap">{t('footer.roadmap')}</a></li>
               <li><a href="/changelog">{t('footer.changelog')}</a></li>

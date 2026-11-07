@@ -585,3 +585,9 @@ Frames, profile effects, nameplates and name styles are drawn in `styles/decorat
 - `data-motion`: `on` (a profile, a preview), `hover` (inside a `.deco-hover` row or message, moving only while it is pointed at or focused), `off`.
 
 Reduce motion stills all of them. Higher contrast and forced colours leave out effects and nameplates and show a name in its plain colour. Nothing here takes the violet: "Your colours" are the person's own.
+
+## Space tags and the voice overlay (1.37.0)
+
+`.space-tag` is a space's tag beside a name (space-tags.md): 16px tall, Geist Mono 10px, the tag's colour (`data-color`, the accent family or silver) as text on a 10% ground with a 32% hairline, a 4px radius scaled like the rest, no glow. It is a control (`role="button"`) that opens the space's card; `data-static="true"` draws the same mark where it is not one. It never takes the violet signal.
+
+The voice overlay (voice-overlay.md, `overlay/overlay.css`) draws over a stream, not over Graphite: dark opaque labels for names, the status green as the ring of who speaks, the rose for a muted mark, and a transparent page. Its preview in the dialog stands on a checked ground for "transparent".

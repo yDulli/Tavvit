@@ -961,6 +961,7 @@ function ChannelItem({
           channelId={channel.id}
           channelName={channel.name}
           channelIcon={channel.icon}
+          streamOverlay={channel.streamOverlay === true}
           onClick={() => canConnect && handleVoiceJoin(channel.id)}
           locked={!canConnect}
           canManage={canManage}

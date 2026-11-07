@@ -1,0 +1,71 @@
+{
+  "title": "Für Creator",
+  "lead": "Ein Ort für deine Community, der deine Leute nichts kostet, mit deinem Stream zusammenspielt und in den du schnell umziehst.",
+  "sections": {
+    "community": {
+      "title": "Deine Community",
+      "items": {
+        "free": {
+          "title": "Kostenlos für alle darin",
+          "text": "Rahmen, Profileffekte, Namensschilder und Namensstile kosten nichts. Niemand braucht ein Abo, um in deinem Space aufzufallen."
+        },
+        "tag": {
+          "title": "Dein Tag neben ihren Namen",
+          "text": "Gib deinem Space einen Tag. Mitglieder können ihn neben ihrem Namen tragen, überall wo diese Instanz sie zeigt, und ein Klick darauf führt zu deinem Space."
+        },
+        "events": {
+          "title": "Events und Watch-Partys",
+          "text": "Plane Streams und Community-Abende als Events mit Erinnerung, und schaut Videos gemeinsam in einem Sprachkanal."
+        },
+        "moderation": {
+          "title": "Platz zum Moderieren",
+          "text": "Slowmode, Wortfilter, Timeouts, Banns, Beitrittsanfragen, und Regeln, denen man zustimmt, bevor man schreibt."
+        }
+      }
+    },
+    "stream": {
+      "title": "Gemacht fürs Streamen",
+      "items": {
+        "twitch": {
+          "title": "Live auf Twitch",
+          "text": "Verknüpfe dein Twitch-Konto in den Einstellungen. Während du live bist, zeigt dein Profil das, mit einem Knopf zu deinem Stream."
+        },
+        "streamerMode": {
+          "title": "Streamer-Modus",
+          "text": "Blendet E-Mail-Adressen, Einladungslinks und Codes und den Inhalt von Benachrichtigungen aus: von Hand, per Kurzbefehl, oder von selbst in der Desktop-App, solange OBS, Streamlabs oder XSplit läuft."
+        },
+        "overlay": {
+          "title": "Voice-Overlay für OBS",
+          "text": "Zeig in deinem Stream, wer in einem Sprachkanal ist und wer spricht: ein Link, als Browserquelle eingefügt."
+        },
+        "camera": {
+          "title": "Kamera-Hintergründe",
+          "text": "Verwisch dein Zimmer oder setz dich in eine Szene, berechnet auf deinem eigenen Gerät."
+        }
+      }
+    },
+    "move": {
+      "title": "Umziehen",
+      "items": {
+        "discord": {
+          "title": "Bring dein Discord mit",
+          "text": "Übernimm Kanäle und Rollen deines Servers aus einer Vorlage, und nimm Emojis und Sticker mit."
+        },
+        "invite": {
+          "title": "Deine eigene Einladungsadresse",
+          "text": "Gib deinem Space eine eigene Adresse, leicht in ein Panel oder eine Bio zu schreiben."
+        },
+        "start": {
+          "title": "In Minuten bereit",
+          "text": "Space erstellen, Tag und Einladungsadresse festlegen, Link in den Chat posten."
+        }
+      }
+    }
+  },
+  "cta": {
+    "title": "Hol deine Community rüber",
+    "text": "Öffne Tavvit und erstelle deinen Space mit dem + oben. Du willst Hilfe beim Umzug, ein Creator-Abzeichen oder einen verifizierten Space? Schreib dem Team dieser Instanz, siehe Kontakt.",
+    "open": "Tavvit öffnen",
+    "contact": "Kontakt"
+  }
+}

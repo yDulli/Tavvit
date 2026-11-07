@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import changelog from '../locales/en/changelog.json';
+import creators from '../locales/en/creators.json';
 import roadmap from '../locales/en/roadmap.json';
 import help from '../locales/en/help.json';
 import status from '../locales/en/status.json';
@@ -43,8 +44,8 @@ describe('the pages', () => {
     await i18next.use(initReactI18next).init({
       lng: 'en',
       defaultNS: 'status',
-      ns: ['status', 'help', 'changelog'],
-      resources: { en: { status, help, changelog, roadmap } },
+      ns: ['status', 'help', 'changelog', 'creators'],
+      resources: { en: { status, help, changelog, roadmap, creators } },
       interpolation: { escapeValue: false },
       react: { useSuspense: false },
     });
@@ -108,7 +109,7 @@ describe('the pages', () => {
     render(<PublicPage path="/changelog" />);
     const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(headings).toEqual(Object.values(changelog.versions).map((entry) => entry.title));
-    expect(Object.keys(changelog.versions)[0]).toBe('1.36.1');
+    expect(Object.keys(changelog.versions)[0]).toBe('1.37.0');
   });
 
   it('roadmap: shows what comes, in its sections, and what was just finished', () => {
@@ -119,6 +120,17 @@ describe('the pages', () => {
     }
     expect(screen.getByText(Object.values(changelog.versions)[0]!.title)).toBeTruthy();
     expect(screen.getByRole('link', { name: roadmap.recent.all }).getAttribute('href')).toBe('/changelog');
+  });
+
+  it('creators: says what there is for someone bringing a community, and how to start', () => {
+    render(<PublicPage path="/creators" />);
+    for (const section of Object.values(creators.sections)) {
+      expect(screen.getByRole('heading', { level: 2, name: section.title })).toBeTruthy();
+      for (const item of Object.values(section.items)) expect(screen.getByRole('heading', { level: 3, name: item.title })).toBeTruthy();
+    }
+    expect(screen.getByRole('link', { name: creators.cta.open })).toHaveAttribute('href', '/channels/@me');
+    expect(screen.getByRole('link', { name: creators.cta.contact })).toHaveAttribute('href', '/imprint');
+    expect(screen.getAllByRole('link', { name: 'Creators' }).some((link) => link.getAttribute('aria-current') === 'page')).toBe(true);
   });
 
   it('marks the page you are on, and leads to the others as plain addresses', () => {

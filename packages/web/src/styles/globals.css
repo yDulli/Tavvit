@@ -1347,6 +1347,53 @@
     transform: scale(.94);
   }
 
+  /* A space's tag beside a name (docs/systems/space-tags.md): its symbol and letters in its colour,
+     on a faint ground of it. A label, so Geist Mono; small radius, no glow. */
+  .space-tag {
+    --space-tag: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 16px;
+    padding: 0 5px 0 4px;
+    border: 1px solid rgb(var(--space-tag) / 0.32);
+    border-radius: calc(4px * var(--radius-scale));
+    background-color: rgb(var(--space-tag) / 0.1);
+    color: rgb(var(--space-tag));
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  }
+  .space-tag:hover,
+  .space-tag[aria-expanded='true'] {
+    background-color: rgb(var(--space-tag) / 0.18);
+    border-color: rgb(var(--space-tag) / 0.5);
+  }
+  .space-tag:focus-visible {
+    outline: 2px solid rgb(var(--space-tag));
+    outline-offset: 1px;
+  }
+  .space-tag[data-static='true'] {
+    cursor: default;
+  }
+  .space-tag[data-static='true']:hover {
+    background-color: rgb(var(--space-tag) / 0.1);
+    border-color: rgb(var(--space-tag) / 0.32);
+  }
+  .space-tag[data-color='mint'] { --space-tag: var(--accent-mint); }
+  .space-tag[data-color='peach'] { --space-tag: var(--accent-peach); }
+  .space-tag[data-color='lavender'] { --space-tag: var(--accent-lavender); }
+  .space-tag[data-color='sky'] { --space-tag: var(--accent-sky); }
+  .space-tag[data-color='amber'] { --space-tag: var(--accent-amber); }
+  .space-tag[data-color='rose'] { --space-tag: var(--accent-rose); }
+  .space-tag[data-color='coral'] { --space-tag: var(--accent-coral); }
+
   /* One icon in the choice of a role's icons: a little larger under the pointer. */
   .role-glyph-option {
     display: flex;

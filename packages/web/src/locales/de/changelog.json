@@ -4,6 +4,14 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.37.0": {
+      "title": "Für Creator",
+      "items": {
+        "tags": "Spaces können einen Tag haben: zwei bis vier Buchstaben mit Symbol und Farbe. Mitglieder tragen ihn neben ihrem Namen, und ein Klick darauf zeigt den Space. Einstellen unter Space-Einstellungen → Space-Tag, tragen unter Deine Einstellungen.",
+        "overlay": "Zeig einen Sprachkanal in deinem Stream: Rechtsklick, Overlay für OBS, und den Link als Browserquelle einfügen. Er zeigt, wer da ist und wer spricht, und alle im Kanal sehen, dass er gezeigt werden kann.",
+        "page": "Eine neue Seite unter /creators sagt, was Tavvit einer Community bietet und wie der Umzug geht."
+      }
+    },
     "1.36.1": {
       "title": "Neue Abzeichen",
       "items": {

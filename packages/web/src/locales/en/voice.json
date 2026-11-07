@@ -317,5 +317,35 @@
     "seek": "Position in the video",
     "untitled": "A {{provider}} video",
     "captions": "Subtitles"
+  },
+  "overlay": {
+    "menu": "Overlay for OBS",
+    "title": "Overlay for OBS",
+    "intro": "Shows who is in {{channel}} and who is speaking, on a transparent background. Add the link to OBS as a browser source.",
+    "notice": "Everyone in the channel sees that it can be shown in a stream.",
+    "layout": "Layout",
+    "layouts": {
+      "list": "One under the other",
+      "row": "Side by side"
+    },
+    "show": "Show",
+    "shows": {
+      "everyone": "Everyone in the channel",
+      "speaking": "Only who is speaking"
+    },
+    "names": "Names",
+    "create": "Create link",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "renew": "New link",
+    "renewHint": "The old link stops working.",
+    "remove": "Remove link",
+    "removed": "Link removed",
+    "existing": "You have a link for this channel. Its address is only shown when it is made: make a new one to copy it again.",
+    "steps": "In OBS: Sources, +, Browser, paste the link. Width 400, height 600.",
+    "preview": "Preview",
+    "streamed": "Shown in a stream",
+    "unavailable": "Voice is not set up on this instance.",
+    "failed": "The link could not be made."
   }
 }

@@ -16,10 +16,12 @@ import { channelToWire, memberStaffBadges, memberToWire, spaceToWire } from '../
 import { restoreHeldTimeout } from '../utils/spaceModeration.js';
 import { auditUserLabel, recordAudit } from '../utils/auditLog.js';
 import { addPublicMember } from '../utils/spaceJoin.js';
+import { parseStoredSpaceTag } from '@backspace/shared/src/spaceTags.js';
 import type {
   ExploreSpace,
   JoinRequest,
   MemberWithUser,
+  SpaceTagCardResponse,
   SpaceWithChannelsAndMembers,
   Channel,
 } from '@backspace/shared';
@@ -242,6 +244,40 @@ export async function exploreRoutes(app: FastifyInstance): Promise<void> {
     }));
 
     return reply.code(200).send({ spaces, total: totalRow.total, totalAll: totalAllRow.total, discoveryEnabled: true });
+  });
+
+  // GET /api/spaces/:id/tag — what a click on a worn tag shows (docs/systems/space-tags.md): the
+  // space as Explore shows it, and its tag. A space that has a tag shows itself this far to anyone
+  // signed in here, as its members' tags already do; one without a tag answers nothing.
+  app.get<{ Params: { id: string } }>('/api/spaces/:id/tag', {
+    preHandler: authenticate,
+  }, async (request, reply) => {
+    const db = getDb();
+    const space = db.select().from(schema.spaces).where(eq(schema.spaces.id, request.params.id)).get();
+    const tag = parseStoredSpaceTag(space?.tag);
+    if (!space || !tag) {
+      return sendError(reply, 404, 'space_tag_unavailable');
+    }
+    const memberCount = (getRawDb().prepare('SELECT COUNT(*) AS count FROM space_members WHERE space_id = ?').get(space.id) as { count: number }).count;
+    const pictureOrigins = mediaOriginsFor();
+    const response: SpaceTagCardResponse = {
+      space: {
+        id: space.id,
+        name: space.name,
+        icon: shownPicture(space.icon, pictureOrigins),
+        banner: shownPicture(space.banner, pictureOrigins),
+        avatarColor: (space.avatarColor as ExploreSpace['avatarColor']) ?? null,
+        description: space.description,
+        visibility: (space.visibility ?? 'private') as ExploreSpace['visibility'],
+        memberCount,
+        createdAt: space.createdAt,
+        joined: isMember(space.id, request.userId),
+        badges: spaceBadgesOf(space),
+        category: null,
+      },
+      tag,
+    };
+    return reply.code(200).send(response);
   });
 
   // POST /api/spaces/:id/public-join — join a public space without invite

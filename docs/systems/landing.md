@@ -23,9 +23,9 @@ anything is drawn and decides as `showsLanding()` in `landing/entry.ts` does
 `main.tsx` still makes the same decision when the app's own page is opened at `/`: when the
 service worker answers a navigation with the app's shell, and on a build without the website
 (Vite's alone, as `pnpm dev` serves). There it imports the stylesheet, `landing/entry.ts` and
-`publicPages/entry.ts`, asks `showsLanding()`, and fetches one thing with a dynamic import:
+`publicPages/entry.ts` and `overlay/entry.ts`, asks `showsLanding()`, and fetches one thing with a dynamic import:
 `landing/boot.tsx` draws the same page without HTML to take over. `/status`, `/help`,
-`/changelog` and `/roadmap` are public pages of their own (operations.md), prerendered the same
+`/changelog`, `/roadmap` and `/creators` are public pages of their own (operations.md), prerendered the same
 way and taken over by `site/client/public.tsx`.
 
 `App.tsx` and its routes do not know the page exists: `/` still redirects inside the router.
@@ -100,8 +100,8 @@ the app's bundle carries, and the app does not change.
   would send, `<html data-origin>`) it writes `SITE_ORIGIN_TOKEN` (`shared/src/site.ts`), and the
   server writes its own origin (`PUBLIC_ORIGIN`, or `https://DOMAIN`) over it once at its start
   (`renderSiteHtml`). The example's first render reads `data-origin`, so it agrees with its HTML.
-- **Serving.** `registerWebDocumentRoutes` answers `/`, `/status`, `/help`, `/changelog` and
-  `/roadmap` (a trailing slash too) with these pages, as documents to revalidate. `/index.html` stays
+- **Serving.** `registerWebDocumentRoutes` answers `/`, `/status`, `/help`, `/changelog`,
+  `/roadmap` and `/creators` (a trailing slash too) with these pages, as documents to revalidate. `/index.html` stays
   the app's page, because the service worker keeps it as the shell of every other address. A build
   without `dist/.site` (Vite's alone) answers as before: `/` with the app's page and the public pages
   through the app.

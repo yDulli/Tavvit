@@ -1,0 +1,128 @@
+/*
+ * The voice overlay (docs/systems/voice-overlay.md): people over a stream. The labels are dark
+ * and opaque enough to read over any picture; the ring while someone speaks is the status green
+ * of the app; nothing glows and nothing moves but the ring coming and going.
+ */
+.voice-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+}
+
+.voice-overlay[data-layout='row'] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.voice-overlay-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.voice-overlay[data-layout='row'] .voice-overlay-person {
+  flex-direction: column;
+  gap: 6px;
+  max-width: 96px;
+}
+
+.voice-overlay-picture {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 30%;
+  box-shadow: 0 0 0 3px transparent;
+  transition: box-shadow var(--dur-fast, 120ms) var(--ease-out, ease-out);
+}
+
+.voice-overlay-person[data-speaking='true'] .voice-overlay-picture {
+  box-shadow: 0 0 0 3px rgb(var(--status-online, 52 211 153));
+}
+
+.voice-overlay-picture img,
+.voice-overlay-initial {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  object-fit: cover;
+  color: #fff;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.voice-overlay-mark {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgb(13 14 17 / 0.92);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+  color: rgb(var(--accent-rose, 244 114 140));
+}
+
+.voice-overlay-mark svg {
+  width: 13px;
+  height: 13px;
+}
+
+.voice-overlay-name {
+  max-width: 220px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgb(13 14 17 / 0.82);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+  padding: 4px 9px;
+  color: #f4f5f7;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-overlay[data-layout='row'] .voice-overlay-name {
+  max-width: 96px;
+  font-size: 13px;
+  padding: 3px 7px;
+}
+
+/* The overlay page itself: nothing but the people, on nothing. */
+html.voice-overlay-page,
+html.voice-overlay-page body,
+html.voice-overlay-page #root {
+  background: transparent !important;
+  overflow: hidden;
+}
+
+.voice-overlay-problem {
+  display: inline-block;
+  margin: 8px;
+  border-radius: 6px;
+  background: rgb(13 14 17 / 0.88);
+  padding: 6px 10px;
+  color: #f4f5f7;
+  font: 600 13px/1.4 'Geist', ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-overlay-picture {
+    transition: none;
+  }
+}

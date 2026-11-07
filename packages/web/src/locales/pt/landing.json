@@ -458,7 +458,8 @@
     "status": "Status",
     "source": "Código-fonte",
     "language": "Idioma",
-    "roadmap": "Roteiro"
+    "roadmap": "Roteiro",
+    "creators": "Criadores"
   },
   "life": {
     "ok": "Tudo funcionando",

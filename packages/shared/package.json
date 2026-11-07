@@ -1,6 +1,6 @@
 {
   "name": "@backspace/shared",
-  "version": "1.36.1",
+  "version": "1.37.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Jannis Braun",
@@ -87,6 +87,10 @@
     "./src/adminConsole.js": "./src/adminConsole.ts",
     "./src/roleGlyphs": "./src/roleGlyphs.ts",
     "./src/roleGlyphs.js": "./src/roleGlyphs.ts",
+    "./src/spaceTags": "./src/spaceTags.ts",
+    "./src/spaceTags.js": "./src/spaceTags.ts",
+    "./src/voiceOverlay": "./src/voiceOverlay.ts",
+    "./src/voiceOverlay.js": "./src/voiceOverlay.ts",
     "./src/badges": "./src/badges.ts",
     "./src/badges.js": "./src/badges.ts",
     "./src/platform": "./src/platform.ts",

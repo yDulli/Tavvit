@@ -8,7 +8,7 @@ import type { PublicPagePath } from './entry';
 /** How often the status page asks again while it is open. */
 const STATUS_EVERY_MS = 60_000;
 
-const FRAME_LINKS = ['help', 'roadmap', 'changelog', 'status'] as const;
+const FRAME_LINKS = ['creators', 'help', 'roadmap', 'changelog', 'status'] as const;
 const LEGAL_LINKS = ['terms', 'privacy', 'imprint', 'report', 'developers'] as const;
 
 function PageFrame({ current, title, lead, children }: { current: PublicPagePath; title: string; lead: string; children: ReactNode }) {
@@ -225,9 +225,57 @@ function RoadmapPage() {
   );
 }
 
+interface CreatorsItem {
+  title: string;
+  text: string;
+}
+
+interface CreatorsSection {
+  title: string;
+  items: Record<string, CreatorsItem>;
+}
+
+/**
+ * What Tavvit offers someone who brings a community along (docs/systems/operations.md, "The public
+ * pages"): only what the app does, and how to start. The team of an instance is reached through its
+ * legal notice, which every instance has.
+ */
+function CreatorsPage() {
+  const { t } = useTranslation('creators');
+  const sections = t('sections', { returnObjects: true }) as unknown as Record<string, CreatorsSection>;
+  return (
+    <PageFrame current="/creators" title={t('title')} lead={t('lead')}>
+      <div className="space-y-10">
+        {Object.entries(sections).map(([id, section]) => (
+          <section key={id} aria-labelledby={`creators-${id}`}>
+            <h2 id={`creators-${id}`} className="label-mono mb-3">{section.title}</h2>
+            <div className="grid gap-3">
+              {Object.entries(section.items).map(([itemId, entry]) => (
+                <div key={itemId} className="surface-card rounded-lg p-4">
+                  <h3 className="text-body font-semibold text-txt-primary">{entry.title}</h3>
+                  <p className="mt-1.5 text-ui leading-relaxed text-txt-secondary">{entry.text}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+        <section aria-labelledby="creators-cta" className="surface-card rounded-lg p-5">
+          <h2 id="creators-cta" className="text-title font-semibold text-txt-primary">{t('cta.title')}</h2>
+          <p className="mt-2 text-ui leading-relaxed text-txt-secondary">{t('cta.text')}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a href="/channels/@me" className="btn-primary">{t('cta.open')}</a>
+            <a href="/imprint" className="btn-outline">{t('cta.contact')}</a>
+          </div>
+        </section>
+      </div>
+    </PageFrame>
+  );
+}
+
 export function PublicPage({ path }: { path: PublicPagePath }) {
   if (path === '/status') return <StatusPage />;
   if (path === '/changelog') return <ChangelogPage />;
   if (path === '/roadmap') return <RoadmapPage />;
+  if (path === '/creators') return <CreatorsPage />;
   return <HelpPage />;
 }

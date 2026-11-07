@@ -84,6 +84,7 @@ export const EmojiStickersPanel = lazyPanel(() => import('./spaceSettingsPanels/
 export const DiscordMovePanel = lazyPanel(() => import('./spaceSettingsPanels/DiscordMovePanel'), (m) => m.DiscordMovePanel);
 export const SoundsPanel = lazyPanel(() => import('./spaceSettingsPanels/SoundsPanel'), (m) => m.SoundsPanel);
 export const WelcomePanel = lazyPanel(() => import('./spaceSettingsPanels/WelcomePanel'), (m) => m.WelcomePanel);
+export const SpaceTagPanel = lazyPanel(() => import('./spaceSettingsPanels/SpaceTagPanel'), (m) => m.SpaceTagPanel);
 
 /**
  * Holds the panel's place while its chunk loads. The block has a fixed height

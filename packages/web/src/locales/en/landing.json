@@ -451,7 +451,8 @@
     "status": "Status",
     "source": "Source code",
     "language": "Language",
-    "roadmap": "Roadmap"
+    "roadmap": "Roadmap",
+    "creators": "Creators"
   },
   "life": {
     "ok": "All systems running",

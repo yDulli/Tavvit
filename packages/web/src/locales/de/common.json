@@ -108,7 +108,8 @@
     "rose": "Rosé",
     "teal": "Petrol",
     "amber": "Bernstein",
-    "peach": "Pfirsich"
+    "peach": "Pfirsich",
+    "silver": "Silber"
   },
   "language": {
     "label": "Sprache",
@@ -240,6 +241,22 @@
     "partner": {
       "name": "Partnerschaft",
       "description": "Eine Community, mit der diese Instanz zusammenarbeitet"
+    }
+  },
+  "spaceTag": {
+    "label": "Space-Tag {{tag}}",
+    "card": {
+      "members_one": "{{formatted}} Mitglied",
+      "members_other": "{{formatted}} Mitglieder",
+      "open": "Space öffnen",
+      "join": "Beitreten",
+      "request": "Beitritt anfragen",
+      "requested": "Anfrage gesendet",
+      "inviteOnly": "Nur mit Einladung",
+      "wear": "Diesen Tag tragen",
+      "takeOff": "Ablegen",
+      "wearFailed": "Der Tag ließ sich nicht ändern.",
+      "gone": "Dieser Space hat keinen Tag mehr."
     }
   },
   "review": {

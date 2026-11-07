@@ -9,6 +9,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { Avatar } from '../ui/Avatar';
 import { DecoratedName, NameplateLayer } from '../ui/Decorations';
 import { personDecorations } from '../../utils/decorations';
+import { SpaceTagChip, shownSpaceTag } from '../ui/SpaceTag';
 import { ActivityCard, hasRichActivity, getActivityAccentClass } from '../ui/ActivityCard';
 import { getPrimaryActivity } from '@backspace/shared/src/activities.js';
 import { parseFederatedUsername, isFederationGlobeApplicable, spaceMemberName } from '../../utils/identity';
@@ -50,6 +51,8 @@ function MobileMemberRow({
   // The person's decorations (docs/systems/decorations.md); a touch screen shows them still.
   const decorations = personDecorations(canonical, displayName);
   const nameInked = colorStyle !== undefined || decorations.nameEffect !== null;
+  // The tag as the space's instance sent it, with the space there (docs/systems/space-tags.md).
+  const spaceTag = shownSpaceTag(member.user);
 
   const rowClass = isRichActivity
     ? `list-row deco-hover relative isolate gap-2.5 px-2 py-2 mb-1 cursor-pointer glass-pill border-l-2 ${accentClass}`
@@ -84,6 +87,7 @@ function MobileMemberRow({
           >
             {displayName}
           </DecoratedName>
+          {spaceTag && <SpaceTagChip tag={spaceTag} origin={origin} />}
           {ownerMark && (
             <span role="img" aria-label={ownerMark} title={ownerMark} className="inline-flex flex-shrink-0 text-accent-amber">
               <Icon name="crown" size={13} />

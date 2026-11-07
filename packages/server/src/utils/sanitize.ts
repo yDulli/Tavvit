@@ -4,6 +4,7 @@ import { isAvatarColor, isProfileLayout, type User } from '@backspace/shared';
 import { parseStoredProfileLinks, withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { parseStoredProfileLinkedAccounts } from '@backspace/shared/src/linkedAccounts.js';
 import { decorationsOf } from '@backspace/shared/src/decorations.js';
+import { parseStoredWornSpaceTag } from '@backspace/shared/src/spaceTags.js';
 import { users } from '../db/schema.js';
 import { userBadgesOf } from './badges.js';
 import { needsVerifiedEmail } from '../email/gate.js';
@@ -34,6 +35,7 @@ export const PUBLIC_USER_COLUMNS = {
   nameplate: users.nameplate,
   nameFont: users.nameFont,
   nameEffect: users.nameEffect,
+  spaceTag: users.spaceTag,
   badges: users.badges,
   status: users.status,
   customStatus: users.customStatus,
@@ -73,6 +75,7 @@ export function publicUserOf(row: PublicUserRow): User {
       nameplate: null,
       nameFont: null,
       nameEffect: null,
+      spaceTag: null,
       badges: [],
       status: 'offline',
       customStatus: null,
@@ -109,6 +112,8 @@ export function publicUserOf(row: PublicUserRow): User {
     // Only names this server knows; null for none, so that a client merging this over an older
     // copy of the row drops a decoration that was taken off.
     ...decorationsOf(row),
+    // The tag as the space last had it (utils/spaceTags.ts); null for none, so a merge takes it off.
+    spaceTag: parseStoredWornSpaceTag(row.spaceTag),
     badges: userBadgesOf(row),
     status: (row.status ?? 'offline') as User['status'],
     customStatus: row.customStatus === null ? null : withoutUnsafeCharacters(row.customStatus),

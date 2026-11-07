@@ -108,7 +108,8 @@
     "rose": "玫瑰粉",
     "teal": "水鸭青",
     "amber": "琥珀黄",
-    "peach": "蜜桃粉"
+    "peach": "蜜桃粉",
+    "silver": "银色"
   },
   "language": {
     "label": "语言",
@@ -240,6 +241,21 @@
     "partner": {
       "name": "合作伙伴",
       "description": "与此实例合作的社区"
+    }
+  },
+  "spaceTag": {
+    "label": "空间标签 {{tag}}",
+    "card": {
+      "members_other": "{{formatted}} 名成员",
+      "open": "打开空间",
+      "join": "加入",
+      "request": "申请加入",
+      "requested": "申请已发送",
+      "inviteOnly": "仅限邀请",
+      "wear": "佩戴此标签",
+      "takeOff": "摘下",
+      "wearFailed": "无法更改标签。",
+      "gone": "这个空间已不再有标签。"
     }
   },
   "review": {

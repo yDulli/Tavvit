@@ -622,7 +622,7 @@ the server's header, which is what happens when the SPA is served by something
 other than the Fastify static handler.
 
 The website's prerendered pages (`/`, `/status`, `/help`, `/changelog`,
-`/roadmap`; [landing.md](landing.md)) carry the same tag
+`/roadmap`, `/creators`; [landing.md](landing.md)) carry the same tag
 (`site/layouts/SiteDocument.astro`) and get the same header, since the server
 sends them through the same document hook. They hold no script written into the
 page: the product page's first script is a file, `/landing-gate.js`, and each

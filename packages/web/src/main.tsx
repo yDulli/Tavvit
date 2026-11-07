@@ -1,11 +1,12 @@
 import './styles/globals.css';
 import { showsLanding } from './landing/entry';
 import { showsPublicPage } from './publicPages/entry';
+import { showsOverlay } from './overlay/entry';
 
 /**
  * The page's only script. It decides what this page load is and fetches just
  * that: the public product page for a visitor, a public page such as the status for
- * anyone, the app for everyone else. Nothing here may import the app, or a visitor
+ * anyone, a stream's voice overlay for OBS, the app for everyone else. Nothing here may import the app, or a visitor
  * downloads all of it for a page of text.
  */
 
@@ -40,6 +41,7 @@ function startApp(): Promise<unknown> {
 function startPage(): Promise<unknown> {
   if (showsLanding()) return import('./landing/boot');
   if (showsPublicPage()) return import('./publicPages/boot');
+  if (showsOverlay()) return import('./overlay/boot');
   return startApp();
 }
 

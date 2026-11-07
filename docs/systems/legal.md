@@ -136,6 +136,8 @@ Each writes `report_decide` to the platform audit log with the reason, and `repo
 
 **Sessions.** Each signed-in device has a row with its browser and system, its address cut short and when it was last active, so a person can recognise and end it in Settings → Security (auth.md, "Tokens and sessions"). The row goes with the session, after 30 days at the latest. The address never goes in whole, and no location is derived from it. The privacy draft states this.
 
+**Voice overlay.** A link for a streaming program shows the names, pictures, mute state and who speaks of the people in a voice channel to whoever has it, possibly a public stream; the channel shows that it has one, and only a hash of the link, its maker and its last use are stored (voice-overlay.md). The privacy draft's voice section says this, and its profile list names the space tag.
+
 **Logs.** The request log holds method and path only: `serializers.req` in `index.ts` leaves out the address and the query string, which carries search terms. Compose bounds the app's log to 3 files of 10 MB. The privacy draft says that addresses are used in memory and not written down, so a change here changes the draft.
 
 ---

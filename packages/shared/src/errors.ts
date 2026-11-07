@@ -314,6 +314,12 @@ export const ERROR_CODES = [
   'join_request_decided',
   // spaces
   'space_owner_title_invalid',
+  // Space tags (docs/systems/space-tags.md). details: { min, max, reason }
+  'space_tag_invalid',
+  'space_tag_reserved',
+  'space_tag_unavailable',
+  // The voice overlay (docs/systems/voice-overlay.md)
+  'voice_overlay_unavailable',
   'member_nickname_invalid',
   'space_name_required',
   'space_name_length',

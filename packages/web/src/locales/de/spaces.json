@@ -336,6 +336,7 @@
       "tabs": {
         "overview": "Übersicht",
         "welcome": "Willkommen und Regeln",
+        "tag": "Space-Tag",
         "sounds": "Soundboard",
         "discovery": "Entdecken",
         "roles": "Rollen",
@@ -711,6 +712,15 @@
         "description": "Dein Spitzname, Bild und Text in diesem Space. Dein Konto bleibt, wie es ist.",
         "action": "Space-Profil bearbeiten"
       },
+      "tag": {
+        "title": "Space-Tag",
+        "description": "Trage den Tag dieses Spaces neben deinem Namen, überall wo diese Instanz dich zeigt.",
+        "wear": "Tag tragen",
+        "takeOff": "Ablegen",
+        "wearing": "Du trägst diesen Tag.",
+        "none": "Dieser Space hat keinen Tag.",
+        "elsewhere": "Dieser Space liegt auf einer anderen Instanz. Seinen Tag trägt man mit einem Konto dort."
+      },
       "leave": {
         "title": "Verlassen",
         "description": "Du verlierst den Zugang zu den Kanälen. Mit einer Einladung kannst du zurückkommen."
@@ -780,6 +790,23 @@
       "channelsTitle": "Kanäle zum Einstieg",
       "channelsDescription": "Bis zu {{max}}, angeboten unter der Willkommensnachricht.",
       "saved": "Gespeichert."
+    },
+    "tag": {
+      "title": "Space-Tag",
+      "intro": "Ein kurzes Zeichen für deinen Space. Mitglieder können es neben ihrem Namen tragen, überall wo diese Instanz sie zeigt, und ein Klick darauf zeigt deinen Space.",
+      "privateNote": "Dein Space ist privat. Über seinen Tag sehen Leute auf dieser Instanz seinen Namen, sein Bild und seine Beschreibung; beitreten können sie trotzdem nur mit Einladung.",
+      "text": "Buchstaben",
+      "textHint": "{{min}} bis {{max}} Buchstaben oder Ziffern aus einem Alphabet.",
+      "glyph": "Symbol",
+      "color": "Farbe",
+      "preview": "Neben einem Namen",
+      "none": "Dein Space hat noch keinen Tag.",
+      "create": "Deinem Space einen Tag geben",
+      "remove": "Tag entfernen",
+      "removeHint": "Alle, die ihn tragen, legen ihn ab.",
+      "saved": "Tag gespeichert",
+      "removed": "Tag entfernt",
+      "wearersNote": "Ob sie ihn tragen, entscheiden die Mitglieder selbst: in den Einstellungen dieses Spaces unter Deine Einstellungen, oder mit einem Klick auf den Tag."
     },
     "sounds": {
       "title": "Soundboard",

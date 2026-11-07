@@ -47,6 +47,8 @@ interface VoiceChannelProps {
   channelName: string;
   /** The icon its space gave it, in place of the speaker (ChannelIcon). */
   channelIcon?: string | null;
+  /** Someone shows it in a stream with an overlay link (docs/systems/voice-overlay.md): said before anyone joins. */
+  streamOverlay?: boolean;
   onClick: () => void;
   locked?: boolean;
   canManage?: boolean;
@@ -68,7 +70,7 @@ interface VoiceChannelProps {
 }
 
 /** Wrapper component for the volume slider so it can use hooks (useState). */
-export function VoiceChannel({ channelId, channelName, channelIcon, onClick, locked, canManage, onSettingsClick, voiceUserHandlers, dropZone }: VoiceChannelProps) {
+export function VoiceChannel({ channelId, channelName, channelIcon, streamOverlay = false, onClick, locked, canManage, onSettingsClick, voiceUserHandlers, dropZone }: VoiceChannelProps) {
   const { t } = useTranslation(['voice', 'common', 'spaces']);
   const serverVoiceUsers = useVoiceStore((s) => s.voiceUsers.get(channelId)) ?? EMPTY_VOICE_USERS;
   const currentVoiceChannel = useVoiceStore((s) => s.currentVoiceChannelId);
@@ -177,6 +179,11 @@ export function VoiceChannel({ channelId, channelName, channelIcon, onClick, loc
           />
         )}
         <span className="min-w-0 flex-1 truncate">{channelName}</span>
+        {streamOverlay && (
+          <span role="img" aria-label={t('voice:overlay.streamed')} data-tooltip={t('voice:overlay.streamed')} className="flex flex-shrink-0 text-txt-tertiary">
+            <Icon name="monitor" size={13} />
+          </span>
+        )}
         <span className="relative flex flex-shrink-0 items-center">
           {canManage && (
             <span

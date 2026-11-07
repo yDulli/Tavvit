@@ -108,7 +108,8 @@
     "rose": "Rosa",
     "teal": "Verde-azulado",
     "amber": "Âmbar",
-    "peach": "Pêssego"
+    "peach": "Pêssego",
+    "silver": "Prata"
   },
   "language": {
     "label": "Idioma",
@@ -240,6 +241,23 @@
     "partner": {
       "name": "Parceiro",
       "description": "Uma comunidade com a qual esta instância trabalha"
+    }
+  },
+  "spaceTag": {
+    "label": "Tag de espaço {{tag}}",
+    "card": {
+      "members_one": "{{formatted}} membro",
+      "members_many": "{{formatted}} de membros",
+      "members_other": "{{formatted}} membros",
+      "open": "Abrir espaço",
+      "join": "Entrar",
+      "request": "Pedir para entrar",
+      "requested": "Pedido enviado",
+      "inviteOnly": "Só com convite",
+      "wear": "Usar esta tag",
+      "takeOff": "Tirar",
+      "wearFailed": "Não foi possível mudar a tag.",
+      "gone": "Este espaço não tem mais uma tag."
     }
   },
   "review": {

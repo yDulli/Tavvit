@@ -336,6 +336,7 @@
       "tabs": {
         "overview": "Overview",
         "welcome": "Welcome and rules",
+        "tag": "Tag",
         "sounds": "Soundboard",
         "discovery": "Discovery",
         "roles": "Roles",
@@ -711,6 +712,15 @@
         "description": "Your nickname, picture and bio in this space. Your account stays as it is.",
         "action": "Edit space profile"
       },
+      "tag": {
+        "title": "Space tag",
+        "description": "Wear this space's tag beside your name wherever this instance shows you.",
+        "wear": "Wear tag",
+        "takeOff": "Take it off",
+        "wearing": "You wear this tag.",
+        "none": "This space has no tag.",
+        "elsewhere": "This space is on another instance. Its tag is worn with an account there."
+      },
       "leave": {
         "title": "Leave",
         "description": "You lose access to its channels. With an invite you can come back."
@@ -780,6 +790,23 @@
       "channelsTitle": "Channels to start in",
       "channelsDescription": "Up to {{max}}, offered under the welcome.",
       "saved": "Saved."
+    },
+    "tag": {
+      "title": "Space tag",
+      "intro": "A short mark for your space. Members can wear it beside their name wherever this instance shows them, and a click on it shows your space.",
+      "privateNote": "Your space is private. Through its tag, people on this instance can see its name, picture and description; they still need an invite to join.",
+      "text": "Letters",
+      "textHint": "{{min}} to {{max}} letters or digits from one alphabet.",
+      "glyph": "Symbol",
+      "color": "Colour",
+      "preview": "Beside a name",
+      "none": "Your space has no tag yet.",
+      "create": "Give your space a tag",
+      "remove": "Remove tag",
+      "removeHint": "Everyone wearing it takes it off.",
+      "saved": "Tag saved",
+      "removed": "Tag removed",
+      "wearersNote": "Members choose for themselves whether to wear it: in this space's settings under Your settings, or with a click on the tag."
     },
     "sounds": {
       "title": "Soundboard",

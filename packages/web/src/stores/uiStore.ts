@@ -25,6 +25,7 @@ type ModalType =
   | 'memberRoles'
   | 'discordImport'
   | 'spaceProfile'
+  | 'voiceOverlay'
   | null;
 
 /**

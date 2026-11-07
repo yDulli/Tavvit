@@ -1436,3 +1436,7 @@ Only the newest `loadSpaceDetail` of a space applies its response; an older one 
 ## Starter spaces
 
 A new account of this instance starts in the public spaces an administrator chose in the console, through the same step as joining one (`addPublicMember` in `utils/spaceJoin.ts`, which `POST /api/spaces/:id/public-join` also uses). See [admin.md](admin.md), "The console".
+
+## Space tag
+
+A space can have a tag its members wear beside their name (Space settings → Tag, MANAGE_SPACE; wearing it in Your settings). Everything about it is in [space-tags.md](space-tags.md).

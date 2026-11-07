@@ -119,6 +119,8 @@ Nothing here can stop what noticed it: if the database is the problem, the failu
 
 `/roadmap` is what comes next, in `locales/<lng>/roadmap.json`, in three sections: next, after that, later. **When a version ships something from it, take it off in all five languages**; the page names the newest versions from the changelog by itself. It has no dates and promises nothing under "later", and it is held to what the product page is held to: no promise of federation, native apps, end-to-end encryption or any price ([landing.md](landing.md)).
 
+`/creators` says what there is for someone bringing a community along, in `locales/<lng>/creators.json`, and how to start; the team of an instance is reached through its legal notice. **It may name only what the app does**, and is held to what the product page is held to ([landing.md](landing.md)). The product page's footer leads to it.
+
 The home page shows one quiet line for the version that runs, once, if that version is in the changelog (`WhatsNewNote`). Someone new has nothing to catch up on, so a first visit only remembers where they started.
 
 ## How the public pages load

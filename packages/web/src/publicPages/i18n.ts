@@ -1,6 +1,7 @@
 import i18next, { type i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import enChangelog from '../locales/en/changelog.json';
+import enCreators from '../locales/en/creators.json';
 import enHelp from '../locales/en/help.json';
 import enRoadmap from '../locales/en/roadmap.json';
 import enStatus from '../locales/en/status.json';
@@ -15,7 +16,7 @@ import {
  * These pages' own small i18n setup, as the product page has one: the app's bundles every English
  * catalog. It carries their namespaces and the same language choice.
  */
-const NAMESPACES = ['help', 'changelog', 'status', 'roadmap'] as const;
+const NAMESPACES = ['help', 'changelog', 'status', 'roadmap', 'creators'] as const;
 type Namespace = (typeof NAMESPACES)[number];
 
 const catalogs = import.meta.glob<Record<string, unknown>>(
@@ -24,6 +25,7 @@ const catalogs = import.meta.glob<Record<string, unknown>>(
     '../locales/*/changelog.json',
     '../locales/*/status.json',
     '../locales/*/roadmap.json',
+    '../locales/*/creators.json',
     '!../locales/en/*.json',
   ],
   { import: 'default' },
@@ -65,7 +67,7 @@ export function initPublicPagesI18nEnglish(instance: i18n = i18next): void {
     fallbackLng: DEFAULT_LANGUAGE,
     defaultNS: 'status',
     ns: [...NAMESPACES],
-    resources: { en: { help: enHelp, changelog: enChangelog, status: enStatus, roadmap: enRoadmap } },
+    resources: { en: { help: enHelp, changelog: enChangelog, status: enStatus, roadmap: enRoadmap, creators: enCreators } },
     initAsync: false,
     returnNull: false,
     interpolation: { escapeValue: false },
@@ -100,7 +102,7 @@ export async function initPublicPagesI18n(): Promise<void> {
     defaultNS: 'status',
     ns: [...NAMESPACES],
     resources: {
-      en: { help: enHelp, changelog: enChangelog, status: enStatus, roadmap: enRoadmap },
+      en: { help: enHelp, changelog: enChangelog, status: enStatus, roadmap: enRoadmap, creators: enCreators },
       ...(translated ? { [language]: translated } : {}),
     },
     returnNull: false,

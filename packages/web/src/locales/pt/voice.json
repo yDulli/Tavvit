@@ -319,5 +319,35 @@
     "seek": "Posição no vídeo",
     "untitled": "Um vídeo do {{provider}}",
     "captions": "Legendas"
+  },
+  "overlay": {
+    "menu": "Overlay para o OBS",
+    "title": "Overlay para o OBS",
+    "intro": "Mostra quem está em {{channel}} e quem está falando, com fundo transparente. Adicione o link no OBS como fonte de navegador.",
+    "notice": "Todos no canal veem que ele pode aparecer numa transmissão.",
+    "layout": "Disposição",
+    "layouts": {
+      "list": "Um embaixo do outro",
+      "row": "Lado a lado"
+    },
+    "show": "Mostrar",
+    "shows": {
+      "everyone": "Todos no canal",
+      "speaking": "Só quem está falando"
+    },
+    "names": "Nomes",
+    "create": "Criar link",
+    "copy": "Copiar link",
+    "copied": "Link copiado",
+    "renew": "Novo link",
+    "renewHint": "O link antigo deixa de funcionar.",
+    "remove": "Remover link",
+    "removed": "Link removido",
+    "existing": "Você tem um link para este canal. O endereço só aparece quando ele é criado: crie um novo para copiá-lo de novo.",
+    "steps": "No OBS: Fontes, +, Navegador, cole o link. Largura 400, altura 600.",
+    "preview": "Prévia",
+    "streamed": "Aparece numa transmissão",
+    "unavailable": "A voz não está configurada nesta instância.",
+    "failed": "Não foi possível criar o link."
   }
 }

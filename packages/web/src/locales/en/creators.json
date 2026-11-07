@@ -1,0 +1,71 @@
+{
+  "title": "For creators",
+  "lead": "A place for your community that costs your people nothing, works with your stream, and is quick to move into.",
+  "sections": {
+    "community": {
+      "title": "Your community",
+      "items": {
+        "free": {
+          "title": "Free for everyone in it",
+          "text": "Frames, profile effects, nameplates and name styles cost nothing. Nobody needs a subscription to stand out in your space."
+        },
+        "tag": {
+          "title": "Your tag beside their names",
+          "text": "Give your space a tag. Members can wear it beside their name wherever this instance shows them, and a click on it leads to your space."
+        },
+        "events": {
+          "title": "Events and watch parties",
+          "text": "Plan streams and community nights as events with reminders, and watch videos together in a voice channel."
+        },
+        "moderation": {
+          "title": "Room to moderate",
+          "text": "Slow mode, word filters, timeouts, bans, join requests, and rules people agree to before they write."
+        }
+      }
+    },
+    "stream": {
+      "title": "Made for streaming",
+      "items": {
+        "twitch": {
+          "title": "Live on Twitch",
+          "text": "Link your Twitch account in your settings. While you are live, your profile shows it, with a button to your stream."
+        },
+        "streamerMode": {
+          "title": "Streamer mode",
+          "text": "Hides email addresses, invite links and codes and what notifications say: by hand, with a shortcut, or by itself in the desktop app while OBS, Streamlabs or XSplit runs."
+        },
+        "overlay": {
+          "title": "Voice overlay for OBS",
+          "text": "Show who is in a voice channel and who is speaking in your stream: one link, added as a browser source."
+        },
+        "camera": {
+          "title": "Camera backgrounds",
+          "text": "Blur your room or sit in a scene, made on your own device."
+        }
+      }
+    },
+    "move": {
+      "title": "Moving in",
+      "items": {
+        "discord": {
+          "title": "Bring your Discord",
+          "text": "Copy your server's channels and roles from a template, and bring its emoji and stickers along."
+        },
+        "invite": {
+          "title": "Your own invite address",
+          "text": "Give your space an address of its own, easy to put in a panel or a bio."
+        },
+        "start": {
+          "title": "Ready in minutes",
+          "text": "Create a space, give it a tag and an invite address, and share the link with your chat."
+        }
+      }
+    }
+  },
+  "cta": {
+    "title": "Bring your community over",
+    "text": "Open Tavvit and create your space with the + at the top. Want a hand moving in, a creator badge or a verified space? Write to the team of this instance under Contact.",
+    "open": "Open Tavvit",
+    "contact": "Contact"
+  }
+}

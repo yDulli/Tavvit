@@ -31,7 +31,7 @@ const ASSETS_DIR = join(DIST, '_astro');
 const LANDING_SCRIPT_BUDGET = 150 * 1024;
 
 /** The pages the server expects, as shared/src/site.ts names them. */
-const PAGES = ['index.html', 'status.html', 'help.html', 'changelog.html', 'roadmap.html'];
+const PAGES = ['index.html', 'status.html', 'help.html', 'changelog.html', 'roadmap.html', 'creators.html'];
 
 const ORIGIN_TOKEN = '%%TAVVIT_ORIGIN%%';
 

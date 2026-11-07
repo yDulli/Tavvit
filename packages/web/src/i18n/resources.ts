@@ -19,6 +19,7 @@ import home from '../locales/en/home.json';
 import landing from '../locales/en/landing.json';
 import help from '../locales/en/help.json';
 import roadmap from '../locales/en/roadmap.json';
+import creators from '../locales/en/creators.json';
 import changelog from '../locales/en/changelog.json';
 import status from '../locales/en/status.json';
 import legal from '../locales/en/legal.json';
@@ -46,6 +47,7 @@ export const resources = {
     landing,
     help,
     roadmap,
+    creators,
     changelog,
     status,
     legal,

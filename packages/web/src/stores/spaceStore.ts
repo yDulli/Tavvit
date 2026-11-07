@@ -1,3 +1,4 @@
+import { spaceTagOf } from '@backspace/shared/src/spaceTags';
 import type { ThreadInfo } from '@backspace/shared/src/threads';
 import { create } from 'zustand';
 import type { Space, Channel, ChannelCategory, MemberWithUser, SpaceWithChannelsAndMembers, Role, SpaceFolder, SpaceLayoutItem, DmChannel, DmMessageWithUser, User, CreateSpaceRequest } from '@backspace/shared';
@@ -76,6 +77,8 @@ function toTaggedSpace(space: Space, origin: string): TaggedSpace {
     directoryListed: space.directoryListed ?? false,
     description: space.description ?? null,
     badges: space.badges,
+    // What a host sends is checked again: a tag this client cannot draw is none (spaceTags.ts).
+    tag: spaceTagOf(space.tag),
     defaultNotificationLevel: space.defaultNotificationLevel ?? null,
     createdAt: space.createdAt,
   } satisfies Record<keyof Space, unknown>;

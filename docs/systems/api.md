@@ -186,7 +186,7 @@ type CheckInviteResponse =
 GET    /users/@me                                        → { user }
 PATCH  /users/@me             { displayName?, avatar?, banner?, accentColor?, accentColorSecondary?,
                                 avatarColor?, bio?, pronouns?, profileLinks?, profileLayout?,
-                                avatarFrame?, profileEffect?, nameplate?, nameFont?, nameEffect?,
+                                avatarFrame?, profileEffect?, nameplate?, nameFont?, nameEffect?, spaceTag?,
                                 customStatus?, customStatusExpiresInMinutes?, status?,
                                 replicatedInstances?, homeUserId?,
                                 profileUpdatedAt?, showActivity? } → { user }
@@ -213,6 +213,8 @@ GET    /users/:id/mutuals     ?homeUserId=               → { mutualFriends[], 
 **Status:** `status` is the user's chosen status: `online`, `idle` or `dnd`; anything else, including `offline`, is 400 `status_invalid`. It is stored in `users.chosen_status` and published as live presence (local `presence_update` and S2S relay) while the user is connected; see activity-presence.md "DB Persistence". A body with only `status` is a valid update.
 
 **Profile card fields:** `pronouns` (a string, trimmed, at most 40 characters, no control or bidirectional characters; blank or null clears it; `400 pronouns_too_long` with `details.max`), `profileLinks` (a list of at most 5 `{ url, label? }`, each `url` a plain `http`/`https` address without credentials of at most 200 characters and each `label` at most 32 characters; null or an empty list clears them; the same address twice is kept once; anything else is `400 profile_links_invalid` with `details.max`) and `profileLayout` (`'standard'`, `'centered'` or `'compact'`, or null for standard; `400 profile_layout_invalid`). Every `User` carries `pronouns`, `profileLinks` (a list, empty when none) and `profileLayout`. The rules are `normalizePronouns` / `normalizeProfileLinks` in packages/shared/src/profileFields.ts, which the editor and the profile card read too (auth.md, "Profile fields"). Like `accentColorSecondary`, these three are not relayed to federation peers.
+
+**Space tag:** `spaceTag` is the id of a space of this instance whose tag to wear, or null for none; the space must have a tag and the caller must be its member, else `400 space_tag_unavailable`. Every `User` carries `spaceTag` (`{ spaceId, text, glyph, color }` or null). See space-tags.md.
 
 **Decorations:** `avatarFrame`, `profileEffect`, `nameplate`, `nameFont` and `nameEffect` each take the name of one of the designs in packages/shared/src/decorations.ts, or null to clear it; `nameFont: 'classic'` is stored as none. Anything else is `400 profile_decoration_invalid` with `details.field`, and nothing of the update is stored (`decorationUpdateOf`). Every `User` carries the five fields, null for none, so that an update merged over an older copy clears one. A change is announced as `user_updated`. Not relayed to federation peers (decorations.md).
 
@@ -1224,3 +1226,19 @@ GET  /downloads/source/<release>.tar.gz      public  the source of the running r
 `GET /api/admin/signup-rules` also answers `challengeLevel`; `PUT /api/admin/signup-rules/challenge` takes `{ level }`.
 
 `POST /api/channels/:id/messages` and `POST /api/dm/:id/messages` take `spoilerAttachments`, those of `attachments` to show as spoilers. An attachment on the wire has `spoiler`.
+
+## Space tags (`routes/spaces.ts`, `routes/explore.ts`)
+```
+PATCH  /spaces/:id              { tag: { text, glyph, color } | null, ... }   MANAGE_SPACE → Space (with `tag`)
+GET    /spaces/:id/tag          → { space: ExploreSpace, tag }                 signed in; 404 space_tag_unavailable without a tag
+```
+`400 space_tag_invalid` with `details: { min, max, reason }` (`length`, `characters`, `glyph`, `color`) and `400 space_tag_reserved` for a word reserved for the platform. A changed or removed tag reaches every wearer's profile (`user_updated`). See space-tags.md.
+
+## Voice overlay (`routes/voiceOverlay.ts`)
+```
+GET    /channels/:id/overlay        → { exists, createdAt }                      VIEW_CHANNEL; the caller's own link
+POST   /channels/:id/overlay        → 201 { secret, createdAt }                  VIEW_CHANNEL + CONNECT + STREAM; 503 voice_disabled; 10/min
+DELETE /channels/:id/overlay        → { success: true }                          VIEW_CHANNEL
+GET    /overlay/voice/:secret       → { channelName, people, livekit }           no account; no-store; 120/min; 404 voice_overlay_unavailable
+```
+The secret is shown once and only its hash is stored; a new link ends the old. The LiveKit token is for a hidden participant that cannot publish, subscribe or send data. See voice-overlay.md.

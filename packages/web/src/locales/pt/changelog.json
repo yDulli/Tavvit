@@ -4,6 +4,14 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.37.0": {
+      "title": "Para criadores",
+      "items": {
+        "tags": "Espaços podem ter uma tag: de duas a quatro letras com um símbolo e uma cor. Os membros a usam ao lado do nome, e um clique nela mostra o espaço. Defina em Configurações do espaço → Tag do espaço e use em Suas configurações.",
+        "overlay": "Mostre um canal de voz na sua transmissão: clique com o botão direito, Overlay para o OBS, e adicione o link como fonte de navegador. Ele mostra quem está lá e quem está falando, e todos no canal veem que ele pode ser mostrado.",
+        "page": "Uma nova página em /creators diz o que o Tavvit oferece a uma comunidade e como fazer a mudança."
+      }
+    },
     "1.36.1": {
       "title": "Novas insígnias",
       "items": {

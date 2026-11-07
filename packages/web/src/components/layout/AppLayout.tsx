@@ -1,3 +1,4 @@
+import { VoiceOverlayModal } from '../voice/VoiceOverlayModal';
 import { SpaceEventsPage } from '../events/SpaceEventsView';
 import { SpaceWelcomeGate } from '../modals/SpaceWelcomeGate';
 import { useRecentPlacesStore } from '../../stores/recentPlacesStore';
@@ -472,6 +473,7 @@ export function AppLayout() {
         {/* UserSettings is a pushed screen on mobile (MobileSettingsScreen), not a modal */}
         <SpaceSettingsModal />
         <ChannelSettingsModal />
+        <VoiceOverlayModal />
         <CategorySettingsModal />
         <NewDmModal />
         <AddDmMemberModal />
@@ -545,6 +547,7 @@ export function AppLayout() {
       <UserSettingsModal />
       <SpaceSettingsModal />
       <ChannelSettingsModal />
+      <VoiceOverlayModal />
       <CategorySettingsModal />
       <NewDmModal />
       <AddDmMemberModal />

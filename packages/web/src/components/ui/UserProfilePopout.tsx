@@ -35,6 +35,7 @@ import { ProfileLinks } from './ProfileLinks';
 import { ProfileBanner } from './ProfileBanner';
 import { CardTopEffect, DecoratedName } from './Decorations';
 import { personDecorations } from '../../utils/decorations';
+import { SpaceTagChip, shownSpaceTag } from './SpaceTag';
 
 /** Gap between the card and the element it was opened from. */
 const ANCHOR_OFFSET = 8;
@@ -78,6 +79,8 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
   const spaceProfile = useSpaceProfile(member);
   const look = profileHeaderLook(profileLayoutOf(user), 'card');
   const decorations = personDecorations(user, displayName);
+  // The tag as the instance that sent the person has it, with its space there.
+  const spaceTag = shownSpaceTag(propUser);
   const pronouns = normalizePronouns(user.pronouns) ?? null;
   const bio = spaceProfile.bio ?? user.bio;
   const isMobile = useUIStore((s) => s.isMobile);
@@ -254,6 +257,7 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
             >
               {displayName}
             </DecoratedName>
+            {spaceTag && <SpaceTagChip tag={spaceTag} origin={origin} className="ml-2" />}
             {/* The badges sit beside the handle, in its line (badges.md). */}
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-ui text-txt-tertiary">
               <Username username={user.username} showAt className="text-ui text-txt-tertiary" />

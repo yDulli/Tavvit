@@ -433,7 +433,10 @@ existing space ends with `space_access_changed` to every member (spaces.md,
 `profileLinks` and `profileLayout` (auth.md, "Profile fields"), and the five
 decoration fields `avatarFrame`, `profileEffect`, `nameplate`, `nameFont` and
 `nameEffect`, null for none, so that a `user_updated` merged over an older copy
-takes a decoration off (decorations.md).
+takes a decoration off (decorations.md), and `spaceTag`, the space tag they wear
+or null (space-tags.md). Every `Space` carries `tag`, and every voice `Channel`
+carries `streamOverlay`, true while someone has an overlay link for it; a change
+of that goes out as `channel_updated` (voice-overlay.md).
 
 **Badges.** No event type is new for badges either (registry:
 `packages/shared/src/badges.ts`; api.md, "Users" and "Spaces"). Every `User`

@@ -451,7 +451,8 @@
     "status": "Status",
     "source": "Quellcode",
     "language": "Sprache",
-    "roadmap": "Roadmap"
+    "roadmap": "Roadmap",
+    "creators": "Creator"
   },
   "life": {
     "ok": "Alles läuft",

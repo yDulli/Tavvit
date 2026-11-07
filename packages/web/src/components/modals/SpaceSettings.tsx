@@ -15,7 +15,7 @@ import { getApiForOrigin } from '../../utils/crossStoreResolvers';
 import { hasPermissionBit, PermissionBits } from '../../utils/permissions';
 import {
   OverviewPanel, YourSpacePanel, InvitesPanel, MembersPanel, RolesPanel, BansPanel, ModerationPanel, AuditLogPanel, VerificationPanel,
-  EmojiStickersPanel, DiscordMovePanel, SoundsPanel, WelcomePanel, SettingsPanelSuspense,
+  EmojiStickersPanel, DiscordMovePanel, SoundsPanel, WelcomePanel, SpaceTagPanel, SettingsPanelSuspense,
 } from './lazySettingsPanels';
 import { allowedSpaceSettingsTabs, isSpaceSettingsTab, SPACE_SETTINGS_NAV, type SpaceSettingsGroup, type SpaceSettingsTab } from './spaceSettingsPanels/spaceSettingsTabs';
 import { DiscoveryListingSection } from './spaceSettingsPanels/DiscoveryListingSection';
@@ -763,6 +763,7 @@ export function SpaceSettingsModal() {
     verification: t('spaces:settings.nav.tabs.verification'),
     moderation: t('spaces:settings.nav.tabs.moderation'),
     welcome: t('spaces:settings.nav.tabs.welcome'),
+    tag: t('spaces:settings.nav.tabs.tag'),
     sounds: t('spaces:settings.nav.tabs.sounds'),
     emoji: t('spaces:settings.nav.tabs.emoji'),
     discord: t('spaces:settings.nav.tabs.discord'),
@@ -881,6 +882,7 @@ export function SpaceSettingsModal() {
                 {tab === 'you' && <YourSpacePanel spaceId={currentSpaceId} />}
                 {tab === 'overview' && canManageSpace && <OverviewPanel spaceId={currentSpaceId} />}
                 {tab === 'welcome' && allowed.welcome && <WelcomePanel key={currentSpaceId} spaceId={currentSpaceId} />}
+                {tab === 'tag' && allowed.tag && <SpaceTagPanel key={currentSpaceId} spaceId={currentSpaceId} />}
                 {tab === 'emoji' && allowed.emoji && (
                   <EmojiStickersPanel
                     key={currentSpaceId}

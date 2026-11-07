@@ -339,6 +339,7 @@
       "tabs": {
         "overview": "Visão geral",
         "welcome": "Boas-vindas e regras",
+        "tag": "Tag do espaço",
         "sounds": "Soundboard",
         "discovery": "Descoberta",
         "roles": "Cargos",
@@ -715,6 +716,15 @@
         "description": "Seu apelido, foto e bio neste espaço. Sua conta continua como está.",
         "action": "Editar perfil do espaço"
       },
+      "tag": {
+        "title": "Tag do espaço",
+        "description": "Use a tag deste espaço ao lado do seu nome onde quer que esta instância mostre você.",
+        "wear": "Usar tag",
+        "takeOff": "Tirar",
+        "wearing": "Você está usando esta tag.",
+        "none": "Este espaço não tem tag.",
+        "elsewhere": "Este espaço fica em outra instância. A tag dele se usa com uma conta de lá."
+      },
       "leave": {
         "title": "Sair",
         "description": "Você perde o acesso aos canais. Com um convite, pode voltar."
@@ -786,6 +796,23 @@
       "channelsTitle": "Canais para começar",
       "channelsDescription": "Até {{max}}, oferecidos abaixo das boas-vindas.",
       "saved": "Salvo."
+    },
+    "tag": {
+      "title": "Tag do espaço",
+      "intro": "Uma marca curta para o seu espaço. Os membros podem usá-la ao lado do nome onde quer que esta instância os mostre, e um clique nela mostra o seu espaço.",
+      "privateNote": "O seu espaço é privado. Pela tag, pessoas desta instância podem ver o nome, a imagem e a descrição dele; para entrar, ainda precisam de um convite.",
+      "text": "Letras",
+      "textHint": "De {{min}} a {{max}} letras ou números de um só alfabeto.",
+      "glyph": "Símbolo",
+      "color": "Cor",
+      "preview": "Ao lado de um nome",
+      "none": "O seu espaço ainda não tem tag.",
+      "create": "Dar uma tag ao seu espaço",
+      "remove": "Remover tag",
+      "removeHint": "Todos que a usam deixam de usá-la.",
+      "saved": "Tag salva",
+      "removed": "Tag removida",
+      "wearersNote": "Os membros decidem se a usam: nas configurações deste espaço, em Suas configurações, ou com um clique na tag."
     },
     "sounds": {
       "title": "Soundboard",

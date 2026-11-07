@@ -8,7 +8,7 @@
 export const SITE_ORIGIN_TOKEN = '%%TAVVIT_ORIGIN%%';
 
 /** The public pages the website renders ahead of time, besides the product page at `/`. */
-export const SITE_PUBLIC_PATHS = ['/status', '/help', '/changelog', '/roadmap'] as const;
+export const SITE_PUBLIC_PATHS = ['/status', '/help', '/changelog', '/roadmap', '/creators'] as const;
 export type SitePublicPath = (typeof SITE_PUBLIC_PATHS)[number];
 
 /** Every page of the website, as the address it answers at. */
@@ -35,6 +35,7 @@ export const SITE_DOCUMENT_FILES: Readonly<Record<SitePath, string>> = {
   '/help': 'help.html',
   '/changelog': 'changelog.html',
   '/roadmap': 'roadmap.html',
+  '/creators': 'creators.html',
 };
 
 /** The folder of the web build that holds those files. */

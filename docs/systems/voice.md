@@ -840,3 +840,7 @@ Source files: `packages/web/src/camera/` — `backgrounds.ts` (the choices, `par
 
 ### Federation
 No federation work. The LK room is at the host instance; remote peers connect to it directly. `switchActiveDevice` is room-internal and works regardless of where the room lives.
+
+## Voice overlay for OBS
+
+A voice channel can be shown in a stream through an overlay link: who is in it and who speaks, read by a hidden LiveKit participant that can neither hear nor send. Everything about it is in [voice-overlay.md](voice-overlay.md).

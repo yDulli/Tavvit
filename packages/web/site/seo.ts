@@ -1,6 +1,7 @@
 import { PRODUCT_NAME } from '@backspace/shared/src/constants.js';
 import { SITE_ORIGIN_TOKEN, SOCIAL_CARD, type SitePath, type SitePublicPath } from '@backspace/shared/src/site.js';
 import changelog from '../src/locales/en/changelog.json';
+import creators from '../src/locales/en/creators.json';
 import help from '../src/locales/en/help.json';
 import landing from '../src/locales/en/landing.json';
 import roadmap from '../src/locales/en/roadmap.json';
@@ -29,6 +30,7 @@ const PUBLIC_PAGES: Record<SitePublicPath, { title: string; lead: string }> = {
   '/help': help,
   '/changelog': changelog,
   '/roadmap': roadmap,
+  '/creators': creators,
 };
 
 /** A whole address on this server, for a page or a file of the build. */

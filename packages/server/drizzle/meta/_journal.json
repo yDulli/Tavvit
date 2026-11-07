@@ -519,6 +519,13 @@
       "when": 1794057933723,
       "tag": "0073_tavvit_profile_decorations",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "6",
+      "when": 1794067668903,
+      "tag": "0074_tavvit_space_tags_voice_overlays",
+      "breakpoints": true
     }
   ]
 }

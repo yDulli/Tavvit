@@ -19,6 +19,7 @@ import { InlineMessageText } from './InlineMessageText';
 import { Avatar } from '../ui/Avatar';
 import { ProfileAvatar } from '../ui/ProfileAvatar';
 import { DecoratedName } from '../ui/Decorations';
+import { SpaceTagChip, shownSpaceTag } from '../ui/SpaceTag';
 import { personDecorations, type PersonDecorations } from '../../utils/decorations';
 import { useAppearanceStore } from '../../stores/appearanceStore';
 import { menuPositionFor, useContextMenuStore } from '../../stores/contextMenuStore';
@@ -541,6 +542,8 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const roleColor = getMemberDisplayColor(message.userId);
   // The author's frame and name style (docs/systems/decorations.md), still until the message is pointed at.
   const authorDecorations = personDecorations(displayIdentity, displayName);
+  // The tag the author wears, from the instance that sent them (docs/systems/space-tags.md).
+  const authorTag = shownSpaceTag(displayIdentity);
 
   // A space message's author is a member of the space it was posted in; the
   // profile opened from it shows their roles there. message.userId is the id
@@ -756,6 +759,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
                 roleColored={roleColor !== AUTHOR_DEFAULT_COLOR}
               />
             </span>
+            {authorTag && <SpaceTagChip tag={authorTag} origin={displayOrigin} className="self-center" />}
             {message.user?.accountKind && (
               <span className="label-mono flex-shrink-0 self-center rounded-sm border border-border-soft px-1 leading-none">
                 {message.user.accountKind === 'webhook' ? t('chat:message.webhookTag') : message.user.accountKind === 'follow' ? t('chat:message.followTag') : t('chat:message.botTag')}

@@ -9,6 +9,7 @@ import { removeSoundFiles } from './soundFiles.js';
 import { removeEmojiFiles } from './spaceExpressions.js';
 import { discoveryStatusOf, isOpenReview, verificationStatusOf } from './spaceReview.js';
 import { announceReviewQueue } from './reviewNotify.js';
+import { announceSpaceTagChange, releaseSpaceTagsOf } from './spaceTags.js';
 
 type SpaceRow = typeof schema.spaces.$inferSelect;
 
@@ -21,6 +22,8 @@ type SpaceRow = typeof schema.spaces.$inferSelect;
 export function deleteSpaceCompletely(space: SpaceRow): void {
   const db = getDb();
   const id = space.id;
+  // Whoever wears its tag stops; they hear of it once the space is gone.
+  const tagWearers = releaseSpaceTagsOf(id);
 
   // Collect all attachment files before cascade-deleting DB records
   const channelIds = db.select({ id: schema.channels.id })
@@ -84,4 +87,5 @@ export function deleteSpaceCompletely(space: SpaceRow): void {
     disconnectMemberFromSpaceVoice(id, member.userId);
     connectionManager.removeUserSpace(member.userId, id);
   }
+  announceSpaceTagChange(tagWearers);
 }

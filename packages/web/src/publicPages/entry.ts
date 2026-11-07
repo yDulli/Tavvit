@@ -3,7 +3,7 @@
  * (docs/systems/operations.md). Decided before any other code loads, like the product page, and
  * free of the app's modules for the same reason.
  */
-export const PUBLIC_PAGE_PATHS = ['/status', '/help', '/changelog', '/roadmap'] as const;
+export const PUBLIC_PAGE_PATHS = ['/status', '/help', '/changelog', '/roadmap', '/creators'] as const;
 export type PublicPagePath = (typeof PUBLIC_PAGE_PATHS)[number];
 
 export function publicPageAt(pathname: string): PublicPagePath | null {

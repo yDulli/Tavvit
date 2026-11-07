@@ -34,7 +34,7 @@ function toast(message: string, kind: 'success' | 'warning', duration?: number):
  * group) are returned as `dialogs`, for the caller to render once.
  */
 export function useConversationContextMenu() {
-  const { t } = useTranslation(['spaces', 'dm', 'chat', 'common']);
+  const { t } = useTranslation(['spaces', 'dm', 'chat', 'voice', 'common']);
   const navigate = useNavigate();
   const [leaveDmId, setLeaveDmId] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
@@ -132,6 +132,11 @@ export function useConversationContextMenu() {
     // Channel settings edits the channels of the open space, with their resolved permissions.
     const canEdit = store.currentSpaceId === entry.spaceId
       && hasPermissionBit(store.channelPermissions.get(channelId), PermissionBits.MANAGE_CHANNELS);
+    // A voice channel's overlay for OBS: for whoever may stream there, as the server checks (docs/systems/voice-overlay.md).
+    const channelPermissions = store.channelPermissions.get(channelId);
+    const canOverlay = entry.type === 'voice' && store.currentSpaceId === entry.spaceId
+      && hasPermissionBit(channelPermissions, PermissionBits.CONNECT)
+      && hasPermissionBit(channelPermissions, PermissionBits.STREAM);
     const link = `${entry.origin || window.location.origin}/channels/${entry.spaceId}/${channelId}`;
 
     const items: ContextMenuItem[] = [
@@ -150,6 +155,11 @@ export function useConversationContextMenu() {
         type: 'action', key: 'copy-link', label: t('chat:menu.copyLink'),
         icon: <Icon name="link" size={16} />,
         onClick: () => copy(link, t('chat:menu.linkCopied')),
+      },
+      {
+        type: 'action', key: 'stream-overlay', label: t('voice:overlay.menu'), hidden: !canOverlay,
+        icon: <Icon name="monitor" size={16} />,
+        onClick: () => useUIStore.getState().openModal('voiceOverlay', { channelId }),
       },
       { type: 'separator', key: 'manage-separator' },
       {

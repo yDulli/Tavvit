@@ -11,6 +11,7 @@ import type { SavedItem } from './saved.js';
 import type { ThreadInfo, ThreadSummary } from './threads.js';
 import type { ForumTag } from './forums.js';
 import type { AvatarFrame, NameEffect, NameFont, Nameplate, ProfileEffect } from './decorations.js';
+import type { SpaceTag, WornSpaceTag } from './spaceTags.js';
 import type { SignupChallengeSolution } from './signupChallenge.js';
 import type { WatchPosition, WatchPresence, WatchReaction, WatchSession } from './watch.js';
 
@@ -71,6 +72,13 @@ export interface User {
   nameplate?: Nameplate | null;
   nameFont?: NameFont | null;
   nameEffect?: NameEffect | null;
+  /**
+   * The space tag the person wears beside their name (docs/systems/space-tags.md): a space of the
+   * instance that sent the row, and its tag as it was when they put it on or the space last
+   * changed it. Null for none, sent as null so that an update merged over an older copy takes it
+   * off; absent from hosts that predate tags. A client shows only what passes `wornSpaceTagOf`.
+   */
+  spaceTag?: WornSpaceTag | null;
   /**
    * The person's badges on the instance that sent the row (badges.ts): staff
    * for an instance admin, and those its admins gave. Absent from hosts that
@@ -227,6 +235,11 @@ export interface Space {
   ownerGroup?: boolean;
   /** The space's badges: verified (from the platform's verification) and those its admins gave. */
   badges?: SpaceBadgeId[];
+  /**
+   * The tag its members can wear beside their name (docs/systems/space-tags.md); null for none,
+   * absent from hosts that predate tags.
+   */
+  tag?: SpaceTag | null;
   inviteCode: string | null;
   /** Its own invite address, `/join/<this>` (shared/src/vanityInvites.ts). */
   vanityCode?: string | null;
@@ -586,6 +599,12 @@ export interface Channel {
   parentChannelId?: string | null;
   /** Its own icon in place of its type's (`glyph:<id>` or an emoji, channelIcons.ts). Absent from hosts that predate it. */
   icon?: string | null;
+  /**
+   * A voice channel someone shows in a stream with an overlay link (docs/systems/voice-overlay.md),
+   * so everyone who joins knows they may be seen. Always sent for a voice channel, absent for others
+   * and from hosts that predate overlays.
+   */
+  streamOverlay?: boolean;
 }
 
 export interface ReadState {
@@ -1567,6 +1586,14 @@ export interface UpdateSpaceRequest {
   description?: string;
   /** The members' starting notification level; null restores the built-in default. Anything else is `400 notification_level_invalid`. */
   defaultNotificationLevel?: SpaceDefaultNotificationLevel | null;
+  /** The space's tag (spaceTags.ts), or null to take it away; anything else is `400 space_tag_invalid`. */
+  tag?: SpaceTag | null;
+}
+
+/** What a click on a worn tag shows: the space as Explore would, and its tag (GET /api/spaces/:id/tag). */
+export interface SpaceTagCardResponse {
+  space: ExploreSpace;
+  tag: SpaceTag;
 }
 
 /** One entry of the list of people the signed-in user has blocked. */
@@ -1667,6 +1694,11 @@ export interface UpdateUserRequest {
   nameplate?: Nameplate | null;
   nameFont?: NameFont | null;
   nameEffect?: NameEffect | null;
+  /**
+   * The id of a space of this instance whose tag to wear, or null to wear none. The space must
+   * have a tag and the person must be its member; anything else is `400 space_tag_unavailable`.
+   */
+  spaceTag?: string | null;
   displayName?: string;
   avatar?: string;
   banner?: string;

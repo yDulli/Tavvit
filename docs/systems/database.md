@@ -36,6 +36,7 @@ IDs: Snowflake text, permissions: bigint decimal strings
 | profileEffect | text | | The effect over the banner, a name in `PROFILE_EFFECTS`; NULL for none. Migration 0073 |
 | nameplate | text | | The nameplate behind the name in lists, a name in `NAMEPLATES`; NULL for none. Migration 0073 |
 | nameFont | text | | The name's typeface, a name in `NAME_FONTS` other than `classic`; NULL for the interface's own. Migration 0073 |
+| spaceTag | text | | The space tag the person wears: JSON `{ spaceId, text, glyph, color }`, a copy of a space's tag of this instance, kept in step with it (utils/spaceTags.ts); NULL for none. Migration `0074_tavvit_space_tags_voice_overlays`. See space-tags.md |
 | nameEffect | text | | The light inside the name's letters, a name in `NAME_EFFECTS`; NULL for none. Migration 0073. Only `PATCH /api/users/@me` writes these five, each checked against its list (`decorationUpdateOf`); read back through `decorationsOf`, which shows a name it does not know as none; cleared by `tombstoneUser` |
 | badges | text | | JSON array of the badges an instance admin granted the person (`GrantedUserBadgeId`, the registry in `packages/shared/src/badges.ts`), in the registry's order, each once; NULL for none. Written only by `PUT /api/admin/users/:id/badges`. Read through `grantedUserBadgesOf` (`utils/badges.ts`), which drops anything the registry does not know as a granted user badge, so a hand-edited row cannot hand out `staff`; staff is not stored but derived from `isAdmin` (`userBadgesOf`). Migration `0041_orbit_platform_admin` |
 | suspendedAt | integer | | When an instance admin suspended the account (epoch ms); NULL when no suspension is recorded. The account is suspended while this is set and `suspendedUntil` is NULL or later than now (`activeSuspension`, `utils/suspension.ts`; `suspendedNow` is the same condition in SQL): it cannot sign in, call an authenticated route or hold a socket (auth.md, "Suspensions"). Migration 0041 |
@@ -76,6 +77,7 @@ Adds `detached_home_instance`, `detached_home_user_id` and their index. The data
 | description | text | | |
 | directoryListed | integer NOT NULL | 0 | The owner asked for this space to be listed in the space directory. Refused on a private space (`400 directory_private_space`) and cleared in the same write when a listed space goes private. Served on `GET /api/directory/spaces` only while the space is listed in Discovery (`discoveryStatus = 'approved'`, public or request) and `instance_settings.directoryEnabled` and `discoveryEnabled` are both 1. See [directory.md](directory.md). |
 | badges | text | | JSON array of the badges an instance admin granted the space (`GrantedSpaceBadgeId`), in the registry's order, each once; NULL for none. Written only by `PUT /api/admin/spaces/:id/badges`, read through `grantedSpaceBadgesOf`. `verified` is not stored here: it is derived from `verificationStatus` (`spaceBadgesOf`). Migration `0041_orbit_platform_admin` |
+| tag | text | | The tag its members can wear: JSON `{ text, glyph, color }` (shared/src/spaceTags.ts), NULL for none. Set with `PATCH /api/spaces/:id` (MANAGE_SPACE). Migration `0074_tavvit_space_tags_voice_overlays`. See space-tags.md |
 | verificationStatus | text | | The platform's verification of the space: NULL while never requested (and after the owner withdrew a request), else `pending`, `needs_info`, `verified`, `rejected` or `revoked` (`VERIFICATION_STATUSES`, `packages/shared/src/platform.ts`). Only `verified` gives the space the verified badge. The one status field: the request is in `space_verification_requests`, every step in `space_review_events`. Written by `utils/spaceReview.ts`, and by `PATCH /api/spaces/:id` and `PATCH /api/spaces/:id/transfer-ownership`, which set `pending` when a verified space is renamed or changes owner (`reviewsAfterEdit`, `reviewsAfterTransfer`). Migration 0041 |
 | discoveryStatus | text | | An instance admin's approval of the space's Discovery listing: NULL while never submitted, else `pending`, `changes_requested`, `approved`, `rejected` or `withdrawn` (`DISCOVERY_STATUSES`). A space is listed (Explore, the directory document, the admin overview) only while this is `approved` and `visibility` is public or request (`LISTED_IN_DISCOVERY_SQL`, `utils/discoveryListing.ts`); nothing the owner sets alone lists it. Written by `utils/spaceReview.ts`, and by `PATCH /api/spaces/:id` in the same update as an edit: `pending` when an approved space's name, description, icon or banner changes, `withdrawn` when an approved or open one is made private (`reviewsAfterEdit`); an open request's `requested_at` moves to the time of such an edit. Migration 0041, which set `pending` on every public or request space (see "Platform administration (0041)") |
 | defaultNotificationLevel | text | | The notification level members start with until they choose their own: `all` or `mentions`; NULL keeps the built-in default (`mentions`). Set with `PATCH /api/spaces/:id`, read by the clients only. Migration `0039_orbit_space_moderation`. See [spaces.md](spaces.md), "Moderation" |
@@ -1246,3 +1248,17 @@ Indexes: `linked_accounts_user_provider_unique` UNIQUE (user_id, provider): one 
 | Column | Notes |
 |--------|-------|
 | `users.profile_linked_accounts` | text, null. What the profile shows of the person's linked accounts: the rows with `show_on_profile`, as a JSON list of `{ provider, login, name }`, written whenever they change (`writeProfileLinkedAccounts`). In `PUBLIC_USER_COLUMNS`, read into `User.linkedAccounts` by the shared rules. Cleared by the tombstone |
+
+## voice_overlays
+
+Links that show a voice channel in a stream (voice-overlay.md). Migration `0074_tavvit_space_tags_voice_overlays`.
+
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| id | text | PK | Snowflake |
+| channelId | text | FK → channels, cascade | The voice channel |
+| spaceId | text | FK → spaces, cascade | Its space |
+| userId | text | FK → users, cascade | Who made it; one link per person and channel (unique `channel_id, user_id`) |
+| tokenHash | text | unique | SHA-256 of the secret, hex; the secret itself is never stored |
+| createdAt | integer | | Epoch ms |
+| lastUsedAt | integer | | When the overlay page last asked, to the minute; NULL before it did |
