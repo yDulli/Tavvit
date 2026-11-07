@@ -4,6 +4,15 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.38.1": {
+      "title": "Flüssiger",
+      "items": {
+        "scroll": "Scrollen durch einen Kanal und durch lange Mitgliederlisten ist wieder flüssig, auch mit vielen dekorierten Leuten darin.",
+        "switch": "Wechseln zwischen Kanälen und Spaces geht schneller: Ein Kanal, den du bei der neuesten Nachricht verlassen hast, ist sofort wieder da.",
+        "motion": "Dekorationen und animierte Profilbilder stehen in Listen und Chats still, bis du auf jemanden zeigst, und bewegen sich im Profil wie bisher.",
+        "stuck": "Behoben: Nach einem Space-Wechsel konnten Kanalliste und Mitgliederliste dauerhaft im Laden hängen bleiben."
+      }
+    },
     "1.38.0": {
       "title": "Dekorationen selbst gemacht",
       "items": {

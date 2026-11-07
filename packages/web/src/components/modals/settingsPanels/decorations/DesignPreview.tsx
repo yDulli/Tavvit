@@ -20,7 +20,9 @@ export type DesignChoice = FrameChoice | EffectChoice | NameplateChoice | NameEf
 /**
  * A picture of what a design does, the same for Tavvit's designs and those people made: the
  * person's picture in a frame, their banner under an effect, their row over a nameplate, their
- * name in a style (in the typeface they chose). `tile` fits a design's tile; `large` is for
+ * name in a style (in the typeface they chose). `tile` fits a design's tile, and stands still until
+ * the tile (a `.deco-hover`) is pointed at, as dozens of them moving at once kept a processor busy;
+ * `large` is for
  * making one, at the sizes it is worn at: the frame on a profile and in a list, the effect over a
  * whole small profile card, the nameplate behind a row of a member list, the name as a profile
  * shows it.
@@ -36,7 +38,7 @@ export function DesignPreview({ kind, design, look, font, size = 'tile' }: {
   const large = size === 'large';
   switch (kind) {
     case 'frame':
-      if (!large) return <Avatar {...avatarProps} size={36} frame={design as FrameChoice | null} frameMotion="on" />;
+      if (!large) return <Avatar {...avatarProps} size={36} frame={design as FrameChoice | null} frameMotion="hover" />;
       return (
         <span className="flex items-center gap-10">
           <Avatar {...avatarProps} size={80} frame={design as FrameChoice | null} frameMotion="on" />
@@ -47,7 +49,7 @@ export function DesignPreview({ kind, design, look, font, size = 'tile' }: {
       if (!large) {
         return (
           <span className="relative block h-full w-full overflow-hidden" style={{ ...look.banner, '--deco-scale': 0.5 } as CSSProperties}>
-            <ProfileEffectLayer effect={design as EffectChoice | null} />
+            <ProfileEffectLayer effect={design as EffectChoice | null} motion="hover" />
           </span>
         );
       }
@@ -72,7 +74,7 @@ export function DesignPreview({ kind, design, look, font, size = 'tile' }: {
             ? 'relative isolate flex h-12 w-72 items-center gap-2.5 overflow-hidden rounded-md bg-surface-channel px-3 text-left'
             : 'relative isolate flex h-full w-full items-center gap-2 bg-surface-channel px-2.5'}
         >
-          <NameplateLayer nameplate={design as NameplateChoice | null} colors={look.colors} />
+          <NameplateLayer nameplate={design as NameplateChoice | null} colors={look.colors} motion={large ? 'on' : 'hover'} />
           <Avatar {...avatarProps} size={large ? 32 : 22} />
           <span className={`truncate font-medium text-txt-primary ${large ? 'text-ui' : 'text-meta'}`}>{look.name}</span>
         </span>
@@ -83,6 +85,7 @@ export function DesignPreview({ kind, design, look, font, size = 'tile' }: {
           font={font}
           effect={design as NameEffectChoice | null}
           colors={look.colors}
+          motion={large ? 'on' : 'hover'}
           className={`truncate px-2 font-semibold text-txt-primary ${large ? 'text-title' : 'text-ui'}`}
         >
           {look.name}
@@ -106,7 +109,7 @@ export function DesignTile({ selected, onSelect, preview, title, detail, actions
 }) {
   return (
     <div
-      className={`relative rounded-lg border p-2 transition-colors duration-100 ${
+      className={`deco-hover relative rounded-lg border p-2 transition-colors duration-100 ${
         selected ? 'border-accent-primary bg-accent-primary/[0.06]' : 'border-border-hard hover:border-interactive-muted hover:bg-interactive-hover'
       }`}
     >

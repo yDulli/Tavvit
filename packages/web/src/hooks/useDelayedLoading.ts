@@ -4,6 +4,12 @@ import { useState, useEffect, useRef } from 'react';
  * Gates a loading boolean behind a delay threshold to prevent skeleton flicker.
  * - Shows nothing for the first `threshold` ms (default 200)
  * - Once shown, keeps skeleton visible for at least `minDisplay` ms (default 300)
+ *
+ * Both effects follow `isLoading` and `show` together. The skeleton can appear in the same moment
+ * the loading ends (the threshold timer's update and the store's land in one turn, and React
+ * applies the store's first): an effect that followed `isLoading` alone saw "done" while nothing
+ * was shown yet, never ran again once the skeleton did show, and left it on screen for good, its
+ * shimmer running.
  */
 export function useDelayedLoading(
   isLoading: boolean,
@@ -13,46 +19,31 @@ export function useDelayedLoading(
   const minDisplay = options?.minDisplay ?? 300;
 
   const [show, setShow] = useState(false);
-  const thresholdRef = useRef<ReturnType<typeof setTimeout>>();
-  const minDisplayRef = useRef<ReturnType<typeof setTimeout>>();
-  const displayStartRef = useRef(0);
+  // When the skeleton appeared: stamped once per showing, so loading that stops and starts again
+  // while it shows does not push its end further out.
+  const shownAtRef = useRef(0);
 
+  // Appear once loading has lasted `threshold`.
   useEffect(() => {
-    if (isLoading) {
-      thresholdRef.current = setTimeout(() => {
-        // Only stamp displayStart on the first false→true transition. Re-firing
-        // the threshold while `show` is already true (which happens when
-        // `isLoading` cycles true→false→true with each `true` segment ≥ threshold)
-        // must not refresh the deadline — otherwise the next `false` reschedules
-        // minDisplay from a fresh start and the skeleton never reaches its real
-        // hide point. setShow's functional form lets us read the latest value
-        // without a closure-stale `show`.
-        setShow((prev) => {
-          if (!prev) displayStartRef.current = Date.now();
-          return true;
-        });
-      }, threshold);
-    } else {
-      // Loading finished — clear threshold timer if it hasn't fired yet
-      clearTimeout(thresholdRef.current);
+    if (!isLoading || show) return undefined;
+    const timer = setTimeout(() => {
+      shownAtRef.current = Date.now();
+      setShow(true);
+    }, threshold);
+    return () => clearTimeout(timer);
+  }, [isLoading, show, threshold]);
 
-      if (show) {
-        // Skeleton is visible — enforce minimum display time
-        const elapsed = Date.now() - displayStartRef.current;
-        const remaining = minDisplay - elapsed;
-        if (remaining > 0) {
-          minDisplayRef.current = setTimeout(() => setShow(false), remaining);
-        } else {
-          setShow(false);
-        }
-      }
+  // Go once loading is over, after at least `minDisplay` on screen.
+  useEffect(() => {
+    if (isLoading || !show) return undefined;
+    const remaining = minDisplay - (Date.now() - shownAtRef.current);
+    if (remaining <= 0) {
+      setShow(false);
+      return undefined;
     }
-
-    return () => {
-      clearTimeout(thresholdRef.current);
-      clearTimeout(minDisplayRef.current);
-    };
-  }, [isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+    const timer = setTimeout(() => setShow(false), remaining);
+    return () => clearTimeout(timer);
+  }, [isLoading, show, minDisplay]);
 
   return show;
 }

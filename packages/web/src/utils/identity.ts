@@ -68,6 +68,10 @@ export function homeHostOf(value: string): string {
   return (stripped.split('/')[0] ?? '').split(':')[0]!.toLowerCase();
 }
 
+/** Hosts already worked out, by origin; bounded, as an origin can come from anywhere. */
+const hostOfOrigin = new Map<string, string>();
+const HOSTS_KEPT = 256;
+
 /**
  * The host an origin or `homeInstance` value names, as written (port kept):
  *
@@ -80,14 +84,19 @@ export function homeHostOf(value: string): string {
  */
 export function normalizeOriginToHost(input: string | null | undefined): string {
   if (!input) return '';
-  if (input.includes('://')) {
-    try {
-      return new URL(input).host;
-    } catch {
-      return '';
-    }
+  if (!input.includes('://')) return input;
+  // A client knows a handful of origins and asks about them for every row a list renders.
+  const known = hostOfOrigin.get(input);
+  if (known !== undefined) return known;
+  let host = '';
+  try {
+    host = new URL(input).host;
+  } catch {
+    host = '';
   }
-  return input;
+  if (hostOfOrigin.size >= HOSTS_KEPT) hostOfOrigin.clear();
+  hostOfOrigin.set(input, host);
+  return host;
 }
 
 /**

@@ -477,7 +477,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => {
       const newPositions = new Map(state.scrollPositions);
       newPositions.set(channelId, anchor);
-      return { scrollPositions: newPositions };
+      // A channel left at its newest message keeps only its newest page: coming back to it draws
+      // 50 rows instead of up to 200, and older ones load again as the person scrolls up. One left
+      // somewhere older keeps all it holds, so the view comes back to that place.
+      const held = state.messages.get(channelId);
+      if (anchor.kind !== 'bottom' || state.detachedChannels.has(channelId) || !held || held.length <= HISTORY_PAGE_LIMIT) {
+        return { scrollPositions: newPositions };
+      }
+      const messages = new Map(state.messages);
+      messages.set(channelId, held.slice(held.length - HISTORY_PAGE_LIMIT));
+      const hasMore = new Map(state.hasMore);
+      hasMore.set(channelId, true);
+      return { scrollPositions: newPositions, messages, hasMore };
     });
   },
 

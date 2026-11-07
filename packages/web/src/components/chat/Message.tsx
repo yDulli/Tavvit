@@ -28,7 +28,8 @@ import { ExternalImage } from '../ui/ExternalMedia';
 import { useAuthStore, useSelfIdentity } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useMessageSelection } from '../../stores/messageSelectionStore';
-import { getApiForOrigin, selectMyRoleIdsInChannel, useSpaceStore } from '../../stores/spaceStore';
+import { listScrolledJustNow } from '../../utils/listScroll';
+import { getApiForOrigin, memberByUserId, selectMyRoleIdsInChannel, useSpaceStore } from '../../stores/spaceStore';
 import { describeError } from '../../i18n/errors';
 import { useUIStore } from '../../stores/uiStore';
 import { AttachmentList, AttachmentRenderer, attUrlOf } from './AttachmentRenderer';
@@ -193,13 +194,23 @@ const AUTHOR_DEFAULT_COLOR: React.CSSProperties = { color: 'rgb(var(--text-prima
 /** A name without decorations has no colours of its own to give. */
 const NO_COLORS = { a: 'transparent', b: 'transparent' };
 
-export function Message({ message, isCompact, isFirstInGroup, previousMessageId }: MessageProps) {
+/**
+ * One message of a list. Kept as it is when the list renders again for its own state (at the
+ * bottom or not, a page loading): a row whose message, grouping and neighbour did not change has
+ * nothing new to show, and a channel holds up to 200 of them.
+ */
+export const Message = React.memo(function Message({ message, isCompact, isFirstInGroup, previousMessageId }: MessageProps) {
   const { t } = useTranslation(['chat', 'common']);
   const fmt = useFormatters();
   const [isHovered, setIsHovered] = useState(false);
   // The hover bar hangs over the row above; a row at the very top of the list
   // has nothing above it to hang over, and the bar would be cut in half.
   const [toolbarInside, setToolbarInside] = useState(false);
+  const enterRow = (row: HTMLElement) => {
+    const list = row.closest('.overflow-y-auto');
+    setToolbarInside(!!list && row.getBoundingClientRect().top - list.getBoundingClientRect().top < TOOLBAR_OVERHANG_PX);
+    setIsHovered(true);
+  };
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // The reaction picker, and what opened it: the "+" of the hover bar, or the
   // message menu ('row'). On desktop it hangs off that button or the message
@@ -211,10 +222,11 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const rowRef = useRef<HTMLDivElement>(null);
   const currentUser = useAuthStore((s) => s.user);
   const editMessage = useChatStore((s) => s.editMessage);
-  const editingMessageId = useChatStore((s) => s.editingMessageId);
+  // Every store read below takes only what this row shows: a whole map or list would re-render
+  // every message of the channel on any change in it (a presence update, an upload's progress).
+  const isEditingThis = useChatStore((s) => s.editingMessageId === message.id);
   const setEditingMessage = useChatStore((s) => s.setEditingMessage);
   const deleteMessage = useChatStore((s) => s.deleteMessage);
-  const members = useSpaceStore((s) => s.members);
   const openUserProfile = useUIStore((s) => s.openUserProfile);
   const isMobile = useUIStore((s) => s.isMobile);
   const jumpToMessage = useMessageJump();
@@ -226,25 +238,24 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const [justArrived] = useState(() => Date.now() - message.createdAt < JUST_ARRIVED_MS);
   const [reactionsAtStart] = useState(() => new Set((message.reactions ?? []).map((reaction) => reaction.emoji)));
   const showInteractions = !pending;
-  const isEditing = !pending && editingMessageId === message.id;
+  const isEditing = !pending && isEditingThis;
 
-  const transfersForRow = useTransferStore((s) => s.transfers);
-  const inMemoryFiles = useTransferStore((s) => s.hasInMemoryFile);
-  const anyTransferTerminallyBad = !!pending && pending.transferIds.some((tid) => {
-    const t = transfersForRow.get(tid);
-    return t && (t.state === 'failed' || t.state === 'aborted');
-  });
+  // Only a message still being sent has transfers; every other row reads a constant here.
+  const anyTransferTerminallyBad = useTransferStore((s) => !!pending && pending.transferIds.some((tid) => {
+    const t = s.transfers.get(tid);
+    return !!t && (t.state === 'failed' || t.state === 'aborted');
+  }));
   const showRetryDiscardRow = pending?.state === 'failed' || anyTransferTerminallyBad;
   // Retry is only feasible when we can re-source the bytes for every transfer in the
   // pending row — either the in-memory File ref still exists (same-session retry)
   // or a persisted FileSystemFileHandle can reacquire the bytes (Chrome/Edge drag-drop).
   // After a reload (or post-redeploy refresh) without a handle, both are gone, and
   // showing a Retry button that silently no-ops would strand the user. Hide it instead.
-  const canRetry = !!pending && pending.transferIds.every((tid) => {
-    const t = transfersForRow.get(tid);
+  const canRetry = useTransferStore((s) => !!pending && pending.transferIds.every((tid) => {
+    const t = s.transfers.get(tid);
     if (!t || t.type !== 'upload') return false;
-    return inMemoryFiles.has(tid) || !!t.fileHandleId;
-  });
+    return s.hasInMemoryFile.has(tid) || !!t.fileHandleId;
+  }));
 
   const channelKey: string = isPendingMessage(message)
     ? message.channelId || message.dmChannelId || ''
@@ -267,8 +278,7 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const stopEditing = () => {
     setEditingMessage(null);
   };
-  const channelPermissions = useSpaceStore((s) => s.channelPermissions);
-  const myChPerms = channelPermissions.get(message.channelId);
+  const myChPerms = useSpaceStore((s) => s.channelPermissions.get(message.channelId));
   const isDmMessage = isPendingMessage(message)
     ? !!message.dmChannelId || !message.channelId
     : !!(message as MessageWithUser & { dmChannelId?: string }).dmChannelId || !message.channelId;
@@ -282,14 +292,14 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
   const dmChannelId = isPendingMessage(message)
     ? message.dmChannelId
     : (message as MessageWithUser & { dmChannelId?: string }).dmChannelId;
-  const dmChannels = useSpaceStore((s) => s.dmChannels);
   // Read-only enforcement (client mirror of the server guard): a dead 1-on-1 DM
   // (partner tombstoned) accepts no reaction mutations. Existing reactions still
   // DISPLAY, but the add/toggle affordances are withdrawn since the server drops them.
-  const isDeadDmThread = !!dmChannelId && (() => {
-    const dm = dmChannels.find(d => d.id === dmChannelId);
+  const isDeadDmThread = useSpaceStore((s) => {
+    if (!dmChannelId) return false;
+    const dm = s.dmChannels.find((d) => d.id === dmChannelId);
     return dm ? isDeletedPartnerDm(dm, { self, origin: messageOrigin }) : false;
-  })();
+  });
   const canManageMessages = hasPermissionBit(myChPerms, PermissionBits.MANAGE_MESSAGES);
   const canSendMessages = isDmMessage || hasPermissionBit(myChPerms, PermissionBits.SEND_MESSAGES);
   // A webhook or a followed channel writes here: there is no person behind the name to open.
@@ -516,21 +526,24 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
     : (_rawMsgUser ? _canonicalMsgUser : message.user);
   const displayOrigin = isAuthor && currentUser ? '' : messageOrigin;
 
-  const spaces = useSpaceStore((s) => s.spaces);
   const currentSpaceId = useSpaceStore((s) => s.currentSpaceId);
-  const currentSpace = spaces.find(s => s.id === currentSpaceId);
-  const ownerId = currentSpace?.ownerId;
+  const ownerId = useSpaceStore((s) => s.spaces.find((space) => space.id === s.currentSpaceId)?.ownerId);
+  const currentSpaceOrigin = useSpaceStore((s) => s.spaces.find((space) => space.id === s.currentSpaceId)?._instanceOrigin ?? '');
 
   // The author's row in the space's roster: it gives the name colour and the
   // nickname. message.userId is the id on the space's instance, the id the
-  // loaded member list carries. A DM has no roster.
-  const spaceMemberOf = (userId: string) => (isDmMessage ? undefined : members.find(m => m.userId === userId));
+  // loaded member list carries. A DM has no roster. The row reads only the two
+  // people it shows, the author and whoever it replies to.
+  const replyToUserId = message.replyTo?.userId;
+  const authorRow = useSpaceStore((s) => (isDmMessage ? undefined : memberByUserId(s.members, message.userId)));
+  const replyRow = useSpaceStore((s) => (isDmMessage || !replyToUserId ? undefined : memberByUserId(s.members, replyToUserId)));
+  const spaceMemberOf = (userId: string) => (userId === message.userId ? authorRow : userId === replyToUserId ? replyRow : undefined);
   const displayName = spaceMemberName(spaceMemberOf(message.userId), displayIdentity);
   // The picture a member set for this space stands in for their account's;
   // it is a file on the space's instance.
   const spaceAvatarOf = (userId: string): string | null => {
     const avatar = spaceMemberOf(userId)?.avatar;
-    return avatar ? resolveAssetUrl(avatar, currentSpace?._instanceOrigin ?? '') ?? null : null;
+    return avatar ? resolveAssetUrl(avatar, currentSpaceOrigin) ?? null : null;
   };
 
   const getMemberDisplayColor = (userId: string): React.CSSProperties => {
@@ -642,10 +655,13 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       } : undefined}
       // Mine came up when I sent it; the row the server's copy replaces it with stays put.
       className={`msg-row deco-hover ${justArrived && (pending || !isOwnMessage) ? 'msg-new ' : ''}group relative flex gap-3 mx-2 px-3 rounded-md transition-colors duration-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-primary/60 ${isFirstInGroup || message.replyTo ? 'msg-first' : ''}`}
+      // A row the list scrolls under a still pointer takes no hover (utils/listScroll.ts); the next
+      // move of the pointer over it does.
       onMouseEnter={(e) => {
-        const list = e.currentTarget.closest('.overflow-y-auto');
-        setToolbarInside(!!list && e.currentTarget.getBoundingClientRect().top - list.getBoundingClientRect().top < TOOLBAR_OVERHANG_PX);
-        setIsHovered(true);
+        if (!listScrolledJustNow()) enterRow(e.currentTarget);
+      }}
+      onMouseMove={(e) => {
+        if (!isHovered && !listScrolledJustNow()) enterRow(e.currentTarget);
       }}
       onMouseLeave={() => {
         setIsHovered(false);
@@ -1043,4 +1059,4 @@ export function Message({ message, isCompact, isFirstInGroup, previousMessageId 
       {content}
     </div>
   );
-}
+});

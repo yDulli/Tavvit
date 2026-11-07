@@ -67,6 +67,7 @@
   opacity: 0;
   transform-origin: 50% 100%;
   animation: decoNote 3.6s ease-out infinite;
+  animation-name: var(--deco-move, decoNote);
 }
 
 .deco-art-note.deco-art-late {
@@ -84,6 +85,7 @@
 .deco-art-ear {
   transform-origin: 46% 92%;
   animation: decoEar 5.2s ease-in-out infinite;
+  animation-name: var(--deco-move, decoEar);
 }
 
 .deco-art-ear.deco-art-late {
@@ -102,6 +104,7 @@
 .deco-art-crown {
   transform-origin: 50% 100%;
   animation: decoCrown 5s ease-in-out infinite;
+  animation-name: var(--deco-move, decoCrown);
 }
 
 @keyframes decoCrown {
@@ -112,6 +115,7 @@
 .deco-art-pop {
   transform-origin: 50% 50%;
   animation: decoPop 3.4s ease-in-out infinite;
+  animation-name: var(--deco-move, decoPop);
 }
 
 .deco-art-pop.deco-art-late {
@@ -128,6 +132,7 @@
 .deco-art-wing {
   transform-origin: 92% 80%;
   animation: decoWing 2.8s ease-in-out infinite;
+  animation-name: var(--deco-move, decoWing);
 }
 
 @keyframes decoWing {
@@ -138,6 +143,7 @@
 .deco-art-float {
   transform-origin: 50% 50%;
   animation: decoHover 3.6s ease-in-out infinite;
+  animation-name: var(--deco-move, decoHover);
 }
 
 @keyframes decoHover {
@@ -149,6 +155,7 @@
 .deco-art-bow {
   transform-origin: 50% 30%;
   animation: decoBow 4.8s ease-in-out infinite;
+  animation-name: var(--deco-move, decoBow);
 }
 
 @keyframes decoBow {
@@ -161,6 +168,7 @@
   opacity: 0;
   transform-origin: 50% 50%;
   animation: decoDrift 4.6s ease-in infinite;
+  animation-name: var(--deco-move, decoDrift);
 }
 
 @keyframes decoDrift {
@@ -174,6 +182,7 @@
 .deco-art-flame {
   transform-origin: 50% 100%;
   animation: decoFlicker 1s ease-in-out infinite alternate;
+  animation-name: var(--deco-move, decoFlicker);
 }
 
 .deco-art-flame.deco-art-late {
@@ -189,6 +198,7 @@
 .deco-art-sway {
   transform-origin: 50% 50%;
   animation: decoRock 4.4s ease-in-out infinite;
+  animation-name: var(--deco-move, decoRock);
 }
 
 @keyframes decoRock {
@@ -199,6 +209,7 @@
 .deco-art-twinkle {
   transform-origin: 50% 50%;
   animation: decoTwinkleShape 2.8s ease-in-out infinite;
+  animation-name: var(--deco-move, decoTwinkleShape);
 }
 
 .deco-art-twinkle.deco-art-late {
@@ -215,6 +226,7 @@
   opacity: 0;
   transform-origin: 50% 50%;
   animation: decoRiseBy 3.8s ease-out infinite;
+  animation-name: var(--deco-move, decoRiseBy);
 }
 
 .deco-art-rise.deco-art-late {
@@ -232,6 +244,7 @@
 .deco-art[data-motion='on'] .deco-art-doodle {
   stroke-dasharray: 100;
   animation: decoDraw 1.1s var(--ease-out, ease-out) both;
+  animation-name: var(--deco-move, decoDraw);
 }
 
 @keyframes decoDraw {
@@ -534,6 +547,7 @@
 .deco-art-disc-turn {
   transform-origin: 50% 50%;
   animation: decoSpin 2.4s linear infinite;
+  animation-name: var(--deco-move, decoSpin);
 }
 
 @keyframes decoSpin {
@@ -545,6 +559,7 @@
 
 .deco-art-window {
   animation: decoWindow 4.2s steps(1, end) infinite;
+  animation-name: var(--deco-move, decoWindow);
 }
 
 @keyframes decoWindow {
@@ -555,6 +570,7 @@
 
 .deco-art-beacon {
   animation: decoBeacon 2s ease-in-out infinite;
+  animation-name: var(--deco-move, decoBeacon);
 }
 
 @keyframes decoBeacon {
@@ -575,6 +591,7 @@
 .deco-nameplate[data-nameplate='sakura'] i {
   top: -6px;
   animation: decoPlatePetal var(--t) ease-in-out var(--d) infinite;
+  animation-name: var(--deco-move, decoPlatePetal);
 }
 
 @keyframes decoPlatePetal {
@@ -586,6 +603,7 @@
 .deco-nameplate[data-nameplate='snow'] i {
   top: -8px;
   animation: decoPlateFlake var(--t) linear var(--d) infinite;
+  animation-name: var(--deco-move, decoPlateFlake);
 }
 
 @keyframes decoPlateFlake {
@@ -600,6 +618,7 @@
 .deco-nameplate[data-nameplate='rain'] i {
   top: 40%;
   animation: decoPlateDrop var(--t) linear var(--d) infinite;
+  animation-name: var(--deco-move, decoPlateDrop);
 }
 
 @keyframes decoPlateDrop {
@@ -617,6 +636,7 @@
   bottom: 40%;
   opacity: 0;
   animation: decoSpark var(--t) ease-out var(--d) infinite;
+  animation-name: var(--deco-move, decoSpark);
 }
 
 @keyframes decoSpark {
@@ -629,13 +649,14 @@
 .deco-nameplate[data-nameplate='starlit'] i {
   top: calc(var(--y) * 0.5);
   animation: decoTwinkle var(--t) ease-in-out var(--d) infinite;
+  animation-name: var(--deco-move, decoTwinkle);
 }
 
 /* Waves: the sea rolling along, a boat rocking on it. */
 .deco-art-sea { aspect-ratio: 80 / 40; }
 
-.deco-art-waves-back { animation: decoSwell 6s linear infinite; }
-.deco-art-waves-front { animation: decoSwell 4s linear infinite; }
+.deco-art-waves-back { animation: decoSwell 6s linear infinite; animation-name: var(--deco-move, decoSwell); }
+.deco-art-waves-front { animation: decoSwell 4s linear infinite; animation-name: var(--deco-move, decoSwell); }
 
 @keyframes decoSwell {
   from { transform: translateX(0); }
@@ -645,6 +666,7 @@
 .deco-art-boat {
   transform-origin: 50% 100%;
   animation: decoBoat 3.2s ease-in-out infinite;
+  animation-name: var(--deco-move, decoBoat);
 }
 
 @keyframes decoBoat {
@@ -657,6 +679,7 @@
 
 .deco-art-birds {
   animation: decoBirds 3s ease-in-out infinite alternate;
+  animation-name: var(--deco-move, decoBirds);
 }
 
 @keyframes decoBirds {
@@ -670,6 +693,7 @@
 .deco-art-tree {
   transform-origin: 50% 100%;
   animation: decoTree 4s ease-in-out infinite;
+  animation-name: var(--deco-move, decoTree);
 }
 
 .deco-art-tree:nth-of-type(2n) {
@@ -687,6 +711,7 @@
 .deco-art-pennant {
   transform-origin: 50% 0;
   animation: decoPennant 2.4s ease-in-out infinite alternate;
+  animation-name: var(--deco-move, decoPennant);
 }
 
 @keyframes decoPennant {
@@ -714,6 +739,7 @@
   color: transparent;
   -webkit-text-fill-color: transparent;
   animation: decoInkFlow var(--deco-flow, 6s) linear infinite;
+  animation-name: var(--deco-move, decoInkFlow);
 }
 
 @keyframes decoInkFlow {
@@ -726,6 +752,7 @@
   --deco-ink: linear-gradient(100deg, rgb(var(--text-primary)) 0 40%, #ffffff 50%, rgb(var(--text-primary)) 60% 100%);
   background-size: 300% 100%;
   animation: decoGlint 4.2s ease-in-out infinite;
+  animation-name: var(--deco-move, decoGlint);
 }
 
 @keyframes decoGlint {
@@ -803,6 +830,7 @@
     linear-gradient(100deg, #6e5cff, #c56bff 30%, #4fa8ff 60%, #6e5cff);
   background-size: 13px 11px, 17px 14px, 200% 100%;
   animation: decoGalaxy 8s linear infinite;
+  animation-name: var(--deco-move, decoGalaxy);
 }
 
 @keyframes decoGalaxy {
@@ -815,6 +843,7 @@
   background-image: repeating-linear-gradient(-45deg, #ff4f68 0 3.5px, #ffffff 3.5px 7px);
   background-size: auto;
   animation: decoStripes 1.4s linear infinite;
+  animation-name: var(--deco-move, decoStripes);
 }
 
 @keyframes decoStripes {
@@ -867,6 +896,7 @@
   -webkit-text-fill-color: rgb(var(--text-primary));
   text-shadow: 1.4px 0 0 rgb(255 60 120 / 0.85), -1.4px 0 0 rgb(40 220 255 / 0.85);
   animation: decoGlitch 2.8s steps(1, end) infinite;
+  animation-name: var(--deco-move, decoGlitch);
 }
 
 @keyframes decoGlitch {
@@ -886,6 +916,7 @@
   display: inline-block;
   color: color-mix(in srgb, var(--deco-a) calc(100% - var(--p, 0) * 100%), var(--deco-b));
   animation: decoWave 1.8s ease-in-out infinite;
+  animation-name: var(--deco-move, decoWave);
   animation-delay: calc(var(--i, 0) * 0.07s);
 }
 
@@ -987,6 +1018,21 @@
   display: none;
 }
 
+/* A person's or a space's animated picture (Avatar.tsx, StillPicture.tsx) the
+ * same way: its first frame on a canvas, the moving picture only while the row
+ * around it is pointed at. */
+.avatar-picture .avatar-moving {
+  display: none;
+}
+
+.deco-hover:is(:hover, :focus-visible, :focus-within) .avatar-picture[data-motion='hover'] .avatar-moving {
+  display: block;
+}
+
+.deco-hover:is(:hover, :focus-visible, :focus-within) .avatar-picture[data-motion='hover'] .avatar-still {
+  display: none;
+}
+
 /* Made name styles: a look, and the maker's colours (`--c1` to `--c3`). */
 .deco-name[data-name-made='gradient'],
 .deco-name[data-name-made='flow'] {
@@ -1004,6 +1050,7 @@
   background-image: linear-gradient(100deg, var(--c1), var(--c2), var(--c3, var(--c1)), var(--c1));
   background-size: 200% 100%;
   animation: decoInkFlow 6s linear infinite;
+  animation-name: var(--deco-move, decoInkFlow);
 }
 
 .deco-name[data-name-made='wave'] {
@@ -1044,6 +1091,7 @@
   -webkit-text-fill-color: var(--c1);
   text-shadow: 1.4px 0 0 var(--c2), -1.4px 0 0 var(--c3);
   animation: decoGlitchMade 2.8s steps(1, end) infinite;
+  animation-name: var(--deco-move, decoGlitchMade);
 }
 
 @keyframes decoGlitchMade {
@@ -1062,18 +1110,30 @@
   animation: none;
 }
 
-/* `hover`: only while the row or card around it is pointed at or focused. */
-.deco-art[data-motion='hover'] *,
-.deco-nameplate[data-motion='hover'] *,
-.deco-name[data-motion='hover'],
-.deco-name[data-motion='hover'] .deco-name-letter {
+/* `hover`: only while the row or card around it is pointed at or focused. At
+ * rest a frame, a nameplate or a name has no animation at all, rather than a
+ * paused one: a paused animation still holds a compositing layer of its own,
+ * and so does everything it overlaps, so a list of a hundred people was
+ * hundreds of layers, and scrolling it went into arranging them. Every part
+ * names its animation through `--deco-move` (`animation-name: var(--deco-move,
+ * …)`), which is `none` where the decoration rests and unset where it moves. */
+[data-motion='off'],
+[data-motion='hover'] {
+  --deco-move: none;
+}
+
+[data-motion='on'],
+.deco-hover:is(:hover, :focus-visible, :focus-within) [data-motion='hover'] {
+  --deco-move: initial;
+}
+
+/* An effect in a picker's tile stands still, caught mid-way, until the tile is
+ * pointed at: dozens of effects moving at once kept a processor busy. */
+.deco-effect[data-motion='hover'] * {
   animation-play-state: paused;
 }
 
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-art[data-motion='hover'] *,
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-nameplate[data-motion='hover'] *,
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-name[data-motion='hover'],
-.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-name[data-motion='hover'] .deco-name-letter {
+.deco-hover:is(:hover, :focus-visible, :focus-within) .deco-effect[data-motion='hover'] * {
   animation-play-state: running;
 }
 
@@ -1114,8 +1174,13 @@ html[data-motion='reduce'] .deco-made-moving {
   display: none !important;
 }
 
-html[data-motion='reduce'] .deco-made-still {
+html[data-motion='reduce'] .deco-made-still,
+html[data-motion='reduce'] .avatar-still {
   display: block !important;
+}
+
+html[data-motion='reduce'] .avatar-moving {
+  display: none !important;
 }
 
 html[data-motion='reduce'] .deco-effect[data-effect='made'] {
@@ -1144,8 +1209,13 @@ html[data-motion='reduce'] .deco-effect[data-effect='made'] {
     display: none !important;
   }
 
-  .deco-made-still {
+  .deco-made-still,
+  .avatar-still {
     display: block !important;
+  }
+
+  .avatar-moving {
+    display: none !important;
   }
 
   .deco-effect[data-effect='made'] {

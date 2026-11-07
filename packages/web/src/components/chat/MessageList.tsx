@@ -7,6 +7,7 @@ import { Message } from './Message';
 import { BlockedRunNotice } from './BlockedRunNotice';
 import { useBlockStore } from '../../stores/blockStore';
 import { EMPTY_BLOCKED_PLAN, planBlockedRuns } from '../../utils/blockedRuns';
+import { noteListScroll } from '../../utils/listScroll';
 import { ChannelIcon } from '../ui/ChannelIcon';
 import { useChatStore, type LoadAroundResult, type LoadNewerResult } from '../../stores/chatStore';
 import { useSpaceStore, useIsDmChannel, getChannelOrigin } from '../../stores/spaceStore';
@@ -105,15 +106,30 @@ function rowOffset(container: HTMLElement, row: HTMLElement): number {
   return layoutPixels(row.getBoundingClientRect().top - container.getBoundingClientRect().top);
 }
 
-/** The first row with a server id whose bottom edge is below the viewport's top edge. */
+/**
+ * The first row with a server id whose bottom edge is below the viewport's top edge. Rows stand
+ * top to bottom in document order, so this halves its way there: it runs on every scroll, and
+ * measuring every row above the view, up to 200 of them, cost a frame's time on its own.
+ */
 function topmostVisibleRow(container: HTMLElement): HTMLElement | null {
   const top = container.getBoundingClientRect().top;
-  for (const row of container.querySelectorAll<HTMLElement>('[id^="msg-"]')) {
-    if (!ANCHORABLE_ROW.test(row.id)) continue;
-    if (row.getBoundingClientRect().bottom > top) return row;
+  const rows = [...container.querySelectorAll<HTMLElement>('[id^="msg-"]')].filter((row) => ANCHORABLE_ROW.test(row.id));
+  let low = 0;
+  let high = rows.length - 1;
+  let found: HTMLElement | null = null;
+  while (low <= high) {
+    const middle = (low + high) >> 1;
+    const row = rows[middle]!;
+    if (row.getBoundingClientRect().bottom > top) {
+      found = row;
+      high = middle - 1;
+    } else {
+      low = middle + 1;
+    }
   }
-  return null;
+  return found;
 }
+
 
 /** True when `id` falls between the oldest and newest server ids in `ids`. */
 function idWithinRows(id: string, ids: readonly string[]): boolean {
@@ -1056,6 +1072,7 @@ export function MessageList({ channelId, jumpToMessageId, onJumpHandled, top }: 
     // The user moved the view. An event at the list's last offset from here
     // on is a coincidence, not the list's own.
     appliedScrollTopRef.current = null;
+    noteListScroll();
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
 
     // While a smooth scroll we started animates toward the bottom, its frames

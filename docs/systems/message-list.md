@@ -58,6 +58,12 @@ The list holds its view to one anchor, `anchorRef` (`ScrollAnchor` in `scrollAnc
 
 **User scrolls move the anchor.** `handleScroll` treats an event as the list's own, or as caused by layout, when the offset equals the one it last applied or the scroll geometry changed since it last measured (the browser clamping the offset after content shrank); it re-applies the anchor and returns. Anything else is the user: the anchor becomes the bottom within 150 px (`AT_BOTTOM_THRESHOLD_PX`) of it, otherwise the topmost visible row with a server id and its offset. While a `'bottom'` smooth scroll we started is animating, the anchor stays at the bottom unless the user has wheeled more than 5000 px away. `isNearBottom` (within 5000 px) only decides whether Jump to Present shows.
 
+**What a scroll costs.** It runs on every scroll event, so it is kept small (1.38.1):
+
+- `topmostVisibleRow` finds the row by halving: rows stand top to bottom in document order, and measuring every row above the view, up to 200, took a frame's time on its own.
+- A user scroll notes itself (`noteListScroll`, `utils/listScroll.ts`), and for 150 ms after it a row takes no hover (`listScrolledJustNow` in `Message`'s mouse handlers): a row passing under a still pointer would otherwise measure itself, render its hover bar and start its author's decorations on every frame. The next move of the pointer hovers it. The note is a variable, not an attribute on the list: an attribute that every row's style read (`pointer-events`) made the browser restyle all of them at each start and end of a scroll, which cost more than the hover.
+- `Message` is memoized, and each row reads from the stores only what it shows: its author and the person it replies to (`memberByUserId`, an index of the roster built once per roster), its channel's permissions, whether it is being edited, and, for a message still being sent, its transfers. A row that read the whole roster, every transfer or every conversation rendered again, with all the others, at every presence update, upload tick or new unread.
+
 Manual regression check for the size paths: open a conversation with enough messages to scroll, go to the bottom, then type a multi-line draft, start a reply, attach a file, switch to another window and back, and on a phone open and dismiss the soft keyboard. The newest message stays above the composer throughout. Repeat while reading older messages: the reading position holds. `MessageList.anchor.test.tsx`, `MessageList.jump.test.tsx` (viewport resizing) and `MessageInput.clearance.test.tsx` cover these with simulated geometry.
 
 **A message that just arrived** rises 8px (`.msg-new`, see `design-system.md`, Animations). It is a transform on the row, so it changes no measure the anchor reads, and the composer clearance below the last row takes up what it draws past the content's end.
@@ -137,6 +143,7 @@ A jump that ends without scrolling takes the anchor from the layout (`deriveAnch
 
 - **Storage:** `chatStore.scrollPositions: Map<channelId, ScrollAnchor>`, in-memory Zustand state. The bottom is stored explicitly.
 - **Commit:** the channel layout effect's cleanup saves the anchor of the channel being closed, on a channel switch and on unmount (a remount without a switch, e.g. starting a DM call or visiting Explore and back, comes back to it).
+- **Left at the bottom** (1.38.1): `saveScrollPosition` with a bottom anchor keeps only the channel's newest page (`HISTORY_PAGE_LIMIT`, 50) and sets `hasMore`, so coming back draws 50 rows instead of up to 200 and scrolling up loads the older ones again. A channel left at a message, and a detached window, keep everything they hold.
 - **Use:** a saved message anchor is the open target on the next visit; its row is restored with `loadMessagesAround` if the cache no longer holds it. A saved bottom yields to the first unread message.
 - **Lifetime:** session-only. Lost on reload, app restart, tab close. Across sessions the server's read state decides where a channel opens.
 - **Eviction:** scroll positions are evicted alongside messages when `MAX_CACHED_CHANNELS` (`chatStore.ts`) is exceeded.

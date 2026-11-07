@@ -148,10 +148,28 @@ cherry blossom, a leaf, a cloud, the moon) are drawn once there.
 **Motion** (`data-motion`): `on` moves always, `hover` only while the surrounding `.deco-hover`
 (the row, the message) is pointed at or focused, `off` never. A frame's things that pass by (a note,
 a falling petal or flake, a rising heart or bubble) appear in `hover` mode only then, so a list is
-not full of them. Under Reduce motion everything is still: particles rest where they are scattered,
+not full of them. At rest (`hover` while nothing points at it, and `off`) a frame, a nameplate or a
+name has **no animation at all**, rather than a paused one (1.38.1): a paused animation still holds a
+compositing layer of its own, and so does everything it overlaps, so a channel with its member list
+was 375 layers and scrolling went into arranging them; it is 21 now. Every animated part names its
+animation through `--deco-move` (`animation-name: var(--deco-move, decoSpin)` after its
+`animation`), which is `none` where the decoration rests and unset where it moves;
+`styles/decorationMotion.test.ts` holds every animation of a frame, a nameplate or a name to it.
+Effects are never in lists: in a picker's tile (`ProfileEffectLayer`'s `motion="hover"`) they pause,
+caught mid-way, so the tile still shows what they are. Every tile of the decorations panel rests
+until it is pointed at (the tiles and `OptionCards` are `.deco-hover`), and only the preview at the
+top moves. Under Reduce motion everything is still: particles rest where they are scattered,
 and what only passes by (notes, a falling star) is not shown. Under Higher contrast and in forced
 colours, effects and nameplates are not drawn and a name shows in its plain colour; in forced
 colours a frame is not drawn either.
+
+**Pictures that move** (1.38.1). An animated picture of a person or a space (a GIF or a WebP) moves
+as its frame does (`Avatar`'s `pictureMotion`, by default its `frameMotion`): on a profile always, in
+a list or a message while the row is pointed at, elsewhere never. Where it may not move it stands on
+its first frame, taken once per address and drawn on a canvas (`components/ui/StillPicture.tsx`),
+because an `<img>` of an animated picture decodes and paints frames for as long as it is on screen;
+the moving `<img>` is in the row only for `hover`, hidden until then (`.avatar-picture`). Reduce
+motion keeps the still one. A browser without `createImageBitmap` shows the picture moving.
 
 **Typefaces:** Fraunces, Comfortaa, Caveat, Pixelify Sans, Cinzel and Unbounded, under the SIL Open
 Font License (the licence beside each in `public/fonts/names/`, and in NOTICE), served by the app
@@ -265,7 +283,9 @@ it from there.
 2. Draw it in `decorationArt.tsx` in the set's style (flat tones, a darker outline, light from the
    upper left, no glow), and add it to `frameArt` and `FRAME_LAYERS`, `effectArt`/`effectSprites`
    or `nameplateArt`/`nameplateSprites`; give its particles a shape in `utils/decorations.ts` and
-   its placing and motion in `styles/decorations.css`. It must stand still under Reduce motion, and
+   its placing and motion in `styles/decorations.css`. Every animated part of a frame, a nameplate
+   or a name takes `animation-name: var(--deco-move, <its keyframes>)` after its `animation`, so it
+   has no animation at rest (a test fails otherwise). It must stand still under Reduce motion, and
    a nameplate or effect must go under Higher contrast.
 3. Give it a label in `settings:decorations.*` in every language.
 

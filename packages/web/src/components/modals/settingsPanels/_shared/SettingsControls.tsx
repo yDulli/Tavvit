@@ -180,7 +180,7 @@ export function OptionCards<T extends string>({ labelledBy, value, options, onCh
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(option.id)}
-            className={`rounded-lg border p-2 text-left transition-colors duration-100 ${
+            className={`deco-hover rounded-lg border p-2 text-left transition-colors duration-100 ${
               selected
                 ? 'border-accent-primary bg-accent-primary/[0.06]'
                 : 'border-border-hard hover:border-interactive-muted hover:bg-interactive-hover active:bg-interactive-active'

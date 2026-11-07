@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import type { User } from '@backspace/shared';
 import type { AvatarFrame } from '@backspace/shared/src/decorations';
 import { decorationColors } from '../../utils/decorations';
@@ -7,6 +7,7 @@ import { FRAME_LAYERS, FRAME_VIEW, frameArt, type FrameLayer } from './decoratio
 import { MadeFrame } from './MadeDecorationArt';
 import { isMadeDesign, type FrameChoice } from '../../utils/decorations';
 import { useGatedPicture } from './ExternalMedia';
+import { mayMove, StillPicture, stillsSupported } from './StillPicture';
 
 interface AvatarProps {
   src?: string | null;
@@ -37,6 +38,11 @@ interface AvatarProps {
    * `off` never.
    */
   frameMotion?: DecorationMotion;
+  /**
+   * When an animated picture moves, the same way; unless given, as its frame
+   * does. Where it may not, it stands on its first frame (StillPicture.tsx).
+   */
+  pictureMotion?: DecorationMotion;
 }
 
 /** When a decoration moves (`styles/decorations.css`, "Where they move"). */
@@ -145,7 +151,7 @@ function getDotMetrics(avatarSize: number, ringWidth: number = 0) {
   return { dot, gap, inset: avatarInset + ringWidth };
 }
 
-export function Avatar({ src, name, size = 40, status, className = '', onClick, user, userId, ring, avatarColor, palette = 'user', frame = null, frameMotion = 'off' }: AvatarProps) {
+export function Avatar({ src, name, size = 40, status, className = '', onClick, user, userId, ring, avatarColor, palette = 'user', frame = null, frameMotion = 'off', pictureMotion }: AvatarProps) {
   const initials = name.charAt(0).toUpperCase();
   const address = src
     ? ((src.startsWith('http') || src.startsWith('blob:') || src.startsWith('data:') || src.startsWith('/')) ? src : `/api/uploads/${src}`)
@@ -153,7 +159,13 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
   // A picture on a server this client does not talk to waits for a yes like anything else from
   // there (docs/systems/legal.md): the initials stand in, and that server learns nothing. What the
   // server lets through is checked there too (utils/remoteMedia.ts); this holds wherever it is not.
-  const shown = useGatedPicture(address);
+  const gated = useGatedPicture(address);
+  // A still picture that could not be read gives way to the initials, as a failed <img> does.
+  const [failedAddress, setFailedAddress] = useState<string | null>(null);
+  const shown = gated !== null && gated !== failedAddress ? gated : null;
+  const markFailed = useCallback(() => setFailedAddress(gated), [gated]);
+  const moves = pictureMotion ?? frameMotion;
+  const standsStill = shown !== null && moves !== 'on' && mayMove(shown) && stillsSupported();
   const fontPx = Math.round(size * 0.4);
   const gradient = palette === 'space'
     ? getSpaceGradient(userId, name, avatarColor)
@@ -200,7 +212,15 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
           ...maskStyle,
         }}
       >
-        {shown ? (
+        {shown && standsStill ? (
+          <span role="img" aria-label={name} className="avatar-picture block w-full h-full" data-motion={moves}>
+            <StillPicture address={shown} pixels={size} radius={innerRadius} onFail={markFailed} />
+            {/* Fetched once it shows: until the row is pointed at it is not displayed. */}
+            {moves === 'hover' && (
+              <img src={shown} alt="" loading="lazy" className="avatar-moving w-full h-full object-cover" style={{ borderRadius: innerRadius }} />
+            )}
+          </span>
+        ) : shown ? (
           <img
             src={shown}
             alt={name}

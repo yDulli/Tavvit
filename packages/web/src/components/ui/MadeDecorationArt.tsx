@@ -35,15 +35,15 @@ export function MadePicture({ view, motion, className }: { view: CustomDecoratio
  * profile: Tavvit decides how many pieces there are and how large (`madeEffectParticles`). A piece
  * that does not load (its design was removed since) draws nothing.
  */
-export function MadeEffect({ view, className = '' }: { view: CustomDecorationView; className?: string }) {
+export function MadeEffect({ view, className = '', motion = 'on' }: { view: CustomDecorationView; className?: string; motion?: 'on' | 'hover' }) {
   const moving = useGatedPicture(view.image);
   const still = useGatedPicture(view.still);
   if (!moving) return null;
-  const motion = view.motion ?? 'fall';
+  const moves = view.motion ?? 'fall';
   const pictures = { '--made-moving': cssUrl(moving), '--made-still': cssUrl(still ?? moving) } as CSSProperties;
   return (
-    <div aria-hidden="true" className={`deco-effect ${className}`} data-effect="made" data-made-motion={motion} style={pictures}>
-      {madeEffectParticles(motion).map((particle, index) => <i key={index} style={particleStyle(particle) as CSSProperties} />)}
+    <div aria-hidden="true" className={`deco-effect ${className}`} data-effect="made" data-made-motion={moves} data-motion={motion} style={pictures}>
+      {madeEffectParticles(moves).map((particle, index) => <i key={index} style={particleStyle(particle) as CSSProperties} />)}
     </div>
   );
 }

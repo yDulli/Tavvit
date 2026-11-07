@@ -23,11 +23,16 @@ import { MadeEffect, MadePicture } from './MadeDecorationArt';
  * (`className="z-20"`); a picker's tile can draw it smaller (`--deco-scale`). An effect someone
  * made is a few of their piece, moving as one of these does (`MadeEffect`).
  */
-export function ProfileEffectLayer({ effect, className = '' }: { effect: EffectChoice | null; className?: string }) {
+export function ProfileEffectLayer({ effect, className = '', motion = 'on' }: {
+  effect: EffectChoice | null;
+  className?: string;
+  /** `hover`: a picker's tile, still until it (the `.deco-hover` around it) is pointed at. */
+  motion?: 'on' | 'hover';
+}) {
   if (!effect) return null;
-  if (isMadeDesign(effect)) return <MadeEffect view={effect} className={className} />;
+  if (isMadeDesign(effect)) return <MadeEffect view={effect} className={className} motion={motion} />;
   return (
-    <div aria-hidden="true" className={`deco-effect ${className}`} data-effect={effect} style={effectSprites(effect) ?? undefined}>
+    <div aria-hidden="true" className={`deco-effect ${className}`} data-effect={effect} data-motion={motion} style={effectSprites(effect) ?? undefined}>
       {effectParticles(effect).map((particle, index) => <i key={index} style={particleStyle(particle) as CSSProperties} />)}
       {effectArt(effect)}
     </div>

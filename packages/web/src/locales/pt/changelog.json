@@ -4,6 +4,15 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.38.1": {
+      "title": "Mais fluido",
+      "items": {
+        "scroll": "Rolar um canal e listas longas de membros voltou a ser fluido, mesmo com muitas pessoas decoradas nelas.",
+        "switch": "Trocar entre canais e espaços ficou mais rápido: um canal que você deixou na mensagem mais nova volta na hora.",
+        "motion": "Decorações e fotos de perfil animadas ficam paradas em listas e conversas até você apontar para alguém, e se movem como antes no perfil.",
+        "stuck": "Corrigido: depois de trocar de espaço, a lista de canais e a de membros podiam ficar carregando para sempre."
+      }
+    },
     "1.38.0": {
       "title": "Decorações feitas por você",
       "items": {

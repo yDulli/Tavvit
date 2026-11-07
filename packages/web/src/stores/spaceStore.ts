@@ -1614,6 +1614,23 @@ export function useIsDmChannel(channelId: string): boolean | undefined {
  * instance lists them (`TaggedSpace.myRoleIds`). Undefined for a DM, and for
  * a space whose roster has not been read yet.
  */
+/**
+ * The open space's roster by user id, built once for each `members` list the store holds (a new
+ * list is a new index): every message of a channel asks for its author on every store change, and
+ * searching the whole roster each time cost a list of 200 messages and 150 people dearly.
+ */
+const memberIndexes = new WeakMap<readonly MemberWithUser[], Map<string, MemberWithUser>>();
+
+export function memberByUserId(members: readonly MemberWithUser[], userId: string): MemberWithUser | undefined {
+  let index = memberIndexes.get(members);
+  if (!index) {
+    index = new Map();
+    for (const member of members) index.set(member.userId, member);
+    memberIndexes.set(members, index);
+  }
+  return index.get(userId);
+}
+
 export function selectMyRoleIdsInChannel(
   state: Pick<SpaceState, 'spaces' | 'channelToSpaceMap' | 'channelOriginMap'>,
   channelId: string,

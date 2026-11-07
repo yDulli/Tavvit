@@ -4,6 +4,15 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.38.1": {
+      "title": "Smoother",
+      "items": {
+        "scroll": "Scrolling through a channel and through long member lists is smooth again, also with many decorated people in them.",
+        "switch": "Switching between channels and spaces is faster: a channel you left at its newest message comes back at once.",
+        "motion": "Decorations and animated profile pictures in lists and chats stand still until you point at someone, and move as before on a profile.",
+        "stuck": "Fixed: after switching spaces, the channel list and the member list could stay loading for good."
+      }
+    },
     "1.38.0": {
       "title": "Decorations you make",
       "items": {
