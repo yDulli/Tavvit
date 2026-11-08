@@ -7,14 +7,14 @@ import { hasPermissionBit, PermissionBits } from '../../../utils/permissions';
  */
 
 export type SpaceSettingsTab =
-  | 'you' | 'overview' | 'welcome' | 'tag' | 'emoji' | 'sounds' | 'discord' | 'access' | 'invites' | 'discovery' | 'verification' | 'moderation'
+  | 'you' | 'overview' | 'welcome' | 'tag' | 'look' | 'emoji' | 'sounds' | 'discord' | 'access' | 'invites' | 'discovery' | 'verification' | 'moderation'
   | 'members' | 'roles' | 'bans' | 'audit';
 
 export type SpaceSettingsGroup = 'general' | 'management';
 
 /** The navigation's sections and their tabs, in order. A tab the viewer may not open is left out. */
 export const SPACE_SETTINGS_NAV: readonly { group: SpaceSettingsGroup; tabs: readonly SpaceSettingsTab[] }[] = [
-  { group: 'general', tabs: ['you', 'overview', 'welcome', 'tag', 'emoji', 'sounds', 'discord', 'access', 'invites', 'discovery', 'verification', 'moderation'] },
+  { group: 'general', tabs: ['you', 'overview', 'welcome', 'tag', 'look', 'emoji', 'sounds', 'discord', 'access', 'invites', 'discovery', 'verification', 'moderation'] },
   { group: 'management', tabs: ['members', 'roles', 'bans', 'audit'] },
 ];
 
@@ -43,6 +43,7 @@ export function allowedSpaceSettingsTabs(permissions: bigint | string | undefine
     moderation: manageSpace,
     welcome: manageSpace,
     tag: manageSpace,
+    look: manageSpace,
     emoji: manageEmojis,
     sounds: has(PermissionBits.MANAGE_SOUNDS),
     // Moving from Discord: the template needs roles and channels, the emoji and stickers their own right.

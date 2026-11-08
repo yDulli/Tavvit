@@ -4,6 +4,17 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.41.0": {
+      "title": "Estúdio de temas",
+      "items": {
+        "studio": "Um novo estúdio de temas define a aparência do app com uma prévia ao vivo: as cores, o destaque, a luz, os cantos, a fonte, a forma das imagens e como as mensagens aparecem e quanto espaço ocupam. Abra em Configurações, Aparência.",
+        "looks": "Guarde os looks de que você gosta com um nome e troque entre eles com um clique, até 30 em cada dispositivo.",
+        "share": "Compartilhe um look como link. O look inteiro está no link, então nada fica guardado em lugar nenhum, e quem o abre vê o look primeiro e o aplica com um clique.",
+        "spaces": "Um espaço pode escolher suas próprias cores em Configurações do espaço, Look. Os membros as veem enquanto estão no espaço; desative em Configurações, Aparência, Espaços com cores próprias.",
+        "yours": "Contraste, tamanho do texto, movimento, cores de status, links sublinhados, o relógio e a largura da barra lateral nunca fazem parte de um look: ficam como você os definiu.",
+        "audit": "Mudanças na tag ou nas cores de um espaço agora aparecem no registro de auditoria dele."
+      }
+    },
     "1.40.0": {
       "title": "Bluesky no chat",
       "items": {

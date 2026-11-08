@@ -332,6 +332,86 @@
         "label": "色盲友好的状态",
         "description": "在线、闲置和忙碌使用易于区分的颜色。"
       }
+    },
+    "spaceLooks": {
+      "label": "空间使用自己的颜色",
+      "description": "空间可以为自己选择颜色。关闭后，你在任何地方都会看到自己的颜色。"
+    }
+  },
+  "studio": {
+    "title": "主题工作室",
+    "lead": "让应用成为你的风格。每项更改都会立即生效；保留你喜欢的外观，并通过链接分享。",
+    "done": "完成",
+    "unnamed": "我的外观",
+    "yours": "对比度、文字大小、动画、状态颜色、链接下划线、时钟和侧边栏宽度不属于外观：它们保持你的设置。",
+    "copyLink": "复制链接",
+    "linkCopied": "链接已复制",
+    "linkFailed": "无法复制链接",
+    "entry": {
+      "title": "主题工作室",
+      "text": "通过预览创建你自己的外观，保留多个并通过链接分享。",
+      "open": "打开工作室"
+    },
+    "keep": {
+      "title": "保留此外观",
+      "nameLabel": "名称",
+      "namePlaceholder": "为此外观命名",
+      "save": "保留",
+      "saved": "已保留为 {{name}}",
+      "isKept": "此外观已保留为 {{name}}。",
+      "full": "你最多可以保留 {{max}} 个外观。删除一个后才能保留新的。",
+      "linkHint": "链接中包含完整的外观；不会在任何地方存储。"
+    },
+    "looks": {
+      "title": "你的外观",
+      "empty": "还没有保留的外观。在下方设计一个并保留它。",
+      "rename": "重命名",
+      "delete": "删除",
+      "deleted": "已删除 {{name}}",
+      "undo": "撤销",
+      "more": "{{name}} 的更多选项"
+    },
+    "sections": {
+      "shape": "形状",
+      "messages": "消息",
+      "typeface": "字体",
+      "light": "光效",
+      "spaces": "空间"
+    },
+    "preview": {
+      "title": "预览",
+      "label": "此外观下的对话预览",
+      "channel": "综合",
+      "composer": "发送消息到 #综合",
+      "messages": {
+        "greeting": "大家晚上好！",
+        "plan": "九点看电影？我带零食。",
+        "reply": "算我一个。谁来选电影？",
+        "link": "这是我做的外观：",
+        "last": "试试看，告诉我你的感受。"
+      },
+      "menu": {
+        "reply": "回复",
+        "forward": "转发",
+        "save": "保存"
+      }
+    },
+    "shared": {
+      "kicker": "Tavvit 外观",
+      "untitled": "共享的外观",
+      "serverAccent": "服务器的颜色",
+      "lightOn": "开",
+      "lightOff": "关",
+      "yours": "对比度、文字大小、动画以及其他帮助阅读的设置保持你的设置。",
+      "use": "使用此外观",
+      "notNow": "暂不",
+      "continue": "继续前往 Tavvit",
+      "openStudio": "打开工作室",
+      "inUse": "你正在使用此外观。",
+      "nowInUse": "完成：此外观现在属于你，并已保留在你的外观中。",
+      "done": "外观 {{name}} 已启用",
+      "invalidTitle": "这里没有外观",
+      "invalidText": "此链接不包含外观，或在复制时被截断。"
     }
   },
   "account": {

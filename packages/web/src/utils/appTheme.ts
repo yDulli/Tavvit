@@ -1,4 +1,5 @@
 import { contrastRatio, relativeLuminance, type Rgb } from '@backspace/shared/src/color.js';
+import { SURFACE_RANGES } from '@backspace/shared/src/looks.js';
 import { applyLook, clearLook, DEFAULT_LOOK, type LookSettings } from './appearanceOptions';
 
 /**
@@ -32,14 +33,15 @@ export interface SurfaceSettings {
   depth: number;
 }
 
-export const HUE_RANGE = { min: 0, max: 359 } as const;
-export const STRENGTH_RANGE = { min: 0, max: 100 } as const;
+// The ranges are shared with the server, which checks a space's look by them (packages/shared/src/looks.ts).
+export const HUE_RANGE = SURFACE_RANGES.hue;
+export const STRENGTH_RANGE = SURFACE_RANGES.strength;
 /**
  * Depth stops at 4: graphite is already lighter than the old near-black, and
  * four steps up its floating panel is as light as five steps once were, the
  * most that still keeps the primary text at 9:1 on it.
  */
-export const DEPTH_RANGE = { min: -3, max: 4, step: 0.5 } as const;
+export const DEPTH_RANGE = SURFACE_RANGES.depth;
 
 export const THEME_IDS = ['carbon', 'slate', 'ink', 'moss', 'clay', 'harbor', 'plum'] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
@@ -255,6 +257,8 @@ export interface AppearanceSettings extends LookSettings {
   chatTextScale: number;
   /** Cut animation down whatever the system asks for. */
   reduceMotion: boolean;
+  /** Show a space in the colours it chose for itself while in it (`Space.look`); off keeps one's own everywhere. */
+  spaceLooks: boolean;
 }
 
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
@@ -264,6 +268,7 @@ export const DEFAULT_APPEARANCE: AppearanceSettings = {
   accent: null,
   chatTextScale: 1,
   reduceMotion: false,
+  spaceLooks: true,
 };
 
 /** Puts the surface theme, the look, the text size and the motion setting on `root`; the accent is applied separately. */

@@ -241,6 +241,7 @@
   "directory_requires_discovery": "请先开启空间发现功能。",
   "space_owner_title_invalid": "拥有者头衔须为 1 到 {{max}} 个字符的单行文本，至少包含一个可见字符，且不能包含控制字符。",
   "space_tag_invalid": "标签由同一种文字的 {{min}} 到 {{max}} 个字母或数字组成，并带一个符号和一种颜色。",
+  "space_look_invalid": "空间的外观由范围内的色相、强度和深度，以及能让白色文字保持可读的强调色（或不设）组成。",
   "space_tag_reserved": "这个标签看起来像平台的标记。请换一个。",
   "space_tag_unavailable": "你无法佩戴这个空间的标签。",
   "voice_overlay_unavailable": "此叠加层链接已失效。",

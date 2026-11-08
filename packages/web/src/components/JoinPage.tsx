@@ -8,7 +8,7 @@ import { api, createApiClient } from '../api/client';
 import { parseInviteInput, buildInstanceJoinUrl } from '../utils/inviteParser';
 import { Avatar } from './ui/Avatar';
 import { Icon } from './ui/Icon';
-import { LegalLinks } from './legal/LegalLinks';
+import { PUBLIC_CARD, PublicPageFrame } from './ui/PublicPageFrame';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 import type { InvitePreview } from '@backspace/shared';
 import { describeError } from '../i18n/errors';
@@ -32,23 +32,10 @@ type JoinPhase = 'preview' | 'connect' | 'fallback' | 'other-instance' | 'alread
 type JoinAction = 'join' | 'request';
 
 /** The one card the page is: the error's and the invite's. */
-const CARD = 'modal-panel my-auto flex-shrink-0 w-full max-w-[440px] glass-modal rounded-lg p-6 desktop:p-8 z-10';
+const CARD = PUBLIC_CARD;
 
-/** The page around the card: where you are, a way to the start, and the legal line every public page has. */
-function JoinFrame({ children }: { children: React.ReactNode }) {
-  const { t } = useTranslation('common');
-  return (
-    <div className="stage-light isolate h-full overflow-y-auto flex flex-col items-center bg-surface-base relative px-4 py-6">
-      <div aria-hidden="true" className="hero-light" />
-      <a href="/" className="mb-6 flex w-fit items-center gap-2.5 self-start">
-        <img src="/icons/logo-mark.svg" alt="" className="h-6 w-6" />
-        <span className="text-lead font-semibold tracking-[-0.01em] text-txt-primary">{t('appName')}</span>
-      </a>
-      {children}
-      <LegalLinks className="mt-6 justify-center" />
-    </div>
-  );
-}
+/** The page around the card (ui/PublicPageFrame.tsx). */
+const JoinFrame = PublicPageFrame;
 
 export function JoinPage() {
   const { t } = useTranslation(['auth', 'common']);

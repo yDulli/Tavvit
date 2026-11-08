@@ -437,7 +437,10 @@ decoration fields `avatarFrame`, `profileEffect`, `nameplate`, `nameFont` and
 takes a decoration off (decorations.md), and `spaceTag`, the space tag they wear
 or null (space-tags.md). Every `Space` carries `tag`, and every voice `Channel`
 carries `streamOverlay`, true while someone has an overlay link for it; a change
-of that goes out as `channel_updated` (voice-overlay.md).
+of that goes out as `channel_updated` (voice-overlay.md). Every `Space` also
+carries `look`, the colours it chose or null (spaces.md, "A space's look"); a
+change reaches the members as `space_updated`, and the client shows it at once
+while they are in the space. A host before 1.41.0 sends none, read as null.
 
 **Badges.** No event type is new for badges either (registry:
 `packages/shared/src/badges.ts`; api.md, "Users" and "Spaces"). Every `User`

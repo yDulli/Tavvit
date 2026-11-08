@@ -5,19 +5,15 @@
     "next": {
       "title": "A seguir",
       "items": {
-        "themeStudio": {
-          "title": "Estúdio de temas",
-          "text": "Crie seu próprio visual, compartilhe por link ou ofereça ao seu espaço."
+        "history": {
+          "title": "Histórico de edições",
+          "text": "Veja o que uma mensagem dizia antes de ser editada, se você a escreveu ou cuida do canal."
         }
       }
     },
     "after": {
       "title": "Depois disso",
       "items": {
-        "history": {
-          "title": "Histórico de edições",
-          "text": "Veja o que uma mensagem dizia antes de ser editada, se você a escreveu ou cuida do canal."
-        },
         "scheduled": {
           "title": "Mensagens agendadas",
           "text": "Escreva agora e deixe para enviar depois."

@@ -1265,6 +1265,12 @@ GET    /spaces/:id/tag          → { space: ExploreSpace, tag }                
 ```
 `400 space_tag_invalid` with `details: { min, max, reason }` (`length`, `characters`, `glyph`, `color`) and `400 space_tag_reserved` for a word reserved for the platform. A changed or removed tag reaches every wearer's profile (`user_updated`). See space-tags.md.
 
+## A space's look (`routes/spaces.ts`)
+```
+PATCH  /spaces/:id              { look: { hue, strength, depth, accent } | null, ... }   MANAGE_SPACE → Space (with `look`)
+```
+`hue` an integer 0–359, `strength` an integer 0–100, `depth` −3 to 4 in half steps, `accent` `null` or a `#rrggbb` white text stays readable on (`accentColorProblem`); anything else, a missing `accent` included, is `400 space_look_invalid` and nothing in the body is written. `null` removes it. Every `Space` carries `look` (`SpaceLook | null`); a host before 1.41.0 omits it. A change is recorded as `space_update` with the field `look`. See spaces.md, "A space's look".
+
 ## Voice overlay (`routes/voiceOverlay.ts`)
 ```
 GET    /channels/:id/overlay        → { exists, createdAt }                      VIEW_CHANNEL; the caller's own link

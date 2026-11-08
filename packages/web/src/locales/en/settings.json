@@ -332,6 +332,86 @@
         "label": "Colour-blind friendly status",
         "description": "Online, idle and busy use colours that are easy to tell apart."
       }
+    },
+    "spaceLooks": {
+      "label": "Spaces in their own colours",
+      "description": "A space can choose colours for itself. Turn this off to see your own everywhere."
+    }
+  },
+  "studio": {
+    "title": "Theme studio",
+    "lead": "Make the app your own. Every change shows at once; keep the looks you like and share them as a link.",
+    "done": "Done",
+    "unnamed": "My look",
+    "yours": "Contrast, text size, motion, status colours, underlined links, the clock and the sidebar's width are not part of a look: they stay as you set them.",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "linkFailed": "Could not copy the link",
+    "entry": {
+      "title": "Theme studio",
+      "text": "Make your own looks with a preview, keep several and share them as a link.",
+      "open": "Open studio"
+    },
+    "keep": {
+      "title": "Keep this look",
+      "nameLabel": "Name",
+      "namePlaceholder": "Name this look",
+      "save": "Keep",
+      "saved": "Kept as {{name}}",
+      "isKept": "This look is kept as {{name}}.",
+      "full": "You can keep up to {{max}} looks. Delete one to keep another.",
+      "linkHint": "The link holds the whole look; nothing is stored anywhere."
+    },
+    "looks": {
+      "title": "Your looks",
+      "empty": "No looks kept yet. Shape one below and keep it.",
+      "rename": "Rename",
+      "delete": "Delete",
+      "deleted": "{{name}} deleted",
+      "undo": "Undo",
+      "more": "More for {{name}}"
+    },
+    "sections": {
+      "shape": "Shape",
+      "messages": "Messages",
+      "typeface": "Typeface",
+      "light": "Light",
+      "spaces": "Spaces"
+    },
+    "preview": {
+      "title": "Preview",
+      "label": "Preview of a conversation in this look",
+      "channel": "general",
+      "composer": "Message #general",
+      "messages": {
+        "greeting": "Evening, everyone!",
+        "plan": "Movie night at nine? I'll bring the snacks.",
+        "reply": "Count me in. Who picks the film?",
+        "link": "Here's the look I made:",
+        "last": "Try it and tell me what you think."
+      },
+      "menu": {
+        "reply": "Reply",
+        "forward": "Forward",
+        "save": "Save"
+      }
+    },
+    "shared": {
+      "kicker": "A look for Tavvit",
+      "untitled": "A shared look",
+      "serverAccent": "The server's",
+      "lightOn": "On",
+      "lightOff": "Off",
+      "yours": "Contrast, text size, motion and the other settings that help you read stay as you set them.",
+      "use": "Use this look",
+      "notNow": "Not now",
+      "continue": "Continue to Tavvit",
+      "openStudio": "Open the studio",
+      "inUse": "You are using this look.",
+      "nowInUse": "Done: this look is yours now, and kept among your looks.",
+      "done": "Look {{name}} in use",
+      "invalidTitle": "No look here",
+      "invalidText": "This link holds no look, or it was cut short when it was copied."
     }
   },
   "account": {

@@ -332,6 +332,86 @@
         "label": "Status para daltônicos",
         "description": "Online, ausente e ocupado em cores fáceis de distinguir."
       }
+    },
+    "spaceLooks": {
+      "label": "Espaços com cores próprias",
+      "description": "Um espaço pode escolher cores para si. Desative para ver as suas em todo lugar."
+    }
+  },
+  "studio": {
+    "title": "Estúdio de temas",
+    "lead": "Deixe o app com a sua cara. Cada mudança aparece na hora; guarde os looks de que gostar e compartilhe-os por link.",
+    "done": "Concluir",
+    "unnamed": "Meu look",
+    "yours": "Contraste, tamanho do texto, movimento, cores de status, links sublinhados, o relógio e a largura da barra lateral não fazem parte de um look: continuam como você definiu.",
+    "copyLink": "Copiar link",
+    "linkCopied": "Link copiado",
+    "linkFailed": "Não foi possível copiar o link",
+    "entry": {
+      "title": "Estúdio de temas",
+      "text": "Crie seus próprios looks com prévia, guarde vários e compartilhe-os por link.",
+      "open": "Abrir estúdio"
+    },
+    "keep": {
+      "title": "Guardar este look",
+      "nameLabel": "Nome",
+      "namePlaceholder": "Dê um nome a este look",
+      "save": "Guardar",
+      "saved": "Guardado como {{name}}",
+      "isKept": "Este look está guardado como {{name}}.",
+      "full": "Você pode guardar até {{max}} looks. Exclua um para guardar outro.",
+      "linkHint": "O link contém o look inteiro; nada é armazenado em lugar nenhum."
+    },
+    "looks": {
+      "title": "Seus looks",
+      "empty": "Nenhum look guardado ainda. Monte um abaixo e guarde-o.",
+      "rename": "Renomear",
+      "delete": "Excluir",
+      "deleted": "{{name}} excluído",
+      "undo": "Desfazer",
+      "more": "Mais para {{name}}"
+    },
+    "sections": {
+      "shape": "Forma",
+      "messages": "Mensagens",
+      "typeface": "Fonte",
+      "light": "Luz",
+      "spaces": "Espaços"
+    },
+    "preview": {
+      "title": "Prévia",
+      "label": "Prévia de uma conversa neste look",
+      "channel": "geral",
+      "composer": "Mensagem em #geral",
+      "messages": {
+        "greeting": "Boa noite, pessoal!",
+        "plan": "Noite de filme às nove? Eu levo os petiscos.",
+        "reply": "Tô dentro. Quem escolhe o filme?",
+        "link": "Aqui está o look que eu fiz:",
+        "last": "Experimente e me diga o que achou."
+      },
+      "menu": {
+        "reply": "Responder",
+        "forward": "Encaminhar",
+        "save": "Salvar"
+      }
+    },
+    "shared": {
+      "kicker": "Um look para o Tavvit",
+      "untitled": "Um look compartilhado",
+      "serverAccent": "A do servidor",
+      "lightOn": "Ligada",
+      "lightOff": "Desligada",
+      "yours": "Contraste, tamanho do texto, movimento e as outras configurações que ajudam você a ler continuam como você definiu.",
+      "use": "Usar este look",
+      "notNow": "Agora não",
+      "continue": "Continuar para o Tavvit",
+      "openStudio": "Abrir estúdio",
+      "inUse": "Você está usando este look.",
+      "nowInUse": "Pronto: este look agora é seu e está guardado entre os seus looks.",
+      "done": "Look {{name}} em uso",
+      "invalidTitle": "Nenhum look aqui",
+      "invalidText": "Este link não contém um look, ou foi cortado ao ser copiado."
     }
   },
   "account": {

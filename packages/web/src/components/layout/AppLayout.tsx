@@ -11,7 +11,7 @@ import i18n from '../../i18n';
 import { TopBar } from './TopBar';
 import { ChannelSidebar } from './ChannelSidebar';
 import { MainContent } from './MainContent';
-import { AdminConsole, SettingsPanelSuspense } from '../modals/lazySettingsPanels';
+import { AdminConsole, LookStudio, SettingsPanelSuspense } from '../modals/lazySettingsPanels';
 import { AnnouncementBar } from '../ui/AnnouncementBar';
 import { AmbientLight } from './AmbientLight';
 import { PlaceStage } from './PlaceStage';
@@ -76,6 +76,7 @@ export function AppLayout() {
   const eventsPage = useMatch('/channels/:spaceId/events') !== null;
   const navigate = useNavigate();
   const inAdminConsole = useMatch('/admin/*') !== null;
+  const inStudio = useMatch('/studio') !== null;
   const threadOpen = useThreadStore((s) => s.open !== null);
   
   // Global interaction handler to resume AudioContext
@@ -455,7 +456,9 @@ export function AppLayout() {
         <AmbientLight />
         <ConnectionBanner connected={homeConnected} />
         <QuickSwitcher />
-        {inAdminConsole ? <SettingsPanelSuspense><AdminConsole /></SettingsPanelSuspense> : <MobileShell />}
+        {inAdminConsole ? <SettingsPanelSuspense><AdminConsole /></SettingsPanelSuspense>
+          : inStudio ? <main className="lit flex h-full min-h-0 bg-surface-chat"><SettingsPanelSuspense><LookStudio /></SettingsPanelSuspense></main>
+          : <MobileShell />}
         {/* Modals still render globally for both mobile and desktop */}
         <CreateSpaceModal />
         <DiscordImportModal />
@@ -520,6 +523,14 @@ export function AppLayout() {
       <div className="relative flex min-h-0 flex-1">
         {inAdminConsole ? (
           <SettingsPanelSuspense><AdminConsole /></SettingsPanelSuspense>
+        ) : inStudio ? (
+          // The studio beside the real sidebar: what is shaped shows on the app itself.
+          <>
+            <ChannelSidebar />
+            <main className="lit flex min-w-0 min-h-0 flex-1 bg-surface-chat">
+              <SettingsPanelSuspense><LookStudio /></SettingsPanelSuspense>
+            </main>
+          </>
         ) : (
           <>
             <ChannelSidebar />

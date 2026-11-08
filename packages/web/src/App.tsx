@@ -15,6 +15,7 @@ import { MfaPromptDialog } from './components/modals/MfaPromptDialog';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { JoinPage } from './components/JoinPage';
+import { LookPage } from './components/studio/LookPage';
 import { DownloadPage } from './components/download/DownloadPage';
 import { SwAutoUpdate } from './components/ui/SwUpdatePrompt';
 import { InstanceBranding } from './components/ui/InstanceBranding';
@@ -190,6 +191,17 @@ export function App() {
               </ProtectedRoute>
             }
           />
+          {/* The theme studio, under the app's own frame, so its looks show on the app itself. */}
+          <Route
+            path="/studio"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          />
+          {/* Public: a look shared as a link works signed in or not, as a device's appearance does. */}
+          <Route path="/look" element={<LookPage />} />
           {/* Public: the desktop installers, for visitors and members alike. */}
           <Route path="/download" element={<DownloadPage />} />
           {/* Public: reachable before and without an account (docs/systems/legal.md). */}

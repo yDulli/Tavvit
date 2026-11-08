@@ -29,6 +29,16 @@ A new presentation preference goes in Appearance, not in Account or in Desktop
 (the browser shows the Desktop tab only as a download offer, so a preference
 placed there would be unreachable outside the app).
 
+Within Appearance, what makes a look (see Looks) and what helps a person read
+are kept apart: a look's parts (theme, accent, light, corners, typeface, the
+shape of pictures, message style and density) are also shaped in the theme
+studio at `/studio`, and putting on a look changes only them. Contrast, text
+size, motion, the status palette, underlined links, the clock and the sidebar's
+width stay with the person whatever look they wear. Each setting is one
+component in `settingsPanels/LookSections.tsx` (`CornersSetting`,
+`FontSetting`, `LightSetting`, `SpaceLooksSetting` …), so the Appearance tab
+and the studio show the same control, never two copies of it.
+
 ## Interface scale
 
 Appearance settings include a device-local interface scale: 50–250% in 25% steps,
@@ -148,7 +158,8 @@ The instance accent (Admin console → General) and a person's own (Settings →
 
 ### Variants
 - `html[data-contrast='high']` (Settings → Appearance → Higher contrast) lifts the quiet text, the hairlines and the muted control tone.
-- Surface themes (Settings → Appearance → Theme, `utils/appTheme.ts`). Carbon is the stylesheet as shipped and sets nothing; `CARBON_SETTINGS` (hue 226, strength 11) is the point that reproduces it, for its swatch and as the start of a person's own theme. Every other theme is a point (hue, strength, depth from −3 to 4) from which each surface is derived at the luminance its depth asks for, and the quiet text is lifted to keep the contrast it has on Carbon's floating panel. Depth stops at 4 because the floating panel is then as light as the old near-black palette's lightest, the most that keeps the primary text at 9:1 on it; `appTheme.test.ts` checks every corner of the ranges.
+- Surface themes (Settings → Appearance → Theme, `utils/appTheme.ts`). Carbon is the stylesheet as shipped and sets nothing; `CARBON_SETTINGS` (hue 226, strength 11) is the point that reproduces it, for its swatch and as the start of a person's own theme. Every other theme is a point (hue, strength, depth from −3 to 4) from which each surface is derived at the luminance its depth asks for, and the quiet text is lifted to keep the contrast it has on Carbon's floating panel. Depth stops at 4 because the floating panel is then as light as the old near-black palette's lightest, the most that keeps the primary text at 9:1 on it; `appTheme.test.ts` checks every corner of the ranges. The ranges are `SURFACE_RANGES` in `packages/shared/src/looks.ts`, shared with the server, which checks a space's look against the same ones.
+- A space's colours (see Looks): in a space that chose them, its surfaces and accent take the place of the person's own while they are in it, unless they switched that off.
 
 ### Light
 
@@ -591,3 +602,17 @@ Reduce motion stills all of them and leaves out what only passes by. Higher cont
 `.space-tag` is a space's tag beside a name (space-tags.md): 16px tall, Geist Mono 10px, the tag's colour (`data-color`, the accent family or silver) as text on a 10% ground with a 32% hairline, a 4px radius scaled like the rest, no glow. It is a control (`role="button"`) that opens the space's card; `data-static="true"` draws the same mark where it is not one. It never takes the violet signal.
 
 The voice overlay (voice-overlay.md, `overlay/overlay.css`) draws over a stream, not over Graphite: dark opaque labels for names, the status green as the ring of who speaks, the rose for a muted mark, and a transparent page. Its preview in the dialog stands on a checked ground for "transparent".
+
+## Looks and the theme studio (1.41.0)
+
+A **look** (`Look` in `utils/looks.ts`) is how the app is coloured and shaped, as one thing that can be named, kept, shared and offered by a space: the surfaces (hue, strength, depth), the accent (or none, for the instance's), the light, the corners, the typeface, the shape of pictures, the message style and the density. What helps a person read (contrast, text size, motion, the status palette, underlined links, the clock, the sidebar's width) is never part of one; putting a look on (`appearanceStore.putLook`) leaves all of it as it was. A look whose surfaces are exactly a ready-made theme's is that theme (`themeChoiceOf`), so wearing one keeps the person's own theme where it was.
+
+**The studio** (`components/studio/LookStudio.tsx`, at `/studio`, signed in; Settings → Appearance opens it) is the Appearance controls for a look beside a sample conversation (`LookPreview`) drawn with the real classes (`.msg-row`, `.count-badge`, `.glass`, `.btn-primary`), so what is shown is what the app will be. At the top a look is kept under a name (`KeepLook`), or, when it already is, its link is copied. On the desktop the preview stands in its own column (`w-[min(440px,40%)]`); on the phone it comes under that row, above the kept looks and the controls. While it is open, a space's colours stand aside, so the person sees their own.
+
+**Kept looks** (`stores/looksStore.ts`, persisted as `tavvit-looks` in this browser, at most `SAVED_LOOKS_MAX` = 30, never on a server) are named (`lookNameOf`: one line, control characters out, at most 40 characters). A card puts its look on with one click; its menu copies the link, renames it in place or deletes it with an undo.
+
+**A look in a link** is `/look#1.<base64url JSON>` (`encodeLook`/`decodeLook`, the version before the dot, 2048 characters at most). The whole look is in the fragment, which a browser never sends to a server, so a link works on any instance and nothing is kept until someone puts it on. `decodeLook` reads a link as any look is read (`lookOf`): every part brought into its range or options, an accent dropped when white text cannot be read on it. The public page `components/studio/LookPage.tsx` shows the name, a `SurfaceSwatch` and what the look sets, offers "Use this look" (put on and kept) and says what stays the person's; it stands in `ui/PublicPageFrame` like the invite page, and works signed out.
+
+**A space's colours** (spaces.md, "A space's look"): a space may choose a surface and an accent (`SpaceLook`, never the shape: that stays the reader's). `AppearanceController` shows them through `withSpaceLook` while the space is the current one, unless the person turned off Settings → Appearance → Spaces in their own colours (`spaceLooks`) or is in the studio. The accent a space chose replaces the person's and the instance's on its controls; a space that chose none leaves the person's.
+
+`ui/SurfaceSwatch` is the one way to draw a surface as a small picture (frame, sidebar, content, floating panel, a stroke of the accent): the theme cards, the studio, the look page and the space's tab use it.

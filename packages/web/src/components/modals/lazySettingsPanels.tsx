@@ -71,6 +71,7 @@ export const ReportsPanel = lazyPanel(() => import('./instanceSettingsPanels/Rep
 export const LegalPanel = lazyPanel(() => import('./instanceSettingsPanels/LegalPanel'), (m) => m.LegalPanel);
 export const EmailPanel = lazyPanel(() => import('./instanceSettingsPanels/EmailPanel'), (m) => m.EmailPanel);
 export const AdminConsole = lazyPanel(() => import('../admin/AdminConsole'), (m) => m.AdminConsole);
+export const LookStudio = lazyPanel(() => import('../studio/LookStudio'), (m) => m.LookStudio);
 
 export const OverviewPanel = lazyPanel(() => import('./spaceSettingsPanels/OverviewPanel'), (m) => m.OverviewPanel);
 export const MembersPanel = lazyPanel(() => import('./spaceSettingsPanels/MembersPanel'), (m) => m.MembersPanel);
@@ -85,6 +86,7 @@ export const DiscordMovePanel = lazyPanel(() => import('./spaceSettingsPanels/Di
 export const SoundsPanel = lazyPanel(() => import('./spaceSettingsPanels/SoundsPanel'), (m) => m.SoundsPanel);
 export const WelcomePanel = lazyPanel(() => import('./spaceSettingsPanels/WelcomePanel'), (m) => m.WelcomePanel);
 export const SpaceTagPanel = lazyPanel(() => import('./spaceSettingsPanels/SpaceTagPanel'), (m) => m.SpaceTagPanel);
+export const SpaceLookPanel = lazyPanel(() => import('./spaceSettingsPanels/SpaceLookPanel'), (m) => m.SpaceLookPanel);
 
 /**
  * Holds the panel's place while its chunk loads. The block has a fixed height

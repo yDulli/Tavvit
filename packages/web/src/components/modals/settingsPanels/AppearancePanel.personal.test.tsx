@@ -1,6 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+// The way into the theme studio asks the session store whether someone is signed in, and that
+// store reaches the voice code, whose noise filter needs Web Audio, which jsdom does not have.
+vi.mock('../../../audio/AudioManager', () => ({
+  AudioManager: { getInstance: vi.fn().mockReturnValue({ setOutputDevice: vi.fn(), setVolume: vi.fn() }) },
+}));
+
 import { AccessibilityPanel } from './AccessibilityPanel';
 import { AppearancePanel } from './AppearancePanel';
 import { useAppearanceStore } from '../../../stores/appearanceStore';

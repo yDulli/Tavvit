@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppearanceStore } from '../../../stores/appearanceStore';
 import { CHAT_TEXT_SCALES } from '../../../utils/appTheme';
 import { SettingsSection, ToggleRow } from './_shared/SettingsControls';
+import { LightSetting } from './LookSections';
 
 /** How chat text is drawn, whether animation is cut down and whether light falls on the panels, on this device. */
 export function ReadingSection() {
@@ -10,8 +11,6 @@ export function ReadingSection() {
   const reduceMotion = useAppearanceStore((s) => s.reduceMotion);
   const setScale = useAppearanceStore((s) => s.setChatTextScale);
   const setReduceMotion = useAppearanceStore((s) => s.setReduceMotion);
-  const light = useAppearanceStore((s) => s.light);
-  const setLook = useAppearanceStore((s) => s.setLook);
 
   return (
     <SettingsSection title={t('appearance.reading.title')}>
@@ -38,12 +37,7 @@ export function ReadingSection() {
         onChange={setReduceMotion}
       />
 
-      <ToggleRow
-        label={t('appearance.reading.light.label')}
-        description={t('appearance.reading.light.description')}
-        enabled={light === 'on'}
-        onChange={(on) => setLook({ light: on ? 'on' : 'off' })}
-      />
+      <LightSetting />
     </SettingsSection>
   );
 }

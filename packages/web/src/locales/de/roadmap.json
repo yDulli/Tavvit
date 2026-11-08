@@ -5,19 +5,15 @@
     "next": {
       "title": "Als Nächstes",
       "items": {
-        "themeStudio": {
-          "title": "Theme-Studio",
-          "text": "Gestalte dein eigenes Aussehen, teile es per Link oder biete es deinem Space an."
+        "history": {
+          "title": "Bearbeitungsverlauf",
+          "text": "Sehen, was in einer Nachricht stand, bevor sie bearbeitet wurde, wenn du sie geschrieben hast oder dich um den Kanal kümmerst."
         }
       }
     },
     "after": {
       "title": "Danach",
       "items": {
-        "history": {
-          "title": "Bearbeitungsverlauf",
-          "text": "Sehen, was in einer Nachricht stand, bevor sie bearbeitet wurde, wenn du sie geschrieben hast oder dich um den Kanal kümmerst."
-        },
         "scheduled": {
           "title": "Geplante Nachrichten",
           "text": "Jetzt schreiben und später senden lassen."

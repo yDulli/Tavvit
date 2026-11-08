@@ -337,6 +337,7 @@
         "overview": "Overview",
         "welcome": "Welcome and rules",
         "tag": "Tag",
+        "look": "Look",
         "sounds": "Soundboard",
         "discovery": "Discovery",
         "roles": "Roles",
@@ -702,8 +703,11 @@
         "tags": "Tags",
         "vanityCode": "Address",
         "emoji": "Emoji",
-        "stickers": "Stickers"
-      }
+        "stickers": "Stickers",
+        "tag": "Tag",
+        "look": "Look"
+      },
+      "lookValue": "Hue {{hue}}, colour {{strength}}, depth {{depth}}"
     },
     "you": {
       "notifications": "Notifications",
@@ -807,6 +811,20 @@
       "saved": "Tag saved",
       "removed": "Tag removed",
       "wearersNote": "Members choose for themselves whether to wear it: in this space's settings under Your settings, or with a click on the tag."
+    },
+    "look": {
+      "title": "Look",
+      "intro": "Choose colours for this space. Members see it in them while they are here, unless they turned that off; their shape, typeface and reading settings stay their own.",
+      "current": "This space's colours",
+      "currentHint": "Members see the space in these colours.",
+      "none": "This space shows in each member's own colours.",
+      "remove": "Remove",
+      "choose": "Choose colours",
+      "chooseHint": "From the look you have on now or one you kept in the theme studio. Only its colours are used.",
+      "mine": "Your current look",
+      "openStudio": "Make looks in the theme studio",
+      "saved": "The space's colours are set",
+      "removed": "The space shows in each member's own colours again"
     },
     "sounds": {
       "title": "Soundboard",

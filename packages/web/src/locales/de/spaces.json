@@ -337,6 +337,7 @@
         "overview": "Übersicht",
         "welcome": "Willkommen und Regeln",
         "tag": "Space-Tag",
+        "look": "Look",
         "sounds": "Soundboard",
         "discovery": "Entdecken",
         "roles": "Rollen",
@@ -702,8 +703,11 @@
         "tags": "Tags",
         "vanityCode": "Adresse",
         "emoji": "Emojis",
-        "stickers": "Sticker"
-      }
+        "stickers": "Sticker",
+        "tag": "Space-Tag",
+        "look": "Look"
+      },
+      "lookValue": "Farbton {{hue}}, Farbstärke {{strength}}, Tiefe {{depth}}"
     },
     "you": {
       "notifications": "Benachrichtigungen",
@@ -807,6 +811,20 @@
       "saved": "Tag gespeichert",
       "removed": "Tag entfernt",
       "wearersNote": "Ob sie ihn tragen, entscheiden die Mitglieder selbst: in den Einstellungen dieses Spaces unter Deine Einstellungen, oder mit einem Klick auf den Tag."
+    },
+    "look": {
+      "title": "Look",
+      "intro": "Such Farben für diesen Space aus. Mitglieder sehen ihn darin, solange sie hier sind, außer sie haben das abgeschaltet; Form, Schrift und Lese-Einstellungen bleiben ihre eigenen.",
+      "current": "Farben dieses Space",
+      "currentHint": "Mitglieder sehen den Space in diesen Farben.",
+      "none": "Dieser Space zeigt sich in den eigenen Farben jedes Mitglieds.",
+      "remove": "Entfernen",
+      "choose": "Farben wählen",
+      "chooseHint": "Aus dem Look, den du gerade an hast, oder einem, den du im Theme-Studio behalten hast. Nur seine Farben werden verwendet.",
+      "mine": "Dein aktueller Look",
+      "openStudio": "Looks im Theme-Studio bauen",
+      "saved": "Die Farben des Space sind gesetzt",
+      "removed": "Der Space zeigt sich wieder in den eigenen Farben jedes Mitglieds"
     },
     "sounds": {
       "title": "Soundboard",

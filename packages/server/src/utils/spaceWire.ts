@@ -11,6 +11,7 @@ import { activeTimeoutUntil } from './spaceModeration.js';
 import { spaceBadgesOf } from './badges.js';
 import { mediaOriginsFor, shownPicture } from './remoteMedia.js';
 import { parseStoredSpaceTag } from '@backspace/shared/src/spaceTags.js';
+import { parseStoredSpaceLook } from '@backspace/shared/src/looks.js';
 import { channelHasVoiceOverlay } from './voiceOverlayChannels.js';
 
 // The wire shapes of a space, a channel and a member, built in one place for
@@ -48,6 +49,7 @@ export function spaceToWire(row: SpaceRow): Space {
     description: row.description ?? null,
     badges: spaceBadgesOf(row),
     tag: parseStoredSpaceTag(row.tag),
+    look: parseStoredSpaceLook(row.look),
     defaultNotificationLevel: storedSpaceDefaultLevel(row.defaultNotificationLevel),
     createdAt: row.createdAt,
   };

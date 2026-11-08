@@ -1,4 +1,5 @@
 import { SPACE_TAG_LIMITS, checkSpaceTag } from '@backspace/shared/src/spaceTags.js';
+import { spaceLookOf } from '@backspace/shared/src/looks.js';
 import { announceSpaceTagChange, refreshSpaceTagWearers, releaseSpaceTag } from '../utils/spaceTags.js';
 import { spaceLimitReached } from '../utils/accountLimits.js';
 import { shownCategories } from '../utils/categoryVisibility.js';
@@ -312,6 +313,9 @@ function auditedSpaceFields(row: typeof schema.spaces.$inferSelect): Record<stri
     ownerTitle: row.ownerTitle,
     ownerGroup: row.ownerGroup === 1,
     defaultNotificationLevel: row.defaultNotificationLevel,
+    // Both are stored as the shared checks wrote them, so the same choice is the same string.
+    tag: row.tag,
+    look: row.look,
   };
 }
 
@@ -638,7 +642,7 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     preHandler: authenticate,
   }, async (request, reply) => {
     const { id } = request.params;
-    const { name, icon, banner, avatarColor, visibility, description, directoryListed, ownerTitle, ownerGroup, defaultNotificationLevel, tag } = request.body;
+    const { name, icon, banner, avatarColor, visibility, description, directoryListed, ownerTitle, ownerGroup, defaultNotificationLevel, tag, look } = request.body;
     const db = getDb();
 
     const server = db.select().from(schema.spaces).where(eq(schema.spaces.id, id)).get();
@@ -738,6 +742,18 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
             : sendError(reply, 400, 'space_tag_invalid', { min: SPACE_TAG_LIMITS.MIN_LENGTH, max: SPACE_TAG_LIMITS.MAX_LENGTH, reason: checked.reason });
         }
         updates.tag = JSON.stringify(checked.tag);
+      }
+    }
+
+    // The colours the space chose for itself (docs/systems/spaces.md, "A space's look"); null takes
+    // them away. Members see the space in them unless they turned that off.
+    if (look !== undefined) {
+      if (look === null) {
+        updates.look = null;
+      } else {
+        const checked = spaceLookOf(look);
+        if (!checked) return sendError(reply, 400, 'space_look_invalid');
+        updates.look = JSON.stringify(checked);
       }
     }
 

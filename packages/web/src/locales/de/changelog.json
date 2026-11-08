@@ -4,6 +4,17 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.41.0": {
+      "title": "Theme-Studio",
+      "items": {
+        "studio": "Ein neues Theme-Studio gestaltet das Aussehen der App mit Live-Vorschau: Farben, Akzent, Licht, Ecken, Schrift, die Form der Bilder und wie Nachrichten aussehen und wie viel Platz sie haben. Zu finden unter Einstellungen, Darstellung.",
+        "looks": "Behalte Looks, die dir gefallen, unter einem Namen und wechsle mit einem Klick zwischen ihnen, bis zu 30 auf jedem Gerät.",
+        "share": "Teile einen Look als Link. Der ganze Look steckt im Link, nichts wird irgendwo gespeichert, und wer ihn öffnet, sieht ihn zuerst und übernimmt ihn mit einem Klick.",
+        "spaces": "Ein Space kann eigene Farben wählen, in den Space-Einstellungen unter Look. Mitglieder sehen sie, solange sie im Space sind; abschalten lässt sich das unter Einstellungen, Darstellung, Spaces in eigenen Farben.",
+        "yours": "Kontrast, Textgröße, Bewegung, Statusfarben, unterstrichene Links, die Uhr und die Breite der Seitenleiste gehören nie zu einem Look: Sie bleiben, wie du sie eingestellt hast.",
+        "audit": "Änderungen am Tag oder an den Farben eines Space stehen jetzt in seinem Protokoll."
+      }
+    },
     "1.40.0": {
       "title": "Bluesky im Chat",
       "items": {

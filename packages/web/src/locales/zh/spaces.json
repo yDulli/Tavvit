@@ -334,6 +334,7 @@
         "overview": "概览",
         "welcome": "欢迎与规则",
         "tag": "标签",
+        "look": "外观",
         "sounds": "音效板",
         "discovery": "发现",
         "roles": "身份组",
@@ -698,8 +699,11 @@
         "tags": "标签",
         "vanityCode": "地址",
         "emoji": "表情",
-        "stickers": "贴纸"
-      }
+        "stickers": "贴纸",
+        "tag": "标签",
+        "look": "外观"
+      },
+      "lookValue": "色相 {{hue}}，色彩浓度 {{strength}}，深度 {{depth}}"
     },
     "you": {
       "notifications": "通知",
@@ -803,6 +807,20 @@
       "saved": "标签已保存",
       "removed": "标签已移除",
       "wearersNote": "是否佩戴由成员自己决定：在此空间设置的“你的设置”中，或点击标签。"
+    },
+    "look": {
+      "title": "外观",
+      "intro": "为此空间选择颜色。成员在此空间中时会看到这些颜色，除非他们关闭了此功能；形状、字体和阅读设置仍由各成员自己决定。",
+      "current": "此空间的颜色",
+      "currentHint": "成员会以这些颜色看到此空间。",
+      "none": "此空间以每位成员自己的颜色显示。",
+      "remove": "移除",
+      "choose": "选择颜色",
+      "chooseHint": "来自你当前使用的外观，或你在主题工作室中保留的外观。只使用其颜色。",
+      "mine": "你当前的外观",
+      "openStudio": "在主题工作室中创建外观",
+      "saved": "空间的颜色已设置",
+      "removed": "空间重新以每位成员自己的颜色显示"
     },
     "sounds": {
       "title": "音效板",

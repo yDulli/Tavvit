@@ -241,6 +241,7 @@
   "directory_requires_discovery": "Schalte zuerst das Entdecken von Spaces ein.",
   "space_owner_title_invalid": "Besitzertitel dürfen 1 bis {{max}} Zeichen in einer Zeile haben, mindestens ein sichtbares Zeichen und keine Steuerzeichen.",
   "space_tag_invalid": "Ein Tag hat {{min}} bis {{max}} Buchstaben oder Ziffern aus einem Alphabet, dazu ein Symbol und eine Farbe.",
+  "space_look_invalid": "Der Look eines Space besteht aus Farbton, Stärke und Tiefe in ihren Bereichen und einem Akzent, auf dem weißer Text lesbar bleibt, oder keinem.",
   "space_tag_reserved": "Dieser Tag sähe aus wie ein Zeichen der Plattform. Wähle einen anderen.",
   "space_tag_unavailable": "Diesen Tag kannst du nicht tragen.",
   "voice_overlay_unavailable": "Dieser Overlay-Link funktioniert nicht mehr.",

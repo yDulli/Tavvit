@@ -340,6 +340,7 @@
         "overview": "Visão geral",
         "welcome": "Boas-vindas e regras",
         "tag": "Tag do espaço",
+        "look": "Look",
         "sounds": "Soundboard",
         "discovery": "Descoberta",
         "roles": "Cargos",
@@ -706,8 +707,11 @@
         "tags": "Tags",
         "vanityCode": "Endereço",
         "emoji": "Emojis",
-        "stickers": "Figurinhas"
-      }
+        "stickers": "Figurinhas",
+        "tag": "Tag do espaço",
+        "look": "Look"
+      },
+      "lookValue": "Matiz {{hue}}, cor {{strength}}, profundidade {{depth}}"
     },
     "you": {
       "notifications": "Notificações",
@@ -813,6 +817,20 @@
       "saved": "Tag salva",
       "removed": "Tag removida",
       "wearersNote": "Os membros decidem se a usam: nas configurações deste espaço, em Suas configurações, ou com um clique na tag."
+    },
+    "look": {
+      "title": "Look",
+      "intro": "Escolha cores para este espaço. Os membros o veem nelas enquanto estão aqui, a menos que tenham desativado isso; forma, fonte e configurações de leitura continuam sendo de cada um.",
+      "current": "Cores deste espaço",
+      "currentHint": "Os membros veem o espaço nestas cores.",
+      "none": "Este espaço aparece nas cores de cada membro.",
+      "remove": "Remover",
+      "choose": "Escolher cores",
+      "chooseHint": "Do look que você está usando agora ou de um que guardou no estúdio de temas. Só as cores dele são usadas.",
+      "mine": "Seu look atual",
+      "openStudio": "Criar looks no estúdio de temas",
+      "saved": "As cores do espaço foram definidas",
+      "removed": "O espaço voltou a aparecer nas cores de cada membro"
     },
     "sounds": {
       "title": "Soundboard",

@@ -332,6 +332,86 @@
         "label": "Farbenblind-freundlicher Status",
         "description": "Online, abwesend und beschäftigt in gut unterscheidbaren Farben."
       }
+    },
+    "spaceLooks": {
+      "label": "Spaces in eigenen Farben",
+      "description": "Ein Space kann sich eigene Farben aussuchen. Schalte das aus, um überall deine eigenen zu sehen."
+    }
+  },
+  "studio": {
+    "title": "Theme-Studio",
+    "lead": "Mach die App zu deiner. Jede Änderung wirkt sofort; behalte die Looks, die dir gefallen, und teile sie als Link.",
+    "done": "Fertig",
+    "unnamed": "Mein Look",
+    "yours": "Kontrast, Textgröße, Bewegung, Statusfarben, unterstrichene Links, die Uhr und die Breite der Seitenleiste gehören nicht zu einem Look: Sie bleiben, wie du sie eingestellt hast.",
+    "copyLink": "Link kopieren",
+    "linkCopied": "Link kopiert",
+    "linkFailed": "Link konnte nicht kopiert werden",
+    "entry": {
+      "title": "Theme-Studio",
+      "text": "Bau deine eigenen Looks mit Vorschau, behalte mehrere und teile sie als Link.",
+      "open": "Studio öffnen"
+    },
+    "keep": {
+      "title": "Diesen Look behalten",
+      "nameLabel": "Name",
+      "namePlaceholder": "Gib dem Look einen Namen",
+      "save": "Behalten",
+      "saved": "Als {{name}} behalten",
+      "isKept": "Dieser Look ist als {{name}} behalten.",
+      "full": "Du kannst bis zu {{max}} Looks behalten. Lösch einen, um einen neuen zu behalten.",
+      "linkHint": "Der Link enthält den ganzen Look; nirgends wird etwas gespeichert."
+    },
+    "looks": {
+      "title": "Deine Looks",
+      "empty": "Noch keine Looks behalten. Gestalte unten einen und behalte ihn.",
+      "rename": "Umbenennen",
+      "delete": "Löschen",
+      "deleted": "{{name}} gelöscht",
+      "undo": "Rückgängig",
+      "more": "Mehr zu {{name}}"
+    },
+    "sections": {
+      "shape": "Form",
+      "messages": "Nachrichten",
+      "typeface": "Schrift",
+      "light": "Licht",
+      "spaces": "Spaces"
+    },
+    "preview": {
+      "title": "Vorschau",
+      "label": "Vorschau einer Unterhaltung in diesem Look",
+      "channel": "allgemein",
+      "composer": "Nachricht an #allgemein",
+      "messages": {
+        "greeting": "Abend zusammen!",
+        "plan": "Filmabend um neun? Ich bring Snacks mit.",
+        "reply": "Bin dabei. Wer sucht den Film aus?",
+        "link": "Hier ist der Look, den ich gebaut hab:",
+        "last": "Probier ihn aus und sag mir, wie du ihn findest."
+      },
+      "menu": {
+        "reply": "Antworten",
+        "forward": "Weiterleiten",
+        "save": "Speichern"
+      }
+    },
+    "shared": {
+      "kicker": "Ein Look für Tavvit",
+      "untitled": "Ein geteilter Look",
+      "serverAccent": "Die des Servers",
+      "lightOn": "An",
+      "lightOff": "Aus",
+      "yours": "Kontrast, Textgröße, Bewegung und deine anderen Lese-Einstellungen bleiben, wie du sie eingestellt hast.",
+      "use": "Diesen Look verwenden",
+      "notNow": "Jetzt nicht",
+      "continue": "Weiter zu Tavvit",
+      "openStudio": "Studio öffnen",
+      "inUse": "Du verwendest diesen Look.",
+      "nowInUse": "Erledigt: Der Look ist jetzt deiner und bei deinen Looks behalten.",
+      "done": "Look {{name}} verwendet",
+      "invalidTitle": "Hier ist kein Look",
+      "invalidText": "Dieser Link enthält keinen Look, oder er wurde beim Kopieren abgeschnitten."
     }
   },
   "account": {

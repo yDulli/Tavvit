@@ -316,6 +316,7 @@ export const ERROR_CODES = [
   'space_owner_title_invalid',
   // Space tags (docs/systems/space-tags.md). details: { min, max, reason }
   'space_tag_invalid',
+  'space_look_invalid',
   'space_tag_reserved',
   'space_tag_unavailable',
   // The voice overlay (docs/systems/voice-overlay.md)

@@ -1,5 +1,6 @@
 import type { MessageCard } from './cards.js';
 import type { BlueskyPost } from './bluesky.js';
+import type { SpaceLook } from './looks.js';
 import type { CommandOptionValue, CommandReply } from './bots.js';
 import type { ErrorCode, ErrorDetails } from './errors.js';
 import type { CustomEmoji } from './customEmoji.js';
@@ -249,6 +250,11 @@ export interface Space {
    * absent from hosts that predate tags.
    */
   tag?: SpaceTag | null;
+  /**
+   * The colours the space chose for itself (looks.ts; read with `spaceLookOf`); null for none,
+   * absent from hosts that predate looks.
+   */
+  look?: SpaceLook | null;
   inviteCode: string | null;
   /** Its own invite address, `/join/<this>` (shared/src/vanityInvites.ts). */
   vanityCode?: string | null;
@@ -1605,6 +1611,8 @@ export interface UpdateSpaceRequest {
   defaultNotificationLevel?: SpaceDefaultNotificationLevel | null;
   /** The space's tag (spaceTags.ts), or null to take it away; anything else is `400 space_tag_invalid`. */
   tag?: SpaceTag | null;
+  /** The space's colours (looks.ts), or null for none; anything `spaceLookOf` refuses is `400 space_look_invalid`. */
+  look?: SpaceLook | null;
 }
 
 /** What a click on a worn tag shows: the space as Explore would, and its tag (GET /api/spaces/:id/tag). */

@@ -12,6 +12,7 @@ import {
   type ThemeChoice,
 } from '../utils/appTheme';
 import { normalizeLook, type LookSettings } from '../utils/appearanceOptions';
+import { appearanceOfLook, type Look } from '../utils/looks';
 
 /**
  * How this device looks: the surface theme, the person's own accent colour, the
@@ -28,8 +29,15 @@ interface AppearanceState extends AppearanceSettings {
   setAccent: (accent: string | null) => boolean;
   setChatTextScale: (scale: number) => void;
   setReduceMotion: (reduce: boolean) => void;
+  /** Whether a space shows in the colours it chose for itself. */
+  setSpaceLooks: (on: boolean) => void;
   /** Change some of the look settings; each is brought into its own range or set of options. */
   setLook: (patch: Partial<LookSettings>) => void;
+  /**
+   * Put a whole look on this device (utils/looks.ts): its surfaces, accent, light and shape. What
+   * helps the person read (contrast, text size, motion, status colours, links, clock) stays theirs.
+   */
+  putLook: (look: Look) => void;
   reset: () => void;
 }
 
@@ -48,6 +56,7 @@ export function normalizeAppearance(stored: unknown): AppearanceSettings {
     accent: normalizeAccent(raw.accent),
     chatTextScale: normalizeChatTextScale(raw.chatTextScale),
     reduceMotion: raw.reduceMotion === true,
+    spaceLooks: raw.spaceLooks !== false,
   };
 }
 
@@ -77,6 +86,7 @@ export function appearanceSettingsOf(state: AppearanceSettings): AppearanceSetti
     accent: state.accent,
     chatTextScale: state.chatTextScale,
     reduceMotion: state.reduceMotion,
+    spaceLooks: state.spaceLooks,
   };
 }
 
@@ -93,7 +103,12 @@ export const useAppearanceStore = create<AppearanceState>()(persist(
     },
     setChatTextScale: (scale) => set({ chatTextScale: normalizeChatTextScale(scale) }),
     setReduceMotion: (reduce) => set({ reduceMotion: reduce === true }),
+    setSpaceLooks: (on) => set({ spaceLooks: on === true }),
     setLook: (patch) => set(normalizeLook({ ...lookOf(get()), ...patch })),
+    putLook: (look) => {
+      const { theme, custom, accent, ...shape } = appearanceOfLook(look);
+      set({ ...normalizeLook({ ...lookOf(get()), ...shape }), theme, ...(custom ? { custom } : {}), accent });
+    },
     reset: () => set({ ...DEFAULT_APPEARANCE }),
   }),
   {

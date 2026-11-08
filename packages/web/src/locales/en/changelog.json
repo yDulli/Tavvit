@@ -4,6 +4,17 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.41.0": {
+      "title": "Theme studio",
+      "items": {
+        "studio": "A new theme studio shapes how the app looks with a live preview: the colours, the accent, the light, the corners, the typeface, the shape of pictures and how messages are drawn and spaced. Open it from Settings, Appearance.",
+        "looks": "Keep the looks you like under a name and switch between them with one click, up to 30 on each device.",
+        "share": "Share a look as a link. The whole look is in the link, so nothing is stored anywhere, and whoever opens it sees it first and puts it on with one click.",
+        "spaces": "A space can choose its own colours in Space settings, Look. Members see them while they are in the space; turn this off in Settings, Appearance, Spaces in their own colours.",
+        "yours": "Contrast, text size, motion, status colours, underlined links, the clock and the sidebar's width are never part of a look: they stay as you set them.",
+        "audit": "Changing a space's tag or colours now shows in its audit log."
+      }
+    },
     "1.40.0": {
       "title": "Bluesky in the chat",
       "items": {

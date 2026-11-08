@@ -7,38 +7,12 @@ import {
   STRENGTH_RANGE,
   THEME_IDS,
   THEME_PRESETS,
-  surfaceChannels,
   surfaceOf,
   type SurfaceSettings,
   type ThemeChoice,
 } from '../../../utils/appTheme';
+import { SurfaceSwatch } from '../../ui/SurfaceSwatch';
 import { SettingsSection, SliderRow } from './_shared/SettingsControls';
-
-/**
- * A theme as a little screen: the bar along the top, the sidebar with the row
- * you are on (its violet edge), the conversation and a floating card, each in
- * the theme's own surface colours, parted by the theme's own hairline.
- */
-function Swatch({ settings }: { settings: SurfaceSettings }) {
-  const rgb = (token: Parameters<typeof surfaceChannels>[1]) => `rgb(${surfaceChannels(settings, token).join(' ')})`;
-  const hairline = rgb('--border-hard');
-  return (
-    <span className="flex h-14 flex-col overflow-hidden rounded-md border border-border-soft" aria-hidden="true">
-      <span className="h-2.5 flex-shrink-0" style={{ backgroundColor: rgb('--bg-base'), borderBottom: `1px solid ${hairline}` }} />
-      <span className="flex flex-1">
-        <span className="relative w-1/4" style={{ backgroundColor: rgb('--bg-channel'), borderRight: `1px solid ${hairline}` }}>
-          <span className="absolute inset-x-1 top-1.5 h-1.5 rounded-[1px] bg-white/[0.08]" />
-          <span className="absolute left-1 top-1.5 h-1.5 w-[2px] bg-accent-primary" />
-        </span>
-        <span className="relative flex-1" style={{ backgroundColor: rgb('--bg-chat') }}>
-          <span className="absolute left-1.5 top-1.5 h-1 w-8 rounded-[1px] bg-white/[0.14]" />
-          <span className="absolute left-1.5 top-3.5 h-1 w-5 rounded-[1px] bg-white/[0.08]" />
-          <span className="absolute bottom-1.5 right-1.5 h-3 w-8 rounded-[2px]" style={{ backgroundColor: rgb('--bg-elevated'), border: `1px solid ${rgb('--border-soft')}` }} />
-        </span>
-      </span>
-    </span>
-  );
-}
 
 const HUE_TRACK = `linear-gradient(90deg, ${[0, 60, 120, 180, 240, 300, 359].map((h) => `hsl(${h} 70% 50%)`).join(', ')})`;
 
@@ -79,7 +53,7 @@ export function ThemeSection() {
                   selected ? 'border-accent-primary bg-accent-primary/[0.06]' : 'border-border-hard hover:border-interactive-muted hover:bg-interactive-hover active:bg-interactive-active'
                 }`}
               >
-                <Swatch settings={settings} />
+                <SurfaceSwatch settings={settings} />
                 <span className="mt-2 flex items-center gap-1.5 px-0.5">
                   <span
                     aria-hidden="true"

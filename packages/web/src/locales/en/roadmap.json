@@ -5,19 +5,15 @@
     "next": {
       "title": "Next",
       "items": {
-        "themeStudio": {
-          "title": "Theme studio",
-          "text": "Make your own look, share it with a link, or offer one to your space."
+        "history": {
+          "title": "Edit history",
+          "text": "See what a message said before it was edited, if you wrote it or look after the channel."
         }
       }
     },
     "after": {
       "title": "After that",
       "items": {
-        "history": {
-          "title": "Edit history",
-          "text": "See what a message said before it was edited, if you wrote it or look after the channel."
-        },
         "scheduled": {
           "title": "Scheduled messages",
           "text": "Write something now and have it sent later."

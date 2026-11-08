@@ -181,6 +181,11 @@ export const spaces = sqliteTable('spaces', {
    */
   tag: text('tag'),
   /**
+   * The colours the space chose for itself (shared/src/looks.ts): JSON `{ hue, strength, depth,
+   * accent }`, null for none. Set with `PATCH /api/spaces/:id` (MANAGE_SPACE).
+   */
+  look: text('look'),
+  /**
    * The platform's verification of the space (docs/systems/admin.md,
    * "Verification"): null when never requested, else 'pending',
    * 'needs_info', 'verified', 'rejected' or 'revoked'. The one status field;

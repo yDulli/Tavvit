@@ -1,4 +1,6 @@
+import { parseStoredSpaceLook, type SpaceLook } from '@backspace/shared/src/looks';
 import { parseRoleGlyph } from '@backspace/shared/src/roleGlyphs';
+import { parseStoredSpaceTag } from '@backspace/shared/src/spaceTags';
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -22,6 +24,8 @@ import { Avatar } from '../../ui/Avatar';
 import { Icon } from '../../ui/Icon';
 import { usePermissionNames, type PermissionKey } from '../../ui/OverrideEntry';
 import { Sensitive } from '../../ui/Sensitive';
+import { SpaceTagMark } from '../../ui/SpaceTag';
+import { surfaceChannels } from '../../../utils/appTheme';
 import { PERMISSION_GROUPS } from '../../../utils/permissionGroups';
 import { normalizeUserAssets } from '../../../utils/assetUrls';
 import { spaceMemberName, userDisplayName } from '../../../utils/identity';
@@ -206,6 +210,8 @@ function useFieldLabels(): Readonly<Record<string, string>> {
     directoryListed: t('spaces:settings.audit.fields.directoryListed'),
     ownerTitle: t('spaces:settings.audit.fields.ownerTitle'),
     ownerGroup: t('spaces:settings.audit.fields.ownerGroup'),
+    tag: t('spaces:settings.audit.fields.tag'),
+    look: t('spaces:settings.audit.fields.look'),
     // A Discord template import records the template and how much it made.
     template: t('spaces:settings.audit.fields.template'),
     roles: t('spaces:settings.audit.fields.roles'),
@@ -249,6 +255,18 @@ const HEX_COLOR = /^#[0-9a-f]{3,8}$/i;
 
 function isAvatarColor(value: string): value is AvatarColor {
   return (AVATAR_COLORS as readonly string[]).includes(value);
+}
+
+/** A space's colours as a small strip: its sidebar, its conversation, and its accent when it chose one. */
+function LookStrip({ look }: { look: SpaceLook }) {
+  const rgb = (token: Parameters<typeof surfaceChannels>[1]) => `rgb(${surfaceChannels(look, token).join(' ')})`;
+  return (
+    <span aria-hidden="true" className="inline-flex h-3 w-7 flex-shrink-0 overflow-hidden rounded-sm border border-border-soft">
+      <span className="w-2" style={{ backgroundColor: rgb('--bg-channel') }} />
+      <span className="flex-1" style={{ backgroundColor: rgb('--bg-chat') }} />
+      {look.accent && <span className="w-1.5" style={{ backgroundColor: look.accent }} />}
+    </span>
+  );
 }
 
 /** How one side of a change reads, by the field it belongs to. */
@@ -310,6 +328,22 @@ function useValueFormatter(): (key: string, value: AuditLogValue) => React.React
       if (option) return option.label;
     }
     if (key === 'avatarColor' && isAvatarColor(value)) return colorNames[value];
+    if (key === 'tag') {
+      const tag = parseStoredSpaceTag(value);
+      if (tag) return <SpaceTagMark tag={tag} />;
+    }
+    if (key === 'look') {
+      const look = parseStoredSpaceLook(value);
+      if (look) {
+        return (
+          <span className="inline-flex items-center gap-1.5">
+            <LookStrip look={look} />
+            <span>{t('spaces:settings.audit.lookValue', { hue: look.hue, strength: look.strength, depth: formatNumber(look.depth) })}</span>
+            {look.accent && <span className="font-mono">{look.accent}</span>}
+          </span>
+        );
+      }
+    }
     if ((key === 'color' || key === 'colorSecondary' || key === 'avatarColor') && HEX_COLOR.test(value)) {
       return (
         <span className="inline-flex items-center gap-1.5">

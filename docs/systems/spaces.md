@@ -98,7 +98,7 @@ Cross-references: [database.md](database.md) (table schemas), [permissions.md](p
 **Endpoint:** `PATCH /api/spaces/:id`
 **Permission:** `MANAGE_SPACE`; `ownerTitle` and `ownerGroup` the owner only
 
-**Updatable fields:** name (1-100 chars), icon, banner, avatarColor (validated against AVATAR_COLORS), visibility (public/request/private), description (max 200 chars), directoryListed (boolean), ownerTitle (see "Owner title" below), ownerGroup (see "Ownership and roles" below), defaultNotificationLevel (`'all'`, `'mentions'` or `null`; see "Moderation", "Default notification level").
+**Updatable fields:** name (1-100 chars), icon, banner, avatarColor (validated against AVATAR_COLORS), visibility (public/request/private), description (max 200 chars), directoryListed (boolean), ownerTitle (see "Owner title" below), ownerGroup (see "Ownership and roles" below), defaultNotificationLevel (`'all'`, `'mentions'` or `null`; see "Moderation", "Default notification level"), tag (space-tags.md), look (see "A space's look" below).
 
 Every field is checked before anything is written. A body with `ownerTitle` from anyone but the owner is refused with `403 space_owner_only` as a whole, so a member with `MANAGE_SPACE` cannot rename the space in the same request either.
 
@@ -1160,7 +1160,7 @@ strings, durations seconds.
 
 | Action | Recorded by | Target | Changes |
 |--------|-------------|--------|---------|
-| `space_update` | `PATCH /spaces/:id` | space | each changed field of name, icon, banner, avatarColor, visibility, description, directoryListed, ownerTitle, defaultNotificationLevel |
+| `space_update` | `PATCH /spaces/:id` | space | each changed field of name, icon, banner, avatarColor, visibility, description, directoryListed, ownerTitle, ownerGroup, defaultNotificationLevel, tag and look (both as the stored JSON, shown as the tag's mark and as a strip of the colours with their values; since 1.41.0) |
 | `moderation_update` | `PATCH /spaces/:id/moderation` | space | `blocked_word_added` / `blocked_word_removed` per word, and blockLinks, blockInvites, maxMentions, minAccountAgeMinutes, minMemberAgeMinutes |
 | `invite_regenerate` | `POST /spaces/:id/invite` when the space had no code and one is generated | invite (the code) | `inviteCode` |
 | `channel_create` | `POST /spaces/:id/channels` | channel | name, type, topic, category |
@@ -1442,3 +1442,15 @@ A new account of this instance starts in the public spaces an administrator chos
 ## Space tag
 
 A space can have a tag its members wear beside their name (Space settings → Tag, MANAGE_SPACE; wearing it in Your settings). Everything about it is in [space-tags.md](space-tags.md).
+
+## A space's look
+
+A space can choose its colours (1.41.0): a surface and, if it likes, an accent, which members see while they are in the space. It is never the shape (corners, typeface, message style, density) and never anything that helps reading: those stay each member's own (design-system.md, "Looks and the theme studio").
+
+**What it is.** `SpaceLook { hue, strength, depth, accent }` (`packages/shared/src/looks.ts`): `hue` an integer 0–359, `strength` an integer 0–100, `depth` −3 to 4 in half steps (`SURFACE_RANGES`, the ranges of a person's own theme), `accent` `null` (each member keeps their own) or a `#rrggbb` that `accentColorProblem` accepts (white button text stays readable), stored in lower case. `spaceLookOf` is the one rule; the server checks a request by it, and `parseStoredSpaceLook` reads the column back by it, so a value that does not hold is no look.
+
+**Stored** in `spaces.look` as JSON, NULL for none (migration `0077_tavvit_space_looks`, additive). **Set** with `PATCH /api/spaces/:id` `{ look: SpaceLook | null }` by anyone with MANAGE_SPACE; anything else is `400 space_look_invalid` and nothing in the body is written. **Sent** on every `Space` the server builds (`spaceToWire`: the ready payload, space responses, `space_updated`, which reaches the members at once). A change is recorded in the audit log (`space_update`, field `look`).
+
+**Space settings → Look** (`spaceSettingsPanels/SpaceLookPanel.tsx`, MANAGE_SPACE) shows the colours chosen, with Remove, and offers the chooser's own looks: the one they wear now and each one they kept (`spaceLookOfLook` takes their colours). A click sets them; the theme studio is a click away for making a new one.
+
+**Shown** by `AppearanceController` while the space is the current one (`withSpaceLook`): its surfaces, and its accent when it chose one, in place of the member's and the instance's. The member can turn this off for every space (Settings → Appearance → Spaces in their own colours, `spaceLooks`, on by default, kept in this browser); in the theme studio a space's colours never show. The client reads every space's look through `spaceLookOf` again (`toTaggedSpace`), so a space from another instance shows only colours that hold here. A host that predates looks sends no `look`, which reads as none.

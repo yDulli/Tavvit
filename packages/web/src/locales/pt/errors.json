@@ -241,6 +241,7 @@
   "directory_requires_discovery": "Ative primeiro a descoberta de espaços.",
   "space_owner_title_invalid": "O título do dono pode ter de 1 a {{max}} caracteres em uma linha, com pelo menos um caractere visível e sem caracteres de controle.",
   "space_tag_invalid": "Uma tag tem de {{min}} a {{max}} letras ou números de um só alfabeto, com um símbolo e uma cor.",
+  "space_look_invalid": "O look de um espaço é um matiz, uma intensidade e uma profundidade dentro dos limites, e uma cor de destaque que mantém o texto branco legível, ou nenhuma.",
   "space_tag_reserved": "Essa tag pareceria uma marca da plataforma. Escolha outra.",
   "space_tag_unavailable": "Você não pode usar a tag desse espaço.",
   "voice_overlay_unavailable": "Este link de overlay não funciona mais.",

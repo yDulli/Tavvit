@@ -1,4 +1,5 @@
 import { spaceTagOf } from '@backspace/shared/src/spaceTags';
+import { spaceLookOf } from '@backspace/shared/src/looks';
 import type { ThreadInfo } from '@backspace/shared/src/threads';
 import { create } from 'zustand';
 import type { Space, Channel, ChannelCategory, MemberWithUser, SpaceWithChannelsAndMembers, Role, SpaceFolder, SpaceLayoutItem, DmChannel, DmMessageWithUser, User, CreateSpaceRequest } from '@backspace/shared';
@@ -79,6 +80,8 @@ function toTaggedSpace(space: Space, origin: string): TaggedSpace {
     badges: space.badges,
     // What a host sends is checked again: a tag this client cannot draw is none (spaceTags.ts).
     tag: spaceTagOf(space.tag),
+    // So are a space's colours: a look that does not hold is none (looks.ts).
+    look: spaceLookOf(space.look),
     defaultNotificationLevel: space.defaultNotificationLevel ?? null,
     createdAt: space.createdAt,
   } satisfies Record<keyof Space, unknown>;
