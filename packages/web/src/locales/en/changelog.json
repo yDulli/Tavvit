@@ -4,6 +4,15 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.40.0": {
+      "title": "Bluesky in the chat",
+      "items": {
+        "post": "A link to a post on Bluesky shows the post: who wrote it, its text with its links, its pictures, video or link, the post it quotes, and its replies, reposts and likes.",
+        "video": "Videos from Bluesky play right in the chat with their own controls: play and pause, a timeline, sound, picture in picture and full screen. Bluesky's GIFs loop without sound.",
+        "viewer": "Pictures open in a new viewer: several in a row with a strip to move between them, zoom by button, wheel or double click, and open, copy, save, reply or forward from there. Uploaded pictures open in it too.",
+        "privacy": "Pictures and videos from Bluesky load only after you agree, like every other preview. Posts Bluesky marks as sensitive stay covered until you choose to see them."
+      }
+    },
     "1.39.1": {
       "title": "Live in purple",
       "items": {

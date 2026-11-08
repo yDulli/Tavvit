@@ -462,6 +462,8 @@ export const embeds = sqliteTable('embeds', {
   width: integer('width'),
   height: integer('height'),
   color: text('color'),
+  /** JSON: what a `post` embed's card shows (a `BlueskyPost`, packages/shared/src/bluesky.ts); null for every other kind. */
+  data: text('data'),
   createdAt: integer('created_at').notNull(),
 }, (table) => ({
   messageIdx: index('idx_embeds_message_id').on(table.messageId),

@@ -20,6 +20,7 @@
  * See docs/systems/web-security.md.
  */
 import { EMBED_FRAME_ORIGINS } from '@backspace/shared/src/constants.js';
+import { BLUESKY_VIDEO_ORIGINS } from '@backspace/shared/src/bluesky.js';
 
 export interface CspInput {
   /** `config.livekit.url`. Absent, empty or unparseable means voice is off. */
@@ -78,8 +79,12 @@ export function buildCspDirectives(input: CspInput): Record<string, string[]> {
   // With federation off (Tavvit's default) the browser only ever talks to this
   // instance, so the policy names nothing else. That closes the exfiltration
   // channel a script injection would otherwise have through fetch/WebSocket.
+  //
+  // Bluesky's video hosts are the named exception: a video in a post's card is an HLS playlist
+  // whose parts the player fetches itself (hls.js), only after the person agreed to load it
+  // (docs/systems/embeds.md, "Bluesky posts").
   const connectSrc = input.federationEnabled === false
-    ? ["'self'", 'blob:', 'data:']
+    ? ["'self'", 'blob:', 'data:', ...BLUESKY_VIDEO_ORIGINS]
     : ["'self'", 'https:', 'http:', 'wss:', 'ws:', 'blob:', 'data:'];
   if (livekit) {
     // The LiveKit client opens its signalling WebSocket on the configured URL

@@ -56,6 +56,34 @@ interface Toast {
   action?: ToastAction;
 }
 
+/** One picture of the media viewer (`components/chat/MediaViewer.tsx`). */
+export interface MediaViewerItem {
+  /** The picture as shown: its whole size. */
+  url: string;
+  /** A smaller copy for the strip of pictures; else `url`. */
+  thumb?: string | null;
+  /** Its description, shown under it and given to assistive technology. */
+  alt?: string | null;
+  /** Where Open in browser and Copy link lead (the post it belongs to); else the picture itself. */
+  pageUrl?: string | null;
+  /**
+   * How Copy and Save read the file when this page cannot fetch `url` itself (Bluesky's picture
+   * host sends no CORS headers: this server fetches it, `api.embeds.blueskyPicture`).
+   */
+  loadFile?: () => Promise<Blob>;
+  /** The name Save suggests. */
+  filename?: string | null;
+}
+
+export interface MediaViewerState {
+  items: MediaViewerItem[];
+  /** The picture it opens on. */
+  index: number;
+  /** The message the pictures belong to: its Reply and Forward, offered beside the picture. */
+  onReply?: () => void;
+  onForward?: () => void;
+}
+
 export interface UIState {
   sidebarOpen: boolean;
   /** The people column's persisted state in a wide window. */
@@ -74,7 +102,8 @@ export interface UIState {
   modalData: Record<string, unknown>;
   isMobile: boolean;
   showDms: boolean;
-  imagePreviewUrl: string | null;
+  /** The pictures the media viewer shows (`activeModal: 'imagePreview'`), or null. */
+  mediaViewer: MediaViewerState | null;
   userProfilePopout: {
     user: User | null;
     /** The instance that issued `user` ('' = the page's own). */
@@ -93,7 +122,10 @@ export interface UIState {
   closeModal: () => void;
   setIsMobile: (isMobile: boolean) => void;
   setShowDms: (show: boolean) => void;
+  /** One picture in the media viewer. */
   openImagePreview: (url: string) => void;
+  /** Several pictures in the media viewer, opening on one, with what may be done with their message. */
+  openMediaViewer: (viewer: MediaViewerState) => void;
   closeImagePreview: () => void;
   /**
    * Show `user`'s profile: `origin` is the instance that issued the row, which
@@ -136,7 +168,7 @@ export const useUIStore = create<UIState>()(
       modalData: {},
       isMobile: false,
       showDms: false,
-      imagePreviewUrl: null,
+      mediaViewer: null,
       userProfilePopout: {
         user: null,
         origin: '',
@@ -173,8 +205,12 @@ export const useUIStore = create<UIState>()(
 
       setShowDms: (show) => set({ showDms: show }),
 
-      openImagePreview: (url) => set({ activeModal: 'imagePreview', imagePreviewUrl: url }),
-      closeImagePreview: () => set({ activeModal: null, imagePreviewUrl: null }),
+      openImagePreview: (url) => set({ activeModal: 'imagePreview', mediaViewer: { items: [{ url }], index: 0 } }),
+      openMediaViewer: (viewer) => {
+        if (viewer.items.length === 0) return;
+        set({ activeModal: 'imagePreview', mediaViewer: { ...viewer, index: Math.min(Math.max(viewer.index, 0), viewer.items.length - 1) } });
+      },
+      closeImagePreview: () => set({ activeModal: null, mediaViewer: null }),
 
       openUserProfile: (user, origin, anchor, placement = 'right', member) => {
         if (get().isMobile) {

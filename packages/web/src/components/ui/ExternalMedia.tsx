@@ -2,6 +2,7 @@ import React, { type ImgHTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 import { externalHostOf, useExternalMediaStore } from '../../stores/externalMediaStore';
 import { useConnectedOrigins } from '../../hooks/useConnectedOrigins';
+import { useFormatters } from '../../i18n/formatters';
 
 /**
  * Whether this address may be fetched now, and its host when it still needs a yes. An address on
@@ -80,6 +81,36 @@ function ExternalPlaceholder({ host, compact, className }: { host: string; compa
   return (
     <div className={`surface-card max-w-[400px] rounded-lg px-3 py-2.5 text-ui ${className ?? ''}`}>
       <p className="break-words leading-snug text-txt-secondary">{t('external.notice', { host })}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-1">
+        <button type="button" onClick={load} className="btn-outline btn-sm">{t('external.load')}</button>
+        <button type="button" onClick={always} className="btn-quiet btn-sm">{t('external.always')}</button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The notice for something that loads from several servers at once (a Bluesky post's pictures and
+ * video): "Load" allows every one of `hosts` until the app closes, "Always allow" is the consent.
+ */
+export function ExternalHostsNotice({ hosts, className }: { hosts: readonly string[]; className?: string }) {
+  const { t } = useTranslation('legal');
+  const allowHost = useExternalMediaStore((s) => s.allowHost);
+  const setAlwaysAllow = useExternalMediaStore((s) => s.setAlwaysAllow);
+  const { formatList } = useFormatters();
+  const load = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    for (const host of hosts) allowHost(host);
+  };
+  const always = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAlwaysAllow(true);
+  };
+  return (
+    <div className={`rounded-md border border-border-soft bg-surface-input px-3 py-2.5 text-ui ${className ?? ''}`}>
+      <p className="break-words leading-snug text-txt-secondary">{t('external.noticeMany', { hosts: formatList([...hosts]), count: hosts.length })}</p>
       <div className="mt-2 flex flex-wrap items-center gap-1">
         <button type="button" onClick={load} className="btn-outline btn-sm">{t('external.load')}</button>
         <button type="button" onClick={always} className="btn-quiet btn-sm">{t('external.always')}</button>

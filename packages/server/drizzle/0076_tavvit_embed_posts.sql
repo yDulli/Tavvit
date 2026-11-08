@@ -1,0 +1,1 @@
+ALTER TABLE `embeds` ADD `data` text;

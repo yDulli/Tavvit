@@ -172,6 +172,23 @@
     "copy": "Bild kopieren",
     "alt": "Bildvorschau"
   },
+  "viewer": {
+    "label": "Bildbetrachter",
+    "position": "{{index}} von {{total}}",
+    "openInBrowser": "Im Browser öffnen",
+    "copyLink": "Link kopieren",
+    "linkCopied": "Link kopiert",
+    "imageCopied": "Bild kopiert",
+    "copyFailed": "Kopieren hat nicht geklappt",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "reply": "Antworten",
+    "forward": "Weiterleiten",
+    "previous": "Vorheriges Bild",
+    "next": "Nächstes Bild",
+    "strip": "Bilder",
+    "show": "Bild {{index}} von {{total}}"
+  },
   "invite": {
     "sentBy": "{{name}} hat eine Einladung geschickt",
     "memberCount_one": "{{count}} Mitglied",
@@ -199,7 +216,37 @@
     "frameTitle": "Einbettung",
     "playNamed": "{{title}} abspielen",
     "playUnnamed": "Video abspielen",
-    "videoTitle": "Video"
+    "videoTitle": "Video",
+    "bluesky": {
+      "provider": "Bluesky",
+      "label": "Beitrag von {{name}} auf Bluesky",
+      "open": "Auf Bluesky öffnen",
+      "replies_one": "{{count}} Antwort",
+      "replies_other": "{{count}} Antworten",
+      "reposts_one": "{{count}} Repost",
+      "reposts_other": "{{count}} Reposts",
+      "likes_one": "{{count}} Like",
+      "likes_other": "{{count}} Likes",
+      "sensitive": "Dieser Beitrag zeigt vielleicht heikle Bilder.",
+      "show": "Anzeigen",
+      "picture": "Bild {{index}} von {{total}}",
+      "quoted": "Zitierter Beitrag von {{name}}",
+      "gif": "GIF"
+    },
+    "player": {
+      "play": "Abspielen",
+      "pause": "Pause",
+      "mute": "Stummschalten",
+      "unmute": "Ton an",
+      "volume": "Lautstärke",
+      "seek": "Stelle im Video",
+      "fullscreen": "Vollbild",
+      "exitFullscreen": "Vollbild verlassen",
+      "pip": "Bild im Bild",
+      "failed": "Dieses Video lässt sich hier nicht abspielen.",
+      "watchOnBluesky": "Auf Bluesky ansehen",
+      "loading": "Video lädt"
+    }
   },
   "stickers": {
     "title": "Meine Sticker",

@@ -175,6 +175,23 @@
     "copy": "Copiar imagem",
     "alt": "Pré-visualização da imagem"
   },
+  "viewer": {
+    "label": "Visualizador de imagens",
+    "position": "{{index}} de {{total}}",
+    "openInBrowser": "Abrir no navegador",
+    "copyLink": "Copiar link",
+    "linkCopied": "Link copiado",
+    "imageCopied": "Imagem copiada",
+    "copyFailed": "Não foi possível copiar",
+    "zoomIn": "Ampliar",
+    "zoomOut": "Reduzir",
+    "reply": "Responder",
+    "forward": "Encaminhar",
+    "previous": "Imagem anterior",
+    "next": "Próxima imagem",
+    "strip": "Imagens",
+    "show": "Imagem {{index}} de {{total}}"
+  },
   "invite": {
     "sentBy": "{{name}} enviou um convite",
     "memberCount_one": "{{count}} membro",
@@ -203,7 +220,40 @@
     "frameTitle": "Conteúdo incorporado",
     "playNamed": "Reproduzir {{title}}",
     "playUnnamed": "Reproduzir vídeo",
-    "videoTitle": "Vídeo"
+    "videoTitle": "Vídeo",
+    "bluesky": {
+      "provider": "Bluesky",
+      "label": "Post de {{name}} no Bluesky",
+      "open": "Abrir no Bluesky",
+      "replies_one": "{{count}} resposta",
+      "replies_many": "{{count}} de respostas",
+      "replies_other": "{{count}} respostas",
+      "reposts_one": "{{count}} repost",
+      "reposts_many": "{{count}} de reposts",
+      "reposts_other": "{{count}} reposts",
+      "likes_one": "{{count}} curtida",
+      "likes_many": "{{count}} de curtidas",
+      "likes_other": "{{count}} curtidas",
+      "sensitive": "Este post pode mostrar imagens sensíveis.",
+      "show": "Mostrar",
+      "picture": "Imagem {{index}} de {{total}}",
+      "quoted": "Post citado de {{name}}",
+      "gif": "GIF"
+    },
+    "player": {
+      "play": "Reproduzir",
+      "pause": "Pausar",
+      "mute": "Silenciar",
+      "unmute": "Ativar som",
+      "volume": "Volume",
+      "seek": "Posição no vídeo",
+      "fullscreen": "Tela cheia",
+      "exitFullscreen": "Sair da tela cheia",
+      "pip": "Picture-in-picture",
+      "failed": "Este vídeo não pode ser reproduzido aqui.",
+      "watchOnBluesky": "Assistir no Bluesky",
+      "loading": "Carregando vídeo"
+    }
   },
   "stickers": {
     "title": "Minhas figurinhas",

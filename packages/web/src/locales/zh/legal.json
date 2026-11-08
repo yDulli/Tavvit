@@ -147,6 +147,7 @@
   },
   "external": {
     "notice": "此内容来自 {{host}}。加载时该服务器会得知您的 IP 地址。",
+    "noticeMany_other": "此内容来自 {{hosts}}。加载时这些服务器会得知您的 IP 地址。",
     "load": "加载",
     "always": "始终允许",
     "compactTitle": "从 {{host}} 加载",

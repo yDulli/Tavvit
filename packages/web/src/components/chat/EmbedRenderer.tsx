@@ -4,15 +4,23 @@ import { GenericEmbed } from './embeds/GenericEmbed';
 import { VideoEmbed } from './embeds/VideoEmbed';
 import { ImageEmbed } from './embeds/ImageEmbed';
 import { RichEmbed } from './embeds/RichEmbed';
+import { BlueskyEmbed } from './embeds/BlueskyEmbed';
 import { ExternalGate } from '../ui/ExternalMedia';
 import { webAddress } from '../../utils/webAddress';
 
 interface EmbedRendererProps {
   embed: Embed;
+  /** The message's Reply and Forward, for embeds that open its pictures in the viewer. */
+  onReply?: () => void;
+  onForward?: () => void;
 }
 
-export function EmbedRenderer({ embed }: EmbedRendererProps) {
+export function EmbedRenderer({ embed, onReply, onForward }: EmbedRendererProps) {
   switch (embed.embedType) {
+    case 'post':
+      // i18n-check: allow-literal (switch/case punctuation between JSX returns, not text)
+      return embed.provider === 'bluesky' ? <BlueskyEmbed embed={embed} onReply={onReply} onForward={onForward} /> : <GenericEmbed embed={embed} />;
+
     case 'video':
       // i18n-check: allow-literal (switch/case punctuation between JSX returns, not text)
       return <VideoEmbed embed={embed} />;

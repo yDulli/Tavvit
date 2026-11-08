@@ -233,6 +233,18 @@ The scenes in packages/web/src/camera/scenes/ are drawn by scripts/camera-scenes
 for Tavvit and are covered by the project license.
 
 ================================================================================
+Videos in Bluesky posts
+================================================================================
+
+A video in a Bluesky post's card (packages/web/src/components/chat/embeds/
+BlueskyVideo.tsx) is HLS, which most browsers play through hls.js:
+
+hls.js
+  License:  Apache License 2.0 (https://github.com/video-dev/hls.js)
+  An npm dependency, used unmodified: its light build is bundled as a chunk of
+  its own, loaded only when someone first plays such a video.
+
+================================================================================
 Emoji
 ================================================================================
 

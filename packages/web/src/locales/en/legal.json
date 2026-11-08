@@ -147,6 +147,8 @@
   },
   "external": {
     "notice": "This comes from {{host}}. Loading it tells that server your IP address.",
+    "noticeMany_one": "This comes from {{hosts}}. Loading it tells that server your IP address.",
+    "noticeMany_other": "This comes from {{hosts}}. Loading it tells these servers your IP address.",
     "load": "Load",
     "always": "Always allow",
     "compactTitle": "Load from {{host}}",

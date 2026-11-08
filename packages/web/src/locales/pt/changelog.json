@@ -4,6 +4,15 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.40.0": {
+      "title": "Bluesky no chat",
+      "items": {
+        "post": "Um link para um post no Bluesky mostra o post: quem escreveu, o texto com seus links, as imagens, o vídeo ou o link, o post citado e as respostas, reposts e curtidas.",
+        "video": "Vídeos do Bluesky tocam direto no chat, com controles próprios: reproduzir e pausar, linha do tempo, som, picture-in-picture e tela cheia. Os GIFs do Bluesky repetem sem som.",
+        "viewer": "Imagens abrem em um novo visualizador: várias em sequência com uma faixa para trocar entre elas, zoom por botão, roda do mouse ou clique duplo, e de lá abrir, copiar, salvar, responder ou encaminhar. Imagens enviadas também abrem nele.",
+        "privacy": "Imagens e vídeos do Bluesky só carregam depois que você concorda, como qualquer outra prévia. Posts que o Bluesky marca como sensíveis ficam cobertos até você escolher ver."
+      }
+    },
     "1.39.1": {
       "title": "Ao vivo em roxo",
       "items": {

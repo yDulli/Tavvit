@@ -87,6 +87,8 @@ vi.mock('../../stores/activityStore', () => ({
       subscribe: vi.fn(),
     }
   ),
+  // Nobody here streams: every status dot shows the status as it is.
+  useStreaming: () => false,
 }));
 
 const mockNavigate = vi.fn();

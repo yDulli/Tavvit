@@ -19,7 +19,7 @@ import { RightPanel } from './RightPanel';
 import { ThreadPanel } from '../chat/ThreadPanel';
 import { useThreadStore } from '../../stores/threadStore';
 import { MobileShell } from './MobileShell';
-import { ImagePreview } from '../chat/ImagePreview';
+import { MediaViewer } from '../chat/MediaViewer';
 import { CreateSpaceModal } from '../modals/CreateSpace';
 import { DiscordImportModal } from '../modals/DiscordImportModal';
 import { SpaceProfileModal } from '../modals/SpaceProfileModal';
@@ -483,7 +483,7 @@ export function AppLayout() {
         {/* MemberRolesModal is desktop-only: it opens from the profile card's
             Edit Roles, and its two-pane layout has no mobile form. */}
         <IncomingCallModal />
-        <ImagePreview />
+        <MediaViewer />
         {/* PictureInPicture is desktop-only. Mobile has its own purpose-built
             voice chrome (MobileVoiceMiniBar + MobileVoiceFullScreen) mounted
             inside MobileShell. Mounting PiP here too caused a "PiP-style grey
@@ -556,7 +556,7 @@ export function AppLayout() {
       <ConnectAndJoinModal />
       <MemberRolesModal />
       <IncomingCallModal />
-      <ImagePreview />
+      <MediaViewer />
       <PictureInPicture />
       <SoundController />
       <GlobalAudioRenderer />

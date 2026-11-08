@@ -159,6 +159,15 @@ export const ICONS = {
   skip: ['M6 5.5v13l9.5-6.5L6 5.5Z', 'M18.5 5.5v13'],
   list: ['M9 6.5h11M9 12h11M9 17.5h11', { dot: [4.5, 6.5] }, { dot: [4.5, 12] }, { dot: [4.5, 17.5] }],
   maximize: ['M4 9V5a1 1 0 0 1 1-1h4', 'M15 4h4a1 1 0 0 1 1 1v4', 'M20 15v4a1 1 0 0 1-1 1h-4', 'M9 20H5a1 1 0 0 1-1-1v-4'],
+  // Leaving full screen: the four corners turned inward.
+  minimize: ['M9 4v4a1 1 0 0 1-1 1H4', 'M20 9h-4a1 1 0 0 1-1-1V4', 'M15 20v-4a1 1 0 0 1 1-1h4', 'M4 15h4a1 1 0 0 1 1 1v4'],
+  // Picture in picture: a screen with a small one in its corner.
+  pip: ['M20 11V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h5', 'M14 14h7v6h-7v-6Z'],
+  'zoom-in': [circle(10.5, 10.5, 6.5), 'm20 20-4.8-4.8', 'M10.5 7.8v5.4M7.8 10.5h5.4'],
+  'zoom-out': [circle(10.5, 10.5, 6.5), 'm20 20-4.8-4.8', 'M7.8 10.5h5.4'],
+  heart: ['M12 20 4.9 13a4.6 4.6 0 0 1 6.5-6.5l.6.6.6-.6A4.6 4.6 0 0 1 19.1 13L12 20Z'],
+  // Reposting: two arrows chasing each other round.
+  repost: ['M17 3.5 20.5 7 17 10.5', 'M3.5 11V9.5A2.5 2.5 0 0 1 6 7h14.5', 'M7 20.5 3.5 17 7 13.5', 'M20.5 13v1.5A2.5 2.5 0 0 1 18 17H3.5'],
   // Subtitles: a screen with the two C's of closed captions.
   captions: [
     'M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z',

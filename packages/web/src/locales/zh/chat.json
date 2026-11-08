@@ -169,6 +169,23 @@
     "copy": "复制图片",
     "alt": "图片预览"
   },
+  "viewer": {
+    "label": "图片查看器",
+    "position": "第 {{index}} 张，共 {{total}} 张",
+    "openInBrowser": "在浏览器中打开",
+    "copyLink": "复制链接",
+    "linkCopied": "链接已复制",
+    "imageCopied": "图片已复制",
+    "copyFailed": "无法复制",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "reply": "回复",
+    "forward": "转发",
+    "previous": "上一张图片",
+    "next": "下一张图片",
+    "strip": "图片",
+    "show": "第 {{index}} 张图片，共 {{total}} 张"
+  },
   "invite": {
     "sentBy": "{{name}} 发送了邀请",
     "memberCount_other": "{{count}} 名成员",
@@ -195,7 +212,34 @@
     "frameTitle": "嵌入内容",
     "playNamed": "播放 {{title}}",
     "playUnnamed": "播放视频",
-    "videoTitle": "视频"
+    "videoTitle": "视频",
+    "bluesky": {
+      "provider": "Bluesky",
+      "label": "{{name}} 在 Bluesky 上的帖子",
+      "open": "在 Bluesky 上打开",
+      "replies_other": "{{count}} 条回复",
+      "reposts_other": "{{count}} 次转发",
+      "likes_other": "{{count}} 个赞",
+      "sensitive": "此帖子可能包含敏感图片。",
+      "show": "显示",
+      "picture": "第 {{index}} 张图片，共 {{total}} 张",
+      "quoted": "{{name}} 的引用帖子",
+      "gif": "GIF"
+    },
+    "player": {
+      "play": "播放",
+      "pause": "暂停",
+      "mute": "静音",
+      "unmute": "取消静音",
+      "volume": "音量",
+      "seek": "视频进度",
+      "fullscreen": "全屏",
+      "exitFullscreen": "退出全屏",
+      "pip": "画中画",
+      "failed": "此视频无法在此播放。",
+      "watchOnBluesky": "在 Bluesky 上观看",
+      "loading": "正在加载视频"
+    }
   },
   "stickers": {
     "title": "我的表情",

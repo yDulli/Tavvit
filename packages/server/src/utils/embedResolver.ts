@@ -1,11 +1,13 @@
 import { stickerUrl } from '@backspace/shared/src/stickers.js';
 import { withoutSpoilers } from '@backspace/shared/src/spoilers.js';
+import { blueskyPlainText, blueskyPostOf, parseBlueskyPostUrl, type BlueskyPost } from '@backspace/shared/src/bluesky.js';
 import { eq, inArray } from 'drizzle-orm';
 import sharp from 'sharp';
 import type { Embed } from '@backspace/shared';
 import { getDb, schema } from '../db/index.js';
 import { generateSnowflake } from './snowflake.js';
-import { classifyUrl } from './embedClassifier.js';
+import { classifyUrl, GENERIC_CLASSIFICATION } from './embedClassifier.js';
+import { readBlueskyPost } from './bluesky.js';
 import { fetchUrlMetadata } from './metadataFetcher.js';
 import { safeFetch } from './ssrf.js';
 import { connectionManager } from '../ws/handler.js';
@@ -95,6 +97,7 @@ export function extractUrls(content: string | null): string[] {
 // ─── Row → Embed Conversion ────────────────────────────────────────────────
 
 export function embedRowToEmbed(row: typeof schema.embeds.$inferSelect): Embed {
+  const post = row.embedType === 'post' && row.provider === 'bluesky' ? storedPostOf(row.data) : null;
   return {
     id: row.id,
     messageId: row.messageId,
@@ -110,6 +113,36 @@ export function embedRowToEmbed(row: typeof schema.embeds.$inferSelect): Embed {
     height: row.height ?? null,
     color: row.color ?? null,
     createdAt: row.createdAt,
+    ...(post ? { post } : {}),
+  };
+}
+
+/** A post kept in `embeds.data`, read as any arriving post is (`blueskyPostOf`). */
+function storedPostOf(data: string | null | undefined): BlueskyPost | null {
+  if (!data) return null;
+  try {
+    return blueskyPostOf(JSON.parse(data));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A post's card as an embed row. Its plain fields name the author, the text and the first picture,
+ * which is what a client that draws no posts shows as an ordinary preview.
+ */
+function postEmbedFields(post: BlueskyPost): Pick<typeof schema.embeds.$inferInsert, 'title' | 'description' | 'image' | 'width' | 'height' | 'data'> {
+  const cover = post.images[0]
+    ? { image: post.images[0].thumb, width: post.images[0].width, height: post.images[0].height }
+    : post.video?.thumbnail
+      ? { image: post.video.thumbnail, width: post.video.width, height: post.video.height }
+      : { image: post.link?.thumb ?? null, width: null, height: null };
+  const name = post.author.displayName ? `${post.author.displayName} (@${post.author.handle})` : `@${post.author.handle}`;
+  return {
+    title: name,
+    description: blueskyPlainText(post.text).slice(0, 500) || null,
+    ...cover,
+    data: JSON.stringify(post),
   };
 }
 
@@ -163,7 +196,33 @@ async function resolveEmbedsNow(
 
   for (const url of urls) {
     try {
-      const classification = classifyUrl(url);
+      let classification = classifyUrl(url);
+
+      // A post on Bluesky, read from Bluesky's public interface. One it withdrew gets no card at
+      // all; one it cannot give (gone, for logged-in people only, Bluesky away) an ordinary preview.
+      if (classification.provider === 'bluesky') {
+        const link = parseBlueskyPostUrl(url);
+        const post = link ? await readBlueskyPost(link) : null;
+        if (post === 'hidden') continue;
+        if (post) {
+          const row: typeof schema.embeds.$inferInsert = {
+            id: generateSnowflake(),
+            messageId: isDm ? null : messageId,
+            dmMessageId: isDm ? messageId : null,
+            url,
+            embedType: 'post',
+            provider: 'bluesky',
+            embedUrl: null,
+            color: null,
+            createdAt: now,
+            ...postEmbedFields(post),
+          };
+          db.insert(schema.embeds).values(row).run();
+          resolvedEmbeds.push(embedRowToEmbed(row as typeof schema.embeds.$inferSelect));
+          continue;
+        }
+        classification = GENERIC_CLASSIFICATION;
+      }
 
       let title: string | null = null;
       let description: string | null = null;

@@ -216,6 +216,9 @@ importers:
       '@sapphi-red/web-noise-suppressor':
         specifier: ^0.4.1
         version: 0.4.1
+      hls.js:
+        specifier: ^1.7.4
+        version: 1.7.4
       i18next:
         specifier: 26.4.2
         version: 26.4.2(typescript@5.9.3)
@@ -4504,6 +4507,9 @@ packages:
   hexy@0.2.11:
     resolution: {integrity: sha512-ciq6hFsSG/Bpt2DmrZJtv+56zpPdnq+NQ4ijEFrveKN0ZG1mhl/LdT1NQZ9se6ty1fACcI4d4vYqC9v8EYpH2A==}
     hasBin: true
+
+  hls.js@1.7.4:
+    resolution: {integrity: sha512-3GlxGdPvT2YHvQYOt+yOzT/DEior/qJVNIylHA77kgeoBTdQQqi70GwefNEUmHQeNGyjC8U62+bruqW/Tpm+tg==}
 
   hookified@1.15.1:
     resolution: {integrity: sha512-MvG/clsADq1GPM2KGo2nyfaWVyn9naPiXrqIe4jYjXNZQt238kWyOGrsyc/DmRAQ+Re6yeo6yX/yoNCG5KAEVg==}
@@ -11355,6 +11361,8 @@ snapshots:
       hermes-estree: 0.25.1
 
   hexy@0.2.11: {}
+
+  hls.js@1.7.4: {}
 
   hookified@1.15.1: {}
 

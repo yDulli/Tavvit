@@ -3,6 +3,12 @@ import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { User } from '@backspace/shared';
 
+// An avatar with a dot asks the activities whether the person streams (`useStreaming`); that
+// store sends over the socket, whose module loads the audio pipeline jsdom does not have.
+vi.mock('../../audio/AudioManager', () => ({
+  AudioManager: { getInstance: vi.fn().mockReturnValue({ setOutputDevice: vi.fn(), setVolume: vi.fn() }) },
+}));
+
 import { ProfileAvatar } from './ProfileAvatar';
 import { useUIStore } from '../../stores/uiStore';
 

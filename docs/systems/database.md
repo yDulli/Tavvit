@@ -205,8 +205,8 @@ Index: `idx_custom_emojis_created_by` (created_by). A person who is not an admin
 | messageId | text | FK → messages.id CASCADE |
 | dmMessageId | text | FK → dm_messages.id CASCADE |
 | url | text NOT NULL | |
-| embedType | text NOT NULL | generic/video/image/audio/rich |
-| provider | text | youtube/vimeo/spotify/null |
+| embedType | text NOT NULL | generic/video/image/audio/rich/post |
+| provider | text | youtube/vimeo/spotify/bluesky/null |
 | title | text | |
 | description | text | |
 | image | text | Thumbnail/og:image URL |
@@ -214,6 +214,7 @@ Index: `idx_custom_emojis_created_by` (created_by). A person who is not an admin
 | width | integer | |
 | height | integer | |
 | color | text | |
+| data | text | JSON of a `post` embed's card: a `BlueskyPost` (packages/shared/src/bluesky.ts), read back through `blueskyPostOf`; null for every other kind (migration 0076, additive) |
 | createdAt | integer NOT NULL | |
 CHECK: exactly one of messageId/dmMessageId is set
 

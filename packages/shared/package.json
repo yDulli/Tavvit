@@ -1,6 +1,6 @@
 {
   "name": "@backspace/shared",
-  "version": "1.39.1",
+  "version": "1.40.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Jannis Braun",
@@ -71,6 +71,8 @@
     "./src/decorations.js": "./src/decorations.ts",
     "./src/adminRemoval": "./src/adminRemoval.ts",
     "./src/adminRemoval.js": "./src/adminRemoval.ts",
+    "./src/bluesky": "./src/bluesky.ts",
+    "./src/bluesky.js": "./src/bluesky.ts",
     "./src/customDecorations": "./src/customDecorations.ts",
     "./src/customDecorations.js": "./src/customDecorations.ts",
     "./src/forums": "./src/forums.ts",

@@ -533,6 +533,13 @@
       "when": 1794083805218,
       "tag": "0075_tavvit_custom_decorations",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "6",
+      "when": 1794135024774,
+      "tag": "0076_tavvit_embed_posts",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,15 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.40.0": {
+      "title": "Bluesky im Chat",
+      "items": {
+        "post": "Ein Link zu einem Beitrag auf Bluesky zeigt den Beitrag: wer ihn geschrieben hat, den Text mit seinen Links, Bilder, Video oder Link, den zitierten Beitrag und die Antworten, Reposts und Likes.",
+        "video": "Videos von Bluesky laufen direkt im Chat, mit eigener Steuerung: Abspielen und Pause, Zeitleiste, Ton, Bild im Bild und Vollbild. GIFs von Bluesky laufen in Schleife ohne Ton.",
+        "viewer": "Bilder öffnen in einem neuen Betrachter: mehrere hintereinander mit einer Leiste zum Wechseln, Zoom per Knopf, Mausrad oder Doppelklick, und von dort öffnen, kopieren, speichern, antworten oder weiterleiten. Hochgeladene Bilder öffnen auch darin.",
+        "privacy": "Bilder und Videos von Bluesky laden erst, wenn du zustimmst, wie jede andere Vorschau. Beiträge, die Bluesky als heikel markiert, bleiben verdeckt, bis du sie sehen willst."
+      }
+    },
     "1.39.1": {
       "title": "Live in Lila",
       "items": {

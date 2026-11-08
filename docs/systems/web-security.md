@@ -72,6 +72,17 @@ default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsa
 With `LIVEKIT_URL=wss://voice.example.org/livekit/` set, the only difference is
 `wss://voice.example.org` appended to `connect-src`.
 
+With federation switched off (`federationEnabled: false`, Tavvit's default) the
+browser talks to no other instance, so `connect-src` lists no schemes: only
+`'self' blob: data:`, LiveKit's origin when it is configured, and the two hosts a
+video in a Bluesky post plays from, `https://video.bsky.app` and
+`https://video.cdn.bsky.app` (`BLUESKY_VIDEO_ORIGINS` in
+`packages/shared/src/bluesky.ts`). Bluesky sends videos as HLS, and hls.js
+fetches the playlist and its parts itself, only after the person agreed to load
+from Bluesky ([embeds.md](embeds.md), "Bluesky posts"). Bluesky's pictures need
+no entry: they are `<img>` (`img-src https:`), and Copy and Save fetch them
+through this server.
+
 ## 3. The non-obvious directives
 
 Each of these exists because a specific piece of code needs it. Removing one

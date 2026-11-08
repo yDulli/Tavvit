@@ -1,4 +1,5 @@
 import type { EmbedType, EmbedProvider } from '@backspace/shared';
+import { parseBlueskyPostUrl } from '@backspace/shared/src/bluesky.js';
 
 export interface EmbedClassification {
   embedType: EmbedType;
@@ -103,6 +104,14 @@ export function classifyUrl(rawUrl: string): EmbedClassification {
     }
   }
 
+  // A post on Bluesky: read from Bluesky's public interface (utils/bluesky.ts), not from its page.
+  if (parseBlueskyPostUrl(rawUrl)) {
+    return { embedType: 'post', provider: 'bluesky', embedUrl: null, needsMetadataFetch: false };
+  }
+
   // Everything else
   return { embedType: 'generic', provider: null, embedUrl: null, needsMetadataFetch: true };
 }
+
+/** What a link becomes when its provider could not be asked: an ordinary preview of its page. */
+export const GENERIC_CLASSIFICATION: EmbedClassification = { embedType: 'generic', provider: null, embedUrl: null, needsMetadataFetch: true };

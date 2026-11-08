@@ -12,14 +12,18 @@ Source files:
 - `packages/web/src/components/chat/embeds/RichEmbed.tsx` — Rich iframe embed (Spotify)
 - `packages/web/src/components/chat/embeds/VideoEmbed.tsx` — Video embed (YouTube, Vimeo, direct)
 - `packages/shared/src/types.ts` — `Embed`, `EmbedType`, `EmbedProvider` type definitions
+- `packages/shared/src/bluesky.ts` — [Bluesky posts](#12-bluesky-posts): Bluesky's hosts, the post a link names (`parseBlueskyPostUrl`), the card's data (`BlueskyPost`) and the check every arriving post goes through (`blueskyPostOf`)
+- `packages/server/src/utils/bluesky.ts` — Reading a post from Bluesky's public interface (`readBlueskyPost`, `postFromView`, `textParts`), a picture for Copy and Save (`fetchBlueskyPicture`)
+- `packages/web/src/components/chat/embeds/BlueskyEmbed.tsx`, `BlueskyVideo.tsx` — The post's card, and its video's player
+- `packages/web/src/components/chat/MediaViewer.tsx` — [The media viewer](#13-the-media-viewer) every picture opens in
 
 ---
 
 ## Type Definitions
 
 ```typescript
-type EmbedType = 'generic' | 'video' | 'image' | 'audio' | 'rich';
-type EmbedProvider = 'youtube' | 'vimeo' | 'spotify';
+type EmbedType = 'generic' | 'video' | 'image' | 'audio' | 'rich' | 'post';
+type EmbedProvider = 'youtube' | 'vimeo' | 'spotify' | 'bluesky';
 
 interface Embed {
   id: string;               // Snowflake
@@ -36,6 +40,7 @@ interface Embed {
   height: number | null;     // Image/thumbnail pixel height
   color: string | null;      // Reserved, always null currently
   createdAt: number;         // Epoch ms
+  post?: BlueskyPost | null; // A `post` embed's card (#12); kept in `embeds.data`
 }
 ```
 
@@ -127,6 +132,14 @@ Host: `open.spotify.com`
 Pattern: `open.spotify.com/{type}/{id}` where type is `track`, `album`, or `playlist`, id is `[A-Za-z0-9]+`
 
 Result: `embedType: 'rich'`, `provider: 'spotify'`, `embedUrl: https://open.spotify.com/embed/{type}/{id}`, `needsMetadataFetch: true`
+
+#### Bluesky
+
+Host: `bsky.app` (also `www.`), over HTTPS or HTTP, no port and no credentials.
+
+Pattern: `/profile/{handle or DID}/post/{record key}` (`parseBlueskyPostUrl`): a handle as a domain name, lower-cased, or a `did:plc:` or `did:web:` identifier; a record key of `[A-Za-z0-9._~:-]`, 1 to 512 characters.
+
+Result: `embedType: 'post'`, `provider: 'bluesky'`, `embedUrl: null`, `needsMetadataFetch: false`: the post is read from Bluesky's public interface, not from its page ([Bluesky posts](#12-bluesky-posts)).
 
 #### Fallthrough
 
@@ -414,12 +427,15 @@ Two functions load embeds for message lists (used when fetching message history)
 
 ```
 EmbedRenderer
+  |-- 'post'    -> BlueskyEmbed (provider bluesky; else GenericEmbed)
   |-- 'video'   -> VideoEmbed
   |-- 'image'   -> ImageEmbed
   |-- 'audio'   -> inline <audio> element
   |-- 'rich'    -> RichEmbed
   |-- 'generic' -> GenericEmbed (default)
 ```
+
+`EmbedRenderer` takes the message's `onReply` and `onForward` (`Message.tsx`: Reply where the person may write, Forward where the message can be forwarded) and hands them to an embed that opens pictures in the media viewer.
 
 ### VideoEmbed
 
@@ -440,7 +456,7 @@ Two modes based on whether a provider is present:
 - When dimensions are null: no wrapper sizing, no fallback aspect-ratio. Inner `<img>` renders within 400 × 300: the `max-w` of the button around it, its own `max-h-[300px]`. The absent fallback is deliberate — see the *Dimension reservation contract* section below.
 - Inner `<img>`: `object-contain`, `loading="lazy"`, `referrerPolicy="no-referrer"`.
 - Image source: `embed.image ?? embed.url`.
-- Click opens image preview lightbox via `useUIStore.openImagePreview()`.
+- Click opens the [media viewer](#13-the-media-viewer) via `useUIStore.openImagePreview()`.
 
 ### RichEmbed (Spotify)
 
@@ -494,6 +510,8 @@ YouTube uses hardcoded 480×360 for `hqdefault.jpg` (`embedResolver.ts:153-154`)
 
 **Client side.** Every embed renderer whose output contains an image, iframe, or video MUST reserve dimensions when they are known. The reference pattern is `mediaBox` in `packages/web/src/components/chat/mediaBox.ts` — wrap the media in a box with `style={mediaBox(width, height)}`: its `aspect-ratio` and a width that fits 400 × 300 (inline style, not Tailwind, because they are runtime values), with `max-w-full` beside it for narrow columns.
 
+A Bluesky card (`BlueskyEmbed`) takes its sizes from the post itself, which Bluesky gives as each picture's and video's shape: one picture and the video by `mediaBox`, two to four pictures in a grid of a fixed 16:9 shape; a video without its shape stands in a 16:9 frame like the YouTube player, a structurally fixed layout.
+
 When dimensions are not populated (probe failed, no OG tags, non-image type), the renderer must NOT apply a fallback `aspect-ratio` with a default ratio (e.g. 4/3). A fallback wrapper produces visible letterbox bars on content whose true ratio differs and was the cause of the revert in commit `0c84029`. Renderers without dimensions must use either a structurally fixed layout (iframe with hardcoded height, fixed-size thumbnail) or render unsized; the message list's anchoring model re-applies its anchor on every size change and media load, which absorbs residual shift. See `docs/systems/message-list.md`, "Anchoring model".
 
 **Why bidirectional.** If only the server populates dims but the client ignores them, the database fills with unused data and embeds shift on load (the symptom from 2026-04-24 onward). If only the client reserves but the server doesn't populate, every embed falls into the unreserved branch and the contract has no effect. Both halves are required.
@@ -505,6 +523,37 @@ When dimensions are not populated (probe failed, no OG tags, non-image type), th
 `GET /api/utils/metadata?url=` (auth required)
 
 Exposes `fetchUrlMetadata()` directly as a REST endpoint. Returns the `UrlMetadata` object, or `{}` if fetch fails. This is independent of the embed pipeline and can be used for ad-hoc URL previews.
+
+---
+
+## 12. Bluesky posts
+
+A link to a post on Bluesky becomes a card of the post: who wrote it, its text with its links, mentions and hashtags, its pictures, video or link card, the post it quotes, and how many replied, reposted and liked it when the link was posted.
+
+**Reading it** (`utils/bluesky.ts`). The server asks Bluesky's public interface, `https://public.api.bsky.app` (`BLUESKY_API_ORIGIN`, no account, through `safeFetch`, 5 seconds, at most 1 MB): `com.atproto.identity.resolveHandle` for the account behind a handle, then `app.bsky.feed.getPosts` for the post. `postFromView` keeps what the card shows (`BlueskyPost` in `packages/shared/src/bluesky.ts`):
+- the author's DID, handle, display name and avatar;
+- the text as runs (`textParts`): facets count UTF-8 bytes, so the text is cut as bytes, and a link becomes its address, a mention the profile on Bluesky, a hashtag its page there; a facet inside a character, past the end, over another or to anything but http(s) stays plain text;
+- one to four pictures (thumbnail, full size, description, shape), or a video (HLS playlist, still, description, shape, and `loops` for one posted as a GIF), or a link card;
+- a quoted post with its text and pictures (`app.bsky.embed.record#viewRecord`, also beside media); a quoted list, feed, starter pack, or a quote that is gone or blocked, shows no quote;
+- the counts, and `sensitive` when the post, its author or the quote carries `porn`, `sexual`, `nudity`, `graphic-media`, `gore` or `!warn`.
+
+A post labelled `!hide`, `!takedown` or `!suspend` gets no card at all. One that cannot be read (gone, for signed-in people only, Bluesky away) becomes an ordinary preview of its page through the generic path. The card is stored in `embeds.data` as JSON; its plain fields name the author (`Name (@handle)`), the first 500 characters of the text and the first picture, which is what a client that draws no posts (`embedType` it does not know) shows as a generic card.
+
+**Only Bluesky's hosts.** Every address in a post is checked where it is made and again wherever one arrives (`blueskyPostOf`: `embedRowToEmbed` on the server, `BlueskyEmbed` on the client for what another instance sends): pictures and avatars only on `https://cdn.bsky.app`, videos only on `https://video.bsky.app` or `https://video.cdn.bsky.app`, the post and the quote only as `https://bsky.app/profile/…/post/…`; links in the text and the link card may lead anywhere a link in a message may (http and https), and open in a new tab. Anything else is dropped; a post whose own address does not hold is no post.
+
+**The card** (`BlueskyEmbed.tsx`). The text, the author's name and the counts come from this server and show at once. The pictures and the video come from Bluesky and wait for the person's yes like any other preview ([legal.md](legal.md), "Content from other servers"): one notice for the hosts the post needs (`ExternalHostsNotice`, "Load" allows each of them until the app closes), the avatar as initials until `cdn.bsky.app` is allowed, a link card's and a quote's pictures only then. A post labelled sensitive keeps its pictures and video covered, and fetches nothing, until "Show". One picture takes its own shape (`mediaBox`); two to four fill a 16:9 grid. A picture opens the [media viewer](#13-the-media-viewer) on itself with the others beside it, with the message's Reply and Forward, and Copy and Save reading the file through `GET /api/embeds/bluesky-picture` (the picture host sends no CORS headers; api.md).
+
+**The video** (`BlueskyVideo.tsx`). Its still and a play button until played. On the first play the light build of hls.js is loaded (`import('hls.js/light')`, a chunk of its own) and plays the playlist through Media Source; a browser without Media Source (Safari on an iPhone) plays HLS itself. Then Tavvit's own controls: play and pause (also by clicking the picture), the time, a timeline, sound and volume, picture in picture, full screen; the keys Space and K, M, F and the arrows (5 seconds) while the player has focus. A GIF plays in a loop without sound and offers no sound. A video that cannot play shows "Watch on Bluesky". The browser fetches the playlist's parts itself, which the CSP allows for Bluesky's two video hosts alone ([web-security.md](web-security.md)).
+
+## 13. The media viewer
+
+`MediaViewer.tsx`, over everything (`activeModal: 'imagePreview'`). `useUIStore.openImagePreview(url)` opens one picture (an image embed, an attachment, a sticker); `openMediaViewer({ items, index, onReply?, onForward? })` several, each a `MediaViewerItem`: the picture, a thumbnail for the strip, its description, the page it belongs to (`pageUrl`, for Open in browser and Copy link), and a `loadFile` where the page cannot fetch the file itself.
+
+- Closes with its X, Escape or a click beside the picture.
+- Several pictures: "2 of 4" at the top, arrows at the sides and the arrow keys, round the end; a strip of thumbnails at the bottom, the current one marked.
+- Zoom up to 5×: the zoom button, + and -, the wheel (at the pointer), a double click; a zoomed picture is moved by dragging it. A new picture starts unzoomed.
+- Actions: Open in browser, Copy link, Copy image (as PNG; a GIF, and anything that fails, as its link), Save, and Reply and Forward when the message came with them; those close the viewer first.
+- The description shows under the picture.
 
 ---
 
@@ -521,5 +570,8 @@ Exposes `fetchUrlMetadata()` directly as a REST endpoint. Returns the `UrlMetada
 | Spotify iframe height | 152px | `RichEmbed.tsx` |
 | Default rich iframe height | 200px | `RichEmbed.tsx` |
 | YouTube thumbnail dimensions | 480x360 | `embedResolver.ts` |
+| Bluesky read timeout / body limit | 5,000ms / 1 MB | `bluesky.ts` |
+| Bluesky picture for Copy and Save | 10,000ms, at most 20 MB, images only | `bluesky.ts` |
+| Bluesky text / pictures | 3,000 characters / 4 | `BLUESKY_LIMITS`, `packages/shared/src/bluesky.ts` |
 
 **Spoilers.** `extractUrls` leaves out what a `||spoiler||` holds: a preview of the link would give it away.

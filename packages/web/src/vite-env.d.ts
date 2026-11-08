@@ -30,3 +30,13 @@ declare module '*.tflite?url' {
   const url: string;
   export default url;
 }
+
+/**
+ * hls.js's light build (no subtitles, alternate audio or DRM), which plays Bluesky's videos
+ * (`chat/embeds/BlueskyVideo.tsx`). The package ships its types for the full build only; the light
+ * one has the same interface.
+ */
+declare module 'hls.js/light' {
+  export * from 'hls.js';
+  export { default } from 'hls.js';
+}

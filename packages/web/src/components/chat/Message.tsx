@@ -346,6 +346,11 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
   const startReply = (): void => {
     if (channelKey) setReplyTo(channelKey, message);
   };
+  const forwardMessage = isPendingMessage(message) || message.poll ? undefined : () => useUIStore.getState().openModal('forwardMessage', {
+    target: { messageId: message.id, isDm: isDmMessage, origin: messageOrigin },
+  });
+  // What the media viewer offers beside a picture of this message's embeds (EmbedRenderer).
+  const replyFromViewer = canSendMessages && !isDeadDmThread && !pending ? startReply : undefined;
 
   const _FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, replicatedInstances: [] } as unknown as User;
   const _rawMsgUser = message.user ?? null;
@@ -493,9 +498,7 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
         if (translations.entries[message.id]) translations.hide(message.id);
         else void translations.translate(message.id, message.content ?? '', channelKey);
       },
-      onForward: isPendingMessage(message) || message.poll ? undefined : () => useUIStore.getState().openModal('forwardMessage', {
-        target: { messageId: message.id, isDm: isDmMessage, origin: messageOrigin },
-      }),
+      onForward: forwardMessage,
       onSelect: canManageMessages && !isDmMessage && !isPendingMessage(message)
         ? () => useMessageSelection.getState().start(channelKey, message.id)
         : undefined,
@@ -819,7 +822,7 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
                 {message.embeds && message.embeds.length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     {message.embeds.map((embed) => (
-                      <EmbedRenderer key={embed.id} embed={embed} />
+                      <EmbedRenderer key={embed.id} embed={embed} onReply={replyFromViewer} onForward={forwardMessage} />
                     ))}
                   </div>
                 )}
@@ -855,7 +858,7 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
                 {!isEditing && !isSticker && message.embeds && message.embeds.length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     {message.embeds.map((embed) => (
-                      <EmbedRenderer key={embed.id} embed={embed} />
+                      <EmbedRenderer key={embed.id} embed={embed} onReply={replyFromViewer} onForward={forwardMessage} />
                     ))}
                   </div>
                 )}

@@ -109,9 +109,9 @@ describe('buildCspHeaderValue', () => {
 });
 
 describe('buildCspDirectives with federation switched off', () => {
-  it('limits connect-src to this instance, blob: and data:', () => {
+  it('limits connect-src to this instance, blob:, data: and the video hosts of Bluesky posts', () => {
     const d = buildCspDirectives({ federationEnabled: false });
-    expect(d['connect-src']).toEqual(["'self'", 'blob:', 'data:']);
+    expect(d['connect-src']).toEqual(["'self'", 'blob:', 'data:', 'https://video.bsky.app', 'https://video.cdn.bsky.app']);
   });
 
   it('no longer allows connections to arbitrary hosts or schemes', () => {

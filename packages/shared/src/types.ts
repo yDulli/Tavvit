@@ -1,4 +1,5 @@
 import type { MessageCard } from './cards.js';
+import type { BlueskyPost } from './bluesky.js';
 import type { CommandOptionValue, CommandReply } from './bots.js';
 import type { ErrorCode, ErrorDetails } from './errors.js';
 import type { CustomEmoji } from './customEmoji.js';
@@ -1074,8 +1075,9 @@ export interface Attachment {
 
 // ─── Embed Types ──────────────────────────────────────────────────────────
 
-export type EmbedType = 'generic' | 'video' | 'image' | 'audio' | 'rich';
-export type EmbedProvider = 'youtube' | 'vimeo' | 'spotify';
+/** `post`: a post on a social network the server could read (Bluesky), drawn from `Embed.post`. */
+export type EmbedType = 'generic' | 'video' | 'image' | 'audio' | 'rich' | 'post';
+export type EmbedProvider = 'youtube' | 'vimeo' | 'spotify' | 'bluesky';
 
 export interface Embed {
   id: string;
@@ -1092,6 +1094,11 @@ export interface Embed {
   height: number | null;
   color: string | null;
   createdAt: number;
+  /**
+   * For a `post` embed: the post as its card shows it (bluesky.ts; read with `blueskyPostOf`). The
+   * plain fields above hold its author, text and first picture for a client that draws no posts.
+   */
+  post?: BlueskyPost | null;
 }
 
 // ─── Active Call Types ───────────────────────────────────────────────────────

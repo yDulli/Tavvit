@@ -569,6 +569,11 @@ export class BackspaceApiClient {
     audio: (id: string) => Promise<Blob>;
     play: (channelId: string, soundId: string) => Promise<{ success: boolean }>;
   };
+  /** Link previews (docs/systems/embeds.md). */
+  readonly embeds: {
+    /** One picture of a Bluesky post, read through this server for Copy and Save (its host sends no CORS headers). */
+    blueskyPicture: (url: string) => Promise<Blob>;
+  };
   /** Watching together in a voice channel's call (docs/systems/watch-together.md). */
   readonly watch: {
     get: (channelId: string) => Promise<WatchStateResponse>;
@@ -1048,6 +1053,10 @@ export class BackspaceApiClient {
       remove: (id) => request<{ success: boolean }>('DELETE', `/sounds/${id}`),
       audio: async (id) => (await send('GET', `/sounds/${id}/audio`)).blob(),
       play: (channelId, soundId) => request<{ success: boolean }>('POST', `/channels/${channelId}/soundboard/${soundId}/play`),
+    };
+
+    this.embeds = {
+      blueskyPicture: async (url) => (await send('GET', `/embeds/bluesky-picture?url=${encodeURIComponent(url)}`)).blob(),
     };
 
     this.watch = {

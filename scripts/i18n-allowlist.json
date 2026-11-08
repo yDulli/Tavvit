@@ -137,5 +137,8 @@
   "Sound",
   "Tag",
   "In {{space}}",
-  "Emoji :{{name}}:"
+  "Emoji :{{name}}:",
+  "Bluesky",
+  "{{count}} repost",
+  "{{count}} reposts"
 ]

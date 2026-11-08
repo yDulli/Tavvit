@@ -1214,9 +1214,11 @@ type PeeringNotificationSummary = {
 
 ## Utilities (`routes/utils.ts`) — auth required
 ```
-GET /utils/metadata  ?url= → { title?, description?, image?, siteName? }
-GET /health          (public) → { status: 'ok', timestamp }
+GET /utils/metadata          ?url= → { title?, description?, image?, siteName? }
+GET /embeds/bluesky-picture  ?url= → the picture's bytes | 400 validation_failed (field url) | 404 file_not_found
+GET /health                  (public) → { status: 'ok', timestamp }
 ```
+`GET /embeds/bluesky-picture` fetches one picture of a Bluesky post for someone copying or saving it in the media viewer: Bluesky's picture host sends no CORS headers, so a page cannot read the file itself (embeds.md, "Bluesky posts"). `url` must be on `https://cdn.bsky.app` (`blueskyImageAddress`); the answer is an image (JPEG, PNG, WebP, GIF or AVIF, at most 20 MB) with `X-Content-Type-Options: nosniff`, a sandboxing CSP and `Cache-Control: private, max-age=3600`. 30 a minute per address, like every rate limit here. Closed to bots.
 
 ## Security reporting (`routes/cspReport.ts`), public
 ```

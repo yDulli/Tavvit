@@ -147,6 +147,8 @@
   },
   "external": {
     "notice": "Das kommt von {{host}}. Beim Laden erfährt dieser Server deine IP-Adresse.",
+    "noticeMany_one": "Das kommt von {{hosts}}. Beim Laden erfährt dieser Server deine IP-Adresse.",
+    "noticeMany_other": "Das kommt von {{hosts}}. Beim Laden erfahren diese Server deine IP-Adresse.",
     "load": "Laden",
     "always": "Immer erlauben",
     "compactTitle": "Von {{host}} laden",

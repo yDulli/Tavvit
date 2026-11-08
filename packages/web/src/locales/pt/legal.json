@@ -147,6 +147,9 @@
   },
   "external": {
     "notice": "Isto vem de {{host}}. Ao carregar, esse servidor fica sabendo seu endereço IP.",
+    "noticeMany_one": "Isto vem de {{hosts}}. Ao carregar, esse servidor fica sabendo seu endereço IP.",
+    "noticeMany_many": "Isto vem de {{hosts}}. Ao carregar, esses servidores ficam sabendo seu endereço IP.",
+    "noticeMany_other": "Isto vem de {{hosts}}. Ao carregar, esses servidores ficam sabendo seu endereço IP.",
     "load": "Carregar",
     "always": "Sempre permitir",
     "compactTitle": "Carregar de {{host}}",

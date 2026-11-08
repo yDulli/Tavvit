@@ -178,6 +178,23 @@
     "copy": "Копировать изображение",
     "alt": "Просмотр изображения"
   },
+  "viewer": {
+    "label": "Просмотр изображений",
+    "position": "{{index}} из {{total}}",
+    "openInBrowser": "Открыть в браузере",
+    "copyLink": "Копировать ссылку",
+    "linkCopied": "Ссылка скопирована",
+    "imageCopied": "Изображение скопировано",
+    "copyFailed": "Не удалось скопировать",
+    "zoomIn": "Увеличить",
+    "zoomOut": "Уменьшить",
+    "reply": "Ответить",
+    "forward": "Переслать",
+    "previous": "Предыдущее изображение",
+    "next": "Следующее изображение",
+    "strip": "Изображения",
+    "show": "Изображение {{index}} из {{total}}"
+  },
   "invite": {
     "sentBy": "Приглашение от {{name}}",
     "memberCount_one": "{{count}} участник",
@@ -207,7 +224,43 @@
     "frameTitle": "Встроенный контент",
     "playNamed": "Воспроизвести: {{title}}",
     "playUnnamed": "Воспроизвести видео",
-    "videoTitle": "Видео"
+    "videoTitle": "Видео",
+    "bluesky": {
+      "provider": "Bluesky",
+      "label": "Пост {{name}} в Bluesky",
+      "open": "Открыть в Bluesky",
+      "replies_one": "{{count}} ответ",
+      "replies_few": "{{count}} ответа",
+      "replies_many": "{{count}} ответов",
+      "replies_other": "{{count}} ответа",
+      "reposts_one": "{{count}} репост",
+      "reposts_few": "{{count}} репоста",
+      "reposts_many": "{{count}} репостов",
+      "reposts_other": "{{count}} репоста",
+      "likes_one": "{{count}} лайк",
+      "likes_few": "{{count}} лайка",
+      "likes_many": "{{count}} лайков",
+      "likes_other": "{{count}} лайка",
+      "sensitive": "В этом посте могут быть деликатные изображения.",
+      "show": "Показать",
+      "picture": "Изображение {{index}} из {{total}}",
+      "quoted": "Цитируемый пост {{name}}",
+      "gif": "GIF"
+    },
+    "player": {
+      "play": "Воспроизвести",
+      "pause": "Пауза",
+      "mute": "Выключить звук",
+      "unmute": "Включить звук",
+      "volume": "Громкость",
+      "seek": "Позиция в видео",
+      "fullscreen": "Во весь экран",
+      "exitFullscreen": "Выйти из полноэкранного режима",
+      "pip": "Картинка в картинке",
+      "failed": "Это видео нельзя воспроизвести здесь.",
+      "watchOnBluesky": "Смотреть в Bluesky",
+      "loading": "Видео загружается"
+    }
   },
   "stickers": {
     "title": "Мои стикеры",
