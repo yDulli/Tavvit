@@ -459,6 +459,8 @@ export const ERROR_CODES = [
   'decoration_style_invalid',
   // details: { min, max }
   'decoration_reason_invalid',
+  'removal_reason_invalid',
+  'removal_parts_invalid',
 
   // Tavvit
   'federation_disabled',

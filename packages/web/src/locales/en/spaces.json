@@ -1045,6 +1045,7 @@
         "description": "Are you sure you want to leave this space? You'll need a new invite to rejoin."
       },
       "left": "Left space",
+      "deleted": "{{name}} was deleted",
       "leaveFailed": "Failed to leave space",
       "unreadMessages_one": "{{count}} unread message",
       "unreadMessages_other": "{{count}} unread messages",

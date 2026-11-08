@@ -462,5 +462,7 @@
   "decoration_image_invalid": "请上传不超过 {{max}} MB 的 PNG、WebP 或 GIF 图片。",
   "decoration_limit_reached": "你最多可以保留 {{max}} 个自制装饰。删除一个后才能制作新的。",
   "decoration_style_invalid": "无法绘制该名字样式。请重新选择外观和颜色。",
-  "decoration_reason_invalid": "请填写 {{min}} 到 {{max}} 个字符的原因。"
+  "decoration_reason_invalid": "请填写 {{min}} 到 {{max}} 个字符的原因。",
+  "removal_reason_invalid": "请填写 {{min}} 到 {{max}} 个字符的原因。",
+  "removal_parts_invalid": "请选择要删除的内容。"
 }

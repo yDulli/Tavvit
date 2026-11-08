@@ -45,6 +45,7 @@ import { welcomeRoutes } from './routes/welcome.js';
 import { startEventReminderSweeper } from './utils/eventReminders.js';
 import { stickerRoutes } from './routes/stickers.js';
 import { customDecorationRoutes } from './routes/customDecorations.js';
+import { adminRemovalRoutes } from './routes/adminRemoval.js';
 import { uploadRoutes } from './routes/uploads.js';
 import { filesRoutes } from './routes/files.js';
 import { dmRoutes } from './routes/dm.js';
@@ -375,6 +376,7 @@ async function main(): Promise<void> {
   await app.register(uploadRoutes);
   await app.register(stickerRoutes);
   await app.register(customDecorationRoutes);
+  await app.register(adminRemovalRoutes);
   await app.register(filesRoutes);
   await app.register(dmRoutes);
   await app.register(livekitRoutes);

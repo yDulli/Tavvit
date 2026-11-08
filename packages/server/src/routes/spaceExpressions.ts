@@ -1,12 +1,10 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { rm } from 'node:fs/promises';
 import { asc, eq, inArray } from 'drizzle-orm';
 import type { AuditLogChange } from '@backspace/shared';
 import {
   CUSTOM_EMOJI_LIMITS,
   CUSTOM_EMOJI_NAME_MAX,
   CUSTOM_EMOJI_NAME_MIN,
-  EMOJI_ID_PATTERN,
   normalizeEmojiName,
 } from '@backspace/shared/src/customEmoji.js';
 import { MAX_STICKER_BYTES, MAX_STICKER_NAME_LENGTH, normalizeStickerName } from '@backspace/shared/src/stickers.js';
@@ -22,7 +20,7 @@ import {
 import { getDb, schema } from '../db/index.js';
 import { recordAudit } from '../utils/auditLog.js';
 import { authenticate } from '../utils/auth.js';
-import { emojiFilePath } from '../utils/emojiImage.js';
+import { removeSpaceEmoji, removeSpaceSticker, spaceEmojiRow, spaceStickerRow } from '../utils/spaceExpressionRemoval.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
 import { sendError } from '../utils/httpErrors.js';
 import { getMember, hasPermission, PermissionBits } from '../utils/permissions.js';
@@ -68,13 +66,8 @@ function decodeImage(image: string): Buffer | null {
   return bytes.length > 0 && bytes.toString('base64') === image ? bytes : null;
 }
 
-const emojiOf = (id: string): SpaceEmojiRow | undefined => (EMOJI_ID_PATTERN.test(id)
-  ? getDb().select().from(schema.spaceEmojis).where(eq(schema.spaceEmojis.id, id)).get()
-  : undefined);
-
-const stickerOf = (id: string): SpaceStickerRow | undefined => (EMOJI_ID_PATTERN.test(id)
-  ? getDb().select().from(schema.spaceStickers).where(eq(schema.spaceStickers.id, id)).get()
-  : undefined);
+const emojiOf = spaceEmojiRow;
+const stickerOf = spaceStickerRow;
 
 /**
  * Sends the refusal and answers true unless `userId` may change the space's emoji and stickers now
@@ -205,10 +198,7 @@ export async function spaceExpressionRoutes(app: FastifyInstance): Promise<void>
     const row = emojiOf(request.params.id);
     if (!row) return sendError(reply, 404, 'space_emoji_not_found');
     if (refusedManager(reply, row.spaceId, request.userId)) return reply;
-    getDb().delete(schema.spaceEmojis).where(eq(schema.spaceEmojis.id, row.id)).run();
-    await rm(emojiFilePath(row.id), { force: true });
-    recordAudit({ spaceId: row.spaceId, actorId: request.userId, action: 'emoji_delete', targetType: 'space', targetId: row.id, targetLabel: row.name });
-    connectionManager.sendToSpace(row.spaceId, { type: 'space_emojis_changed', spaceId: row.spaceId });
+    await removeSpaceEmoji(row, request.userId);
     return reply.code(200).send({ success: true });
   });
 
@@ -314,9 +304,7 @@ export async function spaceExpressionRoutes(app: FastifyInstance): Promise<void>
     const row = stickerOf(request.params.id);
     if (!row) return sendError(reply, 404, 'space_sticker_not_found');
     if (refusedManager(reply, row.spaceId, request.userId)) return reply;
-    getDb().delete(schema.spaceStickers).where(eq(schema.spaceStickers.id, row.id)).run();
-    recordAudit({ spaceId: row.spaceId, actorId: request.userId, action: 'sticker_delete', targetType: 'space', targetId: row.id, targetLabel: row.name });
-    connectionManager.sendToSpace(row.spaceId, { type: 'space_stickers_changed', spaceId: row.spaceId });
+    removeSpaceSticker(row, request.userId);
     return reply.code(200).send({ success: true });
   });
 }

@@ -19,6 +19,7 @@ import { BadgeGlyph } from '../../../badges/BadgeGlyph';
 import { BadgeList } from '../../../badges/BadgeList';
 import { Modal } from '../../ui/Modal';
 import { Avatar } from '../../ui/Avatar';
+import { SpaceRemovalSection } from '../../admin/RemovalSections';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { Sensitive } from '../../ui/Sensitive';
 import { ListingPreview, ReviewDecisionDialog, ReviewHistory, ReviewStatusChip } from '../../review/ReviewParts';
@@ -323,6 +324,20 @@ export function AdminSpaceDetailModal({
               <ReviewHistory events={discovery.history} />
             </div>
           </section>
+
+          <SpaceRemovalSection
+            key={space.id}
+            spaceId={space.id}
+            spaceName={space.name}
+            onChanged={() => {
+              void load(space.id);
+              onChanged();
+            }}
+            onDeleted={() => {
+              onChanged();
+              onClose();
+            }}
+          />
 
           <section>
             <h3 className="label-mono mb-2">{t('admin:platform.audit.aboutSpace')}</h3>

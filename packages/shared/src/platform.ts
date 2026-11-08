@@ -321,6 +321,12 @@ export const PLATFORM_AUDIT_ACTIONS = [
   'audit_export',
   /** A decoration someone made, taken out of the gallery and off everyone who wore it (decorations.md). */
   'decoration_remove',
+  /** A message in a space, removed by an administrator without a report (admin.md, "Removing content"). */
+  'message_remove',
+  /** Parts of a person's profile, removed by an administrator. */
+  'profile_content_remove',
+  /** Parts of a space, or one of its emoji, stickers or sounds, removed by an administrator. */
+  'space_content_remove',
 ] as const;
 export type PlatformAuditAction = (typeof PLATFORM_AUDIT_ACTIONS)[number];
 

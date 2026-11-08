@@ -31,7 +31,8 @@ import { applyChosenStatus } from '../ws/presence.js';
 import { presenceUpdateFor } from '../ws/presenceEvent.js';
 import { deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
 import { pictureFileReleasable, profilePictureOf, uploadNameOf } from '../utils/profileImageRefs.js';
-import { mediaOriginsFor, shownPicture } from '../utils/remoteMedia.js';
+import { mediaOriginsFor } from '../utils/remoteMedia.js';
+import { relayProfileUpdate, relayedPicture } from '../utils/profileRelay.js';
 import { tombstoneUser, collectDeletionBroadcastTargets } from '../utils/userDeletion.js';
 import { announceProfileChange } from '../utils/profileBroadcast.js';
 import { queueOutboxEvent, isFederationRelayEnabled, appendMutationLog } from '../utils/federationOutbox.js';
@@ -55,48 +56,11 @@ export function isValidAssetUrl(url: string | null | undefined): boolean {
   return false;
 }
 
-type UserRow = typeof schema.users.$inferSelect;
-
 /** What one save of the sidebar's order may hold (PUT /api/users/@me/space-layout). */
 const SPACE_LAYOUT_LIMITS = { ITEMS: 500, FOLDERS: 50, SPACES_PER_FOLDER: 200, ID_LENGTH: 128, NAME_LENGTH: 100 } as const;
 /** A folder's colour as the sidebar sets it: one of the accent family, by value or by token. */
 const FOLDER_COLOR = /^(#[0-9a-fA-F]{6}|rgb\(var\(--accent-[a-z]+\)\))$/;
 
-/**
- * A picture as other instances get it: a file here by its full address, and never an address
- * this instance would not show itself (utils/remoteMedia.ts).
- */
-function relayedPicture(value: string | null, origin: string, homeInstance: string | null): string | null {
-  const picture = shownPicture(value, mediaOriginsFor(homeInstance));
-  if (!picture || /^https?:\/\//i.test(picture)) return picture;
-  return `${origin}/api/uploads/${picture.replace(/^\/api\/uploads\//, '')}`;
-}
-
-/** The new profile, to the other instances that hold a copy of this person. */
-function relayProfileUpdate(user: UserRow): void {
-  const origin = getOurOrigin();
-  const profilePayload: FederationProfileUpdatePayload = {
-    homeUserId: user.id,
-    homeInstance: origin,
-    profileUpdatedAt: user.profileUpdatedAt ?? Date.now(),
-    username: user.username,
-    displayName: user.displayName,
-    avatar: relayedPicture(user.avatar, origin, user.homeInstance),
-    banner: relayedPicture(user.banner, origin, user.homeInstance),
-    accentColor: user.accentColor,
-    avatarColor: user.avatarColor,
-    bio: user.bio,
-  };
-  appendMutationLog(user.id, user.id, 'profile_update', JSON.stringify({ profileUpdate: profilePayload }), 'profile');
-  queueOutboxEvent(
-    user.id,    // entityId — user's ID (queue `profile:<id>`: a newer edit replaces a queued one)
-    user.id,    // contextId — user-scoped
-    'profile_update',
-    JSON.stringify({ profileUpdate: profilePayload }),
-    undefined,  // targetPeerOrigins — broadcast to active and unreachable peers
-    'profile',  // contextType
-  );
-}
 
 export async function userRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/users/@me', { preHandler: authenticate, config: { botAllowed: true } }, async (request, reply) => {

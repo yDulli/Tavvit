@@ -685,8 +685,6 @@
       "create": "制作",
       "removeTitle": "移除“{{name}}”",
       "removeText": "它将从画廊中消失，所有佩戴者也将失去它。制作者会收到原因及申诉方式。",
-      "removeGround": "违反了",
-      "removeReason": "告知制作者的原因",
       "remove": "移除",
       "search": "按名称搜索",
       "sortLabel": "排序",

@@ -133,7 +133,9 @@ Each change records a `changed` event in the review history, with the editor as 
 4. All `space_folder_members` referencing this space
 5. The space itself, which takes its review rows (`space_verification_requests`, `space_discovery_requests`, `space_review_events`) with it through their `ON DELETE CASCADE` foreign keys
 
-**Post-transaction:** All attachment files and space icon/banner files deleted from disk, and the pictures of the space's emoji, whose `space_emojis` rows went with the space (`ON DELETE CASCADE`, like `space_stickers`). A sticker's picture is shared by content and stays while a message, a reaction or someone's collection names it; the storage janitor takes the rest.
+**Post-transaction:** All attachment files and space icon/banner files deleted from disk, and the pictures of the space's emoji, whose `space_emojis` rows went with the space (`ON DELETE CASCADE`, like `space_stickers`). A sticker's picture is shared by content and stays while a message, a reaction or someone's collection names it; the storage janitor takes the rest. Every member is sent `space_deleted` and then taken out of its audience and its voice (websocket.md), so the space leaves their list at once.
+
+The same `deleteSpaceCompletely` (`utils/spaceDeletion.ts`) is the only way a space goes: an instance admin deleting the owner's account with its spaces, or the space itself from the admin console (`POST /api/admin/spaces/:id/delete`, admin.md, "Removing content").
 
 ---
 

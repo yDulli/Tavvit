@@ -116,7 +116,34 @@
     },
     "address_withdrawn": {
       "title": "Свой адрес вашего пространства отозван"
-    }
+    },
+    "profile_content_removed": {
+      "title": "Что-то из вашего профиля удалено"
+    },
+    "space_content_removed": {
+      "title": "Что-то из вашего пространства удалено"
+    },
+    "space_removed": {
+      "title": "Ваше пространство удалено"
+    },
+    "parts": {
+      "avatar": "Аватар",
+      "banner": "Баннер",
+      "displayName": "Отображаемое имя",
+      "bio": "О себе",
+      "status": "Статус",
+      "pronouns": "Местоимения",
+      "links": "Ссылки",
+      "decorations": "Украшения",
+      "spaceTag": "Тег пространства",
+      "icon": "Значок",
+      "description": "Описание",
+      "tag": "Тег пространства",
+      "emoji": "Эмодзи :{{name}}:",
+      "sticker": "Стикер «{{name}}»",
+      "sound": "Звук «{{name}}»"
+    },
+    "inSpace": "В пространстве {{space}}"
   },
   "external": {
     "notice": "Это загружается с {{host}}. При загрузке этот сервер узнает ваш IP-адрес.",

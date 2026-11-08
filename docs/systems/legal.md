@@ -104,7 +104,7 @@ The dialog is the client's. The API does not refuse requests from someone who ha
 
 Each writes `report_decide` to the platform audit log with the reason, and `report_queue_count` tells the admins' clients. A report outside these decisions (a space that should be deleted, say) is closed as `handled` after acting in the admin area.
 
-An administrator can also take a made decoration away without a report, from its tile in the gallery (`POST /api/admin/decorations/:id/remove { reason, ground }`): the same removal, `decoration_remove` in the platform audit log, and the same `content_removed` notice to its maker with the reason, the ground and how to object.
+An administrator can also take content away without a report ([admin.md](admin.md), "Removing content"): a message in a space, parts of a person's profile, parts of a space, one of its emoji, stickers and sounds, the whole space, or a made decoration from its tile in the gallery (`POST /api/admin/decorations/:id/remove { reason, ground }`, `decoration_remove` in the platform audit log). Each names a reason and a ground like a decision, gives the person it concerns the notice below with how to object (Art. 17), and is in the platform audit log. Direct messages are not among them: an administrator acts on one only through a report.
 
 **No mail about reports.** Mail is about accounts (email.md), so someone who reported without an account gets their confirmation on the page (Art. 16(4)) and the outcome from the operator's own mailbox; the admin area says so beside their address.
 
@@ -123,7 +123,12 @@ An administrator can also take a made decoration away without a report, from its
 | `warning` | the account | An admin's warning from the console: the reason, the ground, the way to object. It changes nothing about the account |
 | `listing_withdrawn` | the owner | The same |
 | `address_withdrawn` | the owner | An administrator took the space's own invite address away, with the reason ([admin.md](admin.md), "Own invite addresses") |
+| `profile_content_removed` | the account | An administrator removed parts of the profile: which, the reason, the ground, how to object |
+| `space_content_removed` | the owner, or whoever added an emoji, a sticker or a sound | Parts of the space, or that item by its name, with the space's name, the reason, the ground, how to object |
+| `space_removed` | the owner | An administrator deleted the space: its name, the reason, the ground, how to object |
 | `report_decided` | the reporter | The outcome only, not the reason meant for the person affected (Art. 16(5)) |
+
+For the three kinds an administrator's direct removal adds, `subject` is a small JSON document (`removalSubject`, `packages/shared/src/adminRemoval.ts`): the parts by their keys, which the client names in the reader's language (`notices.parts.*`, a part it does not know left out), the space and the item by their names. Each notice reaches an account of this instance only: a copy of someone whose home is another instance does not read this one's notices.
 
 `NoticeDialog` shows unread ones one at a time, and About lists them. A suspended account cannot sign in to read one, so the sign-in page shows the reason, the end, how to object and the operator's address. A suspension made on the account's page in the admin area is told this way too.
 

@@ -607,7 +607,10 @@
         "audit_export": "Audit-Log exportiert",
         "peer_trust": "Vertrauen zu einer anderen Instanz geändert",
         "space_vanity_revoke": "Einladungsadresse entzogen",
-        "decoration_remove": "Selbst gestaltete Dekoration entfernt"
+        "decoration_remove": "Selbst gestaltete Dekoration entfernt",
+        "message_remove": "Nachricht entfernt",
+        "profile_content_remove": "Teile eines Profils entfernt",
+        "space_content_remove": "Etwas aus einem Space entfernt"
       },
       "details": {
         "until": "Bis {{date}}",
@@ -985,5 +988,57 @@
     "removeBody": "{{name}} verlässt jeden Space, und sein Token funktioniert nicht mehr. Was er geschrieben hat, bleibt.",
     "spaces_one": "in {{formatted}} Space",
     "spaces_other": "in {{formatted}} Spaces"
+  },
+  "removal": {
+    "ground": "Rechtsgrund",
+    "reason": "Begründung",
+    "reasonHint": "Die betroffene Person erfährt sie, mit dem Rechtsgrund und wie sie widersprechen kann.",
+    "submit": "Entfernen",
+    "done": "Entfernt.",
+    "message": {
+      "title": "Diese Nachricht entfernen",
+      "text": "Sie verschwindet für alle aus dem Kanal. Wer sie geschrieben hat, erfährt warum."
+    },
+    "profile": {
+      "title": "Aus diesem Profil entfernen",
+      "text": "Wähle, was weg soll. Die Person erfährt, was entfernt wurde und warum.",
+      "open": "Aus dem Profil entfernen …",
+      "keptByHome": "Dieses Profil kommt von {{instance}}: Es zeigt, was dieser Server schickt, und sein nächstes Update brächte alles zurück, was hier entfernt würde. Daraus entfernen können nur die Administratoren dort."
+    },
+    "space": {
+      "title": "Aus diesem Space entfernen",
+      "text": "Wähle, was weg soll. Der Besitzer erfährt, was entfernt wurde und warum.",
+      "open": "Aus dem Space entfernen …",
+      "expressions": "Emoji, Sticker und Sounds",
+      "expressionsEmpty": "Dieser Space hat keine Emoji, Sticker oder Sounds.",
+      "removeOne": "{{name}} entfernen",
+      "removeOneText": "Es verschwindet für alle aus dem Space. Wer es hinzugefügt hat, erfährt warum.",
+      "deleteOpen": "Space löschen …",
+      "deleteTitle": "{{name}} löschen",
+      "deleteText": "Der Space verschwindet mit allen Kanälen, Nachrichten und Dateien, für alle. Der Besitzer erfährt warum. Das lässt sich nicht rückgängig machen.",
+      "deleteSubmit": "Space löschen"
+    },
+    "parts": {
+      "avatar": "Profilbild",
+      "banner": "Banner",
+      "displayName": "Anzeigename",
+      "bio": "Über mich",
+      "status": "Status",
+      "pronouns": "Pronomen",
+      "links": "Links",
+      "decorations": "Dekorationen",
+      "spaceTag": "Space-Tag"
+    },
+    "spaceParts": {
+      "icon": "Icon",
+      "banner": "Banner",
+      "description": "Beschreibung",
+      "tag": "Tag"
+    },
+    "expressions": {
+      "emoji": "Emoji",
+      "sticker": "Sticker",
+      "sound": "Sound"
+    }
   }
 }

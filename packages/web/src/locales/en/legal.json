@@ -116,7 +116,34 @@
     },
     "address_withdrawn": {
       "title": "Your space's own address was taken away"
-    }
+    },
+    "profile_content_removed": {
+      "title": "Something on your profile was removed"
+    },
+    "space_content_removed": {
+      "title": "Something in your space was removed"
+    },
+    "space_removed": {
+      "title": "Your space was deleted"
+    },
+    "parts": {
+      "avatar": "Profile picture",
+      "banner": "Banner",
+      "displayName": "Display name",
+      "bio": "About me",
+      "status": "Status",
+      "pronouns": "Pronouns",
+      "links": "Links",
+      "decorations": "Decorations",
+      "spaceTag": "Space tag",
+      "icon": "Icon",
+      "description": "Description",
+      "tag": "Space tag",
+      "emoji": "Emoji :{{name}}:",
+      "sticker": "Sticker “{{name}}”",
+      "sound": "Sound “{{name}}”"
+    },
+    "inSpace": "In {{space}}"
   },
   "external": {
     "notice": "This comes from {{host}}. Loading it tells that server your IP address.",

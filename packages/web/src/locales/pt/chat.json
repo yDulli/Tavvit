@@ -140,7 +140,8 @@
     },
     "remindSet": "Você será lembrado em {{time}}.",
     "translate": "Traduzir",
-    "hideTranslation": "Ocultar tradução"
+    "hideTranslation": "Ocultar tradução",
+    "adminRemove": "Remover como administrador"
   },
   "attachment": {
     "progress": {

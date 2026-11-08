@@ -1085,6 +1085,20 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       break;
     }
 
+    case 'space_deleted': {
+      // The space is gone for everyone (utils/spaceDeletion.ts). Its owner deleted it, or is told
+      // why in a notice when an administrator did; anyone else learns here why it left the list.
+      const spaces = useSpaceStore.getState();
+      const gone = spaces.spaces.find((space) => space.id === event.spaceId && space._instanceOrigin === origin);
+      if (!gone) break;
+      const myId = isHome ? useAuthStore.getState().user?.id : getMyUserIdForOrigin(origin);
+      spaces.removeSpace(event.spaceId);
+      if (gone.ownerId !== myId) {
+        useUIStore.getState().addToast(i18n.t('spaces:sidebar.space.deleted', { name: gone.name }), 'info');
+      }
+      break;
+    }
+
     // ─── DM events (all origins) ────────────────────────────────────────────
 
     case 'dm_message_created': {

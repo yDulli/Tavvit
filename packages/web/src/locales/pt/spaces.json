@@ -1057,6 +1057,7 @@
         "description": "Tem certeza de que deseja sair deste espaço? Você precisará de um novo convite para entrar de novo."
       },
       "left": "Você saiu do espaço",
+      "deleted": "O espaço {{name}} foi excluído",
       "leaveFailed": "Falha ao sair do espaço",
       "unreadMessages_one": "{{count}} mensagem não lida",
       "unreadMessages_many": "{{count}} mensagens não lidas",

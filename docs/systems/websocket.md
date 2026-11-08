@@ -49,7 +49,7 @@ A client frame is at most `WS_MAX_CLIENT_FRAME_BYTES`, 64 KiB unpacked (`package
 
 One account keeps at most 10 sockets (`MOST_SOCKETS_PER_ACCOUNT`, `ws/handler.ts`). When an eleventh connects, the oldest is sent `error` `too_many_connections` and closed. A client told that does not reconnect by itself (`pushedOut`) until the page is loaded again, so the account's windows do not push each other out in turn.
 
-A member who leaves, is kicked or banned, and every member of a deleted space, is taken out of the space's audience at once (`ConnectionManager.removeUserSpace`): no more `sendToSpace` events for it, no presence of its members by way of it, no thread of it open. They are taken out of its voice too, LiveKit included (docs/systems/voice.md).
+A member who leaves, is kicked or banned, and every member of a deleted space, is taken out of the space's audience at once (`ConnectionManager.removeUserSpace`): no more `sendToSpace` events for it, no presence of its members by way of it, no thread of it open. They are taken out of its voice too, LiveKit included (docs/systems/voice.md). The members of a deleted space are first sent `space_deleted`, while they are still its audience.
 
 ## Client → Server
 
@@ -382,6 +382,7 @@ its next follow-up or the next `ready`; its unread dot shows meanwhile.
 | `member_updated` | spaceId, member: MemberWithUser | space |
 | `member_left` | spaceId, userId | space |
 | `member_banned` | spaceId, reason | user (banned) |
+| `space_deleted` | spaceId | space: every member, from `deleteSpaceCompletely` (`utils/spaceDeletion.ts`), whoever deleted it: its owner, or an instance admin deleting the space or the owner's account. The client drops the space as for `member_banned` (`removeSpace`), and anyone but its owner sees a toast naming it |
 | `channel_created` | channel, spaceId | space |
 | `channel_updated` | channel, spaceId | space |
 | `channel_deleted` | channelId, spaceId | space |

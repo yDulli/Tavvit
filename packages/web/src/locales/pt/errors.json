@@ -462,5 +462,7 @@
   "decoration_image_invalid": "Envie uma imagem PNG, WebP ou GIF de no máximo {{max}} MB.",
   "decoration_limit_reached": "Você pode manter no máximo {{max}} decorações próprias. Exclua uma para criar outra.",
   "decoration_style_invalid": "Esse estilo de nome não pode ser desenhado. Escolha o visual e as cores de novo.",
-  "decoration_reason_invalid": "Informe um motivo de {{min}} a {{max}} caracteres."
+  "decoration_reason_invalid": "Informe um motivo de {{min}} a {{max}} caracteres.",
+  "removal_reason_invalid": "Informe um motivo de {{min}} a {{max}} caracteres.",
+  "removal_parts_invalid": "Escolha o que remover."
 }

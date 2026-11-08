@@ -11,6 +11,8 @@ import { StickerMessage } from './StickerMessage';
 import { useAuthorMenu } from './useAuthorMenu';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { api } from '../../api/client';
+import { AdminRemovalDialog } from '../modals/AdminRemovalDialog';
 import type { TFunction } from 'i18next';
 import { formatters, useFormatters } from '../../i18n/formatters';
 import type { MessageWithUser, Embed, Reaction, User } from '@backspace/shared';
@@ -200,7 +202,7 @@ const NO_COLORS = { a: 'transparent', b: 'transparent' };
  * nothing new to show, and a channel holds up to 200 of them.
  */
 export const Message = React.memo(function Message({ message, isCompact, isFirstInGroup, previousMessageId }: MessageProps) {
-  const { t } = useTranslation(['chat', 'common']);
+  const { t } = useTranslation(['chat', 'common', 'admin']);
   const fmt = useFormatters();
   const [isHovered, setIsHovered] = useState(false);
   // The hover bar hangs over the row above; a row at the very top of the list
@@ -212,6 +214,7 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
     setIsHovered(true);
   };
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [adminRemoving, setAdminRemoving] = useState(false);
   // The reaction picker, and what opened it: the "+" of the hover bar, or the
   // message menu ('row'). On desktop it hangs off that button or the message
   // row; on mobile it is a bottom sheet whatever opened it.
@@ -499,6 +502,11 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
       onReport: isAuthor || isPendingMessage(message) ? undefined : () => useUIStore.getState().openModal('report', {
         target: { type: isDmMessage ? 'dm_message' : 'message', id: message.id, origin: messageOrigin, label: message.content?.slice(0, 200) ?? null },
       }),
+      // This instance's administrator, on someone else's message in one of its spaces (direct
+      // messages stay with reports). The server checks again (routes/adminRemoval.ts).
+      onAdminRemove: currentUser?.isAdmin && messageOrigin === '' && !isDmMessage && !isAuthor && !isPendingMessage(message)
+        ? () => setAdminRemoving(true)
+        : undefined,
       onDelete: () => deleteMessage(message.id, channelKey),
       onReaction: (emoji: string) => toggleReaction(emoji),
       onOpenEmojiPicker: () => {
@@ -947,6 +955,18 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
           </div>
         )}
       </div>
+
+      {adminRemoving && (
+        <AdminRemovalDialog
+          title={t('admin:removal.message.title')}
+          text={t('admin:removal.message.text')}
+          onRemove={async (removal) => {
+            await api.admin.removeMessage(message.id, removal);
+            useUIStore.getState().addToast(t('admin:removal.done'), 'success');
+          }}
+          onClose={() => setAdminRemoving(false)}
+        />
+      )}
 
       {/* Reactions retain the upstream mobile sheet and row/button anchor semantics. */}
       {showInteractions && reactionPicker && canAddReactions && isMobile && (

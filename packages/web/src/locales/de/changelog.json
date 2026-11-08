@@ -4,6 +4,16 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.39.0": {
+      "title": "Moderation für Admins",
+      "items": {
+        "message": "Admins können eine Nachricht in einem Space direkt über ihr Menü entfernen, ohne auf eine Meldung zu warten.",
+        "parts": "In der Admin-Konsole können sie Teile eines Profils entfernen, etwa Bild, Name, Über mich, Status, Links oder Dekorationen, und Teile eines Space, etwa Icon, Banner, Beschreibung oder Tag.",
+        "space": "Sie können Emoji, Sticker und Sounds eines Space einzeln entfernen oder einen ganzen Space löschen.",
+        "told": "Die betroffene Person erfährt jedes Mal in ihrer Sprache, was entfernt wurde, warum und wie sie widersprechen kann, und das Protokoll der Admins hält es fest. Direktnachrichten bleiben privat: Admins werden dort nur tätig, wenn jemand eine meldet.",
+        "deleted": "Behoben: Ein gelöschter Space blieb in der Liste seiner Mitglieder, bis sie die Seite neu luden."
+      }
+    },
     "1.38.1": {
       "title": "Flüssiger",
       "items": {

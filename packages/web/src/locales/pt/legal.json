@@ -116,7 +116,34 @@
     },
     "address_withdrawn": {
       "title": "O endereço próprio do seu espaço foi retirado"
-    }
+    },
+    "profile_content_removed": {
+      "title": "Algo do seu perfil foi removido"
+    },
+    "space_content_removed": {
+      "title": "Algo do seu espaço foi removido"
+    },
+    "space_removed": {
+      "title": "Seu espaço foi excluído"
+    },
+    "parts": {
+      "avatar": "Foto de perfil",
+      "banner": "Banner",
+      "displayName": "Nome de exibição",
+      "bio": "Sobre mim",
+      "status": "Status",
+      "pronouns": "Pronomes",
+      "links": "Links",
+      "decorations": "Decorações",
+      "spaceTag": "Tag de espaço",
+      "icon": "Ícone",
+      "description": "Descrição",
+      "tag": "Tag de espaço",
+      "emoji": "Emoji :{{name}}:",
+      "sticker": "Figurinha “{{name}}”",
+      "sound": "Som “{{name}}”"
+    },
+    "inSpace": "Em {{space}}"
   },
   "external": {
     "notice": "Isto vem de {{host}}. Ao carregar, esse servidor fica sabendo seu endereço IP.",

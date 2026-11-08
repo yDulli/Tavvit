@@ -116,7 +116,34 @@
     },
     "address_withdrawn": {
       "title": "Die eigene Adresse deines Space wurde entzogen"
-    }
+    },
+    "profile_content_removed": {
+      "title": "Etwas aus deinem Profil wurde entfernt"
+    },
+    "space_content_removed": {
+      "title": "Etwas aus deinem Space wurde entfernt"
+    },
+    "space_removed": {
+      "title": "Dein Space wurde gelöscht"
+    },
+    "parts": {
+      "avatar": "Profilbild",
+      "banner": "Banner",
+      "displayName": "Anzeigename",
+      "bio": "Über mich",
+      "status": "Status",
+      "pronouns": "Pronomen",
+      "links": "Links",
+      "decorations": "Dekorationen",
+      "spaceTag": "Space-Tag",
+      "icon": "Icon",
+      "description": "Beschreibung",
+      "tag": "Space-Tag",
+      "emoji": "Emoji :{{name}}:",
+      "sticker": "Sticker „{{name}}“",
+      "sound": "Sound „{{name}}“"
+    },
+    "inSpace": "In {{space}}"
   },
   "external": {
     "notice": "Das kommt von {{host}}. Beim Laden erfährt dieser Server deine IP-Adresse.",

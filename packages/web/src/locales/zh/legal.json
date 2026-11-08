@@ -116,7 +116,34 @@
     },
     "address_withdrawn": {
       "title": "你的空间的专属地址已被收回"
-    }
+    },
+    "profile_content_removed": {
+      "title": "你的个人资料中有内容被删除"
+    },
+    "space_content_removed": {
+      "title": "你的空间中有内容被删除"
+    },
+    "space_removed": {
+      "title": "你的空间已被删除"
+    },
+    "parts": {
+      "avatar": "头像",
+      "banner": "横幅",
+      "displayName": "显示名称",
+      "bio": "关于我",
+      "status": "状态",
+      "pronouns": "代词",
+      "links": "链接",
+      "decorations": "装饰",
+      "spaceTag": "空间标签",
+      "icon": "图标",
+      "description": "描述",
+      "tag": "空间标签",
+      "emoji": "表情 :{{name}}:",
+      "sticker": "贴纸“{{name}}”",
+      "sound": "声音“{{name}}”"
+    },
+    "inSpace": "在 {{space}} 中"
   },
   "external": {
     "notice": "此内容来自 {{host}}。加载时该服务器会得知您的 IP 地址。",

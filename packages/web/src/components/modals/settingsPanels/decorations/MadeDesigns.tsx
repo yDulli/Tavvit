@@ -7,7 +7,6 @@ import {
   type CustomDecorationKind,
   type CustomDecorationSort,
 } from '@backspace/shared/src/customDecorations';
-import { REPORT_GROUNDS, type ReportGround } from '@backspace/shared/src/legal';
 import { api } from '../../../../api/client';
 import { describeError } from '../../../../i18n/errors';
 import { useFormatters } from '../../../../i18n/formatters';
@@ -15,8 +14,8 @@ import { useAuthStore } from '../../../../stores/authStore';
 import { useUIStore } from '../../../../stores/uiStore';
 import { ConfirmDialog } from '../../../ui/ConfirmDialog';
 import { Icon } from '../../../ui/Icon';
-import { Modal } from '../../../ui/Modal';
 import { FormError, SegmentedControl } from '../_shared/SettingsControls';
+import { AdminRemovalDialog } from '../../AdminRemovalDialog';
 import { CreateDecorationDialog } from './CreateDecorationDialog';
 import { DesignPreview, DesignTile, type PreviewLook } from './DesignPreview';
 
@@ -52,63 +51,18 @@ function TileAction({ label, icon, onClick, pressed }: { label: string; icon: 'f
 
 /** An administrator takes someone's design away, with the reason its maker is told (DSA Art. 17). */
 function RemoveDesignDialog({ design, onClose, onRemoved }: { design: CustomDecoration; onClose: () => void; onRemoved: () => void }) {
-  const { t } = useTranslation(['settings', 'legal', 'common']);
-  const reasonId = useId();
-  const groundLabel = useId();
-  const [reason, setReason] = useState('');
-  const [ground, setGround] = useState<ReportGround>('terms');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const length = reason.trim().length;
-  const valid = length >= CUSTOM_DECORATION_LIMITS.REASON_MIN && length <= CUSTOM_DECORATION_LIMITS.REASON_MAX;
-
-  const remove = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      await api.decorations.adminRemove(design.id, { reason: reason.trim(), ground });
-      onRemoved();
-      onClose();
-    } catch (err) {
-      setError(describeError(err));
-    } finally {
-      setSaving(false);
-    }
-  };
-
+  const { t } = useTranslation(['settings']);
   return (
-    <Modal isOpen onClose={onClose} title={t('settings:decorations.made.removeTitle', { name: design.name })} maxWidth="max-w-md">
-      <div className="space-y-4">
-        <p className="text-ui leading-snug text-txt-secondary">{t('settings:decorations.made.removeText')}</p>
-        <div className="space-y-1.5">
-          <div id={groundLabel} className="field-label">{t('settings:decorations.made.removeGround')}</div>
-          <SegmentedControl
-            labelledBy={groundLabel}
-            value={ground}
-            onChange={setGround}
-            options={REPORT_GROUNDS.map((id) => ({ id, label: t(`legal:admin.reports.grounds.${id}`) }))}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor={reasonId} className="field-label">{t('settings:decorations.made.removeReason')}</label>
-          <textarea
-            id={reasonId}
-            value={reason}
-            maxLength={CUSTOM_DECORATION_LIMITS.REASON_MAX}
-            onChange={(event) => setReason(event.target.value)}
-            rows={3}
-            className="input-standard w-full resize-none"
-          />
-        </div>
-        {error && <FormError>{error}</FormError>}
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="btn-quiet">{t('common:actions.cancel')}</button>
-          <button type="button" onClick={remove} disabled={!valid || saving} aria-busy={saving} className="btn-danger">
-            {t('settings:decorations.made.remove')}
-          </button>
-        </div>
-      </div>
-    </Modal>
+    <AdminRemovalDialog
+      title={t('settings:decorations.made.removeTitle', { name: design.name })}
+      text={t('settings:decorations.made.removeText')}
+      submitLabel={t('settings:decorations.made.remove')}
+      onRemove={async (removal) => {
+        await api.decorations.adminRemove(design.id, removal);
+        onRemoved();
+      }}
+      onClose={onClose}
+    />
   );
 }
 

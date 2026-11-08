@@ -48,6 +48,7 @@ import type {
 } from '@backspace/shared/src/legal';
 import type { PersonalSticker } from '@backspace/shared/src/stickers';
 import type { CreateCustomDecorationRequest, CustomDecoration, CustomDecorationKind, CustomDecorationPage, CustomDecorationSort, UpdateCustomDecorationRequest } from '@backspace/shared/src/customDecorations';
+import type { AdminSpaceExpressions, RemovalRequest, RemoveProfileContentRequest, RemoveSpaceContentRequest, RemoveSpaceExpressionRequest } from '@backspace/shared/src/adminRemoval';
 import type { ReportGround } from '@backspace/shared/src/legal';
 import type { ProfileImageRequest, ProfileImageResponse } from '@backspace/shared/src/profileImage';
 import type { CustomEmoji } from '@backspace/shared/src/customEmoji';
@@ -862,6 +863,13 @@ export class BackspaceApiClient {
     addUserNote: (userId: string, body: string) => Promise<AdminNotesResponse>;
     deleteUserNote: (userId: string, noteId: string) => Promise<AdminNotesResponse>;
     warnUser: (userId: string, body: { note: string; ground: 'terms' | 'illegal' }) => Promise<{ success: boolean }>;
+    /** Removing content directly (docs/systems/admin.md, "Removing content"): each with its reason and ground. */
+    removeMessage: (messageId: string, body: RemovalRequest) => Promise<{ success: boolean }>;
+    removeProfileContent: (userId: string, body: RemoveProfileContentRequest) => Promise<{ success: boolean }>;
+    removeSpaceContent: (spaceId: string, body: RemoveSpaceContentRequest) => Promise<{ success: boolean }>;
+    removeSpaceExpression: (spaceId: string, body: RemoveSpaceExpressionRequest) => Promise<{ success: boolean }>;
+    deleteSpace: (spaceId: string, body: RemovalRequest) => Promise<{ success: boolean }>;
+    spaceExpressions: (spaceId: string) => Promise<AdminSpaceExpressions>;
     signupRules: () => Promise<SignupRulesResponse>;
     setSignupChallenge: (level: SignupChallengeLevel) => Promise<SignupRulesResponse>;
     addSignupRule: (body: { kind: SignupRuleKind; value?: string; usual?: boolean }) => Promise<SignupRulesResponse>;
@@ -1754,6 +1762,12 @@ export class BackspaceApiClient {
       addUserNote: (userId, body) => request<AdminNotesResponse>('POST', `/admin/users/${userId}/notes`, { body }),
       deleteUserNote: (userId, noteId) => request<AdminNotesResponse>('DELETE', `/admin/users/${userId}/notes/${noteId}`),
       warnUser: (userId, body) => request<{ success: boolean }>('POST', `/admin/users/${userId}/warn`, body),
+      removeMessage: (messageId, body) => request<{ success: boolean }>('POST', `/admin/messages/${encodeURIComponent(messageId)}/remove`, body),
+      removeProfileContent: (userId, body) => request<{ success: boolean }>('POST', `/admin/users/${encodeURIComponent(userId)}/profile/remove`, body),
+      removeSpaceContent: (spaceId, body) => request<{ success: boolean }>('POST', `/admin/spaces/${encodeURIComponent(spaceId)}/content/remove`, body),
+      removeSpaceExpression: (spaceId, body) => request<{ success: boolean }>('POST', `/admin/spaces/${encodeURIComponent(spaceId)}/expressions/remove`, body),
+      deleteSpace: (spaceId, body) => request<{ success: boolean }>('POST', `/admin/spaces/${encodeURIComponent(spaceId)}/delete`, body),
+      spaceExpressions: (spaceId) => request<AdminSpaceExpressions>('GET', `/admin/spaces/${encodeURIComponent(spaceId)}/expressions`),
       signupRules: () => request<SignupRulesResponse>('GET', '/admin/signup-rules'),
       setSignupChallenge: (level) => request<SignupRulesResponse>('PUT', '/admin/signup-rules/challenge', { level }),
       addSignupRule: (body) => request<SignupRulesResponse>('POST', '/admin/signup-rules', body),

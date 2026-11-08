@@ -254,7 +254,20 @@ export interface DecideReportBody {
 
 // ─── Notices to a person (DSA Art. 16(5), 17) ───────────────────────────────
 
-export const USER_NOTICE_KINDS = ['content_removed', 'account_suspended', 'listing_withdrawn', 'address_withdrawn', 'warning', 'report_decided'] as const;
+export const USER_NOTICE_KINDS = [
+  'content_removed',
+  'account_suspended',
+  'listing_withdrawn',
+  'address_withdrawn',
+  'warning',
+  'report_decided',
+  /** An administrator removed parts of the person's profile; `subject` names them (adminRemoval.ts). */
+  'profile_content_removed',
+  /** An administrator removed parts of a space the person owns, or something in it; `subject` names them. */
+  'space_content_removed',
+  /** An administrator deleted a space the person owned; `subject` is its name. */
+  'space_removed',
+] as const;
 export type UserNoticeKind = (typeof USER_NOTICE_KINDS)[number];
 
 /** What the instance's operator decided, told to the person it concerns. */

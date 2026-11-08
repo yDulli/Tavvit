@@ -624,7 +624,10 @@
         "audit_export": "Exportou o registro de auditoria",
         "peer_trust": "Alterou a confiança em outra instância",
         "space_vanity_revoke": "Retirou um endereço de convite",
-        "decoration_remove": "Removeu uma decoração criada por alguém"
+        "decoration_remove": "Removeu uma decoração criada por alguém",
+        "message_remove": "Removeu uma mensagem",
+        "profile_content_remove": "Removeu partes de um perfil",
+        "space_content_remove": "Removeu algo de um espaço"
       },
       "details": {
         "until": "Até {{date}}",
@@ -1004,5 +1007,57 @@
     "spaces_one": "em {{formatted}} espaço",
     "spaces_many": "em {{formatted}} espaços",
     "spaces_other": "em {{formatted}} espaços"
+  },
+  "removal": {
+    "ground": "Fundamento",
+    "reason": "Motivo",
+    "reasonHint": "A pessoa afetada recebe este motivo, com o fundamento e como contestar.",
+    "submit": "Remover",
+    "done": "Removido.",
+    "message": {
+      "title": "Remover esta mensagem",
+      "text": "Ela some do canal para todos. Quem a escreveu fica sabendo o motivo."
+    },
+    "profile": {
+      "title": "Remover deste perfil",
+      "text": "Escolha o que sai. A pessoa fica sabendo o que foi removido e por quê.",
+      "open": "Remover do perfil…",
+      "keptByHome": "Este perfil vem de {{instance}}: mostra o que aquele servidor envia, e a próxima atualização de lá traria de volta o que fosse removido aqui. Só os administradores de lá podem remover algo dele."
+    },
+    "space": {
+      "title": "Remover deste espaço",
+      "text": "Escolha o que sai. O dono fica sabendo o que foi removido e por quê.",
+      "open": "Remover do espaço…",
+      "expressions": "Emoji, figurinhas e sons",
+      "expressionsEmpty": "Este espaço não tem emoji, figurinhas nem sons.",
+      "removeOne": "Remover {{name}}",
+      "removeOneText": "Ele some do espaço para todos. Quem o adicionou fica sabendo o motivo.",
+      "deleteOpen": "Excluir espaço…",
+      "deleteTitle": "Excluir {{name}}",
+      "deleteText": "O espaço some com todos os canais, mensagens e arquivos, para todos. O dono fica sabendo o motivo. Isso não pode ser desfeito.",
+      "deleteSubmit": "Excluir espaço"
+    },
+    "parts": {
+      "avatar": "Foto de perfil",
+      "banner": "Banner",
+      "displayName": "Nome de exibição",
+      "bio": "Sobre mim",
+      "status": "Status",
+      "pronouns": "Pronomes",
+      "links": "Links",
+      "decorations": "Decorações",
+      "spaceTag": "Tag de espaço"
+    },
+    "spaceParts": {
+      "icon": "Ícone",
+      "banner": "Banner",
+      "description": "Descrição",
+      "tag": "Tag"
+    },
+    "expressions": {
+      "emoji": "Emoji",
+      "sticker": "Figurinha",
+      "sound": "Som"
+    }
   }
 }

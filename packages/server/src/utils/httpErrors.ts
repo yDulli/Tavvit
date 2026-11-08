@@ -246,6 +246,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   decoration_limit_reached: 'You can keep at most {{max}} decorations of your own',
   decoration_style_invalid: 'That is not a name style that can be drawn',
   decoration_reason_invalid: 'Give a reason of {{min}} to {{max}} characters',
+  removal_reason_invalid: 'Give a reason of {{min}} to {{max}} characters',
+  removal_parts_invalid: 'Choose what to remove',
 
   federation_disabled: 'Federation is disabled on this instance',
   accent_color_low_contrast: 'The accent colour does not have enough contrast to be readable',

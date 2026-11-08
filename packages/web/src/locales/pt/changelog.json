@@ -4,6 +4,16 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.39.0": {
+      "title": "Moderação para administradores",
+      "items": {
+        "message": "Administradores podem remover uma mensagem de um espaço direto pelo menu dela, sem esperar por uma denúncia.",
+        "parts": "No console de administração, podem remover partes de um perfil, como a foto, o nome, o Sobre mim, o status, links ou decorações, e partes de um espaço, como o ícone, o banner, a descrição ou a tag.",
+        "space": "Podem remover emojis, figurinhas e sons de um espaço um a um, ou excluir um espaço inteiro.",
+        "told": "A cada vez, a pessoa afetada fica sabendo no seu idioma o que foi removido, por quê e como contestar, e o registro dos administradores guarda isso. Mensagens diretas continuam privadas: administradores só agem sobre uma quando alguém a denuncia.",
+        "deleted": "Corrigido: um espaço excluído continuava na lista dos membros até eles recarregarem a página."
+      }
+    },
     "1.38.1": {
       "title": "Mais fluido",
       "items": {

@@ -686,8 +686,6 @@
       "create": "Make it",
       "removeTitle": "Remove “{{name}}”",
       "removeText": "It goes from the gallery and from everyone who wears it. Its maker is told why, and how to object.",
-      "removeGround": "It breaks",
-      "removeReason": "Reason for its maker",
       "remove": "Remove",
       "search": "Search by name",
       "sortLabel": "Order",

@@ -4,6 +4,16 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.39.0": {
+      "title": "Moderation for administrators",
+      "items": {
+        "message": "Administrators can remove a message in a space straight from its menu, without waiting for a report.",
+        "parts": "In the admin console they can remove parts of a profile, such as the picture, the name, About me, the status, links or decorations, and parts of a space, such as its icon, banner, description or tag.",
+        "space": "They can remove a space's emoji, stickers and sounds one by one, or delete a whole space.",
+        "told": "Each time, the person it concerns is told in their own language what was removed, why and how to object, and the administrators' log keeps it. Direct messages stay private: administrators act on one only when someone reports it.",
+        "deleted": "Fixed: a deleted space stayed in its members' list until they reloaded the page."
+      }
+    },
     "1.38.1": {
       "title": "Smoother",
       "items": {

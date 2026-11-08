@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { LegalDocumentMeta, LegalDocumentResponse, UserNotice } from '@backspace/shared/src/legal';
+import { removalSubjectOf } from '@backspace/shared/src/adminRemoval';
 import { api } from '../../api/client';
 import { describeError } from '../../i18n/errors';
 import { useFormatters } from '../../i18n/formatters';
+import { removedText } from '../../i18n/removal';
 import { useAuthStore } from '../../stores/authStore';
 import { useLegalStore } from '../../stores/legalStore';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -89,17 +91,30 @@ function noticeTitleKey(notice: UserNotice) {
   return `notices.${notice.kind}.title` as const;
 }
 
+/** The kinds whose subject says what an administrator removed (adminRemoval.ts), named in the person's own words. */
+const REMOVAL_KINDS: ReadonlySet<UserNotice['kind']> = new Set(['profile_content_removed', 'space_content_removed', 'space_removed']);
+
 /** One sentence for a notice, shared by the dialog and the list on About. */
 export function NoticeBody({ notice }: { notice: UserNotice }) {
   const { t } = useTranslation('legal');
   const { formatDateTime } = useFormatters();
+  const removal = REMOVAL_KINDS.has(notice.kind) ? removalSubjectOf(notice.subject) : null;
+  // What went: its parts, or the emoji, sticker or sound by its name.
+  const removed = removal ? removedText(removal) : '';
   return (
     <div className="space-y-2 text-ui">
       {notice.kind === 'report_decided' ? (
         <p className="text-txt-secondary">{t(`notices.report_decided.outcome.${notice.decision ?? 'no_action'}`)}</p>
       ) : (
         <>
-          {notice.subject && <p className="line-clamp-3 break-words rounded-md border border-border-soft bg-surface-input px-3 py-2 text-ui text-txt-secondary">{notice.subject}</p>}
+          {removal ? (
+            (removal.space || removed) && (
+              <div className="space-y-0.5 rounded-md border border-border-soft bg-surface-input px-3 py-2 text-ui">
+                {removal.space && <p className="break-words text-txt-tertiary">{t('notices.inSpace', { space: removal.space })}</p>}
+                {removed && <p className="break-words text-txt-secondary">{removed}</p>}
+              </div>
+            )
+          ) : notice.subject && <p className="line-clamp-3 break-words rounded-md border border-border-soft bg-surface-input px-3 py-2 text-ui text-txt-secondary">{notice.subject}</p>}
           {notice.note && (
             <div>
               <div className="label-mono mb-0.5">{t('notices.reason')}</div>

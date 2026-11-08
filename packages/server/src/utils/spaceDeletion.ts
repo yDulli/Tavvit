@@ -16,8 +16,9 @@ type SpaceRow = typeof schema.spaces.$inferSelect;
 /**
  * Delete a space with everything in it: its channels and their messages, members, folder
  * entries, read states, the files only it showed, its clips and emoji, and everyone out of its voice. The
- * one way a space goes, whoever asks: its owner (`DELETE /api/spaces/:id`) or an administrator
- * deleting the owner's account with the spaces it owns (`DELETE /api/admin/users/:id`).
+ * one way a space goes, whoever asks: its owner (`DELETE /api/spaces/:id`), or an administrator
+ * deleting the owner's account with the spaces it owns (`DELETE /api/admin/users/:id`) or the
+ * space itself (`POST /api/admin/spaces/:id/delete`).
  */
 export function deleteSpaceCompletely(space: SpaceRow): void {
   const db = getDb();
@@ -82,7 +83,9 @@ export function deleteSpaceCompletely(space: SpaceRow): void {
     if (picture && pictureFileReleasable(picture)) deleteUploadFile(picture);
   }
   releaseMemberPictures(memberPictures);
-  // Nobody is in its voice or told about it any more.
+  // Every member hears that it is gone while they are still its audience, so it leaves their list
+  // at once rather than at their next start; then nobody is in its voice or told about it any more.
+  connectionManager.sendToSpace(id, { type: 'space_deleted', spaceId: id });
   for (const member of memberPictures) {
     disconnectMemberFromSpaceVoice(id, member.userId);
     connectionManager.removeUserSpace(member.userId, id);

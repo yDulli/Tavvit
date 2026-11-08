@@ -137,7 +137,8 @@
     },
     "remindSet": "Du wirst am {{time}} erinnert.",
     "translate": "Übersetzen",
-    "hideTranslation": "Übersetzung ausblenden"
+    "hideTranslation": "Übersetzung ausblenden",
+    "adminRemove": "Als Admin entfernen"
   },
   "attachment": {
     "progress": {

@@ -687,8 +687,6 @@
       "create": "Criar",
       "removeTitle": "Remover “{{name}}”",
       "removeText": "Sai da galeria e de todos que o usam. Quem o criou fica sabendo o motivo e como contestar.",
-      "removeGround": "Viola",
-      "removeReason": "Motivo para quem o criou",
       "remove": "Remover",
       "search": "Buscar pelo nome",
       "sortLabel": "Ordem",

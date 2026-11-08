@@ -20,6 +20,7 @@ import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { ReviewDecisionDialog } from '../../review/ReviewParts';
 import { SlidingMark } from '../../ui/SlidingMark';
 import { AccountNotesSection, AccountSecuritySection, AccountSessionsSection, AccountStorageSection, AccountWarningSection } from '../../admin/AccountSections';
+import { ProfileRemovalSection } from '../../admin/RemovalSections';
 import { PlatformAuditList } from './PlatformAuditList';
 
 /** What the detail of an account opens on, and the rest of it behind tabs. */
@@ -272,6 +273,10 @@ export function AdminUserDetailModal({
             <div hidden={view !== 'moderation'}>
               <AccountWarningSection key={user.id} userId={user.id} onChanged={sectionChanged} />
             </div>
+          )}
+
+          {view === 'moderation' && !isSelf && !user.isDeleted && (
+            <ProfileRemovalSection key={user.id} userId={user.id} keptBy={user.profileKeptByHome ? user.homeInstance : null} onChanged={sectionChanged} />
           )}
 
           {view === 'access' && <AccountSessionsSection userId={user.id} isSelf={isSelf} onChanged={sectionChanged} />}

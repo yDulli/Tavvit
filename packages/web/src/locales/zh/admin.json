@@ -591,7 +591,10 @@
         "audit_export": "导出了审计日志",
         "peer_trust": "更改了对其他实例的信任",
         "space_vanity_revoke": "收回了一个邀请地址",
-        "decoration_remove": "移除了用户制作的装饰"
+        "decoration_remove": "移除了用户制作的装饰",
+        "message_remove": "删除了一条消息",
+        "profile_content_remove": "删除了个人资料的部分内容",
+        "space_content_remove": "删除了空间中的内容"
       },
       "details": {
         "until": "直至 {{date}}",
@@ -967,5 +970,57 @@
     "removeTitle": "删除此机器人？",
     "removeBody": "{{name}} 将离开所有空间，令牌失效。已发布内容会保留。",
     "spaces_other": "在 {{formatted}} 个空间中"
+  },
+  "removal": {
+    "ground": "依据",
+    "reason": "理由",
+    "reasonHint": "相关的人会收到这条理由，以及依据和申诉方式。",
+    "submit": "删除",
+    "done": "已删除。",
+    "message": {
+      "title": "删除这条消息",
+      "text": "它会从频道中对所有人消失。作者会得知原因。"
+    },
+    "profile": {
+      "title": "从此个人资料中删除",
+      "text": "选择要删除的内容。此人会得知删除了什么以及原因。",
+      "open": "从个人资料中删除…",
+      "keptByHome": "此个人资料来自 {{instance}}：它显示的是那台服务器发送的内容，在这里删除的任何内容都会被那里的下一次更新带回。只有那里的管理员可以从中删除内容。"
+    },
+    "space": {
+      "title": "从此空间中删除",
+      "text": "选择要删除的内容。所有者会得知删除了什么以及原因。",
+      "open": "从空间中删除…",
+      "expressions": "表情、贴纸和声音",
+      "expressionsEmpty": "此空间没有表情、贴纸或声音。",
+      "removeOne": "删除 {{name}}",
+      "removeOneText": "它会从空间中对所有人消失。添加它的人会得知原因。",
+      "deleteOpen": "删除空间…",
+      "deleteTitle": "删除 {{name}}",
+      "deleteText": "空间及其所有频道、消息和文件将对所有人消失。所有者会得知原因。此操作无法撤销。",
+      "deleteSubmit": "删除空间"
+    },
+    "parts": {
+      "avatar": "头像",
+      "banner": "横幅",
+      "displayName": "显示名称",
+      "bio": "关于我",
+      "status": "状态",
+      "pronouns": "代词",
+      "links": "链接",
+      "decorations": "装饰",
+      "spaceTag": "空间标签"
+    },
+    "spaceParts": {
+      "icon": "图标",
+      "banner": "横幅",
+      "description": "描述",
+      "tag": "标签"
+    },
+    "expressions": {
+      "emoji": "表情",
+      "sticker": "贴纸",
+      "sound": "声音"
+    }
   }
 }

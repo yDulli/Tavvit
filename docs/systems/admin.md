@@ -4,6 +4,10 @@ Source files:
 - `packages/server/src/routes/admin.ts` -- User management (list, role, password reset, deletion), storage management endpoints
 - `packages/server/src/routes/platformAdmin.ts` -- The platform admin area: overview, account detail, suspensions, badge grants, spaces, the review queue and its decisions, the platform audit log
 - `packages/server/src/routes/spaceReview.ts` -- A space owner's side of the reviews: verification and Discovery requests, withdrawals, the review state
+- `packages/server/src/routes/adminRemoval.ts` -- [Removing content](#removing-content) directly: a message in a space, parts of a profile or a space, a space's emoji, stickers and sounds, a whole space
+- `packages/server/src/utils/spaceExpressionRemoval.ts` -- Taking a space's emoji, sticker or sound away, the same way for the space's own managers and for an admin
+- `packages/server/src/utils/profileRelay.ts` -- `relayProfileUpdate()`: a changed profile to the peers that hold a copy of it, whoever changed it
+- `packages/shared/src/adminRemoval.ts` -- The removable parts, the reason's limits, the notice's subject (`removalSubject`, `removalSubjectOf`) and the wire types of removing content
 - `packages/server/src/routes/instance.ts` -- Public instance info endpoint
 - `packages/server/src/routes/settings.ts` -- Instance settings and streaming limits endpoints
 - `packages/server/src/utils/auth.ts` -- `requireAdmin` middleware; `verifyJwtAndUser` refuses suspended accounts
@@ -33,6 +37,8 @@ Source files:
 - `packages/web/src/components/modals/instanceSettingsPanels/AdminSpaceDetailModal.tsx` -- One space: both reviews, decisions, badges, audit entries
 - `packages/web/src/components/modals/instanceSettingsPanels/AdminUserDetailModal.tsx` -- One account: facts, suspension, badges, audit entries
 - `packages/web/src/components/modals/instanceSettingsPanels/PlatformAuditPanel.tsx`, `PlatformAuditList.tsx` -- The platform audit log
+- `packages/web/src/components/modals/AdminRemovalDialog.tsx` -- The one dialog every direct removal asks through: what goes, the ground, the reason
+- `packages/web/src/components/admin/RemovalSections.tsx` -- Removing from a profile (the account's Moderation tab) and from a space (its detail)
 - `packages/web/src/components/modals/instanceSettingsPanels/GeneralPanel.tsx` -- General settings UI
 - `packages/web/src/components/modals/instanceSettingsPanels/RegistrationPanel.tsx` -- Registration toggles + invite-link CRUD UI
 - `packages/web/src/components/modals/instanceSettingsPanels/FederationPanel.tsx` -- Federation peers panel (peering, approval queue, peer status, rotation, reset)
@@ -453,13 +459,14 @@ Filters are combined with AND. When `showDeleted` is false (default), `isDeleted
   isAdmin: boolean;
   isDeleted: boolean;
   homeInstance: string | null;
+  profileKeptByHome: boolean;  // a copy whose home still answers for its profile (not one whose home is gone); see Removing content
   createdAt: number;      // epoch ms
   suspension: { since: number; until: number | null; reason: string } | null;  // standing now; null when none or run out
   grantedBadges: GrantedUserBadgeId[];  // what admins gave, in registry order; never staff
 }
 ```
 
-Produced by `utils/adminUser.ts:toAdminUser(row, now?)` -- maps integer DB columns to booleans, coalesces null status, reads the suspension standing at `now` (`activeSuspension()`) and the granted badges (`grantedUserBadgesOf()`). Every route that answers an `AdminUser` (`admin.ts` and `platformAdmin.ts`) builds it here.
+Produced by `utils/adminUser.ts:toAdminUser(row, now?)` -- maps integer DB columns to booleans, coalesces null status, reads the suspension standing at `now` (`activeSuspension()`), the granted badges (`grantedUserBadgesOf()`) and whether the home keeps the profile (`profileKeptByHome()`, the same rule the removal routes ask). Every route that answers an `AdminUser` (`admin.ts` and `platformAdmin.ts`) builds it here.
 
 ---
 
@@ -566,7 +573,7 @@ See [federation.md](federation.md) — Peer Approval Queue and Outbound Peering 
 
 ## Platform administration
 
-The instance's own administration of accounts and spaces, apart from anything a space's roles allow: account [suspensions](#suspensions), the [verification](#verification) and [Discovery approval](#discovery-approval) of spaces, the [badges an admin gives](#badges-grants), and the [platform audit log](#platform-audit-log) that records each of these. Statuses, decision rules, limits and wire types are in `packages/shared/src/platform.ts`; the routes are `routes/platformAdmin.ts` (deciding) and `routes/spaceReview.ts` (asking).
+The instance's own administration of accounts and spaces, apart from anything a space's roles allow: account [suspensions](#suspensions), the [verification](#verification) and [Discovery approval](#discovery-approval) of spaces, the [badges an admin gives](#badges-grants), [removing content](#removing-content) directly, and the [platform audit log](#platform-audit-log) that records each of these. Statuses, decision rules, limits and wire types are in `packages/shared/src/platform.ts`; the routes are `routes/platformAdmin.ts` (deciding) and `routes/spaceReview.ts` (asking).
 
 ### The admin area
 
@@ -599,6 +606,7 @@ The list has the app's sliding mark (`SlidingMark`) and carries the counts of wh
 - *Security activity*: `GET /api/admin/users/:id/security`, what the person sees of it themselves; addresses are cut short as everywhere.
 - *Notes*: `admin_notes`, 1000 characters, for the admins among themselves. They go with the account (`tombstoneUser`) and are in its data export, which the note field says. The audit log says that a note was written and not what it says, because that log outlives the account.
 - *Warning*: `POST /api/admin/users/:id/warn`, a notice of kind `warning` with a reason and a ground ([legal.md](legal.md)). It changes nothing about the account. The notice holds the words; the audit log says that it happened and on what ground, because that log outlives the account.
+- *Removing from the profile*: in the Moderation tab, the parts to take away as checkboxes, then a ground and a reason ([Removing content](#removing-content)).
 - **A second factor cannot be turned off from here**, only with `tavvit-admin reset-2fa` on the server's shell ([auth.md](auth.md)).
 
 **The system** (`GET /api/admin/system`): version, uptime, memory, the size of the database, the disk, which services are on (mail, two-factor sign-in, translating, Twitch (linking accounts and the live check) as `off`, `ok` or `failing` when Twitch did not answer the last check, voice, federation), the backups by file name, and "Back up now" (`POST /api/admin/system/backup`, one every 5 minutes, `backup_too_soon`; it is `VACUUM INTO`, so on a large database the server pauses for it). These copies have a reason of their own, `console`, with their own count (`BACKUP_KEEP_CONSOLE`, 5), so that pressing the button cannot rotate away the copies `update.sh` makes; copies made by hand are also gone after `BACKUP_MAX_AGE_DAYS` (90), so deleted data has an end there too. Restoring a backup and fetching the database stay with the server's shell, so that being signed in as an admin is not a way to take everything or to overwrite it.
@@ -771,6 +779,35 @@ Each step is recorded as a `changed` event with the editor as actor (`recordEdit
 
 ---
 
+## Removing content
+
+A report waits for someone to complain. An instance admin can also take away directly what breaks the terms or the law (`routes/adminRemoval.ts`; parts, limits and wire types in `packages/shared/src/adminRemoval.ts`):
+
+| What | Route | Where in the app | Who is told, by which notice |
+|------|-------|------------------|------------------------------|
+| A message in a space | `POST /api/admin/messages/:id/remove` | the message menu, "Remove as administrator" | its author, `content_removed`, with the message's text as its subject |
+| Parts of a person's profile | `POST /api/admin/users/:id/profile/remove` `{ parts }` | the account's Moderation tab | the person, `profile_content_removed` |
+| Parts of a space | `POST /api/admin/spaces/:id/content/remove` `{ parts }` | the space's detail | its owner, `space_content_removed` |
+| One emoji, sticker or sound of a space | `POST /api/admin/spaces/:id/expressions/remove` `{ kind, id }`; the list is `GET /api/admin/spaces/:id/expressions` (`AdminSpaceExpressions`), since an admin need not be a member | the space's detail, "Emoji, stickers and sounds" | whoever added it, or the owner when that account is gone, `space_content_removed` |
+| A whole space | `POST /api/admin/spaces/:id/delete` | the space's detail, "Delete space…" | its owner, `space_removed` |
+| A decoration someone made | `POST /api/admin/decorations/:id/remove` | its tile in the gallery | its maker ([decorations.md](decorations.md), "Made by people") |
+
+**What every removal asks.** Each route runs `authenticate` then `requireAdmin`, and none is open to bots. The menu item shows only to an admin, for a message of a space on the admin's own instance that is not their own and not a direct message, and the sections only in the console; that is a convenience, not the protection. The body names a `reason` of 3-500 characters once trimmed (`REMOVAL_REASON_LIMITS`, else 400 `removal_reason_invalid` `{ min, max }`) and a `ground`, `illegal` or `terms` (else 400 `report_ground_required`). `parts` is a list of known parts; empty, longer than the list of parts, or naming anything else is 400 `removal_parts_invalid` (`removalPartsOf`), as is an unknown `kind`. The person it concerns gets the notice with the reason, the ground and how to object (DSA Art. 17, [legal.md](legal.md)), unless it is the admin themselves or an account whose home is another instance, which no notice of this one reaches. Every removal writes a [platform audit](#platform-audit-log) entry.
+
+**A message** goes as a report's removal takes it (`removeReportedMessage`): with its attachments and their files, and `message_deleted` to the channel. **Direct messages are not here:** they are in their own table, which this route does not read, so a direct message's id answers 404 `message_not_found`. An admin does not read private messages and acts on one only when someone reports it.
+
+**A profile's parts:** `avatar`, `banner`, `displayName`, `bio`, `status` (with its expiry), `pronouns`, `links`, `decorations` (all five columns, made ones too) and `spaceTag` (the tag worn; the space keeps its tag). The username is not one of them: it is the account, which is suspended or deleted instead. Not the admin's own profile (400 `cannot_target_self`) and not the copy of someone whose home is another instance and still answers for it (400 `profile_managed_by_home`, `profileKeptByHome()`): that copy shows what their home sends and the next update from there would write over it, so the home's admins act on it, and this instance can still suspend the copy. The Moderation tab says so in place of the button (`AdminUser.profileKeptByHome`). A copy whose home is gone is this instance's, as its own accounts are. What goes, goes as if the person had removed it: `profile_updated_at` moves, `user_updated` reaches everyone who sees them (`announceProfileChange`), the relay carries the change to peers while it is on (`relayProfileUpdate`), a picture's file goes once nothing shows it any more (`pictureFileReleasable`), and the decorations' wearer counts are counted again.
+
+**A space's parts:** `icon`, `banner`, `description` and `tag`. Its name stays: a space has to have one. The tag also goes from everyone who wore it (`releaseSpaceTagsOf`, `announceSpaceTagChange`, [space-tags.md](space-tags.md)); the members hear `space_updated`, a picture's file goes once nothing shows it, and a space in the directory is marked dirty for the pinger ([directory.md](directory.md)).
+
+**An emoji, a sticker or a sound** goes the way the space's own managers take one away (`utils/spaceExpressionRemoval.ts`, which `routes/spaceExpressions.ts` and `routes/soundboard.ts` use too): its row, its file where it has one of its own (a sticker's picture is shared by content and left to the storage cleanup), an entry in the space's own audit log naming the admin, and `space_emojis_changed`, `space_stickers_changed` or `space_sounds_changed` to the members. What becomes of messages and reactions that used it is in [emoji.md](emoji.md).
+
+**A whole space** goes the one way a space goes (`deleteSpaceCompletely`, `utils/spaceDeletion.ts`), with its channels, messages and files, for everyone, and cannot be brought back.
+
+**The notice's subject.** For `profile_content_removed`, `space_content_removed` and `space_removed` it is a small JSON document (`removalSubject`): the parts by their keys, the space by its name, an emoji, a sticker or a sound by its kind and name, names cut to 60 characters so that it fits the subject's 200. The client (`NoticeBody` in `components/legal/LegalController.tsx`, read back with `removalSubjectOf`) names the parts in the person's own language whatever language the admin wrote in, leaves out a part it does not know, and adds "In {space}".
+
+**In the app.** `AdminRemovalDialog` is the one dialog for all of them, the decorations people made included: a sentence on what happens, the parts as checkboxes where there is a choice, the ground, the reason with the hint that the person reads it, and a danger button that waits for a reason of 3 characters and, where there is a choice, for one part. A refusal of the server shows in the dialog, which stays open. `RemovalSections.tsx` holds the section of the account's Moderation tab and those of the space's detail.
+
 ## Platform audit log
 
 What the instance's administrators did to accounts, spaces and the instance. Written by `recordPlatformAudit()` in `utils/platformAudit.ts`; read by `GET /api/admin/audit` and by the account and space detail routes (their 20 newest entries).
@@ -788,7 +825,7 @@ What the instance's administrators did to accounts, spaces and the instance. Wri
 | `details` | JSON object of what the action set; null when empty |
 | `created_at` | Epoch ms |
 
-No foreign keys: an entry outlives its actor and its target. No retention: unlike a space's audit log nothing prunes it; these are the records an admin team answers for, and there are few of them. `recordPlatformAudit` never throws: the action it records has already been taken, so a failed insert is logged (`[platform-audit] could not record ...`) and the request goes on.
+No foreign keys: an entry outlives its actor and its target. Kept for two years (`PLATFORM_AUDIT_RETENTION_MS`, swept daily by `purgeOldLegalRecords` in `utils/reports.ts`; [legal.md](legal.md), "Retention"), longer than a space's audit log: these are the records an admin team answers for, and there are few of them. `recordPlatformAudit` never throws: the action it records has already been taken, so a failed insert is logged (`[platform-audit] could not record ...`) and the request goes on.
 
 **Actions:**
 
@@ -799,7 +836,10 @@ No foreign keys: an entry outlives its actor and its target. No retention: unlik
 | `user_role` | `PATCH /api/admin/users/:id/role`, when the flag changed | user | -- | `{ isAdmin }` |
 | `user_password_reset` | `POST /api/admin/users/:id/reset-password` | user | -- | -- |
 | `user_delete` | `DELETE /api/admin/users/:id` | user | -- | -- |
-| `space_delete` | `DELETE /api/admin/users/:id` with `deleteSpaces` | space | -- | -- |
+| `space_delete` | `DELETE /api/admin/users/:id` with `deleteSpaces`, and `POST /api/admin/spaces/:id/delete` | space | the deletion's reason; the reason its owner is told | --; `{ ground }` |
+| `message_remove` | `POST /api/admin/messages/:id/remove` | user, the message's author | the reason its author is told | `{ message, channel, space, ground }` |
+| `profile_content_remove` | `POST /api/admin/users/:id/profile/remove` | user | the reason the person is told | `{ parts, ground }` |
+| `space_content_remove` | `POST /api/admin/spaces/:id/content/remove` and `/expressions/remove` | space | the reason the person is told | `{ parts, ground }`; `{ expression, item, name, ground }` |
 | `user_badges` | `PUT /api/admin/users/:id/badges`, when the list changed | user | optional | `{ added, removed }` |
 | `space_badges` | `PUT /api/admin/spaces/:id/badges`, when the list changed | space | optional | `{ added, removed }` |
 | `verification_approve`, `verification_reject`, `verification_request_info`, `verification_revoke` | `POST /api/admin/spaces/:id/verification/:decision` | space | the decision's note | `{ status }` |
@@ -927,19 +967,20 @@ One space (`GET /api/admin/spaces/:id`), in sections:
 - **Verification:** the status chip and every field of the request as the owner sent it (name and description then, category, website, profiles, reason, proof, who sent it when), then the decisions that apply to the status now (`verificationDecisionApplies`): approve, request information, reject, revoke.
 - **Discovery:** the status chip, a `ListingPreview` of the space as it is now with the requested category, the category, who sent it when and the last decision's note, then the decisions that apply: approve, request changes, reject, withdraw.
 - **Badges:** a checkbox per space badge an admin can give ([Badges (grants)](#badges-grants)).
+- **Removing** ([Removing content](#removing-content)): "Remove from space…" with the parts as checkboxes, "Delete space…", and the space's emoji, stickers and sounds, each with its own remove button. After a deletion the modal closes and the list behind it reloads.
 - **History** of both reviews (`ReviewHistory`) and the 20 newest platform audit entries about the space.
 
 Every decision opens `ReviewDecisionDialog`: what the decision does, a reason (required where the rule says, at most 1000 characters; the owner reads it), and a confirm button, the danger variant for reject, revoke and withdraw. The decision is sent with the `requestedAt` of the request shown, so a request sent again meanwhile comes back as `review_status_conflict`, shown in the dialog. After a decision or a badge change the modal reloads and tells the list behind it.
 
 #### AdminUserDetailModal
 
-One account (`GET /api/admin/users/:id`): avatar, name, `@username` and chips (Admin, the home instance of a federated account, Deleted, Suspended); facts (joined, spaces, friends, messages); the spaces it owns; **Suspension**; **Badges** (not for a deleted account); the 20 newest platform audit entries about it.
+One account (`GET /api/admin/users/:id`): avatar, name, `@username` and chips (Admin, the home instance of a federated account, Deleted, Suspended); facts (joined, spaces, friends, messages); the spaces it owns; **Suspension**; **Removing from the profile** ([Removing content](#removing-content)); **Badges** (not for a deleted account); the 20 newest platform audit entries about it.
 
 The Suspension section shows either the standing suspension (since when, until when or until lifted, the reason) with **Lift suspension**, which asks for an optional reason in `ReviewDecisionDialog`; or, for an account that may be suspended (not deleted, not an admin, not the viewer's own), the form: a duration select (`SUSPENSION_DURATIONS`, 24 hours preselected), a reason of 3-500 characters that the person reads when they try to sign in, and **Suspend**, which confirms in a danger `ConfirmDialog` naming the account and the duration; or a sentence saying why not (deleted, own account, demote first).
 
 #### PlatformAuditPanel
 
-The platform audit log, newest first, 50 at a time (`GET /api/admin/audit`), with a filter by target (everything, accounts, spaces, instance) and "Show older entries" while `hasMore`, which asks for entries before the last id shown. `PlatformAuditList` renders each entry: the action's name, the target's label (not for instance entries, nor in the detail modals' compact list), who did it, when, a sentence for what it set where there is one (the suspension's end, admin role given or taken, badges added and removed by name, the settings fields changed, files deleted and space freed) and the reason. An action this client does not know (from a newer instance) reads as a neutral line rather than failing.
+The platform audit log, newest first, 50 at a time (`GET /api/admin/audit`), with a filter by target (everything, accounts, spaces, instance) and "Show older entries" while `hasMore`, which asks for entries before the last id shown. `PlatformAuditList` renders each entry: the action's name, the target's label (not for instance entries, nor in the detail modals' compact list), who did it, when, a sentence for what it set where there is one (the suspension's end, admin role given or taken, badges added and removed by name, the settings fields changed, files deleted and space freed, what a removal took in the words its notice uses, `removedText` in `i18n/removal.ts`) and the reason. An action this client does not know (from a newer instance) reads as a neutral line rather than failing.
 
 #### GeneralPanel
 

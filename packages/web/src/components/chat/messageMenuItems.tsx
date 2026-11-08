@@ -46,6 +46,8 @@ interface MessageMenuParams {
   onSelect?: () => void;
   /** Report the message to the operator of the instance that holds it. Absent for one's own or a pending message. */
   onReport?: () => void;
+  /** Take it away as this instance's administrator, with a reason its author is told. Absent unless that is who this is. */
+  onAdminRemove?: () => void;
   imageUrl?: string | null;
   stickerSource?: string | null;
   stickerName?: string;
@@ -75,6 +77,7 @@ export function buildMessageMenuItems(params: MessageMenuParams): ContextMenuIte
     onOpenEmojiPicker,
     onMarkUnread,
     onReport,
+    onAdminRemove,
     imageUrl,
     sourceUrl,
     videoUrl,
@@ -370,6 +373,18 @@ export function buildMessageMenuItems(params: MessageMenuParams): ContextMenuIte
       label: i18n.t('legal:report.menuMessage'),
       icon: <Icon name="flag" size={16} />,
       onClick: onReport,
+    });
+  }
+
+  // ── Remove as the instance's administrator (docs/systems/admin.md, "Removing content") ──
+  if (onAdminRemove) {
+    items.push({
+      key: 'admin-remove',
+      type: 'action',
+      label: i18n.t('chat:menu.adminRemove'),
+      icon: <Icon name="shield" size={16} />,
+      onClick: onAdminRemove,
+      danger: true,
     });
   }
 

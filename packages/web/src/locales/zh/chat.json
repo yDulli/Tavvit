@@ -134,7 +134,8 @@
     },
     "remindSet": "将于 {{time}} 提醒你。",
     "translate": "翻译",
-    "hideTranslation": "隐藏翻译"
+    "hideTranslation": "隐藏翻译",
+    "adminRemove": "以管理员身份删除"
   },
   "attachment": {
     "progress": {

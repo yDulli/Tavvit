@@ -462,5 +462,7 @@
   "decoration_image_invalid": "Lade ein PNG-, WebP- oder GIF-Bild mit höchstens {{max}} MB hoch.",
   "decoration_limit_reached": "Du kannst höchstens {{max}} eigene Dekorationen behalten. Lösch eine, um eine neue zu machen.",
   "decoration_style_invalid": "Dieser Namens-Stil lässt sich nicht zeichnen. Wähl Look und Farben noch einmal.",
-  "decoration_reason_invalid": "Gib einen Grund mit {{min}} bis {{max}} Zeichen an."
+  "decoration_reason_invalid": "Gib einen Grund mit {{min}} bis {{max}} Zeichen an.",
+  "removal_reason_invalid": "Gib einen Grund mit {{min}} bis {{max}} Zeichen an.",
+  "removal_parts_invalid": "Wähle aus, was entfernt werden soll."
 }

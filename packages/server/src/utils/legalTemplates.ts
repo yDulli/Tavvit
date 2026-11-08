@@ -73,7 +73,7 @@ Programme (Bots) dürfen nur über ein eigenes Bot-Konto laufen, nie über das K
 Wer einen Space anlegt, legt dort Regeln, Rollen und Moderatoren fest und kann eigene automatische Wortfilter einsetzen. Das sind Entscheidungen des Space, nicht des Anbieters. Der Anbieter greift ein, wenn etwas gegen das Gesetz oder diese Bedingungen verstößt.`,
     `## 7. Moderation durch den Anbieter
 
-Der Anbieter kann Inhalte entfernen, Konten befristet oder unbefristet sperren und Spaces aus der öffentlichen Übersicht nehmen oder ihre Verifizierung entziehen. Grundlage sind das Gesetz und diese Bedingungen. Menschen prüfen jeden Fall; der Anbieter trifft keine automatisierten Entscheidungen. Er handelt verhältnismäßig und berücksichtigt die Grundrechte der Beteiligten, besonders die Meinungsfreiheit.
+Der Anbieter kann Inhalte entfernen, auch Teile eines Profils oder eines Space, Spaces löschen, Konten befristet oder unbefristet sperren und Spaces aus der öffentlichen Übersicht nehmen oder ihre Verifizierung entziehen. Grundlage sind das Gesetz und diese Bedingungen. Menschen prüfen jeden Fall; der Anbieter trifft keine automatisierten Entscheidungen. Er handelt verhältnismäßig und berücksichtigt die Grundrechte der Beteiligten, besonders die Meinungsfreiheit.
 
 Wer betroffen ist, erfährt in der App oder beim Anmelden, was entschieden wurde und warum. Widerspruch ist formlos an ${o.email} möglich. Der Weg zu den Gerichten bleibt offen.`,
     `## 8. Rechtswidrige Inhalte melden
@@ -131,7 +131,7 @@ Programs (bots) may run only on a bot's account of their own, never on a person'
 Whoever creates a space sets its rules, roles and moderators and may use automatic word filters there. Those are the space's decisions, not the provider's. The provider steps in when something breaks the law or these terms.`,
     `## 7. Moderation by the provider
 
-The provider can remove content, suspend accounts for a time or indefinitely, and take spaces off the public listing or withdraw their verification. This rests on the law and on these terms. People review each case; the provider makes no automated decisions. It acts proportionately and takes the fundamental rights of those involved into account, freedom of expression in particular.
+The provider can remove content, parts of a profile or of a space included, delete spaces, suspend accounts for a time or indefinitely, and take spaces off the public listing or withdraw their verification. This rests on the law and on these terms. People review each case; the provider makes no automated decisions. It acts proportionately and takes the fundamental rights of those involved into account, freedom of expression in particular.
 
 Anyone affected learns in the app or when signing in what was decided and why. You can object informally at ${o.email}. The way to the courts stays open.`,
     `## 8. Reporting illegal content

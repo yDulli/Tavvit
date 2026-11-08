@@ -607,7 +607,10 @@
         "audit_export": "Exported the audit log",
         "peer_trust": "Changed trust in another instance",
         "space_vanity_revoke": "Took an invite address away",
-        "decoration_remove": "Removed a decoration someone made"
+        "decoration_remove": "Removed a decoration someone made",
+        "message_remove": "Removed a message",
+        "profile_content_remove": "Removed parts of a profile",
+        "space_content_remove": "Removed something from a space"
       },
       "details": {
         "until": "Until {{date}}",
@@ -985,5 +988,57 @@
     "removeBody": "{{name}} leaves every space and its token stops working. What it wrote stays.",
     "spaces_one": "in {{formatted}} space",
     "spaces_other": "in {{formatted}} spaces"
+  },
+  "removal": {
+    "ground": "Ground",
+    "reason": "Reason",
+    "reasonHint": "The person it concerns is told this, with the ground and how to object.",
+    "submit": "Remove",
+    "done": "Removed.",
+    "message": {
+      "title": "Remove this message",
+      "text": "It goes from the channel for everyone. Its author is told why."
+    },
+    "profile": {
+      "title": "Remove from this profile",
+      "text": "Choose what goes. The person is told what was removed and why.",
+      "open": "Remove from profile…",
+      "keptByHome": "This profile comes from {{instance}}: it shows what that server sends, and its next update would bring back anything removed here. Only that server's administrators can remove from it."
+    },
+    "space": {
+      "title": "Remove from this space",
+      "text": "Choose what goes. The owner is told what was removed and why.",
+      "open": "Remove from space…",
+      "expressions": "Emoji, stickers and sounds",
+      "expressionsEmpty": "This space has no emoji, stickers or sounds.",
+      "removeOne": "Remove {{name}}",
+      "removeOneText": "It goes from the space for everyone. Whoever added it is told why.",
+      "deleteOpen": "Delete space…",
+      "deleteTitle": "Delete {{name}}",
+      "deleteText": "The space goes with all its channels, messages and files, for everyone. Its owner is told why. This cannot be undone.",
+      "deleteSubmit": "Delete space"
+    },
+    "parts": {
+      "avatar": "Profile picture",
+      "banner": "Banner",
+      "displayName": "Display name",
+      "bio": "About me",
+      "status": "Status",
+      "pronouns": "Pronouns",
+      "links": "Links",
+      "decorations": "Decorations",
+      "spaceTag": "Space tag"
+    },
+    "spaceParts": {
+      "icon": "Icon",
+      "banner": "Banner",
+      "description": "Description",
+      "tag": "Tag"
+    },
+    "expressions": {
+      "emoji": "Emoji",
+      "sticker": "Sticker",
+      "sound": "Sound"
+    }
   }
 }

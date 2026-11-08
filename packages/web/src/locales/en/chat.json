@@ -137,7 +137,8 @@
     },
     "remindSet": "You will be reminded on {{time}}.",
     "translate": "Translate",
-    "hideTranslation": "Hide translation"
+    "hideTranslation": "Hide translation",
+    "adminRemove": "Remove as administrator"
   },
   "attachment": {
     "progress": {

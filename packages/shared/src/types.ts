@@ -1401,6 +1401,8 @@ export type ServerEvent =
   /** Only to the person: their linked accounts changed, on this device or another (linked-accounts.md). */
   | { type: 'linked_accounts_update'; accounts: LinkedAccountView[] }
   | { type: 'member_banned'; spaceId: string; reason: string | null }
+  /** To every member: the space is gone, deleted by its owner or an instance administrator (utils/spaceDeletion.ts). */
+  | { type: 'space_deleted'; spaceId: string }
   | { type: 'category_created'; category: ChannelCategory; spaceId: string }
   | { type: 'category_updated'; category: ChannelCategory; spaceId: string }
   | { type: 'category_deleted'; categoryId: string; spaceId: string }
@@ -2312,6 +2314,13 @@ export interface AdminUser {
   isAdmin: boolean;
   isDeleted: boolean;
   homeInstance: string | null;
+  /**
+   * A copy of someone whose home, `homeInstance`, still answers for their profile: what it shows
+   * is what that instance sends, so removing parts of it is that instance's to do
+   * (docs/systems/admin.md, "Removing content"). False for an account of this instance and for a
+   * copy whose home is gone.
+   */
+  profileKeptByHome: boolean;
   createdAt: number;
   /** The suspension standing now (platform.ts); null when there is none. */
   suspension: UserSuspension | null;

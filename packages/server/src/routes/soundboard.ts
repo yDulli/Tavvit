@@ -12,6 +12,7 @@ import { getChannelSpaceId, getMember, hasPermission, PermissionBits } from '../
 import { generateSnowflake } from '../utils/snowflake.js';
 import { memberActionRefusal } from '../utils/spaceModeration.js';
 import { soundDir, soundFilePath } from '../utils/soundFiles.js';
+import { removeSpaceSound } from '../utils/spaceExpressionRemoval.js';
 import { probeMediaMeta } from '../utils/thumbnail.js';
 import { connectionManager } from '../ws/handler.js';
 
@@ -142,10 +143,7 @@ export async function soundboardRoutes(app: FastifyInstance): Promise<void> {
     const row = soundOf(request.params.id);
     if (!row) return sendError(reply, 404, 'sound_not_found');
     if (!hasPermission(request.userId, row.spaceId, PermissionBits.MANAGE_SOUNDS)) return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_SOUNDS' });
-    getDb().delete(schema.spaceSounds).where(eq(schema.spaceSounds.id, row.id)).run();
-    await rm(soundFilePath(row.id), { force: true });
-    recordAudit({ spaceId: row.spaceId, actorId: request.userId, action: 'sound_delete', targetType: 'space', targetId: row.id, targetLabel: row.name });
-    connectionManager.sendToSpace(row.spaceId, { type: 'space_sounds_changed', spaceId: row.spaceId });
+    await removeSpaceSound(row, request.userId);
     return reply.code(200).send({ success: true });
   });
 

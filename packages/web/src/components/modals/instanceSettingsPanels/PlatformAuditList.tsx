@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { isPeerTrustChange, isPlatformAuditAction, type PlatformAuditAction, type PlatformAuditEntry } from '@backspace/shared/src/platform';
 import { isGrantedSpaceBadge, isGrantedUserBadge } from '@backspace/shared/src/badges';
+import { isSpaceExpressionKind } from '@backspace/shared/src/adminRemoval';
 import { useFormatters } from '../../../i18n/formatters';
+import { removedText } from '../../../i18n/removal';
 import { useBadgeText } from '../../../badges/badgeText';
 import { useSensitiveText } from '../../ui/Sensitive';
 
@@ -21,7 +23,8 @@ function stringList(value: unknown): string[] {
  * An action from a newer instance this client does not know reads neutrally.
  */
 export function PlatformAuditList({ entries, compact = false }: { entries: readonly PlatformAuditEntry[]; compact?: boolean }) {
-  const { t } = useTranslation(['admin', 'common']);
+  // `legal` names what a removal took, in the notice's words (i18n/removal.ts).
+  const { t } = useTranslation(['admin', 'common', 'legal']);
   const f = useFormatters();
   const badgeText = useBadgeText();
   // A space's own address lets anyone in: streamer mode hides it.
@@ -86,6 +89,14 @@ export function PlatformAuditList({ entries, compact = false }: { entries: reado
       case 'accounts_export':
       case 'audit_export':
         return typeof details.rows === 'number' ? t('admin:platform.audit.details.rows', { n: f.formatNumber(details.rows) }) : null;
+      case 'profile_content_remove':
+      case 'space_content_remove':
+        // The parts or the item, in the reader's words, as the person's notice names them.
+        return removedText({
+          parts: stringList(details.parts),
+          ...(isSpaceExpressionKind(details.expression) ? { expression: details.expression } : {}),
+          ...(typeof details.name === 'string' ? { name: details.name } : {}),
+        }) || null;
       default:
         return null;
     }

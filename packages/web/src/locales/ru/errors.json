@@ -462,5 +462,7 @@
   "decoration_image_invalid": "Загрузите изображение PNG, WebP или GIF размером не больше {{max}} МБ.",
   "decoration_limit_reached": "Можно хранить не больше {{max}} своих украшений. Удалите одно, чтобы создать новое.",
   "decoration_style_invalid": "Этот стиль имени нельзя отобразить. Выберите вид и цвета ещё раз.",
-  "decoration_reason_invalid": "Укажите причину длиной от {{min}} до {{max}} символов."
+  "decoration_reason_invalid": "Укажите причину длиной от {{min}} до {{max}} символов.",
+  "removal_reason_invalid": "Укажите причину длиной от {{min}} до {{max}} символов.",
+  "removal_parts_invalid": "Выберите, что удалить."
 }
