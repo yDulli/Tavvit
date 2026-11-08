@@ -22,6 +22,7 @@ import { sanitizeUser } from '../utils/sanitize.js';
 import { applyChosenStatus } from './presence.js';
 import { presenceUpdateFor, validateActivities } from './presenceEvent.js';
 import { deleteAttachmentFiles } from '../utils/fileCleanup.js';
+import { deleteDmMessageHere } from '../utils/dmMessageDeletion.js';
 import { resolveEmbeds, reResolveEmbeds, embedRowToEmbed } from '../utils/embedResolver.js';
 import { appendMutationLog, dmMessageFederationRef, dmMessageMutationTarget, queueOutboxEvent, queueDmRelay, queueDmMessageDeleteRelay, getGroupDmTargetOrigins, sendCallRelay, sendTypingRelay, queueReadStateRelay } from '../utils/federationOutbox.js';
 import { canonicalizeHomeInstance, getOurOrigin, normalizeOriginForCompare } from '../utils/federationAuth.js';
@@ -703,6 +704,10 @@ function handleVoiceJoin(event: Record<string, unknown>, userId: string, ws: Web
   // skip the leave+join broadcast to avoid visual flicker for other users.
   const currentRoom = connectionManager.getUserRoom(userId);
   if (currentRoom && currentRoom.roomId === channelId) {
+    // The socket that takes the session over may have missed what the call watched meanwhile
+    // (docs/systems/watch-together.md): it hears where the session stands, as a join does.
+    connectionManager.sendToUser(userId, { type: 'watch_state', channelId, session: currentRoom.room.watch ?? null, serverNow: Date.now() });
+
     const status = connectionManager.getVoiceUserStatus(userId);
     if (status) {
       connectionManager.sendToRoom(channelId, {
@@ -1145,38 +1150,7 @@ function handleDmMessageDelete(event: Record<string, unknown>, userId: string, w
   // before it is gone.
   const relayTarget = dmMessageMutationTarget(msg, userId);
 
-  // Collect attachment filenames before deletion
-  const dmAttachmentRows = db.select({ filename: schema.attachments.filename })
-    .from(schema.attachments).where(eq(schema.attachments.dmMessageId, messageId)).all();
-
-  // Delete attachments, reactions, and message atomically
-  db.transaction((tx) => {
-    tx.delete(schema.attachments)
-      .where(eq(schema.attachments.dmMessageId, messageId))
-      .run();
-    tx.delete(schema.dmReactions)
-      .where(eq(schema.dmReactions.dmMessageId, messageId))
-      .run();
-    tx.delete(schema.dmMessages)
-      .where(eq(schema.dmMessages.id, messageId))
-      .run();
-  });
-
-  // Clean up files from disk
-  deleteAttachmentFiles(dmAttachmentRows);
-
-  const dmMembers = db.select()
-    .from(schema.dmMembers)
-    .where(eq(schema.dmMembers.dmChannelId, msg.dmChannelId))
-    .all();
-
-  for (const member of dmMembers) {
-    connectionManager.sendToUser(member.userId, {
-      type: 'dm_message_deleted',
-      messageId,
-      dmChannelId: msg.dmChannelId,
-    });
-  }
+  deleteDmMessageHere(db, msg);
 
   // Federation: log mutation and queue for relay
   queueDmMessageDeleteRelay(messageId, msg.dmChannelId, relayTarget);

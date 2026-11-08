@@ -4,6 +4,16 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.41.1": {
+      "title": "Continuar na chamada",
+      "items": {
+        "voice": "Corrigido: quem tinha a conexão travada por um instante (uma aba em segundo plano, um celular trocando de app, uma queda breve da rede) não sai mais do canal de voz para os outros um minuto depois enquanto ainda fala, e assistir junto não pede mais para entrar numa chamada em que a pessoa já está.",
+        "watch": "Depois de um momento assim, o vídeo que vocês assistem juntos acompanha o que mudou nesse meio-tempo.",
+        "preview": "Corrigido: apagar ou editar a última mensagem de uma conversa agora muda a prévia em todas as listas na hora, em vez de continuar mostrando o que foi apagado.",
+        "phone": "No celular, segure uma conversa com uma pessoa para fechá-la, como no computador. Sair de um grupo ali agora pede confirmação antes.",
+        "errors": "Se fechar uma conversa ou sair de um grupo não funcionar, você fica sabendo o motivo."
+      }
+    },
     "1.41.0": {
       "title": "Estúdio de temas",
       "items": {

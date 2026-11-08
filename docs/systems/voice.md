@@ -72,6 +72,22 @@ disconnect, displacement, and rejected joins remain terminal and clean up
 immediately — a join refused for the room the user is still holding ends that
 session on the spot rather than letting it idle out the grace period.
 
+The client takes the session over on the first `ready` of every new socket of
+the voice channel's instance (`useWebSocket.ts`): while LiveKit is connected,
+connecting or reconnecting (`voiceSessionIsLive`), it sends `voice_join` and its
+status, whether or not the snapshot still lists it. Listed means the grace is
+running: the socket dropped while LiveKit stayed up (a tab in the background, a
+phone switching apps, a network blip), and nothing in `useLiveKit` re-registers,
+since LiveKit's state never changed. Until 1.41.1 the client skipped that case,
+and a minute later the server ended the session: the person stayed in the LiveKit
+room, heard and hearing, but left the call for everyone else, and watching
+together refused them with `watch_not_in_call`. Not listed means the server
+restarted or the grace ran out, and the join puts them back with a join
+broadcast. A refresh `ready` on the socket that holds the session claims nothing
+while it is listed. The takeover answers with the call's `watch_state`, so a
+player catches up on what changed while the socket was gone
+(watch-together.md).
+
 A short LiveKit reconnect is not a leave for the sounds: `SoundController` counts the user in the room while `voiceConnectionStatus` is `reconnecting` (`isInVoiceRoom`), so neither the disconnect nor the join cue plays, and it keeps its participant and stream-watcher baselines until the room is connected again (a full reconnect drops every remote participant in between). `useLiveKit` sets `isLiveKitConnected` and the status in one update, for a signal resume (`SignalReconnecting`) as for a full reconnect. A reconnect that gives up plays the disconnect cue.
 
 On the client, a LiveKit disconnect is terminal only for `DUPLICATE_IDENTITY`,

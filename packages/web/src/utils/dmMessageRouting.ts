@@ -1,4 +1,4 @@
-import type { DmChannel, DmMessageWithUser, MessageWithUser } from '@backspace/shared';
+import type { DmChannel, DmLastMessagePreview, DmMessageWithUser, MessageWithUser } from '@backspace/shared';
 import { isMe } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { useSpaceStore, resolveDmChannelId } from '../stores/spaceStore';
@@ -63,6 +63,37 @@ function recordLastMessage(origin: string, channelId: string, message: DmMessage
   if (channelId !== currentChannelId && !isOwnMessage(origin, message)) {
     markChannelUnread(channelId);
   }
+}
+
+/** The newest message of `channelId` this client holds that was sent, or null. */
+function newestHeldMessage(channelId: string): DmMessageWithUser | null {
+  const held = useChatStore.getState().messages.get(channelId) ?? [];
+  for (let i = held.length - 1; i >= 0; i -= 1) {
+    const message = held[i];
+    if (message && !message.id.startsWith('temp_')) return message as unknown as DmMessageWithUser;
+  }
+  return null;
+}
+
+/**
+ * A message of the copy `channelId` was deleted (`dm_message_deleted`, after the chat store
+ * dropped it). When it was the copy's preview, the preview becomes the one its host names now (the
+ * message before it, or none), so no list keeps showing what was deleted (docs/systems/dm-system.md,
+ * "Deleting a message"). A host before 1.41.1 names none; then the newest sent message this client
+ * still holds of the conversation stands in, or no preview at all.
+ */
+export function applyDmMessageDeleted(channelId: string, messageId: string, lastMessage: DmLastMessagePreview | null | undefined): void {
+  useSpaceStore.getState().patchDmCopy(channelId, (dm) => {
+    if (dm.lastMessage?.id !== messageId) return dm;
+    return { ...dm, lastMessage: lastMessage !== undefined ? lastMessage : newestHeldMessage(channelId) };
+  });
+}
+
+/** An edit of the copy's preview message (`dm_message_updated`) shows in the preview. */
+export function applyDmMessageUpdated(message: DmMessageWithUser): void {
+  useSpaceStore.getState().patchDmCopy(message.dmChannelId, (dm) => (
+    dm.lastMessage?.id === message.id ? { ...dm, lastMessage: message } : dm
+  ));
 }
 
 /**

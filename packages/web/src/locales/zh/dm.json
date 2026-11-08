@@ -85,6 +85,7 @@
     "hoursShort_other": "{{count}} 小时",
     "daysShort_other": "{{count}} 天",
     "close": "关闭私信",
+    "closeFailed": "关闭私信失败",
     "filterLabel": "显示对话",
     "filterAll": "全部",
     "filterUnread": "未读",

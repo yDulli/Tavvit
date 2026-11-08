@@ -89,6 +89,7 @@
     "daysShort_one": "{{count}} T",
     "daysShort_other": "{{count}} T",
     "close": "Unterhaltung schließen",
+    "closeFailed": "Unterhaltung konnte nicht geschlossen werden",
     "filterLabel": "Unterhaltungen anzeigen",
     "filterAll": "Alle",
     "filterUnread": "Ungelesen",

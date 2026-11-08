@@ -12,6 +12,13 @@ vi.mock('../audio/AudioManager', () => ({
   },
 }));
 
+/** The LiveKit room this tab holds, as `useLiveKit` reports it; none unless a test gives one. */
+const liveKit = vi.hoisted(() => ({ room: null as { state: string; disconnect: () => void } | null }));
+vi.mock('./useLiveKit', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./useLiveKit')>()),
+  getActiveRoom: () => liveKit.room,
+}));
+
 /**
  * A socket the real handler talks to. `connectInstance` opens one per origin;
  * the test plays the server by feeding events through `onmessage` and reads
@@ -54,6 +61,7 @@ const { connectInstance, disconnectInstance } = await import('./useWebSocket');
 const { useAuthStore } = await import('../stores/authStore');
 const { useChatStore } = await import('../stores/chatStore');
 const { useSpaceStore } = await import('../stores/spaceStore');
+const { useVoiceStore } = await import('../stores/voiceStore');
 
 function user(fields: Partial<User> & Pick<User, 'id'>): User {
   return {
@@ -264,5 +272,54 @@ describe('ready on a remote instance socket', () => {
 
     expect(remoteCacheKept()).toBe(false);
     expect(loadMessages).toHaveBeenCalledWith(REMOTE_CHANNEL, true);
+  });
+});
+
+// The voice session of a space belongs to one socket (docs/systems/voice.md, "Transient
+// reconnects"): the server ends it a minute after that socket closes, unless a new one takes it
+// over with voice_join, which it still lists us in meanwhile.
+describe('a voice session on a new socket', () => {
+  const VOICE = 'voice-lounge';
+  const listed = (ids: string[]) => ({ ...ready(jannis), voiceStates: { [VOICE]: ids } });
+  const joins = (ws: FakeWebSocket) => ws.sent.filter((e) => e.type === 'voice_join');
+
+  beforeEach(() => {
+    useVoiceStore.setState({ currentVoiceChannelId: VOICE, voiceConnectionStatus: 'connected' });
+    liveKit.room = { state: 'connected', disconnect: vi.fn() };
+  });
+
+  afterEach(() => {
+    useVoiceStore.setState({ currentVoiceChannelId: null, voiceConnectionStatus: 'disconnected' });
+    liveKit.room = null;
+  });
+
+  it('is taken over by the new socket while the server still lists us, LiveKit having stayed up', () => {
+    const home = homeSocket();
+    home.deliver(listed(['jannis']));
+    expect(joins(home)).toEqual([{ type: 'voice_join', channelId: VOICE }]);
+    expect(home.sent.some((e) => e.type === 'voice_status')).toBe(true);
+  });
+
+  it('is claimed again when the server no longer lists us', () => {
+    const home = homeSocket();
+    home.deliver(listed([]));
+    expect(joins(home)).toEqual([{ type: 'voice_join', channelId: VOICE }]);
+  });
+
+  it('stays with the socket that holds it when that socket refreshes', () => {
+    const home = homeSocket();
+    home.deliver(listed(['jannis']));
+    home.sent = [];
+    home.deliver(listed(['jannis']));
+    expect(joins(home)).toEqual([]);
+  });
+
+  it('is left alone once LiveKit gave up, waiting for Retry with its channel kept', () => {
+    useVoiceStore.setState({ voiceConnectionStatus: 'disconnected' });
+    liveKit.room = null;
+    const home = homeSocket();
+    home.deliver(listed(['jannis']));
+    expect(joins(home)).toEqual([]);
+    expect(useVoiceStore.getState().currentVoiceChannelId).toBe(VOICE);
   });
 });

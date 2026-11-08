@@ -611,13 +611,7 @@ export function ChannelSidebar() {
                   isUnread={isUnreadDm(dm.id)}
                   user={user!}
                   onSelect={handleChannelClick}
-                  onClose={(id) => {
-                    if (currentChannelId === id) {
-                      navigate('/channels/@me');
-                      setCurrentChannel(null);
-                    }
-                    useSpaceStore.getState().closeDm(id);
-                  }}
+                  onClose={(id) => conversationMenu.closeDm(id)}
                   onLeave={(id) => conversationMenu.askLeaveGroup(id)}
                   onContextMenu={(e, id) => conversationMenu.openDm(e, id)}
                 />

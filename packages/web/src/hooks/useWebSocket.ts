@@ -30,7 +30,7 @@ import { broadcastVoiceStatus, broadcastDeafenViaLiveKit } from '../utils/voice'
 import { dmCallCredentialsFrom, dmCallIds, dmCallOrigin, dmCallRefFrom, dmCallRoomKey } from '../utils/dmCall';
 import { turnCameraOnInDmCall } from '../utils/voiceActions';
 import { applySpaceVoiceState } from '../utils/voiceStateSync';
-import { applyIncomingDmMessage, applyIncomingDmChannel } from '../utils/dmMessageRouting';
+import { applyDmMessageDeleted, applyDmMessageUpdated, applyIncomingDmMessage, applyIncomingDmChannel } from '../utils/dmMessageRouting';
 import { ownStatusReport, statusToAssertOnRemote } from '../utils/selfStatus';
 import { getActiveRoom } from './useLiveKit';
 import { useUIStore } from '../stores/uiStore';
@@ -282,11 +282,6 @@ function isLoadedRosterSpace(spaceId: string, origin: string): boolean {
 }
 
 /**
- * `readyAlreadyDelivered`: this socket has delivered a `ready` before. A later
- * one on the same socket is a state refresh (instances up to 1.7.0 send one
- * as a permission refresh), not a new session: no event was missed.
- */
-/**
  * A new space channel message that mentions the signed-in user joins the
  * inbox at once (stores/inboxStore.ts), by the same rule the highlight and
  * the alert use (`messageMentions`).
@@ -309,6 +304,28 @@ function noteLiveMention(origin: string, message: MessageWithUser): void {
   if (via) useInboxStore.getState().addLive(origin, { spaceId, channelId: message.channelId, message, via });
 }
 
+/**
+ * This tab holds a voice session worth keeping: LiveKit is connected, or on its
+ * way there (a first connect, or a reconnect it has not given up on). A session
+ * whose network reconnect gave up is not one: it waits for the Retry action.
+ */
+function voiceSessionIsLive(): boolean {
+  const status = useVoiceStore.getState().voiceConnectionStatus;
+  if (status === 'connecting' || status === 'reconnecting') return true;
+  const room = getActiveRoom();
+  return room != null && (
+    room.state === LiveKitConnectionState.Connected
+    || room.state === LiveKitConnectionState.Connecting
+    || room.state === LiveKitConnectionState.Reconnecting
+  );
+}
+
+/**
+ * `readyAlreadyDelivered`: this socket has delivered a `ready` before. A later
+ * one on the same socket is a state refresh (instances up to 1.7.0 send one
+ * as a permission refresh), not a new session: no event was missed, and the
+ * socket that holds a voice session still holds it.
+ */
 function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered = false): void {
   const isHome = origin === HOME_ORIGIN;
   const { setUser } = useAuthStore.getState();
@@ -583,39 +600,30 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
         // at broadcast and hardware time.
       }
 
-      // Server-authoritative voice session check: if we had a voice connection
-      // but the server's voiceStates doesn't include us (server restarted and
-      // lost in-memory voiceRooms), tear down the stale LiveKit session cleanly.
-      // If the server still knows about us (WS blip, not a restart), do nothing —
-      // useLiveKit's ConnectionStateChanged handler will re-register if needed.
+      // The voice session of a space belongs to one socket (docs/systems/voice.md,
+      // "Transient reconnects"). When that socket closes, the server keeps us in
+      // the call for a grace period and ends the session unless a new socket
+      // takes it over with voice_join. So a new socket always re-asserts a live
+      // session: while the server still lists us its grace is running (the
+      // socket dropped and LiveKit stayed up, so nothing in useLiveKit
+      // re-registers), and when it does not, it restarted or the grace ran out.
+      // Without this, someone whose socket blipped stays in the LiveKit room,
+      // heard and hearing, but leaves the call for everyone else a minute later,
+      // and watching together refuses them as not in the call.
       {
         const { currentVoiceChannelId } = useVoiceStore.getState();
-        if (currentVoiceChannelId) {
-          const voiceOrigin = getChannelOrigin(currentVoiceChannelId);
-          if (voiceOrigin === origin) {
-            const serverKnowsUs = event.voiceStates?.[currentVoiceChannelId]?.includes(event.user.id);
-            if (!serverKnowsUs) {
-              const activeRoom = getActiveRoom();
-              const localStatus = useVoiceStore.getState().voiceConnectionStatus;
-              const recoverable = localStatus === 'connecting'
-                || localStatus === 'reconnecting'
-                || (activeRoom != null && (
-                  activeRoom.state === LiveKitConnectionState.Connected
-                  || activeRoom.state === LiveKitConnectionState.Connecting
-                  || activeRoom.state === LiveKitConnectionState.Reconnecting
-                ));
-              if (recoverable) {
-                // A ready snapshot can race the new socket's voice
-                // registration. Reassert the session and keep LiveKit's own
-                // reconnect machinery and local media intent intact.
-                wsSend({ type: 'voice_join', channelId: currentVoiceChannelId }, origin);
-                broadcastVoiceStatus(origin);
-              }
-              // A completed network disconnect intentionally retains the
-              // channel ID for the Retry action. Absence from a ready snapshot
-              // alone is not a terminal refusal, so leave that intent intact.
-            }
+        if (currentVoiceChannelId && getChannelOrigin(currentVoiceChannelId) === origin) {
+          const serverKnowsUs = event.voiceStates?.[currentVoiceChannelId]?.includes(event.user.id) === true;
+          // A refresh ready on the socket that already holds the session changes nothing.
+          const claim = !readyAlreadyDelivered || !serverKnowsUs;
+          if (claim && voiceSessionIsLive()) {
+            // Keep LiveKit's own reconnect machinery and local media intent intact.
+            wsSend({ type: 'voice_join', channelId: currentVoiceChannelId }, origin);
+            broadcastVoiceStatus(origin);
           }
+          // A completed network disconnect intentionally retains the channel ID
+          // for the Retry action. Absence from a ready snapshot alone is not a
+          // terminal refusal, so leave that intent intact.
         }
       }
 
@@ -1140,6 +1148,7 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
       if ((event.message as any).user) upsertUserView((event.message as any).user, origin);
       if ((event.message as any).replyTo?.user) upsertUserView((event.message as any).replyTo.user, origin);
       updateMessage(event.message as any);
+      applyDmMessageUpdated(event.message);
       break;
 
     case 'federation_file_rejected': {
@@ -1219,6 +1228,8 @@ function handleEvent(origin: string, event: ServerEvent, readyAlreadyDelivered =
     case 'dm_message_deleted':
       if (!isHome && !activePeerOrigins.has(origin)) break;
       removeMessage(event.messageId, event.dmChannelId);
+      // After the removal, so a stand-in preview is never the deleted message.
+      applyDmMessageDeleted(event.dmChannelId, event.messageId, event.lastMessage);
       usePinRevision.getState().bump();
       break;
 

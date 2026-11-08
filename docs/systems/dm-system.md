@@ -201,6 +201,7 @@ Close and reopen are relayed to all peer instances that hold a copy of the DM:
 
 - `spaceStore.closeDm(id)` calls `api.dm.close(id)` then removes the channel from `dmChannels` state
 - `dm_channel_closed` WS event calls `removeDmChannel(id)` which also cleans up unread/read state via `chatStore.removeChannelStates()`
+- Closing and leaving are asked for through one menu (`useConversationContextMenu`): a row's right-click on the desktop (the sidebar, Home, the inbox), its long press on the phone (`MobileDmsScreen`, since 1.41.1; before, the phone offered only leaving a group, and that without asking), and the sidebar row's close button (`closeDm` of the hook). A conversation with one person is closed, a group is left after a confirmation. A close or leave the server refuses keeps the row and says why in a toast (`dm:list.closeFailed`, `dm:leave.failed`).
 
 ---
 
@@ -518,11 +519,10 @@ A member who left or was removed from a group no longer has a `dm_members` row i
 
 Checks (`checkDmMessageDelete`, shared with WS `dm_message_delete`), in order: the message exists (`404 message_not_found`), the caller is a member of the message's conversation (`isDmMember`, `403 not_dm_member`), author-only (`403 not_message_author`), then `403 recipient_deleted` if `isDeadOneOnOne(msg.dmChannelId, caller)` (see "DM Tombstone Semantics"). Then:
 
-1. Collect attachment filenames before deletion
-2. Delete attachments, reactions, and message atomically in a transaction
-3. Clean up files from disk
-4. Broadcast `dm_message_deleted` to all members
-5. Federation: `queueDmMessageDeleteRelay(id, dmChannelId)`
+1. `deleteDmMessageHere` (`utils/dmMessageDeletion.ts`), which every path that deletes a DM message goes through (REST, WS `dm_message_delete`, a report decided against it, a relayed delete): attachments, reactions and the message go in one transaction, then their files, and `dm_message_deleted` goes to every member with `lastMessage`, the conversation's preview as it is now (`newestDmMessagePreview`, `utils/dmChannelWire.ts`): the message before the deleted one, or `null` when nothing is left
+2. Federation: `queueDmMessageDeleteRelay(id, dmChannelId)`
+
+**The preview follows.** A list shows a conversation by its `lastMessage` (the sidebar, Home, the phone's list, the inbox). On `dm_message_deleted` the client drops the message, then, when it was the preview, takes the `lastMessage` the event names (`applyDmMessageDeleted`, `utils/dmMessageRouting.ts`); a host before 1.41.1 names none, and the newest sent message the client still holds of the conversation stands in, or no preview, never the deleted one. Until 1.41.1 the preview kept the deleted message's text until the next listing. An edit of the preview message shows in it the same way (`applyDmMessageUpdated` on `dm_message_updated`); an edit of any other message leaves every list as it is (`patchCopy` returns the state unchanged for a patch that changes nothing).
 
 **Note:** `queueDmMessageDeleteRelay(messageId, dmChannelId, target)` (`federationOutbox.ts`) is the single source of truth for the delete relay and is shared with the WebSocket delete path (`ws/events.ts`). Both callers build `target` with `dmMessageMutationTarget` before deleting the row (see "Relayed edits and deletes"). It appends the mutation log entry and enqueues the outbox event with `getGroupDmTargetOrigins(dmChannelId)`, so a delete reaches exactly the peers that host a participant -- the same targeting create/update use.
 
@@ -685,9 +685,7 @@ An event **without** a `target` (an older sender) is matched as `(sourceInstance
 
 1. Find and authorize the local message ("Relayed edits and deletes"). A message this instance does not hold at all is accepted as a no-op; when it is homed on the signing peer, a tombstone is recorded (federation.md "Receiver guarantees") so a create of it arriving later is a duplicate
 2. Record the same tombstone for a held relayed copy homed on the signing peer, so a create delivered again later does not bring it back
-3. Delete attachments, reactions, and message atomically
-4. Clean up attachment files from disk
-5. Broadcast `dm_message_deleted` to all local members
+3. `deleteDmMessageHere`: attachments, reactions and message atomically, their files, and `dm_message_deleted` with the conversation's preview now to all local members ("Delete Message")
 
 ### Inbound: Read State Update
 

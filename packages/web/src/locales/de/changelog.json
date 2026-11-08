@@ -4,6 +4,16 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.41.1": {
+      "title": "Im Gespräch bleiben",
+      "items": {
+        "voice": "Behoben: Wessen Verbindung kurz hakte (ein Tab im Hintergrund, ein Handy, das die App wechselt, ein kurzer Netzaussetzer), verschwand eine Minute später für alle anderen aus dem Sprachkanal, obwohl die Person noch redete, und gemeinsames Schauen verlangte, einem Anruf beizutreten, in dem sie schon war. Das passiert nicht mehr.",
+        "watch": "Nach so einem Moment holt das gemeinsam geschaute Video nach, was sich inzwischen geändert hat.",
+        "preview": "Behoben: Wer die letzte Nachricht einer Unterhaltung löscht oder bearbeitet, sieht die Vorschau jetzt in jeder Liste sofort geändert, statt weiter den gelöschten Text.",
+        "phone": "Auf dem Handy schließt du eine Unterhaltung mit einer Person, indem du sie gedrückt hältst, wie am Desktop. Wer dort eine Gruppe verlässt, wird jetzt vorher gefragt.",
+        "errors": "Klappt das Schließen einer Unterhaltung oder das Verlassen einer Gruppe nicht, steht jetzt da, warum."
+      }
+    },
     "1.41.0": {
       "title": "Theme-Studio",
       "items": {

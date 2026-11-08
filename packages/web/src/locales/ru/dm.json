@@ -97,6 +97,7 @@
     "daysShort_many": "{{count}} д",
     "daysShort_other": "{{count}} д",
     "close": "Закрыть беседу",
+    "closeFailed": "Не удалось закрыть беседу",
     "filterLabel": "Показать беседы",
     "filterAll": "Все",
     "filterUnread": "Непрочитанные",

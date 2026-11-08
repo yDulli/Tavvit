@@ -289,7 +289,7 @@ A pin's line and a poll are ordinary `message_created`. A pin's line is `type: '
 |------|--------|-------|
 | `dm_message_created` | message: DmMessageWithUser | DM members |
 | `dm_message_updated` | message: DmMessageWithUser | DM members |
-| `dm_message_deleted` | messageId, dmChannelId | DM members |
+| `dm_message_deleted` | messageId, dmChannelId, lastMessage (the conversation's preview now, `DmLastMessagePreview` or null; since 1.41.1, absent from older hosts) | DM members |
 | `dm_typing` | dmChannelId, userId, username | DM members (excludes sender) |
 | `dm_typing_stop` | dmChannelId, userId | DM members (excludes typer) |
 | `dm_embeds_resolved` | messageId, dmChannelId, embeds[] | DM members |

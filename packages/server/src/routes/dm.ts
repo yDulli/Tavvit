@@ -38,7 +38,8 @@ import { sendError } from '../utils/httpErrors.js';
 import { parseHistoryPage, selectHistoryPage, markHistoryPageHonoured } from '../utils/messagePaging.js';
 
 /** Members a group DM can hold, the owner included. */
-import { deleteAttachmentFiles, deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
+import { deleteUploadFile, deleteAttachmentByFilename } from '../utils/fileCleanup.js';
+import { deleteDmMessageHere } from '../utils/dmMessageDeletion.js';
 import { ownProfileUploadOf, pictureFileReleasable } from '../utils/profileImageRefs.js';
 import { resizeProfileImage } from '../utils/thumbnail.js';
 import { GROUP_DM_MAX_MEMBERS, GROUP_DMS_PER_ACCOUNT, groupDmLimitReached } from '../utils/groupDmLimits.js';
@@ -2282,43 +2283,7 @@ export async function dmRoutes(app: FastifyInstance): Promise<void> {
     // row before it is gone.
     const relayTarget = dmMessageMutationTarget(msg, request.userId);
 
-    // Collect attachment filenames before deleting
-    const attachmentRows = db.select({ filename: schema.attachments.filename })
-      .from(schema.attachments)
-      .where(eq(schema.attachments.dmMessageId, id))
-      .all();
-
-    // Delete attachments, reactions, and message atomically
-    db.transaction((tx) => {
-      tx.delete(schema.attachments)
-        .where(eq(schema.attachments.dmMessageId, id))
-        .run();
-
-      tx.delete(schema.dmReactions)
-        .where(eq(schema.dmReactions.dmMessageId, id))
-        .run();
-
-      tx.delete(schema.dmMessages)
-        .where(eq(schema.dmMessages.id, id))
-        .run();
-    });
-
-    // Clean up files from disk after transaction commits
-    deleteAttachmentFiles(attachmentRows);
-
-    // Broadcast to all DM members
-    const dmMembers = db.select()
-      .from(schema.dmMembers)
-      .where(eq(schema.dmMembers.dmChannelId, msg.dmChannelId))
-      .all();
-
-    for (const member of dmMembers) {
-      connectionManager.sendToUser(member.userId, {
-        type: 'dm_message_deleted',
-        messageId: id,
-        dmChannelId: msg.dmChannelId,
-      });
-    }
+    deleteDmMessageHere(db, msg);
 
     // Federation: log mutation and queue for relay
     queueDmMessageDeleteRelay(id, msg.dmChannelId, relayTarget);

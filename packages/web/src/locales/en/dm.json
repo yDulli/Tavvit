@@ -89,6 +89,7 @@
     "daysShort_one": "{{count}}d",
     "daysShort_other": "{{count}}d",
     "close": "Close DM",
+    "closeFailed": "Failed to close the conversation",
     "filterLabel": "Show conversations",
     "filterAll": "All",
     "filterUnread": "Unread",

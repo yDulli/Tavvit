@@ -1365,7 +1365,12 @@ export type ServerEvent =
   | { type: 'member_left'; spaceId: string; userId: string }
   | { type: 'dm_message_created'; message: DmMessageWithUser }
   | { type: 'dm_message_updated'; message: DmMessageWithUser }
-  | { type: 'dm_message_deleted'; messageId: string; dmChannelId: string }
+  /**
+   * `lastMessage`: the conversation's preview once the message is gone, the one before it or null
+   * for none (since 1.41.1), so a list showing the deleted message as the last one stops showing it.
+   * Absent from older hosts.
+   */
+  | { type: 'dm_message_deleted'; messageId: string; dmChannelId: string; lastMessage?: DmLastMessagePreview | null }
   | { type: 'dm_typing'; dmChannelId: string; userId: string; username: string }
   | { type: 'dm_typing_stop'; dmChannelId: string; userId: string }
   | { type: 'emoji_upserted'; emoji: CustomEmoji }

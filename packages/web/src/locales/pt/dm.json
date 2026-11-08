@@ -93,6 +93,7 @@
     "daysShort_many": "{{count}} d",
     "daysShort_other": "{{count}} d",
     "close": "Fechar conversa",
+    "closeFailed": "Falha ao fechar a conversa",
     "filterLabel": "Mostrar conversas",
     "filterAll": "Todas",
     "filterUnread": "Não lidas",

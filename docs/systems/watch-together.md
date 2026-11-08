@@ -46,7 +46,7 @@ Every route is for those in the call right now, as the soundboard's play is (`in
 
 | Event | Fields | Audience |
 |-------|--------|----------|
-| `watch_state` | `channelId`, `session` (null once it ended), `serverNow` | Those in the call, when what plays, the queue or who steers changed. Also to everyone joining or moving into a call (`voice_join`, `voice_move`), null when it watches nothing, so nothing of an earlier call plays on. |
+| `watch_state` | `channelId`, `session` (null once it ended), `serverNow` | Those in the call, when what plays, the queue or who steers changed. Also to everyone joining or moving into a call (`voice_join`, `voice_move`), null when it watches nothing, so nothing of an earlier call plays on, and to a new socket that takes over a session it holds (`voice_join` for the room it is in, after a reconnect), which may have missed changes meanwhile. |
 | `watch_position` | `channelId`, `position` (`itemId`, `playing`, `positionMs`, `stateAt`), `serverNow` | Those in the call, for a play, pause or seek: a few bytes in place of the session. A client whose session plays another video ignores it. |
 | `watch_presence` | `spaceId`, `channelId`, `presence` (`{ title, provider }` or null) | Everyone who can see the channel (`sendToChannel`), for the line under it in the channel list |
 | `watch_reaction` | `channelId`, `reaction` | Those in the call |

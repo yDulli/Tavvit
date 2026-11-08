@@ -9,6 +9,7 @@ import { useChatStore } from '../../../stores/chatStore';
 import { getChannelOrigin, useSpaceStore } from '../../../stores/spaceStore';
 import { useUIStore } from '../../../stores/uiStore';
 import { useVoiceStore } from '../../../stores/voiceStore';
+import { describeCodedError } from '../../../i18n/errors';
 import { isMine, selfIdentityOf } from '../../../utils/identity';
 import { isDeletedPartnerDm } from '../../../utils/dmFormatters';
 import { markConversationRead } from '../../../utils/markConversationRead';
@@ -60,9 +61,13 @@ export function useConversationContextMenu() {
     useChatStore.getState().setCurrentChannel(null);
   };
 
+  /** Closes a conversation with one person: it leaves every list until something new is said in it. */
   const closeDm = (dmId: string) => {
     leaveIfOpen(dmId);
-    void useSpaceStore.getState().closeDm(dmId);
+    // A close the server refused leaves the row where it is, so say why.
+    useSpaceStore.getState().closeDm(dmId).catch((err: unknown) => {
+      toast(describeCodedError(err, t('dm:list.closeFailed')), 'warning');
+    });
   };
 
   /** The right-click menu of a direct message. `side` is where a profile card opens from the row. */
@@ -217,8 +222,9 @@ export function useConversationContextMenu() {
             leaveIfOpen(leaveDmId);
             await useSpaceStore.getState().leaveDm(leaveDmId);
             setLeaveDmId(null);
-          } catch {
-            // leaveDm reports its own errors.
+          } catch (err) {
+            // The dialog stays open to try again, and says why it did not work.
+            toast(describeCodedError(err, t('dm:leave.failed')), 'warning');
           } finally {
             setLeaving(false);
           }
@@ -232,5 +238,5 @@ export function useConversationContextMenu() {
     </>
   );
 
-  return { openDm, openChannel, openMention, askLeaveGroup: setLeaveDmId, dialogs };
+  return { openDm, openChannel, openMention, askLeaveGroup: setLeaveDmId, closeDm, dialogs };
 }

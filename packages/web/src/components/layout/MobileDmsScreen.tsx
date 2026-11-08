@@ -5,7 +5,6 @@ import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useSocialStore } from '../../stores/socialStore';
-import { useContextMenuStore } from '../../stores/contextMenuStore';
 import { Avatar } from '../ui/Avatar';
 import { AvatarStack } from '../ui/AvatarStack';
 import { DecoratedName, NameplateLayer } from '../ui/Decorations';
@@ -26,6 +25,7 @@ import { parseFederatedUsername, isFederationGlobeApplicable, isMine, userDispla
 import { useDmViewer } from '../../hooks/useDmViewer';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { formatDmSidebarPreview, formatDmHeaderName } from '../../utils/dmFormatters';
+import { useConversationContextMenu } from './conversationMenu/useConversationContextMenu';
 import type { DmChannel, User } from '@backspace/shared';
 import type { TaggedFriend } from '../../stores/socialStore';
 
@@ -86,7 +86,7 @@ function MobileDmRow({
   dm: DmChannel;
   readStates: Map<string, string>;
   onTap: (id: string) => void;
-  onContextMenu: (e: React.MouseEvent, id: string, isGroup: boolean) => void;
+  onContextMenu: (e: React.MouseEvent, id: string) => void;
   formatTimestamp: (ts: number) => string;
 }) {
   const { t } = useTranslation(['dm', 'common']);
@@ -125,7 +125,7 @@ function MobileDmRow({
       key={dm.id}
       data-context-menu
       onClick={() => onTap(dm.id)}
-      onContextMenu={(e) => onContextMenu(e, dm.id, isGroup)}
+      onContextMenu={(e) => onContextMenu(e, dm.id)}
       className="list-row deco-hover relative isolate w-full rounded-none px-4 py-2.5"
     >
       <NameplateLayer nameplate={decorations.nameplate} colors={decorations.colors} motion="hover" />
@@ -215,8 +215,7 @@ export function MobileDmsScreen() {
   const friends = useSocialStore((s) => s.friends);
   const navigate = useNavigate();
   const f = useFormatters();
-  const openContextMenu = useContextMenuStore((s) => s.open);
-  const setCurrentChannel = useChatStore((s) => s.setCurrentChannel);
+  const conversationMenu = useConversationContextMenu();
   const addToast = useUIStore((s) => s.addToast);
   const buckets = useFriendBuckets();
   const inVoiceIds = useMemo(
@@ -254,29 +253,9 @@ export function MobileDmsScreen() {
     }
   };
 
-  const handleDmContextMenu = (e: React.MouseEvent, dmId: string, isGroup: boolean) => {
-    if (!isGroup) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    openContextMenu({ x: e.clientX, y: e.clientY }, [
-      {
-        key: 'leave-group',
-        type: 'action',
-        label: t('dm:list.leaveGroup'),
-        danger: true,
-        icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>,
-        onClick: () => {
-          const currentChId = useChatStore.getState().currentChannelId;
-          if (currentChId === dmId) {
-            navigate('/channels/@me');
-            setCurrentChannel(null);
-          }
-          useSpaceStore.getState().leaveDm(dmId);
-        },
-      },
-    ]);
-  };
+  // The conversation's menu is the desktop's: closing one with a single person, leaving a group
+  // after asking, marking it read, a call, the profile.
+  const handleDmContextMenu = (e: React.MouseEvent, dmId: string) => conversationMenu.openDm(e, dmId);
 
   const formatTimestamp = (ts: number): string => {
     const now = Date.now();
@@ -381,6 +360,7 @@ export function MobileDmsScreen() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
         </svg>
       </button>
+      {conversationMenu.dialogs}
     </div>
   );
 }

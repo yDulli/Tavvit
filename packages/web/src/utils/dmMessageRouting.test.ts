@@ -33,7 +33,7 @@ import { useSpaceStore, setApiForOriginResolver, isDmChannel } from '../stores/s
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { api, type BackspaceApiClient } from '../api/client';
-import { applyIncomingDmMessage, applyIncomingDmChannel } from './dmMessageRouting';
+import { applyDmMessageDeleted, applyDmMessageUpdated, applyIncomingDmMessage, applyIncomingDmChannel } from './dmMessageRouting';
 import { wireDm, asListedBy161, copyDm } from '../test/dmWireShape';
 import type { DmChannel, DmMessageWithUser, User } from '@backspace/shared';
 
@@ -407,5 +407,42 @@ describe('the home copy of a conversation is the pinned one (#295 review)', () =
     }));
     expect(useChatStore.getState().messages.get('dm-uv-home') ?? []).toEqual([]);
     expect(useSpaceStore.getState().dmChannels.map(d => d.id)).toEqual(['dm-uv-home']);
+  });
+});
+
+// The preview a list shows of a conversation follows its messages (docs/systems/dm-system.md,
+// "Deleting a message"): carol's DM shows 'hi alice' (m-carol-1) until something changes it.
+describe('a conversation\'s preview after a delete or an edit', () => {
+  const earlier = { id: 'm-carol-0', dmChannelId: 'dm-carol', userId: 'alice-home', content: 'earlier', createdAt: 3_000 };
+
+  it('shows the message before a deleted last one, as its host names it', () => {
+    applyDmMessageDeleted('dm-carol', 'm-carol-1', earlier);
+    expect(dmById('dm-carol')?.lastMessage).toMatchObject({ id: 'm-carol-0', content: 'earlier' });
+  });
+
+  it('shows nothing when its host says nothing is left', () => {
+    applyDmMessageDeleted('dm-carol', 'm-carol-1', null);
+    expect(dmById('dm-carol')?.lastMessage).toBeNull();
+  });
+
+  it('takes the newest sent message still held when an older host names none, never the deleted one', () => {
+    const held = message({ id: 'm-carol-0', dmChannelId: 'dm-carol', userId: 'alice-home', user: aliceHome, content: 'earlier', createdAt: 3_000 });
+    const unsent = message({ id: 'temp_1_abc', dmChannelId: 'dm-carol', userId: 'alice-home', user: aliceHome, content: 'sending', createdAt: 6_000 });
+    useChatStore.setState({ messages: new Map([['dm-carol', [held, unsent] as never]]) });
+    applyDmMessageDeleted('dm-carol', 'm-carol-1', undefined);
+    expect(dmById('dm-carol')?.lastMessage).toMatchObject({ id: 'm-carol-0', content: 'earlier' });
+  });
+
+  it('stays when another message of the conversation was deleted', () => {
+    applyDmMessageDeleted('dm-carol', 'm-carol-older', null);
+    expect(dmById('dm-carol')?.lastMessage).toMatchObject({ id: 'm-carol-1', content: 'hi alice' });
+  });
+
+  it('shows an edit of its message, and an edit of any other leaves every list as it is', () => {
+    applyDmMessageUpdated(message({ id: 'm-carol-1', dmChannelId: 'dm-carol', userId: 'carol-home', user: carolHome, content: 'hi alice!' }));
+    expect(dmById('dm-carol')?.lastMessage).toMatchObject({ id: 'm-carol-1', content: 'hi alice!' });
+    const before = useSpaceStore.getState().dmChannels;
+    applyDmMessageUpdated(message({ id: 'm-carol-older', dmChannelId: 'dm-carol', userId: 'carol-home', user: carolHome, content: 'typo fixed' }));
+    expect(useSpaceStore.getState().dmChannels).toBe(before);
   });
 });

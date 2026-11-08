@@ -10,7 +10,7 @@ import { findOrCreateOneOnOne, mayBeOneOnOneRow, oneOnOneKey } from '../../../ut
 import { oneOnOneBlockRefusal } from '../../../utils/blocks.js';
 import { loadDmChannelWire } from '../../../utils/dmChannelWire.js';
 import { announceDmReconcile } from '../../../utils/dmConversationEvents.js';
-import { deleteAttachmentFiles } from '../../../utils/fileCleanup.js';
+import { deleteDmMessageHere } from '../../../utils/dmMessageDeletion.js';
 import { rewriteRelayedMentions } from '../../../utils/federationMentions.js';
 import { sanitizeUser } from '../../../utils/sanitize.js';
 import { generateSnowflake } from '../../../utils/snowflake.js';
@@ -776,35 +776,7 @@ export function processDeleteEvent(
     );
   }
 
-  // Collect attachment filenames before deletion for disk cleanup
-  const attachmentRows = db
-    .select({ filename: schema.attachments.filename })
-    .from(schema.attachments)
-    .where(eq(schema.attachments.dmMessageId, localMsg.id))
-    .all();
-
-  // Delete attachments, reactions, and message atomically
-  db.transaction((tx) => {
-    tx.delete(schema.attachments)
-      .where(eq(schema.attachments.dmMessageId, localMsg.id))
-      .run();
-    tx.delete(schema.dmReactions)
-      .where(eq(schema.dmReactions.dmMessageId, localMsg.id))
-      .run();
-    tx.delete(schema.dmMessages)
-      .where(eq(schema.dmMessages.id, localMsg.id))
-      .run();
-  });
-
-  // Clean up files from disk
-  deleteAttachmentFiles(attachmentRows);
-
-  // Broadcast deletion to local clients
-  connectionManager.sendToDmMembers(localMsg.dmChannelId, {
-    type: 'dm_message_deleted',
-    messageId: localMsg.id,
-    dmChannelId: localMsg.dmChannelId,
-  });
+  deleteDmMessageHere(db, localMsg);
 
   accepted.push(event.messageId);
 }

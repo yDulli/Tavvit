@@ -19,6 +19,7 @@ import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors.js';
 import { getDb, schema } from '../db/index.js';
 import { connectionManager } from '../ws/handler.js';
 import { deleteAttachmentFiles } from './fileCleanup.js';
+import { deleteDmMessageHere } from './dmMessageDeletion.js';
 import { dmMessageMutationTarget, queueDmMessageDeleteRelay } from './federationOutbox.js';
 import { hasPermission } from './permissions.js';
 import { platformActors } from './platformAudit.js';
@@ -314,19 +315,7 @@ export function removeReportedMessage(type: 'message' | 'dm_message', id: string
   // A peer accepts a delete only from the message's author, so that is who the
   // relay names; a local copy of a remote author's message is removed here only.
   const relayTarget = dmMessageMutationTarget(message, message.userId);
-  const files = db.select({ filename: schema.attachments.filename }).from(schema.attachments)
-    .where(eq(schema.attachments.dmMessageId, id)).all();
-  db.transaction((tx) => {
-    tx.delete(schema.attachments).where(eq(schema.attachments.dmMessageId, id)).run();
-    tx.delete(schema.dmReactions).where(eq(schema.dmReactions.dmMessageId, id)).run();
-    tx.delete(schema.dmMessages).where(eq(schema.dmMessages.id, id)).run();
-  });
-  deleteAttachmentFiles(files);
-  const members = db.select({ userId: schema.dmMembers.userId }).from(schema.dmMembers)
-    .where(eq(schema.dmMembers.dmChannelId, message.dmChannelId)).all();
-  for (const member of members) {
-    connectionManager.sendToUser(member.userId, { type: 'dm_message_deleted', messageId: id, dmChannelId: message.dmChannelId });
-  }
+  deleteDmMessageHere(db, message);
   queueDmMessageDeleteRelay(id, message.dmChannelId, relayTarget);
   return true;
 }

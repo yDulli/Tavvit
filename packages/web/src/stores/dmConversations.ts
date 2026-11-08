@@ -396,8 +396,11 @@ export function removeCopy(state: DmConversations, channelId: string, ctx: DmPin
 export function patchCopy(state: DmConversations, channelId: string, patch: (channel: DmChannel) => DmChannel): DmOperation {
   const found = findCopy(state, channelId);
   if (!found) return { next: state, pinMoves: [] };
+  const channel = patchedChannel(found.copy.channel, patch);
+  // A patch that changes nothing (an edit of a message that is not the preview) leaves the state, and every list, as it is.
+  if (channel === found.copy.channel) return { next: state, pinMoves: [] };
   const copies = new Map(found.conversation.copies);
-  copies.set(found.copy.origin, { ...found.copy, channel: patchedChannel(found.copy.channel, patch) });
+  copies.set(found.copy.origin, { ...found.copy, channel });
   const byKey = new Map(state.byKey);
   byKey.set(found.conversation.key, { ...found.conversation, copies });
   return { next: { byKey, unavailableOrigins: state.unavailableOrigins }, pinMoves: [] };

@@ -46,11 +46,12 @@ vi.mock('../utils/auth.js', () => ({
 
 const sendToUser = vi.fn();
 const sendToWs = vi.fn();
+const sendToDmMembers = vi.fn();
 vi.mock('./handler.js', () => ({
   connectionManager: {
     sendToUser: (...args: unknown[]) => sendToUser(...args),
     sendToWs: (...args: unknown[]) => sendToWs(...args),
-    sendToDmMembers: vi.fn(),
+    sendToDmMembers: (...args: unknown[]) => sendToDmMembers(...args),
     sendToRoom: vi.fn(),
     sendToAdmins: vi.fn(),
     getUserRoom: () => undefined,
@@ -238,6 +239,7 @@ beforeEach(() => {
   _resetWsDmMessageCreateLimit();
   sendToUser.mockClear();
   sendToWs.mockClear();
+  sendToDmMembers.mockClear();
   queueDmRelay.mockClear();
   queueDmMessageDeleteRelay.mockClear();
 });
@@ -321,10 +323,27 @@ describe('WS DM message writes where the rule does not apply', () => {
     sendToUser.mockClear();
     await send({ type: 'dm_message_delete', messageId: created!.id });
     expect(messageRow(created!.id)).toBeUndefined();
-    expect(sent().some(([, e]) => e.type === 'dm_message_deleted')).toBe(true);
+    // The members hear it with the conversation's preview now: nothing was said before it.
+    expect(sendToDmMembers).toHaveBeenCalledWith(dmId, {
+      type: 'dm_message_deleted', messageId: created!.id, dmChannelId: dmId, lastMessage: null,
+    });
     expect(sent().some(([, e]) => e.type === 'error')).toBe(false);
     expect(queueDmMessageDeleteRelay).toHaveBeenCalledTimes(1);
     expect(sendToWs).not.toHaveBeenCalled();
+  });
+
+  it('names the message before a deleted last one as the preview, so no list keeps showing what was deleted', async () => {
+    await send({ type: 'dm_message_create', dmChannelId: LIVE, content: 'first' });
+    await send({ type: 'dm_message_create', dmChannelId: LIVE, content: 'second' });
+    const byContent = new Map(messagesIn(LIVE).map((row) => [row.content, row.id]));
+
+    await send({ type: 'dm_message_delete', messageId: byContent.get('second')! });
+
+    expect(sendToDmMembers).toHaveBeenCalledWith(LIVE, expect.objectContaining({
+      type: 'dm_message_deleted',
+      messageId: byContent.get('second'),
+      lastMessage: expect.objectContaining({ id: byContent.get('first'), content: 'first', dmChannelId: LIVE }),
+    }));
   });
 
   it('creates with an attachment: links it, sends one dm_message_created per member, relays once', async () => {

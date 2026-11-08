@@ -4,6 +4,16 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.41.1": {
+      "title": "Staying in the call",
+      "items": {
+        "voice": "Fixed: someone whose connection stuttered for a moment (a tab in the background, a phone switching apps, a short network drop) no longer left the voice channel for everyone else a minute later while still talking, and watching together no longer asked them to join a call they were in.",
+        "watch": "After such a moment, the video you watch together catches up with anything that changed meanwhile.",
+        "preview": "Fixed: deleting or editing the last message of a conversation now changes its preview in every list at once, instead of still showing what was deleted.",
+        "phone": "On the phone, hold a conversation with one person to close it, as on the desktop. Leaving a group there now asks first.",
+        "errors": "If closing a conversation or leaving a group does not work, you are told why."
+      }
+    },
     "1.41.0": {
       "title": "Theme studio",
       "items": {

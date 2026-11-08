@@ -133,6 +133,11 @@ function newestMessagePreviews(db: Db, channelIds: string[]): Map<string, DmLast
   return previews;
 }
 
+/** The sidebar preview of `channelId`'s newest message as it is now, or null when nothing is left in it. */
+export function newestDmMessagePreview(db: Db, channelId: string): DmLastMessagePreview | null {
+  return newestMessagePreviews(db, [channelId]).get(channelId) ?? null;
+}
+
 /**
  * Each channel's members as user rows, in the order of its membership rows.
  */
