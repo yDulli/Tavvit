@@ -32,6 +32,7 @@ import { ProfileActivity } from '../ui/ProfileActivity';
 import { profileHeaderLook, profileLayoutOf } from '../../utils/profileLayout';
 import { ProfileLinks } from '../ui/ProfileLinks';
 import { useShownStatus } from '../../hooks/useShownStatus';
+import { useStreaming } from '../../stores/activityStore';
 import { ProfileRoles } from '../ui/ProfileRoles';
 import { Icon } from '../ui/Icon';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -172,6 +173,7 @@ export function UserProfileModal() {
   }, [isOpen, closeModal]);
 
   const shownStatus = useShownStatus(user, userOrigin, user?.status);
+  const streaming = useStreaming(user, userOrigin);
 
   if (!isOpen || !user) return null;
 
@@ -332,6 +334,7 @@ export function UserProfileModal() {
             name={displayName}
             size={look.avatarSize}
             status={shownStatus}
+            streaming={streaming}
             userId={user.homeUserId ?? user.id}
             user={user}
             ring={{ width: 5, color: 'rgb(var(--bg-elevated))' }}

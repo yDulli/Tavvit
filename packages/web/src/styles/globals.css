@@ -245,6 +245,8 @@
     --status-idle: 230 167 58;
     --status-dnd: 232 72 64;
     --status-offline: 92 91 86;
+    /* Streaming now (a `streaming` activity): a purple of its own, apart from the accent's violet. */
+    --status-streaming: 139 92 220;
 
     /* ── Shape. Small radii, multiplied by `--radius-scale` (Settings,
      * Appearance), so one number sharpens or softens the whole app. ── */
@@ -341,6 +343,7 @@
     --status-idle: 255 214 80;
     --status-dnd: 255 140 40;
     --status-offline: 120 119 112;
+    --status-streaming: 196 128 255;
   }
 
   html[data-sidebar='narrow'] { --sidebar-width: 216px; }

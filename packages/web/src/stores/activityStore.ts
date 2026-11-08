@@ -29,6 +29,20 @@ export function activitiesFor(
   return userActivities.get(userKey(subject, origin)) ?? [];
 }
 
+/** Whether `activities` hold a live stream (a `streaming` activity, such as live on Twitch). */
+export function streamingIn(activities: readonly Activity[]): boolean {
+  return activities.some((activity) => activity.type === 'streaming');
+}
+
+/**
+ * Whether the person `subject` names, as `origin` delivered them, is streaming now, for the status
+ * dot (Avatar's `streaming`). Only the dot shows it: their status, and with it what alerts them,
+ * stays as they chose.
+ */
+export function useStreaming(subject: PresenceSubject | null | undefined, origin: string): boolean {
+  return useActivityStore((s) => (subject ? streamingIn(activitiesFor(s.userActivities, subject, origin)) : false));
+}
+
 interface ActivityState {
   /** Keyed by `userKey` (the person's home identity), never by a raw row id. */
   userActivities: Map<string, Activity[]>;

@@ -9,6 +9,7 @@ import { Icon } from '../ui/Icon';
 import { isMine, isFederationGlobeApplicable, userDisplayName } from '../../utils/identity';
 import { useDmViewer } from '../../hooks/useDmViewer';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { useStreaming } from '../../stores/activityStore';
 import { formatDmTimestamp, formatDmSidebarPreview, formatDmHeaderName } from '../../utils/dmFormatters';
 import { getRejectedPeerOrigins, getAwaitingApprovalPeerOrigins } from '../../hooks/useWebSocket';
 import { DmRowUnreadBadge } from './DmUnreadBadge';
@@ -57,6 +58,7 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
   // avatars are canonicalised per slot inside AvatarStack.
   const rawFirstOther = isGroup ? null : (otherMembers[0] ?? null);
   const firstOtherCanonical = useCanonicalUserView(rawFirstOther ?? user, viewer.origin);
+  const firstOtherStreaming = useStreaming(rawFirstOther, viewer.origin);
   if (otherMembers.length === 0 && !isGroup) return null;
   const firstOther = rawFirstOther ? firstOtherCanonical : null;
 
@@ -115,6 +117,7 @@ export function DmListItem({ dm, isActive, isUnread, user, onSelect, onClose, on
             name={displayName}
             size={32}
             status={firstOther?.status}
+            streaming={firstOtherStreaming}
             userId={firstOther?.homeUserId ?? firstOther?.id}
             user={firstOther ?? undefined}
             frame={decorations.avatarFrame}

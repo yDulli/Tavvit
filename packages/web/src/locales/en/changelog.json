@@ -4,6 +4,12 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.39.1": {
+      "title": "Live in purple",
+      "items": {
+        "dot": "While someone is live on Twitch, their status dot turns purple with a play mark, in the member list, your DMs, friends and their profile. Their status and notifications stay as they are."
+      }
+    },
     "1.39.0": {
       "title": "Moderation for administrators",
       "items": {

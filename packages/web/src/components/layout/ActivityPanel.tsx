@@ -8,6 +8,7 @@ import { useFriendBuckets } from '../../hooks/useFriendBuckets';
 import { friendRowKey, type HomeFriend } from '../../utils/homeSummary';
 import { parseFederatedUsername, isFederationGlobeApplicable, userDisplayName } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { useStreaming } from '../../stores/activityStore';
 import { friendProfileUser, useFriendDoing } from '../home/friendDoing';
 import { Avatar } from '../ui/Avatar';
 import { Icon } from '../ui/Icon';
@@ -25,6 +26,7 @@ function ActiveFriendRow({ row, onOpen, onContextMenu }: {
   onContextMenu: (event: React.MouseEvent, friend: TaggedFriend) => void;
 }) {
   const canonical = useCanonicalUserView(row.friend as unknown as User, row.friend._instanceOrigin);
+  const streaming = useStreaming(row.friend, row.friend._instanceOrigin);
   const name = userDisplayName(canonical);
   const doing = useFriendDoing(row, canonical);
   const domain = isFederationGlobeApplicable(canonical) ? parseFederatedUsername(canonical.username).domain : null;
@@ -41,6 +43,7 @@ function ActiveFriendRow({ row, onOpen, onContextMenu }: {
           name={name}
           size={32}
           status={canonical.status}
+          streaming={streaming}
           userId={canonical.homeUserId ?? canonical.id}
           avatarColor={canonical.avatarColor}
         />

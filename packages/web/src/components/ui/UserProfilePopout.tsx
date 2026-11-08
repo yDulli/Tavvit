@@ -27,6 +27,7 @@ import { BadgeList } from '../../badges/BadgeList';
 import { ProfileActivity } from './ProfileActivity';
 import { profileHeaderLook, profileLayoutOf } from '../../utils/profileLayout';
 import { useShownStatus } from '../../hooks/useShownStatus';
+import { useStreaming } from '../../stores/activityStore';
 import { viewerCanEditMemberRoles } from '../../utils/roleHierarchy';
 import { ProfileRoles } from './ProfileRoles';
 import { ProfileSpaceNickname } from './ProfileSpaceNickname';
@@ -66,6 +67,7 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
   const { baseName } = parseFederatedUsername(user.username);
   const displayName = user.displayName ?? baseName;
   const shownStatus = useShownStatus(user, origin, user.status);
+  const streaming = useStreaming(user, origin);
   const self = useSelfIdentity();
   const isYou = isMine(user, origin, self);
 
@@ -233,6 +235,7 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
             name={displayName}
             size={look.avatarSize}
             status={shownStatus}
+            streaming={streaming}
             userId={user.homeUserId ?? user.id}
             user={user}
             onClick={handleAvatarClick}

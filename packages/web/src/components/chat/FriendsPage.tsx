@@ -23,6 +23,7 @@ import { useUserContextMenu } from '../layout/userMenu/useUserContextMenu';
 import { parseFederatedUsername, isFederationGlobeApplicable, userDisplayName, type IdentityFields } from '../../utils/identity';
 import { openDirectMessage } from '../../utils/openDirectMessage';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
+import { useStreaming } from '../../stores/activityStore';
 import { friendRequestTarget } from '../../utils/friendRequestTarget';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { presenceLabel } from '../../i18n/presence';
@@ -32,6 +33,7 @@ type SocialT = TFunction<['social', 'common']>;
 /** An online friend in the phone's Activity tab: who, and what they are doing in words. */
 function ActivityFriendItem({ row, onOpen }: { row: HomeFriend; onOpen: (friend: TaggedFriend) => void }) {
   const canonical = useCanonicalUserView(row.friend as unknown as User, row.friend._instanceOrigin);
+  const streaming = useStreaming(row.friend, row.friend._instanceOrigin);
   const friendDisplayName = userDisplayName(canonical);
   const doing = useFriendDoing(row, canonical);
   const domain = isFederationGlobeApplicable(canonical) ? parseFederatedUsername(canonical.username).domain : null;
@@ -44,6 +46,7 @@ function ActivityFriendItem({ row, onOpen }: { row: HomeFriend; onOpen: (friend:
           name={friendDisplayName}
           size={32}
           status={canonical.status}
+          streaming={streaming}
           userId={canonical.homeUserId ?? canonical.id}
           avatarColor={canonical.avatarColor}
         />
@@ -770,12 +773,13 @@ function FriendItem({ friend, onRemove, onDm, onContextMenu }: {
 }) {
   const { t } = useTranslation(['social', 'common']);
   const canonical = useCanonicalUserView(friend as unknown as User, friend._instanceOrigin);
+  const streaming = useStreaming(friend, friend._instanceOrigin);
   const instanceLabel = friend._instanceOrigin ? (() => { try { return new URL(friend._instanceOrigin).host; } catch { return friend._instanceOrigin; } })() : '';
   const friendDisplayName = userDisplayName(canonical);
   return (
     <li className="list-row group justify-between" onContextMenu={onContextMenu}>
       <div className="flex min-w-0 items-center gap-3">
-        <Avatar src={canonical.avatar} name={friendDisplayName} size={32} status={canonical.status} userId={canonical.homeUserId ?? canonical.id} avatarColor={canonical.avatarColor} />
+        <Avatar src={canonical.avatar} name={friendDisplayName} size={32} status={canonical.status} streaming={streaming} userId={canonical.homeUserId ?? canonical.id} avatarColor={canonical.avatarColor} />
         <div className="flex min-w-0 flex-col">
           <div className="flex min-w-0 items-baseline gap-2">
             <span className="truncate text-body font-medium leading-5 text-txt-primary">{friendDisplayName}</span>

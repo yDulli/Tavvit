@@ -4,6 +4,12 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.39.1": {
+      "title": "Ao vivo em roxo",
+      "items": {
+        "dot": "Enquanto alguém está ao vivo na Twitch, o círculo de status fica roxo com um sinal de play, na lista de membros, nas suas DMs, nos amigos e no perfil. O status e as notificações continuam como estão."
+      }
+    },
     "1.39.0": {
       "title": "Moderação para administradores",
       "items": {

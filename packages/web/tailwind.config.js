@@ -64,6 +64,7 @@ export default {
           idle:    'rgb(var(--status-idle) / <alpha-value>)',
           dnd:     'rgb(var(--status-dnd) / <alpha-value>)',
           offline: 'rgb(var(--status-offline) / <alpha-value>)',
+          streaming: 'rgb(var(--status-streaming) / <alpha-value>)',
         },
         glass: {
           bg:        'var(--glass-bg)',

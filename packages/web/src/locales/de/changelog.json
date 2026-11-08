@@ -4,6 +4,12 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.39.1": {
+      "title": "Live in Lila",
+      "items": {
+        "dot": "Während jemand auf Twitch live ist, wird der Statuskreis lila mit einer Play-Marke, in der Mitgliederliste, deinen DMs, bei Freunden und im Profil. Status und Benachrichtigungen bleiben, wie sie sind."
+      }
+    },
     "1.39.0": {
       "title": "Moderation für Admins",
       "items": {

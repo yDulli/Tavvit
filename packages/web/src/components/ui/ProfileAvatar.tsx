@@ -2,6 +2,7 @@ import React from 'react';
 import type { User } from '@backspace/shared';
 import { Avatar } from './Avatar';
 import { useUIStore, type ProfileMemberContext } from '../../stores/uiStore';
+import { useStreaming } from '../../stores/activityStore';
 import type { Placement } from '../../hooks/useFloatingPosition';
 
 type AvatarProps = React.ComponentProps<typeof Avatar>;
@@ -40,5 +41,15 @@ export function ProfileAvatar({ user, origin, placement = 'right', member, ...av
       }
     : undefined;
 
-  return <Avatar {...avatarProps} user={user} onClick={handleClick} />;
+  // Only an avatar with a status dot asks whether the person is streaming, so the many without
+  // one (a message's) keep no subscription to the activities.
+  return avatarProps.status && avatarProps.streaming === undefined
+    ? <StreamingAvatar {...avatarProps} user={user} origin={origin} onClick={handleClick} />
+    : <Avatar {...avatarProps} user={user} onClick={handleClick} />;
+}
+
+/** An avatar whose status dot turns to streaming while the person streams (`useStreaming`). */
+function StreamingAvatar({ origin, ...avatarProps }: AvatarProps & { origin: string }) {
+  const streaming = useStreaming(avatarProps.user, origin);
+  return <Avatar {...avatarProps} streaming={streaming} />;
 }

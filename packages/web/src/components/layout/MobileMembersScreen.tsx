@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { MemberWithUser, Activity, Role } from '@backspace/shared';
 import { useFormatters } from '../../i18n/formatters';
 import { useSpaceStore } from '../../stores/spaceStore';
-import { useActivityStore, activitiesFor } from '../../stores/activityStore';
+import { useActivityStore, activitiesFor, streamingIn } from '../../stores/activityStore';
 import { useUIStore } from '../../stores/uiStore';
 import { Avatar } from '../ui/Avatar';
 import { DecoratedName, NameplateLayer } from '../ui/Decorations';
@@ -69,6 +69,7 @@ function MobileMemberRow({
         name={displayName}
         size={36}
         status={isOffline ? 'offline' : canonical.status}
+        streaming={!isOffline && streamingIn(activities)}
         className={isOffline ? 'opacity-60' : undefined}
         user={canonical}
         frame={decorations.avatarFrame}

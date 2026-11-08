@@ -10,7 +10,7 @@ import { useFormatters } from '../../i18n/formatters';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { selectPeoplePanelOpen } from '../../stores/peoplePanel';
-import { useActivityStore, activitiesFor } from '../../stores/activityStore';
+import { useActivityStore, activitiesFor, streamingIn } from '../../stores/activityStore';
 import { Avatar, avatarRadius } from '../ui/Avatar';
 import { DecoratedName, NameplateLayer } from '../ui/Decorations';
 import { personDecorations } from '../../utils/decorations';
@@ -95,6 +95,7 @@ function MemberSidebarRow({
         name={displayName}
         size={32}
         status={isOffline ? 'offline' : canonical.status}
+        streaming={!isOffline && streamingIn(activities)}
         className={isOffline ? 'opacity-60' : undefined}
         user={canonical}
         frame={decorations.avatarFrame}

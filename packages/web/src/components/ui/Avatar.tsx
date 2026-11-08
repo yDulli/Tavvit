@@ -14,6 +14,12 @@ interface AvatarProps {
   name: string;
   size?: number;
   status?: 'online' | 'idle' | 'dnd' | 'offline' | null;
+  /**
+   * The person is streaming now (a `streaming` activity, `useStreaming`): the status dot shows
+   * that in its own shape and colour in place of online, idle or do not disturb. Only the dot
+   * changes; an offline dot stays offline.
+   */
+  streaming?: boolean;
   className?: string;
   onClick?: (e: React.MouseEvent) => void;
   user?: User;
@@ -117,6 +123,8 @@ const STATUS_GLYPHS: Record<string, { path: string; color: string }> = {
   idle: { path: 'M4.8 0A5 5 0 1 1 0 4.8A3.4 3.4 0 1 0 4.8 0Z', color: 'text-status-idle' },
   dnd: { path: 'M5 0a5 5 0 1 1 0 10A5 5 0 0 1 5 0ZM2.3 4.1h5.4v1.8H2.3Z', color: 'text-status-dnd' },
   offline: { path: 'M5 0a5 5 0 1 1 0 10A5 5 0 0 1 5 0ZM5 2.7a2.3 2.3 0 1 0 0 4.6a2.3 2.3 0 1 0 0-4.6Z', color: 'text-status-offline' },
+  // A disc with a play mark cut out of it.
+  streaming: { path: 'M5 0a5 5 0 1 1 0 10A5 5 0 0 1 5 0ZM3.9 2.9v4.2L7.3 5Z', color: 'text-status-streaming' },
 };
 
 /**
@@ -151,8 +159,10 @@ function getDotMetrics(avatarSize: number, ringWidth: number = 0) {
   return { dot, gap, inset: avatarInset + ringWidth };
 }
 
-export function Avatar({ src, name, size = 40, status, className = '', onClick, user, userId, ring, avatarColor, palette = 'user', frame = null, frameMotion = 'off', pictureMotion }: AvatarProps) {
+export function Avatar({ src, name, size = 40, status, streaming = false, className = '', onClick, user, userId, ring, avatarColor, palette = 'user', frame = null, frameMotion = 'off', pictureMotion }: AvatarProps) {
   const initials = name.charAt(0).toUpperCase();
+  // What the dot shows: the status, or streaming in its place while the person is not offline.
+  const glyph = status ? (streaming && status !== 'offline' ? 'streaming' : status) : null;
   const address = src
     ? ((src.startsWith('http') || src.startsWith('blob:') || src.startsWith('data:') || src.startsWith('/')) ? src : `/api/uploads/${src}`)
     : null;
@@ -247,12 +257,12 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
       {artLayer('front')}
       {madeFrame}
       {/* Status dot — outside the masked div so it isn't clipped */}
-      {status && (
+      {glyph && (
         <svg
           viewBox="0 0 10 10"
           aria-hidden="true"
-          data-status={STATUS_GLYPHS[status] ? status : 'offline'}
-          className={`absolute ${(STATUS_GLYPHS[status] ?? STATUS_GLYPHS.offline!).color}`}
+          data-status={STATUS_GLYPHS[glyph] ? glyph : 'offline'}
+          className={`absolute ${(STATUS_GLYPHS[glyph] ?? STATUS_GLYPHS.offline!).color}`}
           style={{
             width: dotDiameter,
             height: dotDiameter,
@@ -260,7 +270,7 @@ export function Avatar({ src, name, size = 40, status, className = '', onClick, 
             right: dotInset - dotDiameter / 2,
           }}
         >
-          <path d={(STATUS_GLYPHS[status] ?? STATUS_GLYPHS.offline!).path} fill="currentColor" fillRule="evenodd" />
+          <path d={(STATUS_GLYPHS[glyph] ?? STATUS_GLYPHS.offline!).path} fill="currentColor" fillRule="evenodd" />
         </svg>
       )}
     </div>
