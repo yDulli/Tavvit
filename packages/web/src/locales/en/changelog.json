@@ -4,6 +4,17 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.41.3": {
+      "title": "New badges, nicer tags, sound for everyone",
+      "items": {
+        "badges": "Badges have new pictures. Beside a name they stand together in one strip, and a click on one opens a small card with its name, what it means and the kind of badge it is.",
+        "tags": "Space tags are made anew: the space's colour as a small seal with its symbol, the letters beside it on a plain plate that stays readable on any card.",
+        "dates": "Messages from three or more days ago show their date beside the time, so an old conversation says when it happened without scrolling up to its day.",
+        "watch": "Watching together: if someone else pressed play and you heard nothing, you now get the sound, or a button that starts it with one click. A video that plays muted is caught the same way.",
+        "output": "YouTube and Vimeo play on your system's default output. If your calls use another device, you are told once, so a silent video is no mystery.",
+        "overlay": "The mark of a voice channel's OBS overlay no longer lies under its settings button."
+      }
+    },
     "1.41.2": {
       "title": "Stronger colours, nicer bots",
       "items": {

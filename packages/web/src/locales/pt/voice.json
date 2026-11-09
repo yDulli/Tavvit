@@ -313,6 +313,7 @@
     "controlStarter": "Só eu controlo",
     "controlledByStarter": "No momento, só quem começou controla.",
     "blocked": "Clique para assistir junto",
+    "defaultOutput": "O YouTube e o Vimeo tocam na saída padrão do seu sistema, não no dispositivo escolhido para chamadas nas suas configurações.",
     "react": "Reagir com {{reaction}}",
     "reactions": "Reações",
     "sidebar": "Assistindo: {{title}}",

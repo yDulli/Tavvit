@@ -241,6 +241,13 @@
     "partner": {
       "name": "Партнёр",
       "description": "Сообщество, с которым сотрудничает этот сервер"
+    },
+    "categories": {
+      "platform": "Платформа",
+      "space": "Роли в пространстве",
+      "community": "Сообщество",
+      "building": "Создание Tavvit",
+      "early": "Первые дни"
     }
   },
   "spaceTag": {

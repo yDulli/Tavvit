@@ -193,6 +193,7 @@ formatter reads `i18n.resolvedLanguage` at call time; components use the
 |----------|-----|-------------|
 | `formatTime(ts)` | Message timestamps, "today" DM previews | `Intl.DateTimeFormat` `{ hour: 'numeric', minute: '2-digit' }` |
 | `formatShortDate(ts)` | DM previews, day separators | `{ month: 'short', day: 'numeric' }`, year added when not the current year |
+| `formatShortDateTime(ts)` | A message's stamp from `DATED_AFTER_DAYS` (3) calendar days back (`utils/messageTime.ts`), so an old conversation says its day without scrolling to the divider | `formatShortDate`'s options plus `{ hour: 'numeric', minute: '2-digit' }` and the person's clock |
 | `formatMediumDate(ts)` | Lists that always want the year: users, bans, peers, profile "member since" | `{ month: 'short', day: 'numeric', year: 'numeric' }` |
 | `formatLongDate(ts)` | Update panel | `{ day: 'numeric', month: 'long', year: 'numeric' }` |
 | `formatFullDate(ts)` | Message list day separators | weekday plus long date |

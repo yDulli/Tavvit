@@ -10,12 +10,12 @@ Source files:
 - `packages/server/src/routes/explore.ts` -- `ExploreSpace.badges`
 - `packages/server/src/utils/reviewNotify.ts` -- `announceUserUpdate()`, `announceSpaceUpdate()`
 - `packages/web/src/badges/BadgeGlyph.tsx` -- One picture per badge (`images/<id>.webp`)
-- `packages/web/src/badges/BadgeList.tsx` -- `BadgeList`, `memberBadgeIds()`
+- `packages/web/src/badges/BadgeList.tsx` -- `BadgeList` (the strip of badges by a name), `memberBadgeIds()`
 - `packages/web/src/badges/BadgeCard.tsx` -- What a badge says when clicked
-- `packages/web/src/badges/badgeText.ts` -- `useBadgeText()`
+- `packages/web/src/badges/badgeText.ts` -- `useBadgeText()` (name, description, category), `useBadgeCategoryNames()`
 - `packages/web/src/hooks/useProfileMember.ts` -- `useProfileBadges()`
-- `packages/web/src/locales/*/common.json` -- `common:badges.<id>.name` and `.description`
-- `assets/brand/badge sheet.png` -- The badge sheet: 8 rows of 8 metal marks, the pictures are cut from it
+- `packages/web/src/locales/*/common.json` -- `common:badges.<id>.name` and `.description`, `common:badges.categories.<category>`
+- `assets/badges v3.png` -- The badge sheet (1.41.3): 8 rows of 8 flat marks on a dark ground, the pictures are cut from it
 - `scripts/badges/cut.mjs` -- Cuts the registry's pictures out of the sheet (`BADGE_CELLS`: which mark is which badge)
 
 ---
@@ -41,7 +41,7 @@ The badge columns are new with migration 0041. They have nothing to do with the 
 
 ## The registry
 
-`BADGES` in `packages/shared/src/badges.ts` is the one definition. Each entry is `{ id, scope, source }`; the array order is the display order everywhere.
+`BADGES` in `packages/shared/src/badges.ts` is the one definition. Each entry is `{ id, scope, source, category }`; the array order is the display order everywhere.
 
 | Id | Scope | Source | Name (en) | Comes from |
 |----|-------|--------|-----------|------------|
@@ -61,6 +61,8 @@ The badge columns are new with migration 0041. They have nothing to do with the 
 | `beta_tester` | user | granted | Beta tester | An admin's grant |
 | `verified` | space | derived | Verified | `spaces.verification_status = 'verified'` ([admin.md](admin.md), "Verification") |
 | `partner` | space | granted | Partner | An admin's grant |
+
+**Categories** (`BADGE_CATEGORIES`, 1.41.3): each entry names the kind of thing it says, and its card shows that above its name: `platform` (staff, bot, verified, partner), `space` (space owner, administrator, moderator), `community` (helper, creator, event participant, community contributor), `building` (bug hunter, developer, beta tester), `early` (founder, early supporter). Their names are `common:badges.categories.<category>`; a test holds every entry to a category of the list.
 
 **Types:** `BadgeId`; `UserBadgeId`, `MemberBadgeId`, `SpaceBadgeId` (every badge of a scope); `GrantedUserBadgeId`, `GrantedSpaceBadgeId` (the ones an admin gives). They are derived from the array, so a new entry widens them.
 
@@ -136,11 +138,11 @@ Read through `grantedUserBadgesOf()` and `grantedSpaceBadgesOf()`, which keep on
 
 `packages/web/src/badges/`:
 
-- **`BadgeGlyph({ id, size })`**: the badge's picture, an `<img>` of `size` pixels with an empty `alt` and `aria-hidden` (what holds it carries the name). `PICTURES` is a `Record<BadgeId, string>` of the files in `badges/images/`, bundled with a hash in their names, so a registry entry without a picture does not compile.
-- **`BadgeList({ badges, size = 'sm', max, notes })`**: the badges in registry order (`orderedBadges`), nothing when there are none. Sizes `sm` 16px, `md` 18px, `lg` 20px, 4px apart. Each glyph says its name in a `Tooltip` and, when clicked or pressed, opens `BadgeCard`. It is a `listitem` of a `list` and carries its name as `aria-label`. `max` shows the first badges and a mono `+N` for the rest (hidden from assistive technology). `notes` adds a word to a badge's name, used for the owner title on the crown.
-- **`BadgeCard({ id, name, description, anchorRef, onClose })`**: the small card a click opens: the picture at 28px on a plain sunken tile (`bg-surface-input`, a `border-soft` hairline), the name and what it means. It portals above whatever opened it and leaves that open; a press anywhere else or Escape closes only the card. A badge is a `span` with `role="button"`, not a `button`, because it can sit inside one (a space's header), and its click goes no further than itself.
+- **`BadgeGlyph({ id, size, className })`**: the badge's picture, an `<img>` of `size` pixels with an empty `alt` and `aria-hidden` (what holds it carries the name). `PICTURES` is a `Record<BadgeId, string>` of the files in `badges/images/`, bundled with a hash in their names, so a registry entry without a picture does not compile.
+- **`BadgeList({ badges, size = 'sm', max, notes })`**: the badges in registry order (`orderedBadges`), nothing when there are none, in one strip (`.badge-strip`, 1.41.3): the sheet's own dark ground (16 17 21) at 72%, a hairline and a lit top edge, so the marks stand as the sheet draws them on any card, themed or not, and read as one set. It wraps as one piece, and inside itself when it is wider than its line. Each badge is a cell of it (`.badge-mark`, 3px around the picture): a veil under the pointer, the signal colour's fill and edge while its card is open, a small give when pressed. Picture sizes `sm` 16px, `md` 18px, `lg` 20px. Each badge says its name in a `Tooltip` and, when clicked or pressed, opens `BadgeCard`. It is a `listitem` of a `list` and carries its name as `aria-label`. `max` shows the first badges and a mono `+N` for the rest (hidden from assistive technology). `notes` adds a word to a badge's name, used for the owner title on the crown.
+- **`BadgeCard({ id, name, description, category, anchorRef, onClose })`**: the small card a click opens (`.badge-card`, 236px): at its side a narrow stage (`.badge-stage`), a piece of the sheet's ground with its grain, where the picture stands at 30px in a soft light of its own colour falling from above (`.badge-stage-light`: the same picture at 104px, blurred far out of shape, so the light always matches it; off with higher contrast, for people who switch the light off, and with forced colours); beside it the category (`label-mono`), the name and what it means. It portals above whatever opened it and leaves that open; a press anywhere else or Escape closes only the card. A badge is a `span` with `role="button"`, not a `button`, because it can sit inside one (a space's header), and its click goes no further than itself.
 - **`memberBadgeIds(member, space)`**: every badge a person shows inside a space: their own (`member.user.badges`), the ones their roles give (`member.badges`), and the crown for the owner (see above).
-- **`useBadgeText()`**: each badge's name and description from `common:badges.<id>.name` and `.description`, a `Record<BadgeId, BadgeText>`, so a badge without text does not compile.
+- **`useBadgeText()`**: each badge's name and description from `common:badges.<id>.name` and `.description`, and its category's name (`useBadgeCategoryNames()`), a `Record<BadgeId, BadgeText>`, so a badge without text does not compile.
 
 `useProfileBadges(user, member)` (`hooks/useProfileMember.ts`) decides what a profile shows: opened for a member of the space that is loaded, `memberBadgeIds()` with the owner title; opened anywhere else, the person's own badges.
 
@@ -150,8 +152,8 @@ Read through `grantedUserBadgesOf()` and `grantedSpaceBadgesOf()`, which keep on
 
 | Surface | Component | Badges | Size |
 |---------|-----------|--------|------|
-| Profile popout | `UserProfilePopout` | `useProfileBadges()`, beside the handle | `sm` |
-| Full profile (and the phone's profile screen) | `UserProfileModal` | `useProfileBadges()`, beside the handle | `md` |
+| Profile popout | `UserProfilePopout` | `useProfileBadges()`, at the end of the handle's line, after the pronouns | `sm` |
+| Full profile (and the phone's profile screen) | `UserProfileModal` | `useProfileBadges()`, at the end of the handle's line, after the pronouns | `md` |
 | Space header | `ChannelSidebar` | `space.badges` | `sm` |
 | Explore card (Inner Space) | `SpaceCard` | `space.badges` | `md` |
 | Listing preview | `ListingPreview` (`components/review/ReviewParts.tsx`): the owner's Discovery tab and the admin's space detail | the space's badges | `sm` |
@@ -165,8 +167,8 @@ Outside the admin area, a person's badges show on their profile and nowhere else
 
 ## Design rules
 
-- **Pictures cut from the sheet.** Each badge is one mark of `assets/brand/badge sheet.png`, matte metal on a dark face, cut out by `scripts/badges/cut.mjs` and written as a 72px WebP into `packages/web/src/badges/images/`, sharp from 16px next to a name to 28px on the card. The script finds each mark by its crisp edges and takes the sheet's ground, its light, the shadows and the glows away as one soft field, so a badge lies flat on any surface; whatever a rim encloses stays whole. The sheet draws more marks than the registry holds (flags, months and years, more shields): only registry entries exist in the product, and `node scripts/badges/cut.mjs --preview <dir>` shows every mark cut out, to choose from.
-- **No light, no chip.** A badge is its picture: no glow, no colour of a tone, no pill, no border. Under the pointer it grows a little and nothing lights up; on its card it sits on a plain sunken tile.
+- **Pictures cut from the sheet, as drawn.** Each badge is one mark of `assets/badges v3.png` (1536 by 1024, 8 rows of 8 flat marks, grey and a few violet, on a near-black ground), cut out by `scripts/badges/cut.mjs` and written as a 96px WebP into `packages/web/src/badges/images/`, sharp from 16px next to a name to 32px. No mark is redrawn, recoloured or given an effect. The script finds the rows and columns as the bands the sheet's ink falls in (its margins are not even), takes the ground away pixel by pixel (a pixel's cover is how far it stands from the ground's colour, measured against the strongest stand-off near it, and its colour the one that gives the sheet's pixel back over that ground), so inside a mark every pixel is the sheet's and its edges stay smooth, and frames every mark in one square of the same size, so their sizes keep to one another. The sheet draws more marks than the registry holds: only registry entries exist in the product, and `node scripts/badges/cut.mjs --preview <dir>` writes every mark and contact sheets on the app's surfaces, to choose from.
+- **On their own ground, never with a light around them.** Beside a name the marks stand in one strip of the sheet's ground; on the card on a stage of it, in a light of their own colour that is a wash over the ground, never a halo hugging the mark. Under the pointer a cell gets a veil and nothing lights up.
 - **Every badge names itself.** A tooltip gives the name and so does the accessible label; a click opens the card with its meaning, also on a touch screen. A person's badges stand in one place on a profile, beside the handle, and are not repeated further down.
 - **A fixed order, short rows.** The registry decides the order on every surface. A dense row can cap the count (`max`) and show `+N`; the profile shows all.
 - **On the profile, not on the name.** Lists and messages, where names repeat, stay free of badges; a person's badges are read on their profile.
@@ -175,7 +177,7 @@ Outside the admin area, a person's badges show on their profile and nowhere else
 
 ## Adding a badge
 
-1. Add an entry to `BADGES` in `packages/shared/src/badges.ts` (`id` in snake_case, `scope`, `source`) where it should sort.
+1. Add an entry to `BADGES` in `packages/shared/src/badges.ts` (`id` in snake_case, `scope`, `source`, `category`) where it should sort.
 2. Choose its mark on the sheet: its row and column in `BADGE_CELLS` (`scripts/badges/cut.mjs`). Run `node scripts/badges/cut.mjs`, and import the new picture into `PICTURES` (`packages/web/src/badges/BadgeGlyph.tsx`). A mark the sheet does not have is drawn into the sheet first.
 3. Give it text: an entry in `useBadgeText()` (`badgeText.ts`) and `common:badges.<id>.name` and `.description` in every catalog (`packages/web/src/locales/{en,de,pt,ru,zh}/common.json`).
 4. A **granted** badge needs nothing more: the admin area's checkboxes list `GRANTED_USER_BADGES` or `GRANTED_SPACE_BADGES`, the grant routes accept it through `isGrantedUserBadge` or `isGrantedSpaceBadge`, the stored list keeps it, and the audit log names it.

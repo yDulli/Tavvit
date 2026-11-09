@@ -19,6 +19,14 @@ interface PlayerMessage {
   info?: unknown;
 }
 
+/** What the player says of itself (`initialDelivery`, `infoDelivery`, `onVolumeChange`); only what is read. */
+interface PlayerInfo {
+  currentTime?: unknown;
+  duration?: unknown;
+  playerState?: unknown;
+  muted?: unknown;
+}
+
 export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events) => {
   const iframe = document.createElement('iframe');
   const params = new URLSearchParams({
@@ -44,6 +52,15 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
   let ready = false;
   let wantPlaying = false;
   let volume = 100;
+  /** Whether the player says it is muted; null until it has said. */
+  let muted: boolean | null = null;
+  /** Its sound was asked back once, unbidden, since it was made or the person last clicked. */
+  let unmuteAsked = false;
+  /**
+   * The browser would not play it with sound (`onBlocked`), until the person clicks: asking for
+   * the sound again meanwhile would only stop a video a browser lets go on muted.
+   */
+  let refused = false;
   let captions = false;
   let destroyed = false;
   let blockTimer: ReturnType<typeof setTimeout> | null = null;
@@ -70,26 +87,80 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
     command('unloadModule', ['cc']);
   };
 
+  /**
+   * The person's sound, all of it: the volume, and muted or not. A volume alone leaves muted a
+   * player that was muted: YouTube keeps a mute on the device (also one of ours, from a call
+   * deafened or a volume of 0 while a video ended) and starts every later video with it.
+   */
+  const applySound = (): void => {
+    command('setVolume', [volume]);
+    if (volume === 0) command('mute');
+    else if (!refused) command('unMute');
+  };
+
+  /** Muted while the person's volume asks for sound. */
+  const silenced = (): boolean => volume > 0 && muted === true;
+
   const clearBlockTimer = (): void => {
     if (blockTimer) clearTimeout(blockTimer);
     blockTimer = null;
   };
-  const watchStart = (): void => {
-    clearBlockTimer();
+  /**
+   * A while after a start was asked for, it must play with its sound, else the browser refused
+   * it. Set going once per attempt: the room asks every second, and an ask that set it going anew
+   * would keep it from ever coming.
+   */
+  const checkStart = (): void => {
+    if (blockTimer) return;
     blockTimer = setTimeout(() => {
-      if (!destroyed && wantPlaying && state !== PLAYING) events.onBlocked();
+      blockTimer = null;
+      if (destroyed || !wantPlaying || (state === PLAYING && !silenced())) return;
+      refused = true;
+      events.onBlocked();
     }, PLAY_START_GRACE_MS);
+  };
+
+  /** It plays: with its sound that is a start; silent against the person's volume it is not one yet. */
+  const onPlayingNow = (): void => {
+    if (silenced()) {
+      if (wantPlaying) checkStart();
+      return;
+    }
+    refused = false;
+    clearBlockTimer();
+    events.onPlaying();
+  };
+
+  const onMuted = (next: boolean): void => {
+    if (next === muted) return;
+    muted = next;
+    if (!next) {
+      if (state === PLAYING) onPlayingNow();
+      return;
+    }
+    if (!silenced()) return;
+    // Asked back once, not again and again: a browser that refuses the sound mutes it anew, and
+    // each ask would stop the video for a moment.
+    if (!unmuteAsked && !refused) {
+      unmuteAsked = true;
+      command('unMute');
+    }
+    if (wantPlaying) checkStart();
   };
 
   const onState = (next: number): void => {
     const started = next === PLAYING && state !== PLAYING;
     state = next;
-    if (next === PLAYING) {
-      clearBlockTimer();
-      events.onPlaying();
-    }
+    if (next === PLAYING) onPlayingNow();
     if (started) applyCaptions();
     if (next === ENDED) events.onEnded();
+  };
+
+  const onInfo = (info: PlayerInfo): void => {
+    if (typeof info.currentTime === 'number') time = info.currentTime * 1000;
+    if (typeof info.duration === 'number' && info.duration > 0) duration = info.duration * 1000;
+    if (typeof info.muted === 'boolean') onMuted(info.muted);
+    if (typeof info.playerState === 'number' && info.playerState !== state) onState(info.playerState);
   };
 
   const onMessage = (event: MessageEvent): void => {
@@ -103,20 +174,20 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
     if (data.event === 'onReady' || data.event === 'initialDelivery') {
       if (!ready) {
         ready = true;
-        command('setVolume', [volume]);
+        applySound();
         applyCaptions();
         if (wantPlaying) {
           command('playVideo');
-          watchStart();
+          checkStart();
         }
       }
     }
     if (data.event === 'onStateChange' && typeof data.info === 'number') onState(data.info);
-    if (data.event === 'infoDelivery' && typeof data.info === 'object' && data.info !== null) {
-      const info = data.info as { currentTime?: unknown; duration?: unknown; playerState?: unknown };
-      if (typeof info.currentTime === 'number') time = info.currentTime * 1000;
-      if (typeof info.duration === 'number' && info.duration > 0) duration = info.duration * 1000;
-      if (typeof info.playerState === 'number' && info.playerState !== state) onState(info.playerState);
+    if (
+      (data.event === 'infoDelivery' || data.event === 'initialDelivery' || data.event === 'onVolumeChange')
+      && typeof data.info === 'object' && data.info !== null
+    ) {
+      onInfo(data.info as PlayerInfo);
     }
   };
   window.addEventListener('message', onMessage);
@@ -136,7 +207,7 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
       if (wantPlaying && state === PLAYING) return;
       wantPlaying = true;
       command('playVideo');
-      if (ready) watchStart();
+      if (ready) checkStart();
     },
     pause: () => {
       // Told again and again while the room is paused: only a player that moves hears of it.
@@ -153,8 +224,18 @@ export const createYouTubePlayer: WatchPlayerFactory = (source, startMs, events)
     durationMs: () => duration,
     setVolume: (next) => {
       volume = Math.round(Math.min(100, Math.max(0, next)));
-      command('setVolume', [volume]);
-      command(volume === 0 ? 'mute' : 'unMute');
+      applySound();
+      // A volume of 0 makes a silent player one that plays as asked, and the other way round.
+      if (state === PLAYING) onPlayingNow();
+    },
+    resume: () => {
+      refused = false;
+      unmuteAsked = false;
+      wantPlaying = true;
+      clearBlockTimer();
+      applySound();
+      command('playVideo');
+      if (ready) checkStart();
     },
     setCaptions: (on) => {
       if (on === captions) return;

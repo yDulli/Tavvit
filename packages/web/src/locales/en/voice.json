@@ -311,6 +311,7 @@
     "controlStarter": "Only I steer",
     "controlledByStarter": "Only the person who started this steers it right now.",
     "blocked": "Click to watch along",
+    "defaultOutput": "YouTube and Vimeo play on your system's default output, not on the device chosen for calls in your settings.",
     "react": "React with {{reaction}}",
     "reactions": "Reactions",
     "sidebar": "Watching: {{title}}",

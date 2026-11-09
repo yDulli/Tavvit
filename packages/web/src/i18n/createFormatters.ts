@@ -14,6 +14,8 @@ export interface Formatters {
   formatTime: (timestamp: number) => string;
   /** `Mar 15` this year, `Dec 14, 2025` otherwise. */
   formatShortDate: (timestamp: number, now?: Date) => string;
+  /** `Mar 15, 2:05 PM` this year, `Dec 14, 2025, 9:30 AM` otherwise: an older message's stamp. */
+  formatShortDateTime: (timestamp: number, now?: Date) => string;
   /** `March 15, 2026` */
   formatLongDate: (timestamp: number) => string;
   /** `Mar 15, 2026`: always carries the year, for "member since" and audit dates. */
@@ -157,6 +159,18 @@ export function createFormatters(getLocale: () => string, getClock: () => TimeFo
           ? { month: 'short', day: 'numeric' }
           : { month: 'short', day: 'numeric', year: 'numeric' },
       ).format(timestamp);
+    },
+
+    formatShortDateTime: (timestamp, now = new Date()) => {
+      const sameYear = new Date(timestamp).getFullYear() === now.getFullYear();
+      return dateFormat({
+        month: 'short',
+        day: 'numeric',
+        ...(sameYear ? {} : { year: 'numeric' as const }),
+        hour: 'numeric',
+        minute: '2-digit',
+        ...clock(),
+      }).format(timestamp);
     },
 
     formatLongDate: (timestamp) => dateFormat({ day: 'numeric', month: 'long', year: 'numeric' }).format(timestamp),

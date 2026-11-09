@@ -4,6 +4,17 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.41.3": {
+      "title": "Novas insígnias, tags mais bonitas, som para todos",
+      "items": {
+        "badges": "As insígnias têm novas imagens. Ao lado de um nome ficam juntas numa faixa, e um clique numa delas abre um pequeno cartão com o nome, o significado e o tipo de insígnia.",
+        "tags": "As tags de espaço foram refeitas: a cor do espaço como um pequeno selo com o seu símbolo, as letras ao lado numa placa simples que continua legível em qualquer cartão.",
+        "dates": "Mensagens com três dias ou mais mostram a data ao lado da hora, para que uma conversa antiga diga quando aconteceu sem rolar até o seu dia.",
+        "watch": "Assistir juntos: quem não ouvia nada quando outra pessoa apertava play agora recebe o som, ou um botão que o inicia com um clique. Um vídeo que toca sem som é detectado da mesma forma.",
+        "output": "YouTube e Vimeo tocam na saída padrão do seu sistema. Se as suas chamadas usam outro dispositivo, você é avisado uma vez, para que um vídeo mudo não seja um mistério.",
+        "overlay": "A marca da sobreposição do OBS de um canal de voz não fica mais por baixo do botão de configurações."
+      }
+    },
     "1.41.2": {
       "title": "Cores mais fortes, bots mais bonitos",
       "items": {

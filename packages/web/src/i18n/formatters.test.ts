@@ -18,6 +18,12 @@ describe('createFormatters', () => {
     expect(createFormatters(() => 'de').formatShortDate(dec14LastYear, new Date(2026, 5, 1))).toBe('14. Dez. 2025');
   });
 
+  it('formats an older message\'s stamp: the short date and the time, the year only from another year', () => {
+    expect(createFormatters(() => 'en', () => '12h').formatShortDateTime(march15, new Date(2026, 5, 1))).toBe('Mar 15, 2:05 PM');
+    expect(createFormatters(() => 'de', () => '24h').formatShortDateTime(march15, new Date(2026, 5, 1))).toBe('15. März, 14:05');
+    expect(createFormatters(() => 'en', () => '12h').formatShortDateTime(dec14LastYear, new Date(2026, 5, 1))).toBe('Dec 14, 2025, 9:30 AM');
+  });
+
   it('formats a long date', () => {
     expect(createFormatters(() => 'en').formatLongDate(march15)).toBe('March 15, 2026');
     expect(createFormatters(() => 'de').formatLongDate(march15)).toBe('15. März 2026');

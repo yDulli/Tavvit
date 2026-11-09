@@ -13,10 +13,13 @@ const { made, api, me, permissions, playerAt } = vi.hoisted(() => ({
   made: [] as Array<{
     source: unknown;
     startMs: number;
+    events: { onEnded: () => void; onBlocked: () => void; onPlaying: () => void };
     element: HTMLElement;
     play: ReturnType<typeof vi.fn>;
     seek: ReturnType<typeof vi.fn>;
     setVolume: ReturnType<typeof vi.fn>;
+    resume: ReturnType<typeof vi.fn>;
+    setOutputDevice?: ReturnType<typeof vi.fn>;
     destroy: ReturnType<typeof vi.fn>;
   }>,
   api: { change: vi.fn(), react: vi.fn(), end: vi.fn(), add: vi.fn(), get: vi.fn() },
@@ -27,10 +30,11 @@ const { made, api, me, permissions, playerAt } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../utils/watchPlayers', () => ({
-  createWatchPlayer: (source: unknown, startMs: number) => {
+  createWatchPlayer: (source: { provider: string }, startMs: number, events: { onEnded: () => void; onBlocked: () => void; onPlaying: () => void }) => {
     const player = {
       source,
       startMs,
+      events,
       element: document.createElement('div'),
       play: vi.fn(),
       pause: vi.fn(),
@@ -38,6 +42,9 @@ vi.mock('../../utils/watchPlayers', () => ({
       currentMs: () => playerAt.value,
       durationMs: () => 212_000,
       setVolume: vi.fn(),
+      resume: vi.fn(),
+      // Only a file's player can choose where it plays; a provider's frame cannot.
+      ...(source.provider === 'file' ? { setOutputDevice: vi.fn() } : {}),
       destroy: vi.fn(),
     };
     made.push(player);
@@ -120,8 +127,9 @@ beforeEach(() => {
     speakingParticipantIds: new Set(),
     spaceDeafenedUserIds: new Set(),
     pipEnabled: true,
+    outputDeviceId: 'default',
   });
-  useUIStore.setState({ isMobile: false });
+  useUIStore.setState({ isMobile: false, toasts: [] });
   useExternalMediaStore.setState({ alwaysAllow: false, allowedHosts: [] });
 });
 
@@ -277,6 +285,55 @@ describe('the player of watching together', () => {
     expect(made[0]!.setVolume).toHaveBeenLastCalledWith(40);
     act(() => useVoiceStore.setState({ isDeafened: true }));
     expect(made[0]!.setVolume).toHaveBeenLastCalledWith(0);
+  });
+
+  it('asks for a click when the browser would not play it with sound, and the click brings the sound', async () => {
+    useExternalMediaStore.setState({ allowedHosts: ['www.youtube-nocookie.com'] });
+    show(session());
+    act(() => made[0]!.events.onBlocked());
+    await userEvent.click(screen.getByRole('button', { name: 'Click to watch along' }));
+    expect(made[0]!.resume).toHaveBeenCalledTimes(1);
+    act(() => made[0]!.events.onPlaying());
+    expect(screen.queryByRole('button', { name: 'Click to watch along' })).toBeNull();
+  });
+
+  it('plays a file on the call\'s output device, and says once that a provider\'s frame plays on the default', async () => {
+    const DEFAULT_OUTPUT = 'YouTube and Vimeo play on your system\'s default output, not on the device chosen for calls in your settings.';
+    const told = () => useUIStore.getState().toasts.filter((toast) => toast.message === DEFAULT_OUTPUT).length;
+    const outputs = [
+      { kind: 'audiooutput', deviceId: 'default', groupId: 'speakers' },
+      { kind: 'audiooutput', deviceId: 'speakers-1', groupId: 'speakers' },
+      { kind: 'audiooutput', deviceId: 'headset-1', groupId: 'headset' },
+    ];
+    Object.defineProperty(navigator, 'mediaDevices', { value: { enumerateDevices: vi.fn().mockResolvedValue(outputs) }, configurable: true });
+    try {
+      useExternalMediaStore.setState({ allowedHosts: ['www.youtube-nocookie.com'] });
+
+      // The default under its own name is the same device: nothing to say.
+      useVoiceStore.setState({ outputDeviceId: 'speakers-1' });
+      const first = show(session());
+      await act(async () => { await Promise.resolve(); });
+      expect(told()).toBe(0);
+      first.unmount();
+
+      // The call on a headset, the frame on the speakers: said once, not again for another device.
+      useVoiceStore.setState({ outputDeviceId: 'headset-1' });
+      const second = show(session());
+      await waitFor(() => expect(told()).toBe(1));
+      act(() => useVoiceStore.setState({ outputDeviceId: 'headset-2' }));
+      await act(async () => { await Promise.resolve(); });
+      expect(told()).toBe(1);
+      second.unmount();
+
+      // A file plays where the call does, with nothing to say.
+      useVoiceStore.setState({ outputDeviceId: 'headset-1' });
+      show(session({ current: { id: 'item-9', provider: 'file', ref: 'https://media.example/night.mp4', startMs: 0, url: 'https://media.example/night.mp4', title: 'Night' } }));
+      const file = made.at(-1)!;
+      expect(file.setOutputDevice).toHaveBeenLastCalledWith('headset-1');
+      expect(told()).toBe(1);
+    } finally {
+      Reflect.deleteProperty(navigator, 'mediaDevices');
+    }
   });
 
   it('is gone with the call', () => {

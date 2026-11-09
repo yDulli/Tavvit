@@ -61,7 +61,7 @@ The client keeps the offset between its clock and the server's from `serverNow` 
 
 ## The players
 
-`utils/watchPlayers/` gives the three kinds one interface (`WatchPlayer`: play, pause, seek, position, length, volume, subtitles where the player has them, destroy) and reports the end, a start the browser refused, and playing.
+`utils/watchPlayers/` gives the three kinds one interface (`WatchPlayer`: play, pause, seek, position, length, volume, `resume` after a refused start, subtitles where the player has them, the output device where the player can choose one, destroy) and reports the end, a start the browser refused, and playing.
 
 - **YouTube** in an iframe from `www.youtube-nocookie.com` with `enablejsapi=1` and its own controls off, steered over postMessage only. Commands are posted to that origin alone, and only messages from that origin and that iframe's window are heard.
 - **Vimeo** in an iframe from `player.vimeo.com` with `dnt=1`, the same way.
@@ -69,9 +69,13 @@ The client keeps the offset between its clock and the server's from `serverNow` 
 
 No script of either provider runs on our page, and the CSP stays as it is: both hosts are in `EMBED_FRAME_ORIGINS`, and `media-src` already allows https. The providers' own controls are off and a layer over the player keeps clicks from it, so nobody steers only their own copy. The iframes may autoplay (`allow="autoplay"`) and send a referrer of the origin only.
 
-**Consent.** A video from another server loads on a person's device only after their yes, through the same gate as any embed (`useBlockedHost`, legal.md "Content from other servers"): until then the frame shows the title and "Load" / "Always allow", and the moment they agree the player starts where the room is. A start the browser blocks without a click shows "Click to watch along".
+**Consent.** A video from another server loads on a person's device only after their yes, through the same gate as any embed (`useBlockedHost`, legal.md "Content from other servers"): until then the frame shows the title and "Load" / "Always allow", and the moment they agree the player starts where the room is.
 
-**Sound.** One's own volume for the video (kept on the device), times the call's output volume, quieter while someone else speaks when the setting that softens a stream for speech is on (`streamAttenuationEnabled`, by its strength), silent while deafened, by oneself or by the space.
+**A start the browser refuses** (1.41.3). Someone else pressing play is no click of this person's, and a browser may refuse to start sound without one (Safari always, others until the page was clicked). It either does not start, or, with YouTube, plays on muted. Both count as refused: a player that does not play with its sound `PLAY_START_GRACE_MS` (2.5 s) after it was asked to calls `onBlocked`, and the frame shows "Click to watch along". The count runs once per attempt (the room asks every second, and an ask that started it anew kept it from ever ending, so before 1.41.3 nobody was asked to click). The click calls `resume`: the sound as the volume asks, and play, from the click, which is what lets the page start sound. YouTube says in its info messages whether it is muted; Vimeo says so when asked (`getMuted`, after each start). A player muted against the person's volume is asked for its sound back once, unasked; once refused it is not asked again until the click, since a browser that refuses sound stops a video when its sound is taken back without one.
+
+**Sound.** One's own volume for the video (kept on the device), times the call's output volume, quieter while someone else speaks when the setting that softens a stream for speech is on (`streamAttenuationEnabled`, by its strength), silent while deafened, by oneself or by the space. A player is always told all of it, the volume and muted or not, once ready and at every change: YouTube keeps a mute on the device (also one of ours, from a call deafened or a volume of 0 while a video ended) and would start every later video muted, which before 1.41.3 left some people hearing nothing.
+
+**Output device.** A file's `<video>` plays on the call's output device (`setOutputDevice`, `HTMLMediaElement.setSinkId`, where the browser has it). A provider's player plays in a frame of its own, whose sound always goes to the system's default output; a person whose call plays on another device (not the default under its own name, which has the same `groupId`) is told so once per session (`voice:watch.defaultOutput`).
 
 **Subtitles** (1.35.0). Off until the viewer turns them on with the subtitles button under the picture, a choice of their own kept on the device (`tavvit.watch.captions`) like the volume. Left to itself YouTube turns them on where the video's language is not the browser's, and with the providers' controls off nobody could turn them off again. `WatchPlayer.setCaptions` carries the choice: YouTube's player loads or unloads its captions module (`loadModule` / `unloadModule('captions')`, and `cc`, its older name) once ready and again each time the video starts to play, when YouTube loads the module anew; Vimeo's disables its text track once ready (also a track its owner made the default) and, turned on, enables the track in the browser's language, else English, else the first (`getTextTracks`, `chooseTrack`). A file has none, so the button is not there.
 
@@ -110,4 +114,6 @@ The draft says that the link, the title and the queue are held in memory only wh
 - A provider's player may still show ads or refuse to play in some countries; the room cannot see that.
 - A video that ends early on one device (a shorter copy, an ad) asks for the next only once, through the `itemId` rule.
 - A live stream has no position the room can share: its players are moved to the room's position like any video, which may jump.
+- The click that lets a refused start play is on the page, and the player is in a provider's frame. Chrome, Edge and the desktop app count the page's click for the frame (`allow="autoplay"`); Safari may still want a tap on the video itself, which the layer over the player keeps from it.
+- YouTube and Vimeo play on the system's default output, whatever device the call uses: no page can send a frame's sound elsewhere.
 - Real syncing across real devices and networks has to be tried by hand.

@@ -149,6 +149,18 @@ describe('VoiceChannel occupancy timer', () => {
     );
   });
 
+  it('gives the OBS overlay\'s mark\'s place to the gear while the pointer is on the row', () => {
+    const { unmount } = render(
+      <VoiceChannel channelId="voice-1" channelName="Voice" onClick={() => {}} streamOverlay canManage onSettingsClick={() => {}} />,
+    );
+    expect(screen.getByTestId('voice-channel-overlay-mark')).toHaveClass('group-hover:invisible', 'group-focus-within:invisible');
+    unmount();
+
+    // Without the gear there is nothing to make way for: the mark stays.
+    render(<VoiceChannel channelId="voice-1" channelName="Voice" onClick={() => {}} streamOverlay />);
+    expect(screen.getByTestId('voice-channel-overlay-mark')).not.toHaveClass('group-hover:invisible');
+  });
+
   it('opens channel settings without also activating the channel row', () => {
     const onSettingsClick = vi.fn();
     const onClick = vi.fn();

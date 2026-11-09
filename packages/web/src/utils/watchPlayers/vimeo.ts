@@ -12,7 +12,7 @@ interface PlayerMessage {
   event?: string;
   method?: string;
   value?: unknown;
-  data?: { seconds?: unknown; duration?: unknown };
+  data?: { seconds?: unknown; duration?: unknown; muted?: unknown };
 }
 
 /** A subtitle track as Vimeo names it. */
@@ -66,6 +66,15 @@ export const createVimeoPlayer: WatchPlayerFactory = (source, startMs, events) =
   let playing = false;
   let wantPlaying = false;
   let volume = 100;
+  /** Whether the player says it is muted (asked for once it plays); null until it has said. */
+  let muted: boolean | null = null;
+  /** Its sound was asked back once, unbidden, since it was made or the person last clicked. */
+  let unmuteAsked = false;
+  /**
+   * The browser would not play it with sound (`onBlocked`), until the person clicks: asking for
+   * the sound again meanwhile would only stop a video a browser lets go on muted.
+   */
+  let refused = false;
   let captions = false;
   /** The video's subtitle tracks, once Vimeo has said (`getTextTracks`). */
   let tracks: VimeoTextTrack[] | null = null;
@@ -96,15 +105,64 @@ export const createVimeoPlayer: WatchPlayerFactory = (source, startMs, events) =
     if (track) post('enableTextTrack', { language: track.language, kind: track.kind });
   };
 
+  /**
+   * The person's sound, all of it: the volume, and muted or not, so a mute from before (a call
+   * deafened, a volume of 0) is not carried into the next video.
+   */
+  const applySound = (): void => {
+    post('setVolume', volume / 100);
+    if (volume === 0) post('setMuted', true);
+    else if (!refused) post('setMuted', false);
+  };
+
+  /** Muted while the person's volume asks for sound. */
+  const silenced = (): boolean => volume > 0 && muted === true;
+
   const clearBlockTimer = (): void => {
     if (blockTimer) clearTimeout(blockTimer);
     blockTimer = null;
   };
-  const watchStart = (): void => {
-    clearBlockTimer();
+  /**
+   * A while after a start was asked for, it must play with its sound, else the browser refused
+   * it. Set going once per attempt: the room asks every second, and an ask that set it going anew
+   * would keep it from ever coming.
+   */
+  const checkStart = (): void => {
+    if (blockTimer) return;
     blockTimer = setTimeout(() => {
-      if (!destroyed && wantPlaying && !playing) events.onBlocked();
+      blockTimer = null;
+      if (destroyed || !wantPlaying || (playing && !silenced())) return;
+      refused = true;
+      events.onBlocked();
     }, PLAY_START_GRACE_MS);
+  };
+
+  /** It plays: with its sound that is a start; silent against the person's volume it is not one yet. */
+  const onPlayingNow = (): void => {
+    if (silenced()) {
+      if (wantPlaying) checkStart();
+      return;
+    }
+    refused = false;
+    clearBlockTimer();
+    events.onPlaying();
+  };
+
+  const onMuted = (next: boolean): void => {
+    if (next === muted) return;
+    muted = next;
+    if (!next) {
+      if (playing) onPlayingNow();
+      return;
+    }
+    if (!silenced()) return;
+    // Asked back once, and asked again whether it took: Vimeo does not say so by itself.
+    if (!unmuteAsked && !refused) {
+      unmuteAsked = true;
+      post('setMuted', false);
+      post('getMuted');
+    }
+    if (wantPlaying) checkStart();
   };
 
   const onMessage = (event: MessageEvent): void => {
@@ -120,16 +178,20 @@ export const createVimeoPlayer: WatchPlayerFactory = (source, startMs, events) =
       if (captions) applyCaptions();
       return;
     }
+    if (data.method === 'getMuted') {
+      if (typeof data.value === 'boolean') onMuted(data.value);
+      return;
+    }
     switch (data.event) {
       case 'ready':
         if (ready) return;
         ready = true;
-        for (const name of ['timeupdate', 'play', 'pause', 'ended']) post('addEventListener', name);
-        post('setVolume', volume / 100);
+        for (const name of ['timeupdate', 'play', 'pause', 'ended', 'volumechange']) post('addEventListener', name);
+        applySound();
         applyCaptions();
         if (wantPlaying) {
           post('play');
-          watchStart();
+          checkStart();
         }
         return;
       case 'timeupdate':
@@ -139,8 +201,12 @@ export const createVimeoPlayer: WatchPlayerFactory = (source, startMs, events) =
         return;
       case 'play':
         playing = true;
-        clearBlockTimer();
-        events.onPlaying();
+        // A browser that refuses sound may let it go on muted; only Vimeo can say.
+        post('getMuted');
+        onPlayingNow();
+        return;
+      case 'volumechange':
+        if (typeof data.data?.muted === 'boolean') onMuted(data.data.muted);
         return;
       case 'pause':
         playing = false;
@@ -160,7 +226,7 @@ export const createVimeoPlayer: WatchPlayerFactory = (source, startMs, events) =
       if (wantPlaying && playing) return;
       wantPlaying = true;
       post('play');
-      if (ready) watchStart();
+      if (ready) checkStart();
     },
     pause: () => {
       if (!wantPlaying && !playing) return;
@@ -176,7 +242,19 @@ export const createVimeoPlayer: WatchPlayerFactory = (source, startMs, events) =
     durationMs: () => duration,
     setVolume: (next) => {
       volume = Math.round(Math.min(100, Math.max(0, next)));
-      post('setVolume', volume / 100);
+      applySound();
+      // A volume of 0 makes a silent player one that plays as asked, and the other way round.
+      if (playing) onPlayingNow();
+    },
+    resume: () => {
+      refused = false;
+      unmuteAsked = false;
+      wantPlaying = true;
+      clearBlockTimer();
+      applySound();
+      post('play');
+      post('getMuted');
+      if (ready) checkStart();
     },
     setCaptions: (on) => {
       if (on === captions) return;

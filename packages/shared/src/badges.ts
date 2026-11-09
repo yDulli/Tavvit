@@ -23,32 +23,40 @@ export type BadgeScope =
 
 export type BadgeSource = 'derived' | 'granted';
 
+/**
+ * What kind of thing a badge says, in the order a badge's card and the profile's grid name them:
+ * the platform's own marks, a place in a space, the community, building the software, its first days.
+ */
+export const BADGE_CATEGORIES = ['platform', 'space', 'community', 'building', 'early'] as const;
+export type BadgeCategory = (typeof BADGE_CATEGORIES)[number];
+
 export interface BadgeDefinition {
   id: string;
   scope: BadgeScope;
   source: BadgeSource;
+  category: BadgeCategory;
 }
 
 export const BADGES = [
   // Staff and ownership
-  { id: 'staff', scope: 'user', source: 'derived' },
-  { id: 'bot', scope: 'user', source: 'derived' },
-  { id: 'server_owner', scope: 'member', source: 'derived' },
-  { id: 'administrator', scope: 'member', source: 'derived' },
-  { id: 'moderator', scope: 'member', source: 'derived' },
-  { id: 'helper', scope: 'user', source: 'granted' },
+  { id: 'staff', scope: 'user', source: 'derived', category: 'platform' },
+  { id: 'bot', scope: 'user', source: 'derived', category: 'platform' },
+  { id: 'server_owner', scope: 'member', source: 'derived', category: 'space' },
+  { id: 'administrator', scope: 'member', source: 'derived', category: 'space' },
+  { id: 'moderator', scope: 'member', source: 'derived', category: 'space' },
+  { id: 'helper', scope: 'user', source: 'granted', category: 'community' },
   // Community and support
-  { id: 'founder', scope: 'user', source: 'granted' },
-  { id: 'early_supporter', scope: 'user', source: 'granted' },
-  { id: 'bug_hunter', scope: 'user', source: 'granted' },
-  { id: 'developer', scope: 'user', source: 'granted' },
-  { id: 'creator', scope: 'user', source: 'granted' },
-  { id: 'event_participant', scope: 'user', source: 'granted' },
-  { id: 'community_contributor', scope: 'user', source: 'granted' },
-  { id: 'beta_tester', scope: 'user', source: 'granted' },
+  { id: 'founder', scope: 'user', source: 'granted', category: 'early' },
+  { id: 'early_supporter', scope: 'user', source: 'granted', category: 'early' },
+  { id: 'bug_hunter', scope: 'user', source: 'granted', category: 'building' },
+  { id: 'developer', scope: 'user', source: 'granted', category: 'building' },
+  { id: 'creator', scope: 'user', source: 'granted', category: 'community' },
+  { id: 'event_participant', scope: 'user', source: 'granted', category: 'community' },
+  { id: 'community_contributor', scope: 'user', source: 'granted', category: 'community' },
+  { id: 'beta_tester', scope: 'user', source: 'granted', category: 'building' },
   // Spaces
-  { id: 'verified', scope: 'space', source: 'derived' },
-  { id: 'partner', scope: 'space', source: 'granted' },
+  { id: 'verified', scope: 'space', source: 'derived', category: 'platform' },
+  { id: 'partner', scope: 'space', source: 'granted', category: 'platform' },
 ] as const satisfies readonly BadgeDefinition[];
 
 export type BadgeId = (typeof BADGES)[number]['id'];

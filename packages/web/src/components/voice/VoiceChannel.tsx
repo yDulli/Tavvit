@@ -179,8 +179,16 @@ export function VoiceChannel({ channelId, channelName, channelIcon, streamOverla
           />
         )}
         <span className="min-w-0 flex-1 truncate">{channelName}</span>
+        {/* The gear takes the place of this mark while the pointer is on the row, as it does with a
+            text channel's marks: it floats where the mark is, and would lie over it. */}
         {streamOverlay && (
-          <span role="img" aria-label={t('voice:overlay.streamed')} data-tooltip={t('voice:overlay.streamed')} className="flex flex-shrink-0 text-txt-tertiary">
+          <span
+            role="img"
+            aria-label={t('voice:overlay.streamed')}
+            data-tooltip={t('voice:overlay.streamed')}
+            data-testid="voice-channel-overlay-mark"
+            className={`flex flex-shrink-0 text-txt-tertiary ${canManage ? 'group-hover:invisible group-focus-within:invisible' : ''}`}
+          >
             <Icon name="monitor" size={13} />
           </span>
         )}

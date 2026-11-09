@@ -32,8 +32,8 @@ export function shownSpaceTag(person: { spaceTag?: unknown } | null | undefined)
 export function SpaceTagMark({ tag, className = '' }: { tag: SpaceTag; className?: string }) {
   return (
     <span className={`space-tag ${className}`} data-color={tag.color} data-static="true">
-      <RoleGlyph id={tag.glyph} size={11} />
-      <span>{tag.text}</span>
+      <span className="space-tag-seal" aria-hidden="true"><RoleGlyph id={tag.glyph} size={10} /></span>
+      <span className="space-tag-text">{tag.text}</span>
     </span>
   );
 }
@@ -67,8 +67,8 @@ export function SpaceTagChip({ tag, origin, className = '' }: { tag: WornSpaceTa
         className={`space-tag flex-shrink-0 ${className}`}
         data-color={tag.color}
       >
-        <RoleGlyph id={tag.glyph} size={11} />
-        <span>{tag.text}</span>
+        <span className="space-tag-seal" aria-hidden="true"><RoleGlyph id={tag.glyph} size={10} /></span>
+        <span className="space-tag-text">{tag.text}</span>
       </span>
       {open && <SpaceTagCard tag={tag} origin={origin} anchorRef={anchorRef} onClose={close} />}
     </>

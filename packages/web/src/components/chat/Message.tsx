@@ -6,6 +6,7 @@ import { savedKey, useSavedStore } from '../../stores/savedStore';
 import { useTranslationStore } from '../../stores/translationStore';
 import { MessageTranslation } from './MessageTranslation';
 import { reminderMoment, type ReminderPreset } from '../../utils/reminderTimes';
+import { isDatedMessage } from '../../utils/messageTime';
 import { isStickerMessage } from '../../utils/stickerMessages';
 import { StickerMessage } from './StickerMessage';
 import { useAuthorMenu } from './useAuthorMenu';
@@ -204,6 +205,9 @@ const NO_COLORS = { a: 'transparent', b: 'transparent' };
 export const Message = React.memo(function Message({ message, isCompact, isFirstInGroup, previousMessageId }: MessageProps) {
   const { t } = useTranslation(['chat', 'common', 'admin']);
   const fmt = useFormatters();
+  // From a few days back the stamp says the day too: the divider with the date may be far up (utils/messageTime.ts).
+  const dated = isDatedMessage(message.createdAt);
+  const stamp = dated ? fmt.formatShortDateTime(message.createdAt) : fmt.formatTime(message.createdAt);
   const [isHovered, setIsHovered] = useState(false);
   // The hover bar hangs over the row above; a row at the very top of the list
   // has nothing above it to hang over, and the bar would be cut in half.
@@ -655,6 +659,7 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
       role="article"
       aria-label={t('chat:message.rowLabel', { author: displayName, time: formatMessageTimestamp(t, fmt, message.createdAt) })}
       data-own={isOwnMessage ? 'true' : 'false'}
+      data-dated={dated ? 'true' : undefined}
       data-first={isFirstInGroup || message.replyTo ? 'true' : 'false'}
       data-mentioned={isMentioned || isKeywordHit ? 'true' : 'false'}
       data-selecting={selecting ? 'true' : undefined}
@@ -792,13 +797,14 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
                 {message.user.accountKind === 'webhook' ? t('chat:message.webhookTag') : message.user.accountKind === 'follow' ? t('chat:message.followTag') : t('chat:message.botTag')}
               </span>
             )}
-            {/* The day is in the divider above; the line carries the time, the whole date is its tooltip. */}
+            {/* The day is in the divider above; the line carries the time, and from a few days back
+                its date too, since that divider may be far up. The whole date is its tooltip. */}
             <time
               className="msg-time tabular flex-shrink-0 whitespace-nowrap font-mono text-label text-txt-tertiary leading-tight hover:cursor-default"
               dateTime={new Date(message.createdAt).toISOString()}
               title={formatMessageTimestamp(t, fmt, message.createdAt)}
             >
-              {fmt.formatTime(message.createdAt)}
+              {stamp}
             </time>
           </div>
         )}
@@ -990,7 +996,7 @@ export const Message = React.memo(function Message({ message, isCompact, isFirst
       {showInteractions && !selecting && (isHovered || reactionPicker === 'button' || confirmingDelete) && !isEditing && (
         <div className={`msg-toolbar absolute right-3 z-10 flex h-8 w-max items-center gap-px rounded-md p-0.5 glass ${toolbarInside ? 'top-1' : '-top-4'}`}>
           <time className="tabular px-1.5 font-mono text-label text-txt-tertiary" dateTime={new Date(message.createdAt).toISOString()}>
-            {formatHoverTime(message.createdAt)}
+            {stamp}
           </time>
           {canAddReactions && (
             <div className="flex h-full items-center gap-px border-r border-border-soft pr-0.5 mr-0.5">

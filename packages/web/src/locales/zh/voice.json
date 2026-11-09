@@ -309,6 +309,7 @@
     "controlStarter": "仅我控制",
     "controlledByStarter": "目前只有发起者可以控制。",
     "blocked": "点击一起观看",
+    "defaultOutput": "YouTube 和 Vimeo 会通过系统的默认输出播放，而不是你在设置中为通话选择的设备。",
     "react": "用 {{reaction}} 回应",
     "reactions": "回应",
     "sidebar": "正在观看：{{title}}",

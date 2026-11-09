@@ -261,13 +261,13 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
               {displayName}
             </DecoratedName>
             {spaceTag && <SpaceTagChip tag={spaceTag} origin={origin} className="ml-2" />}
-            {/* The badges sit beside the handle, in its line (badges.md). */}
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-ui text-txt-tertiary">
+            {/* The badges sit at the end of the handle's line, their strip wrapping as one piece (badges.md). */}
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-ui text-txt-tertiary">
               <Username username={user.username} showAt className="text-ui text-txt-tertiary" />
+              {pronouns && <span>· {pronouns}</span>}
               {badges.length > 0 && (
                 <BadgeList badges={badges} size="sm" notes={ownerTitle ? { server_owner: ownerTitle } : undefined} />
               )}
-              {pronouns && <span>· {pronouns}</span>}
             </div>
             {user.customStatus && (
               <div className="text-ui text-txt-secondary italic mt-1">

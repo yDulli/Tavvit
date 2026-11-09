@@ -241,6 +241,13 @@
     "partner": {
       "name": "Partner",
       "description": "A community this instance works with"
+    },
+    "categories": {
+      "platform": "Platform",
+      "space": "Space roles",
+      "community": "Community",
+      "building": "Building Tavvit",
+      "early": "Early days"
     }
   },
   "spaceTag": {

@@ -241,6 +241,13 @@
     "partner": {
       "name": "Parceiro",
       "description": "Uma comunidade com a qual esta instância trabalha"
+    },
+    "categories": {
+      "platform": "Plataforma",
+      "space": "Funções no espaço",
+      "community": "Comunidade",
+      "building": "Construindo o Tavvit",
+      "early": "Primeiros dias"
     }
   },
   "spaceTag": {

@@ -241,6 +241,13 @@
     "partner": {
       "name": "Partnerschaft",
       "description": "Eine Community, mit der diese Instanz zusammenarbeitet"
+    },
+    "categories": {
+      "platform": "Plattform",
+      "space": "Rollen im Space",
+      "community": "Community",
+      "building": "Tavvit mitbauen",
+      "early": "Die ersten Tage"
     }
   },
   "spaceTag": {

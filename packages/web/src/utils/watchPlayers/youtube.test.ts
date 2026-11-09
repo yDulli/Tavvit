@@ -95,16 +95,90 @@ describe('the YouTube player', () => {
     fromPlayer({ event: 'onStateChange', info: 2 });
     player.pause();
     player.pause();
-    expect(commands()).toEqual(['setVolume']);
+    expect(commands()).toEqual(['setVolume', 'unMute']);
 
     player.play();
     fromPlayer({ event: 'onStateChange', info: 1 });
     player.play();
     player.play();
-    expect(commands()).toEqual(['setVolume', 'playVideo']);
+    expect(commands()).toEqual(['setVolume', 'unMute', 'playVideo']);
 
     player.pause();
-    expect(commands()).toEqual(['setVolume', 'playVideo', 'pauseVideo']);
+    expect(commands()).toEqual(['setVolume', 'unMute', 'playVideo', 'pauseVideo']);
+    player.destroy();
+  });
+
+  it('takes its sound as the person\'s volume says once ready, also out of a mute YouTube kept', () => {
+    const { player, posted, fromPlayer } = setUp();
+    const sound = () => posted
+      .filter((entry) => entry.message.func === 'setVolume' || entry.message.func === 'mute' || entry.message.func === 'unMute')
+      .map((entry) => `${String(entry.message.func)}${entry.message.func === 'setVolume' ? `:${String((entry.message.args as unknown[])[0])}` : ''}`);
+
+    // Asked before the player listens: it waits for it.
+    player.setVolume(80);
+    expect(sound()).toEqual([]);
+    fromPlayer({ event: 'onReady' });
+    expect(sound()).toEqual(['setVolume:80', 'unMute']);
+
+    // Deafened: muted, and its sound back after.
+    player.setVolume(0);
+    player.setVolume(80);
+    expect(sound().slice(2)).toEqual(['setVolume:0', 'mute', 'setVolume:80', 'unMute']);
+    player.destroy();
+  });
+
+  it('says a start the browser refused, also while the room asks for it every second', () => {
+    const { player, events, fromPlayer } = setUp();
+    fromPlayer({ event: 'onReady' });
+    // What the room does while it plays: ask again each second. The count is not set back by it.
+    player.play();
+    for (let second = 0; second < 3; second += 1) {
+      vi.advanceTimersByTime(1_000);
+      player.play();
+    }
+    expect(events.onBlocked).toHaveBeenCalledTimes(1);
+    player.destroy();
+  });
+
+  it('takes a video playing silent against the person\'s volume as refused, asks for its sound once, and gets it from the click', () => {
+    const { player, posted, events, fromPlayer } = setUp();
+    const unmutes = () => posted.filter((entry) => entry.message.func === 'unMute').length;
+    player.setVolume(80);
+    fromPlayer({ event: 'onReady' });
+    player.play();
+    expect(unmutes()).toBe(1);
+
+    // A browser that refuses sound may let YouTube play on muted: that is no start.
+    fromPlayer({ event: 'infoDelivery', info: { playerState: 1, muted: true } });
+    expect(unmutes()).toBe(2);
+    expect(events.onPlaying).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(3_000);
+    expect(events.onBlocked).toHaveBeenCalledTimes(1);
+
+    // Refused: a new volume (someone speaks) does not ask again, which would only stop the video.
+    player.setVolume(40);
+    expect(unmutes()).toBe(2);
+
+    // The person's click: its sound, and it plays with it.
+    player.resume();
+    expect(unmutes()).toBe(3);
+    expect(posted.at(-1)?.message.func).toBe('playVideo');
+    fromPlayer({ event: 'infoDelivery', info: { muted: false } });
+    expect(events.onPlaying).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(3_000);
+    expect(events.onBlocked).toHaveBeenCalledTimes(1);
+    player.destroy();
+  });
+
+  it('is no refusal when muted as the person asked, with a volume of 0', () => {
+    const { player, events, fromPlayer } = setUp();
+    player.setVolume(0);
+    fromPlayer({ event: 'onReady' });
+    player.play();
+    fromPlayer({ event: 'infoDelivery', info: { playerState: 1, muted: true } });
+    expect(events.onPlaying).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(3_000);
+    expect(events.onBlocked).not.toHaveBeenCalled();
     player.destroy();
   });
 

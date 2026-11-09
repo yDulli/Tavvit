@@ -241,6 +241,13 @@
     "partner": {
       "name": "合作伙伴",
       "description": "与此实例合作的社区"
+    },
+    "categories": {
+      "platform": "平台",
+      "space": "空间角色",
+      "community": "社区",
+      "building": "共建 Tavvit",
+      "early": "早期"
     }
   },
   "spaceTag": {

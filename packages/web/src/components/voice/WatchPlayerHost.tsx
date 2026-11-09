@@ -126,6 +126,24 @@ function useSlotBox(slot: HTMLElement | null): Box | null {
   return box;
 }
 
+/**
+ * Whether the call's sound goes to another device than the system's default output, which is where
+ * a provider's frame plays whatever the call uses. The default under a device's own name is the
+ * same device: the browser gives both the same group.
+ */
+async function callPlaysElsewhere(deviceId: string): Promise<boolean> {
+  if (deviceId === '' || deviceId === 'default') return false;
+  try {
+    const outputs = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === 'audiooutput');
+    const chosen = outputs.find((device) => device.deviceId === deviceId);
+    const standard = outputs.find((device) => device.deviceId === 'default');
+    return !(chosen && standard && chosen.groupId !== '' && chosen.groupId === standard.groupId);
+  } catch {
+    // The devices cannot be read: a device chosen by its own name is most likely another one.
+    return true;
+  }
+}
+
 /** The place of the call's floating window (`PictureInPicture`), which the video takes while it floats. */
 function floatingBox(): Box {
   const { x, y } = restingPipPosition();
@@ -260,6 +278,29 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
     player?.setVolume(effectiveVolume);
   }, [player, effectiveVolume]);
 
+  // On the call's output device. A file plays there; a provider's frame cannot, its sound goes to
+  // the system's default output, so whoever hears the call elsewhere is told once, else they would
+  // wonder why the video is silent.
+  const outputDeviceId = useVoiceStore((state) => state.outputDeviceId);
+  const toldOfOutput = useRef(false);
+  useEffect(() => {
+    if (!player) return undefined;
+    if (player.setOutputDevice) {
+      player.setOutputDevice(outputDeviceId);
+      return undefined;
+    }
+    if (toldOfOutput.current) return undefined;
+    let live = true;
+    void callPlaysElsewhere(outputDeviceId).then((elsewhere) => {
+      if (!live || !elsewhere || toldOfOutput.current) return;
+      toldOfOutput.current = true;
+      addToast(t('voice:watch.defaultOutput'), 'info', 9000);
+    });
+    return () => {
+      live = false;
+    };
+  }, [player, outputDeviceId, addToast, t]);
+
   // Subtitles as this viewer chose, on every player of the session (off unless asked for).
   useEffect(() => {
     player?.setCaptions?.(captions);
@@ -356,8 +397,9 @@ function WatchFrame({ channelId, entry }: { channelId: string; entry: WatchEntry
             </div>
           )}
 
+          {/* The browser would not play it with sound: this click is what lets the page start it. */}
           {blocked && !blockedHost && (
-            <button type="button" onClick={() => player?.play()} className="absolute inset-0 flex items-center justify-center bg-black/55">
+            <button type="button" onClick={() => player?.resume()} className="absolute inset-0 flex items-center justify-center bg-black/55">
               <span className="btn-hero btn-lg pointer-events-none">
                 <Icon name="play" size={18} />
                 {t('voice:watch.blocked')}

@@ -4,6 +4,17 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.41.3": {
+      "title": "Neue Badges, schönere Tags, Ton für alle",
+      "items": {
+        "badges": "Badges haben neue Bilder. Neben dem Namen stehen sie zusammen in einer Leiste, und ein Klick auf eines öffnet eine kleine Karte mit Name, Bedeutung und Art des Badges.",
+        "tags": "Space-Tags sind neu gemacht: die Farbe des Space als kleines Siegel mit seinem Symbol, die Buchstaben daneben auf einer schlichten Plakette, die auf jeder Karte lesbar bleibt.",
+        "dates": "Nachrichten, die drei Tage oder älter sind, zeigen ihr Datum neben der Uhrzeit. So sieht man bei einer alten Unterhaltung, wann sie war, ohne bis zu ihrem Tag hochzuscrollen.",
+        "watch": "Gemeinsam schauen: Wer nichts hörte, wenn jemand anderes auf Abspielen drückte, bekommt jetzt den Ton oder einen Knopf, der ihn mit einem Klick startet. Ein Video, das stumm läuft, wird genauso erkannt.",
+        "output": "YouTube und Vimeo spielen über die Standardausgabe deines Systems. Laufen deine Anrufe über ein anderes Gerät, wird dir das einmal gesagt, damit ein stummes Video kein Rätsel bleibt.",
+        "overlay": "Das Zeichen für das OBS-Overlay eines Sprachkanals liegt nicht mehr unter seinem Einstellungsknopf."
+      }
+    },
     "1.41.2": {
       "title": "Kräftigere Farben, schönere Bots",
       "items": {

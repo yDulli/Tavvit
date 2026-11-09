@@ -311,6 +311,7 @@
     "controlStarter": "Nur ich steuere",
     "controlledByStarter": "Gerade steuert nur die Person, die das gestartet hat.",
     "blocked": "Klicke, um mitzuschauen",
+    "defaultOutput": "YouTube und Vimeo spielen über die Standardausgabe deines Systems, nicht über das Gerät, das du in den Einstellungen für Anrufe gewählt hast.",
     "react": "Mit {{reaction}} reagieren",
     "reactions": "Reaktionen",
     "sidebar": "Schaut: {{title}}",

@@ -79,9 +79,16 @@ for a private space before anyone sets one.
 
 ## Design
 
-`.space-tag` (globals.css): 16px tall, Geist Mono 10px semibold, the colour's text on a 10% ground
-with a 32% hairline, a small radius, no glow; `data-color` picks the token, `data-static` for the
-mark that is not a control (the card, the previews).
+`.space-tag` (globals.css, 1.41.3): a small enamel plate, 16px tall with a small radius. At its
+head a seal (`.space-tag-seal`, 16px square) in the space's colour, solid, with the symbol in dark
+ink and a lit top edge; beside it the letters (`.space-tag-text`) in the interface font, 10px
+semibold with a little tracking, in `--text-primary` on a plate of the floating surface's tone at
+94%, with a hairline and a lit top edge. The colour is in the seal alone, so a list of names stays
+quiet, and the plate is nearly opaque, so the letters read over a nameplate's scene or a themed
+card. Under the pointer, or with its card open, the plate steps lighter and its edge takes the
+space's colour. No glow. `data-color` picks the token, `data-static` marks the tag that is not a
+control (the card, the previews). In the message list's lines look the tag (and a bot's mark) keeps
+to the first line of the text, where the name is.
 
 ## Known limits
 

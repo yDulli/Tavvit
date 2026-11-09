@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BADGES } from '@backspace/shared/src/badges';
+import { BADGE_CATEGORIES, BADGES } from '@backspace/shared/src/badges';
 import { setLanguage } from '../i18n';
 import { BadgeList } from './BadgeList';
 
@@ -21,7 +21,13 @@ describe('a badge', () => {
     await userEvent.click(mark);
     const card = screen.getByRole('dialog', { name: 'Staff' });
     expect(card.textContent).toContain('Runs this instance');
+    // The card names its category too, from the registry.
+    expect(card.textContent).toContain('Platform');
     expect(mark.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('belongs to a category of the list, every one of them', () => {
+    for (const badge of BADGES) expect(BADGE_CATEGORIES).toContain(badge.category);
   });
 
   it('closes on a second click, on Escape, and on a press elsewhere', async () => {
@@ -94,11 +100,23 @@ describe('a badge\'s picture', () => {
     }
   });
 
-  it('sits on its card without a light of its own', async () => {
+  it('stands on its card\'s stage, in a light made of its own picture', async () => {
     render(<BadgeList badges={['founder']} />);
     await userEvent.click(screen.getByRole('button', { name: 'Founder' }));
-    const tile = screen.getByRole('dialog', { name: 'Founder' }).querySelector('img')?.parentElement;
-    expect(tile?.getAttribute('style')).toBeNull();
-    expect(tile?.className).toContain('bg-surface-input');
+    const stage = screen.getByTestId('badge-stage');
+    expect(screen.getByRole('dialog', { name: 'Founder' }).contains(stage)).toBe(true);
+    const [light, mark] = [...stage.querySelectorAll('img')];
+    // The light is the same picture blurred, so it always has the mark's colour; both are silent.
+    expect(light.getAttribute('src')).toBe(mark.getAttribute('src'));
+    expect(light.className).toContain('badge-stage-light');
+    expect(mark.getAttribute('width')).toBe('30');
+    expect(stage.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('sits in one strip with the others', () => {
+    render(<BadgeList badges={['staff', 'helper']} />);
+    const strip = screen.getByRole('list');
+    expect(strip.className).toContain('badge-strip');
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });
 });

@@ -17,10 +17,10 @@ import staff from './images/staff.webp';
 import verified from './images/verified.webp';
 
 /**
- * The badge pictures (docs/systems/badges.md): matte metal marks cut from the badge sheet in
- * assets/brand by `scripts/badges/cut.mjs`, which also says which mark of the sheet each badge
- * is. They lie flat on the surface: no glow, no light behind them. Each is 72px, so it stays
- * sharp from 14px next to a name to 24px on a badge's card.
+ * The badge pictures (docs/systems/badges.md): the flat marks of the badge sheet
+ * (`assets/badges v3.png`), cut out as drawn by `scripts/badges/cut.mjs`, which also says which
+ * mark of the sheet each badge is. Each is 96px on a clear ground, so it stays sharp from 16px
+ * next to a name to 48px on a badge's card.
  */
 const PICTURES: Record<BadgeId, string> = {
   staff,
@@ -42,7 +42,7 @@ const PICTURES: Record<BadgeId, string> = {
 };
 
 /** A badge's picture. It says nothing itself: what holds it carries the badge's name. */
-export function BadgeGlyph({ id, size }: { id: BadgeId; size: number }) {
+export function BadgeGlyph({ id, size, className = '' }: { id: BadgeId; size: number; className?: string }) {
   return (
     <img
       src={PICTURES[id]}
@@ -52,7 +52,7 @@ export function BadgeGlyph({ id, size }: { id: BadgeId; size: number }) {
       aria-hidden="true"
       draggable={false}
       decoding="async"
-      className="flex-shrink-0 select-none"
+      className={`flex-shrink-0 select-none ${className}`.trim()}
     />
   );
 }
