@@ -547,6 +547,13 @@
       "when": 1794138612892,
       "tag": "0077_tavvit_space_looks",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "6",
+      "when": 1794246686187,
+      "tag": "0078_tavvit_profile_theme_style",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, lte, sql } from 'drizzle-orm';
+import { USERNAME_LIMITS, isUsernameShape, normalizeUsername, usernameChangeAllowedAt, usernameHeldUntil } from '@backspace/shared/src/usernames.js';
 import { withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { isVisibleSingleLine } from '@backspace/shared/src/constants.js';
 import {
@@ -25,7 +26,8 @@ import { getDb, getRawDb, schema } from '../db/index.js';
 import { interactionFor, openInteraction } from '../utils/botInteractions.js';
 import { deleteAttachmentByFilename, deleteUploadFile } from '../utils/fileCleanup.js';
 import { withoutMentions } from '../utils/neutralMentions.js';
-import { pictureFileReleasable, profilePictureOf, uploadNameOf } from '../utils/profileImageRefs.js';
+import { pictureFileReleasable, profilePictureOf, uploadNameOf, type ProfilePicture } from '../utils/profileImageRefs.js';
+import { announceProfileChange } from '../utils/profileBroadcast.js';
 import { resizeProfileImage } from '../utils/thumbnail.js';
 import { postChannelMessage } from './messages.js';
 import { recordAudit } from '../utils/auditLog.js';
@@ -33,6 +35,8 @@ import { authenticate, requireAdmin } from '../utils/auth.js';
 import { botsEnabled, createBotAccount, newBotToken } from '../utils/botAccess.js';
 import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
 import { sendError } from '../utils/httpErrors.js';
+import { usernameReserved } from '../utils/signupRules.js';
+import { usernameHeld, usernameShapeRefusal } from '../utils/usernames.js';
 import { mayPostSticker } from '../utils/remoteMedia.js';
 import { emojiUseRefusal } from '../utils/emojiUse.js';
 import { computePermissions, getChannelSpaceId, hasPermission, isBanned, isMember, PermissionBits } from '../utils/permissions.js';
@@ -62,12 +66,26 @@ function nameOf(botId: string): string {
   return withoutUnsafeCharacters(row?.displayName || row?.username || '');
 }
 
-/** What it looks like wherever it is shown: its picture, or its colour without one. */
-const faceOf = (botId: string): { avatar: string | null; avatarColor: string | null } => {
-  const row = getDb().select({ avatar: schema.users.avatar, avatarColor: schema.users.avatarColor })
+/**
+ * What it looks like wherever it is shown: its picture, or its colour without one, the banner of
+ * its profile, and the username under its name (`bot-<id>` until its owner gives it one).
+ */
+const faceOf = (botId: string): { avatar: string | null; avatarColor: string | null; banner: string | null; username: string } => {
+  const row = getDb().select({ avatar: schema.users.avatar, avatarColor: schema.users.avatarColor, banner: schema.users.banner, username: schema.users.username })
     .from(schema.users).where(eq(schema.users.id, botId)).get();
-  return { avatar: row?.avatar ?? null, avatarColor: row?.avatarColor ?? null };
+  return { avatar: row?.avatar ?? null, avatarColor: row?.avatarColor ?? null, banner: row?.banner ?? null, username: row?.username ?? '' };
 };
+
+/**
+ * A picture the owner asks a bot to show (its avatar or banner): their own upload, the one shown
+ * now, or none for `null`. Never one at an address elsewhere: every member who reads the bot would
+ * ask that server for it. `undefined` when the body asks nothing, `'refused'` when it is no picture.
+ */
+function botPictureOf(asked: unknown, ownerId: string, current: string | null): ProfilePicture | undefined | 'refused' {
+  if (asked === undefined) return undefined;
+  if (typeof asked === 'string' && /^https?:/i.test(asked.trim())) return 'refused';
+  return profilePictureOf(asked, ownerId, current) ?? 'refused';
+}
 
 function toInfo(row: BotRow): BotInfo {
   return { id: row.id, name: nameOf(row.id), ...faceOf(row.id), description: row.description, ownerId: row.ownerId, createdAt: row.createdAt, lastUsedAt: row.lastUsedAt };
@@ -170,7 +188,7 @@ export async function botRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(200).send(detail);
   });
 
-  app.patch<{ Params: { id: string }; Body: { name?: unknown; description?: unknown; avatar?: unknown } }>('/api/bots/:id', {
+  app.patch<{ Params: { id: string }; Body: { name?: unknown; description?: unknown; avatar?: unknown; banner?: unknown; username?: unknown } }>('/api/bots/:id', {
     preHandler: authenticate,
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
   }, async (request, reply) => {
@@ -181,34 +199,85 @@ export async function botRoutes(app: FastifyInstance): Promise<void> {
     const description = cleanDescription(request.body?.description);
     if (description === undefined) return sendError(reply, 400, 'validation_failed', { field: 'description' });
     const db = getDb();
+    const face = faceOf(row.id);
+    const now = Date.now();
 
-    // Its picture is its owner's upload. Never one at an address elsewhere: every member who
-    // reads the bot would ask that server for it.
-    const oldAvatar = faceOf(row.id).avatar;
-    const asked = request.body?.avatar;
-    const elsewhere = typeof asked === 'string' && /^https?:/i.test(asked.trim());
-    const picture = asked === undefined || elsewhere ? null : profilePictureOf(asked, request.userId, oldAvatar);
-    if (elsewhere || (asked !== undefined && !picture)) return sendError(reply, 400, 'avatar_url_invalid');
-    // Written anew before the bot shows it, and refused when it cannot be (utils/thumbnail.ts).
-    if (picture?.upload && !(await resizeProfileImage(path.join(config.uploadDir, picture.upload), 'avatar'))) {
+    // Its username, what people find it by and see under its name, under a person's rules: the
+    // shape, reserved words, a name taken or held, one change every CHANGE_EVERY_DAYS (the first,
+    // from `bot-<id>`, at once). Not what a person's change asks besides, a password: nobody signs
+    // in with it, and its owner is the one asking.
+    let username: string | null = null;
+    const askedUsername = request.body?.username;
+    if (askedUsername !== undefined) {
+      if (typeof askedUsername !== 'string') return sendError(reply, 400, 'validation_failed', { field: 'username' });
+      const wanted = normalizeUsername(askedUsername);
+      if (wanted !== face.username) {
+        const refusal = usernameShapeRefusal(wanted);
+        if (refusal) return sendError(reply, 400, refusal.code, refusal.details);
+        const changedAt = db.select({ at: schema.users.usernameChangedAt }).from(schema.users).where(eq(schema.users.id, row.id)).get()?.at ?? null;
+        if (usernameChangeAllowedAt(changedAt) > now) {
+          return sendError(reply, 429, 'username_change_too_soon', { days: USERNAME_LIMITS.CHANGE_EVERY_DAYS });
+        }
+        if (usernameReserved(wanted)) return sendError(reply, 400, 'username_reserved');
+        const taken = db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.username, wanted)).get();
+        if (taken || usernameHeld(wanted, now)) return sendError(reply, 409, 'username_taken');
+        username = wanted;
+      }
+    }
+
+    // Its picture and its banner are its owner's uploads, checked as a person's own are.
+    const avatar = botPictureOf(request.body?.avatar, request.userId, face.avatar);
+    if (avatar === 'refused') return sendError(reply, 400, 'avatar_url_invalid');
+    const banner = botPictureOf(request.body?.banner, request.userId, face.banner);
+    if (banner === 'refused') return sendError(reply, 400, 'banner_url_invalid');
+    // Written anew before the bot shows them, and refused when they cannot be (utils/thumbnail.ts).
+    if (avatar?.upload && !(await resizeProfileImage(path.join(config.uploadDir, avatar.upload), 'avatar'))) {
+      return sendError(reply, 400, 'profile_image_invalid');
+    }
+    if (banner?.upload && !(await resizeProfileImage(path.join(config.uploadDir, banner.upload), 'banner'))) {
       return sendError(reply, 400, 'profile_image_invalid');
     }
 
-    db.transaction((tx) => {
-      tx.update(schema.users).set({ displayName: name, ...(picture ? { avatar: picture.stored } : {}) }).where(eq(schema.users.id, row.id)).run();
-      tx.update(schema.bots).set({ description }).where(eq(schema.bots.id, row.id)).run();
-    });
+    try {
+      db.transaction((tx) => {
+        // A name it gives up stays out of reach for a while, so nobody can pose as it. The generated
+        // `bot-<id>` is no name anyone could take, and so not held.
+        if (username && isUsernameShape(face.username)) {
+          tx.delete(schema.retiredUsernames).where(lte(schema.retiredUsernames.until, now)).run();
+          tx.insert(schema.retiredUsernames).values({ username: face.username, userId: row.id, until: usernameHeldUntil(now) })
+            .onConflictDoNothing().run();
+        }
+        tx.update(schema.users).set({
+          displayName: name,
+          ...(username ? { username, usernameChangedAt: now } : {}),
+          ...(avatar ? { avatar: avatar.stored } : {}),
+          ...(banner ? { banner: banner.stored } : {}),
+        }).where(eq(schema.users.id, row.id)).run();
+        tx.update(schema.bots).set({ description }).where(eq(schema.bots.id, row.id)).run();
+      });
+    } catch (error) {
+      // Someone took the name between the look above and this write: the unique index is the last word.
+      if (username && error instanceof Error && 'code' in error && String(error.code).startsWith('SQLITE_CONSTRAINT')) {
+        return sendError(reply, 409, 'username_taken');
+      }
+      throw error;
+    }
 
-    if (picture) {
-      // Handled as a person's own picture is (routes/users.ts): the replaced file goes once nothing
-      // shows it, and the new one's upload record goes, so it counts on nobody's storage.
-      const replaced = uploadNameOf(oldAvatar);
+    // Handled as a person's own pictures are (routes/users.ts): a replaced file goes once nothing
+    // shows it, and a new one's upload record goes, so it counts on nobody's storage.
+    for (const [picture, previous] of [[avatar, face.avatar], [banner, face.banner]] as const) {
+      if (!picture) continue;
+      const replaced = uploadNameOf(previous);
       if (replaced && replaced !== uploadNameOf(picture.stored) && pictureFileReleasable(replaced)) {
         deleteUploadFile(replaced);
         deleteAttachmentByFilename(replaced);
       }
       if (picture.upload) deleteAttachmentByFilename(picture.upload);
     }
+
+    // Everyone who sees the bot (its spaces, the people it shares a conversation with) sees it as it is now.
+    const account = db.select().from(schema.users).where(eq(schema.users.id, row.id)).get();
+    if (account) announceProfileChange(account);
 
     const updated = botOf(row.id);
     return reply.code(200).send(updated ? toInfo(updated) : toInfo(row));

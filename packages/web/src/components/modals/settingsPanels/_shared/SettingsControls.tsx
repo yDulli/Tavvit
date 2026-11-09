@@ -125,9 +125,10 @@ export function FormError({ children }: { children: React.ReactNode }): React.JS
 /**
  * Arrow keys move a radio group's choice to its neighbour, and focus with it.
  * For a choice laid out on its own (the camera backgrounds); the controls
- * below use it themselves.
+ * below use it themselves. A strip of tabs passes `[aria-selected="true"]`
+ * as the `chosen` selector, the element focus follows to.
  */
-export function useRadioArrows<T extends string>(ids: readonly T[], value: T, onChange: (id: T) => void) {
+export function useRadioArrows<T extends string>(ids: readonly T[], value: T, onChange: (id: T) => void, chosen = '[aria-checked="true"]') {
   const group = useRef<HTMLDivElement>(null);
   return {
     ref: group,
@@ -139,7 +140,7 @@ export function useRadioArrows<T extends string>(ids: readonly T[], value: T, on
       const next = ids[(ids.indexOf(value) + (forward ? 1 : ids.length - 1)) % ids.length];
       if (next === undefined) return;
       onChange(next);
-      requestAnimationFrame(() => group.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus());
+      requestAnimationFrame(() => group.current?.querySelector<HTMLElement>(chosen)?.focus());
     },
   };
 }

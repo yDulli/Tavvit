@@ -616,3 +616,15 @@ A **look** (`Look` in `utils/looks.ts`) is how the app is coloured and shaped, a
 **A space's colours** (spaces.md, "A space's look"): a space may choose a surface and an accent (`SpaceLook`, never the shape: that stays the reader's). `AppearanceController` shows them through `withSpaceLook` while the space is the current one, unless the person turned off Settings → Appearance → Spaces in their own colours (`spaceLooks`) or is in the studio. The accent a space chose replaces the person's and the instance's on its controls; a space that chose none leaves the person's.
 
 `ui/SurfaceSwatch` is the one way to draw a surface as a small picture (frame, sidebar, content, floating panel, a stroke of the accent): the theme cards, the studio, the look page and the space's tab use it.
+
+## Profile themes (1.41.2)
+
+A person's profile theme is two colours (`accentColor`, `accentColorSecondary`) and how strongly they colour the profile card (`profileThemeStyle`, Settings → Account, under the colours; `utils/profileTheme.ts`). They are the person's own colours, not the signal, so they may be anywhere on their card.
+
+| Strength | The card | Text stands on |
+|----------|----------|----------------|
+| `soft` (default, and what a theme always was) | A faint tint at its top and an edge in the first colour (`cardTint`, `cardEdge`) | The card |
+| `strong` | The whole card a gradient of the two colours, each deepened (`deepened`: scaled in linear light, hue kept) until its luminance is at most 0.022 | The card: at that light the quietest text (`--text-tertiary`) reads at 4.5:1, as on a plain card |
+| `full` | The whole card in the colours, far brighter (up to 0.1 and 0.05), the picture's ring in the first | `.profile-panel`, black at 55% (75% under Higher contrast, `Canvas` under forced colours), which brings any of them back to that light |
+
+`profileCardLook(theme, style)` gives the card's style, the ring colour and whether the text needs the panel; the popout, the full profile, the phone's own card and the editor's preview all use it, and a test holds every preset to 4.5:1 for the quietest text in `strong` and on the panel in `full`. Without a banner picture the banner is the theme's gradient in every strength.

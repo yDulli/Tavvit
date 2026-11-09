@@ -312,6 +312,16 @@ describe('owning bots', () => {
     expect(role.statusCode).toBe(404);
     const dm = await app.inject({ method: 'POST', url: '/api/dm', headers: headers(MEMBER), payload: { userId: bot.id } });
     expect(dm.statusCode).toBeGreaterThanOrEqual(400);
+
+    // A username of its own makes it nobody's friend or conversation still, whatever its rule columns say.
+    const renamed = await app.inject({ method: 'PATCH', url: `/api/bots/${bot.id}`, headers: headers(OWNER), payload: { name: 'Helper', description: null, username: 'helper_bot' } });
+    expect(renamed.json().username).toBe('helper_bot');
+    testDb.update(schema.users).set({ dmPolicy: 'anyone', friendRequestPolicy: 'anyone' }).where(eq(schema.users.id, bot.id)).run();
+    const asked = await app.inject({ method: 'POST', url: '/api/social/requests', headers: headers(MEMBER), payload: { username: 'helper_bot' } });
+    expect(asked.statusCode).toBe(400);
+    expect(asked.json().code).toBe('friend_request_not_person');
+    expect((await app.inject({ method: 'POST', url: '/api/dm', headers: headers(MEMBER), payload: { userId: bot.id } })).statusCode).toBeGreaterThanOrEqual(400);
+    expect(testDb.select().from(schema.friendRequests).all()).toEqual([]);
   });
 });
 

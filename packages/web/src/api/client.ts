@@ -551,7 +551,7 @@ export class BackspaceApiClient {
     list: () => Promise<BotsResponse>;
     create: (name: string) => Promise<BotWithToken>;
     detail: (id: string) => Promise<BotDetail>;
-    update: (id: string, body: { name: string; description: string | null; avatar?: string | null }) => Promise<BotInfo>;
+    update: (id: string, body: { name: string; description: string | null; avatar?: string | null; banner?: string | null; username?: string }) => Promise<BotInfo>;
     rotate: (id: string) => Promise<BotWithToken>;
     remove: (id: string) => Promise<{ success: boolean }>;
     publicInfo: (id: string) => Promise<BotPublicInfo>;

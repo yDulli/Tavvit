@@ -77,6 +77,10 @@ export interface BotInfo {
   /** The stored file of its picture. */
   avatar: string | null;
   avatarColor: string | null;
+  /** The stored file of the banner across the top of its profile (since 1.41.2; absent from older hosts). */
+  banner?: string | null;
+  /** What people find it by and see under its name: `bot-<id>` until its owner gives it one (since 1.41.2). */
+  username?: string;
   description: string | null;
   ownerId: string;
   createdAt: number;

@@ -1,13 +1,63 @@
 import { describe, it, expect } from 'vitest';
-import { parseHexColor } from '@backspace/shared/src/color.js';
+import { contrastRatio, parseHexColor, relativeLuminance } from '@backspace/shared/src/color.js';
 import {
   PROFILE_THEME_PRESETS,
   bannerBackground,
   cardEdge,
   cardTint,
+  deepened,
   presetOf,
+  profileCardLook,
   profileThemeOf,
+  profileThemeStyleOf,
 } from './profileTheme';
+
+/** The colours a gradient of the card's look runs through, in order. */
+function gradientColors(look: { backgroundImage?: string }): string[] {
+  return [...(look.backgroundImage ?? '').matchAll(/#[0-9a-f]{6}/gi)].map((match) => match[0]);
+}
+
+// The quietest text there is (`--text-tertiary`), and the panel `full` puts it on (`.profile-panel`, black at 0.55).
+const TERTIARY = [141, 144, 156] as const;
+const onPanel = (hex: string) => parseHexColor(hex)!.map((channel) => channel * 0.45) as unknown as readonly [number, number, number];
+
+describe('how strongly a theme colours the card', () => {
+  it('is soft unless a person chose otherwise, and nothing else counts as a choice', () => {
+    expect(profileThemeStyleOf({})).toBe('soft');
+    expect(profileThemeStyleOf({ profileThemeStyle: 'full' })).toBe('full');
+    expect(profileThemeStyleOf({ profileThemeStyle: 'loud' })).toBe('soft');
+  });
+
+  it('keeps soft as it always was: a faint tint and an edge', () => {
+    const theme = profileThemeOf({ accentColor: '#7443fc', accentColorSecondary: '#45affd' })!;
+    expect(profileCardLook(theme, 'soft')).toEqual({ card: { backgroundImage: cardTint(theme), borderColor: cardEdge(theme) }, ring: null, panel: false });
+  });
+
+  it('deepens a colour to the light asked for and no further, its hue kept', () => {
+    const deep = deepened('#f2b84b', 0.02);
+    expect(relativeLuminance(parseHexColor(deep)!)).toBeLessThanOrEqual(0.021);
+    const [r, g, b] = parseHexColor(deep)!;
+    expect(r).toBeGreaterThan(g);
+    expect(g).toBeGreaterThan(b);
+    expect(deepened('#101114', 0.02)).toBe('#101114');
+  });
+
+  it('reads every text colour on a strong card, and on the panel of a full one, with every preset', () => {
+    for (const preset of PROFILE_THEME_PRESETS) {
+      const theme = profileThemeOf({ accentColor: preset.primary, accentColorSecondary: preset.secondary })!;
+      const strong = profileCardLook(theme, 'strong');
+      expect(strong.panel).toBe(false);
+      for (const ground of gradientColors(strong.card)) {
+        expect(contrastRatio(TERTIARY, parseHexColor(ground)!), `${preset.id} strong ${ground}`).toBeGreaterThanOrEqual(4.5);
+      }
+      const full = profileCardLook(theme, 'full');
+      expect(full.panel).toBe(true);
+      for (const ground of gradientColors(full.card)) {
+        expect(contrastRatio(TERTIARY, onPanel(ground)), `${preset.id} full ${ground}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+});
 
 describe('profileThemeOf', () => {
   it('is null when no first colour was chosen, whatever the second says', () => {

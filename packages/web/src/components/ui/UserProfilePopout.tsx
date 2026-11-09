@@ -16,8 +16,8 @@ import { describeError } from '../../i18n/errors';
 import { useUIStore, type ProfileMemberContext } from '../../stores/uiStore';
 import { getAvatarGradient } from '../../utils/gradients';
 import { bannerFill } from '../../utils/placeLight';
-import { bannerBackground, cardEdge, cardTint, profileThemeOf } from '../../utils/profileTheme';
-import { isMine, parseFederatedUsername } from '../../utils/identity';
+import { bannerBackground, profileCardLook, profileThemeOf, profileThemeStyleOf } from '../../utils/profileTheme';
+import { isMine, isPersonAccount, parseFederatedUsername } from '../../utils/identity';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { loadFederatedMutuals } from '../../utils/mutuals';
 import { replaceEmojiShortcodes, useEmojiShortcodeNames } from '../../utils/emojiShortcodes';
@@ -203,13 +203,15 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
   // control edge's tone instead.
   const divider = theme ? 'my-3.5 h-px bg-border-soft' : 'divider-fade my-3.5';
 
+  // The person's profile theme, as strongly as they chose (utils/profileTheme.ts).
+  const themed = theme ? profileCardLook(theme, profileThemeStyleOf(user)) : null;
+
   // Parked off-screen for the one layout pass before the card knows how tall it
   // is; `useLayoutEffect` places it before the browser paints, so it never
   // renders visibly in the wrong spot.
   const cardStyle = {
     ...(placed ?? { top: -9999, left: -9999 }),
-    // The person's profile theme: a faint tint down the card and an edge in their first colour.
-    ...(theme ? { backgroundImage: cardTint(theme), borderColor: cardEdge(theme) } : {}),
+    ...(themed?.card ?? {}),
   };
 
   return (
@@ -222,8 +224,8 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
       {/* Banner; the compact layout has none */}
       {look.banner && <ProfileBanner className={look.banner} src={bannerSrc} fallback={bannerFallback} />}
 
-      {/* Body */}
-      <div className="px-4 pb-4 relative">
+      {/* Body; on a card its theme fills, the text stands on a dark panel in it */}
+      <div className={themed?.panel ? 'profile-panel relative mx-2 mb-2 px-3 pb-3' : 'px-4 pb-4 relative'}>
 
         <div className={look.header}>
           {/* Avatar */}
@@ -239,7 +241,7 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
             userId={user.homeUserId ?? user.id}
             user={user}
             onClick={handleAvatarClick}
-            ring={{ width: 5, color: 'rgb(var(--bg-elevated))' }}
+            ring={{ width: 5, color: themed?.ring ?? 'rgb(var(--bg-elevated))' }}
             frame={decorations.avatarFrame}
             frameMotion="on"
             className={look.avatar}
@@ -336,13 +338,16 @@ export function UserProfilePopout({ user: propUser, origin, onClose, anchor, pla
             person edits their profile, and in a space their profile there.
             One outlined button for what the card is mostly for, the quieter
             ones in a line under it so a full card still fits a small window. */}
-        <button
-          type="button"
-          onClick={isYou ? handleEditProfile : handleSendMessage}
-          className="btn-outline mt-3.5 w-full"
-        >
-          {isYou ? t('social:profile.editProfile') : t('social:profile.sendMessage')}
-        </button>
+        {/* A bot, a webhook or a follow takes no message: nothing to offer there. */}
+        {(isYou || isPersonAccount(user)) && (
+          <button
+            type="button"
+            onClick={isYou ? handleEditProfile : handleSendMessage}
+            className="btn-outline mt-3.5 w-full"
+          >
+            {isYou ? t('social:profile.editProfile') : t('social:profile.sendMessage')}
+          </button>
+        )}
         <div className="mt-1 flex flex-wrap items-center gap-x-1">
           {isYou && member && (
             <button

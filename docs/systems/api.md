@@ -185,7 +185,7 @@ type CheckInviteResponse =
 ```
 GET    /users/@me                                        → { user }
 PATCH  /users/@me             { displayName?, avatar?, banner?, accentColor?, accentColorSecondary?,
-                                avatarColor?, bio?, pronouns?, profileLinks?, profileLayout?,
+                                profileThemeStyle?, avatarColor?, bio?, pronouns?, profileLinks?, profileLayout?,
                                 avatarFrame?, profileEffect?, nameplate?, nameFont?, nameEffect?, spaceTag?,
                                 customStatus?, customStatusExpiresInMinutes?, status?,
                                 replicatedInstances?, homeUserId?,
@@ -213,6 +213,8 @@ GET    /users/:id/mutuals     ?homeUserId=               → { mutualFriends[], 
 **Status:** `status` is the user's chosen status: `online`, `idle` or `dnd`; anything else, including `offline`, is 400 `status_invalid`. It is stored in `users.chosen_status` and published as live presence (local `presence_update` and S2S relay) while the user is connected; see activity-presence.md "DB Persistence". A body with only `status` is a valid update.
 
 **Profile card fields:** `pronouns` (a string, trimmed, at most 40 characters, no control or bidirectional characters; blank or null clears it; `400 pronouns_too_long` with `details.max`), `profileLinks` (a list of at most 5 `{ url, label? }`, each `url` a plain `http`/`https` address without credentials of at most 200 characters and each `label` at most 32 characters; null or an empty list clears them; the same address twice is kept once; anything else is `400 profile_links_invalid` with `details.max`) and `profileLayout` (`'standard'`, `'centered'` or `'compact'`, or null for standard; `400 profile_layout_invalid`). Every `User` carries `pronouns`, `profileLinks` (a list, empty when none) and `profileLayout`. The rules are `normalizePronouns` / `normalizeProfileLinks` in packages/shared/src/profileFields.ts, which the editor and the profile card read too (auth.md, "Profile fields"). Like `accentColorSecondary`, these three are not relayed to federation peers.
+
+**Profile theme strength:** `profileThemeStyle` is `'soft'`, `'strong'` or `'full'`, or null for soft (the look a theme always had); anything else is `400 validation_failed` with `details.field: 'profileThemeStyle'`. Every `User` carries it (null when unset); a change reaches the profile audience as `user_updated`. Not relayed to peers. See design-system.md, "Profile themes".
 
 **Space tag:** `spaceTag` is the id of a space of this instance whose tag to wear, or null for none; the space must have a tag and the caller must be its member, else `400 space_tag_unavailable`. Every `User` carries `spaceTag` (`{ spaceId, text, glyph, color }` or null). See space-tags.md.
 
@@ -470,6 +472,8 @@ DELETE /social/friends/:id                                → { success }
 GET    /social/search          ?q=                        → UserSearchResult[]
 ```
 
+`POST /social/requests` naming an account here that is not a person (a bot, a webhook, a follow) answers `400 friend_request_not_person` (social.md, "Only people are friends").
+
 `GET /social/discover`, the Discover People list of everyone who had `discoverable` set, is gone together with the column (migration `0042_orbit_drop_discoverable`): no route lists an instance's people any more.
 
 ### GET /api/social/search — finding people by username
@@ -687,7 +691,7 @@ See [bots.md](bots.md) for the rules, and `BOT_ROUTES` in `shared/src/bots.ts`, 
 | Method | Path |
 |--------|------|
 | GET, POST | `/api/bots` |
-| GET, PATCH, DELETE | `/api/bots/:id` (its owner) |
+| GET, PATCH, DELETE | `/api/bots/:id` (its owner; PATCH `{ name, description, avatar?, banner?, username? }`, since 1.41.2 `banner` and `username` under a person's rules, see bots.md "The portal"; every `BotInfo` carries `banner` and `username`) |
 | POST | `/api/bots/:id/token` |
 | GET | `/api/bots/:id/public` |
 | POST | `/api/bots/:id/spaces/:spaceId` |

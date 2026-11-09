@@ -22,7 +22,7 @@ import {
 import { getDb, schema } from '../db/index.js';
 
 type Db = ReturnType<typeof getDb>;
-type TargetRow = Pick<typeof schema.users.$inferSelect, 'id' | 'homeInstance' | 'dmPolicy' | 'friendRequestPolicy'>;
+type TargetRow = Pick<typeof schema.users.$inferSelect, 'id' | 'homeInstance' | 'dmPolicy' | 'friendRequestPolicy' | 'accountKind'>;
 
 export function isDmPolicy(value: unknown): value is DmPolicy {
   return typeof value === 'string' && (DM_POLICIES as readonly string[]).includes(value);
@@ -47,8 +47,12 @@ export function shareSpace(a: string, b: string, db: Db = getDb()): boolean {
   ).get(a, b) !== undefined;
 }
 
-/** Whether `actorId` may start a conversation with `target`. */
+/**
+ * Whether `actorId` may start a conversation with `target`. Only with a person: a bot, a webhook or
+ * a channel follow is never written to directly, whatever its rule columns say.
+ */
 export function mayStartConversation(actorId: string, target: TargetRow, db: Db = getDb()): boolean {
+  if (target.accountKind !== 'person') return false;
   if (target.homeInstance) return true;
   const policy = isDmPolicy(target.dmPolicy) ? target.dmPolicy : DEFAULT_DM_POLICY;
   switch (policy) {
@@ -59,8 +63,9 @@ export function mayStartConversation(actorId: string, target: TargetRow, db: Db 
   }
 }
 
-/** Whether `actorId` may send `target` a friend request. */
+/** Whether `actorId` may send `target` a friend request. Only a person can be a friend. */
 export function maySendFriendRequest(actorId: string, target: TargetRow, db: Db = getDb()): boolean {
+  if (target.accountKind !== 'person') return false;
   if (target.homeInstance) return true;
   const policy = isFriendRequestPolicy(target.friendRequestPolicy) ? target.friendRequestPolicy : DEFAULT_FRIEND_REQUEST_POLICY;
   switch (policy) {

@@ -19,7 +19,7 @@ import { endOtherSessions } from '../utils/sessions.js';
 import { connectionManager } from '../ws/handler.js';
 import type { UpdateUserRequest, VerifyPasswordRequest, VerifyPasswordResponse, ChangePasswordRequest, ChangeUsernameRequest, ChangePasswordResponse, DeleteAccountRequest, FederationCredentialRequest, FederationCredentialResponse, ReplicatedInstance, SpaceLayoutItem, SpaceFolder, FederationIdentityDeleteRequest, FederationIdentityDeleteResponse, FederationIdentityDeleteResult, FederationProfileUpdatePayload } from '@backspace/shared';
 import { AVATAR_COLORS, PROFILE_LIMITS, isChosenUserStatus, isProfileLayout, type ChosenUserStatus } from '@backspace/shared';
-import { hasUnsafeCharacters, normalizePronouns, normalizeProfileLinks } from '@backspace/shared/src/profileFields.js';
+import { hasUnsafeCharacters, isProfileThemeStyle, normalizePronouns, normalizeProfileLinks } from '@backspace/shared/src/profileFields.js';
 import { DECORATION_FIELDS, decorationUpdateOf } from '@backspace/shared/src/decorations.js';
 import { customDecorationIdOf } from '@backspace/shared/src/customDecorations.js';
 import { forgetWearerCounts, mayWearCustomDecoration } from '../utils/customDecorations.js';
@@ -323,7 +323,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch<{ Body: UpdateUserRequest }>('/api/users/@me', { preHandler: authenticate }, async (request, reply) => {
-    const { displayName, avatar, banner, accentColor, accentColorSecondary, avatarColor, bio, pronouns, profileLinks, profileLayout, customStatus, customStatusExpiresInMinutes, status, replicatedInstances, profileUpdatedAt, showActivity } = request.body;
+    const { displayName, avatar, banner, accentColor, accentColorSecondary, profileThemeStyle, avatarColor, bio, pronouns, profileLinks, profileLayout, customStatus, customStatusExpiresInMinutes, status, replicatedInstances, profileUpdatedAt, showActivity } = request.body;
     const db = getDb();
 
     const updateData: Record<string, string | null | undefined> = {};
@@ -427,6 +427,14 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
         }
         updateData.accentColorSecondary = hex;
       }
+    }
+
+    // How strongly the theme colours the card: one of the styles, or null back to `soft`.
+    if (profileThemeStyle !== undefined) {
+      if (profileThemeStyle !== null && !isProfileThemeStyle(profileThemeStyle)) {
+        return sendError(reply, 400, 'validation_failed', { field: 'profileThemeStyle' });
+      }
+      updateData.profileThemeStyle = profileThemeStyle;
     }
 
     if (avatarColor !== undefined) {
@@ -621,7 +629,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Detect profile changes and stamp timestamp
-    const hasProfileChange = ['displayName', 'avatar', 'banner', 'accentColor', 'accentColorSecondary', 'avatarColor', 'bio', 'pronouns', 'profileLinks', 'profileLayout', ...DECORATION_FIELDS, 'spaceTag', 'customStatus', 'customStatusExpiresAt'].some(f => f in updateData);
+    const hasProfileChange = ['displayName', 'avatar', 'banner', 'accentColor', 'accentColorSecondary', 'profileThemeStyle', 'avatarColor', 'bio', 'pronouns', 'profileLinks', 'profileLayout', ...DECORATION_FIELDS, 'spaceTag', 'customStatus', 'customStatusExpiresAt'].some(f => f in updateData);
     const hasDurableChange = DURABLE_PROFILE_FIELDS.some(f => f in updateData);
     if (hasDurableChange) {
       (updateData as Record<string, unknown>).profileUpdatedAt = Date.now();

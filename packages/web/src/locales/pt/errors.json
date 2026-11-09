@@ -344,6 +344,7 @@
   "discovery_requires_uploaded_pictures": "Envie o ícone e o banner do espaço em vez de usar links de outro site antes de pedir uma listagem",
   "dm_not_accepted": "Esta pessoa não aceita mensagens diretas de você.",
   "friend_request_not_accepted": "Esta pessoa não aceita pedidos de amizade de você.",
+  "friend_request_not_person": "Bots e outras contas que não são pessoas não podem ser adicionados como amigos.",
   "emoji_admins_only": "Neste servidor, só administradores podem adicionar emojis.",
   "invite_options_invalid": "Escolha uma das datas e limites oferecidos.",
   "invite_limit_reached": "Este espaço já tem {{max}} links de convite. Revogue um para criar outro.",

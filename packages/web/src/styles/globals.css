@@ -1082,6 +1082,20 @@
       linear-gradient(180deg, rgb(255 255 255 / 0.022), rgb(255 255 255 / 0) 70%);
   }
 
+  /* The panel the text of a profile stands on when its theme fills the whole card (`full`,
+     utils/profileTheme.ts): dark enough that every text colour reads on it as on a plain card,
+     however bright the person's colours around it. */
+  .profile-panel {
+    background-color: rgb(0 0 0 / 0.55);
+    border-radius: calc(6px * var(--radius-scale));
+  }
+  html[data-contrast='high'] .profile-panel {
+    background-color: rgb(0 0 0 / 0.75);
+  }
+  @media (forced-colors: active) {
+    .profile-panel { background-color: Canvas; }
+  }
+
   /* A card you can act on rises toward the pointer and casts a shadow, in its own
      colour where it has one (`--tile`). */
   .lift {

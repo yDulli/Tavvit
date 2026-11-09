@@ -473,7 +473,14 @@
         "second": "第二种颜色",
         "picker": "{{name}}：取色器",
         "hex": "{{name}}：十六进制代码",
-        "preview": "你的资料卡将呈现的样子"
+        "preview": "你的资料卡将呈现的样子",
+        "style": {
+          "label": "强度",
+          "soft": "柔和",
+          "strong": "浓烈",
+          "full": "整张卡片"
+        },
+        "previewName": "你的名字"
       },
       "pronouns": {
         "label": "代词",
@@ -1268,7 +1275,22 @@
       "commandsHint": "你的程序上次注册的内容。",
       "noCommands": "暂无。",
       "spaces": "空间",
-      "noSpaces": "它还不在任何空间中。"
+      "noSpaces": "它还不在任何空间中。",
+      "tabs": {
+        "token": "令牌",
+        "invite": "邀请"
+      },
+      "lastUsedLabel": "上次使用",
+      "botCount": "{{used}} / {{max}} 个机器人",
+      "newBot": "新建机器人",
+      "pictureLabel": "头像",
+      "bannerLabel": "横幅",
+      "bannerChange": "更换横幅",
+      "bannerRemove": "移除横幅",
+      "bannerCropTitle": "裁剪横幅",
+      "bannerHint": "显示在它的资料顶部，无论谁在哪里打开。",
+      "usernameLabel": "用户名",
+      "usernameHint": "别人通过它找到机器人，它也显示在名称下方：{{min}} 到 {{max}} 个小写字母、数字或下划线。更改后需等待 {{days}} 天才能再次更改，旧名称在此期间保留。"
     }
   }
 }

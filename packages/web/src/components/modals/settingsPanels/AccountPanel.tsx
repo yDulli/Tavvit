@@ -17,7 +17,7 @@ import { useTransferStore } from '../../../stores/transferStore';
 import { waitForTransferAttachment } from '../../../utils/waitForTransfer';
 import { getAvatarGradient, AVATAR_GRADIENT_MAP } from '../../../utils/gradients';
 import { bannerFill } from '../../../utils/placeLight';
-import { bannerBackground, profileThemeOf } from '../../../utils/profileTheme';
+import { bannerBackground, profileThemeOf, profileThemeStyleOf, type ProfileThemeStyle } from '../../../utils/profileTheme';
 import { ProfileThemeEditor } from './ProfileThemeEditor';
 import { ProfileDetailsEditor, invalidLinkDrafts, linkDrafts, linksOfDrafts, type ProfileLinkDraft } from './ProfileDetailsEditor';
 import { FormError, SettingsField, SettingsPage, SettingsSection, SWATCH_ROW, SwatchButton } from './_shared/SettingsControls';
@@ -83,6 +83,7 @@ export function AccountPanel() {
   const [bio, setBio] = useState(user?.bio ?? '');
   const [accentColor, setAccentColor] = useState<string | null>(user?.accentColor ?? null);
   const [accentSecondary, setAccentSecondary] = useState<string | null>(user?.accentColorSecondary ?? null);
+  const [themeStyle, setThemeStyle] = useState<ProfileThemeStyle>(profileThemeStyleOf(user ?? {}));
   const [avatarColorState, setAvatarColorState] = useState<AvatarColor | null>(user?.avatarColor ?? null);
   // The profile card's own fields: pronouns, links and the card's layout.
   const [pronouns, setPronouns] = useState(user?.pronouns ?? '');
@@ -128,6 +129,7 @@ export function AccountPanel() {
     setBio(source.bio ?? '');
     setAccentColor(source.accentColor ?? null);
     setAccentSecondary(source.accentColorSecondary ?? null);
+    setThemeStyle(profileThemeStyleOf(source));
     setAvatarColorState(source.avatarColor ?? null);
     setPronouns(source.pronouns ?? '');
     setLinks(linkDrafts(source.profileLinks));
@@ -143,7 +145,7 @@ export function AccountPanel() {
 
   useEffect(() => {
     if (user) resetDraftsFrom(user);
-  }, [user?.displayName, user?.customStatus, user?.customStatusExpiresAt, user?.bio, user?.accentColor, user?.accentColorSecondary, user?.avatarColor, user?.avatar, user?.banner, user?.pronouns, storedLinksKey, user?.profileLayout]);
+  }, [user?.displayName, user?.customStatus, user?.customStatusExpiresAt, user?.bio, user?.accentColor, user?.accentColorSecondary, user?.profileThemeStyle, user?.avatarColor, user?.avatar, user?.banner, user?.pronouns, storedLinksKey, user?.profileLayout]);
 
   // Delete account state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -207,7 +209,7 @@ export function AccountPanel() {
   const effectiveAvatarColor = avatarColorState;
   const look = profileHeaderLook(layout, 'preview');
   // The preview wears the colours being edited; the decorations are chosen in their own tab.
-  const previewUser = { ...user, accentColor, accentColorSecondary: accentSecondary, avatarColor: effectiveAvatarColor } as User;
+  const previewUser = { ...user, accentColor, accentColorSecondary: accentSecondary, profileThemeStyle: themeStyle, avatarColor: effectiveAvatarColor } as User;
   const decorations = personDecorations(previewUser, effectiveDisplayName);
   const draftLinks = linksOfDrafts(links);
   const linksChanged = JSON.stringify(draftLinks) !== JSON.stringify((user.profileLinks ?? []).map((link) => ({ url: link.url, label: link.label ?? null })));
@@ -223,6 +225,7 @@ export function AccountPanel() {
     bio !== (user.bio ?? '') ||
     accentColor !== (user.accentColor ?? null) ||
     accentSecondary !== (user.accentColorSecondary ?? null) ||
+    themeStyle !== profileThemeStyleOf(user) ||
     avatarColorState !== (user.avatarColor ?? null) ||
     avatarFilename !== null ||
     bannerFilename !== null;
@@ -391,6 +394,7 @@ export function AccountPanel() {
       if (bio !== (user.bio ?? '')) updates.bio = bio.trim();
       if (accentColor !== (user.accentColor ?? null)) updates.accentColor = accentColor ?? '';
       if (accentSecondary !== (user.accentColorSecondary ?? null)) updates.accentColorSecondary = accentSecondary ?? '';
+      if (themeStyle !== profileThemeStyleOf(user)) updates.profileThemeStyle = themeStyle;
       if (avatarColorState !== (user.avatarColor ?? null)) updates.avatarColor = avatarColorState ?? '';
       if (avatarFilename !== null) updates.avatar = avatarFilename;
       if (bannerFilename !== null) updates.banner = bannerFilename;
@@ -600,8 +604,8 @@ export function AccountPanel() {
 
         {/* Profile theme: two colours for the banner and the card */}
         <ProfileThemeEditor
-          value={{ primary: accentColor, secondary: accentSecondary }}
-          onChange={({ primary, secondary }) => { setAccentColor(primary); setAccentSecondary(secondary); }}
+          value={{ primary: accentColor, secondary: accentSecondary, style: themeStyle }}
+          onChange={({ primary, secondary, style }) => { setAccentColor(primary); setAccentSecondary(secondary); setThemeStyle(style); }}
         />
 
         <ProfileDetailsEditor

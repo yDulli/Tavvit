@@ -1,19 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parseHexColor } from '@backspace/shared/src/color.js';
+import { PROFILE_THEME_STYLES } from '@backspace/shared/src/profileFields.js';
 import {
   PROFILE_THEME_PRESETS,
   bannerBackground,
-  cardEdge,
-  cardTint,
   presetOf,
+  profileCardLook,
   profileThemeOf,
+  type ProfileThemeStyle,
 } from '../../../utils/profileTheme';
-import { SettingsField, SWATCH_ROW, SwatchButton } from './_shared/SettingsControls';
+import { SegmentedControl, SettingsField, SWATCH_ROW, SwatchButton } from './_shared/SettingsControls';
 
 export interface ProfileThemeColors {
   primary: string | null;
   secondary: string | null;
+  /** How strongly the two colours colour the card. */
+  style: ProfileThemeStyle;
 }
 
 interface ProfileThemeEditorProps {
@@ -72,8 +75,10 @@ function ColorField({ name, color, disabled, onPick }: {
  */
 export function ProfileThemeEditor({ value, onChange }: ProfileThemeEditorProps) {
   const { t } = useTranslation(['settings', 'common']);
+  const styleLabel = useId();
   const theme = profileThemeOf({ accentColor: value.primary, accentColorSecondary: value.secondary });
   const activePreset = presetOf({ accentColor: value.primary, accentColorSecondary: value.secondary });
+  const themed = theme ? profileCardLook(theme, value.style) : null;
 
   return (
     <SettingsField label={t('settings:account.profile.theme.label')} hint={t('settings:account.profile.theme.hint')}>
@@ -85,7 +90,7 @@ export function ProfileThemeEditor({ value, onChange }: ProfileThemeEditorProps)
               label={t(`settings:account.profile.theme.preset.${preset.id}`)}
               background={`linear-gradient(135deg, ${preset.primary}, ${preset.secondary})`}
               selected={activePreset?.id === preset.id}
-              onClick={() => onChange({ primary: preset.primary, secondary: preset.secondary })}
+              onClick={() => onChange({ ...value, primary: preset.primary, secondary: preset.secondary })}
             />
           </li>
         ))}
@@ -95,18 +100,18 @@ export function ProfileThemeEditor({ value, onChange }: ProfileThemeEditorProps)
         <ColorField
           name={t('settings:account.profile.theme.first')}
           color={value.primary}
-          onPick={(hex) => onChange({ primary: hex, secondary: value.secondary })}
+          onPick={(hex) => onChange({ ...value, primary: hex })}
         />
         <ColorField
           name={t('settings:account.profile.theme.second')}
           color={value.secondary}
           disabled={value.primary === null}
-          onPick={(hex) => onChange({ primary: value.primary, secondary: hex })}
+          onPick={(hex) => onChange({ ...value, secondary: hex })}
         />
         {value.primary !== null && (
           <button
             type="button"
-            onClick={() => onChange({ primary: null, secondary: null })}
+            onClick={() => onChange({ ...value, primary: null, secondary: null })}
             className="btn-quiet h-8 px-2.5 text-meta"
           >
             {t('common:actions.clear')}
@@ -114,15 +119,30 @@ export function ProfileThemeEditor({ value, onChange }: ProfileThemeEditorProps)
         )}
       </div>
 
-      {theme && (
-        <div
-          data-testid="profile-theme-preview"
-          className="mt-3 overflow-hidden rounded-lg border bg-surface-channel"
-          style={{ borderColor: cardEdge(theme), backgroundImage: cardTint(theme) }}
-        >
-          <div className="h-10" style={{ background: bannerBackground(theme) }} />
-          <div className="px-3 pb-2.5 pt-2 text-meta text-txt-tertiary">{t('settings:account.profile.theme.preview')}</div>
-        </div>
+      {theme && themed && (
+        <>
+          <div className="mt-4">
+            <div id={styleLabel} className="mb-1 text-meta text-txt-secondary">{t('settings:account.profile.theme.style.label')}</div>
+            <SegmentedControl
+              labelledBy={styleLabel}
+              value={value.style}
+              options={PROFILE_THEME_STYLES.map((id) => ({ id, label: t(`settings:account.profile.theme.style.${id}`) }))}
+              onChange={(style) => onChange({ ...value, style })}
+            />
+          </div>
+          <div
+            data-testid="profile-theme-preview"
+            data-style={value.style}
+            className="mt-3 overflow-hidden rounded-lg border bg-surface-channel"
+            style={themed.card}
+          >
+            <div className="h-10" style={{ background: bannerBackground(theme) }} />
+            <div className={themed.panel ? 'profile-panel mx-1.5 mb-1.5 mt-1.5 px-2.5 pb-2 pt-1.5' : 'px-3 pb-2.5 pt-2'}>
+              <div className="text-ui font-semibold text-txt-primary">{t('settings:account.profile.theme.previewName')}</div>
+              <div className="text-meta text-txt-tertiary">{t('settings:account.profile.theme.preview')}</div>
+            </div>
+          </div>
+        </>
       )}
     </SettingsField>
   );

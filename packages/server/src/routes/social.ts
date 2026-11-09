@@ -104,6 +104,20 @@ function findNativeUserByHomeId(
   )).get();
 }
 
+/**
+ * Whether the finders above would have found an account here, were it a person: a bot, a webhook
+ * or a channel follow by that username or id. Nobody befriends one, and saying so is plainer than
+ * "no such user" for a name the person asking can see in a member list.
+ */
+function namesNonPerson(db: ReturnType<typeof getDb>, by: { username: string } | { homeUserId: string }): boolean {
+  return db.select({ id: schema.users.id }).from(schema.users).where(and(
+    'username' in by ? eq(schema.users.username, by.username.toLowerCase()) : eq(schema.users.id, by.homeUserId),
+    eq(schema.users.isDeleted, 0),
+    ne(schema.users.accountKind, 'person'),
+    isNull(schema.users.homeInstance),
+  )).get() !== undefined;
+}
+
 async function handleLocalFriendRequest(
   db: ReturnType<typeof getDb>,
   request: FastifyRequest,
@@ -653,7 +667,9 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
       // example.com.
       const isOwnInstance = homeInstance === ourHost || isOwnDomain(homeInstance);
       if (isOwnInstance) {
-        return handleLocalFriendRequest(db, request, reply, findNativeUserByHomeId(db, homeUserId), sender, ourOrigin);
+        const target = findNativeUserByHomeId(db, homeUserId);
+        if (!target && namesNonPerson(db, { homeUserId })) return sendError(reply, 400, 'friend_request_not_person');
+        return handleLocalFriendRequest(db, request, reply, target, sender, ourOrigin);
       }
       return handleFederatedFriendRequest(db, reply, {
         targetDomain: homeInstance,
@@ -671,7 +687,9 @@ export async function socialRoutes(app: FastifyInstance): Promise<void> {
 
     if (!isFederated) {
       const localUsername = atIndex > 0 ? raw.slice(0, atIndex) : raw;
-      return handleLocalFriendRequest(db, request, reply, findLocalUserByUsername(db, localUsername), sender, ourOrigin);
+      const target = findLocalUserByUsername(db, localUsername);
+      if (!target && namesNonPerson(db, { username: localUsername })) return sendError(reply, 400, 'friend_request_not_person');
+      return handleLocalFriendRequest(db, request, reply, target, sender, ourOrigin);
     }
     const baseName = raw.slice(0, atIndex).toLowerCase();
     return handleFederatedFriendRequest(db, reply, {

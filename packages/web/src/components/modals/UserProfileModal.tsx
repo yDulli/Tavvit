@@ -17,8 +17,8 @@ import { useSocialStore } from '../../stores/socialStore';
 import { useSelfIdentity } from '../../stores/authStore';
 import { getAvatarGradient, getSpaceGradient } from '../../utils/gradients';
 import { bannerFill } from '../../utils/placeLight';
-import { bannerBackground, cardEdge, cardTint, profileThemeOf } from '../../utils/profileTheme';
-import { isMine, parseFederatedUsername } from '../../utils/identity';
+import { bannerBackground, profileCardLook, profileThemeOf, profileThemeStyleOf } from '../../utils/profileTheme';
+import { isMine, isPersonAccount, parseFederatedUsername } from '../../utils/identity';
 import { openDirectMessage } from '../../utils/openDirectMessage';
 import { normalizeUserAssets } from '../../utils/assetUrls';
 import { loadFederatedMutuals, type TaggedMutualFriend, type MutualSpace } from '../../utils/mutuals';
@@ -192,6 +192,8 @@ export function UserProfileModal() {
     ? (bannerFile.startsWith('http') || bannerFile.startsWith('/') ? bannerFile : api.uploads.url(bannerFile))
     : null;
   const theme = profileThemeOf(user);
+  // The person's profile theme, as strongly as they chose (utils/profileTheme.ts).
+  const themed = theme ? profileCardLook(theme, profileThemeStyleOf(user)) : null;
   const bannerFallback = theme
     ? bannerBackground(theme)
     : (() => {
@@ -310,7 +312,7 @@ export function UserProfileModal() {
       <div className="modal-scrim absolute inset-0" onClick={closeModal} />
       <div
         className="relative isolate max-w-lg w-full mx-4 max-h-[calc(calc(100*var(--app-vh))-2rem)] flex flex-col glass-modal rounded-lg modal-panel overflow-hidden"
-        style={theme ? { backgroundImage: cardTint(theme), borderColor: cardEdge(theme) } : undefined}
+        style={themed?.card}
       >
         {/* Banner; the compact layout has none, and its close button sits on the header */}
         {look.banner && <ProfileBanner className={`${look.banner} flex-shrink-0`} src={bannerSrc} fallback={bannerFallback} />}
@@ -327,6 +329,9 @@ export function UserProfileModal() {
           <Icon name="x" size={16} />
         </button>
 
+        {/* On a card its theme fills, everything under the banner stands on a dark panel in it;
+            otherwise this wrapper is no box at all. */}
+        <div className={themed?.panel ? 'profile-panel relative mx-2 mb-2 flex min-h-0 flex-1 flex-col' : 'contents'}>
         {/* Header (avatar + name) */}
         <div className={`px-6 flex-shrink-0 relative ${look.header}`}>
           <Avatar
@@ -337,7 +342,7 @@ export function UserProfileModal() {
             streaming={streaming}
             userId={user.homeUserId ?? user.id}
             user={user}
-            ring={{ width: 5, color: 'rgb(var(--bg-elevated))' }}
+            ring={{ width: 5, color: themed?.ring ?? 'rgb(var(--bg-elevated))' }}
             frame={decorations.avatarFrame}
             frameMotion="on"
             className={look.avatar}
@@ -563,16 +568,20 @@ export function UserProfileModal() {
         {friendship.state !== 'self' && (
           <div className="flex-shrink-0 px-6 py-3 border-t border-border-hard flex flex-wrap gap-2">
             {/* Only one thing here is the main action: while a request waits
-                for an answer that is the answer, otherwise the conversation. */}
-            <button
-              type="button"
-              onClick={handleSendMessage}
-              className={`${friendship.state === 'inbound_pending' ? 'btn-outline' : 'btn-primary'} flex-1`}
-            >
-              {t('social:profile.sendMessage')}
-            </button>
+                for an answer that is the answer, otherwise the conversation.
+                A bot, a webhook or a follow takes no message and is nobody's
+                friend: only blocking is offered there. */}
+            {isPersonAccount(user) && (
+              <button
+                type="button"
+                onClick={handleSendMessage}
+                className={`${friendship.state === 'inbound_pending' ? 'btn-outline' : 'btn-primary'} flex-1`}
+              >
+                {t('social:profile.sendMessage')}
+              </button>
+            )}
 
-            {friendship.state === 'none' && (
+            {friendship.state === 'none' && isPersonAccount(user) && (
               <button type="button" onClick={handleAddFriend} disabled={friendActionLoading} aria-busy={friendActionLoading} className="btn-outline flex-1">
                 {t('social:profile.addFriend')}
               </button>
@@ -608,6 +617,7 @@ export function UserProfileModal() {
             />
           </div>
         )}
+        </div>
         {/* The profile's effect, over the whole panel (decorations.md) */}
         <ProfileEffectLayer effect={decorations.profileEffect} className="z-20" />
       </div>

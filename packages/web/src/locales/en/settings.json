@@ -473,7 +473,14 @@
         "second": "Second colour",
         "picker": "{{name}}: colour picker",
         "hex": "{{name}}: hex code",
-        "preview": "How your profile card will look"
+        "preview": "How your profile card will look",
+        "style": {
+          "label": "Strength",
+          "soft": "Soft",
+          "strong": "Strong",
+          "full": "Whole card"
+        },
+        "previewName": "Your name"
       },
       "pronouns": {
         "label": "Pronouns",
@@ -1274,7 +1281,22 @@
       "commandsHint": "What your program registered, the last time it told the instance.",
       "noCommands": "None yet.",
       "spaces": "Spaces",
-      "noSpaces": "It is in no space yet."
+      "noSpaces": "It is in no space yet.",
+      "tabs": {
+        "token": "Token",
+        "invite": "Invite"
+      },
+      "lastUsedLabel": "Last used",
+      "botCount": "{{used}} of {{max}} bots",
+      "newBot": "New bot",
+      "pictureLabel": "Picture",
+      "bannerLabel": "Banner",
+      "bannerChange": "Change banner",
+      "bannerRemove": "Remove banner",
+      "bannerCropTitle": "Crop the banner",
+      "bannerHint": "Shown across the top of its profile, wherever someone opens it.",
+      "usernameLabel": "Username",
+      "usernameHint": "What people find it by and see under its name: {{min}} to {{max}} small letters, digits or underscores. After a change it can change again in {{days}} days, and the old name stays reserved that long."
     }
   }
 }

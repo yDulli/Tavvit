@@ -1,7 +1,7 @@
 import { DEFAULT_DM_POLICY, DEFAULT_FRIEND_REQUEST_POLICY } from '@backspace/shared';
 import { isDmPolicy, isFriendRequestPolicy } from './contactPolicy.js';
 import { isAvatarColor, isProfileLayout, type User } from '@backspace/shared';
-import { parseStoredProfileLinks, withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
+import { isProfileThemeStyle, parseStoredProfileLinks, withoutUnsafeCharacters } from '@backspace/shared/src/profileFields.js';
 import { parseStoredProfileLinkedAccounts } from '@backspace/shared/src/linkedAccounts.js';
 import { decorationsOf } from '@backspace/shared/src/decorations.js';
 import { parseStoredWornSpaceTag } from '@backspace/shared/src/spaceTags.js';
@@ -25,6 +25,7 @@ export const PUBLIC_USER_COLUMNS = {
   banner: users.banner,
   accentColor: users.accentColor,
   accentColorSecondary: users.accentColorSecondary,
+  profileThemeStyle: users.profileThemeStyle,
   avatarColor: users.avatarColor,
   bio: users.bio,
   pronouns: users.pronouns,
@@ -65,6 +66,7 @@ export function publicUserOf(row: PublicUserRow): User {
       banner: null,
       accentColor: null,
       accentColorSecondary: null,
+      profileThemeStyle: null,
       avatarColor: null,
       bio: null,
       pronouns: null,
@@ -103,6 +105,7 @@ export function publicUserOf(row: PublicUserRow): User {
     banner: shownAccountPicture(row.banner, pictureHome),
     accentColor: row.accentColor ?? null,
     accentColorSecondary: row.accentColorSecondary ?? null,
+    profileThemeStyle: isProfileThemeStyle(row.profileThemeStyle) ? row.profileThemeStyle : null,
     avatarColor: isAvatarColor(row.avatarColor) ? row.avatarColor : null,
     bio: row.bio ?? null,
     pronouns: row.pronouns ?? null,

@@ -1,11 +1,16 @@
-import { parseHexColor } from '@backspace/shared/src/color.js';
+import type { CSSProperties } from 'react';
+import { parseHexColor, relativeLuminance, toHexColor } from '@backspace/shared/src/color.js';
+import { isProfileThemeStyle, type ProfileThemeStyle } from '@backspace/shared/src/profileFields.js';
 import { adjustColor, hexToRgba, mutedGradient } from './gradients';
 
+export type { ProfileThemeStyle };
+
 /**
- * A profile theme: two colours the person chose. They make the banner's
- * gradient when there is no banner picture and a soft tint down the profile
- * card. Only the card's top is tinted and only faintly, so the text on it is as
- * readable with any pair as with none.
+ * A profile theme: two colours the person chose (docs/systems/design-system.md, "Profile themes").
+ * They make the banner's gradient when there is no banner picture, and colour the profile card as
+ * strongly as the person chose (`ProfileThemeStyle`): `soft`, a faint tint at its top; `strong`,
+ * the whole card in the two colours, deep enough for every text colour to read on it as on a
+ * plain card; `full`, the colours bright across the card, the text on a dark panel in it.
  */
 
 export interface ProfileTheme {
@@ -61,6 +66,75 @@ export function cardTint(theme: ProfileTheme): string {
 /** The card's edge in the theme's first colour. */
 export function cardEdge(theme: ProfileTheme): string {
   return hexToRgba(theme.primary, 0.35);
+}
+
+/** The style a person chose for their theme; `soft`, the look a theme always had, when none. */
+export function profileThemeStyleOf(fields: { profileThemeStyle?: string | null }): ProfileThemeStyle {
+  return isProfileThemeStyle(fields.profileThemeStyle) ? fields.profileThemeStyle : 'soft';
+}
+
+/**
+ * The most light the colour of a `strong` card, or of the panel in a `full` one, may have
+ * (relative luminance): at it the quietest text (`--text-tertiary`) still reads at 4.5:1, as it
+ * does on a plain card. A `full` card's own colours may be brighter, for no text stands on them.
+ */
+const READABLE_GROUND = 0.022;
+const FULL_TOP = 0.1;
+const FULL_BOTTOM = 0.05;
+
+function srgbChannel(linear: number): number {
+  const c = linear <= 0.0031308 ? 12.92 * linear : 1.055 * Math.pow(linear, 1 / 2.4) - 0.055;
+  return c * 255;
+}
+
+function linearChannel(channel: number): number {
+  const c = channel / 255;
+  return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+/**
+ * `hex` brought down until its relative luminance is at most `most`, its hue and saturation kept:
+ * the channels are scaled in linear light, where luminance is their weighted sum.
+ */
+export function deepened(hex: string, most: number): string {
+  const rgb = parseHexColor(hex);
+  if (!rgb) return hex;
+  const luminance = relativeLuminance(rgb);
+  if (luminance <= most) return hex.toLowerCase();
+  const scale = most / luminance;
+  return toHexColor([
+    srgbChannel(linearChannel(rgb[0]) * scale),
+    srgbChannel(linearChannel(rgb[1]) * scale),
+    srgbChannel(linearChannel(rgb[2]) * scale),
+  ]);
+}
+
+/** How a profile card wears its theme: the card's own style, the ring round the picture on it, and whether its text stands on a panel. */
+export interface ProfileCardLook {
+  card: CSSProperties;
+  /** The colour the picture's ring takes, to cut it out of the card's top; null keeps the card's surface. */
+  ring: string | null;
+  panel: boolean;
+}
+
+export function profileCardLook(theme: ProfileTheme, style: ProfileThemeStyle): ProfileCardLook {
+  if (style === 'strong') {
+    const top = deepened(theme.primary, READABLE_GROUND);
+    return {
+      card: { backgroundImage: `linear-gradient(180deg, ${top} 0%, ${deepened(theme.secondary, READABLE_GROUND * 0.7)} 100%)`, borderColor: hexToRgba(theme.primary, 0.5) },
+      ring: top,
+      panel: false,
+    };
+  }
+  if (style === 'full') {
+    const top = deepened(theme.primary, FULL_TOP);
+    return {
+      card: { backgroundImage: `linear-gradient(180deg, ${top} 0%, ${deepened(theme.secondary, FULL_BOTTOM)} 100%)`, borderColor: hexToRgba(theme.primary, 0.7) },
+      ring: top,
+      panel: true,
+    };
+  }
+  return { card: { backgroundImage: cardTint(theme), borderColor: cardEdge(theme) }, ring: null, panel: false };
 }
 
 /** The preset that `fields` are exactly, if any, ignoring case. */

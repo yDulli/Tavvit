@@ -473,7 +473,14 @@
         "second": "Zweite Farbe",
         "picker": "{{name}}: Farbwähler",
         "hex": "{{name}}: Hex-Code",
-        "preview": "So sieht deine Profilkarte aus"
+        "preview": "So sieht deine Profilkarte aus",
+        "style": {
+          "label": "Stärke",
+          "soft": "Dezent",
+          "strong": "Kräftig",
+          "full": "Ganze Karte"
+        },
+        "previewName": "Dein Name"
       },
       "pronouns": {
         "label": "Pronomen",
@@ -1274,7 +1281,22 @@
       "commandsHint": "Was dein Programm zuletzt bei der Instanz angemeldet hat.",
       "noCommands": "Noch keine.",
       "spaces": "Spaces",
-      "noSpaces": "Er ist noch in keinem Space."
+      "noSpaces": "Er ist noch in keinem Space.",
+      "tabs": {
+        "token": "Token",
+        "invite": "Einladen"
+      },
+      "lastUsedLabel": "Zuletzt genutzt",
+      "botCount": "{{used}} von {{max}} Bots",
+      "newBot": "Neuer Bot",
+      "pictureLabel": "Bild",
+      "bannerLabel": "Banner",
+      "bannerChange": "Banner ändern",
+      "bannerRemove": "Banner entfernen",
+      "bannerCropTitle": "Banner zuschneiden",
+      "bannerHint": "Steht oben in seinem Profil, wo immer es jemand öffnet.",
+      "usernameLabel": "Benutzername",
+      "usernameHint": "Darunter finden ihn andere, und er steht unter seinem Namen: {{min}} bis {{max}} kleine Buchstaben, Ziffern oder Unterstriche. Nach einer Änderung geht die nächste erst nach {{days}} Tagen, und der alte Name bleibt so lange reserviert."
     }
   }
 }

@@ -8,7 +8,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { parseFederatedUsername } from '../../utils/identity';
 import { replaceEmojiShortcodes, useEmojiShortcodeNames } from '../../utils/emojiShortcodes';
 import { useFederationEnabled } from '../../hooks/useFederationEnabled';
-import { bannerBackground, cardTint, profileThemeOf } from '../../utils/profileTheme';
+import { bannerBackground, profileCardLook, profileThemeOf, profileThemeStyleOf } from '../../utils/profileTheme';
 import { MobileNavRow } from './MobileNavRow';
 import { BAR_BUTTON, BAR_TITLE } from './mobileClasses';
 
@@ -37,6 +37,8 @@ export function MobileYouScreen() {
   const avatarUrl = user.avatar ? `/api/uploads/${user.avatar}` : null;
   const bannerUrl = user.banner ? `/api/uploads/${user.banner}` : null;
   const theme = profileThemeOf(user);
+  // The person's profile theme, as strongly as they chose (utils/profileTheme.ts).
+  const themed = theme ? profileCardLook(theme, profileThemeStyleOf(user)) : null;
 
   const actionRows: ActionRow[] = [
     {
@@ -108,7 +110,7 @@ export function MobileYouScreen() {
         {/* Profile card: a step lighter than the list it stands on */}
         <div
           className="mx-4 mt-4 overflow-hidden rounded-lg border border-border-hard bg-surface-chat"
-          style={theme ? { backgroundImage: cardTint(theme) } : undefined}
+          style={themed?.card}
         >
           {/* Banner or accent background */}
           <div
@@ -129,12 +131,12 @@ export function MobileYouScreen() {
               name={user.displayName ?? user.username}
               avatarColor={user.avatarColor}
               size={72}
-              ring={{ width: 4, color: 'rgb(var(--bg-chat))' }}
+              ring={{ width: 4, color: themed?.ring ?? 'rgb(var(--bg-chat))' }}
             />
           </div>
 
-          {/* User info */}
-          <div className="px-4 pb-4 pt-2">
+          {/* User info; on a card its theme fills, on a dark panel in it */}
+          <div className={themed?.panel ? 'profile-panel mx-2 mb-2 mt-2 px-3 pb-3 pt-2' : 'px-4 pb-4 pt-2'}>
             <h2 className="break-words text-title font-semibold tracking-[-0.015em] text-txt-primary">
               {user.displayName ?? user.username}
             </h2>

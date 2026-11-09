@@ -473,7 +473,14 @@
         "second": "Segunda cor",
         "picker": "{{name}}: seletor de cor",
         "hex": "{{name}}: código hex",
-        "preview": "Como ficará o cartão do seu perfil"
+        "preview": "Como ficará o cartão do seu perfil",
+        "style": {
+          "label": "Intensidade",
+          "soft": "Suave",
+          "strong": "Forte",
+          "full": "Cartão inteiro"
+        },
+        "previewName": "Seu nome"
       },
       "pronouns": {
         "label": "Pronomes",
@@ -1280,7 +1287,22 @@
       "commandsHint": "O que seu programa registrou da última vez.",
       "noCommands": "Nenhum ainda.",
       "spaces": "Espaços",
-      "noSpaces": "Ainda não está em nenhum espaço."
+      "noSpaces": "Ainda não está em nenhum espaço.",
+      "tabs": {
+        "token": "Token",
+        "invite": "Convite"
+      },
+      "lastUsedLabel": "Último uso",
+      "botCount": "{{used}} de {{max}} bots",
+      "newBot": "Novo bot",
+      "pictureLabel": "Imagem",
+      "bannerLabel": "Banner",
+      "bannerChange": "Trocar banner",
+      "bannerRemove": "Remover banner",
+      "bannerCropTitle": "Recortar o banner",
+      "bannerHint": "Aparece no topo do perfil dele, onde quer que alguém o abra.",
+      "usernameLabel": "Nome de usuário",
+      "usernameHint": "É por ele que as pessoas o encontram, e ele aparece abaixo do nome: de {{min}} a {{max}} letras minúsculas, dígitos ou sublinhados. Depois de uma mudança, a próxima só daqui a {{days}} dias, e o nome antigo fica reservado por esse tempo."
     }
   }
 }

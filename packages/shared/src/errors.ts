@@ -128,6 +128,7 @@ export const ERROR_CODES = [
   'age_not_confirmed',
   'dm_not_accepted',
   'friend_request_not_accepted',
+  'friend_request_not_person',
   'emoji_admins_only',
   'invite_options_invalid',
   'invite_limit_reached',

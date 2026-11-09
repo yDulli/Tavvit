@@ -344,6 +344,7 @@
   "discovery_requires_uploaded_pictures": "申请收录前，请上传空间的图标和横幅，而不是链接到其他网站上的图片。",
   "dm_not_accepted": "此人不接受你的私信。",
   "friend_request_not_accepted": "此人不接受你的好友请求。",
+  "friend_request_not_person": "机器人和其他非真人账户无法添加为好友。",
   "emoji_admins_only": "在此服务器上，只有管理员可以添加表情。",
   "invite_options_invalid": "请选择提供的到期时间和次数限制。",
   "invite_limit_reached": "此空间已有 {{max}} 个邀请链接。请撤销一个后再创建。",

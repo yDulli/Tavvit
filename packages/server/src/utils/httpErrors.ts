@@ -467,6 +467,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   age_not_confirmed: 'Confirm that you are at least {{age}} years old to create an account.',
   dm_not_accepted: 'This person does not take direct messages from you.',
   friend_request_not_accepted: 'This person does not take friend requests from you.',
+  friend_request_not_person: 'Bots and other accounts that are not people cannot be added as friends.',
   emoji_admins_only: 'Only administrators can add emoji on this server.',
   invite_options_invalid: 'Choose one of the offered end dates and limits.',
   invite_limit_reached: 'This space has {{max}} invite links already. Revoke one to make another.',

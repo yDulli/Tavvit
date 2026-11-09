@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import i18n from '../../../i18n';
 import { Icon, type IconName } from '../../ui/Icon';
 import { openDirectMessage } from '../../../utils/openDirectMessage';
-import { selfIdentityOf } from '../../../utils/identity';
+import { isPersonAccount, selfIdentityOf } from '../../../utils/identity';
 import type { User } from '@backspace/shared';
 import type { TFunction } from 'i18next';
 import { useAuthStore } from '../../../stores/authStore';
@@ -38,6 +38,8 @@ export function reportUserMenuItem(id: string, name: string, origin: string): Co
 }
 
 export function friendshipMenuItems(user: User, origin: string, t: TFunction<readonly ['spaces', 'social', 'common']>): ContextMenuAction[] {
+  // A bot, a webhook or a follow is nobody's friend.
+  if (!isPersonAccount(user)) return [];
   const social = useSocialStore.getState();
   const auth = useAuthStore.getState();
   const friendship = getFriendshipStatus({ viewedUser: user, origin, self: selfIdentityOf(auth.user, auth.myRowIds), ...social });

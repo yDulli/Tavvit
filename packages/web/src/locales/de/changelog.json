@@ -4,6 +4,15 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.41.2": {
+      "title": "Kräftigere Farben, schönere Bots",
+      "items": {
+        "theme": "Dein Profilthema hat jetzt eine Stärke: dezent wie bisher, kräftig für die ganze Karte in deinen Farben, oder ganze Karte mit deinen Farben leuchtend um den Text. Einstellungen, Konto, unter den Farben.",
+        "portal": "Das Entwicklerportal ist neu: deine Bots an der Seite, und jeder mit Profil, Token, Einladung, Befehlen und Spaces in Tabs.",
+        "botProfile": "Bots können ein Banner und einen eigenen Benutzernamen haben statt bot-und-einer-Zahl. Ändert sich Name oder Bild eines Bots, sehen es alle sofort.",
+        "notFriends": "Bots kann man nicht als Freund hinzufügen oder anschreiben, und ihre Karten bieten das nicht mehr an. Wer es mit dem Namen eines Bots versucht, bekommt das klar gesagt."
+      }
+    },
     "1.41.1": {
       "title": "Im Gespräch bleiben",
       "items": {

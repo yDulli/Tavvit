@@ -4,6 +4,15 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.41.2": {
+      "title": "Stronger colours, nicer bots",
+      "items": {
+        "theme": "Your profile theme now has a strength: soft as before, strong for the whole card in your colours, or whole card with your colours bright around the text. Settings, Account, under the colours.",
+        "portal": "The developer portal is new: your bots down the side, and each one with its profile, token, invite, commands and spaces in tabs.",
+        "botProfile": "Bots can have a banner and a username of their own instead of bot-and-a-number. A change to a bot's name or pictures shows to everyone at once.",
+        "notFriends": "Bots can't be added as friends or messaged, and their cards no longer offer it. Trying with a bot's name says so plainly."
+      }
+    },
     "1.41.1": {
       "title": "Staying in the call",
       "items": {

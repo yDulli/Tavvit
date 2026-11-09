@@ -174,6 +174,7 @@ There is no list of people to browse. A person is found by their username, or ad
 Two rules a person sets in Settings → Privacy (`utils/contactPolicy.ts`). On a public instance anyone can find anyone by name, and without these only a block would stop a stranger, after the first message.
 
 - **Who may start a conversation** (`users.dm_policy`, default friends and people in a shared space). `POST /api/dm` refuses with `dm_not_accepted`. A conversation the two already have stays open whatever the rule says now, calls in it too; to end one, a person blocks. Group DMs and space invites were friends-only already.
+- **Only people are friends.** An account that is not a person (a bot, a webhook, a channel follow) takes no friend request and no conversation, whatever its policy columns say (`maySendFriendRequest`, `mayStartConversation`). A request naming one here by its username or id answers `400 friend_request_not_person` instead of `404 user_not_found` (`namesNonPerson` in `routes/social.ts`): since 1.41.2 a bot can carry a username of its own that people see in member lists.
 - **Who may send a friend request** (`users.friend_request_policy`, default anyone). Refused with `friend_request_not_accepted`, after the checks that answer someone who already knows (`already_friends`, `friend_request_pending`). Name search (`GET /api/social/search`) leaves out whoever would refuse the one searching, so `nobody` also takes someone out of search.
 
 A block is checked first and says more. Nobody has a way around a rule, an administrator included.

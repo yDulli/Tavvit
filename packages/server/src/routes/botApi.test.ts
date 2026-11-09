@@ -814,4 +814,64 @@ describe('the developer portal', () => {
     expect((await update(bot.id, '../../etc/passwd')).statusCode).toBe(400);
     expect((await update(bot.id, 'theirs.webp', MEMBER)).statusCode).toBe(404);
   });
+
+  // The banner across the top of its profile, under the picture's rules.
+  const updateBanner = (id: string, banner: unknown, userId = OWNER) => app.inject({
+    method: 'PATCH', url: `/api/bots/${id}`, headers: headers(userId), payload: { name: 'Helper', description: null, banner },
+  });
+
+  it('takes the owner\'s own upload as its banner beside its picture, and removes the one it replaced', async () => {
+    const bot = await botWith();
+    for (const name of ['pic', 'wide', 'wider']) ownUpload(name, `${name}.webp`);
+    await update(bot.id, 'pic.webp');
+    const res = await updateBanner(bot.id, 'wide.webp');
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json()).toMatchObject({ avatar: 'pic.webp', banner: 'wide.webp' });
+    expect((await detail(bot.id)).json()).toMatchObject({ avatar: 'pic.webp', banner: 'wide.webp' });
+    await updateBanner(bot.id, 'wider.webp');
+    expect(fs.existsSync(path.join(tmpDir, 'wide.webp'))).toBe(false);
+    expect((await updateBanner(bot.id, null)).json()).toMatchObject({ avatar: 'pic.webp', banner: null });
+    expect(fs.existsSync(path.join(tmpDir, 'wider.webp'))).toBe(false);
+  });
+
+  it('refuses a banner from elsewhere or from someone else', async () => {
+    const bot = await botWith();
+    expect((await updateBanner(bot.id, 'https://tracker.example/wide.png')).json()).toMatchObject({ code: 'banner_url_invalid' });
+    ownUpload('theirs', 'theirs.webp', MEMBER);
+    expect((await updateBanner(bot.id, 'theirs.webp')).json()).toMatchObject({ code: 'banner_url_invalid' });
+  });
+
+  // Its username, `bot-<id>` until its owner gives it one, under a person's rules.
+  const rename = (id: string, username: unknown, userId = OWNER) => app.inject({
+    method: 'PATCH', url: `/api/bots/${id}`, headers: headers(userId), payload: { name: 'Helper', description: null, username },
+  });
+
+  it('takes a username of its own at once, stored as names are, and then not again for a while', async () => {
+    const bot = await botWith();
+    expect((await detail(bot.id)).json().username).toBe(`bot-${bot.id}`);
+    const res = await rename(bot.id, '  Night_Watch ');
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json().username).toBe('night_watch');
+    // The same name again changes nothing, so it is no change.
+    expect((await rename(bot.id, 'night_watch')).statusCode).toBe(200);
+    expect((await rename(bot.id, 'night_owl')).json()).toMatchObject({ code: 'username_change_too_soon' });
+  });
+
+  it('refuses a username that does not fit or that someone has', async () => {
+    const bot = await botWith();
+    expect((await rename(bot.id, 'no spaces')).statusCode).toBe(400);
+    expect((await rename(bot.id, 'ab')).statusCode).toBe(400);
+    expect((await rename(bot.id, 5)).json()).toMatchObject({ code: 'validation_failed' });
+    const taken = testDb.select({ username: schema.users.username }).from(schema.users).where(eq(schema.users.id, MEMBER)).get()!.username;
+    expect((await rename(bot.id, taken)).json()).toMatchObject({ code: 'username_taken' });
+    expect((await detail(bot.id)).json().username).toBe(`bot-${bot.id}`);
+  });
+
+  it('shows everyone who sees the bot its new name and pictures at once', async () => {
+    const bot = await botWith();
+    ownUpload('wide', 'wide.webp');
+    sent.length = 0;
+    await updateBanner(bot.id, 'wide.webp');
+    expect(eventsOfType('user_updated')).toContainEqual(expect.objectContaining({ user: expect.objectContaining({ id: bot.id, banner: 'wide.webp' }) }));
+  });
 });

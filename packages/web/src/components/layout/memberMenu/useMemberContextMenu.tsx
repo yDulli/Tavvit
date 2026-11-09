@@ -13,7 +13,7 @@ import { MemberNicknameDialog } from './MemberNicknameDialog';
 import { MemberRemovalDialog } from './MemberRemovalDialog';
 import { TimeoutDialog } from './TimeoutDialog';
 import { isTimedOut, removeMemberTimeout } from './memberTimeout';
-import { spaceMemberName, userDisplayName } from '../../../utils/identity';
+import { isPersonAccount, spaceMemberName, userDisplayName } from '../../../utils/identity';
 import { Icon } from '../../ui/Icon';
 
 type MemberDialog = {
@@ -100,7 +100,7 @@ export function useMemberContextMenu(space: TaggedSpace | undefined) {
         }
       },
       {
-        type: 'action', key: 'message', label: t('social:profile.sendMessage'), hidden: allowed.self,
+        type: 'action', key: 'message', label: t('social:profile.sendMessage'), hidden: allowed.self || !isPersonAccount(user),
         icon: <Icon name="message" size={16} />,
         onClick: () => { void runMemberAction(() => sendMemberMessage(user, target.origin, navigate)); }
       },

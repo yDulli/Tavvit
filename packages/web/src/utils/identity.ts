@@ -372,3 +372,12 @@ export function withUserUpdate<T extends IdentityFields>(row: T, rowOrigin: stri
   if (reach === 'person') return { ...row, ...profileFieldsOf(user) };
   return row;
 }
+
+/**
+ * Whether an account is a person's, the only kind anyone writes to directly, calls or befriends.
+ * A bot, a webhook or a channel follow carries its `accountKind`; a person's carries none.
+ * The server refuses the rest anyway (utils/contactPolicy.ts); this keeps it from being offered.
+ */
+export function isPersonAccount(user: { accountKind?: string | null }): boolean {
+  return !user.accountKind || user.accountKind === 'person';
+}

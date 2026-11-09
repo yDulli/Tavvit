@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 import { isChosenUserStatus, type ChosenUserStatus, type DmPolicy, type FriendRequestPolicy, type FederatedIdentity, type ProfileLayout, type ProfileLink, type User } from '@backspace/shared';
 import type { DecorationsUpdate } from '@backspace/shared/src/decorations';
+import type { ProfileThemeStyle } from '@backspace/shared/src/profileFields';
 import { api, createApiClient, HttpError } from '../api/client';
 import { useChatStore } from './chatStore';
 import { useSpaceStore } from './spaceStore';
@@ -58,7 +59,7 @@ interface AuthState {
   register: (username: string, password: string, displayName?: string, avatarColor?: string) => Promise<void>;
   logout: () => void;
   loadUser: () => Promise<void>;
-  updateProfile: (data: { displayName?: string; avatar?: string; banner?: string; accentColor?: string; accentColorSecondary?: string; avatarColor?: string; bio?: string; pronouns?: string; profileLinks?: ProfileLink[] | null; profileLayout?: ProfileLayout | null; customStatus?: string; customStatusExpiresInMinutes?: number | null; status?: ChosenUserStatus; dmPolicy?: DmPolicy; friendRequestPolicy?: FriendRequestPolicy; spaceTag?: string | null } & DecorationsUpdate) => Promise<void>;
+  updateProfile: (data: { displayName?: string; avatar?: string; banner?: string; accentColor?: string; accentColorSecondary?: string; profileThemeStyle?: ProfileThemeStyle | null; avatarColor?: string; bio?: string; pronouns?: string; profileLinks?: ProfileLink[] | null; profileLayout?: ProfileLayout | null; customStatus?: string; customStatusExpiresInMinutes?: number | null; status?: ChosenUserStatus; dmPolicy?: DmPolicy; friendRequestPolicy?: FriendRequestPolicy; spaceTag?: string | null } & DecorationsUpdate) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string, twoFactorCode?: string) => Promise<void>;
   deleteAccount: (password: string, username: string) => Promise<void>;
   setUser: (user: User) => void;

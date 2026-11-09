@@ -1,6 +1,7 @@
 import type { MessageCard } from './cards.js';
 import type { BlueskyPost } from './bluesky.js';
 import type { SpaceLook } from './looks.js';
+import type { ProfileThemeStyle } from './profileFields.js';
 import type { CommandOptionValue, CommandReply } from './bots.js';
 import type { ErrorCode, ErrorDetails } from './errors.js';
 import type { CustomEmoji } from './customEmoji.js';
@@ -49,6 +50,11 @@ export interface User {
    * Absent on instances that predate it; meaningless without `accentColor`.
    */
   accentColorSecondary?: string | null;
+  /**
+   * How strongly the profile theme colours the card (`soft`, `strong`, `full`); null or absent
+   * reads as `soft`, the look a theme always had. Since 1.41.2; local to its instance.
+   */
+  profileThemeStyle?: ProfileThemeStyle | null;
   avatarColor: AvatarColor | null;
   bio: string | null;
   /** Pronouns shown beside the name on the profile card; absent or null without. */
@@ -1737,6 +1743,8 @@ export interface UpdateUserRequest {
   accentColor?: string;
   /** The profile theme's second colour; an empty string clears it. */
   accentColorSecondary?: string;
+  /** How strongly the theme colours the card; null goes back to `soft`. */
+  profileThemeStyle?: ProfileThemeStyle | null;
   avatarColor?: string;
   bio?: string;
   customStatus?: string;

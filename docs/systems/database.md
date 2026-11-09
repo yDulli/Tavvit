@@ -26,7 +26,9 @@ IDs: Snowflake text, permissions: bigint decimal strings
 | homeUserId | text | | Canonical ID on home instance |
 | replicatedInstances | text | `'[]'` | JSON array of instance URLs |
 | banner | text | | Upload filename |
-| accentColor | text | | Hex color |
+| accentColor | text | | Hex color: the profile theme's first colour |
+| accentColorSecondary | text | | The profile theme's second colour (`#rrggbb`) |
+| profileThemeStyle | text | | How strongly the profile theme colours the card: `soft`, `strong` or `full`; NULL reads as `soft`. Set with `PATCH /api/users/@me` (`isProfileThemeStyle`, packages/shared/src/profileFields.ts), not relayed to peers, cleared when the account is deleted. Migration `0078_tavvit_profile_theme_style`, additive. See design-system.md, "Profile themes" |
 | avatarColor | text | | Hex color |
 | bio | text | | |
 | pronouns | text | | Shown after the username on the profile card; stored as `normalizePronouns` returns it. Migration `0040_orbit_roles_profiles` |

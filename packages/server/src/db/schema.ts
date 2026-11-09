@@ -33,6 +33,8 @@ export const users = sqliteTable('users', {
   accentColor: text('accent_color'),
   /** The profile theme's second colour (`#rrggbb`); see User.accentColorSecondary. */
   accentColorSecondary: text('accent_color_secondary'),
+  /** How strongly the profile theme colours the card: `soft`, `strong` or `full`; NULL reads as `soft`. See User.profileThemeStyle. */
+  profileThemeStyle: text('profile_theme_style'),
   avatarColor: text('avatar_color'),
   bio: text('bio'),
   /** Pronouns shown on the profile card; null without (User.pronouns). */

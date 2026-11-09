@@ -344,6 +344,7 @@
   "discovery_requires_uploaded_pictures": "Lade Icon und Banner des Space hoch, statt sie von einer anderen Seite zu verlinken, bevor du einen Eintrag beantragst",
   "dm_not_accepted": "Diese Person nimmt keine Direktnachrichten von dir an.",
   "friend_request_not_accepted": "Diese Person nimmt keine Freundschaftsanfragen von dir an.",
+  "friend_request_not_person": "Bots und andere Konten, die keine Menschen sind, kann man nicht als Freund hinzufügen.",
   "emoji_admins_only": "Auf diesem Server können nur Administratoren Emoji hinzufügen.",
   "invite_options_invalid": "Wähle eines der angebotenen Enddaten und Limits.",
   "invite_limit_reached": "Dieser Space hat schon {{max}} Einladungslinks. Widerrufe einen, um einen neuen zu erstellen.",

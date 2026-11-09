@@ -135,3 +135,29 @@ describe('PATCH /api/users/@me: the profile theme\'s two colours', () => {
     expect(res.json().accentColorSecondary).toBe('#45affd');
   });
 });
+
+describe('PATCH /api/users/@me: how strongly the theme colours the card', () => {
+  it('stores each strength, shows it to anyone, and tells the profile audience', async () => {
+    for (const style of ['strong', 'full', 'soft']) {
+      expect((await patch({ profileThemeStyle: style })).statusCode).toBe(200);
+      expect(row().profileThemeStyle).toBe(style);
+    }
+    await patch({ profileThemeStyle: 'full' });
+    const res = await app.inject({ method: 'GET', url: `/api/users/${ME}`, headers: auth() });
+    expect(res.json().profileThemeStyle).toBe('full');
+    const toFriend = sent.filter(([to, event]) => to === FRIEND && event.type === 'user_updated');
+    expect(toFriend.at(-1)![1].user).toMatchObject({ profileThemeStyle: 'full' });
+  });
+
+  it('goes back to the soft look with null, and refuses anything else', async () => {
+    await patch({ profileThemeStyle: 'strong' });
+    expect((await patch({ profileThemeStyle: null })).statusCode).toBe(200);
+    expect(row().profileThemeStyle).toBeNull();
+    for (const wrong of ['loud', 3, { style: 'full' }]) {
+      const res = await patch({ profileThemeStyle: wrong });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toMatchObject({ code: 'validation_failed', details: { field: 'profileThemeStyle' } });
+    }
+    expect(row().profileThemeStyle).toBeNull();
+  });
+});

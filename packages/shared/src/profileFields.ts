@@ -115,3 +115,15 @@ export function profileLinkText(link: ProfileLink): string {
     return link.url;
   }
 }
+
+/**
+ * How strongly a profile theme colours the profile card (docs/systems/design-system.md, "Profile
+ * themes"): `soft`, a faint tint at its top as there always was; `strong`, the whole card tinted;
+ * `full`, the whole card in the two colours, the text on a darker panel in it.
+ */
+export const PROFILE_THEME_STYLES = ['soft', 'strong', 'full'] as const;
+export type ProfileThemeStyle = (typeof PROFILE_THEME_STYLES)[number];
+
+export function isProfileThemeStyle(value: unknown): value is ProfileThemeStyle {
+  return typeof value === 'string' && (PROFILE_THEME_STYLES as readonly string[]).includes(value);
+}

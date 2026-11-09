@@ -6,7 +6,7 @@ import { menuPositionFor, useContextMenuStore, type ContextMenuItem } from '../.
 import { useSelfIdentity } from '../../../stores/authStore';
 import { useBlockStore } from '../../../stores/blockStore';
 import { useUIStore } from '../../../stores/uiStore';
-import { isMine, parseFederatedUsername } from '../../../utils/identity';
+import { isMine, isPersonAccount, parseFederatedUsername } from '../../../utils/identity';
 import { describeError } from '../../../i18n/errors';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { Icon } from '../../ui/Icon';
@@ -78,7 +78,7 @@ export function useUserContextMenu() {
         onClick: () => useUIStore.getState().openUserProfile(user, origin, anchor, side),
       },
       {
-        type: 'action', key: 'message', label: t('social:profile.sendMessage'), hidden: mine,
+        type: 'action', key: 'message', label: t('social:profile.sendMessage'), hidden: mine || !isPersonAccount(user),
         icon: <Icon name="message" size={16} />,
         onClick: () => { void runMemberAction(() => sendMemberMessage(user, origin, navigate)); },
       },
