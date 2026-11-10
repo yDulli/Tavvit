@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { EVENTS, Server as TusServer } from '@tus/server';
 import { FileStore } from '@tus/file-store';
 import { config } from '../config.js';
@@ -21,6 +21,7 @@ import {
 } from '../utils/accountLimits.js';
 import { errorBody } from '../utils/httpErrors.js';
 import { finalizeUpload } from '../utils/uploadFinalize.js';
+import { endRawResponse } from '../utils/rawResponse.js';
 import { eq } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -284,12 +285,16 @@ export async function filesRoutes(app: FastifyInstance): Promise<void> {
   // Delegate all /api/files and /api/files/* requests to tus.
   // reply.hijack() tells Fastify the response is being managed externally —
   // prevents lifecycle races (double-send, reply timing) under load.
-  app.all('/api/files', (request, reply) => {
+  // tus answers on the raw response, so Fastify's error handling is not behind it: its promise
+  // is watched here. One that rejects (a client gone mid-upload, a response already begun) was a
+  // rejection nobody handled, which ends a Node process (utils/processGuards.ts).
+  const handOver = (request: FastifyRequest, reply: FastifyReply): void => {
     reply.hijack();
-    tusServer.handle(request.raw, reply.raw);
-  });
-  app.all('/api/files/*', (request, reply) => {
-    reply.hijack();
-    tusServer.handle(request.raw, reply.raw);
-  });
+    tusServer.handle(request.raw, reply.raw).catch((err: unknown) => {
+      request.log.error({ err }, 'An upload request failed outside tus');
+      endRawResponse(reply.raw);
+    });
+  };
+  app.all('/api/files', handOver);
+  app.all('/api/files/*', handOver);
 }

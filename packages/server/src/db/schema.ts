@@ -380,6 +380,11 @@ export const messages = sqliteTable('messages', {
     foreignColumns: [table.id],
   }).onDelete('set null'),
   channelIdx: index('idx_messages_channel_id').on(table.channelId),
+  // A page of a channel's history (utils/messagePaging.ts): the newest by `created_at`, the id
+  // breaking ties, read off this index in that order and stopped at the page's end. Without it
+  // each page read every message of the channel and sorted them: 135 ms for a channel of 200,000
+  // on a desktop, on a server that does nothing else meanwhile (docs/systems/operations.md).
+  historyIdx: index('idx_messages_channel_created').on(table.channelId, table.createdAt, table.id),
   pinnedIdx: index('idx_messages_channel_pinned').on(table.channelId, table.pinnedAt).where(sql`pinned_at IS NOT NULL`),
   userIdx: index('idx_messages_user_id').on(table.userId),
   // Unread counts (ws/channelUnreadCounts.ts): the messages of a channel after
@@ -532,6 +537,8 @@ export const dmMessages = sqliteTable('dm_messages', {
     foreignColumns: [table.id],
   }).onDelete('set null'),
   channelIdx: index('idx_dm_messages_dm_channel_id').on(table.dmChannelId),
+  // A page of a conversation's history, as `idx_messages_channel_created` is for a channel's.
+  historyIdx: index('idx_dm_messages_channel_created').on(table.dmChannelId, table.createdAt, table.id),
   pinnedIdx: index('idx_dm_messages_channel_pinned').on(table.dmChannelId, table.pinnedAt).where(sql`pinned_at IS NOT NULL`),
   userIdx: index('idx_dm_messages_user_id').on(table.userId),
   // Unread counts, as idx_messages_channel_unread above.

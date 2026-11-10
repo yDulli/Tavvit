@@ -6,6 +6,12 @@
 
 What is not in these docs is not promised, and is closed to a bot's token anyway.
 
+## 1.41.4
+
+- A `POST`, `PUT`, `PATCH` or `DELETE` with no body, or with the JSON `null` for one, is read as an empty object and answered by the route's own check of its fields: 400 with that check's code. Some routes answered it 500.
+- The socket takes JSON objects. Anything else that parses (`null`, a list, a bare value) is answered `{ "type": "error", "message": "Invalid JSON" }`.
+- The cursors of `GET /api/channels/:id/messages` compare ids as numbers. Nothing changes for an id. A cursor that is no id reads as past every id: `before` it is the newest page, `after` it is an empty one.
+
 ## 1.34.0
 
 - A new right, `MANAGE_EMOJIS` (536870912), for a space's own emoji and stickers. The routes it opens are not open to bots.

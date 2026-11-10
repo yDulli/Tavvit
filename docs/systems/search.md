@@ -24,6 +24,8 @@ Four endpoints, all requiring JWT authentication (`preHandler: authenticate`).
 
 For full endpoint signatures, see [api.md](api.md) under "Search".
 
+**Messages around one.** The target and what is before it are the rows with an id up to the target's, the newest `createdAt` first; what is after it are the next ids past it, as a forward page of history takes them, put in history's order. Ids are compared as numbers (`idUpTo`, `idAfter`, `utils/messagePaging.ts`; api.md, "Message history paging").
+
 ---
 
 ## Filter Syntax
@@ -32,8 +34,8 @@ All filters are query string parameters on the search endpoints.
 
 | Parameter | Type | Description | SQL Behavior |
 |-----------|------|-------------|-------------|
-| `q` | string | Text query (trimmed) | `LIKE '%{q}%'` on `content` column, case-insensitive in SQLite by default for ASCII. Content that is a sticker token never matches (`notStickerContent` in `db/stickerContent.ts`): it is not text anyone wrote |
-| `from` | string | Username filter | Exact `LIKE` match on `users.username` (not partial — no wildcards added). If no user found, returns empty results immediately (not 404). |
+| `q` | string | Text query (trimmed) | `LIKE '%{q}%' ESCAPE '\'` on `content` column (`containsText`, `db/likePattern.ts`): the words as typed, so `%` and `_` in them match themselves (until 1.41.4 they were LIKE's wildcards: `_` alone matched every message). Case-insensitive in SQLite by default for ASCII only. Content that is a sticker token never matches (`notStickerContent` in `db/stickerContent.ts`): it is not text anyone wrote |
+| `from` | string | Username filter | Exact match on `users.username` whatever the case of ASCII letters (`sameTextIgnoringCase`: a LIKE with its wildcards escaped, so `from=%` names nobody). If no user found, returns empty results immediately (not 404). |
 | `has` | `file` \| `image` \| `link` | Attachment/content filter | See "has: filter" section below |
 | `before` | string | ISO 8601 date | `createdAt < new Date(before).getTime()` — parsed via `new Date()`, invalid dates silently ignored |
 | `after` | string | ISO 8601 date | `createdAt > new Date(after).getTime()` — parsed via `new Date()`, invalid dates silently ignored |
@@ -277,7 +279,7 @@ Primary-coloured flash (accent color at 20% opacity) that fades to transparent o
 
 ## Known Limitations
 
-1. **SQL LIKE for text search:** Uses `LIKE '%query%'` — no full-text indexing (FTS5), no relevance ranking, no word boundary matching. Performance degrades linearly with message count.
+1. **SQL LIKE for text search:** Uses `LIKE '%query%'` — no full-text indexing (FTS5), no relevance ranking, no word boundary matching. Performance degrades linearly with message count, and the scan runs in the server's own thread (operations.md, "A page of history"). LIKE ignores case for ASCII letters only: a search for `привет` does not find `Привет`, nor `über` an `Über`. An FTS5 index with the `unicode61` tokenizer would answer all of these and is the next step for search.
 2. **from: filter is exact match:** Uses `LIKE` without wildcards on username, but SQLite LIKE is case-insensitive for ASCII by default. Does not search display names.
 3. **has:link is content-based:** Searches for `'%http%'` in message content — does not check the `embeds` table. May miss non-HTTP links or match false positives (e.g., a message containing the word "http" in prose).
 4. **No cross-channel search:** Each search is scoped to a single channel or DM. There is no global/space-wide search endpoint.

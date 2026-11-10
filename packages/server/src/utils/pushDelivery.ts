@@ -119,10 +119,16 @@ function pump(): void {
   while (sendingNow < SENDING_AT_ONCE && waiting.length > 0) {
     const next = waiting.shift()!;
     sendingNow += 1;
-    void deliver(next).finally(() => {
-      sendingNow -= 1;
-      pump();
-    });
+    // A delivery that fails past the push service's answer (its keys, the note of how it went)
+    // is one push lost, never the process (utils/processGuards.ts).
+    void deliver(next)
+      .catch((err: unknown) => {
+        console.error('[push] A delivery failed:', err instanceof Error ? err.message : err);
+      })
+      .finally(() => {
+        sendingNow -= 1;
+        pump();
+      });
   }
 }
 

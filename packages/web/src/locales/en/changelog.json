@@ -4,6 +4,15 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.41.4": {
+      "title": "Sturdier and faster",
+      "items": {
+        "security": "A security fix: one malformed message, from anyone, could take the whole server down, and every call with it. If you run an instance, update.",
+        "history": "Opening a channel with a long history, and scrolling up in it, is fast however much was written there.",
+        "search": "Searching for text with % or _ in it finds exactly that text.",
+        "signedIn": "If the server stumbles while you connect, you stay signed in and the app connects again."
+      }
+    },
     "1.41.3": {
       "title": "New badges, nicer tags, sound for everyone",
       "items": {

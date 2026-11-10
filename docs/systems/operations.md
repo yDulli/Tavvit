@@ -83,6 +83,31 @@ A change tells the space with `space_emojis_changed` or `space_stickers_changed`
 
 Checking who may use an emoji (`utils/emojiUse.ts`) runs once per message or reaction, for whoever wrote or gave it, never for its readers; a message that brings no custom emoji token it did not already carry reads nothing for it.
 
+## When something fails (1.41.4)
+
+The instance is one Node process, and what lives in its memory goes with it: every call, every watch session, every open socket. Two things end a Node process by default, and neither may be reachable from outside:
+
+- **An exception that leaves a listener or a timer.** A request's handler is behind Fastify's error handling; a socket's listeners and timers are behind nothing. Until 1.41.4 the JSON text `null` as a WebSocket frame ended the process, from anyone and before any token: `JSON.parse` answers `null`, and reading its `type` threw out of the socket's `message` listener. Now a frame must be a JSON object (`isSocketFrame`, ws/handler.ts), every listener of a socket (`message`, `close`) writes down what it could not handle and closes that one socket as a server fault (1011, `endAfterFault`), and the connection manager's timers (going offline, the voice grace, a call nobody answered, presence batches) run their work through `onTimer`, which writes a failure down. A fault while `ready` is built closes the socket with 1011 as well: it used to be answered as a bad token, which made the client sign the person out.
+- **A promise nobody awaits that is rejected.** `utils/processGuards.ts` listens for these and writes them down (`A background task failed`), and the instance goes on: a background task that failed has failed as a request that failed. The known ones were closed at the source too: the upload route hands a request to tus outside Fastify (`reply.hijack()`), and tus's promise is now watched (`endRawResponse` ends the response); the push queue, the typing relay and the cancel of another server's stream (`metadataFetcher.ts`) each catch their own. An exception thrown outside any promise and outside those guards still ends the process, since nothing says what state it left; the container starts it again and the restart shows under Warnings.
+
+`ws/handler.frames.test.ts` holds the socket to this (it fails on the old handler), `utils/processGuards.test.ts` and `utils/rawResponse.test.ts` the rest. Promises nobody awaits are found with `@typescript-eslint/no-floating-promises` (`ignoreVoid: false`), which is not part of `pnpm lint` (it needs type information: 18 s for the server); run it by hand after adding background work.
+
+A write whose body is missing, or is the JSON `null`, reads as an empty object (`registerEmptyBodyDefault`, utils/jsonBody.ts): 26 routes took their fields straight out of `request.body` and answered such a request with 500 instead of their own 400.
+
+## A page of history (1.41.4)
+
+SQLite runs in the server's own thread, so while one query runs nothing else does: no other request, no socket frame. A page of a channel's history is `WHERE channel_id = ? ORDER BY created_at DESC, id DESC LIMIT 50`, and until 1.41.4 the only index for it was on `channel_id`: every page read all of the channel's messages and sorted them. Measured on a copy of the demo database with 200,000 messages in one channel (a desktop; `better-sqlite3`, median of 15 runs):
+
+| Page | Before | With `idx_messages_channel_created` |
+|------|--------|--------------------------------------|
+| the newest (opening a channel) | 135 ms | 0.08 ms |
+| before a message near the newest (scrolling up) | 135 ms | 0.09 ms |
+| before a message in the middle | 73 ms | 8 ms |
+| before a message near the oldest | 0.14 ms | 17 ms |
+| after a message (catching up) | 0.07 ms | 0.07 ms |
+
+The index is `(channel_id, created_at, id)` (migration 0079, and the same for `dm_messages`): the page is read off it in order and stopped at its end. A page `before` a cursor walks the index from the newest message down and skips what is newer than the cursor, so its cost is the distance from the newest message (about 8 ms per 100,000 messages), where it used to be the distance from the oldest: the common pages became cheap and the rarest one dearer. The cursor's comparison carries a unary `+` (`idBefore`, utils/messagePaging.ts) so the planner does not take the index of ids for it and sort again; `routes/messageHistory.paging.test.ts` checks the plans. Text search is still a scan of the channel (search.md, known limits).
+
 ## Warnings
 
 `utils/operatorAlerts.ts` looks every five minutes, and at each start.

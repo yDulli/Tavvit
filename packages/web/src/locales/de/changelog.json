@@ -4,6 +4,15 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.41.4": {
+      "title": "Stabiler und schneller",
+      "items": {
+        "security": "Ein Sicherheitsfix: Eine einzige fehlerhafte Nachricht, von irgendwem, konnte den ganzen Server lahmlegen und jeden Anruf mit ihm. Wer eine Instanz betreibt, sollte aktualisieren.",
+        "history": "Einen Kanal mit langem Verlauf zu öffnen und darin hochzuscrollen geht schnell, egal wie viel dort geschrieben wurde.",
+        "search": "Die Suche nach Text mit % oder _ findet genau diesen Text.",
+        "signedIn": "Stolpert der Server, während du dich verbindest, bleibst du angemeldet und die App verbindet sich neu."
+      }
+    },
     "1.41.3": {
       "title": "Neue Badges, schönere Tags, Ton für alle",
       "items": {

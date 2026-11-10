@@ -1,6 +1,7 @@
 # REST API Reference
 
 Base: `/api`. Auth via `Authorization: Bearer <jwt>`. All responses JSON.
+A `POST`, `PUT`, `PATCH` or `DELETE` whose body is missing, or is the JSON `null`, is read as an empty object, so it is answered by the route's own check of its fields (`utils/jsonBody.ts`).
 Source files: `packages/server/src/routes/*.ts`
 
 ---
@@ -426,7 +427,8 @@ Every channel message also carries `type`: `user`, or `system` for a row the ins
 | both | `400 paging_cursor_conflict`, nothing selected |
 
 - `limit` defaults to 50 and is clamped to 1-100. An empty cursor (`after=`) counts as absent. A repeated cursor (`after=a&after=b`) is `400 validation_failed`.
-- Cursors compare snowflake ids; the cursor message need not exist (a deleted message is a valid cursor).
+- Cursors compare snowflake ids as numbers (`idBefore`, `idAfter`): they are decimal text, and text compares wrongly across a change of length, which ids have on 2031-07-22 (18 to 19 digits). The cursor message need not exist (a deleted message is a valid cursor). A cursor that is no id (a client's `temp_…` for a message still on its way, or more digits than an id has) reads as past every id: `before` it is the newest page, `after` it is nothing.
+- The pages are read off indexes in order: `(channel_id, created_at, id)` for the newest page and `before`, `(channel_id, id as a number)` for `after` (operations.md, "A page of history").
 - **Next forward cursor:** the greatest id in the page, not the last element. A relayed DM message keeps its sender's `createdAt` but gets a local id on arrival, so it can sort earlier in the page than its id says. Cutting at the greatest id never skips or repeats a row.
 - **End of history:** a forward page shorter than `limit` reached the newest message at the time of the request; an empty forward page means nothing is newer than the cursor.
 - **Signal:** a response that honoured `after` carries `X-Backspace-Paging: after` (`MESSAGE_PAGING_HEADER` / `MESSAGE_PAGING_AFTER` in `@backspace/shared`), the empty page included. Backward, newest and error responses never carry it. A server that predates forward paging ignores `after` and answers with the newest page and no header, so a client that sent `after` and finds no header must treat the body as the newest page, not as the page after its cursor. The header is in the CORS `exposedHeaders`, so a browser on another instance can read it (web-security.md, section 6).

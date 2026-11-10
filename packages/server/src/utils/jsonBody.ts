@@ -20,6 +20,22 @@ export function registerJsonBodyParser(app: FastifyInstance): void {
   });
 }
 
+/** The methods that carry a body a handler takes fields from. */
+const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * A request of those methods whose body is missing, or is the JSON `null`, reads as an empty
+ * object. Most handlers take their fields straight out of `request.body`: without this, such a
+ * request threw in them and was answered 500, where the handler's own check of its fields
+ * answers 400. A body that is a string (a route that checks a signature over the bytes) or a
+ * list is left as it came.
+ */
+export function registerEmptyBodyDefault(app: FastifyInstance): void {
+  app.addHook('preValidation', async (request) => {
+    if ((request.body === undefined || request.body === null) && BODY_METHODS.has(request.method)) request.body = {};
+  });
+}
+
 /**
  * A JSON body as it came, as a string, for a route that checks a signature over the exact bytes.
  * Fastify 5 refuses to add a JSON parser where the inherited one is not its default, and the

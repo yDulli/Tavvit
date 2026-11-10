@@ -1074,13 +1074,28 @@ export function queueGroupMetadataRelay(
 
 /**
  * Send typing indicator events directly to remote peers (bypasses outbox).
- * Fire-and-forget — typing is ephemeral, lost packets are acceptable.
+ * Fire-and-forget — typing is ephemeral, lost packets are acceptable. Callers do not wait for it,
+ * so it never rejects: what goes wrong on the way (reading the conversation, building the event)
+ * is written down here, since a rejection nobody handles would be a failure of its own
+ * (utils/processGuards.ts).
  */
 export async function sendTypingRelay(
   dmChannelId: string,
   eventType: 'dm_typing_start' | 'dm_typing_stop',
   userId: string,
 ): Promise<void> {
+  try {
+    relayTyping(dmChannelId, eventType, userId);
+  } catch (err) {
+    console.warn('[federation] Typing relay failed:', err instanceof Error ? err.message : err);
+  }
+}
+
+function relayTyping(
+  dmChannelId: string,
+  eventType: 'dm_typing_start' | 'dm_typing_stop',
+  userId: string,
+): void {
   if (!isFederationRelayEnabled()) return;
 
   const db = getDb();

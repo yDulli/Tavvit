@@ -1070,7 +1070,7 @@ function handleDmTypingStart(event: Record<string, unknown>, userId: string, use
   }
 
   // Relay typing indicator to remote peers (fire-and-forget)
-  sendTypingRelay(dmChannelId, 'dm_typing_start', userId);
+  void sendTypingRelay(dmChannelId, 'dm_typing_start', userId);
 
   const timeout = setTimeout(() => {
     typingTimeouts.delete(key);
@@ -1330,12 +1330,15 @@ function handleReactionRemove(event: Record<string, unknown>, userId: string): v
 
 // ─── Read State Handler ────────────────────────────────────────────────────
 
+/** What a read state may point at: a message id (a snowflake has at most 19 digits), or `0` for "nothing read". */
+const READ_CURSOR = /^\d{1,19}$/;
+
 function handleChannelAck(event: Record<string, unknown>, userId: string, isFederated: boolean): void {
-  const channelId = event.channelId as string;
-  const messageId = event.messageId as string;
-  if (!channelId || !messageId) return;
-  // Validate messageId is a valid snowflake (numeric string) — reject temp/garbage IDs
-  if (!/^\d+$/.test(messageId)) return;
+  const { channelId, messageId } = event;
+  if (typeof channelId !== 'string' || typeof messageId !== 'string' || !channelId) return;
+  // A snowflake and nothing else: temp ids and garbage are refused, and so is a run of digits no
+  // id has (it would be kept as the read state, as long as a frame may be).
+  if (!READ_CURSOR.test(messageId)) return;
 
   // Validate channel membership — reject acks for channels the user doesn't belong to
   const spaceId = getChannelSpaceId(channelId);
@@ -1389,10 +1392,9 @@ function handleChannelAck(event: Record<string, unknown>, userId: string, isFede
 }
 
 function handleMarkUnread(event: Record<string, unknown>, userId: string, isFederated: boolean): void {
-  const channelId = event.channelId as string;
-  const messageId = event.messageId as string;
-  if (!channelId || !messageId) return;
-  if (!/^\d+$/.test(messageId)) return;
+  const { channelId, messageId } = event;
+  if (typeof channelId !== 'string' || typeof messageId !== 'string' || !channelId) return;
+  if (!READ_CURSOR.test(messageId)) return;
 
   // Validate channel membership
   const spaceId = getChannelSpaceId(channelId);

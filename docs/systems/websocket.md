@@ -17,6 +17,8 @@ Source: `packages/server/src/ws/handler.ts`, `packages/server/src/ws/events.ts`
 
 ### Refused sockets
 
+A frame is a JSON object. JSON that is anything else (`null`, a list, a bare value) is no frame: before `auth` it is answered as any first message that is not `auth`, after it with `{ type: 'error', message: 'Invalid JSON' }`, and the socket goes on (`isSocketFrame`; until 1.41.4 the text `null` ended the server, operations.md, "When something fails"). A fault of the server's own, while it builds `ready` or handles a frame, closes that socket with 1011 and no code: the client connects again and does not sign out.
+
 A first message that is not `auth` gets an error and a close. A token that does not open the account gets the check's code, `{ type: 'error', message, code, details? }`, then close 4001: `unauthorized`, `session_ended`, `account_deleted`, `account_suspended`. The client signs out on these instead of reconnecting (auth.md, "Sockets"). `session_ended` also comes to an open socket when its session ends, and the 30-second sweep checks every open socket again.
 
 ```typescript

@@ -1,4 +1,4 @@
-import { asc, desc, gt, lt, type SQL } from 'drizzle-orm';
+import { asc, desc, sql, type SQL } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { FastifyReply } from 'fastify';
 import { MESSAGE_PAGING_AFTER, MESSAGE_PAGING_HEADER } from '@backspace/shared';
@@ -72,6 +72,33 @@ export function parseHistoryPage(query: HistoryPageQuery): HistoryPageParse {
 }
 
 /**
+ * Ids in a query, compared as the numbers they are. A snowflake is stored as decimal text, and
+ * text compares character by character: right while every id has as many digits, wrong across a
+ * change of length ("9…" with 18 digits is not less than "1…" with 19). Ids made from
+ * 2031-07-22 on have 19 digits, and from then a text comparison would have cut every older
+ * message out of a page `before` a new one, and every new message out of a page `after` an old
+ * one.
+ *
+ * `idAfter` is spelled `CAST(... AS INTEGER)` as the indexes on (channel, id as a number) spell
+ * it (db/schema.ts), so the ids past a cursor are read off them in order. `idBefore` and `idUpTo`
+ * go with an ORDER BY of `created_at`, newest first, which the history index gives in order: the
+ * unary `+` keeps the planner from taking the id index for them instead, which would read every
+ * older message of the channel and sort them, for each page someone scrolls up.
+ */
+export const idAsNumber = (column: SQLiteColumn): SQL => sql`CAST(${column} AS INTEGER)`;
+export const idBefore = (column: SQLiteColumn, id: string): SQL => sql`+CAST(${column} AS INTEGER) < CAST(${id} AS INTEGER)`;
+export const idUpTo = (column: SQLiteColumn, id: string): SQL => sql`+CAST(${column} AS INTEGER) <= CAST(${id} AS INTEGER)`;
+export const idAfter = (column: SQLiteColumn, id: string): SQL => sql`CAST(${column} AS INTEGER) > CAST(${id} AS INTEGER)`;
+
+/** The order of a history page, for rows read another way (routes/search.ts): oldest first, the id breaking ties. */
+export function inHistoryOrder<Row extends HistoryPageRow>(rows: Row[]): Row[] {
+  return rows.sort(compareChronological);
+}
+
+/** A snowflake as text: digits, and no more of them than a 64-bit number has. */
+const SNOWFLAKE_TEXT = /^\d{1,19}$/;
+
+/**
  * Compare two snowflake ids numerically. They are stored as decimal text, so
  * a shorter id is the smaller one and ids of one length compare as strings.
  */
@@ -103,6 +130,10 @@ function compareChronological(a: HistoryPageRow, b: HistoryPageRow): number {
  * `select` runs the query for one table: it receives the cursor condition
  * (undefined for `latest`, so `and(scope, cursor)` drops it), the ordering and
  * the limit, and adds its own scope condition.
+ *
+ * Ids are compared as numbers (`idBefore`, `idAfter`). A cursor that is no id
+ * (a client's `temp_…` for a message still on its way) reads as it always
+ * compared, past every id: nothing is after it, and everything is before it.
  */
 export function selectHistoryPage<Row extends HistoryPageRow>(
   page: HistoryPage,
@@ -110,10 +141,11 @@ export function selectHistoryPage<Row extends HistoryPageRow>(
   select: (cursor: SQL | undefined, orderBy: SQL[], limit: number) => Row[],
 ): Row[] {
   if (page.direction === 'after') {
-    const rows = select(gt(columns.id, page.cursor), [asc(columns.id)], page.limit);
+    if (!SNOWFLAKE_TEXT.test(page.cursor)) return [];
+    const rows = select(idAfter(columns.id, page.cursor), [asc(idAsNumber(columns.id))], page.limit);
     return rows.sort(compareChronological);
   }
-  const cursor = page.direction === 'before' ? lt(columns.id, page.cursor) : undefined;
+  const cursor = page.direction === 'before' && SNOWFLAKE_TEXT.test(page.cursor) ? idBefore(columns.id, page.cursor) : undefined;
   const rows = select(cursor, [desc(columns.createdAt), desc(columns.id)], page.limit);
   rows.reverse();
   return rows;

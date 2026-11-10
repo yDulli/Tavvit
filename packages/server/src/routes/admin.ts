@@ -6,10 +6,11 @@ import { notifyPasswordChanged } from '../email/account.js';
 import { endOtherSessions } from '../utils/sessions.js';
 import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
-import { eq, like, or, and, not, sql, isNull, isNotNull, gte, lte, asc, desc } from 'drizzle-orm';
+import { eq, or, and, not, sql, isNull, isNotNull, gte, lte, asc, desc } from 'drizzle-orm';
 import { authenticate, requireAdmin, hashPassword } from '../utils/auth.js';
 import { getStorageStats, getOrphanedFiles, cleanupStorage, cleanupOldMedia, cleanupStaleTusSessions } from '../utils/storageJanitor.js';
 import { getDb, schema } from '../db/index.js';
+import { containsText } from '../db/likePattern.js';
 import { connectionManager } from '../ws/handler.js';
 import { checkVoicePermissions } from '../ws/events.js';
 import { tombstoneUser, collectDeletionBroadcastTargets } from '../utils/userDeletion.js';
@@ -140,10 +141,9 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         conditions.push(eq(schema.users.isDeleted, 0));
       }
       if (q) {
-        const pattern = `%${q}%`;
         conditions.push(or(
-          like(schema.users.username, pattern),
-          like(schema.users.displayName, pattern),
+          containsText(schema.users.username, q),
+          containsText(schema.users.displayName, q),
         )!);
       }
 

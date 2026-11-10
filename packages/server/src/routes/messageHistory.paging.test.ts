@@ -518,3 +518,117 @@ describe('GET /api/dm/:id/messages with after', () => {
     expect(newest.paging).toBeUndefined();
   });
 });
+
+// Ids are decimal text, and from 2031-07-22 a new one has 19 digits where today's have 18. Text
+// compares character by character, so "9…" (18 digits) is not less than "1…" (19 digits): before
+// 1.41.4 a page `before` a new message would have left every older one out, and a page `after` an
+// old one every new one.
+describe('pages across ids of different lengths', () => {
+  const OLD = ['999999999999999997', '999999999999999998', '999999999999999999'];
+  const NEW = ['1000000000000000000', '1000000000000000001', '1000000000000000002'];
+
+  function seedAcrossTheChange(): void {
+    [...OLD, ...NEW].forEach((id, at) => {
+      testDb.insert(schema.messages).values({ id, channelId: GENERAL, userId: 'reader', replyToId: null, content: `message ${at}`, createdAt: NOW + at }).run();
+      testDb.insert(schema.dmMessages).values({ id, dmChannelId: DM, userId: 'reader', replyToId: null, content: `message ${at}`, type: 'user', createdAt: NOW + at }).run();
+    });
+  }
+
+  for (const [what, base] of [['a channel', `/api/channels/${GENERAL}/messages`], ['a conversation', `/api/dm/${DM}/messages`]] as const) {
+    it(`reads ${what} backward past the change`, async () => {
+      seedAcrossTheChange();
+      const page = await getPage(app, `${base}?before=${NEW[0]}`);
+      expect(page.ids).toEqual(OLD);
+      const two = await getPage(app, `${base}?before=${NEW[1]}&limit=2`);
+      expect(two.ids).toEqual([OLD[2], NEW[0]]);
+    });
+
+    it(`reads ${what} forward past the change`, async () => {
+      seedAcrossTheChange();
+      const page = await getPage(app, `${base}?after=${OLD[2]}`);
+      expect(page.ids).toEqual(NEW);
+      const two = await getPage(app, `${base}?after=${OLD[1]}&limit=2`);
+      expect(two.ids).toEqual([OLD[2], NEW[0]]);
+    });
+
+    it(`gives ${what}'s newest page in order`, async () => {
+      seedAcrossTheChange();
+      expect((await getPage(app, base)).ids).toEqual([...OLD, ...NEW]);
+    });
+
+    it(`loads the messages around one of ${what} on both sides of the change`, async () => {
+      seedAcrossTheChange();
+      const { searchRoutes } = await import('./search.js');
+      const around = Fastify({ logger: false });
+      await around.register(searchRoutes);
+      await around.ready();
+      const res = await around.inject({ method: 'GET', url: `${base}/around?messageId=${OLD[2]}&limit=4` });
+      expect((JSON.parse(res.body) as PageMessage[]).map((message) => message.id)).toEqual([OLD[0], OLD[1], OLD[2], NEW[0], NEW[1]]);
+      await around.close();
+    });
+  }
+
+  it('reads a cursor that is no id as it always compared: past every id', async () => {
+    const ids = seedChannelMessages(GENERAL, 4);
+    // A client's own id for a message still on its way.
+    const before = await getPage(app, `/api/channels/${GENERAL}/messages?before=temp_17&limit=2`);
+    expect(before.ids).toEqual([ids[2], ids[3]]);
+    const after = await getPage(app, `/api/channels/${GENERAL}/messages?after=temp_17`);
+    expect(after.status).toBe(200);
+    expect(after.ids).toEqual([]);
+    expect(after.paging).toBe(MESSAGE_PAGING_AFTER);
+    // Digits no id has (more than a 64-bit number holds) are past every id too.
+    const huge = await getPage(app, `/api/channels/${GENERAL}/messages?before=${'9'.repeat(30)}&limit=2`);
+    expect(huge.ids).toEqual([ids[2], ids[3]]);
+  });
+});
+
+// A page of history is read off an index in its order and stopped at its end. Before 1.41.4
+// every page read all of the channel's messages and sorted them (docs/systems/operations.md).
+describe('how a page of history is read', () => {
+  function plansOf(run: () => Promise<unknown>, table: string): Promise<string[]> {
+    const sources: string[] = [];
+    const prepare = sqlite.prepare.bind(sqlite);
+    vi.spyOn(sqlite, 'prepare').mockImplementation((source: string) => {
+      sources.push(source);
+      return prepare(source);
+    });
+    return run().then(() => {
+      vi.mocked(sqlite.prepare).mockRestore();
+      return sources
+        .filter((source) => new RegExp(`from "${table}"`, 'i').test(source) && /order by/i.test(source))
+        .map((source) => {
+          const params = Array.from({ length: (source.match(/\?/g) ?? []).length }, () => '1');
+          return (sqlite.prepare(`EXPLAIN QUERY PLAN ${source}`).all(...params) as Array<{ detail: string }>).map((row) => row.detail).join('\n');
+        });
+    });
+  }
+
+  it('takes the newest page and a page before a message from the history index, without sorting', async () => {
+    const ids = seedChannelMessages(GENERAL, 60);
+    for (const query of ['', `?before=${ids[40]}`]) {
+      const plans = await plansOf(() => getPage(app, `/api/channels/${GENERAL}/messages${query}`), 'messages');
+      expect(plans).toHaveLength(1);
+      expect(plans[0]).toContain('idx_messages_channel_created (channel_id=?)');
+      expect(plans[0]).not.toContain('TEMP B-TREE');
+    }
+  });
+
+  it('takes a page after a message from the index of ids as numbers, without sorting', async () => {
+    const ids = seedChannelMessages(GENERAL, 60);
+    const plans = await plansOf(() => getPage(app, `/api/channels/${GENERAL}/messages?after=${ids[10]}`), 'messages');
+    expect(plans).toHaveLength(1);
+    expect(plans[0]).toContain('idx_messages_channel_unread (channel_id=? AND <expr>>?)');
+    expect(plans[0]).not.toContain('TEMP B-TREE');
+  });
+
+  it('does the same for a conversation', async () => {
+    const ids = seedDmMessages(DM, 60);
+    const newest = await plansOf(() => getPage(app, `/api/dm/${DM}/messages`), 'dm_messages');
+    expect(newest[0]).toContain('idx_dm_messages_channel_created (dm_channel_id=?)');
+    expect(newest[0]).not.toContain('TEMP B-TREE');
+    const after = await plansOf(() => getPage(app, `/api/dm/${DM}/messages?after=${ids[10]}`), 'dm_messages');
+    expect(after[0]).toContain('idx_dm_messages_channel_unread (dm_channel_id=? AND <expr>>?)');
+    expect(after[0]).not.toContain('TEMP B-TREE');
+  });
+});

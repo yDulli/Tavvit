@@ -286,10 +286,14 @@ class ConnectionManager implements ReplicaSessionHost {
   private scheduleDisconnect(userId: string) {
     if (this.pendingOfflineTimeouts.has(userId)) return;
 
-    const timeout = setTimeout(() => {
-      this.finalizeDisconnect(userId);
-      this.pendingOfflineTimeouts.delete(userId);
-    }, 5000); // 5 second grace period
+    const timeout = setTimeout(onTimer('finalizing a disconnect', () => {
+      try {
+        this.finalizeDisconnect(userId);
+      } finally {
+        // Also when that failed: an entry left here would keep the person from ever going offline again.
+        this.pendingOfflineTimeouts.delete(userId);
+      }
+    }), 5000); // 5 second grace period
 
     this.pendingOfflineTimeouts.set(userId, timeout);
   }
@@ -328,12 +332,12 @@ class ConnectionManager implements ReplicaSessionHost {
       }
     }
 
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(onTimer('ending a voice session after its grace', () => {
       const pending = this.pendingVoiceReconnects.get(userId);
       if (!pending || pending.timeout !== timeout) return;
       this.pendingVoiceReconnects.delete(userId);
       if (!this.voiceWs.has(userId)) this.finalizeVoiceDisconnect(userId, pending.roomId, pending.federatedId);
-    }, VOICE_RECONNECT_GRACE_MS);
+    }), VOICE_RECONNECT_GRACE_MS);
     this.pendingVoiceReconnects.set(userId, { timeout, roomId, federatedId });
   }
 
@@ -846,7 +850,7 @@ class ConnectionManager implements ReplicaSessionHost {
     if (!created) return false;
 
     // 60s ringing timeout: nobody but the caller joined, so the call ends.
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(onTimer('ending a call nobody answered', () => {
       this.ringingTimeouts.delete(dmChannelId);
       const room = this.voiceRooms.get(dmChannelId);
       if (room && room.roomType === 'dm' && (room.metadata as DmRoomMeta).state === 'ringing') {
@@ -856,7 +860,7 @@ class ConnectionManager implements ReplicaSessionHost {
         // Without this, an accept-relay failure → Alice's 60s auto-clean leaves Bob's FederatedCallEntry lingering with no terminal event.
         this.fanOutCallEnd(dmChannelId, ringedCallerId);
       }
-    }, 60_000);
+    }), 60_000);
     this.ringingTimeouts.set(dmChannelId, timeout);
 
     return true;
@@ -1023,7 +1027,7 @@ class ConnectionManager implements ReplicaSessionHost {
     this.clearFederatedCall(entry.federatedId);
     this.federatedCalls.set(entry.federatedId, entry);
 
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(onTimer('ending a call from another instance', () => {
       this.federatedCallTimeouts.delete(entry.federatedId);
       const call = this.federatedCalls.get(entry.federatedId);
       if (call && call.state === 'active') {
@@ -1041,7 +1045,7 @@ class ConnectionManager implements ReplicaSessionHost {
           this.sendToUser(uid, endEvent as ServerEvent);
         }
       }
-    }, 60_000);
+    }), 60_000);
     this.federatedCallTimeouts.set(entry.federatedId, timeout);
   }
 
@@ -1433,7 +1437,7 @@ class ConnectionManager implements ReplicaSessionHost {
       waiting.set(userId, text);
     }
     if (!this.presenceTimer) {
-      this.presenceTimer = setTimeout(() => this.flushPresence(), PRESENCE_BATCH_MS);
+      this.presenceTimer = setTimeout(onTimer('sending presence', () => this.flushPresence()), PRESENCE_BATCH_MS);
       this.presenceTimer.unref?.();
     }
   }
@@ -2367,6 +2371,29 @@ export function buildReadyPayload(userId: string): {
  * Sends a socket away for good: why, with a code the client acts on, then the close.
  * The client signs out on these rather than knocking again (hooks/useWebSocket.ts).
  */
+/**
+ * A timer's work, guarded. What a timer's callback throws has nowhere to go and ends the process,
+ * with every call and connection in it (as a socket's listener would, see `endAfterFault`); this
+ * writes it down instead, and the timer's one piece of work is lost.
+ */
+export function onTimer(what: string, work: () => void): () => void {
+  return () => {
+    try {
+      work();
+    } catch (err) {
+      console.error(`[ws] ${what} failed:`, err);
+    }
+  };
+}
+
+/**
+ * What a client may send: a JSON object. `JSON.parse` also answers `null`, lists and bare values,
+ * and reading a field of `null` throws, so everything that reads a frame's `type` asks this first.
+ */
+export function isSocketFrame(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function refuseSocket(ws: WebSocket, code: ErrorCode, message: string, details?: ErrorDetails): void {
   try {
     ws.send(JSON.stringify({ type: 'error', message, code, ...(details ? { details } : {}) }));
@@ -2432,19 +2459,53 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
       }
     }, 10000);
 
+    /**
+     * This socket goes, the others stay. An exception that leaves a listener of a socket ends the
+     * whole process, with every call and every connection in it, so none may: what a listener
+     * could not handle is written down, and its socket is closed as a server fault (1011), which
+     * a client answers by connecting again, never by signing out.
+     */
+    const endAfterFault = (err: unknown, during: string): void => {
+      app.log.error({ err, userId, during }, 'Unhandled error on a socket');
+      try {
+        ws.close(1011, 'Internal error');
+      } catch { /* The socket is already gone. */ }
+    };
+
     ws.on('message', (data: Buffer | string) => {
+      try {
+        receive(data);
+      } catch (err) {
+        endAfterFault(err, 'message');
+      }
+    });
+
+    const receive = (data: Buffer | string): void => {
       // A socket told to go (a suspension, a session ended) is heard no further, though
       // the closing handshake can take a client as long as it likes.
       if (ws.readyState !== ws.OPEN) return;
-      let parsed: Record<string, unknown>;
+      let value: unknown;
       const frameBytes = typeof data === 'string' ? Buffer.byteLength(data) : data.length;
       try {
         const raw = typeof data === 'string' ? data : data.toString('utf-8');
-        parsed = JSON.parse(raw) as Record<string, unknown>;
+        value = JSON.parse(raw);
       } catch {
         ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
         return;
       }
+      // JSON that is no object (`null`, a list, a bare value) is no frame. `null` in particular
+      // has no `type` to read: before 1.41.4 that one frame, from anyone and before any token,
+      // ended the process.
+      if (!isSocketFrame(value)) {
+        if (!authenticated && !authAsked) {
+          ws.send(JSON.stringify({ type: 'error', message: 'First message must be auth' }));
+          ws.close();
+        } else {
+          ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+        }
+        return;
+      }
+      const parsed = value;
 
       // Any received message proves liveness
       wsIsAlive.set(ws, true);
@@ -2531,17 +2592,28 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
               try { queuePresenceRelay(_uid, connectStatus, connectActivities); } catch (e) { console.warn('[ws] queuePresenceRelay(connect) failed', e); }
             });
           } catch (error) {
-            const refusal = error instanceof AuthError ? error : new AuthError('Invalid token', 401);
-            refuseSocket(ws, refusal.code, refusal.message, refusal.details);
+            if (error instanceof AuthError) {
+              refuseSocket(ws, error.code, error.message, error.details);
+            } else {
+              // Not the token's fault (building `ready` failed): refusing it would sign the person
+              // out. The socket closes as a server fault instead, and their client tries again.
+              heldFrames.length = 0;
+              endAfterFault(error, 'ready');
+              return;
+            }
           }
           if (!authenticated) return;
-          for (const frame of heldFrames.splice(0)) handleFrame(frame);
+          try {
+            for (const frame of heldFrames.splice(0)) handleFrame(frame);
+          } catch (error) {
+            endAfterFault(error, 'held frames');
+          }
         });
         return;
       }
 
       handleFrame(parsed);
-    });
+    };
 
     const handleFrame = (parsed: Record<string, unknown>): void => {
       // Fast-path heartbeat — never reaches business logic
@@ -2577,8 +2649,12 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
 
     ws.on('close', () => {
       clearTimeout(authTimeout);
-      if (userId) {
+      if (!userId) return;
+      try {
         connectionManager.removeConnection(ws);
+      } catch (err) {
+        // Leaving a call, presence and the rest run from here; none of it may end the process.
+        app.log.error({ err, userId }, 'Unhandled error while a socket closed');
       }
     });
 

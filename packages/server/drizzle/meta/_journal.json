@@ -554,6 +554,13 @@
       "when": 1794246686187,
       "tag": "0078_tavvit_profile_theme_style",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "6",
+      "when": 1794325416836,
+      "tag": "0079_tavvit_history_page_index",
+      "breakpoints": true
     }
   ]
 }

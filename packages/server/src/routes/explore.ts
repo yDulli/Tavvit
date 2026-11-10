@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and, sql, inArray, ne } from 'drizzle-orm';
 import { getDb, getRawDb, schema } from '../db/index.js';
+import { escapeLike } from '../db/likePattern.js';
 import { LISTED_IN_DISCOVERY_SQL } from '../utils/discoveryListing.js';
 import { spaceBadgesOf } from '../utils/badges.js';
 import { isSpaceCategory } from '@backspace/shared/src/platform.js';
@@ -202,9 +203,11 @@ export async function exploreRoutes(app: FastifyInstance): Promise<void> {
     const params: (string | number)[] = [];
 
     if (q) {
-      const likePattern = `%${q}%`;
-      querySql += ` AND (s.name LIKE ? COLLATE NOCASE OR s.description LIKE ? COLLATE NOCASE)`;
-      countSql += ` AND (s.name LIKE ? COLLATE NOCASE OR s.description LIKE ? COLLATE NOCASE)`;
+      // The words as typed: `%` and `_` in them are not wildcards (db/likePattern.ts).
+      const likePattern = `%${escapeLike(q)}%`;
+      // LIKE ignores the case of ASCII letters by itself; a collation changes nothing for it.
+      querySql += ` AND (s.name LIKE ? ESCAPE '\\' OR s.description LIKE ? ESCAPE '\\')`;
+      countSql += ` AND (s.name LIKE ? ESCAPE '\\' OR s.description LIKE ? ESCAPE '\\')`;
       params.push(likePattern, likePattern);
     }
 

@@ -350,7 +350,7 @@ export function broadcastDmMessage(dmChannelId: string, message: DmMessageWithUs
   }
 
   // Relay typing stop to remote peers (fire-and-forget)
-  sendTypingRelay(dmChannelId, 'dm_typing_stop', message.userId);
+  void sendTypingRelay(dmChannelId, 'dm_typing_stop', message.userId);
 
   reopenForClosedMembers(dmChannelId, message);
   pushDmMessage(message, (id) => connectionManager.isUserFocused(id));

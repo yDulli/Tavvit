@@ -4,6 +4,15 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.41.4": {
+      "title": "Mais firme e mais rápido",
+      "items": {
+        "security": "Uma correção de segurança: uma única mensagem malformada, de qualquer pessoa, podia derrubar o servidor inteiro, e todas as chamadas com ele. Se você mantém uma instância, atualize.",
+        "history": "Abrir um canal com um histórico longo, e rolar para cima nele, é rápido por mais que se tenha escrito ali.",
+        "search": "Buscar um texto com % ou _ encontra exatamente esse texto.",
+        "signedIn": "Se o servidor tropeçar enquanto você se conecta, você continua conectado à sua conta e o app se conecta de novo."
+      }
+    },
     "1.41.3": {
       "title": "Novas insígnias, tags mais bonitas, som para todos",
       "items": {

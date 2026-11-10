@@ -56,7 +56,8 @@ export async function fetchUrlMetadata(url: string): Promise<UrlMetadata | null>
       if (done) break;
       bytesRead += value.length;
       if (bytesRead > 512_000) {
-        reader.cancel();
+        // The other server's stream: how it ends is its own affair, never a rejection left unhandled.
+        void reader.cancel().catch(() => undefined);
         break;
       }
       html += decoder.decode(value, { stream: true });

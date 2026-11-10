@@ -1,0 +1,2 @@
+CREATE INDEX `idx_dm_messages_channel_created` ON `dm_messages` (`dm_channel_id`,`created_at`,`id`);--> statement-breakpoint
+CREATE INDEX `idx_messages_channel_created` ON `messages` (`channel_id`,`created_at`,`id`);

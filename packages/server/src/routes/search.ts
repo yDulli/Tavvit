@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, and, desc, lt, gt, like, sql, asc } from 'drizzle-orm';
+import { eq, and, desc, lt, gt, sql, asc } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
 import { sendError } from '../utils/httpErrors.js';
@@ -8,6 +8,8 @@ import { hydrateChannelMessages } from './messages.js';
 import { userWrittenMessages } from '../db/userWrittenMessages.js';
 import { notStickerContent } from '../db/stickerContent.js';
 import { hydrateDmMessages } from './dm.js';
+import { idAfter, idAsNumber, idUpTo, inHistoryOrder } from '../utils/messagePaging.js';
+import { containsText, sameTextIgnoringCase } from '../db/likePattern.js';
 
 interface SearchQuery {
   q?: string;
@@ -54,12 +56,12 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
     const conditions: ReturnType<typeof eq>[] = [eq(schema.messages.channelId, id), userWrittenMessages()];
 
     if (q && q.trim()) {
-      conditions.push(like(schema.messages.content, `%${q.trim()}%`), notStickerContent(schema.messages.content));
+      conditions.push(containsText(schema.messages.content, q.trim()), notStickerContent(schema.messages.content));
     }
 
     if (from && from.trim()) {
       const user = db.select().from(schema.users)
-        .where(like(schema.users.username, from.trim()))
+        .where(sameTextIgnoringCase(schema.users.username, from.trim()))
         .get();
       if (user) {
         conditions.push(eq(schema.messages.userId, user.id));
@@ -91,7 +93,7 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
         has === 'image' ? sql` AND attachments.mimetype LIKE 'image/%'` : sql``
       })`;
     } else if (has === 'link') {
-      conditions.push(like(schema.messages.content, '%http%'));
+      conditions.push(containsText(schema.messages.content, 'http'));
     }
 
     // Count total
@@ -153,12 +155,12 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
     const conditions: ReturnType<typeof eq>[] = [eq(schema.dmMessages.dmChannelId, id)];
 
     if (q && q.trim()) {
-      conditions.push(like(schema.dmMessages.content, `%${q.trim()}%`), notStickerContent(schema.dmMessages.content));
+      conditions.push(containsText(schema.dmMessages.content, q.trim()), notStickerContent(schema.dmMessages.content));
     }
 
     if (from && from.trim()) {
       const user = db.select().from(schema.users)
-        .where(like(schema.users.username, from.trim()))
+        .where(sameTextIgnoringCase(schema.users.username, from.trim()))
         .get();
       if (user) {
         conditions.push(eq(schema.dmMessages.userId, user.id));
@@ -189,7 +191,7 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
         has === 'image' ? sql` AND attachments.mimetype LIKE 'image/%'` : sql``
       })`;
     } else if (has === 'link') {
-      conditions.push(like(schema.dmMessages.content, '%http%'));
+      conditions.push(containsText(schema.dmMessages.content, 'http'));
     }
 
     let countQuery;
@@ -266,22 +268,23 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
       .from(schema.messages)
       .where(and(
         eq(schema.messages.channelId, id),
-        sql`${schema.messages.id} <= ${messageId}`,
+        idUpTo(schema.messages.id, messageId),
       ))
       .orderBy(desc(schema.messages.createdAt))
       .limit(half + 1)
       .all();
 
-    // Messages after
-    const afterRows = db.select()
+    // Messages after: the next ids past the target, as a forward page of history takes them
+    // (utils/messagePaging.ts), read off the index of ids and then put in history's order.
+    const afterRows = inHistoryOrder(db.select()
       .from(schema.messages)
       .where(and(
         eq(schema.messages.channelId, id),
-        gt(schema.messages.id, messageId),
+        idAfter(schema.messages.id, messageId),
       ))
-      .orderBy(asc(schema.messages.createdAt))
+      .orderBy(asc(idAsNumber(schema.messages.id)))
       .limit(half)
-      .all();
+      .all());
 
     // Combine in chronological order
     beforeRows.reverse();
@@ -328,21 +331,21 @@ export async function searchRoutes(app: FastifyInstance): Promise<void> {
       .from(schema.dmMessages)
       .where(and(
         eq(schema.dmMessages.dmChannelId, id),
-        sql`${schema.dmMessages.id} <= ${messageId}`,
+        idUpTo(schema.dmMessages.id, messageId),
       ))
       .orderBy(desc(schema.dmMessages.createdAt))
       .limit(half + 1)
       .all();
 
-    const afterRows = db.select()
+    const afterRows = inHistoryOrder(db.select()
       .from(schema.dmMessages)
       .where(and(
         eq(schema.dmMessages.dmChannelId, id),
-        gt(schema.dmMessages.id, messageId),
+        idAfter(schema.dmMessages.id, messageId),
       ))
-      .orderBy(asc(schema.dmMessages.createdAt))
+      .orderBy(asc(idAsNumber(schema.dmMessages.id)))
       .limit(half)
-      .all();
+      .all());
 
     beforeRows.reverse();
     const messageRows = [...beforeRows, ...afterRows];

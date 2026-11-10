@@ -88,6 +88,7 @@ import { startFederationWorkers, stopFederationWorkers } from './utils/federatio
 import { startBackupWorker, stopBackupWorker } from './utils/backupWorker.js';
 import { startRuntimeStats, stopRuntimeStats } from './utils/runtimeStats.js';
 import { startOperatorAlerts, stopOperatorAlerts } from './utils/operatorAlerts.js';
+import { installProcessGuards } from './utils/processGuards.js';
 import { publicStatusRoutes } from './routes/publicStatus.js';
 import { loadtestRoutes } from './routes/loadtest.js';
 import { startDirectoryPinger, stopDirectoryPinger } from './directory/pinger.js';
@@ -97,7 +98,7 @@ import { registerDeveloperDocs } from './utils/developerDocs.js';
 import { createWebDocuments, isStaticAssetPath, registerWebDocumentRoutes, sendIndex, type InviteCard } from './utils/webDocument.js';
 import { rateLimitsDisabled, warnIgnoredRateLimitSwitch } from './utils/rateLimitSwitch.js';
 import { trustProxyFor } from './utils/trustProxy.js';
-import { registerJsonBodyParser } from './utils/jsonBody.js';
+import { registerEmptyBodyDefault, registerJsonBodyParser } from './utils/jsonBody.js';
 import { registerBodyGuard } from './utils/bodyGuard.js';
 import { getLocalInvitePreview } from './utils/spaceInviteSnapshot.js';
 import { uploadNameOf } from './utils/profileImageRefs.js';
@@ -137,6 +138,8 @@ async function main(): Promise<void> {
 
   // An empty JSON body is no body, as before Fastify 5 (utils/jsonBody.ts).
   registerJsonBodyParser(app);
+  // A write without a body, or with JSON `null` for one, reads as an empty object (utils/jsonBody.ts).
+  registerEmptyBodyDefault(app);
   // A large body is read only from someone who has shown who they are (utils/bodyGuard.ts).
   registerBodyGuard(app);
 
@@ -252,6 +255,8 @@ async function main(): Promise<void> {
   // and logs it, and those carry things that must go nowhere: the parser quotes the
   // body it could not read, passwords included.
   app.setErrorHandler(apiErrorHandler);
+  // A background task that fails is written down; it does not end the process (utils/processGuards.ts).
+  installProcessGuards(app.log);
 
   await app.register(rateLimit, {
     max: 200,
@@ -444,7 +449,7 @@ async function main(): Promise<void> {
   }
 
   // Log ffmpeg availability at startup (so admins see the warning immediately)
-  checkFfmpeg();
+  void checkFfmpeg();
 
   // Register WS-layer call relay hooks (ring-timeout fan-out).
   registerCallRelayHooks();
@@ -505,8 +510,18 @@ async function main(): Promise<void> {
     process.exit(0);
   };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  // A shutdown that fails still ends the process: the container must not wait for one that hangs.
+  const stop = (): void => {
+    shutdown().catch((err: unknown) => {
+      console.error('Shutting down failed:', err);
+      process.exit(1);
+    });
+  };
+  process.on('SIGINT', stop);
+  process.on('SIGTERM', stop);
 }
 
-main();
+main().catch((err: unknown) => {
+  console.error('The server could not start:', err);
+  process.exit(1);
+});
