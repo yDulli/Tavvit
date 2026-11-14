@@ -157,6 +157,55 @@ describe('JSON that is no frame', () => {
   });
 });
 
+// Every refused frame was still unpacked, parsed and answered, for as long as a client liked, and a
+// client that read none of the answers made the server keep them all (security audit, 2026-11-14).
+describe('frames nobody should be sending', () => {
+  it('that are not JSON end the socket of someone who has not signed in', async () => {
+    const { socket, heard, closed } = await open();
+    socket.send('x');
+    socket.send('x');
+    await closed;
+    expect(heard).toEqual([expect.objectContaining({ type: 'error', message: 'Invalid JSON' })]);
+    expect(escaped).toEqual([]);
+  });
+
+  it('are answered a while and then end the socket of someone signed in', async () => {
+    const { socket, heard, closed } = await signedIn('anna');
+    for (let sent = 0; sent < 260; sent += 1) socket.send('not json');
+    const code = await closed;
+    expect(code).toBe(1008);
+    const refusals = heard.filter((event) => event.type === 'error').length;
+    expect(refusals).toBe(200);
+    // Others are not touched by it.
+    const next = await signedIn('ben');
+    next.socket.close();
+    expect(escaped).toEqual([]);
+  });
+
+  it('do not count against someone whose frames are otherwise taken', async () => {
+    const { socket, heard } = await signedIn('anna');
+    for (let round = 0; round < 3; round += 1) {
+      for (let sent = 0; sent < 150; sent += 1) socket.send('not json');
+      // A frame that is taken starts the count again.
+      socket.send(JSON.stringify({ type: 'client_focus', focused: true }));
+    }
+    socket.send(JSON.stringify({ type: 'ping' }));
+    await until(() => heard.some((event) => event.type === 'pong'), 'the pong after them');
+    expect(socket.readyState).toBe(WebSocket.OPEN);
+    socket.close();
+  });
+
+  it('get no more pongs than a client has reason to ask for', async () => {
+    const { socket, heard } = await signedIn('anna');
+    for (let sent = 0; sent < 80; sent += 1) socket.send(JSON.stringify({ type: 'ping' }));
+    socket.send(JSON.stringify({ type: 'client_focus', focused: true }));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(heard.filter((event) => event.type === 'pong')).toHaveLength(20);
+    expect(socket.readyState).toBe(WebSocket.OPEN);
+    socket.close();
+  });
+});
+
 describe('a timer\'s work', () => {
   it('that throws is written down, not thrown out of the timer', async () => {
     const { onTimer } = await import('./handler.js');

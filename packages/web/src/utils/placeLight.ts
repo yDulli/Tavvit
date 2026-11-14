@@ -37,8 +37,9 @@ export function lightFromColor(hex: string): string | null {
 
 /**
  * A band painted in a colour rather than with a picture (a space's card, a profile's
- * banner): lit from its top corner, deepening away from it. Goes with `.banner-depth`.
+ * banner): the colour itself, a little deeper at its foot so words under it stay clear,
+ * and no light of its own. Goes with `.banner-depth`, which adds the grain.
  */
 export function bannerFill(hex: string): string {
-  return `radial-gradient(120% 150% at 85% -20%, ${lightFromColor(hex) ?? hex} 0%, ${hex} 48%, ${adjustColor(hex, -34)} 100%)`;
+  return `linear-gradient(180deg, ${hex} 0%, ${adjustColor(hex, -16)} 100%)`;
 }

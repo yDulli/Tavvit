@@ -2,11 +2,11 @@
 export const LANDING_IMAGE_SIZES = {
   "bot-card": {
     "width": 1192,
-    "height": 390
+    "height": 392
   },
   "community": {
     "width": 1888,
-    "height": 1050
+    "height": 1120
   },
   "phone": {
     "width": 780,

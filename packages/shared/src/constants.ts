@@ -33,6 +33,12 @@ export const EMBED_FRAME_ORIGINS: readonly string[] = [
  */
 export const WS_MAX_CLIENT_FRAME_BYTES = 64 * 1024;
 
+/**
+ * The most files one message carries. Far more than anyone attaches by hand; without a number a
+ * single request could name tens of thousands of ids, each one looked up and written in turn.
+ */
+export const MAX_ATTACHMENTS_PER_MESSAGE = 50;
+
 // ─── Streaming Constants ─────────────────────────────────────────────────────
 
 export const STANDARD_RESOLUTIONS = [540, 720, 1080, 1440, 2160] as const;

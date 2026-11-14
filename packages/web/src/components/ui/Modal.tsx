@@ -144,7 +144,7 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
           <button
             type="button"
             onClick={onClose}
-            className="icon-btn icon-btn-lg absolute right-3 top-3 z-10 border border-border-soft bg-surface-elevated"
+            className="icon-btn icon-btn-lg absolute right-3 top-3 z-10"
             aria-label={closeLabel}
           >
             <Icon name="x" size={16} strokeWidth={2} />
@@ -165,8 +165,8 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
       />
       <div className={`modal-panel relative ${maxWidth} w-full mx-4 max-h-[calc(calc(100*var(--app-vh))-2rem)] flex flex-col glass-modal rounded-lg`}>
         {title && (
-          <div className="flex h-12 items-center justify-between gap-3 border-b border-border-hard pl-4 pr-2 flex-shrink-0">
-            <h2 className="truncate text-lead font-semibold tracking-[-0.01em] text-txt-primary">{title}</h2>
+          <div className="flex min-h-[56px] items-center justify-between gap-4 border-b border-border-hard py-3 pl-5 pr-3 flex-shrink-0">
+            <h2 className="truncate text-title font-[450] tracking-[-0.016em] text-txt-primary">{title}</h2>
             {dismissible && (
             <button
               type="button"
@@ -174,12 +174,12 @@ function ModalSurface({ onClose, title, children, maxWidth = 'max-w-md', size, m
               className="icon-btn icon-btn-lg"
               aria-label={closeLabel}
             >
-              <Icon name="x" size={17} />
+              <Icon name="x" size={16} />
             </button>
             )}
           </div>
         )}
-        <div className="p-4 overflow-y-auto scrollbar-thin flex-1 min-h-0">
+        <div className="p-5 overflow-y-auto scrollbar-thin flex-1 min-h-0">
           {children}
         </div>
       </div>

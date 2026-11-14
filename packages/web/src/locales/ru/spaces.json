@@ -1129,7 +1129,8 @@
     "dmUnreadMessages_few": "{{count}} непрочитанных личных сообщения",
     "dmUnreadMessages_many": "{{count}} непрочитанных личных сообщений",
     "dmUnreadMessages_other": "{{count}} непрочитанного личного сообщения",
-    "dmUnreadMessagesOver99": "Более 99 непрочитанных личных сообщений"
+    "dmUnreadMessagesOver99": "Более 99 непрочитанных личных сообщений",
+    "places": "Места"
   },
   "channels": {
     "loading": "Загрузка каналов",

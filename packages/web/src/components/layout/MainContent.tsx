@@ -3,7 +3,7 @@ import { FollowChannelButton } from '../chat/FollowChannelButton';
 import { ChannelIcon } from '../ui/ChannelIcon';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useSearchParams, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useSpaceStore } from '../../stores/spaceStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useUIStore } from '../../stores/uiStore';
@@ -12,6 +12,7 @@ import { MessageInput } from '../chat/MessageInput';
 import { VoiceGrid } from '../voice/VoiceGrid';
 import { VoiceControlBar } from '../voice/VoiceControlBar';
 import { VoiceChatPanel } from '../voice/VoiceChatPanel';
+import { VoiceRoomPreview } from '../voice/VoiceRoomPreview';
 import { FriendsPage } from '../chat/FriendsPage';
 import { ExplorePage } from '../chat/ExplorePage';
 import { HomePage } from '../home/HomePage';
@@ -32,7 +33,6 @@ import { DmDeletedNotice } from '../chat/DmDeletedNotice';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import type { User } from '@backspace/shared';
 import { Tooltip } from '../ui/Tooltip';
-import { joinVoiceChannel } from '../../utils/voice';
 import { SearchPopover } from '../chat/SearchPopover';
 import { PinsPopover } from '../chat/PinsPopover';
 import { ThreadsPopover } from '../chat/ThreadsPopover';
@@ -45,6 +45,8 @@ import { isDmChannel } from '../../stores/spaceStore';
 import { usePointerReveal, VOICE_CHROME_ATTR } from '../../hooks/usePointerReveal';
 import { Icon } from '../ui/Icon';
 import { useCanPinInChannel } from '../../utils/pinPermission';
+import { PageBar, TopbarActions, TopbarLead, Crumb } from './TopbarSlots';
+import { DmCrumbs, SpaceCrumbs } from './PlaceCrumbs';
 
 /**
  * Voice channel header, in both of its shapes.
@@ -68,6 +70,22 @@ function voiceHeaderClassName(fullscreen: boolean, revealed: boolean): string {
     ? 'opacity-100'
     : 'opacity-0 focus-within:opacity-100 [@media(hover:none)]:opacity-100 [@media(any-pointer:coarse)]:opacity-100';
   return `${base} ${overlay} ${visibility}`;
+}
+
+/** How a call stands, beside its name: failed, connected with how many are in it, or connecting. */
+function CallState({ connectionError, connected, label }: { connectionError: unknown; connected: boolean; label: string }) {
+  const { t } = useTranslation('spaces');
+  if (connectionError) return <span className="ml-1 flex-shrink-0 text-meta font-medium text-txt-danger">{t('main.voice.connectionFailed')}</span>;
+  if (connected) {
+    return (
+      <span className="ml-1 flex flex-shrink-0 items-center gap-2 text-meta">
+        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-status-online" />
+        <span className="font-medium text-txt-positive">{t('main.voice.connected')}</span>
+        <span className="tabular text-txt-tertiary">{label}</span>
+      </span>
+    );
+  }
+  return <span className="ml-1 flex-shrink-0 text-meta font-medium text-status-idle">{t('main.voice.connecting')}</span>;
 }
 
 export function MainContent() {
@@ -303,30 +321,38 @@ export function MainContent() {
           ref={voiceContainerRef}
           className={`lit flex-1 flex flex-col bg-surface-base min-w-0 group/voice relative overflow-hidden ${voiceFullscreen ? 'h-screen' : ''}`}
         >
-          <div
-            data-testid="voice-header-overlay"
-            className={voiceHeaderClassName(voiceFullscreen, chromeRevealed)}
-            {...(voiceFullscreen ? { [VOICE_CHROME_ATTR]: '' } : {})}
-          >
-            <div className="flex items-center gap-3">
-              <Icon name="phone" size={18} className="text-txt-tertiary" />
-              <span className="font-semibold text-lead tracking-[-0.01em] text-txt-primary">{dmName}</span>
-              {connectionError ? (
-                <span className="text-meta text-txt-danger font-medium ml-2">{t('spaces:main.voice.connectionFailed')}</span>
-              ) : isLiveKitConnected ? (
-                <>
-                  <span className="text-meta text-status-online font-medium ml-2">{t('spaces:main.voice.connected')}</span>
-                  <span className="text-meta text-txt-tertiary ml-1">{t('spaces:main.voice.inCall', { count: participants.length })}</span>
-                </>
-              ) : (
-                <span className="text-meta text-status-idle font-medium ml-2">{t('spaces:main.voice.connecting')}</span>
-              )}
+          {voiceFullscreen ? (
+            <div
+              data-testid="voice-header-overlay"
+              className={voiceHeaderClassName(voiceFullscreen, chromeRevealed)}
+              {...{ [VOICE_CHROME_ATTR]: '' }}
+            >
+              <div className="flex items-center gap-3">
+                <Icon name="phone" size={18} className="text-txt-tertiary" />
+                <span className="font-semibold text-lead tracking-[-0.01em] text-txt-primary">{dmName}</span>
+                <CallState connectionError={connectionError} connected={isLiveKitConnected} label={t('spaces:main.voice.inCall', { count: participants.length })} />
+              </div>
+              <div className="pointer-events-auto mr-24 flex flex-shrink-0 items-center gap-1">
+                <TransferIndicator />
+                <MemberListToggleButton />
+              </div>
             </div>
-            <div className={`flex items-center gap-1 flex-shrink-0 ${voiceFullscreen ? 'pointer-events-auto mr-24' : ''}`}>
-              <TransferIndicator />
-              <MemberListToggleButton />
-            </div>
-          </div>
+          ) : (
+            <PageBar>
+              <TopbarLead>
+                <DmCrumbs />
+                <Crumb current>
+                  <Icon name="phone" size={15} className="flex-shrink-0 text-txt-tertiary" />
+                  <span className="truncate">{dmName}</span>
+                </Crumb>
+                <CallState connectionError={connectionError} connected={isLiveKitConnected} label={t('spaces:main.voice.inCall', { count: participants.length })} />
+              </TopbarLead>
+              <TopbarActions>
+                <TransferIndicator />
+                <MemberListToggleButton />
+              </TopbarActions>
+            </PageBar>
+          )}
 
           <div className="flex-1 flex overflow-hidden min-h-0">
             <div className={`flex-1 min-w-0 flex relative ${voiceFullscreen ? '' : 'pb-20'}`}>
@@ -354,30 +380,34 @@ export function MainContent() {
             </button>
           </div>
         )}
-        <div className="panel-bar px-5 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0" onContextMenu={(e) => conversationMenu.openDm(e, currentChannelId)}>
+        <PageBar>
+          <TopbarLead>
+          <DmCrumbs />
+          <div className="crumb-here flex items-center gap-2 min-w-0" onContextMenu={(e) => conversationMenu.openDm(e, currentChannelId)}>
             {isGroupDm ? (
               <div
                 onClick={() => openModal('groupDmSettings', { dmChannelId: currentChannelId, initialTab: 'overview' })}
                 className="flex-shrink-0 cursor-pointer"
                 aria-label={t('spaces:main.dm.openGroupSettings')}
               >
-                <AvatarStack members={otherMembers} origin={dmViewer.origin} size={32} border="chat" iconUrl={dmChannel?.icon} />
+                <AvatarStack members={otherMembers} origin={dmViewer.origin} size={24} border="chat" iconUrl={dmChannel?.icon} />
               </div>
+            ) : firstOther ? (
+              <Avatar src={firstOther.avatar} name={dmName} size={20} userId={firstOther.homeUserId ?? firstOther.id} avatarColor={firstOther.avatarColor} />
             ) : (
               <span className="flex flex-shrink-0 items-center justify-center text-txt-tertiary">
-                <Icon name="user" size={18} />
+                <Icon name="user" size={16} />
               </span>
             )}
             {isGroupDm ? (
               <span
                 onClick={() => openModal('groupDmSettings', { dmChannelId: currentChannelId, initialTab: 'overview' })}
-                className="font-semibold text-lead tracking-[-0.01em] text-txt-primary truncate cursor-pointer"
+                className="text-ui font-medium text-txt-primary truncate cursor-pointer"
               >
                 {dmName}
               </span>
             ) : (
-              <span className="font-semibold text-lead tracking-[-0.01em] text-txt-primary truncate">{dmName}</span>
+              <span className="text-ui font-medium text-txt-primary truncate">{dmName}</span>
             )}
             {!isGroupDm && firstOther && isFederationGlobeApplicable(firstOther) && (
               <Tooltip content={firstOther.username} position="bottom">
@@ -411,7 +441,8 @@ export function MainContent() {
               </button>
             )}
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          </TopbarLead>
+          <TopbarActions>
             {/* A 1-on-1 whose partner was deleted has nobody to ring, as on mobile. */}
             {!dmPartnerDeleted && (
               <>
@@ -461,8 +492,8 @@ export function MainContent() {
             <TransferIndicator />
             <div className="w-px h-5 bg-border-hard mx-1.5" />
             <MemberListToggleButton />
-          </div>
-        </div>
+          </TopbarActions>
+        </PageBar>
         <MessageList channelId={currentChannelId} jumpToMessageId={jumpToMessageId} onJumpHandled={clearJumpRequest} />
         {dmPartnerDeleted
           ? <DmDeletedNotice />
@@ -492,13 +523,16 @@ export function MainContent() {
   if (!currentChannelId || !channel) {
     return (
       <div className="flex-1 flex flex-col relative">
-        <div className="panel-bar px-5 flex items-center justify-between">
-          <span className="text-ui text-txt-tertiary">{t('spaces:main.selectChannel')}</span>
-          <div className="flex items-center gap-1 flex-shrink-0">
+        <PageBar>
+          <TopbarLead>
+            <SpaceCrumbs spaceId={currentSpaceId} />
+            <span className="truncate text-ui text-txt-tertiary">{t('spaces:main.selectChannel')}</span>
+          </TopbarLead>
+          <TopbarActions>
             <TransferIndicator />
             <MemberListToggleButton />
-          </div>
-        </div>
+          </TopbarActions>
+        </PageBar>
         <div className="empty-state flex-1">
           <p className="empty-state-body">{t('spaces:main.selectChannelHint')}</p>
         </div>
@@ -513,34 +547,20 @@ export function MainContent() {
       return (
         <div className="flex-1 flex flex-col">
           {conversationMenu.dialogs}
-          <div className="panel-bar px-5 flex items-center justify-between">
-            <div className="flex items-center gap-3" onContextMenu={(e) => conversationMenu.openChannel(e, channel.id)}>
-              <ChannelIcon type="voice" icon={channel.icon} size={18} className="text-txt-tertiary" />
-              <span className="font-semibold text-lead tracking-[-0.01em] text-txt-primary">{channel.name}</span>
-            </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
+          <PageBar>
+            <TopbarLead>
+              <SpaceCrumbs spaceId={currentSpaceId} />
+              <Crumb current onContextMenu={(e) => conversationMenu.openChannel(e, channel.id)}>
+                <ChannelIcon type="voice" icon={channel.icon} size={15} className="flex-shrink-0 text-txt-tertiary" />
+                <span className="truncate">{channel.name}</span>
+              </Crumb>
+            </TopbarLead>
+            <TopbarActions>
               <TransferIndicator />
               <MemberListToggleButton />
-            </div>
-          </div>
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="surface-card w-full max-w-[360px] rounded-md">
-              <div className="flex items-center gap-2.5 border-b border-border-hard px-4 py-3">
-                <ChannelIcon type="voice" icon={channel.icon} size={16} className="text-txt-tertiary" />
-                <h2 className="min-w-0 truncate text-body font-semibold text-txt-primary">{channel.name}</h2>
-              </div>
-              <div className="flex items-center justify-between gap-4 px-4 py-3">
-                <p className="text-ui text-txt-tertiary">{t('spaces:main.voice.empty')}</p>
-                <button
-                  onClick={() => joinVoiceChannel(currentChannelId, useVoiceStore.getState().connectFn ?? undefined)}
-                  className="btn-primary flex-shrink-0"
-                >
-                  <Icon name="mic" size={15} />
-                  {t('spaces:main.voice.join')}
-                </button>
-              </div>
-            </div>
-          </div>
+            </TopbarActions>
+          </PageBar>
+          <VoiceRoomPreview channel={channel} />
         </div>
       );
     }
@@ -550,30 +570,38 @@ export function MainContent() {
         ref={voiceContainerRef}
         className={`lit flex-1 flex flex-col bg-surface-base min-w-0 group/voice relative overflow-hidden ${voiceFullscreen ? 'h-screen' : ''}`}
       >
-        <div
-          data-testid="voice-header-overlay"
-          className={voiceHeaderClassName(voiceFullscreen, chromeRevealed)}
-          {...(voiceFullscreen ? { [VOICE_CHROME_ATTR]: '' } : {})}
-        >
-          <div className="flex items-center gap-3">
-            <ChannelIcon type="voice" icon={channel.icon} size={18} className="text-txt-tertiary" />
-            <span className="font-semibold text-lead tracking-[-0.01em] text-txt-primary">{channel.name}</span>
-            {connectionError ? (
-              <span className="text-meta text-txt-danger font-medium ml-2">{t('spaces:main.voice.connectionFailed')}</span>
-            ) : isLiveKitConnected ? (
-              <>
-                <span className="text-meta text-status-online font-medium ml-2">{t('spaces:main.voice.connected')}</span>
-                <span className="text-meta text-txt-tertiary ml-1">{t('spaces:main.voice.participants', { count: participants.length })}</span>
-              </>
-            ) : (
-              <span className="text-meta text-status-idle font-medium ml-2">{t('spaces:main.voice.connecting')}</span>
-            )}
+        {voiceFullscreen ? (
+          <div
+            data-testid="voice-header-overlay"
+            className={voiceHeaderClassName(voiceFullscreen, chromeRevealed)}
+            {...{ [VOICE_CHROME_ATTR]: '' }}
+          >
+            <div className="flex items-center gap-3">
+              <ChannelIcon type="voice" icon={channel.icon} size={18} className="text-txt-tertiary" />
+              <span className="font-semibold text-lead tracking-[-0.01em] text-txt-primary">{channel.name}</span>
+              <CallState connectionError={connectionError} connected={isLiveKitConnected} label={t('spaces:main.voice.participants', { count: participants.length })} />
+            </div>
+            <div className="pointer-events-auto mr-24 flex flex-shrink-0 items-center gap-1">
+              <TransferIndicator />
+              <MemberListToggleButton />
+            </div>
           </div>
-          <div className={`flex items-center gap-1 flex-shrink-0 ${voiceFullscreen ? 'pointer-events-auto mr-24' : ''}`}>
-            <TransferIndicator />
-            <MemberListToggleButton />
-          </div>
-        </div>
+        ) : (
+          <PageBar>
+            <TopbarLead>
+              <SpaceCrumbs spaceId={currentSpaceId} />
+              <Crumb current>
+                <ChannelIcon type="voice" icon={channel.icon} size={15} className="flex-shrink-0 text-txt-tertiary" />
+                <span className="truncate">{channel.name}</span>
+              </Crumb>
+              <CallState connectionError={connectionError} connected={isLiveKitConnected} label={t('spaces:main.voice.participants', { count: participants.length })} />
+            </TopbarLead>
+            <TopbarActions>
+              <TransferIndicator />
+              <MemberListToggleButton />
+            </TopbarActions>
+          </PageBar>
+        )}
 
         <div className="flex-1 flex overflow-hidden min-h-0">
           <div className={`flex-1 min-w-0 flex relative ${voiceFullscreen ? '' : 'pb-20'}`}>
@@ -593,21 +621,22 @@ export function MainContent() {
     return (
       <div className="flex-1 flex flex-col min-w-0 relative">
         {conversationMenu.dialogs}
-        <div className="panel-bar px-5 flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0" onContextMenu={(e) => conversationMenu.openChannel(e, channel.id)}>
-            <span className="flex flex-shrink-0 items-center justify-center text-txt-tertiary">
-              <Icon name="forum" size={18} />
-            </span>
-            <span className="font-semibold text-lead tracking-[-0.01em] text-txt-primary truncate leading-tight">{channel.name}</span>
+        <PageBar>
+          <TopbarLead>
+            <SpaceCrumbs spaceId={currentSpaceId} />
+            <Crumb current onContextMenu={(e) => conversationMenu.openChannel(e, channel.id)}>
+              <Icon name="forum" size={15} className="flex-shrink-0 text-txt-tertiary" />
+              <span className="truncate">{channel.name}</span>
+            </Crumb>
             {channel.topic && <ChannelHeaderTopic key={channel.id} channelName={channel.name} topic={channel.topic} />}
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          </TopbarLead>
+          <TopbarActions>
             <ChannelNotificationButton channelId={currentChannelId} channelName={channel.name} />
             <TransferIndicator />
             <div className="w-px h-5 bg-border-hard mx-1.5" />
             <MemberListToggleButton />
-          </div>
-        </div>
+          </TopbarActions>
+        </PageBar>
         <ForumView channel={channel} />
       </div>
     );
@@ -616,17 +645,18 @@ export function MainContent() {
   return (
     <div className="flex-1 flex flex-col min-w-0 relative">
       {conversationMenu.dialogs}
-      <div className="panel-bar px-5 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0" onContextMenu={(e) => conversationMenu.openChannel(e, channel.id)}>
-          <span className="flex flex-shrink-0 items-center justify-center text-txt-tertiary">
-            <ChannelIcon type={channel.type} icon={channel.icon} size={18} />
-          </span>
-          <span className="font-semibold text-lead tracking-[-0.01em] text-txt-primary truncate leading-tight">{channel.name}</span>
+      <PageBar>
+        <TopbarLead>
+          <SpaceCrumbs spaceId={currentSpaceId} />
+          <Crumb current onContextMenu={(e) => conversationMenu.openChannel(e, channel.id)}>
+            <ChannelIcon type={channel.type} icon={channel.icon} size={15} className="flex-shrink-0 text-txt-tertiary" />
+            <span className="truncate">{channel.name}</span>
+          </Crumb>
           {channel.topic && (
             <ChannelHeaderTopic key={channel.id} channelName={channel.name} topic={channel.topic} />
           )}
-        </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        </TopbarLead>
+        <TopbarActions>
           {channel.type === 'announcement' && <FollowChannelButton channelId={channel.id} channelName={channel.name} />}
           <ChannelNotificationButton channelId={currentChannelId} channelName={channel.name} />
           <button
@@ -659,8 +689,8 @@ export function MainContent() {
           <TransferIndicator />
           <div className="w-px h-5 bg-border-hard mx-1.5" />
           <MemberListToggleButton />
-        </div>
-      </div>
+        </TopbarActions>
+      </PageBar>
       <MessageList channelId={currentChannelId} jumpToMessageId={jumpToMessageId} onJumpHandled={clearJumpRequest} />
       <MessageInput channelId={currentChannelId} channelName={channel.name} />
       <SearchPopover

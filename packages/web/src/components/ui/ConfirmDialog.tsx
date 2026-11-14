@@ -72,10 +72,10 @@ function ConfirmSurface({
         className="modal-panel relative max-w-[440px] w-full mx-4 glass-modal rounded-lg"
       >
         <div className="p-5">
-          <h3 id={titleId} className="mb-1.5 text-lead font-semibold tracking-[-0.01em] text-txt-primary">{title}</h3>
+          <h3 id={titleId} className="mb-1.5 text-title font-[450] tracking-[-0.016em] text-txt-primary">{title}</h3>
           <div className="text-ui leading-relaxed text-txt-secondary">{description}</div>
         </div>
-        <div className="flex justify-end gap-2 border-t border-border-hard px-5 py-3">
+        <div className="flex justify-end gap-2 rounded-b-lg border-t border-border-hard bg-surface-channel/40 px-5 py-3.5">
           <button
             type="button"
             onClick={onClose}

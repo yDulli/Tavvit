@@ -124,6 +124,27 @@ export function everyonePermissions(spaceId: string, channelId: string): bigint 
 }
 
 /**
+ * What someone holds in a category: their rights in the space with the category's own overrides
+ * on them, which is what a channel in it starts from. Whoever is not in the space holds nothing,
+ * and whoever holds everything (owner, instance admin, ADMINISTRATOR) holds it here too.
+ */
+export function computeCategoryPermissions(userId: string, spaceId: string, categoryId: string): bigint {
+  const held = computePermissions(userId, spaceId);
+  if ((held & ALL_PERMISSIONS) === ALL_PERMISSIONS) return held;
+  if (!getMember(spaceId, userId)) return 0n;
+  const db = getDb();
+  const catOverrides = db.select().from(schema.categoryOverrides)
+    .where(eq(schema.categoryOverrides.categoryId, categoryId))
+    .all();
+  if (catOverrides.length === 0) return held;
+  const assignedRoleIds = db.select({ roleId: schema.memberRoles.roleId }).from(schema.memberRoles)
+    .where(and(eq(schema.memberRoles.spaceId, spaceId), eq(schema.memberRoles.userId, userId)))
+    .all()
+    .map((row) => row.roleId);
+  return applyOverrides(held, spaceId, userId, assignedRoleIds, catOverrides, []);
+}
+
+/**
  * A channel's overrides on what someone holds in the space. Within each tier (@everyone, roles,
  * member), category first, then channel: channel bits win for any bit they explicitly set.
  */

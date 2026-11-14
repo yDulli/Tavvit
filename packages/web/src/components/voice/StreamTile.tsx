@@ -151,7 +151,7 @@ function StreamAttenuationItem() {
             }`}
           >
             {streamAttenuationEnabled && (
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="rgb(var(--on-accent))">
                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
               </svg>
             )}

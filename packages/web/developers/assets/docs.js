@@ -1,8 +1,166 @@
 // The docs work without this. It adds the search, the copy buttons, this instance's own address in
-// the examples, the calculator on the permissions page and the source offer in the footer. It asks
-// nothing of any other server.
+// the examples, the calculator on the permissions page and the source offer in the footer, and the
+// light of the look: the threads behind a page's opening, the ring that trails the pointer, and what
+// is further down rising into view. It asks nothing of any other server.
 (() => {
   const INSTANCE_HOST = 'your.instance';
+
+  // ── The light: decoration, and none of it moves for someone who asked for less motion ──
+
+  const STILL = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /** Bands of light threads: where each runs, how far it swings, its light, its pace. */
+  const BANDS = {
+    hero: [
+      { y: 0.52, amplitude: 0.11, light: '242 242 242', speed: 0.22, phase: 0 },
+      { y: 0.66, amplitude: 0.08, light: '158 158 158', speed: 0.16, phase: 2.1 },
+      { y: 0.34, amplitude: 0.07, light: '242 242 242', speed: 0.12, phase: 4.2 },
+    ],
+    quiet: [{ y: 0.6, amplitude: 0.16, light: '242 242 242', speed: 0.14, phase: 1.3 }],
+  };
+  const THREADS = 22;
+  const FRAME_MS = 1000 / 30;
+
+  /**
+   * The field of fine light threads behind the opening of a page (as the app's ui/LightField.tsx):
+   * a canvas in each `data-light` host, thirty frames a second, resting while off screen or in a
+   * hidden tab, and one still frame with reduced motion.
+   */
+  function startLight() {
+    for (const host of document.querySelectorAll('[data-light]')) {
+      const canvas = document.createElement('canvas');
+      canvas.className = 'light-field';
+      canvas.setAttribute('aria-hidden', 'true');
+      host.prepend(canvas);
+      const pen = canvas.getContext('2d');
+      if (!pen) continue;
+      const kind = host.dataset.light === 'hero' ? 'hero' : 'quiet';
+      const bands = BANDS[kind];
+      const strength = kind === 'hero' ? 0.16 : 0.1;
+      let width = 0;
+      let height = 0;
+      let visible = true;
+      let last = 0;
+
+      const measure = () => {
+        const ratio = Math.min(1.5, window.devicePixelRatio || 1);
+        width = canvas.clientWidth;
+        height = canvas.clientHeight;
+        canvas.width = Math.max(1, Math.round(width * ratio));
+        canvas.height = Math.max(1, Math.round(height * ratio));
+        pen.setTransform(ratio, 0, 0, ratio, 0, 0);
+      };
+      const draw = (time) => {
+        const t = time / 1000;
+        pen.clearRect(0, 0, width, height);
+        pen.globalCompositeOperation = 'lighter';
+        const step = Math.max(6, width / 180);
+        for (const band of bands) {
+          const base = band.y * height;
+          const amplitude = band.amplitude * height;
+          for (let thread = 0; thread < THREADS; thread += 1) {
+            // Threads near the middle of a band are the brightest: a soft, fabric-like falloff.
+            const offset = thread / (THREADS - 1) - 0.5;
+            pen.strokeStyle = `rgb(${band.light} / ${(strength * Math.exp(-(offset * offset) * 10)).toFixed(3)})`;
+            pen.lineWidth = 1;
+            pen.beginPath();
+            for (let x = -step; x <= width + step; x += step) {
+              const u = x / Math.max(1, width);
+              const y = base
+                + offset * amplitude * 1.6
+                + amplitude * Math.sin(u * 5.2 + t * band.speed * 2 + band.phase + offset * 1.4)
+                + amplitude * 0.45 * Math.sin(u * 11.5 - t * band.speed * 3.1 + band.phase * 1.7 - offset * 2.2);
+              if (x < 0) pen.moveTo(x, y);
+              else pen.lineTo(x, y);
+            }
+            pen.stroke();
+          }
+        }
+        pen.globalCompositeOperation = 'source-over';
+      };
+
+      measure();
+      draw(4000);
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(() => {
+          measure();
+          draw(STILL ? 4000 : window.performance.now());
+        }).observe(canvas);
+      }
+      if (STILL) continue;
+      if (typeof IntersectionObserver !== 'undefined') {
+        new IntersectionObserver((entries) => { visible = entries.some((entry) => entry.isIntersecting); }).observe(canvas);
+      }
+      const loop = (time) => {
+        window.requestAnimationFrame(loop);
+        if (!visible || document.hidden || time - last < FRAME_MS) return;
+        last = time;
+        draw(time);
+      };
+      window.requestAnimationFrame(loop);
+    }
+  }
+
+  /**
+   * For a mouse: a soft ring of light that trails the pointer and opens up over what can be pressed,
+   * and frames marked `data-glare`, which are told where the pointer is so they can catch its light.
+   * The cursor itself stays. It rests while the pointer does.
+   */
+  function startPointer() {
+    if (STILL || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    const ring = document.createElement('div');
+    ring.className = 'pointer-aura';
+    ring.setAttribute('aria-hidden', 'true');
+    document.body.append(ring);
+    let x = -200;
+    let y = -200;
+    let ax = x;
+    let ay = y;
+    let active = false;
+    let frame = 0;
+
+    const tick = () => {
+      ax += (x - ax) * 0.2;
+      ay += (y - ay) * 0.2;
+      ring.style.transform = `translate(${ax}px, ${ay}px) translate(-50%, -50%) scale(${active ? 1.65 : 1})`;
+      ring.dataset.active = active ? 'true' : 'false';
+      frame = Math.abs(x - ax) + Math.abs(y - ay) > 0.1 ? window.requestAnimationFrame(tick) : 0;
+    };
+    window.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'mouse') return;
+      x = event.clientX;
+      y = event.clientY;
+      const target = event.target instanceof window.Element ? event.target : null;
+      active = Boolean(target?.closest('a, button, input, summary, label'));
+      const lit = target?.closest('[data-glare]');
+      if (lit) {
+        const box = lit.getBoundingClientRect();
+        lit.style.setProperty('--px', `${Math.round(x - box.left)}px`);
+        lit.style.setProperty('--py', `${Math.round(y - box.top)}px`);
+      }
+      ring.style.opacity = '1';
+      if (!frame) frame = window.requestAnimationFrame(tick);
+    }, { passive: true });
+    document.documentElement.addEventListener('pointerleave', () => { ring.style.opacity = '0'; });
+  }
+
+  /** What is below the first screen rises into view when it is reached. What is already in view is left alone. */
+  function startReveal() {
+    if (STILL || typeof IntersectionObserver === 'undefined') return;
+    const waiting = [...document.querySelectorAll('[data-reveal]')].filter((element) => element.getBoundingClientRect().top > window.innerHeight * 0.92);
+    if (waiting.length === 0) return;
+    const sight = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.dataset.reveal = 'in';
+        sight.unobserve(entry.target);
+      }
+    }, { rootMargin: '0px 0px -8% 0px' });
+    for (const element of waiting) {
+      element.dataset.reveal = 'wait';
+      sight.observe(element);
+    }
+  }
 
   /** The examples say the address of the instance being read, so they can be copied as they are. */
   function showOwnAddress() {
@@ -200,4 +358,12 @@
   startCalculator();
   startSearch();
   void showSourceOffer();
+  // Last, and each on its own: a browser that cannot draw one of them still has everything above.
+  for (const decorate of [startLight, startPointer, startReveal]) {
+    try {
+      decorate();
+    } catch {
+      // The page reads the same without it.
+    }
+  }
 })();

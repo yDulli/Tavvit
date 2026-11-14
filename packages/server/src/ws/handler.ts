@@ -1449,7 +1449,7 @@ class ConnectionManager implements ReplicaSessionHost {
     for (const [target, waiting] of pending) {
       const texts = [...waiting.values()];
       for (const ws of this.getUserConnections(target)) {
-        if (ws.readyState !== 1) continue; // WebSocket.OPEN
+        if (!takesMore(ws)) continue;
         if (this.socketAccess.get(ws)?.batches) {
           ws.send(texts.length === 1 ? (texts[0] as string) : batchFrame(texts));
         } else {
@@ -1470,11 +1470,7 @@ class ConnectionManager implements ReplicaSessionHost {
     const followUp = unreadCountFollowUp(userId, event, channelPerms);
     const followUpMessage = followUp ? JSON.stringify(followUp) : null;
     for (const ws of connections) {
-      if (ws.readyState !== 1) continue; // WebSocket.OPEN
-      if (ws.bufferedAmount > MOST_BUFFERED_BYTES) {
-        ws.terminate();
-        continue;
-      }
+      if (!takesMore(ws)) continue;
       ws.send(message);
       if (followUpMessage) ws.send(followUpMessage);
     }
@@ -1487,9 +1483,7 @@ class ConnectionManager implements ReplicaSessionHost {
       if (spaceIds.has(spaceId) && userId !== excludeUserId) {
         const connections = this.getUserConnections(userId);
         for (const ws of connections) {
-          if (ws.readyState === 1) {
-            ws.send(message);
-          }
+          if (takesMore(ws)) ws.send(message);
         }
       }
     }
@@ -1527,7 +1521,7 @@ class ConnectionManager implements ReplicaSessionHost {
         encoded.set(followUp, frames);
       }
       for (const ws of this.getUserConnections(userId)) {
-        if (ws.readyState !== 1) continue; // WebSocket.OPEN
+        if (!takesMore(ws)) continue;
         if (!frames) {
           ws.send(plain, TEXT_FRAME);
         } else if (this.socketAccess.get(ws)?.batches) {
@@ -1657,9 +1651,7 @@ class ConnectionManager implements ReplicaSessionHost {
     for (const [userId, connections] of this.connections) {
       if (userId !== excludeUserId) {
         for (const ws of connections) {
-          if (ws.readyState === 1) {
-            ws.send(message);
-          }
+          if (takesMore(ws)) ws.send(message);
         }
       }
     }
@@ -2433,6 +2425,27 @@ function inTurnForReady(job: () => void): void {
  * token is not checked until then, so a stranger could otherwise park 32 full frames per socket
  * for as long as the queue is long.
  */
+/**
+ * Whether a socket is open and draining. One that holds `MOST_BUFFERED_BYTES` unsent has a client
+ * that reads nothing: it is ended rather than fed more, and a client that is only slow connects
+ * again. Every send asks this, the answers to a socket's own frames included: a socket that sent
+ * frame after frame and read none of the answers made the server keep them all, with no end.
+ */
+function takesMore(ws: WebSocket): boolean {
+  if (ws.readyState !== 1) return false; // WebSocket.OPEN
+  if (ws.bufferedAmount > MOST_BUFFERED_BYTES) {
+    ws.terminate();
+    return false;
+  }
+  return true;
+}
+
+/** Frames in a row a signed-in socket may have refused (not JSON, over the limit) before it is closed. */
+const MOST_REFUSED_IN_A_ROW = 200;
+/** Pings answered per socket in ten seconds; a client sends one in fifteen. */
+const PINGS_PER_WINDOW = 20;
+const PING_WINDOW_MS = 10_000;
+
 const MOST_HELD_FRAMES = 32;
 const MOST_HELD_BYTES = 64 * 1024;
 
@@ -2450,6 +2463,38 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
     let isFederated = false;
     let isBot = false;
     let socketAccess: SocketAccess = { sessionId: null };
+    let refusedInARow = 0;
+    let pingWindowStart = 0;
+    let pingsInWindow = 0;
+
+    /** An answer to this socket's own frame, unless it is not reading its answers (`takesMore`). */
+    const answer = (frame: Record<string, unknown>): void => {
+      if (takesMore(ws)) ws.send(JSON.stringify(frame));
+    };
+
+    /** A pong, for as many pings as a client has reason to send; more are not answered. */
+    const pong = (): void => {
+      const now = Date.now();
+      if (now - pingWindowStart > PING_WINDOW_MS) {
+        pingWindowStart = now;
+        pingsInWindow = 0;
+      }
+      pingsInWindow += 1;
+      if (pingsInWindow <= PINGS_PER_WINDOW) answer({ type: 'pong' });
+    };
+
+    /**
+     * A frame that was refused. A client that keeps sending them is not one of ours: every one is
+     * still unpacked, parsed and answered, so after `MOST_REFUSED_IN_A_ROW` the socket is closed.
+     */
+    const refused = (message: string): void => {
+      refusedInARow += 1;
+      if (refusedInARow > MOST_REFUSED_IN_A_ROW) {
+        ws.close(1008, 'Too many refused frames');
+        return;
+      }
+      answer({ type: 'error', message });
+    };
 
     // Set auth timeout - must authenticate within 10 seconds
     const authTimeout = setTimeout(() => {
@@ -2490,7 +2535,13 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
         const raw = typeof data === 'string' ? data : data.toString('utf-8');
         value = JSON.parse(raw);
       } catch {
-        ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+        // Before a token, what is not JSON ends the socket: nothing that speaks this protocol sends it.
+        if (!authenticated && !authAsked) {
+          answer({ type: 'error', message: 'Invalid JSON' });
+          ws.close();
+        } else {
+          refused('Invalid JSON');
+        }
         return;
       }
       // JSON that is no object (`null`, a list, a bare value) is no frame. `null` in particular
@@ -2501,7 +2552,7 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
           ws.send(JSON.stringify({ type: 'error', message: 'First message must be auth' }));
           ws.close();
         } else {
-          ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+          refused('Invalid JSON');
         }
         return;
       }
@@ -2513,7 +2564,7 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
       if (!authenticated) {
         if (authAsked) {
           // Its `ready` is waiting its turn. A ping needs no account to answer.
-          if (parsed.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+          if (parsed.type === 'ping') pong();
           else if (heldFrames.length < MOST_HELD_FRAMES && heldBytes + frameBytes <= MOST_HELD_BYTES) {
             heldFrames.push(parsed);
             heldBytes += frameBytes;
@@ -2618,7 +2669,7 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
     const handleFrame = (parsed: Record<string, unknown>): void => {
       // Fast-path heartbeat — never reaches business logic
       if (parsed.type === 'ping') {
-        ws.send(JSON.stringify({ type: 'pong' }));
+        pong();
         return;
       }
 
@@ -2630,9 +2681,10 @@ export async function registerWebSocket(app: FastifyInstance): Promise<void> {
 
       // Rate limit all post-auth, non-ping messages (per-user, shared across tabs)
       if (!connectionManager.getUserRateLimiter(userId!).consume()) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Rate limited' }));
+        refused('Rate limited');
         return;
       }
+      refusedInARow = 0;
 
       // Handle authenticated events
       if (userId && username) {

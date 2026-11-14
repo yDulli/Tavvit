@@ -156,7 +156,11 @@ export async function threadRoutes(app: FastifyInstance): Promise<void> {
       .where(and(eq(schema.threadMembers.threadId, row.id), eq(schema.threadMembers.userId, request.userId)))
       .run();
     connectionManager.sendToUser(request.userId, { type: 'thread_unfollowed', threadId: row.id });
-    return reply.code(200).send(threadInfoOf(row, request.userId));
+    // Anyone may stop following, also someone who can no longer read it; only who can read it is
+    // told what it is. The answer to everyone else says no more than that it is done.
+    const found = readable(row.id, request.userId);
+    if (!found.ok) return reply.code(200).send({ id: row.id });
+    return reply.code(200).send(threadInfoOf(found.row, request.userId));
   });
 
   /** May this person rename or delete it: who started it, or someone who may manage the channel's messages. */

@@ -39,7 +39,7 @@ A thread has no address of its own. `/channels/<space>/<channel>?thread=<id>&mes
 
 ## Audit and data
 
-`thread_create`, `thread_update` and `thread_delete` are in the space's audit log. Renaming and deleting are for who started it or MANAGE_MESSAGES. Deleting takes everything said in it and keeps the message it grew from. A thread's name passes the space's word filter when someone chooses it. `tombstoneUser` removes an account's follows; its messages in threads go by the same rules as any channel's and appear in the data export under the thread's name.
+`thread_create`, `thread_update` and `thread_delete` are in the space's audit log. `DELETE /api/threads/:id/follow` is open to anyone, so that someone who lost access can still stop following; whoever cannot read the thread is answered `{ id }` and nothing else (it used to answer with the thread's name, channel and last message). Renaming and deleting are for who started it or MANAGE_MESSAGES. Deleting takes everything said in it and keeps the message it grew from. A thread's name passes the space's word filter when someone chooses it. `tombstoneUser` removes an account's follows; its messages in threads go by the same rules as any channel's and appear in the data export under the thread's name.
 
 ## Where else this shows
 

@@ -314,6 +314,7 @@
       "label": "字体",
       "description": "整个应用使用的字体。中文始终使用系统字体。",
       "options": {
+        "outfit": "Outfit",
         "geist": "Geist",
         "plexSans": "Plex",
         "inter": "Inter",

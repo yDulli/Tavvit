@@ -93,3 +93,46 @@ describe('resolveRemoteIdentityForClient against a home that does not answer', (
     expect(fetchCalls).toHaveLength(1);
   }, 10_000);
 });
+
+// Any signed-in account could have a row made for "someone elsewhere" through the conversation
+// routes, with federation off as well, and named by any text of any length: a megabyte a row,
+// without end (security audit, 2026-11-14).
+describe('a row for someone elsewhere, named by a client', () => {
+  beforeEach(() => {
+    sqlite = new Database(':memory:');
+    testDb = drizzle(sqlite, { schema });
+    applyMigrations(sqlite);
+    fetchCalls.length = 0;
+  });
+
+  const rows = (): number => testDb.select().from(schema.users).all().length;
+
+  it('is made for a home that is an instance\'s address, as before', async () => {
+    const { resolveRemoteIdentityForClient } = await import('./federationClientIdentity.js');
+    const user = await resolveRemoteIdentityForClient(KAI_ID, 'not-peered-yet.example', testDb);
+    expect(user?.username).toBe(`${KAI_ID}@not-peered-yet.example`);
+    expect(rows()).toBe(1);
+  });
+
+  it('is not made for a home that is no address of an instance', async () => {
+    const { resolveRemoteIdentityForClient } = await import('./federationClientIdentity.js');
+    for (const home of ['x'.repeat(200_000), 'no host at all!', 'a'.repeat(600) + '.example']) {
+      expect(await resolveRemoteIdentityForClient(KAI_ID, home, testDb)).toBeNull();
+    }
+    expect(rows()).toBe(0);
+  });
+
+  it('is not made at all while federation is off', async () => {
+    const { resolveRemoteIdentityForClient } = await import('./federationClientIdentity.js');
+    const { config } = await import('../config.js');
+    const federation = config.federation as { enabled: boolean };
+    federation.enabled = false;
+    try {
+      expect(await resolveRemoteIdentityForClient(KAI_ID, 'friend.example', testDb)).toBeNull();
+      expect(rows()).toBe(0);
+      expect(fetchCalls).toEqual([]);
+    } finally {
+      federation.enabled = true;
+    }
+  });
+});

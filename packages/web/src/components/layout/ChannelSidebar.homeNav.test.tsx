@@ -11,7 +11,7 @@ vi.mock('../../audio/AudioManager', () => ({
   },
 }));
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { useChatStore } from '../../stores/chatStore';
 import { useSpaceStore } from '../../stores/spaceStore';
@@ -33,9 +33,12 @@ function renderAt(pathname: string) {
   );
 }
 
-/** The button of a home item, found by its visible label. */
+/**
+ * The button of a home item, found by its visible label in the home navigation. The dock above it
+ * (SpaceSidebar) has a tile named Home as well, which is not one of these rows.
+ */
 function homeItem(label: string): HTMLElement {
-  return screen.getByRole('button', { name: label });
+  return within(screen.getByRole('navigation', { name: LABELS.home })).getByRole('button', { name: label });
 }
 
 function selectedItems(): string[] {

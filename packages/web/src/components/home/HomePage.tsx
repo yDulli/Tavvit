@@ -6,7 +6,7 @@ import type { DmChannel, User } from '@backspace/shared';
 import { getMyUserIdForOrigin, useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
 import { isIncomingRequest, useSocialStore, type TaggedFriend } from '../../stores/socialStore';
-import { useSpaceStore, type TaggedSpace } from '../../stores/spaceStore';
+import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { useVoiceStore } from '../../stores/voiceStore';
 import { selectRecentPlaces, useRecentPlacesStore, type RecentPlace } from '../../stores/recentPlacesStore';
@@ -26,21 +26,21 @@ import { joinVoiceChannel } from '../../utils/voice';
 import { useCanonicalUserView } from '../../utils/userViewLookup';
 import { openDirectMessage } from '../../utils/openDirectMessage';
 import { markConversationRead } from '../../utils/markConversationRead';
-import { getSpaceGradient } from '../../utils/gradients';
-import { bannerFill, lightFromColor } from '../../utils/placeLight';
 import { resolveSpaceLayout, spacesInLayoutOrder } from '../../utils/spaceLayout';
 import { FRIENDS_ADD_PATH, FRIENDS_PENDING_PATH, HOME_ROUTES } from '../../utils/homeNav';
 import { Avatar } from '../ui/Avatar';
 import { AvatarStack } from '../ui/AvatarStack';
 import { ChannelIcon } from '../ui/ChannelIcon';
 import { Icon, type IconName } from '../ui/Icon';
-import { SpaceBand } from '../ui/SpaceBand';
+import { PageBody, Panel } from '../ui/PageHeader';
+import { useFormatters } from '../../i18n/formatters';
 import { useUserContextMenu } from '../layout/userMenu/useUserContextMenu';
 import { useConversationContextMenu } from '../layout/conversationMenu/useConversationContextMenu';
 import { useSpaceContextMenu } from '../layout/spaceMenu/useSpaceContextMenu';
-import { ChannelConversationRow, ConversationTime, DmConversationRow, MentionRow, SpaceChannelMark, iconSrc } from '../inbox/InboxPage';
-import { UnreadBadge } from '../inbox/UnreadBadge';
+import { ChannelConversationRow, ConversationTime, DmConversationRow, MentionRow, SpaceChannelMark } from '../inbox/InboxPage';
 import { friendProfileUser, useFriendDoing } from './friendDoing';
+import { GoChip, HomeHero, type HomeStat } from './HomeHero';
+import { HomeSpaceCard, SpaceSuggestTile } from './HomeSpaceCard';
 
 /** How many waiting conversations and mentions Home lists before pointing at the inbox. */
 const ATTENTION_LIMIT = 5;
@@ -51,8 +51,8 @@ const RECENT_LIMIT = 8;
 const ONLINE_LIMIT = 8;
 /** Below this many spaces, the space grid offers to create or join one. */
 const SUGGEST_SPACE_BELOW = 3;
-/** How many space cards Home shows before "Show all": two rows on a wide window, three on a narrower one. */
-const SPACE_CARD_LIMIT = 6;
+/** How many space cards Home shows before "Show all": two rows of four on a wide window, more rows on a narrower one. */
+const SPACE_CARD_LIMIT = 8;
 
 const FALLBACK_USER = { id: '', username: '', createdAt: 0, isAdmin: false, replicatedInstances: [] } as unknown as User;
 
@@ -61,26 +61,25 @@ function spaceKey(origin: string, spaceId: string): string {
   return `${origin}\u0000${spaceId}`;
 }
 
-/** One block of the page: its mono label, an optional action on the right, its rows. */
-function Section({ label, count, action, children }: {
+/** One block of the page as a frame: its title and count in the head row, an action at its end, its rows. */
+function Section({ label, count, action, children, flush = false }: {
   label: string;
-  /** Shown beside the label when above zero. */
+  /** Shown beside the title when above zero. */
   count?: number;
   action?: React.ReactNode;
   children: React.ReactNode;
+  /** The rows run to the panel's edges and bring their own padding (a table). */
+  flush?: boolean;
 }) {
   return (
-    <section aria-label={label}>
-      <div className="mb-1.5 flex h-7 items-center justify-between gap-3 px-2.5">
-        <h2 className="label-mono flex min-w-0 items-center gap-1.5">
-          <span className="truncate">{label}</span>
-          {count !== undefined && count > 0 && <span className="tabular text-txt-secondary">{count}</span>}
-        </h2>
-        {/* A quiet button's words end on the same line as the rows' times and counts. */}
-        {action && <div className="-mr-2.5 flex-shrink-0">{action}</div>}
-      </div>
+    <Panel
+      title={label}
+      meta={count !== undefined && count > 0 ? count : undefined}
+      actions={action || undefined}
+      bodyClassName={flush ? '' : 'p-1.5'}
+    >
       {children}
-    </section>
+    </Panel>
   );
 }
 
@@ -98,12 +97,38 @@ function EmptyState({ icon, title, body, action }: { icon: IconName; title: stri
   );
 }
 
-/** What you can start from Home: the one thing most people came for is the white button. */
+/**
+ * A block of the page that stands open on the canvas rather than in a frame (its cards are frames
+ * themselves): its name behind the spark with its count, a hairline running to its action, and what
+ * it holds. A region named by its title, as a panel is.
+ */
+function OpenSection({ label, count, action, children }: {
+  label: string;
+  /** Shown beside the title when above zero. */
+  count?: number;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section aria-label={label} className="min-w-0">
+      <div className="mb-3.5 flex min-h-[28px] items-center gap-3">
+        <h2 className="eyebrow">{label}</h2>
+        {count !== undefined && count > 0 && <span aria-hidden="true" className="count-badge count-badge-muted tabular">{count}</span>}
+        <span aria-hidden="true" className="h-px min-w-[24px] flex-1 bg-border-faint" />
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** What you can start from Home: the one thing most people came for is the white button with the arrow. */
 function QuickAction({ icon, label, onClick, main = false }: { icon: IconName; label: string; onClick: () => void; main?: boolean }) {
   return (
-    <button type="button" onClick={onClick} className={`${main ? 'btn-hero' : 'btn-outline'} btn-lg`}>
-      <Icon name={icon} size={15} className={main ? undefined : 'text-txt-tertiary'} />
+    <button type="button" onClick={onClick} className={main ? 'btn-hero btn-lg go-host' : 'btn-outline btn-lg'}>
+      {!main && <Icon name={icon} size={15} className="opacity-70" />}
       {label}
+      {main && <GoChip />}
     </button>
   );
 }
@@ -227,122 +252,7 @@ function VoiceGroupRow({ group, onJoin, onContextMenu }: {
   );
 }
 
-/**
- * A space as a card, as Explore shows one: its banner across the top (or a band painted in its
- * colour when it has none that may be shown), its icon over the band's edge, its name, and what is
- * going on in it: mentions in the accent, other unread messages quieter, who is talking in its voice
- * channels (friends first), else what it is about. A space on another instance names that instance,
- * and says so while the connection to it is out.
- */
-function HomeSpaceCard({ space, mentions, unreadTotal, unread, friendsInVoice, peopleInVoice, reconnecting, onOpen, onContextMenu }: {
-  space: TaggedSpace;
-  mentions: number;
-  /** The unread messages its instance counted; 0 when that instance sends no counts. */
-  unreadTotal: number;
-  /** Some text channel of it has unread messages, counted or not. */
-  unread: boolean;
-  friendsInVoice: number;
-  /** Everyone in its voice channels except the viewer. */
-  peopleInVoice: number;
-  /** The name of its instance while the connection to it is out; null otherwise. */
-  reconnecting: string | null;
-  onOpen: () => void;
-  onContextMenu: (event: React.MouseEvent) => void;
-}) {
-  const { t } = useTranslation(['home', 'spaces']);
-  const remoteHost = useMemo(() => {
-    if (!space._instanceOrigin) return null;
-    try { return new URL(space._instanceOrigin).host; } catch { return space._instanceOrigin; }
-  }, [space._instanceOrigin]);
-  const tone = getSpaceGradient(space.id, space.name, space.avatarColor).from;
-  return (
-    <li className="min-w-0">
-      <button
-        type="button"
-        onClick={onOpen}
-        onContextMenu={onContextMenu}
-        style={{ '--tile': lightFromColor(tone) } as React.CSSProperties}
-        className="surface-card tinted-card lift spotlight flex h-full w-full flex-col overflow-hidden rounded-lg text-left hover:bg-interactive-hover active:bg-interactive-active"
-      >
-        <SpaceBand banner={space.banner} fill={bannerFill(tone)} faded={reconnecting !== null} className="h-24 w-full flex-shrink-0" />
-        <span aria-hidden="true" className="relative z-[2] -mt-6 block px-3.5">
-          <Avatar
-            src={space.icon ? iconSrc(space.icon) : null}
-            name={space.name}
-            size={48}
-            palette="space"
-            userId={space.id}
-            avatarColor={space.avatarColor}
-            ring={{ width: 3, color: 'rgb(var(--bg-chat))' }}
-          />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-1 px-3.5 pb-3.5 pt-2">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className={`min-w-0 flex-1 truncate text-lead text-txt-primary ${unread || mentions > 0 ? 'font-semibold' : 'font-medium'}`}>{space.name}</span>
-            {mentions > 0 ? (
-              <UnreadBadge count={mentions} label={t('home:spaces.mentions', { count: mentions })} />
-            ) : unreadTotal > 0 ? (
-              <UnreadBadge
-                count={unreadTotal}
-                tone="muted"
-                label={unreadTotal > 99 ? t('spaces:sidebar.space.unreadMessagesOver99') : t('spaces:sidebar.space.unreadMessages', { count: unreadTotal })}
-              />
-            ) : unread ? (
-              <UnreadBadge count={null} tone="muted" />
-            ) : null}
-          </span>
-          {friendsInVoice > 0 ? (
-            <span className="flex min-w-0 items-center gap-1.5 text-meta text-txt-secondary">
-              <Icon name="volume" size={13} className="flex-shrink-0 text-status-online" />
-              <span className="truncate">{t('home:spaces.inVoice', { count: friendsInVoice })}</span>
-            </span>
-          ) : peopleInVoice > 0 ? (
-            <span className="flex min-w-0 items-center gap-1.5 text-meta text-txt-secondary">
-              <Icon name="volume" size={13} className="flex-shrink-0 text-txt-tertiary" />
-              <span className="truncate">{t('home:spaces.peopleInVoice', { count: peopleInVoice })}</span>
-            </span>
-          ) : space.description ? (
-            <span className="line-clamp-2 text-meta text-txt-tertiary">{space.description}</span>
-          ) : null}
-          {remoteHost && (
-            <span className="mt-auto flex min-w-0 items-center gap-1.5 pt-1 text-label text-txt-tertiary">
-              {reconnecting ? (
-                <>
-                  <span aria-hidden="true" className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-amber" />
-                  <span className="truncate">{t('spaces:sidebar.space.reconnecting', { instance: reconnecting })}</span>
-                </>
-              ) : (
-                <>
-                  <Icon name="globe" size={12} className="flex-shrink-0" />
-                  <span className="truncate font-mono">{remoteHost}</span>
-                </>
-              )}
-            </span>
-          )}
-        </span>
-      </button>
-    </li>
-  );
-}
-
-/** The quiet card beside a short list of spaces (or in place of none): make one, or join one. */
-function SpaceSuggestTile({ alone, onCreate, onJoin }: { alone: boolean; onCreate: () => void; onJoin: () => void }) {
-  const { t } = useTranslation('home');
-  return (
-    <li className={`flex min-w-0 flex-col items-start justify-center gap-3 rounded-lg border border-border-hard p-4 ${alone ? 'col-span-full' : ''}`}>
-      <span aria-hidden="true" className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-border-hard text-txt-tertiary">
-        <Icon name="plus" size={18} />
-      </span>
-      {alone && <span className="block text-ui text-txt-secondary">{t('spaces.empty')}</span>}
-      <span className="-ml-2.5 flex flex-wrap items-center">
-        <button type="button" onClick={onCreate} className="btn-quiet btn-sm">{t('spaces.create')}</button>
-        <button type="button" onClick={onJoin} className="btn-quiet btn-sm">{t('spaces.join')}</button>
-      </span>
-    </li>
-  );
-}
-
-/** For an account with nothing yet: the three ways in, each a real action. */
+/** For an account with nothing yet: the three ways in, each a real action, numbered like the steps they are. */
 function FirstSteps({ onAddFriend, onCreateSpace, onJoinSpace }: { onAddFriend: () => void; onCreateSpace: () => void; onJoinSpace: () => void }) {
   const { t } = useTranslation('home');
   const steps: Array<{ key: string; icon: IconName; title: string; body: string; action: string; onClick: () => void; primary: boolean }> = [
@@ -351,18 +261,21 @@ function FirstSteps({ onAddFriend, onCreateSpace, onJoinSpace }: { onAddFriend: 
     { key: 'invite', icon: 'link', title: t('onboarding.invite.title'), body: t('onboarding.invite.body'), action: t('spaces.join'), onClick: onJoinSpace, primary: false },
   ];
   return (
-    <section aria-label={t('empty.title')} className="mt-8 px-2.5">
-      <h2 className="text-lead font-semibold text-txt-primary">{t('empty.title')}</h2>
-      <p className="mt-1 max-w-[600px] text-ui leading-[1.5] text-txt-secondary">{t('empty.body')}</p>
-      <ul className="stagger mt-5 grid gap-3 desktop:grid-cols-3 compact:grid-cols-1">
-        {steps.map((step) => (
-          <li key={step.key} className="surface-card spotlight flex flex-col rounded-lg p-4">
-            <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-hard text-txt-secondary">
-              <Icon name={step.icon} size={16} />
+    <section aria-label={t('empty.title')} className="pt-2">
+      <h2 className="display-title ink">{t('empty.title')}</h2>
+      <p className="mt-3 max-w-[620px] text-lead leading-[1.5] text-txt-secondary">{t('empty.body')}</p>
+      <ul className="stagger mt-7 grid gap-3.5 desktop:grid-cols-3 compact:grid-cols-1">
+        {steps.map((step, at) => (
+          <li key={step.key} className="surface-card spotlight flex min-h-[230px] flex-col rounded-lg p-5">
+            <span className="flex items-center justify-between">
+              <span aria-hidden="true" className="label-mono">{String(at + 1).padStart(2, '0')}</span>
+              <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-full border border-border-hard text-txt-secondary">
+                <Icon name={step.icon} size={16} />
+              </span>
             </span>
-            <h3 className="mt-3 text-body font-semibold text-txt-primary">{step.title}</h3>
-            <p className="mt-1 flex-1 text-ui leading-[1.45] text-txt-secondary">{step.body}</p>
-            <button type="button" onClick={step.onClick} className={`${step.primary ? 'btn-primary' : 'btn-outline'} btn-sm mt-4 self-start`}>
+            <h3 className="mt-auto pt-8 text-title font-semibold tracking-[-0.03em] text-txt-primary">{step.title}</h3>
+            <p className="mt-1.5 text-ui leading-[1.45] text-txt-secondary">{step.body}</p>
+            <button type="button" onClick={step.onClick} className={`${step.primary ? 'btn-primary' : 'btn-outline'} mt-5 self-start`}>
               {step.action}
             </button>
           </li>
@@ -395,10 +308,13 @@ function useVisibleRecentPlaces(recent: readonly RecentPlace[], dmChannels: read
 /**
  * The page behind the Home tab: where to pick up.
  *
- * The main column answers what needs me (the mentions and the conversations
- * with something unread, the same facts as the inbox), where was I (the
- * conversations opened last on this device, or the latest DMs on a new one,
- * minus the ones already listed above) and where my spaces stand. The side
+ * It opens with the greeting and the page's figures (HomeHero): what is unread,
+ * how many mentions wait, who is online, how many spaces there are, each a way
+ * to what it counts. Then the spaces as cards, across the whole width: they are
+ * the places people come back to. Under them the main column answers what needs
+ * me (the mentions and the conversations with something unread, the same facts
+ * as the inbox) and where was I (the conversations opened last on this device,
+ * or the latest DMs on a new one, minus the ones already listed above). The side
  * column answers who is around: friend requests, friends in voice, friends
  * online. Everything is read from the client's own stores; nothing is
  * invented, and a section with nothing to show says so in one line, or offers
@@ -409,6 +325,7 @@ function useVisibleRecentPlaces(recent: readonly RecentPlace[], dmChannels: read
  */
 export function HomePage({ now }: { now?: Date }) {
   const { t } = useTranslation(['home', 'common', 'spaces']);
+  const { formatFullDate } = useFormatters();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const info = useHomeInstanceInfo();
@@ -568,6 +485,14 @@ export function HomePage({ now }: { now?: Date }) {
     openUserProfile(friendProfileUser(friend), friend._instanceOrigin, event.currentTarget.getBoundingClientRect(), 'left');
   };
 
+  // The page's figures, each from the same facts as the section it leads to.
+  const stats: HomeStat[] = [
+    { key: 'unread', icon: 'message', label: t('home:inbox.tabs.unread'), value: conversations.length, onOpen: () => navigate(HOME_ROUTES.inbox) },
+    { key: 'mentions', icon: 'at', label: t('home:inbox.tabs.mentions'), value: unreadMentionCount, onOpen: () => navigate(HOME_ROUTES.inbox) },
+    { key: 'online', icon: 'users', label: t('home:online.title'), value: online.length, onOpen: () => navigate(HOME_ROUTES.friends) },
+    { key: 'spaces', icon: 'grid', label: t('home:inbox.sections.spaces'), value: orderedSpaces.length, onOpen: () => navigate(HOME_ROUTES.explore) },
+  ];
+
   return (
     <div className="lit-phone flex h-full min-w-0 flex-1 flex-col bg-surface-chat desktop:bg-transparent">
       <div className="panel-bar flex items-center gap-2 px-4 desktop:hidden">
@@ -576,78 +501,80 @@ export function HomePage({ now }: { now?: Date }) {
       </div>
 
       <div className="relative isolate min-h-0 flex-1 overflow-y-auto">
-        <div aria-hidden="true" className="hero-light" />
-        <div className="mx-auto w-full max-w-[1280px] px-3 py-6 desktop:px-6 desktop:py-10">
-          <header className="rise-in px-2.5 desktop:pt-4">
-            <div className="scroll-away">
-              <h1 className="display-title ink">{t(`home:greeting.${part}`, { name })}</h1>
-              <p className="mt-2 text-lead text-txt-secondary">
+        <HomeHero
+          eyebrow={<><span>{t('home:nav.home')}</span><span aria-hidden="true">·</span><span>{formatFullDate(Date.now())}</span></>}
+          greeting={t(`home:greeting.${part}`, { name })}
+          name={name}
+          description={(
+            <>
+              <p>
                 {online.length > 0
                   ? t('home:subtitle.online', { instance, n: online.length })
                   : t('home:subtitle.quiet', { instance })}
               </p>
               <WhatsNewNote />
-            </div>
-            {/* The search is the top bar's, on every page: Home has no second one. */}
-            {!nothingYet && (
-              <div className="mt-6 flex flex-wrap items-center gap-2">
-                <QuickAction main icon="message" label={t('home:actions.newMessage')} onClick={() => openModal('newDm')} />
-                <QuickAction icon="user-plus" label={t('home:actions.addFriend')} onClick={addFriend} />
-                <QuickAction icon="plus" label={t('home:actions.createSpace')} onClick={createSpace} />
-                <QuickAction icon="login" label={t('home:actions.joinSpace')} onClick={joinSpace} />
-              </div>
-            )}
-          </header>
-
+            </>
+          )}
+          // The search is the sidebar's, on every page: Home has no second one.
+          actions={!nothingYet && (
+            <>
+              <QuickAction main icon="message" label={t('home:actions.newMessage')} onClick={() => openModal('newDm')} />
+              <QuickAction icon="user-plus" label={t('home:actions.addFriend')} onClick={addFriend} />
+              <QuickAction icon="plus" label={t('home:actions.createSpace')} onClick={createSpace} />
+              <QuickAction icon="login" label={t('home:actions.joinSpace')} onClick={joinSpace} />
+            </>
+          )}
+          // The first steps say what to do with an account that has nothing yet; its figures would all be zero.
+          stats={nothingYet ? [] : stats}
+        />
+        <PageBody>
           {nothingYet ? (
             <FirstSteps onAddFriend={addFriend} onCreateSpace={createSpace} onJoinSpace={joinSpace} />
           ) : (
             <>
               {/* The spaces come first and across the whole width: they are the places people come back to. */}
-              <div className="rise-in mt-8">
-                <Section
-                  label={t('home:spaces.title')}
-                  count={orderedSpaces.length}
-                  action={orderedSpaces.length > SPACE_CARD_LIMIT && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAllSpaces((all) => !all)}
-                      aria-expanded={showAllSpaces}
-                      aria-controls={spacesListId}
-                      className="btn-quiet btn-sm"
-                    >
-                      {showAllSpaces ? t('home:spaces.showFewer') : t('home:spaces.showAll')}
-                    </button>
+              <OpenSection
+                label={t('home:spaces.title')}
+                count={orderedSpaces.length}
+                action={orderedSpaces.length > SPACE_CARD_LIMIT && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllSpaces((all) => !all)}
+                    aria-expanded={showAllSpaces}
+                    aria-controls={spacesListId}
+                    className="btn-quiet btn-sm"
+                  >
+                    {showAllSpaces ? t('home:spaces.showFewer') : t('home:spaces.showAll')}
+                  </button>
+                )}
+              >
+                <ul id={spacesListId} className="home-spaces stagger">
+                  {shownSpaces.map((space) => {
+                    const origin = space._instanceOrigin ?? '';
+                    const key = spaceKey(origin, space.id);
+                    return (
+                      <HomeSpaceCard
+                        key={key}
+                        space={space}
+                        mentions={mentionsBySpace.get(key) ?? 0}
+                        unreadTotal={unreadTotalBySpace.get(key) ?? 0}
+                        unread={unreadSpaces.has(key)}
+                        friendsInVoice={voiceBySpace.get(key) ?? 0}
+                        peopleInVoice={peopleInVoiceBySpace.get(key) ?? 0}
+                        reconnecting={origin ? reconnectingByOrigin.get(origin) ?? null : null}
+                        onOpen={() => { if (canOpenSpace(space)) navigate(`/channels/${space.id}`); }}
+                        onContextMenu={(event) => spaceMenu.open(space.id, event)}
+                      />
+                    );
+                  })}
+                  {orderedSpaces.length < SUGGEST_SPACE_BELOW && (
+                    <SpaceSuggestTile alone={orderedSpaces.length === 0} onCreate={createSpace} onJoin={joinSpace} />
                   )}
-                >
-                  <ul id={spacesListId} className="card-grid px-2.5">
-                    {shownSpaces.map((space) => {
-                      const origin = space._instanceOrigin ?? '';
-                      const key = spaceKey(origin, space.id);
-                      return (
-                        <HomeSpaceCard
-                          key={key}
-                          space={space}
-                          mentions={mentionsBySpace.get(key) ?? 0}
-                          unreadTotal={unreadTotalBySpace.get(key) ?? 0}
-                          unread={unreadSpaces.has(key)}
-                          friendsInVoice={voiceBySpace.get(key) ?? 0}
-                          peopleInVoice={peopleInVoiceBySpace.get(key) ?? 0}
-                          reconnecting={origin ? reconnectingByOrigin.get(origin) ?? null : null}
-                          onOpen={() => { if (canOpenSpace(space)) navigate(`/channels/${space.id}`); }}
-                          onContextMenu={(event) => spaceMenu.open(space.id, event)}
-                        />
-                      );
-                    })}
-                    {orderedSpaces.length < SUGGEST_SPACE_BELOW && (
-                      <SpaceSuggestTile alone={orderedSpaces.length === 0} onCreate={createSpace} onJoin={joinSpace} />
-                    )}
-                  </ul>
-                </Section>
-              </div>
+                </ul>
+              </OpenSection>
 
-              <div className="stagger mt-10 grid grid-cols-1 gap-x-8 gap-y-8 desktop:grid-cols-[minmax(0,1fr)_320px] compact:grid-cols-1">
-                <div className="min-w-0 space-y-8">
+              <div className="stagger mt-8 grid grid-cols-1 gap-4 desktop:grid-cols-[minmax(0,1fr)_340px] compact:grid-cols-1">
+                <div className="min-w-0 space-y-4">
                   <Section
                     label={t('home:attention.title')}
                     action={attentionTotal > 0 && (
@@ -697,7 +624,7 @@ export function HomePage({ now }: { now?: Date }) {
 
                 </div>
 
-                <aside className="min-w-0 space-y-8 desktop:border-l desktop:border-border-hard desktop:pl-6 compact:border-l-0 compact:pl-0">
+                <aside className="min-w-0 space-y-4">
                   {incoming.length > 0 && (
                     <Section label={t('home:requests.title')}>
                       <div className="list-row">
@@ -769,7 +696,7 @@ export function HomePage({ now }: { now?: Date }) {
               </div>
             </>
           )}
-        </div>
+        </PageBody>
       </div>
       {userMenu.dialogs}
       {conversationMenu.dialogs}

@@ -17,6 +17,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { CountBadge } from '../ui/CountBadge';
 import { Icon } from '../ui/Icon';
 import { ImageCropModal } from '../ui/ImageCropModal';
+import { LightField } from '../ui/LightField';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { usePermissionNames } from '../ui/OverrideEntry';
 import { useSensitiveText } from '../ui/Sensitive';
@@ -197,7 +198,7 @@ function Shell({ bots, owned, active, children }: { bots: BotInfo[]; owned: numb
 
         <div className="flex min-w-0 flex-1 flex-col">
           <main className="relative isolate min-h-0 flex-1 overflow-y-auto">
-            <div className="hero-light" />
+            <LightField intensity="quiet" className="light-field-top" />
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-8 desktop:px-6 desktop:py-10">{children}</div>
           </main>
           {owned !== null && (
@@ -243,7 +244,8 @@ function BotList() {
   return (
     <Shell bots={bots} owned={enabled ? bots.length : null}>
       <div className="flex flex-col gap-4">
-        <h1 className="display-title ink">{t('settings:developers.title')}</h1>
+        <p className="eyebrow rise">{t('settings:developers.portal.title')}</p>
+        <h1 className="display-title ink kinetic pb-1">{t('settings:developers.title')}</h1>
         <p className="max-w-xl text-lead leading-relaxed text-txt-secondary">
           {t('settings:developers.description', { max: BOT_LIMITS.PER_OWNER })}
         </p>

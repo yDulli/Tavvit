@@ -227,6 +227,37 @@ describe('messages in an existing 1-on-1', () => {
     expect((await send('dm-ab')).statusCode).toBe(201);
   });
 
+  // An edit is new words: it reached the other person at once, with its links looked up again,
+  // though the block had closed the conversation to new messages (security audit, 2026-11-14).
+  it('cannot be edited or pinned while a block exists, by either of the two', async () => {
+    const sent = (await send('dm-ab', 'before')).json() as { id: string };
+    block('bob', 'alice');
+    const edit = await app.inject({ method: 'PATCH', url: `/api/dm/messages/${sent.id}`, payload: { content: 'now with https://example.com/a-link' } });
+    expect(edit.statusCode).toBe(403);
+    expect(edit.json().code).toBe('interaction_unavailable');
+    expect(testDb.select().from(schema.dmMessages).all()[0]?.content).toBe('before');
+    // The rule the pin routes ask (routes/pins.ts), for the one blocked and for the one who blocked.
+    const { checkDmMessagePin } = await import('../utils/dmMessageRules.js');
+    expect(checkDmMessagePin(sent.id, 'alice')).toMatchObject({ ok: false, refusal: { status: 403, code: 'interaction_unavailable' } });
+    expect(checkDmMessagePin(sent.id, 'bob')).toMatchObject({ ok: false, refusal: { status: 403, code: 'blocked_by_you' } });
+
+    testDb.delete(schema.userBlocks).run();
+    expect(checkDmMessagePin(sent.id, 'alice').ok).toBe(true);
+    expect((await app.inject({ method: 'PATCH', url: `/api/dm/messages/${sent.id}`, payload: { content: 'after' } })).statusCode).toBe(200);
+  });
+
+  // Every id is looked up and written in turn: a list of tens of thousands, or one id repeated, held the server.
+  it('carry no more files than a message has room for, each once', async () => {
+    const many = Array.from({ length: 51 }, (_unused, at) => `file-${at}`);
+    const tooMany = await app.inject({ method: 'POST', url: '/api/dm/dm-ab/messages', payload: { content: 'x', attachments: many } });
+    expect(tooMany.statusCode).toBe(400);
+    expect(tooMany.json().code).toBe('attachment_invalid');
+    const twice = await app.inject({ method: 'POST', url: '/api/dm/dm-ab/messages', payload: { content: 'x', attachments: ['file-1', 'file-1'] } });
+    expect(twice.statusCode).toBe(400);
+    expect(twice.json().code).toBe('attachment_invalid');
+    expect(testDb.select().from(schema.dmMessages).all()).toEqual([]);
+  });
+
   it('are not stopped in a group the two share', async () => {
     testDb.insert(schema.dmChannels).values({ id: 'grp', ownerId: 'alice', createdAt: Date.now() }).run();
     testDb.insert(schema.dmMembers).values([

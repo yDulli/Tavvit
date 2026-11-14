@@ -198,7 +198,7 @@ is allowed out.
 | `fe80::/10` | `link-local` | The full /10, `fe80` through `febf` |
 | `ff00::/8` | `multicast` | |
 
-**IPv4-mapped IPv6** is unwrapped to its IPv4 form before classification, in
+**IPv4-mapped IPv6** is unwrapped to its IPv4 form before classification, in (An IPv4 address carried in NAT64, `64:ff9b::/96`, or 6to4, `2002::/16`, is classed by the address it carries, and the rest of `::/8`, the IPv4-compatible form among it, and `2001:db8::/32` as reserved: a gateway hands such a packet on to the IPv4 address inside.)
 both spellings: the hex form `::ffff:7f00:1` that the WHATWG URL parser emits
 and the dotted form `::ffff:127.0.0.1` that glibc's `inet_ntop` emits. Which
 one arrives depends on the resolution path, so both are handled. A mapped

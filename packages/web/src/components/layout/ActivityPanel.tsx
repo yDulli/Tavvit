@@ -96,16 +96,16 @@ export function ActivityPanel({ onAddFriends }: { onAddFriends?: () => void }) {
 
   return (
     <SidePanel>
-      <div className="px-2.5 pb-4 pt-1.5">
-        <h2 className="flex h-7 items-center gap-1.5 px-2.5">
-          <span className="label-mono">{t('social:activity.title')}</span>
-          {online.length > 0 && (
-            <>
-              <span aria-hidden="true" className="label-mono tabular text-txt-secondary">{online.length}</span>
-              <span className="sr-only">{t('social:activity.onlineCount', { count: online.length })}</span>
-            </>
-          )}
-        </h2>
+      <h2 className="side-panel-head">
+        <span className="text-ui font-medium text-txt-primary">{t('social:activity.title')}</span>
+        {online.length > 0 && (
+          <>
+            <span aria-hidden="true" className="font-mono text-meta tabular text-txt-tertiary">{online.length}</span>
+            <span className="sr-only">{t('social:activity.onlineCount', { count: online.length })}</span>
+          </>
+        )}
+      </h2>
+      <div className="px-2.5 pb-4 pt-3">
 
         {online.length === 0 ? (
           <div className="empty-state">

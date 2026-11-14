@@ -49,7 +49,12 @@
     "mentions_one": "{{count}} ungelesene Erwähnung",
     "mentions_other": "{{count}} ungelesene Erwähnungen",
     "showAll": "Alle anzeigen",
-    "showFewer": "Weniger anzeigen"
+    "showFewer": "Weniger anzeigen",
+    "columns": {
+      "space": "Space",
+      "unread": "Ungelesen",
+      "voice": "Sprache"
+    }
   },
   "about": {
     "title": "Über Tavvit",

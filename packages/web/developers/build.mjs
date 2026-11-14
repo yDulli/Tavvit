@@ -96,7 +96,29 @@ function plainText(markdown) {
 }
 
 function logo() {
-  return '<img class="logo" src="/icons/logo-mark.svg" alt="" width="24" height="24" />';
+  return '<img class="logo" src="/icons/logo-mark.svg" alt="" width="26" height="26" />';
+}
+
+/** The round chip with an arrow that stands at the end of a way onward. */
+function chip() {
+  return '<i class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></i>';
+}
+
+/** Which letters of the chrome word catch the light (docs.css says where and when). */
+const GLINTS = new Set([0, 2, 4, 5]);
+
+/**
+ * A word in polished chrome, as the product page has the name. Each letter stands in the page once:
+ * the metal face is painted from `data-letter` by the stylesheet, which takes no inline style.
+ */
+function chromeWord(word) {
+  return `<span class="chrome-word">${[...word].map((letter, at) => `<span class="chrome-letter"><span class="chrome-body" data-letter="${escapeHtml(letter)}">${escapeHtml(letter)}</span>${GLINTS.has(at) ? '<span class="chrome-glint"></span>' : ''}</span>`).join('')}</span>`;
+}
+
+/** The band of words across the start page. It is there twice, so it runs on without a seam. */
+function marquee(words) {
+  const half = words.map((word, at) => `<span${at % 2 === 1 ? ' class="hollow"' : ''}>${escapeHtml(word)}</span><i></i>`).join('');
+  return `<div class="marquee" aria-hidden="true"><div class="marquee-track">${half}${half}</div></div>`;
 }
 
 function siteHeader() {
@@ -136,8 +158,9 @@ function documentOf({ title, description, body, bodyClass }) {
 <meta property="og:title" content="${escapeHtml(title)}" />
 <meta property="og:description" content="${escapeHtml(description)}" />
 <meta property="og:type" content="website" />
-<meta name="theme-color" content="#0d0e11" />
+<meta name="theme-color" content="#000000" />
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+<link rel="preload" href="/fonts/Outfit-Latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/developers/assets/docs.css" />
 <script src="/developers/assets/docs.js" defer></script>
 </head>
@@ -170,7 +193,7 @@ function contents(headings) {
 /** The calculator of the permissions page: with no script it is simply the table above it. */
 function calculator() {
   const rows = permissionRows().filter((row) => row.name !== 'ADMINISTRATOR');
-  return `<section id="calculator" class="calculator" hidden>
+  return `<section id="calculator" class="calculator frame" hidden>
   <h2 id="calculator-title">Calculator</h2>
   <p>Tick what your bot needs.</p>
   <div class="calculator-grid">${rows.map((row) => `<label><input type="checkbox" value="${row.value}" /> ${escapeHtml(row.label)}</label>`).join('')}</div>
@@ -190,6 +213,7 @@ function neighbours(slug) {
 
 function docPage(page, markdown) {
   const headings = headingsOf(markdown);
+  const section = SECTIONS.find((item) => item.pages.some((entry) => entry.slug === page.slug));
   return documentOf({
     title: `${page.title} · ${SITE_TITLE}`,
     description: page.description,
@@ -198,8 +222,12 @@ function docPage(page, markdown) {
 <div class="docs-layout">
 ${sideNav(page.slug)}
 <main class="docs-main">
-<h1 class="docs-title">${escapeHtml(page.title)}</h1>
+<header class="docs-head">
+<div class="docs-head-light" data-light="quiet" aria-hidden="true"></div>
+${section ? `<p class="eyebrow">${escapeHtml(section.title)}</p>` : ''}
+<div class="docs-title-clip"><h1 class="docs-title">${escapeHtml(page.title)}</h1></div>
 <p class="docs-lead">${escapeHtml(page.description)}</p>
+</header>
 ${renderMarkdown(markdown)}
 ${page.slug === 'permissions' ? calculator() : ''}
 ${neighbours(page.slug)}
@@ -229,25 +257,41 @@ function homePage() {
     body: `${siteHeader()}
 <main class="home-main">
 <section class="home-hero">
-  <p class="eyebrow">For developers</p>
-  <h1>Build for the people in your space.</h1>
-  <p class="home-lead">Bots, commands and webhooks, with a small API you can read in an afternoon, and a token that opens only what it says.</p>
-  <div class="home-actions">
-    <a class="button button-main" href="/developers/docs/quickstart">Read the quickstart</a>
-    <a class="button" href="/developers/bots">Your bots</a>
+  <div class="hero-light" data-light="hero" aria-hidden="true"></div>
+  <div class="hero-meta">
+    <p class="eyebrow">For developers</p>
+    <p class="hero-facts">JSON over HTTP<i></i>A WebSocket<i></i>No SDK to install</p>
   </div>
-  <div class="home-sample"><pre>${renderToStaticMarkup(createElement(CodeBlock, { language: 'bash', code: HOME_SAMPLE }))}</pre></div>
+  <div class="hero-word" aria-hidden="true">${chromeWord('Tavvit')}<span class="outline-word">Developers</span></div>
+  <div class="hero-row">
+    <h1><span class="line"><span>Build for the people</span></span> <span class="line"><span>in your space.</span></span></h1>
+    <div class="hero-side">
+      <p class="home-lead">Bots, commands and webhooks, with a small API you can read in an afternoon, and a token that opens only what it says.</p>
+      <div class="home-actions">
+        <a class="button button-main" href="/developers/docs/quickstart">Read the quickstart${chip()}</a>
+        <a class="button" href="/developers/bots">Your bots</a>
+      </div>
+    </div>
+  </div>
 </section>
 <section class="home-features">
-${features.map(([title, text, slug, action]) => `<a class="feature" href="/developers/docs/${slug}"><h2>${title}</h2><p>${text}</p><span>${action}</span></a>`).join('\n')}
+${features.map(([title, text, slug, action], at) => `<a class="feature frame" href="/developers/docs/${slug}" data-glare data-reveal><span class="feature-index">0${at + 1}</span><h2>${title}</h2><p>${text}</p><span class="feature-go">${action}${chip()}</span></a>`).join('\n')}
 </section>
-<section class="home-more">
-  <h2>What you can count on</h2>
-  <ul>
-    <li><strong>Closed by default.</strong> A token opens <a href="/developers/docs/rest">the routes on this list</a>, and accounts, sign-in and private messages never.</li>
-    <li><strong>Stable.</strong> What is documented only changes by adding to it. <a href="/developers/docs/changelog">The changelog</a> says what changed.</li>
-    <li><strong>Plain.</strong> JSON over HTTP and a WebSocket, with no SDK to install. <a href="/developers/assets/example-bot.mjs">A whole bot</a> fits in one file.</li>
-  </ul>
+${marquee(['Bots', 'Commands', 'Cards', 'Webhooks', 'REST', 'Sockets'])}
+<section class="home-proof">
+  <div class="home-sample frame" data-reveal>
+    <div class="sample-bar"><i></i><i></i><i></i><span>Say hello</span></div>
+    <pre>${renderToStaticMarkup(createElement(CodeBlock, { language: 'bash', code: HOME_SAMPLE }))}</pre>
+  </div>
+  <div class="home-more" data-reveal>
+    <p class="eyebrow">The contract</p>
+    <h2>What you can count on</h2>
+    <ul>
+      <li><strong>Closed by default.</strong> A token opens <a href="/developers/docs/rest">the routes on this list</a>, and accounts, sign-in and private messages never.</li>
+      <li><strong>Stable.</strong> What is documented only changes by adding to it. <a href="/developers/docs/changelog">The changelog</a> says what changed.</li>
+      <li><strong>Plain.</strong> JSON over HTTP and a WebSocket, with no SDK to install. <a href="/developers/assets/example-bot.mjs">A whole bot</a> fits in one file.</li>
+    </ul>
+  </div>
 </section>
 </main>
 ${siteFooter()}`,
@@ -285,7 +329,7 @@ export function buildSite(outDir) {
     fs.writeFileSync(path.join(outDir, 'docs', `${page.slug}.html`), docPage(page, sources.get(page.slug)));
   }
 
-  for (const asset of ['docs.css', 'docs.js']) {
+  for (const asset of ['docs.css', 'docs.js', 'grain.svg']) {
     fs.copyFileSync(path.join(HERE, 'assets', asset), path.join(outDir, 'assets', asset));
   }
   fs.copyFileSync(path.join(HERE, 'example-bot.mjs'), path.join(outDir, 'assets', 'example-bot.mjs'));

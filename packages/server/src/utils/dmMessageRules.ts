@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { MAX_MESSAGE_LENGTH } from '@backspace/shared';
+import { MAX_ATTACHMENTS_PER_MESSAGE } from '@backspace/shared/src/constants.js';
 import { spoilerAttachmentIds } from '@backspace/shared/src/spoilers.js';
 import type { ErrorCode, ErrorDetails } from '@backspace/shared/src/errors';
 import { getDb, schema } from '../db/index.js';
@@ -122,6 +123,10 @@ export function checkDmMessageCreate(
 
   const text = typeof content === 'string' ? content.trim() : '';
   const attachmentIds = attachments ?? [];
+  // Each id once, and no more than a message carries: every one is looked up and written in turn.
+  if (attachmentIds.length > MAX_ATTACHMENTS_PER_MESSAGE || new Set(attachmentIds).size !== attachmentIds.length) {
+    return refuse(400, 'attachment_invalid');
+  }
   if (text.length === 0 && attachmentIds.length === 0) return refuse(400, 'content_required');
   if (typeof content === 'string' && content.length > MAX_MESSAGE_LENGTH) {
     return refuse(400, 'content_too_long', { max: MAX_MESSAGE_LENGTH });
@@ -177,6 +182,10 @@ export function checkDmMessageEdit(
   if (editRefusal) return refuse(403, editRefusal);
 
   if (isDeadOneOnOne(message.dmChannelId, editorId)) return refuse(403, 'recipient_deleted');
+  // A block closes the conversation to new words, and an edit is new words: it reaches the
+  // other person at once, with its links looked up again.
+  const blocked = oneOnOneBlockRefusal(message.dmChannelId, editorId);
+  if (blocked) return refuse(403, blocked);
 
   return { ok: true, value: { message, content: content.trim() } };
 }
@@ -191,6 +200,9 @@ export function checkDmMessagePin(messageId: string, userId: string): DmMessageC
   if (!isDmMember(message.dmChannelId, userId)) return refuse(403, 'not_dm_member');
   if (message.type === 'system') return refuse(403, 'system_message_immutable');
   if (isDeadOneOnOne(message.dmChannelId, userId)) return refuse(403, 'recipient_deleted');
+  // Pinning announces itself to the other person, which a block is there to stop.
+  const blocked = oneOnOneBlockRefusal(message.dmChannelId, userId);
+  if (blocked) return refuse(403, blocked);
   return { ok: true, value: message };
 }
 

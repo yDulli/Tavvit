@@ -22,9 +22,13 @@ export default {
           members:  'rgb(var(--bg-members) / <alpha-value>)',
           elevated: 'rgb(var(--bg-elevated) / <alpha-value>)',
           input:    'rgb(var(--bg-input) / <alpha-value>)',
+          // Evolve's panel (the structural unit on the canvas) and a control raised on it.
+          panel:    'rgb(var(--bg-panel) / <alpha-value>)',
+          raised:   'rgb(var(--bg-raised) / <alpha-value>)',
           overlay:  'var(--bg-overlay)',
         },
         border: {
+          faint: 'rgb(var(--border-faint) / <alpha-value>)',
           hard: 'rgb(var(--border-hard) / <alpha-value>)',
           soft: 'rgb(var(--border-soft) / <alpha-value>)',
         },
@@ -39,9 +43,16 @@ export default {
           primary:         'rgb(var(--accent-primary) / <alpha-value>)',
           'primary-hover': 'rgb(var(--accent-primary-hover) / <alpha-value>)',
           'primary-active':'rgb(var(--accent-primary-active) / <alpha-value>)',
-          // The accent lifted until it reads as text on the dark panels (>= 4.5:1).
-          // Use it for accent-coloured text and icons; `primary` is for fills under white text.
+          // The accent as text, an icon or a line on the dark panels (>= 4.5:1).
+          // `primary` is a fill; what is written on that fill is `on-accent` below.
           soft:            'rgb(var(--accent-primary-soft) / <alpha-value>)',
+        },
+        // What stands on the signal's fill: black on the white default, white on an accent a
+        // person or an instance chose (utils/instanceBranding.ts). Never `text-white` there.
+        'on-accent': 'rgb(var(--on-accent) / <alpha-value>)',
+        danger: {
+          fill:  'rgb(var(--danger-fill) / <alpha-value>)',
+          'fill-hover': 'rgb(var(--danger-fill-hover) / <alpha-value>)',
         },
         txt: {
           primary:   'rgb(var(--text-primary) / <alpha-value>)',
@@ -73,19 +84,22 @@ export default {
         },
         notification: 'rgb(var(--notification) / <alpha-value>)',
       },
-      // Small, precise corners, every one multiplied by `--radius-scale`
-      // (Settings, Appearance), so the person's choice of sharp, standard or
-      // round reaches every control that uses a radius utility. `rounded-full`
-      // stays exact, for dots, toggles and the status pips.
+      // Showomat's shapes, every one multiplied by `--radius-scale` (Settings,
+      // Appearance), so the person's choice of sharp, standard or round reaches
+      // every control that uses a radius utility: `rounded-md` makes a 32px
+      // control a pill, `rounded-lg` is the corner of a frame (panels, menus,
+      // dialogs, the composer), `rounded-pill` a pill of any height.
+      // `rounded-full` stays exact, for dots, avatars and the status pips.
       borderRadius: {
         none: '0px',
-        sm: 'calc(2px * var(--radius-scale))',
-        DEFAULT: 'calc(4px * var(--radius-scale))',
-        md: 'calc(5px * var(--radius-scale))',
-        lg: 'calc(6px * var(--radius-scale))',
-        xl: 'calc(8px * var(--radius-scale))',
-        '2xl': 'calc(10px * var(--radius-scale))',
-        '3xl': 'calc(14px * var(--radius-scale))',
+        sm: 'calc(6px * var(--radius-scale))',
+        DEFAULT: 'calc(8px * var(--radius-scale))',
+        md: 'calc(16px * var(--radius-scale))',
+        lg: 'calc(24px * var(--radius-scale))',
+        xl: 'calc(28px * var(--radius-scale))',
+        '2xl': 'calc(32px * var(--radius-scale))',
+        '3xl': 'calc(40px * var(--radius-scale))',
+        pill: 'var(--radius-pill)',
         full: '9999px',
       },
       // Surfaces sit flat and are separated by a hairline; only what floats
@@ -93,6 +107,8 @@ export default {
       boxShadow: {
         'header': 'none',
         'elevation-low': '0 1px 2px rgb(0 0 0 / 0.4)',
+        'raised': 'var(--shadow-raised)',
+        'glow': 'var(--shadow-glow)',
         'elevation-high': 'var(--shadow-popover)',
         'glass': 'var(--shadow-popover)',
         'input': 'none',

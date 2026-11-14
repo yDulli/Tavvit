@@ -66,26 +66,29 @@ interface SidebarItemProps {
 }
 
 /**
- * The violet edge under the tab of the place (Home, a space, Explore) the
- * person is in. It sits on the bar's own hairline, where the tab meets the
- * page below it.
+ * The ring round the tile of the place (Home, a space, a folder, Explore) the person is in. The
+ * dock's sliding mark copies its box and glides there from the place they left.
  */
 function ActiveMark() {
-  return <span aria-hidden="true" data-active-mark className="active-line pointer-events-none absolute inset-x-2 bottom-0 h-[2px]" />;
+  return <span aria-hidden="true" data-active-mark className="dock-mark pointer-events-none absolute -inset-[3px]" />;
 }
 
 /** A small neutral marker for news in a space or in Home that has no count to show. */
 function UnreadDot() {
-  return <span aria-hidden="true" className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-txt-primary" />;
+  return <span aria-hidden="true" className="dock-dot pointer-events-none absolute -right-0.5 -top-0.5 z-10 h-2 w-2 rounded-full bg-txt-primary ring-2 ring-surface-channel" />;
 }
 
-/** A space's unread count, or the dot when it has news but no count. */
+/**
+ * A space's unread count, or the dot when it has news but no count. In the bar it is neutral:
+ * a row of tabs each in violet would make the signal the bar's colour. The violet up here is
+ * kept for someone waiting on you, Home's direct messages and the inbox's mentions.
+ */
 function SpaceTabUnread({ spaceId, hasUnread }: { spaceId: string; hasUnread: boolean }) {
   const { t } = useTranslation('spaces');
   const { total, muted } = useSpaceUnreadCount(spaceId);
   if (total > 0) {
     const label = total > 99 ? t('sidebar.space.unreadMessagesOver99') : t('sidebar.space.unreadMessages', { count: total });
-    return <CountBadge count={total} muted={muted} label={label} />;
+    return <CountBadge count={total} muted quiet={muted} label={label} placement="corner" />;
   }
   return hasUnread ? <UnreadDot /> : null;
 }
@@ -96,19 +99,22 @@ function HomeTabUnread({ hasUnread }: { hasUnread: boolean }) {
   const total = useDmUnreadCount();
   if (total > 0) {
     const label = total > 99 ? t('sidebar.dmUnreadMessagesOver99') : t('sidebar.dmUnreadMessages', { count: total });
-    return <CountBadge count={total} label={label} />;
+    return <CountBadge count={total} label={label} placement="corner" />;
   }
   return hasUnread ? <UnreadDot /> : null;
 }
 
 /** A space's picture in a tab: its icon, or its first letter on its colour. */
-function SpaceGlyph({ id, name, icon, avatarColor, size = 20 }: { id: string; name: string; icon?: string | null; avatarColor?: string | null; size?: number }) {
+export function SpaceGlyph({ id, name, icon, avatarColor, size = 20 }: { id: string; name: string; icon?: string | null; avatarColor?: string | null; size?: number }) {
   const tone = getSpaceGradient(id, name, avatarColor);
+  // The corner grows with the glyph, about a third of a tile's and a quarter of a smaller one's,
+  // and follows the corners setting.
+  const radius = `calc(${size >= 40 ? 14 : size >= 28 ? 7 : 4}px * var(--radius-scale))`;
   const letter = (
     <span
       aria-hidden="true"
-      className="flex flex-shrink-0 items-center justify-center rounded font-mono text-label font-semibold leading-none text-white"
-      style={{ width: size, height: size, background: tone.gradient }}
+      className="flex flex-shrink-0 items-center justify-center font-mono font-semibold leading-none text-white"
+      style={{ width: size, height: size, borderRadius: radius, background: tone.gradient, fontSize: Math.max(10, Math.round(size * 0.4)) }}
     >
       {name.charAt(0).toUpperCase()}
     </span>
@@ -118,42 +124,43 @@ function SpaceGlyph({ id, name, icon, avatarColor, size = 20 }: { id: string; na
     <GatedPicture
       src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
       alt=""
-      className="flex-shrink-0 rounded object-cover"
-      style={{ width: size, height: size }}
+      className="flex-shrink-0 object-cover"
+      style={{ width: size, height: size, borderRadius: radius }}
       whileBlocked={letter}
     />
   );
 }
 
 /**
- * A tab of the bar: 32px tall, a 5px corner, never a capsule. The one you are
- * in is a step lighter with the violet edge under it (ActiveMark); one with news
- * you have not seen is in the primary colour and a heavier weight.
+ * A tile of the dock: the place's picture in a 44px square with a rounded corner, never a circle.
+ * Its name is its label and its tooltip. The one you are in has the ring (ActiveMark); a count or
+ * a dot on its corner says what is new there.
  */
-const TAB = 'relative flex h-8 flex-shrink-0 items-center gap-1.5 rounded-md px-2 text-ui transition-colors duration-100 active:bg-interactive-active';
-const TAB_ACTIVE = 'bg-interactive-selected font-medium text-txt-primary';
-const TAB_UNREAD = 'font-semibold text-txt-primary hover:bg-interactive-hover';
-const TAB_IDLE = 'font-medium text-txt-secondary hover:bg-interactive-hover hover:text-txt-primary';
+const TAB = 'dock-tile';
+/** The side of a tile in pixels, as `.dock-tile` has it. */
+const TILE = 44;
 
 function tabTone(active: boolean, unread: boolean): string {
-  if (active) return TAB_ACTIVE;
-  return unread ? TAB_UNREAD : TAB_IDLE;
+  if (active) return 'dock-tile-active';
+  return unread ? 'dock-tile-unread' : '';
 }
 
 function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMenu, type = 'space', actionType, hasUnread, dimmed, federationBadge, federationDisconnected, tooltipText, draggable, onDragStart, onDragOver, onDragEnd, onDrop, isDragging, dropIndicator }: SidebarItemProps) {
-  // The actions (create, join, explore) are quiet icon tiles; their name is the native tooltip.
+  // The actions (create, join, explore) are tiles of their own, edged by a dashed line: places
+  // that are not there yet. Their name is their label and their tooltip.
   if (type === 'action') {
     return (
-      <div className="relative flex h-full flex-shrink-0 items-center">
+      <div className="relative flex flex-shrink-0 items-center">
         <button
           type="button"
           onClick={onClick}
           aria-label={name}
           aria-current={active ? 'page' : undefined}
           data-active={active}
-          className="icon-btn icon-btn-lg"
+          data-tooltip=""
+          className="dock-tile dock-tile-action"
         >
-          <Icon name={actionType === 'add' ? 'plus' : actionType === 'explore' ? 'compass' : 'login'} size={18} />
+          <Icon name={actionType === 'add' ? 'plus' : actionType === 'explore' ? 'compass' : 'login'} size={19} />
         </button>
         {active && <ActiveMark />}
       </div>
@@ -161,23 +168,25 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
   }
 
   const unread = !!hasUnread && !active;
+  // A space of another instance says where it lives in its tooltip (`tooltipText`); the rest say their name.
+  const ownTooltip = !(tooltipText && tooltipText !== name);
   const tab = (
     <button
       type="button"
       onClick={onClick}
-      title={type === 'dm' ? name : undefined}
+      aria-label={name}
       aria-current={active ? 'page' : undefined}
-      className={`${TAB} ${tabTone(active, unread)} ${dimmed ? 'opacity-40 saturate-50' : ''} ${dropIndicator === 'merge' ? 'ring-1 ring-accent-primary' : ''}`}
+      data-tooltip={ownTooltip ? '' : undefined}
+      className={`${TAB} ${tabTone(active, unread)} ${type === 'dm' ? 'dock-tile-home' : ''} ${dimmed ? 'opacity-40 saturate-50' : ''} ${dropIndicator === 'merge' ? 'dock-tile-merge' : ''}`}
     >
-      {/* Home's glyph takes the tab's own colour, never the violet. */}
+      {/* Home's glyph takes the tile's own colour, never the violet. */}
       {type === 'dm'
-        ? <Icon name="home" size={16} className="flex-shrink-0" />
-        : <SpaceGlyph id={id} name={name} icon={icon} avatarColor={avatarColor} />}
-      <span className="max-w-[168px] truncate compact:max-w-[112px]">{name}</span>
+        ? <Icon name="home" size={20} className="flex-shrink-0" />
+        : <SpaceGlyph id={id} name={name} icon={icon} avatarColor={avatarColor} size={TILE} />}
       {federationBadge && (
         federationDisconnected
-          ? <span aria-hidden="true" className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent-amber" />
-          : <Icon name="globe" size={12} className="flex-shrink-0 text-txt-tertiary" />
+          ? <span aria-hidden="true" className="pointer-events-none absolute -bottom-0.5 -right-0.5 z-10 h-2 w-2 rounded-full bg-accent-amber ring-2 ring-surface-channel" />
+          : <span aria-hidden="true" className="pointer-events-none absolute -bottom-1 -right-1 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-surface-channel text-txt-tertiary"><Icon name="globe" size={10} /></span>
       )}
       {type === 'space' && <SpaceTabUnread spaceId={id} hasUnread={unread} />}
       {type === 'dm' && <HomeTabUnread hasUnread={unread} />}
@@ -186,7 +195,7 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
 
   return (
     <div
-      className={`relative flex h-full flex-shrink-0 items-center ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative flex flex-shrink-0 items-center ${isDragging ? 'opacity-50' : ''}`}
       onContextMenu={onContextMenu}
       draggable={draggable}
       onDragStart={onDragStart}
@@ -195,10 +204,10 @@ function SidebarItem({ id, name, icon, avatarColor, active, onClick, onContextMe
       onDrop={onDrop}
     >
       {dropIndicator === 'before' && (
-        <span className="absolute -left-[2px] top-2.5 bottom-2.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
+        <span className="absolute -left-[4px] top-0.5 bottom-0.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
       )}
       {dropIndicator === 'after' && (
-        <span className="absolute -right-[2px] top-2.5 bottom-2.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
+        <span className="absolute -right-[4px] top-0.5 bottom-0.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
       )}
       {tooltipText && tooltipText !== name ? (
         <Tooltip content={tooltipText} position="bottom" delay={300}>
@@ -219,7 +228,7 @@ function MiniSpaceIcon({ space }: { space: TaggedSpace }) {
   const grad = getSpaceGradient(space.id, space.name, space.avatarColor);
   const colour = (
     <div
-      className="w-full h-full rounded-[1px]"
+      className="w-full h-full rounded-[4px]"
       style={{ background: grad.gradient }}
     />
   );
@@ -228,7 +237,7 @@ function MiniSpaceIcon({ space }: { space: TaggedSpace }) {
     <GatedPicture
       src={icon.startsWith('http') || icon.startsWith('/') ? icon : `/api/uploads/${icon}`}
       alt=""
-      className="w-full h-full object-cover rounded-[1px]"
+      className="w-full h-full object-cover rounded-[4px]"
       whileBlocked={colour}
     />
   );
@@ -241,8 +250,8 @@ function FolderGlyph({ spaces, color }: { spaces: TaggedSpace[]; color: string |
   return (
     <span
       aria-hidden="true"
-      className="grid h-5 w-5 flex-shrink-0 grid-cols-2 gap-[2px] rounded p-[2px]"
-      style={{ backgroundColor: color ? `${color}33` : 'rgb(255 255 255 / 0.06)' }}
+      className="grid h-11 w-11 flex-shrink-0 grid-cols-2 gap-1 p-[6px]"
+      style={{ backgroundColor: color ? `${color}33` : 'rgb(255 255 255 / 0.06)', borderRadius: 'calc(14px * var(--radius-scale))' }}
     >
       {display.map((s) => (
         <span key={s.id} className="block h-full w-full overflow-hidden">
@@ -250,7 +259,7 @@ function FolderGlyph({ spaces, color }: { spaces: TaggedSpace[]; color: string |
         </span>
       ))}
       {display.length < 4 && Array.from({ length: 4 - display.length }).map((_, i) => (
-        <span key={`empty-${i}`} className="block h-full w-full rounded-[1px] bg-white/[0.06]" />
+        <span key={`empty-${i}`} className="block h-full w-full rounded-[4px] bg-white/[0.06]" />
       ))}
     </span>
   );
@@ -521,7 +530,7 @@ function FolderSlot({
   return (
     <div
       ref={anchorRef}
-      className={`relative flex h-full flex-shrink-0 items-center ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative flex flex-shrink-0 items-center ${isDragging ? 'opacity-50' : ''}`}
       onContextMenu={onContextMenu}
       draggable
       onDragStart={onDragStart}
@@ -530,21 +539,21 @@ function FolderSlot({
       onDrop={onDrop}
     >
       {dropIndicator === 'before' && (
-        <span className="absolute -left-[2px] top-2.5 bottom-2.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
+        <span className="absolute -left-[4px] top-0.5 bottom-0.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
       )}
       {dropIndicator === 'after' && (
-        <span className="absolute -right-[2px] top-2.5 bottom-2.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
+        <span className="absolute -right-[4px] top-0.5 bottom-0.5 z-10 w-[2px] rounded-[1px] bg-accent-primary" />
       )}
       <button
         type="button"
         onClick={onToggleFlyout}
         aria-expanded={isFlyoutOpen}
-        className={`${TAB} ${tabTone(isActive || isFlyoutOpen, hasUnread)} ${dropIndicator === 'merge' ? 'ring-1 ring-accent-primary' : ''}`}
+        aria-label={label}
+        data-tooltip=""
+        className={`${TAB} dock-tile-folder ${tabTone(isActive || isFlyoutOpen, hasUnread)} ${dropIndicator === 'merge' ? 'dock-tile-merge' : ''}`}
       >
         <FolderGlyph spaces={folderSpaces} color={folder.color} />
-        <span className="max-w-[140px] truncate compact:max-w-[96px]">{label}</span>
         {hasUnread && !isActive && <UnreadDot />}
-        <Icon name="chevron-down" size={13} className={`flex-shrink-0 text-txt-tertiary transition-transform ${isFlyoutOpen ? 'rotate-180' : ''}`} />
       </button>
       {isActive && <ActiveMark />}
     </div>
@@ -952,36 +961,14 @@ export function SpaceSidebar() {
     }
   }, [openFolderId, resolvedLayout]);
 
-  // The tab of the place you are in is never left outside the strip, however
-  // you got there (a link, the quick switcher, the folder flyout).
-  const stripRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    stripRef.current?.querySelector('[data-active-mark]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
-  }, [currentSpaceId, showDms, resolvedLayout]);
-
-  // The strip has no scrollbar, so a mouse wheel moves it sideways. A trackpad's
-  // sideways swipe and Shift + wheel already do.
-  const handleStripWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (event.deltaX !== 0 || event.shiftKey) return;
-    // Firefox reports a mouse wheel in lines, the others in pixels.
-    event.currentTarget.scrollLeft += event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * 16 : event.deltaY;
-  };
-
-  // Once scrolled, the strip's start fades out too (globals.css, `.tab-strip`).
-  const [stripScrolled, setStripScrolled] = useState(false);
-
   return (
-    <nav className="flex h-full min-w-0 flex-1 items-center select-none" onDragOver={(e) => { if (dragState) e.preventDefault(); }} onDrop={handleDrop}>
-      {/* Home and the spaces scroll sideways when they outgrow the bar; the
-          actions after them stay put, so they are never the ones cut off. */}
-      <div
-        ref={stripRef}
-        onWheel={handleStripWheel}
-        onScroll={(event) => setStripScrolled(event.currentTarget.scrollLeft > 0)}
-        data-scrolled={stripScrolled}
-        className="tab-strip sliding-list flex h-full min-w-0 items-center gap-0.5 overflow-x-auto overflow-y-hidden no-scrollbar scroll-px-4 pl-1"
-      >
-      <SlidingMark variant="line" selector="[data-active-mark]" />
+    <nav
+      aria-label={t('spaces:sidebar.places')}
+      className="space-dock sliding-list flex flex-wrap items-center gap-3 px-3 pb-3.5 pt-3.5 select-none"
+      onDragOver={(e) => { if (dragState) e.preventDefault(); }}
+      onDrop={handleDrop}
+    >
+      <SlidingMark variant="tile" selector="[data-active-mark]" />
       <SidebarItem
         id="@me"
         name={t('home:nav.home')}
@@ -993,8 +980,6 @@ export function SpaceSidebar() {
         type="dm"
         hasUnread={hasDmUnread}
       />
-
-      <span aria-hidden="true" className="mx-1 h-5 w-px flex-shrink-0 bg-border-hard" />
 
       {/* Unified space list (ordered by user layout) */}
       {resolvedLayout.map((item) => {
@@ -1114,10 +1099,6 @@ export function SpaceSidebar() {
           />
         );
       })}
-      </div>
-
-      <div className="flex h-full flex-shrink-0 items-center gap-0.5 pr-1">
-      <span aria-hidden="true" className="mx-1 h-5 w-px flex-shrink-0 bg-border-hard" />
 
       <SidebarItem
         id="add-space"
@@ -1145,7 +1126,6 @@ export function SpaceSidebar() {
         type="action"
         actionType="explore"
       />
-      </div>
 
       {spaceMenu.dialogs}
 

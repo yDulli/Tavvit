@@ -565,6 +565,18 @@ All paths: insert `space_members`, register in `connectionManager`, broadcast `m
 
 **Role hierarchy:** kicking someone else needs a higher top role than theirs (`403 role_hierarchy`, permissions.md).
 
+**What goes with the membership** (`removeMembershipRows`, `utils/spaceMemberRemoval.ts`), in one transaction, for leaving, a kick and a ban alike:
+
+- the member row;
+- **their roles** (`member_roles`) and **the channel and category overrides that name them**. Until 1.42.0 only a ban took the roles. A kick or leaving left them, and since permissions are read from those rows, a kicked moderator who joined again by the same invite had every role back, announced to nobody (`member_joined` carries no roles), while nobody could take them away in between (the role routes answer `member_not_found`). Found in the security audit of 2026-11-14;
+- what they read (`read_states`), the threads they follow, their voice restrictions and the events they signed up for (`space_event_rsvps`), so no reminder with an event's title reaches someone who is out.
+
+Rows left by earlier versions are taken at the next start (`removeGrantsWithoutMembership`, `db/migrate.ts`): roles and member overrides of people who are not in that space. It logs how many it removed.
+
+A **ban** also declines the person's request to join that still waits, and accepting a request answers `409 already_banned` while a ban stands: accepting an old request used to bring a banned person in.
+
+They are taken out of the space's voice at LiveKit as well, whether or not this server had them in a call (voice.md, "Removing someone from a call").
+
 **Cleanup on removal:**
 1. Keep a running timeout in `space_departed_timeouts`, so joining again does not lift it (see "Moderation", "Timeouts")
 2. Delete `space_members` row

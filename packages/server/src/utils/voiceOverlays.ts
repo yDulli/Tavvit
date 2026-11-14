@@ -8,6 +8,7 @@ import { getDb, schema } from '../db/index.js';
 import { connectionManager } from '../ws/handler.js';
 import { hasPermission, PermissionBits } from './permissions.js';
 import { shownAccountPicture, mediaOriginsFor, shownPicture } from './remoteMedia.js';
+import { evictIdentityFromLiveKitRoom } from './livekitEviction.js';
 import { generateSnowflake } from './snowflake.js';
 import { channelToWire } from './spaceWire.js';
 import { activeSuspension } from './suspension.js';
@@ -41,21 +42,31 @@ function announceChannel(channelId: string): void {
   connectionManager.sendToChannel(channel.spaceId, channel.id, { type: 'channel_updated', channel: channelToWire(channel), spaceId: channel.spaceId });
 }
 
+/** The hidden participant of a link, in its channel's call. */
+const overlayIdentity = (linkId: string): string => `overlay:${linkId}`;
+
 /** A new link for a person and channel, ending the one they had there. Answers its secret, shown this once. */
 export function createVoiceOverlay(userId: string, spaceId: string, channelId: string): { secret: string; createdAt: number } {
   const secret = randomBytes(32).toString('base64url');
   const createdAt = Date.now();
   const db = getDb();
+  const replaced = db.select({ id: schema.voiceOverlays.id }).from(schema.voiceOverlays)
+    .where(and(eq(schema.voiceOverlays.channelId, channelId), eq(schema.voiceOverlays.userId, userId))).all();
   db.transaction((tx) => {
     tx.delete(schema.voiceOverlays).where(and(eq(schema.voiceOverlays.channelId, channelId), eq(schema.voiceOverlays.userId, userId))).run();
     tx.insert(schema.voiceOverlays).values({ id: generateSnowflake(), channelId, spaceId, userId, tokenHash: hashOf(secret), createdAt }).run();
   });
+  // A page still open on the old link is put out of the call it listens in on.
+  for (const link of replaced) evictIdentityFromLiveKitRoom(channelId, overlayIdentity(link.id));
   announceChannel(channelId);
   return { secret, createdAt };
 }
 
 /** A person's link for a channel taken away. Answers whether there was one. */
 export function deleteVoiceOverlay(userId: string, channelId: string): boolean {
+  const ended = getDb().select({ id: schema.voiceOverlays.id }).from(schema.voiceOverlays)
+    .where(and(eq(schema.voiceOverlays.channelId, channelId), eq(schema.voiceOverlays.userId, userId))).all();
+  for (const link of ended) evictIdentityFromLiveKitRoom(channelId, overlayIdentity(link.id));
   const result = getDb().delete(schema.voiceOverlays)
     .where(and(eq(schema.voiceOverlays.channelId, channelId), eq(schema.voiceOverlays.userId, userId)))
     .run();
@@ -80,8 +91,11 @@ export async function voiceOverlayState(secret: string, now = Date.now()): Promi
   const link = db.select().from(schema.voiceOverlays).where(eq(schema.voiceOverlays.tokenHash, hashOf(secret))).get();
   if (!link) return null;
   const maker = db.select().from(schema.users).where(eq(schema.users.id, link.userId)).get();
-  if (!maker || maker.isDeleted === 1 || activeSuspension(maker, now)) return null;
-  if (!hasPermission(link.userId, link.spaceId, OVERLAY_PERMISSIONS, link.channelId)) return null;
+  if (!maker || maker.isDeleted === 1 || activeSuspension(maker, now) || !hasPermission(link.userId, link.spaceId, OVERLAY_PERMISSIONS, link.channelId)) {
+    // The page asks again every few seconds; the first refusal also ends what it still holds open.
+    evictIdentityFromLiveKitRoom(link.channelId, overlayIdentity(link.id));
+    return null;
+  }
   const channel = db.select({ name: schema.channels.name, type: schema.channels.type }).from(schema.channels).where(eq(schema.channels.id, link.channelId)).get();
   if (!channel || channel.type !== 'voice') return null;
 
@@ -120,7 +134,7 @@ export async function voiceOverlayState(secret: string, now = Date.now()): Promi
   let livekit: VoiceOverlayState['livekit'] = null;
   if (config.livekit.apiKey && config.livekit.apiSecret && config.livekit.url) {
     // A participant nobody sees that can neither hear, nor send, nor publish: it only learns who speaks.
-    const token = new AccessToken(config.livekit.apiKey, config.livekit.apiSecret, { identity: `overlay:${link.id}`, ttl: '10m' });
+    const token = new AccessToken(config.livekit.apiKey, config.livekit.apiSecret, { identity: overlayIdentity(link.id), ttl: '10m' });
     token.addGrant({ room: link.channelId, roomJoin: true, hidden: true, canPublish: false, canSubscribe: false, canPublishData: false });
     livekit = { url: config.livekit.url, token: await token.toJwt() };
   }

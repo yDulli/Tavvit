@@ -33,8 +33,12 @@ import { useDragManager, type DropTarget, type LayoutItem } from '../../hooks/us
 import { useDelayedLoading } from '../../hooks/useDelayedLoading';
 import { activeHomeNavItem, HOME_ROUTES, isHomeNavMoreItem } from '../../utils/homeNav';
 import { useSpaceBanner } from '../../hooks/useSpaceBanner';
-import { SpaceBannerHeader } from './SpaceBannerHeader';
 import { ChannelMutedIndicator } from '../notifications/ChannelMutedIndicator';
+import { useQuickSwitcherStore } from '../../stores/quickSwitcherStore';
+import { switcherKeyShortcuts, switcherShortcut } from '../../utils/quickSwitcher';
+import { InstanceSwitcher } from './InstanceSwitcher';
+import { SpaceSidebar } from './SpaceSidebar';
+import { UserControls } from './UserControls';
 
 /**
  * One item of the home block: a navigation row with its glyph. `aria-current`
@@ -111,6 +115,71 @@ function SpaceHeaderRow({ space, instanceLabel, canCreateInvite, overBanner }: {
         </button>
       )}
     </>
+  );
+}
+
+/**
+ * The way to anything (Evolve's "Search or jump to…"): a field-shaped button under the dock that
+ * opens the quick switcher, with its shortcut.
+ */
+function SidebarSearch() {
+  const { t } = useTranslation('common');
+  const openSwitcher = useQuickSwitcherStore((s) => s.setOpen);
+  return (
+    <div className="flex-shrink-0 px-3 pb-3">
+      <button
+        type="button"
+        onClick={() => openSwitcher(true)}
+        aria-keyshortcuts={switcherKeyShortcuts()}
+        className="sidebar-search"
+      >
+        <Icon name="search" size={14} className="flex-shrink-0" />
+        <span className="min-w-0 flex-1 truncate text-left">{t('actions.searchOrJump')}</span>
+        <kbd className="kbd">{switcherShortcut()}</kbd>
+      </button>
+    </div>
+  );
+}
+
+/**
+ * The column's frame in both its modes (Evolve's sidebar): the server's head, the dock of places,
+ * the search, what the place holds (scrolling), the voice connection and who you are at the foot.
+ */
+function SidebarFrame({ children, voicePanel }: { children: React.ReactNode; voicePanel: React.ReactNode }) {
+  return (
+    <aside className="app-sidebar relative flex w-[var(--sidebar-width)] flex-shrink-0 flex-col select-none border-r border-border-hard bg-surface-channel">
+      <InstanceSwitcher />
+      <SpaceSidebar />
+      <SidebarSearch />
+      {children}
+      {voicePanel}
+      <UserControls />
+    </aside>
+  );
+}
+
+/**
+ * A space at the head of its channels: its banner as a band when it has one the page may show, and
+ * under it the row with its name, its badges and its instance (which opens its settings) and the
+ * invite button. One card, so the place you are in reads as a place before its rooms.
+ */
+function SpaceHead({ space, banner, instanceLabel, canCreateInvite }: {
+  space: TaggedSpace;
+  banner: { src: string | null; onError: () => void };
+  instanceLabel: string | null;
+  canCreateInvite: boolean;
+}) {
+  return (
+    <div className="space-head group/header">
+      {banner.src && (
+        <div aria-hidden="true" className="space-head-banner">
+          <img src={banner.src} alt="" decoding="async" draggable={false} onError={banner.onError} />
+        </div>
+      )}
+      <div className="flex items-center gap-1 p-1">
+        <SpaceHeaderRow space={space} instanceLabel={instanceLabel} canCreateInvite={canCreateInvite} overBanner={false} />
+      </div>
+    </div>
   );
 }
 
@@ -518,11 +587,8 @@ export function ChannelSidebar() {
 
     return (
       <>
-      <div className="lit relative w-[var(--sidebar-width)] flex flex-col flex-shrink-0 select-none border-r border-border-hard bg-surface-channel">
-        <div className="panel-bar px-2.5 flex items-center">
-          <DmSearchBar />
-        </div>
-        <div className="sliding-list flex-1 overflow-y-auto pt-2.5 pb-4 px-2 no-scrollbar">
+      <SidebarFrame voicePanel={voicePanel}>
+        <div className="sliding-list sidebar-nav flex-1 overflow-y-auto border-t border-border-hard pt-3 pb-4 px-2.5 no-scrollbar">
           <SlidingMark variant="row" />
           <nav aria-label={t('home:nav.home')} className="space-y-px">
             <HomeNavRow active={activeHomeItem === 'home'} label={t('home:nav.home')} icon="home" onClick={handleHomeClick} />
@@ -582,17 +648,21 @@ export function ChannelSidebar() {
             )}
           </nav>
 
-          <section aria-label={t('spaces:sidebar.directMessages')} className="mt-3 border-t border-border-hard pt-3">
-            <div className="flex h-7 items-center justify-between gap-2 pl-2.5">
+          <section aria-label={t('spaces:sidebar.directMessages')} className="mt-5">
+            <div className="flex h-7 items-center justify-between gap-2 pl-2">
               <h2 className="label-mono min-w-0 truncate">{t('spaces:sidebar.directMessages')}</h2>
               <button
                 type="button"
                 onClick={() => openModal('newDm')}
-                className="icon-btn flex-shrink-0"
+                className="icon-btn h-6 w-6 flex-shrink-0"
                 aria-label={t('spaces:sidebar.dmList.newDm')}
               >
-                <Icon name="plus" size={15} strokeWidth={2} />
+                <Icon name="plus" size={14} strokeWidth={2} />
               </button>
+            </div>
+
+            <div className="mb-2 mt-1">
+              <DmSearchBar />
             </div>
 
             {dmChannels.length > 0 && (
@@ -634,8 +704,7 @@ export function ChannelSidebar() {
             </div>
           </section>
         </div>
-        {voicePanel}
-      </div>
+      </SidebarFrame>
       {conversationMenu.dialogs}
       </>
     );
@@ -643,29 +712,11 @@ export function ChannelSidebar() {
 
   return (
     <>
-    <div className="lit relative w-[var(--sidebar-width)] flex flex-col flex-shrink-0 select-none border-r border-border-hard bg-surface-channel">
-      {/* The column's bar. With a banner it lies over the picture, inside what scrolls (below). */}
-      {!banner.src && (
-        <div className="panel-bar flex items-center gap-1 px-2 group/header">
-          <SpaceHeaderRow space={space} instanceLabel={instanceLabel} canCreateInvite={canCreateInvite} overBanner={false} />
-        </div>
-      )}
-
-      {/* Channels — dynamic category layout */}
-      <div ref={scrollContainerRef} className={`sliding-list flex-1 overflow-y-auto pb-4 px-2 no-scrollbar ${banner.src ? 'scroll-pt-[var(--topbar-height)]' : 'pt-2.5'}`} onDrop={containerHandlers.onDrop} onDragOver={containerHandlers.onDragOver} onContextMenu={handleSidebarContextMenu}>
+    <SidebarFrame voicePanel={voicePanel}>
+      {/* Channels — dynamic category layout, under the space's own card */}
+      <div ref={scrollContainerRef} className="sliding-list sidebar-nav flex-1 overflow-y-auto border-t border-border-hard pt-3 pb-4 px-2.5 no-scrollbar" onDrop={containerHandlers.onDrop} onDragOver={containerHandlers.onDragOver} onContextMenu={handleSidebarContextMenu}>
         <SlidingMark variant="row" />
-        {banner.src && (
-          <SpaceBannerHeader
-            key={space.id}
-            src={banner.src}
-            onError={banner.onError}
-            scrollRef={scrollContainerRef}
-            barClassName="lit -mx-2 flex items-center gap-1 px-2 group/header"
-            bandClassName="-mx-2 mb-2.5"
-          >
-            {(over) => <SpaceHeaderRow space={space} instanceLabel={instanceLabel} canCreateInvite={canCreateInvite} overBanner={over} />}
-          </SpaceBannerHeader>
-        )}
+        <SpaceHead key={space.id} space={space} banner={banner} instanceLabel={instanceLabel} canCreateInvite={canCreateInvite} />
         {showChannelSkeleton ? (
           <div role="status" aria-label={t('spaces:channels.loading')}>
             {/* The real rows' geometry, so nothing moves when the channels arrive. */}
@@ -858,9 +909,7 @@ export function ChannelSidebar() {
         </>)}
 
       </div>
-
-      {voicePanel}
-    </div>
+    </SidebarFrame>
     <ConfirmDialog
       isOpen={deleteCategoryId !== null}
       onClose={() => setDeleteCategoryId(null)}

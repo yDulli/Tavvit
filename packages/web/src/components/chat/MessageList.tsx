@@ -1349,7 +1349,7 @@ function UnreadDivider({ label, name, dateLabel }: { label: string; name: string
           <div className="flex-1 h-px bg-accent-primary/60" />
         </>
       )}
-      <span className="ml-2 rounded bg-accent-primary px-1.5 py-px font-mono text-2xs font-semibold uppercase leading-4 tracking-[0.06em] text-white">
+      <span className="ml-2 rounded-pill bg-accent-primary px-2 py-px font-mono text-2xs font-semibold uppercase leading-4 tracking-[0.08em] text-on-accent">
         {label}
       </span>
     </div>

@@ -29,7 +29,7 @@ import { isElectron } from '../../platform/platform';
 import { useFederationEnabled } from '../../hooks/useFederationEnabled';
 import { useHomeInstanceInfo } from '../../hooks/useHomeInstanceInfo';
 import { useLinkedAccountsStore } from '../../stores/linkedAccountsStore';
-import { Icon } from '../ui/Icon';
+import { Icon, type IconName } from '../ui/Icon';
 import { SlidingMark } from '../ui/SlidingMark';
 
 /**
@@ -115,6 +115,26 @@ function AdminConsoleRow({ tall, onLeave }: { tall: boolean; onLeave: () => void
   );
 }
 
+/** The mark of each settings tab in the navigation. */
+const TAB_ICONS: Record<UserSettingsTab, IconName> = {
+  account: 'user',
+  decorations: 'sparkle',
+  security: 'shield',
+  privacy: 'lock',
+  linkedAccounts: 'link',
+  connections: 'globe',
+  notifications: 'bell',
+  appearance: 'palette',
+  accessibility: 'zoom-in',
+  language: 'translate',
+  voice: 'mic',
+  emoji: 'smile',
+  games: 'play',
+  developers: 'hash',
+  keybinds: 'grid',
+  desktop: 'monitor',
+};
+
 export function UserSettingsModal() {
   const { t } = useTranslation(['settings', 'common']);
   const activeModal = useUIStore((s) => s.activeModal);
@@ -160,8 +180,8 @@ export function UserSettingsModal() {
     if (isMobile) setMobileView('content');
   };
 
-  // One `.nav-item` per tab: the open one is a step lighter with the violet
-  // edge. On the phone the rows are taller, for a thumb.
+  // One `.nav-item` per tab, with its icon (Evolve's settings navigation): the open one is a step
+  // lighter with the ultraviolet edge. On the phone the rows are taller, for a thumb.
   const renderNav = (layout: 'desktop' | 'mobile'): ReactNode => (
     <>
       {GROUP_ORDER.map((group, index) => (
@@ -176,6 +196,7 @@ export function UserSettingsModal() {
               data-active={tab === entry.id}
               aria-current={tab === entry.id ? 'page' : undefined}
             >
+              <Icon name={TAB_ICONS[entry.id]} size={16} className={`flex-shrink-0 ${tab === entry.id ? 'text-txt-primary' : 'text-txt-tertiary'}`} />
               <span className="min-w-0 flex-1 truncate">{t(entry.label)}</span>
               {layout === 'mobile' && <Icon name="chevron-right" size={15} className="flex-shrink-0 text-txt-tertiary" />}
             </button>

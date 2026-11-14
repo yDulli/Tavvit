@@ -42,7 +42,8 @@
     "previous": "Anterior",
     "next": "Próximo",
     "preview": "Pré-visualizar",
-    "logIn": "Entrar"
+    "logIn": "Entrar",
+    "searchOrJump": "Pesquisar ou ir para…"
   },
   "states": {
     "loading": "Carregando…",
@@ -83,7 +84,8 @@
     "noMembersFound": "Nenhum membro encontrado",
     "or": "ou",
     "nameAZ": "Nome (A-Z)",
-    "adminConsole": "Console de administração"
+    "adminConsole": "Console de administração",
+    "whereYouAre": "Onde você está"
   },
   "time": {
     "today": "Hoje às {{time}}",

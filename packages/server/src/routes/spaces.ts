@@ -51,6 +51,7 @@ import { sanitizeUser } from '../utils/sanitize.js';
 import { checkVoicePermissions, disconnectMemberFromSpaceVoice } from '../ws/events.js';
 import { channelToWire, memberStaffBadges, memberToWire, spaceToWire } from '../utils/spaceWire.js';
 import { dropHeldTimeout, holdDepartingTimeout, memberActionRefusal, restoreHeldTimeout } from '../utils/spaceModeration.js';
+import { removeMembershipRows } from '../utils/spaceMemberRemoval.js';
 import {
   addedFields,
   auditChange,
@@ -1216,34 +1217,13 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     // Leaving does not lift a timeout: it is put back if they join again.
     holdDepartingTimeout(id, uid);
 
-    const departing = and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, uid));
     const departingPictures = db.select({ avatar: schema.spaceMembers.avatar, banner: schema.spaceMembers.banner })
-      .from(schema.spaceMembers).where(departing).all();
-    db.delete(schema.spaceMembers).where(departing).run();
+      .from(schema.spaceMembers).where(and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, uid))).all();
+    // The member row and all that was held through it: roles, overrides naming them, what they
+    // read and follow (utils/spaceMemberRemoval.ts). A kicked member who joins again starts as new.
+    db.transaction((tx) => removeMembershipRows(id, uid, tx));
     releaseMemberPictures(departingPictures);
     if (releaseSpaceTag(uid, id)) announceSpaceTagChange([uid]);
-
-    // Clean up any voice restrictions for the removed member
-    db.delete(schema.voiceRestrictions).where(
-      and(
-        eq(schema.voiceRestrictions.spaceId, id),
-        eq(schema.voiceRestrictions.userId, uid),
-      )
-    ).run();
-
-    // Clean up read_states for the departing user in this space's channels
-    const spaceChannelIds = db.select({ id: schema.channels.id })
-      .from(schema.channels).where(eq(schema.channels.spaceId, id)).all().map(c => c.id);
-    if (spaceChannelIds.length > 0) {
-      db.delete(schema.readStates).where(and(
-        eq(schema.readStates.userId, uid),
-        inArray(schema.readStates.channelId, spaceChannelIds),
-      )).run();
-      db.delete(schema.threadMembers).where(and(
-        eq(schema.threadMembers.userId, uid),
-        inArray(schema.threadMembers.threadId, spaceChannelIds),
-      )).run();
-    }
 
     if (!isSelf) {
       recordAudit({
@@ -1799,9 +1779,6 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
     // Read while the member row still holds their nickname.
     const bannedLabel = auditUserLabel(id, targetId);
 
-    // Fetch channel IDs before the transaction for read_states cleanup
-    const banChannelIds = db.select({ id: schema.channels.id })
-      .from(schema.channels).where(eq(schema.channels.spaceId, id)).all().map(c => c.id);
     const bannedPictures = db.select({ avatar: schema.spaceMembers.avatar, banner: schema.spaceMembers.banner })
       .from(schema.spaceMembers)
       .where(and(eq(schema.spaceMembers.spaceId, id), eq(schema.spaceMembers.userId, targetId)))
@@ -1817,31 +1794,15 @@ export async function spaceRoutes(app: FastifyInstance): Promise<void> {
         createdAt: now,
       }).run();
 
-      // Remove member from space
-      tx.delete(schema.spaceMembers).where(and(
-        eq(schema.spaceMembers.spaceId, id),
-        eq(schema.spaceMembers.userId, targetId),
-      )).run();
+      // The member row and all that was held through it (utils/spaceMemberRemoval.ts): roles,
+      // overrides naming them, what they read and follow. Also for someone banned who was never
+      // a member, or left with roles from before this was taken on leaving.
+      removeMembershipRows(id, targetId, tx);
 
-      // Remove member's role assignments
-      tx.delete(schema.memberRoles).where(and(
-        eq(schema.memberRoles.spaceId, id),
-        eq(schema.memberRoles.userId, targetId),
-      )).run();
-
-      // Clean up read_states for the banned user in this space's channels
-      if (banChannelIds.length > 0) {
-        tx.delete(schema.readStates).where(and(
-          eq(schema.readStates.userId, targetId),
-          inArray(schema.readStates.channelId, banChannelIds),
-        )).run();
-      }
-
-      // Clean up any voice restrictions for the banned member
-      tx.delete(schema.voiceRestrictions).where(and(
-        eq(schema.voiceRestrictions.spaceId, id),
-        eq(schema.voiceRestrictions.userId, targetId),
-      )).run();
+      // A request to join that still waits is answered by the ban: accepting it later would
+      // bring them in past it.
+      tx.update(schema.joinRequests).set({ status: 'declined', decidedBy: request.userId, decidedAt: now })
+        .where(and(eq(schema.joinRequests.spaceId, id), eq(schema.joinRequests.userId, targetId), eq(schema.joinRequests.status, 'pending'))).run();
 
       // A ban drops a timeout, one held from an earlier leave included.
       dropHeldTimeout(id, targetId, tx);

@@ -71,6 +71,41 @@ export function ensureDefaults(db: Database.Database): void {
 }
 
 /**
+ * What a membership held in a space goes with it (utils/spaceMemberRemoval.ts). Before that held
+ * for leaving and for a kick, both left the roles and the overrides naming the person behind, and
+ * they came back to whoever joined again. This takes what was left so far: roles, and channel and
+ * category overrides on a member, of people who are not in that space. Idempotent, and nothing to
+ * do on a database that never had such a row. Answers how many rows went; `beforeChanges` runs once
+ * before the first of them does.
+ */
+export function removeGrantsWithoutMembership(db: Database.Database, options: { beforeChanges?: () => void } = {}): number {
+  const withoutMembership = {
+    member_roles: `NOT EXISTS (
+      SELECT 1 FROM space_members m WHERE m.space_id = member_roles.space_id AND m.user_id = member_roles.user_id
+    )`,
+    channel_overrides: `target_type = 'member' AND NOT EXISTS (
+      SELECT 1 FROM channels c JOIN space_members m ON m.space_id = c.space_id
+      WHERE c.id = channel_overrides.channel_id AND m.user_id = channel_overrides.target_id
+    )`,
+    category_overrides: `target_type = 'member' AND NOT EXISTS (
+      SELECT 1 FROM channel_categories c JOIN space_members m ON m.space_id = c.space_id
+      WHERE c.id = category_overrides.category_id AND m.user_id = category_overrides.target_id
+    )`,
+  } as const;
+  const tables = Object.keys(withoutMembership) as Array<keyof typeof withoutMembership>;
+  const waiting = tables.reduce((total, table) => total
+    + (db.prepare(`SELECT count(*) AS n FROM ${table} WHERE ${withoutMembership[table]}`).get() as { n: number }).n, 0);
+  if (waiting === 0) return 0;
+
+  // Rows go for good: the snapshot a migration takes comes first, as for every pass that rewrites rows.
+  options.beforeChanges?.();
+  const removed = db.transaction(() => tables.reduce((total, table) => total
+    + db.prepare(`DELETE FROM ${table} WHERE ${withoutMembership[table]}`).run().changes, 0))();
+  console.log(`[defaults] removed ${removed} role or override row(s) of people who are no longer in the space`);
+  return removed;
+}
+
+/**
  * One-time, idempotent recovery of 1-on-1 DM threads broken before the DM
  * tombstone fix: those had the deleted partner's dm_members row removed, making
  * the thread UI-unreachable. For each ownerId-NULL channel with exactly one

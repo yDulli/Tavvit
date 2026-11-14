@@ -10,6 +10,8 @@ import { useSpaceStore } from '../../stores/spaceStore';
 import { useUIStore } from '../../stores/uiStore';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Icon } from '../ui/Icon';
+import { PageHeader } from '../ui/PageHeader';
+import { TopbarActions } from '../layout/TopbarSlots';
 import { MemberListToggleButton } from '../layout/MemberListToggleButton';
 import { useFormatters } from '../../i18n/formatters';
 import { describeError } from '../../i18n/errors';
@@ -272,18 +274,15 @@ export function ExplorePage() {
 
       {/* Content: Inner Space on top, Outer Space below it, in that order whatever either holds */}
       <div className="relative isolate flex-1 overflow-y-auto">
-        {!isMobile && <div aria-hidden="true" className="hero-light" />}
         {!isMobile && (
-          <header className="rise-in relative px-6 pb-2 pt-12">
-            <div className="absolute right-3 top-2 flex items-center gap-1">
+          <>
+            <TopbarActions>
               <MemberListToggleButton />
-            </div>
-            <div className="scroll-away">
-              <h1 className="display-title ink">{t('spaces:explore.title')}</h1>
-              <p className="mt-2 text-lead text-txt-secondary">{t('spaces:explore.lead')}</p>
-            </div>
-            <div className="mt-6 flex">{searchField}</div>
-          </header>
+            </TopbarActions>
+            <PageHeader eyebrow={t('spaces:sidebar.places')} title={t('spaces:explore.title')} description={t('spaces:explore.lead')}>
+              <div className="flex pb-5">{searchField}</div>
+            </PageHeader>
+          </>
         )}
         <div className="space-y-10 p-4 desktop:p-6">
           {/* Inner Space: the home instance and every connected instance */}

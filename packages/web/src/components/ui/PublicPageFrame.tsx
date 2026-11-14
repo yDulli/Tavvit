@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LegalLinks } from '../legal/LegalLinks';
+import { LightField } from './LightField';
 
 /**
  * The one card a public page is (an invite, a shared look): floating in the middle of the page,
@@ -16,7 +17,7 @@ export function PublicPageFrame({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation('common');
   return (
     <div className="stage-light isolate h-full overflow-y-auto flex flex-col items-center bg-surface-base relative px-4 py-6">
-      <div aria-hidden="true" className="hero-light" />
+      <LightField intensity="hero" className="light-field-window" />
       <a href="/" className="mb-6 flex w-fit items-center gap-2.5 self-start">
         <img src="/icons/logo-mark.svg" alt="" className="h-6 w-6" />
         <span className="text-lead font-semibold tracking-[-0.01em] text-txt-primary">{t('appName')}</span>

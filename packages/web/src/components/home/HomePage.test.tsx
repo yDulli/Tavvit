@@ -332,6 +332,81 @@ describe('HomePage spaces', () => {
   });
 });
 
+describe('HomePage figures', () => {
+  const amy = user('a', 'Amy');
+
+  beforeEach(() => {
+    useSocialStore.setState({ friends: [friend('a', 'Amy'), friend('b', 'Ben'), friend('c', 'Cleo', 'offline')] });
+    useSpaceStore.setState({
+      spaces: [space('space-1', 'Game Night')],
+      dmChannels: [dm('dm-1', amy, 'are you coming?', 20)],
+    });
+    useChatStore.setState({ unreadChannels: new Set(['dm-1']) });
+  });
+
+  // Each figure is the count of the section it leads to, from the same facts.
+  it('says what is unread, who is online and how many spaces there are', () => {
+    renderHome();
+    expect(screen.getByRole('button', { name: /^Unread\s*1$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Mentions\s*0$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Online now\s*2$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Spaces\s*1$/ })).toBeInTheDocument();
+  });
+
+  it.each([
+    [/^Unread/, '/inbox'],
+    [/^Mentions/, '/inbox'],
+    [/^Online now/, '/friends'],
+    [/^Spaces/, '/explore'],
+  ])('leads from %s to what it counts', (name, path) => {
+    renderHome();
+    fireEvent.click(screen.getByRole('button', { name }));
+    expect(screen.getByTestId('location')).toHaveTextContent(path);
+  });
+
+  // The first steps say what to do with an account that has nothing; four zeros would say nothing.
+  it('shows no figures to a brand-new account', () => {
+    useSocialStore.setState({ friends: [] });
+    useSpaceStore.setState({ spaces: [], dmChannels: [] });
+    useChatStore.setState({ unreadChannels: new Set() });
+    renderHome();
+    expect(screen.queryByRole('button', { name: /^Unread/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Spaces/ })).toBeNull();
+  });
+});
+
+describe('HomePage space cards', () => {
+  it('shows a space as one card that opens it, with what it is about', () => {
+    useSpaceStore.setState({ spaces: [{ ...space('space-1', 'Game Night'), description: 'Co-op on Fridays.' } as Space] });
+    renderHome();
+    const section = screen.getByRole('region', { name: 'Your spaces' });
+    const cards = within(section).getAllByRole('button', { name: /Game Night/ });
+    expect(cards).toHaveLength(1);
+    expect(within(cards[0]!).getByText('Co-op on Fridays.')).toBeInTheDocument();
+  });
+
+  it('lights a card in its space\'s own colour, which a screen reader hears nothing of', () => {
+    useSpaceStore.setState({ spaces: [space('space-1', 'Game Night')] });
+    renderHome();
+    const card = within(screen.getByRole('region', { name: 'Your spaces' })).getByRole('button', { name: /Game Night/ });
+    expect(card).toHaveClass('home-space', 'surface-card');
+    expect(card.style.getPropertyValue('--tile')).toMatch(/^rgb\(/);
+    expect(card.querySelector('.go-chip')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('counts what waits in a space on its card, once', () => {
+    useSpaceStore.setState({
+      spaces: [space('space-1', 'Game Night')],
+      spaceChannelIndex: new Map([['text-1', { spaceId: 'space-1', origin: '', type: 'text' as const, name: 'plans' }]]),
+    });
+    useChatStore.setState({ unreadChannels: new Set(['text-1']) });
+    renderHome();
+    const card = within(screen.getByRole('region', { name: 'Your spaces' })).getByRole('button', { name: /Game Night/ });
+    // No count from the server here: a neutral dot says something is new, and words say it to a screen reader.
+    expect(within(card).getByText('Unread')).toBeInTheDocument();
+  });
+});
+
 describe('HomePage recent conversations', () => {
   const amy = user('a', 'Amy');
 

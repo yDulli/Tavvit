@@ -17,6 +17,8 @@ import { channelToWire, memberStaffBadges, memberToWire, spaceToWire } from '../
 import { restoreHeldTimeout } from '../utils/spaceModeration.js';
 import { auditUserLabel, recordAudit } from '../utils/auditLog.js';
 import { addPublicMember } from '../utils/spaceJoin.js';
+import { shownCategories } from '../utils/categoryVisibility.js';
+import { idsHiddenFromEveryone } from '@backspace/shared/src/permissions.js';
 import { parseStoredSpaceTag } from '@backspace/shared/src/spaceTags.js';
 import type {
   ExploreSpace,
@@ -81,6 +83,16 @@ function buildFullSpace(spaceId: string, forUserId: string): SpaceWithChannelsAn
     .where(and(eq(schema.channels.spaceId, spaceId), ne(schema.channels.type, 'thread')))
     .all();
 
+  // Which categories are hidden from @everyone, as `GET /api/spaces/:id` works it out: their
+  // names go only to those `shownCategories` lets see them (utils/categoryVisibility.ts).
+  const privateCategoryIds = idsHiddenFromEveryone(
+    db.select().from(schema.categoryOverrides)
+      .where(and(eq(schema.categoryOverrides.targetType, 'role'), eq(schema.categoryOverrides.targetId, spaceId)))
+      .all(),
+    (override) => override.categoryId,
+    () => spaceId,
+  );
+
   const categories = db.select()
     .from(schema.channelCategories)
     .where(eq(schema.channelCategories.spaceId, spaceId))
@@ -91,6 +103,7 @@ function buildFullSpace(spaceId: string, forUserId: string): SpaceWithChannelsAn
       spaceId: c.spaceId,
       name: c.name,
       position: c.position ?? 0,
+      isPrivate: privateCategoryIds.has(c.id),
       createdAt: c.createdAt,
     }));
 
@@ -146,7 +159,7 @@ function buildFullSpace(spaceId: string, forUserId: string): SpaceWithChannelsAn
   return {
     ...spaceToWire(space),
     channels: visibleChannels,
-    categories,
+    categories: shownCategories(categories, visibleChannels, spacePerms),
     members,
     roles: rolesForViewer(roles, spacePerms),
     myPermissions: permissionsToString(spacePerms),
@@ -464,6 +477,10 @@ export async function exploreRoutes(app: FastifyInstance): Promise<void> {
     const now = Date.now();
 
     if (action === 'accept') {
+      // A ban made after the request was sent stands: the ban is lifted first, on purpose.
+      if (isBanned(id, joinReq.userId)) {
+        return sendError(reply, 409, 'already_banned');
+      }
       // Insert member and update request atomically
       db.transaction((tx) => {
         tx.insert(schema.spaceMembers).values({

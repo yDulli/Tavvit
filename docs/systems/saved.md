@@ -27,7 +27,7 @@ A server that was down at the moment says it once it is back: unlike an event, a
 
 ## Keywords
 
-`notification_keywords` holds up to `KEYWORD_LIMITS.MAX` (25) words per account, cleaned by `cleanKeyword`: trimmed, spaces folded, lowercase, 2 to 50 characters. `GET` and `PUT /api/users/@me/keywords`, the whole list each time, in the person's order.
+`notification_keywords` holds up to `KEYWORD_LIMITS.MAX` (25) words per account, cleaned by `cleanKeyword`: trimmed, spaces folded, lowercase, 2 to 50 characters. A list of more than twice that many entries is refused before it is read (`400 keyword_limit_reached`): each word is compared with those kept so far, and a list of a hundred thousand held the whole server for seconds. `GET` and `PUT /api/users/@me/keywords`, the whole list each time, in the person's order.
 
 **One rule.** `matchesKeyword` in `shared/src/notificationRules.ts` is read by `isMessageAlert`, so sound, notification and push cannot disagree. A hit counts as a mention: it alerts in a channel set to mentions, and never where the person chose `nothing` or muted. It matches whole words in any case, in any alphabet, outside code: "raid" finds "Raid?" and not "afraid". In a script written without spaces (Han, Kana, Thai) there are no whole words to go by, so there the word is found anywhere.
 

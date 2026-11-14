@@ -4,6 +4,28 @@
   "note": "New in {{version}}: {{title}}",
   "noteClose": "Close",
   "versions": {
+    "1.42.1": {
+      "title": "Safer",
+      "items": {
+        "hidden": "Managing roles no longer opens a hidden channel: a channel's permissions can only be changed by someone who can see it. Whoever makes a channel private stays in it.",
+        "roles": "Whoever leaves a space or is removed from it loses their roles there. Joining again is starting anew.",
+        "voice": "Someone removed from a space or a group conversation is out of its call at once, and nobody sits in a voice channel unseen.",
+        "photos": "A photo you upload no longer says where it was taken: place, time and device are taken out of JPEG pictures, and the picture itself is untouched.",
+        "calls": "In a conversation a call can be placed a few times a minute, not over and over.",
+        "landing": "On a phone, the page for visitors shows its cards as you reach them instead of a moment later.",
+        "operators": "If you run an instance, update. After the update the server removes roles left behind by people who left before; there is nothing else to do."
+      }
+    },
+    "1.42.0": {
+      "title": "A new look",
+      "items": {
+        "look": "Tavvit looks new: black, white and light. Buttons and fields are round, panels are frames lit from their corner, and the typefaces are Outfit and JetBrains Mono. Your theme, your accent colour and every other setting stay as they are; if you never picked a typeface, you get the new one.",
+        "window": "The window is laid out anew: your spaces are tiles at the top of the sidebar, the bar above a page says where you are, and Home, the inbox, Friends and Explore each open with a header.",
+        "home": "Home opens with a greeting, shows at a glance what is unread and who is online, and has your spaces as cards.",
+        "light": "A little light moves behind the opening of a page and follows the pointer. Settings, Appearance, Light switches it off, and Reduce motion keeps it still.",
+        "pages": "The page for visitors and the developer docs wear the same look, and the page for visitors reads in all five languages."
+      }
+    },
     "1.41.4": {
       "title": "Sturdier and faster",
       "items": {

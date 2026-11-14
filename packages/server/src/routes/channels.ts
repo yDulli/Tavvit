@@ -1,10 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { categoryShownTo, shownCategories } from '../utils/categoryVisibility.js';
 import { eq, and, inArray, ne } from 'drizzle-orm';
-import { getDb, schema } from '../db/index.js';
+import { getDb, schema, type DBHandle } from '../db/index.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
-import { isMember, hasPermission, getChannelSpaceId, PermissionBits, computePermissions } from '../utils/permissions.js';
+import { isMember, hasPermission, getChannelSpaceId, PermissionBits, ALL_PERMISSIONS, computePermissions, computeCategoryPermissions } from '../utils/permissions.js';
 import {
   permissionsToString,
   stringToPermissions,
@@ -311,7 +311,7 @@ function overrideTargetRefusal(
   targetType: string,
   targetId: string,
   mode: 'write' | 'delete',
-): { status: 400 | 403; code: 'role_not_in_space' | 'role_hierarchy' } | null {
+): { status: 400 | 403; code: 'role_not_in_space' | 'role_hierarchy' | 'member_not_found' } | null {
   if (targetType === 'role') {
     const role = getDb().select({ position: schema.roles.position }).from(schema.roles)
       .where(and(eq(schema.roles.id, targetId), eq(schema.roles.spaceId, spaceId)))
@@ -319,10 +319,73 @@ function overrideTargetRefusal(
     if (!role) return mode === 'write' ? { status: 400, code: 'role_not_in_space' } : null;
     return canManageRoleInSpace(spaceId, actorId, role.position ?? 0) ? null : { status: 403, code: 'role_hierarchy' };
   }
-  if (targetType === 'member' && targetId !== actorId && !canActOnMemberInSpace(spaceId, actorId, targetId)) {
-    return { status: 403, code: 'role_hierarchy' };
+  if (targetType === 'member') {
+    // Only someone in the space: an override on anyone else does nothing but take up room, and
+    // any text at all could be stored as the id of one. Removing a row left from before is allowed.
+    if (mode === 'write' && !isMember(spaceId, targetId)) return { status: 400, code: 'member_not_found' };
+    if (targetId !== actorId && !canActOnMemberInSpace(spaceId, actorId, targetId)) return { status: 403, code: 'role_hierarchy' };
   }
   return null;
+}
+
+/**
+ * Who may read or change the overrides of a channel or category (permissions.md, "Who may set
+ * overrides"): whoever manages roles in the space (utils/permissionDataView.ts) and sees the place
+ * itself. `placePerms` is what they hold there: `computePermissions` with the channel, or
+ * `computeCategoryPermissions`. Without the second half, managing roles was enough to write an
+ * override on oneself into a channel kept from one's own roles, and so to read and manage it.
+ * Returns the permission that is missing.
+ */
+function overridePlaceRefusal(spacePerms: bigint, placePerms: bigint): 'MANAGE_ROLES' | 'VIEW_CHANNEL' | null {
+  if (!viewerReadsPermissionData(spacePerms)) return 'MANAGE_ROLES';
+  return (placePerms & PermissionBits.VIEW_CHANNEL) !== 0n ? null : 'VIEW_CHANNEL';
+}
+
+/**
+ * The held-bits rule where the override stands (permissions.md, "Held-bits rule"): what a write
+ * gives, by allowing a bit or by no longer denying it, the actor must hold in that channel or
+ * category, not only in the space. Someone a channel's overrides keep from writing there cannot
+ * lift that for themselves, for a role they hold or for anyone else. Taking away follows the
+ * rule of the space alone (`overrideWriteRefusal`). `after` null is a delete.
+ */
+function overrideGrantRefusal(placePerms: bigint, before: OverrideBits | null, after: OverrideBits | null): HeldBitsRefusal | null {
+  if ((placePerms & ALL_PERMISSIONS) === ALL_PERMISSIONS) return null;
+  const given = ((after?.allow ?? 0n) & ~(before?.allow ?? 0n)) | ((before?.deny ?? 0n) & ~(after?.deny ?? 0n));
+  return (given & ~placePerms) !== 0n ? 'cannot_grant_unowned_permissions' : null;
+}
+
+/**
+ * Whoever changes who sees a channel or category stays in it (permissions.md, "Who may set
+ * overrides"). Overrides are for those who see the place, so a write that hid it from its own
+ * writer (the Private switch, flipped by a moderator no allowed role holds) would be one they
+ * could never take back. Called inside the write's transaction, after it: when the actor no longer
+ * sees the place, an override on them allows View Channels again, which they held there a moment
+ * ago, so it gives them nothing new. Answers the row it wrote, for the audit log, or null.
+ */
+function keepActorInSight(
+  place: 'channel' | 'category',
+  id: string,
+  spaceId: string,
+  actorId: string,
+  tx: DBHandle,
+): { before: { allow: string; deny: string } | undefined; after: { allow: string; deny: string } } | null {
+  const sees = place === 'channel' ? computePermissions(actorId, spaceId, id) : computeCategoryPermissions(actorId, spaceId, id);
+  if ((sees & PermissionBits.VIEW_CHANNEL) !== 0n) return null;
+  const view = PermissionBits.VIEW_CHANNEL;
+  if (place === 'channel') {
+    const own = and(eq(schema.channelOverrides.channelId, id), eq(schema.channelOverrides.targetType, 'member'), eq(schema.channelOverrides.targetId, actorId));
+    const before = tx.select().from(schema.channelOverrides).where(own).get();
+    const after = { allow: permissionsToString(stringToPermissions(before?.allow ?? '0') | view), deny: permissionsToString(stringToPermissions(before?.deny ?? '0') & ~view) };
+    tx.delete(schema.channelOverrides).where(own).run();
+    tx.insert(schema.channelOverrides).values({ channelId: id, targetType: 'member', targetId: actorId, ...after }).run();
+    return { before, after };
+  }
+  const own = and(eq(schema.categoryOverrides.categoryId, id), eq(schema.categoryOverrides.targetType, 'member'), eq(schema.categoryOverrides.targetId, actorId));
+  const before = tx.select().from(schema.categoryOverrides).where(own).get();
+  const after = { allow: permissionsToString(stringToPermissions(before?.allow ?? '0') | view), deny: permissionsToString(stringToPermissions(before?.deny ?? '0') & ~view) };
+  tx.delete(schema.categoryOverrides).where(own).run();
+  tx.insert(schema.categoryOverrides).values({ categoryId: id, targetType: 'member', targetId: actorId, ...after }).run();
+  return { before, after };
 }
 
 /**
@@ -767,9 +830,11 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 404, 'channel_not_found');
     }
 
-    // Override rows go only to viewers who manage roles (utils/permissionDataView.ts).
-    if (!viewerReadsPermissionData(computePermissions(request.userId, channel.spaceId))) {
-      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
+    // Who manages roles in the space, and sees this channel: `overridePlaceRefusal`.
+    const placePerms = computePermissions(request.userId, channel.spaceId, id);
+    const placeRefusal = overridePlaceRefusal(computePermissions(request.userId, channel.spaceId), placePerms);
+    if (placeRefusal) {
+      return sendError(reply, 403, 'missing_permission', { permission: placeRefusal });
     }
 
     const overrides = db.select().from(schema.channelOverrides)
@@ -809,10 +874,11 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 404, 'channel_not_found');
     }
 
-    // The same rule as the override reads, so who may read the rows and who
-    // may change them stay one set (utils/permissionDataView.ts).
-    if (!viewerReadsPermissionData(computePermissions(request.userId, channel.spaceId))) {
-      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
+    // Who manages roles in the space, and sees this channel: `overridePlaceRefusal`.
+    const placePerms = computePermissions(request.userId, channel.spaceId, id);
+    const placeRefusal = overridePlaceRefusal(computePermissions(request.userId, channel.spaceId), placePerms);
+    if (placeRefusal) {
+      return sendError(reply, 403, 'missing_permission', { permission: placeRefusal });
     }
 
     const bits = parseOverrideBits(allow, deny);
@@ -840,13 +906,14 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Privilege escalation guard: only bits the caller holds may change
-    const escalation = overrideWriteRefusal(request.userId, channel.spaceId, existingChannelOverride, bits);
+    const escalation = overrideWriteRefusal(request.userId, channel.spaceId, existingChannelOverride, bits)
+      ?? overrideGrantRefusal(placePerms, storedOverrideBits(existingChannelOverride), bits);
     if (escalation) {
       return sendError(reply, 403, escalation);
     }
 
     // Upsert: delete existing then insert
-    db.transaction((tx) => {
+    const keptIn = db.transaction((tx) => {
       tx.delete(schema.channelOverrides).where(
         and(
           eq(schema.channelOverrides.channelId, id),
@@ -862,7 +929,16 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
         allow: permissionsToString(bits.allow),
         deny: permissionsToString(bits.deny),
       }).run();
+      return keepActorInSight('channel', id, channel.spaceId, request.userId, tx);
     });
+    if (keptIn) {
+      recordOverrideAudit({
+        spaceId: channel.spaceId, actorId: request.userId, action: 'override_update',
+        targetType: 'channel', targetId: id, targetLabel: channel.name,
+        overrideTargetType: 'member', overrideTargetId: request.userId,
+        before: keptIn.before, after: keptIn.after,
+      });
+    }
 
     recordOverrideAudit({
       spaceId: channel.spaceId, actorId: request.userId, action: 'override_update',
@@ -900,10 +976,11 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
         return sendError(reply, 404, 'channel_not_found');
       }
 
-      // The same rule as the override reads, so who may read the rows and who
-      // may change them stay one set (utils/permissionDataView.ts).
-      if (!viewerReadsPermissionData(computePermissions(request.userId, channel.spaceId))) {
-        return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
+      // Who manages roles in the space, and sees this channel: `overridePlaceRefusal`.
+      const placePerms = computePermissions(request.userId, channel.spaceId, id);
+      const placeRefusal = overridePlaceRefusal(computePermissions(request.userId, channel.spaceId), placePerms);
+      if (placeRefusal) {
+        return sendError(reply, 403, 'missing_permission', { permission: placeRefusal });
       }
 
       const targetRefusal = overrideTargetRefusal(request.userId, channel.spaceId, targetType, targetId, 'delete');
@@ -923,18 +1000,30 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       if (existing && isStaleOverrideWrite(existing, expectedVersion.expected)) {
         return sendError(reply, 409, 'overrides_conflict');
       }
-      const escalation = overrideWriteRefusal(request.userId, channel.spaceId, existing, null);
+      const escalation = overrideWriteRefusal(request.userId, channel.spaceId, existing, null)
+      ?? overrideGrantRefusal(placePerms, storedOverrideBits(existing), null);
       if (escalation) {
         return sendError(reply, 403, escalation);
       }
 
-      db.delete(schema.channelOverrides).where(
-        and(
-          eq(schema.channelOverrides.channelId, id),
-          eq(schema.channelOverrides.targetType, targetType),
-          eq(schema.channelOverrides.targetId, targetId),
-        )
-      ).run();
+      const keptIn = db.transaction((tx) => {
+        tx.delete(schema.channelOverrides).where(
+          and(
+            eq(schema.channelOverrides.channelId, id),
+            eq(schema.channelOverrides.targetType, targetType),
+            eq(schema.channelOverrides.targetId, targetId),
+          )
+        ).run();
+        return keepActorInSight('channel', id, channel.spaceId, request.userId, tx);
+      });
+      if (keptIn) {
+        recordOverrideAudit({
+          spaceId: channel.spaceId, actorId: request.userId, action: 'override_update',
+          targetType: 'channel', targetId: id, targetLabel: channel.name,
+          overrideTargetType: 'member', overrideTargetId: request.userId,
+          before: keptIn.before, after: keptIn.after,
+        });
+      }
 
       if (existing) {
         recordOverrideAudit({
@@ -972,9 +1061,11 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 403, 'not_space_member');
     }
 
-    // Override rows go only to viewers who manage roles (utils/permissionDataView.ts).
-    if (!viewerReadsPermissionData(computePermissions(request.userId, category.spaceId))) {
-      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
+    // Who manages roles in the space, and sees this category: `overridePlaceRefusal`.
+    const placePerms = computeCategoryPermissions(request.userId, category.spaceId, id);
+    const placeRefusal = overridePlaceRefusal(computePermissions(request.userId, category.spaceId), placePerms);
+    if (placeRefusal) {
+      return sendError(reply, 403, 'missing_permission', { permission: placeRefusal });
     }
 
     const overrides = db.select().from(schema.categoryOverrides)
@@ -1015,10 +1106,11 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       return sendError(reply, 404, 'category_not_found');
     }
 
-    // The same rule as the override reads, so who may read the rows and who
-    // may change them stay one set (utils/permissionDataView.ts).
-    if (!viewerReadsPermissionData(computePermissions(request.userId, category.spaceId))) {
-      return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
+    // Who manages roles in the space, and sees this category: `overridePlaceRefusal`.
+    const placePerms = computeCategoryPermissions(request.userId, category.spaceId, id);
+    const placeRefusal = overridePlaceRefusal(computePermissions(request.userId, category.spaceId), placePerms);
+    if (placeRefusal) {
+      return sendError(reply, 403, 'missing_permission', { permission: placeRefusal });
     }
 
     const bits = parseOverrideBits(allow, deny);
@@ -1046,12 +1138,13 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Privilege escalation guard (matches channel override pattern)
-    const escalation = overrideWriteRefusal(request.userId, category.spaceId, existingCategoryOverride, bits);
+    const escalation = overrideWriteRefusal(request.userId, category.spaceId, existingCategoryOverride, bits)
+      ?? overrideGrantRefusal(placePerms, storedOverrideBits(existingCategoryOverride), bits);
     if (escalation) {
       return sendError(reply, 403, escalation);
     }
 
-    db.transaction((tx) => {
+    const keptInCategory = db.transaction((tx) => {
       tx.delete(schema.categoryOverrides).where(
         and(
           eq(schema.categoryOverrides.categoryId, id),
@@ -1067,7 +1160,16 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
         allow: permissionsToString(bits.allow),
         deny: permissionsToString(bits.deny),
       }).run();
+      return keepActorInSight('category', id, category.spaceId, request.userId, tx);
     });
+    if (keptInCategory) {
+      recordOverrideAudit({
+        spaceId: category.spaceId, actorId: request.userId, action: 'override_update',
+        targetType: 'category', targetId: id, targetLabel: category.name,
+        overrideTargetType: 'member', overrideTargetId: request.userId,
+        before: keptInCategory.before, after: keptInCategory.after,
+      });
+    }
 
     recordOverrideAudit({
       spaceId: category.spaceId, actorId: request.userId, action: 'override_update',
@@ -1105,10 +1207,11 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
         return sendError(reply, 404, 'category_not_found');
       }
 
-      // The same rule as the override reads, so who may read the rows and who
-      // may change them stay one set (utils/permissionDataView.ts).
-      if (!viewerReadsPermissionData(computePermissions(request.userId, category.spaceId))) {
-        return sendError(reply, 403, 'missing_permission', { permission: 'MANAGE_ROLES' });
+      // Who manages roles in the space, and sees this category: `overridePlaceRefusal`.
+      const placePerms = computeCategoryPermissions(request.userId, category.spaceId, id);
+      const placeRefusal = overridePlaceRefusal(computePermissions(request.userId, category.spaceId), placePerms);
+      if (placeRefusal) {
+        return sendError(reply, 403, 'missing_permission', { permission: placeRefusal });
       }
 
       const targetRefusal = overrideTargetRefusal(request.userId, category.spaceId, targetType, targetId, 'delete');
@@ -1126,18 +1229,30 @@ export async function channelRoutes(app: FastifyInstance): Promise<void> {
       if (existing && isStaleOverrideWrite(existing, expectedVersion.expected)) {
         return sendError(reply, 409, 'overrides_conflict');
       }
-      const escalation = overrideWriteRefusal(request.userId, category.spaceId, existing, null);
+      const escalation = overrideWriteRefusal(request.userId, category.spaceId, existing, null)
+      ?? overrideGrantRefusal(placePerms, storedOverrideBits(existing), null);
       if (escalation) {
         return sendError(reply, 403, escalation);
       }
 
-      db.delete(schema.categoryOverrides).where(
-        and(
-          eq(schema.categoryOverrides.categoryId, id),
-          eq(schema.categoryOverrides.targetType, targetType),
-          eq(schema.categoryOverrides.targetId, targetId),
-        )
-      ).run();
+      const keptIn = db.transaction((tx) => {
+        tx.delete(schema.categoryOverrides).where(
+          and(
+            eq(schema.categoryOverrides.categoryId, id),
+            eq(schema.categoryOverrides.targetType, targetType),
+            eq(schema.categoryOverrides.targetId, targetId),
+          )
+        ).run();
+        return keepActorInSight('category', id, category.spaceId, request.userId, tx);
+      });
+      if (keptIn) {
+        recordOverrideAudit({
+          spaceId: category.spaceId, actorId: request.userId, action: 'override_update',
+          targetType: 'category', targetId: id, targetLabel: category.name,
+          overrideTargetType: 'member', overrideTargetId: request.userId,
+          before: keptIn.before, after: keptIn.after,
+        });
+      }
 
       if (existing) {
         recordOverrideAudit({

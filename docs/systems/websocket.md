@@ -51,6 +51,13 @@ A client frame is at most `WS_MAX_CLIENT_FRAME_BYTES`, 64 KiB unpacked (`package
 
 One account keeps at most 10 sockets (`MOST_SOCKETS_PER_ACCOUNT`, `ws/handler.ts`). When an eleventh connects, the oldest is sent `error` `too_many_connections` and closed. A client told that does not reconnect by itself (`pushedOut`) until the page is loaded again, so the account's windows do not push each other out in turn.
 
+**Frames nobody should send** (security audit, 2026-11-14). Every refused frame is still unpacked, parsed and answered, so they have an end:
+
+- Before a token, anything that is not JSON, or JSON that is no frame, is answered once and the socket closed.
+- Signed in, a frame that is not JSON or is over the rate limit is answered with `error`; after 200 in a row (`MOST_REFUSED_IN_A_ROW`) the socket is closed with 1008. A frame that is taken starts the count again, so a client that is merely fast is never closed.
+- `ping` is answered at most 20 times in ten seconds per socket; a client sends one in fifteen. More are not answered.
+- **Every send asks whether the socket drains** (`takesMore`): one holding 16 MiB unsent is ended, not fed. Before, only `sendToUser` asked; the answers to a socket's own frames, `sendToSpace`, `sendToChannel`, `sendToAll` and presence did not, so a client that sent frames and read nothing made the server keep every answer.
+
 A member who leaves, is kicked or banned, and every member of a deleted space, is taken out of the space's audience at once (`ConnectionManager.removeUserSpace`): no more `sendToSpace` events for it, no presence of its members by way of it, no thread of it open. They are taken out of its voice too, LiveKit included (docs/systems/voice.md). The members of a deleted space are first sent `space_deleted`, while they are still its audience.
 
 ## Client → Server
@@ -124,7 +131,7 @@ All four also need the actor to outrank the target (permissions.md, "Role hierar
 ### DM Calls
 | type | fields | notes |
 |------|--------|-------|
-| `dm_call_start` | dmChannelId | 60s auto-timeout if not accepted. In a DM whose call is hosted here, a member not in it joins it (handled as `dm_call_accept`). A member already in it, or any member while the DM's call hosted on another instance still rings or has a member here in it, gets `error` with `code: 'dm_call_in_progress'` and the `dmChannelId`, on the sending socket only (a record of such a call with nobody here in it is dropped and the start goes on); a non-member gets `code: 'not_dm_member'`, a missing `dmChannelId` `code: 'validation_failed'` |
+| `dm_call_start` | dmChannelId | 60s auto-timeout if not accepted. One person starts at most 4 calls a minute in one conversation (`error` `rate_limited` with `dmChannelId` past that): started and ended over and over, a call was a way to ring the others once a second. In a DM whose call is hosted here, a member not in it joins it (handled as `dm_call_accept`). A member already in it, or any member while the DM's call hosted on another instance still rings or has a member here in it, gets `error` with `code: 'dm_call_in_progress'` and the `dmChannelId`, on the sending socket only (a record of such a call with nobody here in it is dropped and the start goes on); a non-member gets `code: 'not_dm_member'`, a missing `dmChannelId` `code: 'validation_failed'` |
 | `dm_call_accept` | dmChannelId?, federatedCallId? | ringing→active; later accepts join the active call (late join). Refused on the sending socket only with `error` and a code: `dm_call_not_found` (no call any more), `not_dm_member`, `validation_failed`, with the id the client sent as `dmChannelId` |
 | `dm_call_reject` | dmChannelId?, federatedCallId? | 1-on-1: ends the call. Group: stops only the sender's ring; ends the call only when it still rings and every member but the caller has declined. Ignored from the caller or a participant |
 | `dm_call_end` | dmChannelId?, federatedCallId? | 1-on-1: ends the call. Group: takes only the sender out; the caller of a call nobody joined ends it; the call ends with its last participant. Ignored from a member who is not in the call |

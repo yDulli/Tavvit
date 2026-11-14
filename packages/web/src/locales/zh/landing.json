@@ -451,5 +451,269 @@
     "ok": "一切正常",
     "down": "部分服务暂时异常",
     "version": "版本 {{version}}"
+  },
+  "home": {
+    "strip": {
+      "spaces": "适合每个群体的空间",
+      "tags": "两个字母起的标签",
+      "permissions_other": "每个身份组 {{count}} 项权限",
+      "languages_other": "{{count}} 种语言",
+      "clean": "没有广告，没有追踪器"
+    },
+    "hero": {
+      "label": "你的社区之家",
+      "title": "你的社区。\n你的空间。",
+      "accent": "你的规则。",
+      "lead": "Tavvit 给你的群体一个属于自己的地方：每个话题都有频道，语音房间一直开着，身份组和规则由你自己定。",
+      "more": "看看里面有什么"
+    },
+    "stats": {
+      "permissions": "项权限，每个身份组",
+      "zero": "条广告，也没有追踪器"
+    },
+    "scene": {
+      "about": "深夜、合作游戏和烂片。",
+      "members_other": "{{count}} 位成员",
+      "online_other": "{{count}} 人在线",
+      "talking_other": "{{count}} 人交谈中",
+      "speaking": "{{name}} 正在说话",
+      "owner": "拥有者",
+      "message": "算我一个。谁带零食？",
+      "poll": "上个补丁把坦克毁了吗？",
+      "skill": "菜就多练",
+      "little": "有一点",
+      "completely": "完全毁了",
+      "raid": "周六团本",
+      "when": "周六 20:00",
+      "going_other": "{{count}} 人参加",
+      "events": "活动",
+      "label": "Night Shift，一个人物均为虚构的演示空间",
+      "rooms": "Night Shift 的房间"
+    },
+    "marquee": "里面有什么",
+    "tags": {
+      "kicker": "你的空间",
+      "title": "大家佩戴的\n标签。",
+      "body": "给你的空间一个标签：一个符号加两到四个字母。成员在自己发言的每个空间里，都会把它佩戴在名字旁。再加上一个由文字组成的邀请地址，和你自己的配色。",
+      "items": {
+        "tag": {
+          "title": "一个标签",
+          "body": "两到四个字母或数字，配一个符号"
+        },
+        "address": {
+          "title": "一个地址",
+          "body": "用 /join/your-space 代替随机代码"
+        },
+        "look": {
+          "title": "一套外观",
+          "body": "空间自己的配色，里面的人都能看到"
+        }
+      },
+      "worn": "佩戴在名字旁",
+      "address": "你的邀请地址",
+      "try": "试一试",
+      "yourTag": "你的标签",
+      "symbol": "符号",
+      "symbols": {
+        "moon": "月亮",
+        "book": "书",
+        "wrench": "扳手",
+        "film": "电影",
+        "music": "音乐",
+        "sparkle": "星星"
+      },
+      "ruleTag": "2 到 4 个字母或数字",
+      "ruleAddress": "3 到 32 个小写字母、数字或连字符"
+    },
+    "inside": {
+      "kicker": "内部",
+      "title": "群体要做的一切。\n都在一个地方。",
+      "label": "Tavvit 的组成部分",
+      "tabs": {
+        "talk": {
+          "tab": "聊天",
+          "title": "把话说在该说的地方。",
+          "body": "频道用来聊当天的话题，子区用来聊岔开的话，论坛留给值得保存的内容。回复具体的某条消息，添加表情回应，投票，把大家反复问的内容置顶。"
+        },
+        "voice": {
+          "tab": "语音",
+          "title": "一直开着的房间。",
+          "body": "进去之前先看看谁在语音频道里，离开时也不会让别人的通话结束。共享屏幕，一起看视频，从音效板播放一段声音。"
+        },
+        "plan": {
+          "tab": "计划",
+          "title": "准时碰头。",
+          "body": "活动带有房间、提醒，还能加入你的日历。门口有带规则的欢迎页，还有其他空间可以关注的公告频道。"
+        },
+        "order": {
+          "tab": "维持秩序",
+          "title": "管用的规则。",
+          "body": "每个身份组三十项权限，可按分类或频道调整。过滤器会在发布之前拦下词语、链接和邀请，每个决定都会记入审计日志。"
+        }
+      },
+      "watching": "一起看",
+      "thread": "战斗笔记",
+      "replies_other": "{{count}} 条回复",
+      "reply": "这正是我们需要的。",
+      "first": "我为周六做了个东西。按职业统计的伤害数据。",
+      "soon": "4 天后",
+      "date": "11月14日 20:00 至 23:00",
+      "join": "加入休息室",
+      "calendar": "添加到日历",
+      "post": "来这里的第一周？从这里开始",
+      "postTags": "新玩家",
+      "rolesTitle": "身份组",
+      "granted_other": "{{count}} 项权限",
+      "log": {
+        "one": "更改了 Sam 的身份组",
+        "two": "发起了子区“战斗笔记”",
+        "three": "发布了活动“周六团本”"
+      },
+      "switch": {
+        "send": "发送消息",
+        "pin": "置顶消息",
+        "ban": "封禁成员",
+        "attach": "附加文件",
+        "kick": "踢出成员"
+      },
+      "vote": "投票后查看结果",
+      "voted_other": "{{count}} 票，含你的一票",
+      "mute": "静音",
+      "unmute": "取消静音",
+      "share": "共享屏幕",
+      "going": "我去",
+      "goingYes": "你已参加",
+      "remind": "提醒我",
+      "reminded": "已设提醒",
+      "you": "你"
+    },
+    "moving": {
+      "kicker": "入住",
+      "title": "把你的服务器\n搬过来。",
+      "body": "粘贴一个 Discord 服务器模板，Tavvit 就会建好它的身份组、分类、频道和权限。借助你自己的机器人，表情和贴纸也能一起带来。",
+      "note": "消息和成员留在原处：大家通过一个邀请链接加入。",
+      "from": "来自模板",
+      "bot": "借助你的机器人",
+      "to": "你的空间",
+      "items": {
+        "roles": "身份组",
+        "categories": "分类",
+        "channels": "频道",
+        "permissions": "权限",
+        "emoji": "表情",
+        "stickers": "贴纸"
+      },
+      "help": "搬迁是怎么进行的"
+    },
+    "identity": {
+      "kicker": "个人资料",
+      "title": "以自己的样子\n出现。",
+      "body": "横幅、简介、你的代词。再加上头像边框、卡片特效、列表里的名牌和名字的字体，由 Tavvit 制作，或由社区绘制。",
+      "chips": {
+        "frames": "边框",
+        "effects": "特效",
+        "nameplates": "名牌",
+        "names": "名字样式",
+        "badges": "徽章",
+        "themes": "个人资料主题",
+        "perSpace": "每个空间一份资料",
+        "community": "社区制作"
+      },
+      "bio": {
+        "jonas": "白天写后端，晚上俄罗斯方块打得很烂。",
+        "mara": "负责周六团本。先喝咖啡。",
+        "lena": "管理团队。请友善相待。"
+      },
+      "message": "发送消息",
+      "try": "试戴一下",
+      "frame": "边框",
+      "colour": "颜色",
+      "frames": {
+        "laurel": "月桂",
+        "headphones": "耳机",
+        "halo": "天使",
+        "none": "无"
+      },
+      "tones": {
+        "lavender": "薰衣草紫",
+        "sky": "天蓝",
+        "mint": "薄荷绿",
+        "amber": "琥珀黄",
+        "peach": "蜜桃粉",
+        "rose": "玫瑰粉",
+        "coral": "珊瑚橙"
+      }
+    },
+    "scenes": {
+      "kicker": "适合每个群体",
+      "title": "一个应用。\n每个团队。",
+      "items": {
+        "gaming": {
+          "title": "游戏团队",
+          "body": "整晚开着的语音房间、音效板、团本之夜的活动，还有一起看的视频。",
+          "tags": {
+            "a": "语音房间",
+            "b": "音效板",
+            "c": "活动",
+            "d": "一起观看"
+          }
+        },
+        "creators": {
+          "title": "创作者",
+          "body": "观众佩戴的标签、OBS 叠加层、主播模式，以及显示在个人资料里的 Twitch 账号。",
+          "tags": {
+            "a": "空间标签",
+            "b": "OBS 叠加层",
+            "c": "主播模式",
+            "d": "Twitch"
+          },
+          "link": "面向创作者"
+        },
+        "developers": {
+          "title": "开发者",
+          "body": "带斜杠命令的机器人、传入 Webhook，以及带公开文档的 HTTP 和 WebSocket API。",
+          "tags": {
+            "a": "机器人",
+            "b": "斜杠命令",
+            "c": "Webhook",
+            "d": "API"
+          },
+          "link": "开发者文档"
+        },
+        "clubs": {
+          "title": "社团和班级",
+          "body": "保存答案的论坛、子区、投票、带规则的欢迎页，以及给管理者的身份组。",
+          "tags": {
+            "a": "论坛",
+            "b": "子区",
+            "c": "投票",
+            "d": "身份组"
+          }
+        }
+      }
+    },
+    "bot": {
+      "done": "夜间构建完成了。",
+      "card": "构建通过",
+      "detail": "所有检查都是绿色，修复已在预发布环境上线。",
+      "tests": "测试",
+      "testsValue": "412 项通过",
+      "coverage": "覆盖率",
+      "took": "耗时",
+      "tookValue": "3 分 12 秒",
+      "mark": "机器人"
+    },
+    "closing": {
+      "title": "为你的人\n腾出地方。",
+      "address": "你的空间地址"
+    },
+    "motion": {
+      "pause": "暂停动效",
+      "play": "播放动效"
+    },
+    "code": {
+      "copy": "复制",
+      "copied": "已复制"
+    }
   }
 }

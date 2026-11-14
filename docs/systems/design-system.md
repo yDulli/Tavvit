@@ -1,21 +1,25 @@
-# Design System — Tavvit "Graphite"
+# Design System — Tavvit "Schwarzlicht", Evolve structure
 
 Styles: `packages/web/src/styles/globals.css` (the tokens on `:root`, the component classes in `@layer components`)
 Theme: `packages/web/tailwind.config.js` (maps the tokens to utilities; the layout variants `desktop:` and `compact:`)
-Fonts: Geist for the interface, Geist Mono for labels, times and counts, all served from `public/fonts` and split by `unicode-range`. IBM Plex Sans, Inter, Space Grotesk, a mono face and the system stack are choices in Settings → Appearance; Simplified Chinese takes the platform stack (see `globals.css`).
+Fonts: Outfit for the interface and every title, JetBrains Mono for labels, times and counts, both served from `public/fonts` and split by `unicode-range`. Outfit has Latin only, so Cyrillic falls to Geist, which stands behind it in the stack (the app ships Russian); JetBrains Mono carries Cyrillic itself. Geist, IBM Plex Sans, Inter, Space Grotesk, a mono face and the system stack are choices in Settings → Appearance; Simplified Chinese takes the platform stack (see `globals.css`).
 Brand masters: `assets/brand/` (see its README)
 
 ---
 
 ## Principles
 
-- A tool that feels expensive: precise, calm and deep. Tavvit is not a Discord clone. The places a person can be (Home, each space, Explore) are named tabs in the top bar, not a column of icons, so where you are reads as words.
-- Deep graphite surfaces, a little cool. Two surfaces are told apart by a step in tone and a 1px hairline. Light falls on them from above: soft, ambient, in the colour of the place you are in, and behind the content, so text is never tinted (see Light). Light is the one effect and it is used sparingly: no neon, no glow around text, no glass.
-- One signal colour, a subtle violet (`#7466e8`). It marks only what is selected or active, the one main action of a form, the count of what is unread, the keyboard focus ring and selected text. It is never a heading colour and never the logo. As light it may fill a room; as a fill it stays on those few things.
-- Small, controlled corners (see Shape). No pill-shaped buttons, tabs or chips; `rounded-full` is for avatars, status dots and toggle thumbs only.
-- Only what floats above the page (menus, popovers, dialogs, toasts) casts a shadow, a deep one, and has a lit top edge. Nothing is glass: the upstream class names `.glass*` survive, but each is an opaque surface edged by a hairline.
-- Every state reads without the colour alone: selected is a lighter step plus a violet edge, unread is the primary colour in a heavier weight, hover is a faint veil, focus is an outline for the keyboard only, disabled is half opacity.
-- Real data only. An empty list says so with `.empty-state`; nothing is filled with sample people, invented numbers or decoration without a purpose.
+Since 1.42 the app keeps the structure of Evolve (a sidebar on ink with the dock of places, a topbar with a breadcrumb, pages that open with a header and hold panels) and wears the look of Showomat, the owner's other product, where it is called "Schwarzlicht": pure black, white ink, chrome, pills, frames, mono labels and light.
+
+- Black and white. The canvas is `#000`, the type is off-white, and the one signal is that same white: what is selected, on or waiting for you is white with black words on it. Colour is left to what is a person's or a place's own (avatars, a space's tint, a profile's theme) and to status.
+- Four tones do the work: the **canvas** (`--bg-chat`, pure black), **ink** (`--bg-channel`, a breath above it: the sidebar, the people column, fields), the **panel** (`--bg-panel`, a frame on the canvas) and **raised** (`--bg-raised`, a control on a panel). Two surfaces are told apart by a hairline before anything else.
+- A frame is the structural unit (`.surface-card`): a hairline-edged surface with a 24px corner, lit faintly from its top left corner (`--frame-light`), which catches a little of the pointer's light.
+- Pills: every button, field, chip and count is fully round. A button's fill rises from its foot when it is pointed at; the main one is white and glows (`--shadow-glow`).
+- Type is Outfit at 600, set very tight (−0.045em) with a line height near 1 for anything large. Every label is JetBrains Mono capitals at 0.14em (`.label-mono`); the one that opens a section stands behind a turning spark (`.eyebrow`).
+- Light is part of the look: film grain over everything, a field of fine light threads behind the opening of a page (`ui/LightField.tsx`), a ring of light that trails the pointer (`ui/PointerAura.tsx`), the product's name in polished chrome (`ui/ChromeWord.tsx`), figures in metal (`.stat-value`). All of it is decoration: off with Settings → Appearance → Light, under higher contrast and in forced colours, and still with Reduce motion.
+- Not a Discord look-alike: the places are tiles in a dock and a breadcrumb in a topbar, never a column of round icons.
+- Every state reads without colour alone: selected is a lighter step plus a white edge, unread is primary text in a heavier weight, hover is a faint veil, focus is an outline for the keyboard only, disabled is under half opacity.
+- Real data only. An empty list says so with `.empty-state`; nothing is filled with sample people, invented numbers or decoration that pretends to be content.
 
 ## Settings organization
 
@@ -111,90 +115,96 @@ Every colour token is an RGB channel triple, so Tailwind can add opacity (`bg-ac
 ### Surfaces
 | Token | Channels | Hex | Role |
 |-------|----------|-----|------|
-| `--bg-base` | 13 14 17 | `#0d0e11` | The frame: the top bar, the window, the browser and OS chrome (`theme-color` in `index.html`, the PWA manifest in `vite.config.ts`, the Electron window, whose buttons follow it through `setFrameColor`), and the ground of the pages outside the app |
-| `--bg-channel` | 17 18 22 | `#111216` | The left column (channels, Home navigation) and the settings navigation |
-| `--bg-members` | 18 19 23 | `#121317` | The right column (members, activity, a group's people): a step between the sidebars and the content |
-| `--bg-chat` | 21 22 27 | `#15161b` | The page itself: the conversation, Home, Explore, the inbox, settings content |
-| `--bg-elevated` | 30 31 37 | `#1e1f25` | What floats (menus, popovers, dialogs, toasts), always through the floating-layer classes |
-| `--bg-input` | 12 13 16 | `#0c0d10` | Sunken fields |
-| `--bg-overlay` | `rgba(0, 0, 0, 0.62)` | | Scrims behind sheets |
-
-The order is the layout's: the frame darkest, the columns a step up, the page a step more, what floats lightest.
+| `--bg-base` | 0 0 0 | `#000000` | The canvas behind everything: the topbar, the window, the browser and OS chrome (`theme-color`, the PWA manifest, the Electron window), the ground of the pages outside the app |
+| `--bg-chat` | 0 0 0 | `#000000` | The page itself: the conversation, Home, Explore, the inbox, settings content |
+| `--bg-channel` | 5 5 5 | `#050505` | Ink: the sidebar and the settings navigation |
+| `--bg-members` | 5 5 5 | `#050505` | Ink: the people column (members, activity, a group's people) |
+| `--bg-input` | 5 5 5 | `#050505` | Ink: fields, the well of a segmented control |
+| `--bg-panel` | 11 11 11 | `#0b0b0b` | The frame (`.surface-card`, `ui/PageHeader` `Panel`), the composer, a dialog |
+| `--bg-raised` | 20 20 20 | `#141414` | A control on a panel: secondary buttons, keys, the chosen part of a segmented control |
+| `--bg-elevated` | 29 29 29 | `#1d1d1d` | What floats (menus, popovers, tooltips, toasts), always through the floating-layer classes |
+| `--bg-overlay` | `rgba(0, 0, 0, 0.8)` | | Scrims behind sheets |
 
 ### Hairlines and control tones
 | Token | Value | Role |
 |-------|-------|------|
-| `--border-hard` | 35 36 43 | The line between two surfaces: column edges, the bottom of a bar, dividers, card edges |
-| `--border-soft` | 50 51 60 | The edge of a control or a floating layer: fields, outlined buttons, menus, dialogs |
-| `--interactive-muted` | 78 80 92 | A hovered edge, a switch that is off, the scrollbar thumb under the pointer |
+| `--border-faint` | 23 23 23 | The line between rows inside a panel (`divide-border-faint`) |
+| `--border-hard` | 41 41 41 | The hairline between two surfaces: column edges, the bottom of a bar, a frame's edge |
+| `--border-soft` | 64 64 64 | The strong edge of a control or a floating layer: fields, keys, menus, dialogs |
+| `--interactive-muted` | 110 110 110 | A hovered edge, the scrollbar thumb under the pointer |
 | `--interactive-hover` | `rgba(255, 255, 255, 0.05)` | The veil of a hovered row or button |
-| `--interactive-selected` | `rgba(255, 255, 255, 0.075)` | The fill of a selected row or tab |
-| `--interactive-active` | `rgba(255, 255, 255, 0.1)` | The fill while something is pressed |
-| `--interactive-row` | `rgba(255, 255, 255, 0.025)` | The hover of a message row, quieter than a control's |
+| `--interactive-selected` | `rgba(255, 255, 255, 0.08)` | The fill of a selected row or tab |
+| `--interactive-active` | `rgba(255, 255, 255, 0.11)` | The fill while something is pressed |
+| `--interactive-row` | `rgba(255, 255, 255, 0.03)` | The hover of a message row, quieter than a control's |
 
 ### Text
-| Token | Channels | Contrast | Use |
-|-------|----------|----------|-----|
-| `--text-primary` | 237 238 242 | 13.2:1 on `--bg-elevated` | Titles, names, the selected and the unread row |
-| `--text-message` | 225 227 233 | 11.9:1 | Message bodies |
-| `--text-secondary` | 172 175 186 | 7.0:1 | Idle navigation rows, secondary lines |
-| `--text-tertiary` | 141 144 156 | 4.8:1 | Quiet meta: times, hints, placeholders |
-| `--text-category` | 150 153 166 | 5.4:1 (over 6:1 on the sidebars) | `.label-mono` section labels |
-| `--text-link` | 158 148 255 | 6.5:1 on `--bg-chat` | Links |
-| `--text-positive`, `--text-warning`, `--text-danger` | 92 196 128, 232 176 64, 240 98 84 | | Outcomes and errors |
+| Token | Channels | Use |
+|-------|----------|-----|
+| `--text-primary` | 242 242 242 | Titles, names, the selected and the unread row, the primary button's fill |
+| `--text-message` | 228 228 228 | Message bodies |
+| `--text-secondary` | 168 168 168 | Idle navigation rows, secondary lines |
+| `--text-tertiary` | 140 140 140 | Quiet meta: times, hints, placeholders (5:1 on the floating tone) |
+| `--text-category` | 140 140 140 | `.label-mono` (6:1 on ink) |
+| `--text-link` | 255 255 255 | Links |
+| `--text-positive`, `--text-warning`, `--text-danger` | 69 214 160, 247 184 79, 242 122 122 | Outcomes and errors, functional only |
+| `--danger-fill`, `--danger-fill-hover` | 207 48 48, 185 41 41 | The fill of a destructive button, under white words (`bg-danger-fill`) |
 
 ### The signal
 | Token | Channels | Use |
 |-------|----------|-----|
-| `--accent-primary` | 116 102 232 (`#7466e8`) | Fills under white text (4.4:1): the primary button, count badges, the active edge, a switch that is on. It is the shared `DEFAULT_ACCENT_COLOR` (`packages/shared/src/constants.ts`). |
-| `--accent-primary-hover`, `--accent-primary-active` | 102 90 204, 88 78 176 | The primary button under the pointer and pressed |
-| `--accent-primary-soft` | 150 140 245 | Violet text and icons on the panels (5.4:1 on `--bg-elevated`) and the focus outline. Utility: `text-accent-soft`. |
-| `--notification` | 116 102 232 | `bg-notification`, kept for older call sites; counts use `.count-badge` |
+| `--accent-primary` | 242 242 242 (`#f2f2f2`) | Fills under `--on-accent`: count badges of what waits for you, a switch or box that is on |
+| `--accent-primary-hover`, `--accent-primary-active` | 255 255 255, 214 214 214 | The fill under the pointer and pressed |
+| `--accent-primary-soft` | 242 242 242 | The signal as a line, a mark or text: the edge of a selected row, the ring of the place you are in, a mention's edge, the focus outline. Utility: `text-accent-soft` |
+| `--on-accent` | 0 0 0 | What stands on the signal: black on the white default, white once an accent colour is chosen (see below). Utilities: `text-on-accent`, `bg-on-accent` |
+| `--notification` | 242 242 242 | `bg-notification`, kept for older call sites; counts use `.count-badge` |
 
-The instance accent (Admin console → General) and a person's own (Settings → Appearance → Accent colour) replace the four `--accent-primary*` variables at runtime (`utils/instanceBranding.ts`, `components/ui/AppearanceController.tsx`). Either is accepted only when `accentColorProblem` (`packages/shared/src/color.ts`) passes it: white button text at 3.5:1 or more, and 2.5:1 or more against the dark panels. The ready-made choices (`ACCENT_CHOICES` in `utils/appTheme.ts`, `ACCENT_PRESETS` in `instanceSettingsPanels/AccentColorField.tsx`) start with the violet, and a test keeps every one of them acceptable.
+The instance accent (Admin console → General), a person's own (Settings → Appearance → Accent colour) and a space's replace the four `--accent-primary*` variables at runtime (`utils/instanceBranding.ts`, `components/ui/AppearanceController.tsx`), and set `--on-accent` to white with them: an accent is accepted only when `accentColorProblem` (`packages/shared/src/color.ts`) passes it, which asks that white text reads on it. So anything drawn on the signal (a count's figures, a switch's thumb, a check mark) takes `--on-accent`, never a fixed white or black. The shared `DEFAULT_ACCENT_COLOR` (`#7466e8`) is what the server and the settings offer as the first choice of a colour; the stylesheet's own default is the white signal.
 
 ### Accent family and status
-`--accent-mint`, `--accent-peach`, `--accent-lavender`, `--accent-sky`, `--accent-amber`, `--accent-rose`, `--accent-coral` colour avatars, folders, reactions and the tone of an informational mark (amber: an update or an approval waiting; rose: a destructive action or a mute). They are not a second signal. `--status-online`, `--status-idle`, `--status-dnd` and `--status-offline` colour presence, and `--status-streaming`, a purple of its own apart from the accent's violet, the dot of someone streaming now (activity-presence.md, "Streaming on the dot"); `html[data-status-palette='accessible']` swaps them for a palette that does not depend on telling red from green.
+`--accent-mint`, `--accent-peach`, `--accent-lavender`, `--accent-sky`, `--accent-amber`, `--accent-rose`, `--accent-coral` colour avatars, folders, reactions and the tone of an informational mark (amber: an update or an approval waiting; rose: a destructive action or a mute). They are not a second signal. `--status-online`, `--status-idle`, `--status-dnd` and `--status-offline` colour presence, and `--status-streaming`, a purple of its own, the dot of someone streaming now (activity-presence.md, "Streaming on the dot"); `html[data-status-palette='accessible']` swaps them for a palette that does not depend on telling red from green.
 
 ### Variants
-- `html[data-contrast='high']` (Settings → Appearance → Higher contrast) lifts the quiet text, the hairlines and the muted control tone.
-- Surface themes (Settings → Appearance → Theme, `utils/appTheme.ts`). Carbon is the stylesheet as shipped and sets nothing; `CARBON_SETTINGS` (hue 226, strength 11) is the point that reproduces it, for its swatch and as the start of a person's own theme. Every other theme is a point (hue, strength, depth from −3 to 4) from which each surface is derived at the luminance its depth asks for, and the quiet text is lifted to keep the contrast it has on Carbon's floating panel. Depth stops at 4 because the floating panel is then as light as the old near-black palette's lightest, the most that keeps the primary text at 9:1 on it; `appTheme.test.ts` checks every corner of the ranges. The ranges are `SURFACE_RANGES` in `packages/shared/src/looks.ts`, shared with the server, which checks a space's look against the same ones.
+- `html[data-contrast='high']` (Settings → Appearance → Higher contrast) lifts the quiet text, the hairlines and the muted control tone, and takes the grain, the light and the metal away.
+- Surface themes (Settings → Appearance → Theme, `utils/appTheme.ts`). Carbon is the stylesheet as shipped and sets nothing; `CARBON_SETTINGS` (hue 0, strength 0, depth 0: grey at no strength) is the point that reproduces it, for its swatch and as the start of a person's own theme. Every other theme is a point (hue, strength, depth from −3 to 4) from which each surface is derived at the luminance its depth asks for, and the quiet text is lifted to keep the contrast it has on Carbon's floating panel. The canvas is pure black, which has no luminance to scale, so it stays black in every theme: a theme colours what stands on it (the wells, the frames, the lines, what floats). `appTheme.test.ts` checks every corner of the ranges and `carbonSync.test.ts` holds `CARBON_SURFACES` to the stylesheet. The ranges are `SURFACE_RANGES` in `packages/shared/src/looks.ts`, shared with the server, which checks a space's look against the same ones.
 - A space's colours (see Looks): in a space that chose them, its surfaces and accent take the place of the person's own while they are in it, unless they switched that off.
 
 ### Light
 
-What separates the app from a flat dark interface. There are three strengths, all gradients with a fine grain (`--grain`) that keeps them from banding, all switched off under `html[data-light='off']` (Settings, Appearance, Ambient light; `LookSettings.light`), `html[data-contrast='high']` and forced colours.
+Light is what the look is made of, and all of it is paint over real content, never content:
 
-| Class | Where | What it is |
-|-------|-------|------------|
-| `.lit` | The panels of the frame: top bar, left column, the page (`main`), right column, the loading overlay of a message list; on the phone the screens themselves | One field of light anchored to the window (`background-attachment: fixed`), so it runs across the panels unbroken while each keeps its tone. It is a background, so it lies behind their content. `.lit-phone` is the same on the phone only, for the pages that stand on `main`'s light on the desktop. |
-| `.hero-light` | First child of what scrolls, on a page with an opening of its own (Home, Explore, the sign-in, an invite, the legal pages) | Rings and a glow in them. The parent is `relative isolate`; it clips itself, so it never makes the page wider. |
-| `.stage-light` | The pages outside the app (sign-in, an invite, the download, not found) | A bloom, much stronger, as the ground of the whole page. |
-| `.panel-light` | The content column of a settings dialog | A faint light from the far corner of the room the dialog is. |
+| What | Where | How |
+|------|-------|-----|
+| Film grain | Over the whole window (`html body::after`, `--grain-film`, 7% in `overlay`) | Keeps pure black from reading as a switched-off screen |
+| The frame's light | `.surface-card` | `--frame-light`, a faint white glow from the top left corner, and under the pointer a soft spot where the pointer is (`--pointer-x`, `--pointer-y` from `utils/pointerLight.ts`) |
+| `ui/LightField.tsx` | Behind the opening of a page | A canvas of fine light threads that flow like fabric, thirty frames a second, resting while off screen or in a hidden tab. `intensity="quiet"` (one dim band along the far side) in `ui/PageHeader`; `"hero"` (three bands) on Home's opening and on the pages outside the app (`light-field-window` fixes it to the window); `light-field-top` lays it across the top of a page with no header (a legal text, the bot portal) |
+| `ui/PointerAura.tsx` | Once, in `App.tsx` | A ring of light that trails a mouse a breath behind it and opens over what can be pressed. The cursor stays. It rests when the pointer does, and is not there on a touch screen |
+| `ui/ChromeWord.tsx` | The sign-in's aside | The product's name in extruded, polished chrome, each letter at its own angle, a few edges catching the light. One per view. The metal face is painted from the letter itself (`data-letter`), so the word stands in the page's text once |
+| `.chrome-text`, `.stat-value` | The name in Home's greeting, the figure of a stat tile | A sheen of polished metal on the largest words and numbers |
+| `.go-chip` + `.go-host` | A way onward: Home's stat tiles and space cards, the main action | The arrow in its round chip turns up and fills with the signal when what it stands in is pointed at |
+| `--shadow-glow` | `.btn-primary`, `.btn-hero` under the pointer | The white button's glow |
 
-**The colour of the place.** `.lit` reads `--place-target`, which is `rgb(var(--accent-primary))` until `layout/AmbientLight.tsx` sets something else on `<html>`: in a space its picture's dominant colour (read once, cached, `utils/colorExtractor.ts`) or its tile's colour, in a conversation with one person their profile colour or their tile's. Home, the pages around it and a group keep the accent. `utils/placeLight.ts` keeps the hue and brings saturation and lightness into a range that lights a dark room; a grey stays grey. `--place-color`, registered with `@property` and not inherited, is what fades over 520ms on each `.lit`, so a change of place repaints only those panels and recalculates nothing under them.
+`.lit` stays on the panels as the hook through which `--place-target` (the colour of the place, set by `layout/AmbientLight.tsx`) is read. `.stage-light` (the pages outside the app) and `.panel-light` (a settings dialog's content column) remain; `.hero-light` is hidden. Everything in this section is off under `html[data-light='off']` (Settings → Appearance → Light), `html[data-contrast='high']` and forced colours, and stands still under Reduce motion and `prefers-reduced-motion` (the light field then draws one frame, the ring is not there).
 
-Light may be drawn in the accent or the place's colour. It stays behind things: never on text, never as a fill on a control, never a glow around a word.
+### Where the signal may appear
+- The selected or active place: the ring round the tile of the place you are in (the dock), the 2px edge of a selected `.nav-item` (on the column's own edge in the sidebar), a chosen option card or theme.
+- Counts of what waits for you: unread direct messages (Home's tile), mentions (the inbox bell, a space's card on Home). Counts of activity are neutral figures (`.count-badge-muted`).
+- Controls that are on: a switch, the filled part of a slider, a checked box, a call control that is on and going out.
+- The one thing a form or a page is for: the white button (`.btn-primary`, `.btn-hero`).
+- A state of the app's own that is on: streamer mode's badge.
+- A message that mentions you (its edge and tint), your own reaction (`.glass-pill-mine`).
+- Keyboard focus and selected text.
 
-### Where the violet may appear
-- The selected or active place: the edge under the tab of the place you are in, the edge of a selected `.nav-item`, a chosen option card or theme.
-- The one main action of a form or dialog: `.btn-primary`.
-- Counts of unread messages and mentions: `.count-badge`.
-- Controls that are on: a switch, the filled part of a slider, a checked box, a call control that is on and going out (camera, screen share, noise suppression; `VoiceControlBar`, `VoiceControls`).
-- A state of the app's own that is on: streamer mode's badge in the top bar (`layout/StreamerModeBadge.tsx`: a 28px chip, 30% violet edge, 10% violet fill, `--accent-soft` label with the `eye-off` icon).
-- Keyboard focus (`--accent-primary-soft`) and selected text.
-
-Never: headings, icons that are only decoration, the logo, a whole row's solid fill (a selected row is neutral with a violet edge and a faint violet wash from it), an unread dot with no count (that dot is neutral, `bg-txt-primary`), empty states. The light of a room (see Light) is not a use of the signal: it may be violet anywhere the room is.
+Never: a whole row's solid fill, an unread dot with no count (that dot is neutral, `bg-txt-primary`), two white buttons side by side (the second is `.btn-outline`), decoration that could be taken for a state.
 
 ---
 
 ## Native controls
 
-`input[type='checkbox']` and `input[type='radio']` are drawn by the base layer (a 16px sunken box edged like a field, violet while on), so every form gets them without a class; size and margin utilities beside them still win. A `select.input-*` gets the app's own arrow in place of the system's.
+`input[type='checkbox']` and `input[type='radio']` are drawn by the base layer (a 16px sunken box edged like a field, the signal while on with its mark in `--on-accent`), so every form gets them without a class; size and margin utilities beside them still win. A `select.input-*` gets the app's own arrow in place of the system's.
 
 ## Brand
 
-The mark is a slanted T inside a thin ring. It is black and white everywhere: white on graphite, never tinted violet, never on a coloured tile. Up to 32 px it is the T alone (`/icons/logo-mark.svg`, the top bar's left end, the favicons), because the ring disappears at that size; larger it carries the ring (`/icons/mark.svg`). The masters live in `assets/brand/` and every favicon, PWA icon, tray icon and desktop build icon is generated from them with `pnpm gen-icons`; outputs are never hand-edited. The app-icon family (`app-icon.svg`, `app-icon-small.svg`) puts the white mark on a near-black rounded square; that ground belongs to the icon artwork, not to the interface palette above.
+The mark is a slanted T inside a thin ring. It is black and white everywhere: white on black, never tinted, never on a coloured tile. Up to 32 px it is the T alone (`/icons/logo-mark.svg`, the top bar's left end, the favicons), because the ring disappears at that size; larger it carries the ring (`/icons/mark.svg`). The masters live in `assets/brand/` and every favicon, PWA icon, tray icon and desktop build icon is generated from them with `pnpm gen-icons`; outputs are never hand-edited. The app-icon family (`app-icon.svg`, `app-icon-small.svg`) puts the white mark on a near-black rounded square; that ground belongs to the icon artwork, not to the interface palette above.
 
 The product name "Tavvit" is fixed; the instance name (the browser tab, the sign-in page) is the administrator's.
 
@@ -202,33 +212,39 @@ The product name "Tavvit" is fixed; the instance name (the browser tab, the sign
 
 ## Shape
 
-Every radius utility is multiplied by `--radius-scale` (Settings → Appearance → Corners: sharp, standard, round), so one number sharpens or softens the whole app. The component classes below use the same scaled values.
+Every radius utility is multiplied by `--radius-scale` (Settings → Appearance → Corners: sharp 0, standard 1, round 1.5), so one number sharpens or softens the whole app; `--radius-pill` (`rounded-pill`) is scaled with it, so "sharp" squares the pills too.
 
 | Corner | Utility | Use |
 |--------|---------|-----|
-| 2px | `rounded-sm` | Hairline marks: drop indicators, the active edge's own corner |
-| 3px | (`.kbd`) | Keyboard keys, small amber counts in the settings navigation |
-| 4px | `rounded` | Count badges, a 20px space glyph, swatches, the buttons inside a tri-state control |
-| 5px | `rounded-md` | Buttons, icon buttons, fields, navigation rows, tabs, segmented controls, the switch track |
-| 6px | `rounded-lg` | Cards, tiles, list rows, menus, popovers, dialogs, toasts, the composer, the top corners of a phone sheet |
-| 8px | `rounded-xl` | Larger picture tiles only |
-| round | `rounded-full` | Avatars (their own roundness setting), status dots, switch thumbs, the empty-state icon and its rings. Nothing else. |
+| 6px | `rounded-sm` | Keys, small glyphs, swatches, hairline marks |
+| 8px | `rounded` | Small pictures and marks inside a row |
+| 16px | `rounded-md` | Navigation rows, list rows, menu rows, a multi-line field, code blocks |
+| 24px | `rounded-lg` | Frames: panels, cards, menus, popovers, dialogs, toasts (`--panel-radius`) |
+| 28px, 32px, 40px | `rounded-xl`, `rounded-2xl`, `rounded-3xl` | Larger frames and picture tiles |
+| pill | `rounded-pill` | Buttons, icon buttons, fields, tags, counts, the composer, the segmented control, the action bar |
+| round | `rounded-full` | Avatars (their own roundness setting), status dots, the switch, the chip of an arrow |
+
+A dock tile is 44px with a 14px corner (its ring 17px), a stat tile 20px.
 
 ## Type
 
 | Role | How |
 |------|-----|
-| The opening of a page of its own | `.display-title` (`clamp(2rem, 3.2vw, 3.25rem)`, 680, −0.045em) with `.ink`; `.display-hero` adds size (up to 5.25rem) where there is next to nothing else, as on the sign-in |
-| Page and settings-panel titles | `.page-title`: 20px, 650, −0.025em, painted like `.ink` |
-| Large type's own light | `.ink`: from `--text-primary` at the top to a little of the surface at the bottom, clipped to the text; plain text under higher contrast and forced colours |
-| Dialog titles | 15px semibold (the `Modal` header) |
-| Section labels | `.label-mono`: 11px Geist Mono, 500, capitals, 0.05em, `--text-category` |
+| The opening of a page | `.display-title` (36px, 600, −0.045em, line height 1) in `ui/PageHeader`, rising out of a clip once (`.kinetic`); `.display-hero` adds size (up to 5.75rem) where there is next to nothing else, as on the sign-in; `.home-greeting` (up to 4.5rem) on Home |
+| Settings-panel and dialog-section titles | `.page-title`: 22px, 600, −0.035em |
+| Dialog titles | 18px, 600 (the `Modal` header, `ConfirmDialog`) |
+| Panel heads | `.panel-head-title`: 15px, 600, −0.03em; beside it `.panel-head-meta`, 12px tertiary |
+| The label that opens a section | `.eyebrow`: 11px JetBrains Mono, 500, capitals, 0.14em, behind the turning spark |
+| Group names, column heads, the name of a figure | `.label-mono`: 11px JetBrains Mono, 500, capitals, 0.14em (`--tracking-label`), `--text-category` |
+| A figure | `.stat-value`: 34px, 600, −0.045em, in metal; proportional figures |
 | Form field names | `.field-label`: 12px, 500, sentence case, `--text-secondary`, 6px above the field |
 | Row titles | `text-ui` (13px) medium, `text-txt-primary` |
 | Secondary lines | `text-meta` (12px), `text-txt-tertiary` or `text-txt-secondary` |
-| Times, counts, sizes | `font-mono`, `.tabular` (tabular figures; `<time>` gets them by default). Geist's default "1" is far narrower than its "8", so any number that lines up with others needs them |
+| Times, counts, sizes, hosts | `font-mono`, `.tabular` (tabular figures; `<time>` gets them by default) |
 | Message text | `.message-text`: 15px × the chat text size (Settings → Appearance → Reading) |
-| Markdown in a message | `.md-h1` to `.md-h3`, `.md-code`, `.md-code-block`, `.md-jumbo` (a message of nothing but a few emoji): sizes in `em` against the message text, so they follow the chat text size. Inline code is neutral, not a second link colour; a quote's edge is `--interactive-muted`, not the signal |
+| Markdown in a message | `.md-h1` to `.md-h3`, `.md-code`, `.md-code-block` (a frame with a head strip naming the language and copying the code, `.md-code-head`, `.md-code-copy`, over `.md-code-body`), `.md-jumbo` |
+
+The display face has no glyphs for Chinese: `:root:lang(zh)` sets titles in the platform's own face without the tight tracking.
 
 ### The type scale
 
@@ -238,61 +254,57 @@ Tailwind's `fontSize` in `tailwind.config.js`, a size each with no line height o
 
 | State | Look |
 |-------|------|
-| Hover | `--interactive-hover` veil; text steps up to `--text-primary`; a hairline steps up to `--interactive-muted` |
-| Pressed | `--interactive-active` fill (`.nav-item`, `.list-row`, `.icon-btn`, `.btn-quiet`, `.btn-outline`, tabs); the filled buttons step to their `-active` shade |
-| Selected / active | `--interactive-selected` fill and `--text-primary`, plus the violet edge: a 2px bar on the left of a `.nav-item`, under a tab, under a section tab; option cards take a violet border |
+| Hover | `--interactive-hover` veil; text steps up to `--text-primary`; a hairline steps up to `--interactive-muted`; a button's fill rises from its foot; a frame catches the pointer's light |
+| Pressed | `--interactive-active` fill (`.nav-item`, `.list-row`, `.icon-btn`, `.btn-quiet`, tabs); a button settles a pixel |
+| Selected / active | `--interactive-selected` fill and `--text-primary`, plus the white edge: a 2px bar on the left of a `.nav-item`, a 2px line under a tab; option cards take a white border |
 | Unread | `--text-primary` and weight 600 (`data-unread="true"` on a `.nav-item`); a count when the server sent one (`.count-badge`), otherwise a 6px neutral dot |
 | Muted | The count in `.count-badge-muted` |
-| Focus | A 2px `--accent-primary-soft` outline, 2px out, for the keyboard only (`:focus-visible`, globals.css base layer); fields show their own violet border and ring instead |
-| Disabled | 45–50% opacity (40% on icon buttons) and `cursor: not-allowed`; `disabled` or `aria-disabled="true"` |
+| Focus | A 2px `--accent-primary-soft` outline, 2px out, for the keyboard only (`:focus-visible`, globals.css base layer); fields show their own white edge and ring instead |
+| Disabled | 45–55% opacity (40% on icon buttons) and `cursor: not-allowed`; `disabled` or `aria-disabled="true"` |
 | Loading | `aria-busy="true"` on a `.btn-*`: the label stays, a 12px ring turns beside it, the button stops answering |
 | Error | `aria-invalid="true"` on `.input-standard` or `.input-search`: a rose edge |
-| Mentioned | A message that reaches you (`data-mentioned` on `.msg-row`): a violet veil and a 2px violet edge, the same signal as the count that led there |
-| Destructive | `.btn-danger` (a deeper rose so white text reads at 4.7:1); destructive menu items in `--text-danger` with a rose hover |
+| Mentioned | A message that reaches you (`data-mentioned` on `.msg-row`): a white veil and a 2px white edge, the same signal as the count that led there |
+| Destructive | `.btn-danger` (solid red, `--danger-fill`, under white words); destructive menu items in `--text-danger` with a rose hover |
 
 ---
 
 ## Component classes
 
-Defined in `@layer components` of `globals.css`, so a utility on the same element (`h-11`, `text-txt-danger`, `hover:bg-accent-rose/10`) always wins. The hover rules guard `:disabled` inside `:where()`, which adds no specificity, so a `hover:` utility wins there too.
+Defined in `@layer components` of `globals.css`, so a utility on the same element always wins. The hover rules guard `:disabled` inside `:where()`, which adds no specificity, so a `hover:` utility wins there too.
 
 | Class | What it is | States |
 |-------|-----------|--------|
-| `.nav-item` | A row of any navigation list (sidebars, Home links, the settings navigation, the folder flyout): 32px tall, 10px side padding, 10px gap, 5px corner, 13px medium `--text-secondary` | hover: veil + primary text; `data-active="true"` or `aria-current="page"`: selected fill + primary text + a 2px × 16px violet bar on the left edge; `data-unread="true"`: primary text, 600 |
-| `.list-row` | An interactive row of a list in the page (Home, the inbox, panels): flex, 12px gap, 8px × 10px padding, 6px corner | hover: veil; `data-active="true"`: selected fill |
-| `.icon-btn`, `.icon-btn-lg` | A square button that is only an icon: 28px (32px for `-lg`), 5px corner, `--text-tertiary`. Its name is its `aria-label`, which "Tooltips" shows; never a `title` | hover: 6% white + primary icon; `data-active="true"` (what it toggles is on, its menu is open): selected fill + primary icon; disabled: 40% |
-| `.count-badge`, `.count-badge-muted` | An unread or mention count: 16px tall, at least 16px wide, 4px side padding, 4px corner, white 10px Geist Mono 600 tabular figures on `--accent-primary`; `-muted` is the neutral one (white 10% fill, `--text-secondary`), alone or added to `.count-badge` | Rendered by `ui/CountBadge.tsx`, which also says the count to a screen reader |
-| `.kbd` | A keyboard key: 18px, 5px side padding, 3px corner, 1px `--border-soft`, 10px Geist Mono `--text-tertiary` | |
-| `.empty-state` + `-icon`, `-title`, `-body` | What a list says when it is empty: a centred column (6px gap, 28px × 16px padding); the icon in a 36px outlined square (8px corner, `--border-hard`, `--text-tertiary`); a 14px semibold title; a 13px `--text-secondary` body at most 320px wide | No illustration and no colour |
-| `.page-title` | See Type | |
-| `.label-mono` | See Type | |
-| `.btn-primary`, `.btn-quiet`, `.btn-outline`, `.btn-danger` | One button geometry (32px, 12px side padding, 5px corner, 13px medium, never a capsule) in four weights: the accent fill for the one thing a form is for, a quiet text button beside it, an outlined secondary action, the rose fill for destroying something | hover and pressed steps; disabled 50%; focus outline |
-| `.btn-sm` | Added to a button: 28px, 10px side padding, 12px, for rows and toolbars | |
-| `.btn-lg` | Added to a button: 40px, 16px side padding, 14px, for the opening of a page | |
-| `.btn-hero` | White with dark text, a glow in the accent under it: the one call to action on an opening page (Home's New message, the sign-in, an invite, not found). Never more than one on a page, never inside the app's forms. | hover: rises 1px, the glow grows; pressed: scale .98; `aria-busy` as the others |
-| `.stat-value` | The number of a stat tile: 28px, 620, proportional figures, which read better large | |
-| `.chart-column`, `.chart-dot` | The marks of a chart (`admin/DayChart.tsx`): columns at most 24px wide, rounded at their free end, 2px apart; a dot with a 2px ring of the surface. A chart is one measure per card in the accent, with a hairline grid, a crosshair and tooltip on the pointer and the arrow keys, and its numbers as a table | |
-| `.announcement`, `.announcement-warning` | What the operator says to everyone (`ui/AnnouncementBar.tsx`): a band in the accent or amber, with text in the text colour | |
-| `.field-label` | See Type | |
-| `.range-slider` | A slider (`ui/RangeSlider.tsx`): a 4px track in a 20px box, violet up to a 14px white thumb (`--range-fill`), or all painted by the caller (`--range-track`), as the hue slider is | hover and pressed: a faint halo round the thumb; keyboard focus: the ring on the thumb; disabled: 50% |
-| `.tab-strip` | The top bar's tabs when they do not fit, and the phone's space strip: scrolls sideways, its last 16px fade out so a cut-off tab reads as more to scroll to, and with `data-scrolled="true"` its first 16px do too | |
-| `.typing-dot` | One of the three dots of the typing line; they brighten in turn | |
-| `.panel-bar` | The header of a column: at least `--topbar-height` (48px) with a `--border-hard` line under it | |
-| `.panel-bar-over` | A column's bar laid over a space's banner (`layout/SpaceBannerHeader.tsx`): sticky at the top of what scrolls, the picture starting under it, no surface or hairline while it lies over the picture, the column's own (with `.lit`) once the picture has scrolled away | `data-over-banner="true"` while over the picture; under higher contrast and forced colours it never lies over it |
-| `.space-banner` | A space's banner at the head of its channel column, 16:9 as the owner framed it, no corner: a 58% shade under the bar (the bar's words are all primary over it, which keeps 4.5:1 even on white) and a fade into `--bg-channel` at its foot | without a banner, one that may not be fetched yet or one that fails, the column's plain bar stands as before |
-| `.surface-card` | A card: a little white over what it sits on, more at the top, a `--border-hard` edge and a lit top edge; the caller adds `rounded-lg` | |
-| `.lift` | Added to a card you can act on | hover: rises 2px with a deep shadow and a glow in its own colour (`--tile`, a CSS colour, or the accent); pressed: settles back |
-| `.spotlight` | Added to a card: a soft light follows the pointer (`utils/pointerLight.ts`, one listener for the document) | hover |
-| `.tinted-card` | A place as a tile: lit from a corner in its own colour (`--tile`) | |
-| `.banner-depth` | A band painted by the app rather than a picture (`bannerFill` in `utils/placeLight.ts`): grain over it and a shade toward what follows | |
-| `.sliding-list` + `ui/SlidingMark.tsx` | The one mark of a list, sliding from the place you left to the place you chose: `variant="row"` (a lit row with its violet edge; the left column, the settings navigation), `line` (under the tab; the top bar, the tabs of an account's detail, the phone's tab bar, with `selector` naming the anchor, `[data-active-mark]` or `[data-active-line]`), `pill` (the fill of `SegmentedControl`). The mark goes first inside the list, which reads which element is active from the DOM, so rows keep saying `data-active`. `data-marked` on the list turns the row's own highlight off once the mark has a place. | |
-| `.active-line` | The line of a tab with no mark to slide (the action tiles of the top bar), or the anchor a mark measures | |
-| `.action-bar` | The strip that carries a form's actions (Cancel / Save): elevated, a hairline, 6px corner, a plain shadow | |
+| `.nav-item` | A row of any navigation list: 32px tall, 10px side padding, 10px gap, 16px corner, 13px regular `--text-secondary` | hover: veil + primary text; `data-active="true"` or `aria-current="page"`: selected fill + primary text + a 2px white edge, standing on the column's own edge inside `.sidebar-nav` (`--nav-edge`); `data-unread="true"`: primary text, 500 |
+| `.list-row` | An interactive row of a list in the page: flex, 12px gap, 8px × 10px padding, 16px corner | hover: veil; `data-active="true"`: selected fill |
+| `.icon-btn`, `.icon-btn-lg` | A round ghost button that is only an icon: 28px (32px), `--text-tertiary`. Its name is its `aria-label`, which "Tooltips" shows | hover: 9% white + primary icon; pressed: a pixel down; `data-active="true"`: selected fill |
+| `.count-badge` | A count of what waits for you: a 16px pill, 10px JetBrains Mono in `--on-accent` on `--accent-primary` | springs in |
+| `.count-badge-muted` | A count of activity: the figures alone, mono, tertiary; on a corner (`ring-2`) a small raised plate. `.count-badge-quiet` (via `CountBadge quiet`) for a muted place | |
+| `.kbd` | A key: 20px, 6px corner, the strong edge on raised, 10px mono | |
+| `.empty-state` + `-icon`, `-title`, `-body` | An empty list: the icon in a dashed 44px ink well (14px corner) with one white point at its corner, a 15px title, a 13px body | |
+| `.page-title`, `.display-title`, `.display-hero`, `.label-mono`, `.eyebrow`, `.field-label` | See Type | |
+| `.kinetic`, `.rise` (+ `.rise-2` to `.rise-4`), `.rise-in`, `.stagger` | What opens a page: a title rising out of a clip, one thing coming up by itself (each a beat after the one before), a group's children, a grid's cards one after another | once, `backwards` |
+| `.chrome-word` + parts, `.chrome-text`, `.light-field` (+ `-window`, `-top`), `.pointer-aura`, `.go-chip`, `.go-host` | See Light | |
+| `.btn-primary`, `.btn-outline`, `.btn-quiet`, `.btn-danger`, `.btn-hero` | One geometry (a 32px pill, 15px side padding, 13px medium) and one motion: a fill (`--pill-fill`) that rises from the foot under the pointer. The primary is white with black words and glows (the one thing a form or page is for), `.btn-outline` is edged by the hairline and fills white, turning its words black, `.btn-quiet` is words alone on a faint veil, `.btn-danger` solid red; `.btn-hero` is the primary of an opening page, with a `GoChip` where it leads somewhere | hover: the fill rises; pressed a pixel down; disabled 45–55%; `aria-busy` ring |
+| `.btn-sm`, `.btn-lg` | 28px / 40px | |
+| `.tag`, `.tag-uv`, `.tag-dashed` | A small label as a pill: 20px, mono 10px capitals; `-uv` the signal tint, `-dashed` for what is not live or not measured | |
+| `.surface-card` | A frame: `--bg-panel`, the hairline, a 24px corner of its own (a `rounded-*` utility still wins), the light from its corner and, under the pointer, the pointer's. A frame that is a button or link answers the pointer with its edge; `.tinted-card` lights it in a place's own colour (`--tile`) | |
+| `.panel-head`, `.panel-head-title`, `.panel-head-meta` | The head row of a panel: at least 52px, 20px side padding, the faint hairline under it | |
+| `.page-tabs`, `.page-tab` | The tabs under a page's title: 40px, the type's colour when chosen with a 2px white line on the header's hairline | |
+| `.side-panel-head` | The head row of the people column: what it holds and how many | |
+| `.sidebar-search` | "Search or jump to…", a field-shaped button that opens the quick switcher | |
+| `.space-dock`, `.dock-tile` (+ `-home`, `-action`, `-folder`, `-active`, `-merge`), `.dock-mark` | The dock of places in the sidebar (`layout/SpaceSidebar.tsx`): 44px tiles with a 14px corner that wrap, four to a row (three in the narrow sidebar, five in the wide one); Home on a raised tile, the ways to more (create, join, explore) dashed; the ring of the current place slides between tiles (`SlidingMark variant="tile"`) and glows a little | hover lifts two pixels; a drop's middle quarter merges into a folder (`-merge`) |
+| `.space-head`, `.space-head-banner` | A space's card at the head of its channels: its banner as a 16:7 band, the row with its name, badges and invite under it | |
+| `.home-hero`, `.home-greeting`, `.home-stats`, `.stat-tile` | Home's opening (`home/HomeHero.tsx`): the greeting at the size of a title page over the light field, and the page's figures as glass tiles (a mono name, the number in metal, the way to what it counts), two by two beside it and four in a row in a narrower window | a tile that leads somewhere lifts and its chip turns |
+| `.home-spaces`, `.home-space` (+ `-name`, `-foot`, `-new`) | The spaces on Home (`home/HomeSpaceCard.tsx`): frames in a grid, each lit from its corner in the space's own colour, with its picture and what waits there, its name and what it is about, who is in its voice channels; `-new` is the dashed tile that offers to make or join one | lifts; its chip turns |
+| `.forum-row`, `.forum-row-open` | A forum post as a row of the forum's one panel; the open one carries the white edge | |
+| `.sliding-list` + `ui/SlidingMark.tsx` | The one mark of a list, sliding from the place you left to the place you chose: `row` (a lit row with its edge), `line` (under a tab, in the type's colour), `pill` (the raised part of a segmented control), `tile` (the dock's ring) | |
+| `.action-bar` | The strip that carries a form's actions (Cancel / Save): the floating tone, the strong edge, a pill | |
 | `.input-standard`, `.input-search`, `.input-embedded`, `.input-danger` | See Input Tiers | |
 | `.glass`, `.glass-modal`, `.glass-bubble`, `.glass-pill`, `.glass-pill-mine`, `.glass-strip` | See Floating Layers | |
 | `.card-grid` | See Layout | |
+| `.badge-strip`, `.badge-mark`, `.badge-card`, `.space-tag`, `.thread-chip`, `.poll-option`, `.spoiler`, `.range-slider`, `.tab-strip`, `.typing-dot`, `.panel-bar`, `.banner-depth`, `.space-banner`, `.lift`, `.spotlight`, `.tinted-card`, `.stat-value`, `.chart-column`, `.chart-dot`, `.announcement` | As before (the sections below), in the new tones | |
 
-Shared components built on these: `ui/CountBadge.tsx` (counts), `ui/Toggle.tsx` (a 36 × 20 switch: 5px track, round thumb, violet when on), `ui/TriStateToggle.tsx` (deny / neutral / allow in one sunken strip), `ui/Tooltip.tsx` (12px on `.glass`, 5px corner, the look of `ui/TooltipBubble.tsx`; for a mark that is not a control, whose words are not its name: a federation globe, a status, a badge), `ui/TooltipLayer.tsx` (see "Tooltips"), `ui/SpaceBand.tsx` (a space's banner across a card, or its colour painted with depth), `ui/ContextMenuRenderer.tsx` (6px menus, 32px rows, hairline separators; when any row of a menu has an icon every row keeps the 16px column, so its labels start at one x, and a destructive row's icon takes the danger colour), `ui/Modal.tsx` (a 48px header with a hairline and a 15px title; the close control is `.icon-btn-lg`, 40px in a phone's sheet and full-screen dialog), `ui/ConfirmDialog.tsx` (title and text over a hairline footer of `.btn-quiet` and `.btn-danger`, or an amber confirm with dark text for a warning), `voice/LiveBadge.tsx` (a live stream's mark: a small red dot and white Geist Mono capitals on a dark chip, the same on a sidebar row and over a picture), `ui/Sensitive.tsx` (what streamer mode hides, streamer-mode.md: `Sensitive` puts eight dots in `--text-tertiary` in a value's place, read out as hidden; `SensitiveBlock` replaces a whole part with a dashed-edged note on the sunken input surface with `eye-off` and a quiet "Turn off streamer mode"; nothing is blurred), the camera background picker (`modals/settingsPanels/CameraBackgroundPicker.tsx`: 16:9 tiles in three columns with the option cards' edge, dot and label, each a small figure in front of what would be behind it, so a blur reads as the room soft and the person sharp), and the settings controls in `modals/settingsPanels/_shared/SettingsControls.tsx` (`SettingsPage`, `SettingsSection`, `SettingBlock`, `SettingsField`, `FormError`, `OptionCards`, `SegmentedControl`, `ToggleRow`, `SliderRow`, `SwatchButton`), which every panel of the user settings is built from: one title, one section heading and card, one label treatment.
+Shared components built on these: `ui/PageHeader.tsx` (`PageHeader`: the eyebrow behind its spark, the title rising out of a clip, a line about it and the page's actions over a quiet light field, then tabs or filters; `PageBody`; `Panel`: a `<section>` named by its title with its head row), `ui/LightField.tsx`, `ui/PointerAura.tsx`, `ui/ChromeWord.tsx`, `home/HomeHero.tsx` (`HomeHero`, `GoChip`), `ui/CountBadge.tsx`, `ui/Toggle.tsx` (the switch: an 18 × 32 capsule on ink with the strong edge, the signal when on, a thumb in `--on-accent` that springs across), `ui/TriStateToggle.tsx`, `ui/Tooltip.tsx`, `ui/TooltipLayer.tsx`, `ui/SpaceBand.tsx`, `ui/ContextMenuRenderer.tsx` (menus as frames on the floating tone, 32px rows in regular weight), `ui/Modal.tsx` (a 56px head with the hairline and an 18px title, a 20px body), `ui/ConfirmDialog.tsx` (title and text over a footer on a strip of ink), `voice/VoiceRoomPreview.tsx` (a voice channel before joining: the space as eyebrow, the room's name as the title, who is in it with their pictures and how long it has been going, the one Join button, which says why it does nothing without the right to connect), and the settings controls in `modals/settingsPanels/_shared/SettingsControls.tsx` (`SettingsSection` is a panel with its head row; the settings navigation shows each tab with its icon).
 
 ---
 
@@ -309,16 +321,16 @@ Every control that shows only an icon names itself in `aria-label`, and one laye
 
 | Tier | Class | When to use |
 |------|-------|-------------|
-| Structural | `bg-surface-*` | Permanent layout (the bars, the columns, the page) |
+| Structural | `bg-surface-*` | Permanent layout (the topbar, the sidebar, the page, the people column) |
 | Strip | `.glass-strip` | The phone's space strip (in `@layer utilities`, so it wins over `bg-surface-*`) |
-| Bubble | `.glass-bubble` | Persistent controls above the content: the voice bar, the chat composer (floating on desktop and mobile; see `docs/systems/mobile-ui.md` "Floating Composer"), the voice mini-bar |
-| Popover | `.glass` | Menus, popovers, tooltips, the folder flyout, the device menus of the top bar, toasts |
-| Modal | `.glass-modal` | Dialogs, the quick switcher, the profile card |
-| Pill | `.glass-pill` | Inline decorations (reactions, tags); `.glass-pill-mine` is the viewer's own reaction, in the signal colour |
+| Bubble | `.glass-bubble` | Persistent controls above the content: the voice bar, the composer (on the panel tone), the voice mini-bar |
+| Popover | `.glass` | Menus, popovers, tooltips, the folder flyout, the device menus, toasts |
+| Modal | `.glass-modal` | Dialogs (on the panel tone), the quick switcher, the profile card |
+| Pill | `.glass-pill` | Inline decorations (reactions, tags); `.glass-pill-mine` is the viewer's own reaction, in the signal |
 
-Each is the opaque `--bg-elevated` surface with a `--border-soft` edge, a little lighter at the top (`--float-sheen`) with a lit top edge (`--float-edge`), and all but the pill cast a deep shadow (`--shadow-popover`, `--shadow-modal`; a dialog adds a wide, faint glow in the accent). **Rule:** anything that floats above the content plane uses one of them, never `bg-surface-elevated` directly, so the edge and the shadow stay consistent.
+Each is opaque: the floating tone (`--bg-elevated`) or, for a dialog and the composer, the panel tone, edged by the strong line (`--glass-border`, `--border-soft`), with a faint lit top edge (a dialog carries the frame's light from its corner too), and all but the pill cast `--shadow-popover` or `--shadow-modal`. The surface is drawn on a `::before` layer behind the content, so a `transform` or `filter` never makes the element the frame of a fixed child. What floats arrives with `floatIn` (3px and 1.5% smaller, under a fifth of a second), through the separate `translate` and `scale` properties, so a layer centred with a transform utility keeps its place. **Rule:** anything that floats above the content plane uses one of them, never `bg-surface-elevated` directly.
 
-**Modal backdrops:** `.modal-scrim`: 50% black and a 10px blur of what is behind, so the dialog is the one sharp thing on the screen (dimming alone on a phone, where the blur costs frames). It fades by itself: a parent's fading opacity would cut the blur off, so a dialog's outer element carries no animation.
+**Modal backdrops:** `.modal-scrim`: 80% black, no blur. It fades by itself, so a dialog's outer element carries no animation.
 
 **Dialogs arrive and leave:** the panel has `.modal-panel` (or `.sheet-panel` on a phone) in place of `animate-slide-up`. `hooks/useExitGhost.ts`, used by `Modal` and `ConfirmDialog`, lets a dialog leave the way it came however it is closed: as it unmounts, an inert copy (no ids, nothing that would load again, hidden from assistive technology) plays `.modal-leaving` for 150ms. The real dialog is gone at once, so nothing has to stay mounted without its state, and no test or screen reader ever meets the copy. Elements that open and close constantly (menus, tooltips) have an entrance only: leaving at once is what makes them feel quick.
 
@@ -326,7 +338,7 @@ Each is the opaque `--bg-elevated` surface with a `--border-soft` edge, a little
 
 The shared `Modal` (`components/ui/Modal.tsx`) portals itself through this hook, so a caller mounts it wherever its state lives and never wraps it in another portal. Rendering in place is not safe: an ancestor with `transform`, `filter` or `backdrop-filter` becomes the containing block of a `fixed` element, and a dialog mounted inside the `.glass-strip` space strip rendered 72px wide. Overlays stack by portal order: a dialog or card opened from inside an open `Modal` is appended after it, so it draws above at the same `z-index`.
 
-`.modal-scrim` is the one use of `backdrop-filter`. Write `-webkit-backdrop-filter` first and the unprefixed property last: Vite 8 minifies CSS with Lightning CSS, which folds the two into one and keeps whichever came last, and Firefox implements only the unprefixed form.
+The floating layers use no `backdrop-filter`; Home's stat tiles do (`.stat-tile`, so the light behind them shows through softly). Wherever one is written, `-webkit-backdrop-filter` comes first and the unprefixed property last: Vite 8 minifies CSS with Lightning CSS, which folds the two into one and keeps whichever came last, and Firefox implements only the unprefixed form.
 
 ---
 
@@ -351,18 +363,18 @@ A right click never opens the browser's own menu, anywhere in the app, signed in
 
 ## Input Tiers
 
-All defined in `globals.css`. A field is sunken (`--bg-input`) with a resting `--border-soft` edge that steps up to `--interactive-muted` under the pointer; with focus it turns `--accent-primary` with a 1px ring of the same at 40%. Its corner is the buttons' (5px), so a field and the button beside it line up.
+All defined in `globals.css`. A field is a pill on ink (`--bg-input`) with a resting hairline edge that steps up to `--interactive-muted` under the pointer; with focus the edge turns white with a soft ring of the same. A one-line field is fully round, as the button beside it; a `textarea` takes a 14px corner.
 
 | Tier | Class | When to use | Focus |
 |------|-------|-------------|-------|
-| Standard | `.input-standard` | Form fields in dialogs, settings, sign-in | violet edge + `ring-1` violet/40 |
-| Search | `.input-search` | Search bars, filter inputs (`py-1.5`) | violet edge + `ring-1` violet/40 |
+| Standard | `.input-standard` | Form fields in dialogs, settings, sign-in | white edge + a soft white ring |
+| Search | `.input-search` | Search bars, filter inputs (`py-1.5`) | white edge + a soft white ring |
 | Embedded | `.input-embedded` | Inside a container that already draws the field (the composer, the quick switcher) | none |
 | Danger | `.input-danger` | Destructive confirmations | rose edge + `ring-1` rose/40 |
 
 Override padding and size with utilities: `input-standard w-full py-2.5`.
 
-The top bar's search trigger is not a field but looks like one: a 32px button on `--bg-input` with a `--border-soft` edge, the search icon, the word and the shortcut in a `.kbd`; in a compact window it folds to the icon.
+The sidebar's search trigger (`.sidebar-search`) is not a field but looks like one: a 32px pill on the panel tone with the hairline edge, the search icon, the words and the shortcut in a `.kbd`.
 
 ### iOS Auto-Zoom Suppression
 
@@ -378,7 +390,7 @@ When introducing a new input or contenteditable surface, no extra work is needed
 
 | Mark | Meaning | Used by |
 |------|---------|---------|
-| `.count-badge` (violet) | Someone is waiting on you: unread messages, mentions, the inbox | the tabs of the top bar (a space's count, Home's direct-message count), the inbox bell, the folder flyout, Home's lists (`ui/CountBadge.tsx`, `layout/SpaceUnreadBadge.tsx`) |
+| `.count-badge` (the signal) | Someone is waiting on you: unread messages, mentions, the inbox | the tabs of the top bar (a space's count, Home's direct-message count), the inbox bell, the folder flyout, Home's lists (`ui/CountBadge.tsx`, `layout/SpaceUnreadBadge.tsx`) |
 | `.count-badge-muted` (neutral) | The same count in a place you muted | a muted space's tab and rows |
 | A 6px neutral dot | Something new where the server sent no count | a tab or a folder with unread channels, the quick switcher's rows |
 | Primary text, weight 600 | This row or tab has something you have not seen | `.nav-item[data-unread="true"]`, the tabs |
@@ -395,24 +407,24 @@ the amber-means-update rule above, not a bug.
 
 ## Layout
 
-The desktop shell (`components/layout/AppLayout.tsx`):
+The desktop shell (`components/layout/AppLayout.tsx`, Evolve's frame), on the canvas:
 
-- **Top bar** (`TopBar.tsx`, `--bg-base`, 48px, a hairline under it): the white mark and the wordmark; the places as named tabs (`SpaceSidebar.tsx`: Home, a hairline, the spaces and folders in the person's order, a hairline, then create, join and Explore as `.icon-btn-lg` tiles); the search trigger with its `.kbd`; the inbox bell with its count; a hairline; the microphone and headphones switches (each joined to its device menu) and the settings button; a hairline; the person's own picture, name and handle. The tab you are on is a step lighter with a 2px violet edge under it, on the bar's own hairline. In a compact window the wordmark and the search text fold away and the tab names shorten.
-- **Left column** (`--bg-channel`, `--sidebar-width`, a hairline on its right): a space's channels (under its banner when it has one, and one Create row with a menu for whoever may make channels), or Home's navigation (Home, Inbox, Friends, and More, which holds Explore and About and stays as this device left it) and direct messages.
-- **The page** (`--bg-chat`): the conversation, Home, Explore, the inbox, About.
-- **Right column** (`SidePanel.tsx`, `--bg-members`, `--sidebar-width`, a hairline on its left): the members of a space, the friends' activity on Home, a group's people. In a compact window it floats over the page's right edge with the popover shadow and a press in the page puts it away.
+- **The sidebar** (`ChannelSidebar.tsx`, ink, `--sidebar-width`, full height, a hairline on its right), top to bottom:
+  - `InstanceSwitcher.tsx`: the server this app speaks for (the mark in a raised square, its name, its host in mono), a 56px row whose hairline continues the topbar's; its menu holds Explore, Create a space, Join a space, About, the admin console, Settings and Log out.
+  - The dock (`SpaceSidebar.tsx`): Home and the spaces and folders as 44px tiles, in the person's order, wrapping four to a row; then Create, Join and Explore as dashed tiles. A tile's corner carries its count: Home's direct messages in the signal, a space's activity as neutral figures (a muted space quieter still), a dot where there is news without a count. Dragging reorders: the left or right quarter of a tile puts the dragged one before or after, the middle merges into a folder. A folder opens its flyout under its tile.
+  - `SidebarSearch`: "Search or jump to…" with the shortcut; it opens the quick switcher.
+  - What the place holds, scrolling (`.sidebar-nav`): in a space its card (`.space-head`: banner band, name, badges, settings, invite), Events and the channels by category; on Home the Home rows (Home, Inbox, Friends, More) and the direct messages with their search and filter.
+  - The call you are in (`VoiceControls`), then `UserControls.tsx`: your picture, name and handle (your profile card), the microphone and headphones each with its device menu (opening upward), the settings.
+- **The page column**: `AppTopbar.tsx` (56px, the canvas, a hairline under it) over the page and, on the right, the people column.
+  - The topbar holds where you are as a breadcrumb (the instance's host in mono, the space with its glyph, the channel with its icon and topic) and the page's actions (pins, threads, search, notifications, the people toggle), then the inbox bell with its count, the review queue of an administrator and streamer mode's badge. A page hands its breadcrumb and actions to the bar through `TopbarLead` and `TopbarActions` (`layout/TopbarSlots.tsx`, portals, so the buttons keep their state and the popovers anchored to them); a page that hands none shows the route's name. `PageBar` draws a bar of the page's own where there is no topbar (a test, a page shown alone); `Crumb`, `CrumbSep` and `layout/PlaceCrumbs.tsx` (`SpaceCrumbs`, `DmCrumbs`) build the trail.
+  - The page: a conversation directly under the bar; a page of its own (the inbox, Friends, Explore, a space's events) opens with `PageHeader` and holds panels (`PageBody`, `Panel`). Home opens larger, with `HomeHero` (the greeting, the page's figures), then its spaces as cards and its panels. The admin console's navigation is a list inside its page beside its panels.
+  - **The people column** (`SidePanel.tsx`, ink, `--sidebar-width`, a hairline on its left): the members of a space under a head with their count, the friends' activity on Home, a group's people. In a compact window it floats over the page's right edge with the popover shadow.
 
-`--sidebar-width` is 248px (216px narrow, 296px wide: Settings → Appearance → Shape). The phone has its own shell (`docs/systems/mobile-ui.md`).
+`--sidebar-width` is 256px (216px narrow, 296px wide: Settings → Appearance → Shape); `--topbar-height` is 56px. The phone has its own shell (`docs/systems/mobile-ui.md`).
 
-User settings (`modals/UserSettings.tsx`) repeat the shell inside the settings dialog: a flat navigation column on `--bg-channel` with a hairline on its right (who is signed in on a `.panel-bar`, `.label-mono` group headings, `.nav-item` rows, Log out in the danger colour at the foot), and the panel on `--bg-chat` at most 640px wide.
+User settings and space settings (`modals/UserSettings.tsx`, `modals/SpaceSettings.tsx`) keep their dialog: a navigation column on ink (each tab with its icon, mono group names, Log out in the danger colour at the foot) and the panel at most 640px wide, its sections as panels with head rows.
 
-Card lists (Explore's Inner and Outer Space sections, the Friends page's
-discover list) share one class, `.card-grid` in `globals.css`: one full-width
-column below the desktop breakpoint, and above it
-`repeat(auto-fill, minmax(min(100%, 280px), 1fr))` with a 1rem gap. It is
-`auto-fill` and not `auto-fit` on purpose, because `auto-fit` collapses the
-empty tracks and stretches a list holding a single card over the whole row.
-Any new card list uses this class rather than its own template.
+Card lists (Explore's Inner and Outer Space sections, the Friends page's discover list) share `.card-grid`: one full-width column below the desktop breakpoint, and above it `repeat(auto-fill, minmax(min(100%, 280px), 1fr))` with a 1rem gap (`auto-fill`, not `auto-fit`, so a lone card keeps a card's width).
 
 ---
 
@@ -420,9 +432,11 @@ Any new card list uses this class rather than its own template.
 
 | Name | Use |
 |------|-----|
-| `--shadow-popover` (`shadow-elevation-high`, `shadow-glass`) | Menus, popovers, toasts, the compact right column: `0 18px 44px -14px`, 80% black, over a small close shadow |
-| `--shadow-modal` | Dialogs: `0 50px 110px -30px`, 90% black, over a closer one |
-| `elevation-low` | A 1px lift for a tile that sits on another surface (the connection card) |
+| `--shadow-popover` (`shadow-elevation-high`, `shadow-glass`) | Menus, popovers, toasts, the compact right column: `0 12px 32px` at 50% black, a closer one under it, a lit top edge |
+| `--shadow-modal` | Dialogs: `0 40px 90px -30px` at 95% black and a lit top edge |
+| `--shadow-glow` (`shadow-glow`) | The white button under the pointer: a 1px ring of 50% white and `0 12px 44px -10px` of white light |
+| `--shadow-raised` (`shadow-raised`) | A raised control on a panel: a lit top edge and a short shadow |
+| `elevation-low` | A 1px lift for a tile on another surface |
 | `header`, `input` | `none`: bars and fields never cast one |
 
 ---
@@ -430,13 +444,16 @@ Any new card list uses this class rather than its own template.
 ## Animations
 
 ### Tokens
-`--ease-out` (`cubic-bezier(.16, 1, .3, 1)`, for anything arriving), `--ease-spring` (a sampled spring through `linear()` where the browser has it, a bezier otherwise, for small things that may overshoot), `--dur-fast` 120ms, `--dur-base` 200ms, `--dur-slow` 320ms, `--dur-slower` 520ms. Fill with `backwards`, never `both`, on anything that can hold a `fixed` child or a dialog: a filled transform leaves a containing block behind.
+`--ease-out` (`cubic-bezier(.16, 1, .3, 1)`, for anything arriving), `--ease-expo` (`cubic-bezier(.19, 1, .22, 1)`, the long curve of the look: a title rising, a button's fill, a chip turning), `--ease-standard` (`cubic-bezier(.2, 0, 0, 1)`, for state changes: hovers, edges), `--ease-spring` (a sampled spring through `linear()` where the browser has it, a bezier otherwise, for small things that may overshoot), `--dur-fast` 120ms, `--dur-base` 200ms, `--dur-slow` 320ms, `--dur-slower` 520ms. Fill with `backwards`, never `both`, on anything that can hold a `fixed` child or a dialog: a filled transform leaves a containing block behind.
 
 ### What moves
 | Class or hook | What it does |
 |---------------|--------------|
 | `usePlaceEntrance` (`layout/PlaceStage.tsx`) | The middle of the window comes up 6px when the place changes. The element stays mounted (a key would throw away a message list and its scroll position) and nothing is left behind when it ends. |
-| `.rise-in`, `.stagger` | What opens a page rises 10px and fades in; `.stagger` delays its children by 40ms each, up to 320ms |
+| `.kinetic` | The title that opens a page rises out of a clip, once (900ms on `--ease-expo`) |
+| `.rise`, `.rise-in`, `.stagger` | What opens a page rises 22–24px and fades in: `.rise` the element itself (`.rise-2` to `.rise-4` each a beat later), `.rise-in` its children, `.stagger` its children 40ms apart, up to 320ms |
+| `ui/LightField`, `ui/PointerAura`, `.chrome-letter`, `.chrome-text`, `.eyebrow::before` | The light: threads that flow, the ring that trails the pointer, metal that shifts, the spark that turns. See Light |
+| `.btn-*`, `.go-chip` | A button's fill rising from its foot, the arrow's chip turning up |
 | `.modal-panel`, `.sheet-panel`, `.modal-leaving`, `.modal-scrim` | See Floating Layers |
 | `.animate-pop` | A small card springing out of what opened it: the profile card, a badge's card |
 | `.animate-toast` | A toast, up from the bottom edge with a small spring |
@@ -460,14 +477,14 @@ Any new card list uses this class rather than its own template.
 ### Skeleton Loading
 `.skeleton`, `.skeleton-circle`, `.skeleton-bar`, `.skeleton-block`
 
-Settings → Appearance → Reduce motion (`html[data-motion='reduce']`) cuts every animation and transition down whatever the system asks for, and `prefers-reduced-motion` does the same for what the stylesheet and `utils/motion.ts` start. While the app's script loads, `.boot-mark` in `index.html` shows the logo after a moment's wait; React replaces it with the first render.
+Settings → Appearance → Reduce motion (`html[data-motion='reduce']`) cuts every animation and transition down whatever the system asks for, and `prefers-reduced-motion` does the same for what the stylesheet and `utils/motion.ts` start; the light field then draws one still frame and the pointer's ring is not there. While the app's script loads, `.boot-mark` in `index.html` shows the logo after a moment's wait; React replaces it with the first render.
 
 ---
 
 ## Utility Classes
 
 - `.no-scrollbar` — Hides scrollbars
-- The product page has its own stylesheet and classes (`landing/landing.css`, `.lp-*`). It is the one place where this design's rules do not hold: pills, large radii and cards of colour, in a composition the owner asked for; see [landing.md](landing.md), "Design".
+- The product page has its own stylesheet and classes (`landing/landing.css`, `.lp-*`), because its bundle carries none of the app's. It wears the same look at the size of a page; see [landing.md](landing.md), "Design". The developer docs do the same in `developers/assets/docs.css` ([developers.md](developers.md)).
 - `.scrollbar-thin` — 4px thin scrollbars (the default bar is 8px with a 2px inset thumb in `--border-soft`, `--interactive-muted` under the pointer)
 - `.divider-fade` — A 1px `--border-hard` line
 - `.rounded-inherit` — Inherits border radius
@@ -587,7 +604,7 @@ Every floating surface places itself with `computeFloatingPosition` (`hooks/useF
 
 ## Profile decorations (1.36.0, drawn since 1.37.1)
 
-Frames, profile effects and nameplates are drawings of things (`components/ui/decorationArt.tsx`, decorations.md), placed and moved by `styles/decorations.css`: flat shapes in two or three tones with a darker outline of the same hue, lit from the upper left like the rest of the app. They are the one place the interface draws pictures rather than surfaces, and they keep the rule against light: no glow, no blur, no neon, nothing generated-looking; a sparkle or a star is a drawn shape with an outline. Name styles are a typeface and colour, a printed look or motion in the letters, never a glow round them.
+Frames, profile effects and nameplates are drawings of things (`components/ui/decorationArt.tsx`, decorations.md), placed and moved by `styles/decorations.css`: flat shapes in two or three tones with a darker outline of the same hue, lit from the upper left like the rest of the app. They are the one place the interface draws pictures rather than surfaces, and they keep a rule of their own: no glow, no blur, no neon, nothing generated-looking; a sparkle or a star is a drawn shape with an outline. Name styles are a typeface and colour, a printed look or motion in the letters, never a glow round them.
 
 - `.deco-art` is a frame's drawing round an `Avatar` (`frame`, `frameMotion`), a view a fifth larger than the picture, in a layer behind it (`data-layer="back"`, `z-index: -1` in the avatar, which is `isolate` while it wears one) and one in front.
 - `.deco-effect` lies over the whole profile card, last in it (`ProfileEffectLayer` with `z-20`), taking no pointer; it measures itself (`container-type: size`) and a picker's tile halves it (`--deco-scale`). What moves in it wears a sprite (`--sprite-a/b/c`).
@@ -595,13 +612,13 @@ Frames, profile effects and nameplates are drawings of things (`components/ui/de
 - `.deco-name` carries `data-name-font` and `data-name-effect` (`DecoratedName`); `.deco-name-letter` is one letter of a `wave`. A role's colour wins over the effect; the typeface stays.
 - `data-motion`: `on` (a profile, a preview), `hover` (inside a `.deco-hover` row or message, moving only while it is pointed at or focused), `off`.
 
-Reduce motion stills all of them and leaves out what only passes by. Higher contrast and forced colours leave out effects and nameplates and show a name in its plain colour; forced colours leave out frames too. Nothing here takes the violet: "Your colours" are the person's own.
+Reduce motion stills all of them and leaves out what only passes by. Higher contrast and forced colours leave out effects and nameplates and show a name in its plain colour; forced colours leave out frames too. Nothing here takes the signal: "Your colours" are the person's own.
 
 ## Space tags and the voice overlay (1.37.0)
 
-`.space-tag` is a space's tag beside a name (space-tags.md): 16px tall, Geist Mono 10px, the tag's colour (`data-color`, the accent family or silver) as text on a 10% ground with a 32% hairline, a 4px radius scaled like the rest, no glow. It is a control (`role="button"`) that opens the space's card; `data-static="true"` draws the same mark where it is not one. It never takes the violet signal.
+`.space-tag` is a space's tag beside a name (space-tags.md): 16px tall, mono 10px, the tag's colour (`data-color`, the accent family or silver) as text on a 10% ground with a 32% hairline, a 4px radius scaled like the rest, no glow. It is a control (`role="button"`) that opens the space's card; `data-static="true"` draws the same mark where it is not one. It never takes the signal.
 
-The voice overlay (voice-overlay.md, `overlay/overlay.css`) draws over a stream, not over Graphite: dark opaque labels for names, the status green as the ring of who speaks, the rose for a muted mark, and a transparent page. Its preview in the dialog stands on a checked ground for "transparent".
+The voice overlay (voice-overlay.md, `overlay/overlay.css`) draws over a stream, not over the app's black: dark opaque labels for names, the status green as the ring of who speaks, the rose for a muted mark, and a transparent page. Its preview in the dialog stands on a checked ground for "transparent".
 
 ## Looks and the theme studio (1.41.0)
 

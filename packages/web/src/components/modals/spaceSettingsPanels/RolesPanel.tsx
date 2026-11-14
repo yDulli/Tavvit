@@ -621,8 +621,8 @@ function RoleEditView({ role, spaceId, isNew, onBack, onDeleted, onCopied }: Rol
                       >
                         <span
                           aria-hidden="true"
-                          className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
-                            isOn ? 'translate-x-[19px]' : 'translate-x-[3px]'
+                          className={`inline-block h-3.5 w-3.5 rounded-full transition-transform ${
+                            isOn ? 'translate-x-[19px] bg-on-accent' : 'translate-x-[3px] bg-white'
                           }`}
                         />
                       </div>

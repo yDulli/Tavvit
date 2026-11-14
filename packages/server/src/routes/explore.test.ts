@@ -184,6 +184,44 @@ describe('explore routes — error codes', () => {
     expect(decided.statusCode).toBe(400);
     expect(JSON.parse(decided.body).code).toBe('join_request_decided');
   });
+
+  // A request sent before a ban waited on, and accepting it brought the person in past the ban.
+  it('does not accept the request of someone banned since they asked', async () => {
+    seedSpace('s1', 'request');
+    seedUser('asker', 'asker');
+    testDb.update(schema.spaces).set({ ownerId: CALLER_ID }).run();
+    testDb.insert(schema.joinRequests).values({ id: 'jr2', spaceId: 's1', userId: 'asker', status: 'pending', createdAt: Date.now() }).run();
+    testDb.insert(schema.bans).values({ spaceId: 's1', userId: 'asker', bannedBy: CALLER_ID, createdAt: Date.now() }).run();
+
+    const res = await app.inject({ method: 'PATCH', url: '/api/spaces/s1/join-requests/jr2', payload: { action: 'accept' } });
+
+    expect(res.statusCode).toBe(409);
+    expect(JSON.parse(res.body).code).toBe('already_banned');
+    expect(testDb.select().from(schema.spaceMembers).where(eq(schema.spaceMembers.userId, 'asker')).all()).toEqual([]);
+  });
+
+  // The answer to joining listed every category by name; a private one's name says what it holds.
+  it('leaves a category hidden from everyone out of what a new member is sent', async () => {
+    seedSpace('s1', 'public');
+    testDb.insert(schema.roles).values({ id: 's1', spaceId: 's1', name: '@everyone', position: 0, permissions: '2', createdAt: Date.now() }).run();
+    testDb.insert(schema.channelCategories).values([
+      { id: 'cat-open', spaceId: 's1', name: 'Lobby', position: 0, createdAt: Date.now() },
+      { id: 'cat-staff', spaceId: 's1', name: 'Ban appeals', position: 1, createdAt: Date.now() },
+    ]).run();
+    testDb.insert(schema.channels).values([
+      { id: 'c-open', spaceId: 's1', name: 'general', type: 'text', categoryId: 'cat-open', createdAt: Date.now() },
+      { id: 'c-staff', spaceId: 's1', name: 'appeals', type: 'text', categoryId: 'cat-staff', createdAt: Date.now() },
+    ]).run();
+    testDb.insert(schema.categoryOverrides).values({ categoryId: 'cat-staff', targetType: 'role', targetId: 's1', allow: '0', deny: '2' }).run();
+
+    const res = await app.inject({ method: 'POST', url: '/api/spaces/s1/public-join' });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { categories: Array<{ name: string }>; channels: Array<{ name: string }> };
+    expect(body.categories.map((category) => category.name)).toEqual(['Lobby']);
+    expect(body.channels.map((channel) => channel.name)).toEqual(['general']);
+    expect(res.body).not.toContain('Ban appeals');
+  });
 });
 
 describe('GET /api/spaces/explore — what Discovery lists', () => {

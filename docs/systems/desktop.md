@@ -52,7 +52,7 @@ such method, and its buttons keep the colour it was built with until it updates.
 Default size: 1280 x 800
 Minimum size: 940 x 500
 Title bar: hiddenInset (macOS), hidden with titleBarOverlay (Windows/Linux)
-Title bar overlay: bg #0d0e11, symbol #edeef2, height 32px
+Title bar overlay: bg #000000, symbol #f2f2f2, height 32px
 Background color: #0d0e11
 ```
 

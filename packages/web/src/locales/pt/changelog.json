@@ -4,6 +4,28 @@
   "note": "Novo na {{version}}: {{title}}",
   "noteClose": "Fechar",
   "versions": {
+    "1.42.1": {
+      "title": "Mais seguro",
+      "items": {
+        "hidden": "Gerenciar cargos não abre mais um canal oculto: as permissões de um canal só podem ser alteradas por quem consegue vê-lo. Quem torna um canal privado continua nele.",
+        "roles": "Quem sai de um espaço ou é removido dele perde os cargos que tinha ali. Entrar de novo é começar do zero.",
+        "voice": "Quem é removido de um espaço ou de uma conversa em grupo sai da chamada na hora, e ninguém fica em um canal de voz sem ser visto.",
+        "photos": "Uma foto enviada não diz mais onde foi tirada: local, hora e aparelho são retirados das imagens JPEG, e a imagem em si não é alterada.",
+        "calls": "Em uma conversa, dá para iniciar uma chamada algumas vezes por minuto, não sem parar.",
+        "landing": "No celular, a página para visitantes mostra os cartões assim que você chega a eles, e não um instante depois.",
+        "operators": "Se você mantém uma instância, atualize. Depois da atualização, o servidor remove os cargos deixados por quem saiu antes; não há mais nada a fazer."
+      }
+    },
+    "1.42.0": {
+      "title": "Um visual novo",
+      "items": {
+        "look": "O Tavvit está de cara nova: preto, branco e luz. Botões e campos são arredondados, os painéis são molduras iluminadas pelo canto, e as fontes são Outfit e JetBrains Mono. O seu tema, a sua cor de destaque e todas as outras configurações continuam como estão; se você nunca escolheu uma fonte, recebe a nova.",
+        "window": "A janela foi reorganizada: os seus espaços são blocos no alto da barra lateral, a barra acima de uma página diz onde você está, e Início, Caixa de entrada, Amigos e Explorar abrem cada um com um cabeçalho.",
+        "home": "O Início abre com uma saudação, mostra de relance o que não foi lido e quem está online, e traz os seus espaços como cartões.",
+        "light": "Um pouco de luz se move atrás da abertura de uma página e acompanha o ponteiro. Configurações, Aparência, Luz desliga isso, e Reduzir movimento a mantém parada.",
+        "pages": "A página para visitantes e a documentação para desenvolvedores usam o mesmo visual, e a página para visitantes está nos cinco idiomas."
+      }
+    },
     "1.41.4": {
       "title": "Mais firme e mais rápido",
       "items": {

@@ -177,7 +177,10 @@ describe('a viewer whose home is another instance', () => {
     expect(status).toBe(200);
     expectStoredBits(body.roles);
     as(REPLICATED.manager.id);
-    expect((await app.inject({ method: 'GET', url: `/api/channels/${PRIVATE_ID}/overrides` })).statusCode).toBe(200);
+    // The rows of a channel they see. A channel hidden from them keeps its rows, as for anyone
+    // who manages roles and cannot see it (permissions.md, "Who may set overrides").
+    expect((await app.inject({ method: 'GET', url: `/api/channels/${GENERAL_ID}/overrides` })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: `/api/channels/${PRIVATE_ID}/overrides` })).statusCode).toBe(403);
   });
 
   it('gets display fields only otherwise', async () => {
@@ -235,7 +238,21 @@ describe('channel and category override rows', () => {
     expect(category.json<{ code: string }>().code).toBe('not_space_member');
   });
 
-  it.each(MANAGERS)('are sent to %s', async (_label, userId) => {
+  // Managing roles is not seeing every channel: the rows of a channel or category go to a manager
+  // who sees it. Until the security audit of 2026-11-14 they went to every manager, who could then
+  // write themselves into a channel kept from their own roles.
+  it('of a place hidden from a MANAGE_ROLES holder are refused to them, and those of a place they see are sent', async () => {
+    as(USERS.manager);
+    for (const url of [`/api/channels/${PRIVATE_ID}/overrides`, `/api/categories/${CATEGORY_ID}/overrides`]) {
+      const res = await app.inject({ method: 'GET', url });
+      expect(res.statusCode).toBe(403);
+      expect(res.json<{ code: string; details: { permission: string } }>()).toMatchObject({ code: 'missing_permission', details: { permission: 'VIEW_CHANNEL' } });
+    }
+    const general = await app.inject({ method: 'GET', url: `/api/channels/${GENERAL_ID}/overrides` });
+    expect(general.statusCode).toBe(200);
+  });
+
+  it.each(MANAGERS.filter(([, userId]) => userId !== USERS.manager))('are sent to %s', async (_label, userId) => {
     as(userId);
     const channel = await app.inject({ method: 'GET', url: `/api/channels/${PRIVATE_ID}/overrides` });
     expect(channel.statusCode).toBe(200);

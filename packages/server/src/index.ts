@@ -107,7 +107,8 @@ import './utils/federationRollback.js'; // Side-effect: registers rollback callb
 import { registerCallRelayHooks } from './ws/events.js';
 import { resetStalePresenceOnBoot } from './utils/presenceBoot.js';
 
-import { registerWebSocket } from './ws/handler.js';
+import { connectionManager, registerWebSocket } from './ws/handler.js';
+import { startVoiceReconciler, stopVoiceReconciler } from './utils/livekitReconcile.js';
 import { WEBSOCKET_OPTIONS } from './ws/socketOptions.js';
 import path from 'path';
 import fs from 'fs';
@@ -486,6 +487,8 @@ async function main(): Promise<void> {
   loadVoiceOverlayChannels();
   // Only with TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET set (utils/twitchLive.ts).
   startTwitchLive(config.twitch.redirectUri);
+  // Only with LiveKit: who is in a voice channel there is held to who this server has in it (utils/livekitReconcile.ts).
+  startVoiceReconciler((roomId) => connectionManager.getRoomParticipants(roomId));
 
   // The space directory pinger stays outside the workers guard on purpose:
   // the two-instance harness disables the workers and still needs the pinger,
@@ -505,6 +508,7 @@ async function main(): Promise<void> {
     stopEmailWorker();
     stopSecuritySweeper();
     stopTwitchLive();
+    stopVoiceReconciler();
     await app.close();
     closeDatabase(); // checkpoints WAL — leaves a complete on-disk file
     process.exit(0);

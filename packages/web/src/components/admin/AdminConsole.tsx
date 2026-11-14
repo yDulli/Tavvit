@@ -216,26 +216,29 @@ export function AdminConsole() {
     );
   }
 
+  // Evolve's settings page: the console's own navigation is a list inside the page, beside its
+  // panels, under the app's sidebar and topbar like every other page.
   return (
-    <div className="flex min-h-0 min-w-0 flex-1">
-      <nav aria-label={t('admin:console.title')} className="lit relative flex w-[var(--sidebar-width)] flex-shrink-0 flex-col border-r border-border-hard bg-surface-channel">
-        <div className="panel-bar flex items-center gap-2 px-4">
-          <Icon name="shield" size={16} className="flex-shrink-0 text-txt-secondary" />
-          <span className="truncate text-lead font-semibold tracking-[-0.01em] text-txt-primary">{t('admin:console.title')}</span>
+    <main className="relative isolate flex min-h-0 min-w-0 flex-1 overflow-y-auto bg-surface-chat">
+      <div className="mx-auto flex w-full max-w-[1440px] gap-8 px-8 pb-12 pt-6">
+        <nav aria-label={t('admin:console.title')} className="sticky top-6 flex w-[220px] flex-shrink-0 flex-col self-start">
+          <div className="mb-3 flex items-center gap-2 px-2">
+            <Icon name="shield" size={14} className="flex-shrink-0 text-txt-tertiary" />
+            <span className="label-mono truncate">{t('admin:console.title')}</span>
+          </div>
+          <div className="sliding-list">
+            <SlidingMark variant="row" />
+            {navigation}
+          </div>
+        </nav>
+        <div className="min-w-0 flex-1">
+          <div className="relative z-20 flex justify-end">{search}</div>
+          <div key={`${section}:${revision}`} className="pt-2">
+            <SettingsPanelSuspense>{panels[section]()}</SettingsPanelSuspense>
+          </div>
         </div>
-        <div className="sliding-list min-h-0 flex-1 overflow-y-auto px-2 py-3 no-scrollbar">
-          <SlidingMark variant="row" />
-          {navigation}
-        </div>
-      </nav>
-      <main className="lit relative isolate min-h-0 min-w-0 flex-1 overflow-y-auto bg-surface-chat">
-        <div aria-hidden="true" className="hero-light" />
-        <div className="relative z-20 flex justify-end px-6 pt-4">{search}</div>
-        <div key={`${section}:${revision}`} className="mx-auto w-full max-w-[1120px] px-6 pb-12 pt-4">
-          <SettingsPanelSuspense>{panels[section]()}</SettingsPanelSuspense>
-        </div>
-      </main>
+      </div>
       {details}
-    </div>
+    </main>
   );
 }

@@ -18,9 +18,9 @@ import { SHEET_HANDLE, SHEET_ROW } from '../layout/mobileClasses';
 
 // ── Desktop item button ──────────────────────────────────────────────────────
 
-// One row geometry for every item: 32px, a 5px corner, 13px medium text. An
+// One row geometry for every item: 32px, a 6px corner, 13px regular text. An
 // item the arrow keys moved to looks like a hovered one.
-const ITEM_BASE = 'group/item w-full min-h-8 text-left px-2 py-1.5 mx-1 text-ui font-medium leading-snug rounded-md flex items-center gap-2.5';
+const ITEM_BASE = 'group/item w-full min-h-8 text-left px-2 py-1.5 mx-1 text-ui font-normal leading-snug rounded-md flex items-center gap-2.5';
 const ITEM_CLASS =
   `${ITEM_BASE} text-txt-secondary transition-colors hover:bg-interactive-selected hover:text-txt-primary active:bg-interactive-active outline-none focus-visible:bg-interactive-selected focus-visible:text-txt-primary`;
 const ITEM_DANGER_CLASS =
@@ -73,7 +73,7 @@ function CheckboxIndicator({ checked }: { checked: boolean }) {
       }`}
     >
       {checked && (
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="white">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="rgb(var(--on-accent))">
           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
         </svg>
       )}

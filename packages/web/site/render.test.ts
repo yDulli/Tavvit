@@ -19,15 +19,19 @@ describe('the website, rendered while building', () => {
   it('renders the product page with no browser around', () => {
     expect(typeof window).toBe('undefined');
     const html = renderLanding();
-    expect(html).toContain('<div id="lp">');
-    // The opening's two lines, as the catalog breaks them.
-    for (const line of en.hero.title.split('\n')) expect(html).toContain(`<span class="lp-line">${line}</span>`);
+    // The page moves until someone says otherwise: the footer's switch and the system's setting are read in a browser.
+    expect(html).toContain('<div id="lp" data-motion="on">');
+    // The opening's lines, as the catalog breaks them, and the last one in a tone of its own.
+    for (const line of en.home.hero.title.split('\n')) expect(html).toContain(`<span class="lp-line">${line}</span>`);
+    expect(html).toContain(`<span class="lp-line lp-hero-accent">${en.home.hero.accent}</span>`);
     expect(html).toMatch(/<h1 [^>]*id="landing-title"[^>]*><span class="lp-line">/);
     expect(html).toContain(en.questions.title);
     // Both of the choices by device are in it; the stylesheet shows one.
     for (const name of ['lp-for-windows', 'lp-not-windows']) expect(html).toContain(name);
-    // The plan of the opening can be walked through: its eight rooms are buttons, in the HTML before any script.
-    expect(html.match(/<button type="button" class="lp-room"/g) ?? []).toHaveLength(8);
+    // What is inside can be chosen: its four parts are tabs, in the HTML before any script.
+    expect(html.match(/ role="tab"/g) ?? []).toHaveLength(4);
+    // The questions open without a script: each is a <details>.
+    expect(html.match(/<details/g) ?? []).toHaveLength(Object.keys(en.questions.items).length);
     // The example a bot would send names this server, which fills in its own address.
     expect(html).toContain(`${SITE_ORIGIN_TOKEN}/api/`);
     // Nothing is hidden until a script runs: a reader without one sees every part.
@@ -39,7 +43,7 @@ describe('the website, rendered while building', () => {
     const html = renderPublicPage(path);
     // The page's name as its heading, written as HTML writes text.
     const name = (siteMeta(path).title.split(' · ')[0] ?? '').replace(/&/g, '&amp;').replace(/'/g, '&#x27;');
-    expect(html).toContain(`<h1 class="page-title">${name}</h1>`);
+    expect(html).toContain(`<h1 class="page-title display-title">${name}</h1>`);
     expect(html.length).toBeGreaterThan(500);
   });
 });

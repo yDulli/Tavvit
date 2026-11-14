@@ -4,7 +4,7 @@ import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { config } from '../config.js';
 import * as schema from './schema.js';
-import { ensureDefaults, backfillOneOnOneDmMembership } from './migrate.js';
+import { ensureDefaults, backfillOneOnOneDmMembership, removeGrantsWithoutMembership } from './migrate.js';
 import { normalizeAllRolePositions } from './rolePositions.js';
 import { normalizeStoredPermissions } from './permissionStrings.js';
 import { setWorkerId } from '../utils/snowflake.js';
@@ -77,6 +77,10 @@ export function initDatabase() {
       throw err;
     }
   };
+
+  // Roles and personal overrides of people who left a space before those went with the
+  // membership (utils/spaceMemberRemoval.ts). Idempotent, and nothing to do once applied.
+  removeGrantsWithoutMembership(sqlite, { beforeChanges: snapshotBefore('removal of roles left behind') });
 
   // A detached account is homed on this instance (federation.md, "Detached
   // accounts are homed here"): accounts detached before that rule still carry

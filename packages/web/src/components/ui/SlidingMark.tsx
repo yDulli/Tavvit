@@ -10,6 +10,7 @@ const VARIANT_CLASS = {
   row: 'sliding-mark-row',
   line: 'sliding-mark-line',
   pill: 'sliding-mark-pill',
+  tile: 'sliding-mark-tile',
 } as const;
 
 interface Offset {

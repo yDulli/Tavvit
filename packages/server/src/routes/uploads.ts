@@ -41,7 +41,11 @@ export async function uploadRoutes(app: FastifyInstance): Promise<void> {
     const safeName = path.basename(filename);
     const filepath = path.join(config.uploadDir, safeName);
 
-    if (!fs.existsSync(filepath)) {
+    // A file, and nothing else: the staging folder inside the upload directory (`.tus`) and the
+    // directory itself (`..`, which the join above leaves in it) have a name too, and reading one
+    // as a file was a server error with a line in the log for every request, signed in or not.
+    const stat = fs.statSync(filepath, { throwIfNoEntry: false });
+    if (!stat?.isFile()) {
       return sendError(reply, 404, 'file_not_found');
     }
 
@@ -67,7 +71,6 @@ export async function uploadRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Support Range requests for audio/video seeking
-    const stat = fs.statSync(filepath);
     const fileSize = stat.size;
     const rangeHeader = request.headers.range;
 

@@ -1094,3 +1094,7 @@ For full wire formats, see `docs/systems/websocket.md`.
 **Pins.** Any member may pin in a conversation (`checkDmMessagePin`), and it relays as `pin_set`, one event in `events/dmMessages.ts`, with the message in shared coordinates. The checks are a reaction's: attribution, a peer of the conversation, a member of it. Each event sets the whole state, so a redelivery changes nothing, and `pin_changed_at` keeps an older state from replacing a newer one. The outbox folds a newer state over what is queued (`pinRule`). A catch-up pull replays them through the mutation log. A conversation's pin leaves no line in the timeline: that line would have to name a message by an id each instance holds differently.
 
 **Spoilers** are in the content or on the attachment (`FederationRelayAttachment.spoiler`). **Forwards** are ordinary new messages with `message.forwarded`. A sender that does not know them sends neither, and a receiver that does not know them shows a normal message.
+
+## Blocks and edits
+
+A block between the two people of a 1-on-1 closes it to new messages (social.md). It also stops editing and pinning there, for both (`checkDmMessageEdit`, `checkDmMessagePin`: `403 blocked_by_you` or `interaction_unavailable`): an edit is new words that reach the other person at once, with its links looked up again. A group the two share is not affected.

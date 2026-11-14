@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Crumb, PageBar, TopbarLead } from '../layout/TopbarSlots';
+import { SpaceCrumbs } from '../layout/PlaceCrumbs';
 import { useNavigate } from 'react-router-dom';
 import type { SpaceEvent } from '@backspace/shared/src/events';
 import type { User } from '@backspace/shared';
@@ -16,6 +18,7 @@ import { useVoiceStore } from '../../stores/voiceStore';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Icon } from '../ui/Icon';
 import { EventFormModal } from './EventFormModal';
+import { PageBody, PageHeader } from '../ui/PageHeader';
 import { ChannelIcon } from '../ui/ChannelIcon';
 
 /** Which instance hosts a space, as the client knows it. */
@@ -104,7 +107,7 @@ function EventCard({ event, origin, canManage, past, onEdit }: EventCardProps) {
   const place = event.location ?? channel?.name ?? null;
 
   return (
-    <li className="surface-card p-4">
+    <li className="surface-card rounded-lg p-5">
       <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
         <div className="min-w-0 flex-1">
           <p className="label-mono mb-1">{past ? t('spaces:events.ended') : formatRelativeDay(event.startsAt)}</p>
@@ -179,10 +182,16 @@ function EventCard({ event, origin, canManage, past, onEdit }: EventCardProps) {
   );
 }
 
-/** A space's events: what is coming up, who is going, and what ended in the last day. */
-export function SpaceEventsView({ spaceId }: { spaceId: string }) {
+/**
+ * A space's events: what is coming up, who is going, and what ended in the last day. As a page of
+ * the app (`page`) it opens the way every page does, with the space's name over the title and the
+ * way to a new event at the far end; on a phone its screen has a bar of its own, so the line about
+ * it and the button stand above the list.
+ */
+export function SpaceEventsView({ spaceId, page = false }: { spaceId: string; page?: boolean }) {
   const { t } = useTranslation(['spaces']);
   const origin = useSpaceOrigin(spaceId);
+  const spaceName = useSpaceStore((state) => state.spaces.find((space) => space.id === spaceId)?.name);
   const events = useEventStore((state) => state.bySpace.get(eventSpaceKey(origin, spaceId)));
   const permissions = useSpaceStore((state) => state.spacePermissions.get(spaceId));
   const myRowId = useAuthStore((state) => state.user?.id);
@@ -201,18 +210,21 @@ export function SpaceEventsView({ spaceId }: { spaceId: string }) {
   const past = (events ?? []).filter(hasEnded);
   const canManage = (event: SpaceEvent) => canManageEvents || (origin === '' && event.createdBy === myRowId);
 
-  return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-ui text-txt-secondary">{t('spaces:events.intro')}</p>
-          {canManageEvents && (
-            <button type="button" onClick={() => setForm({ open: true, event: null })} className="btn-primary btn-sm flex-shrink-0">
-              <Icon name="plus" size={14} />
-              {t('spaces:events.create')}
-            </button>
-          )}
-        </div>
+  const createButton = canManageEvents ? (
+    <button type="button" onClick={() => setForm({ open: true, event: null })} className={`btn-primary flex-shrink-0 ${page ? '' : 'btn-sm'}`}>
+      <Icon name="plus" size={14} />
+      {t('spaces:events.create')}
+    </button>
+  ) : null;
+
+  const list = (
+    <>
+        {!page && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-ui text-txt-secondary">{t('spaces:events.intro')}</p>
+            {createButton}
+          </div>
+        )}
 
         {error && <p role="alert" className="text-meta text-txt-danger">{error}</p>}
 
@@ -242,7 +254,21 @@ export function SpaceEventsView({ spaceId }: { spaceId: string }) {
             </ul>
           </section>
         )}
-      </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      {page ? (
+        <>
+          <PageHeader eyebrow={spaceName} title={t('spaces:events.title')} description={t('spaces:events.intro')} actions={createButton} />
+          <PageBody>
+            <div className="flex max-w-3xl flex-col gap-4">{list}</div>
+          </PageBody>
+        </>
+      ) : (
+        <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">{list}</div>
+      )}
 
       <EventFormModal
         isOpen={form.open}
@@ -260,11 +286,16 @@ export function SpaceEventsPage({ spaceId }: { spaceId: string }) {
   const { t } = useTranslation('spaces');
   return (
     <div className="flex min-w-0 flex-1 flex-col">
-      <header className="panel-bar flex h-12 flex-shrink-0 items-center gap-2 px-4">
-        <Icon name="calendar" size={16} className="text-txt-tertiary" />
-        <h1 className="truncate text-body text-txt-primary">{t('events.title')}</h1>
-      </header>
-      <SpaceEventsView spaceId={spaceId} />
+      <PageBar>
+        <TopbarLead>
+          <SpaceCrumbs spaceId={spaceId} />
+          <Crumb current>
+            <Icon name="calendar" size={15} className="flex-shrink-0 text-txt-tertiary" />
+            <span className="truncate">{t('events.title')}</span>
+          </Crumb>
+        </TopbarLead>
+      </PageBar>
+      <SpaceEventsView spaceId={spaceId} page />
     </div>
   );
 }

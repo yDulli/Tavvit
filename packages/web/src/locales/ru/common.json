@@ -42,7 +42,8 @@
     "previous": "Назад",
     "next": "Далее",
     "preview": "Предпросмотр",
-    "logIn": "Войти"
+    "logIn": "Войти",
+    "searchOrJump": "Поиск или переход…"
   },
   "states": {
     "loading": "Загрузка…",
@@ -83,7 +84,8 @@
     "noMembersFound": "Участники не найдены",
     "or": "или",
     "nameAZ": "Имя (А–Я)",
-    "adminConsole": "Панель администратора"
+    "adminConsole": "Панель администратора",
+    "whereYouAre": "Где вы находитесь"
   },
   "time": {
     "today": "Сегодня в {{time}}",

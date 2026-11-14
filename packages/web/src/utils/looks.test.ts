@@ -52,7 +52,7 @@ describe('a look in a link', () => {
   it('brings what a hand-made link holds into range, and drops a colour white text cannot be read on', () => {
     const decoded = decodeLook(`#${linkOf({ n: 'a\u0000b\n', h: 9999, s: -5, d: 0.3, a: '#ffffff', l: 'disco', c: 'round', f: 'comic', p: 'circle', m: 'bubbles', y: 'cozy' })}`);
     expect(decoded?.name).toBe('a b');
-    expect(decoded?.look).toMatchObject({ surface: { hue: 359, strength: 0, depth: 0.5 }, accent: null, light: 'on', corners: 'round', font: 'geist' });
+    expect(decoded?.look).toMatchObject({ surface: { hue: 359, strength: 0, depth: 0.5 }, accent: null, light: 'on', corners: 'round', font: 'outfit' });
   });
 });
 

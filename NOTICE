@@ -82,6 +82,29 @@ Space Grotesk
   The full license text is shipped alongside the font file at
   packages/web/public/fonts/SpaceGrotesk-OFL.txt.
 
+Outfit
+  Files:    packages/web/public/fonts/Outfit-Latin.woff2
+            packages/web/public/fonts/Outfit-LatinExt.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2021 The Outfit Project Authors
+            (https://github.com/Outfitio/Outfit-Fonts)
+  The files are the variable web subsets of the Fontsource package
+  (@fontsource-variable/outfit), unchanged. The full license text is shipped
+  alongside the font files at packages/web/public/fonts/Outfit-OFL.txt.
+
+JetBrains Mono
+  Files:    packages/web/public/fonts/JetBrainsMono-Latin.woff2
+            packages/web/public/fonts/JetBrainsMono-LatinExt.woff2
+            packages/web/public/fonts/JetBrainsMono-Cyrillic.woff2
+            packages/web/public/fonts/JetBrainsMono-CyrillicExt.woff2
+  License:  SIL Open Font License, Version 1.1
+  Notice:   Copyright 2020 The JetBrains Mono Project Authors
+            (https://github.com/JetBrains/JetBrainsMono)
+  The files are the variable web subsets of the Fontsource package
+  (@fontsource-variable/jetbrains-mono), unchanged. The full license text is
+  shipped alongside the font files at
+  packages/web/public/fonts/JetBrainsMono-OFL.txt.
+
 Typefaces of the name styles (profile decorations, docs/systems/decorations.md)
   The files are the web subsets Google Fonts serves for each family, unchanged,
   served by the app itself under the family names in

@@ -299,6 +299,48 @@ unheld bit the `PUT` rule protects. The cost is that a moderator cannot remove
 an override the owner set with a bit the moderator lacks; the owner, an
 instance admin or an `ADMINISTRATOR` holder can.
 
+**In the channel or category too.** What an override write gives, by allowing
+a bit or by no longer denying it, the actor must also hold in that channel or
+category, as its own overrides leave them (`overrideGrantRefusal` in
+`routes/channels.ts`; `403 cannot_grant_unowned_permissions`). Someone a
+channel keeps from writing cannot lift that there: not for themselves, not
+for a lower role they hold, not for anyone else. Taking away (a new deny, an
+allow removed) stays on the rule of the space alone. The consequence for a
+moderator who is not an administrator: to make a channel read-only and then
+let one role write, allow the role first; once the moderator cannot write
+there, they cannot hand writing out.
+
+### Who may set overrides
+
+Reading and writing the overrides of a channel or category takes two things
+(`overridePlaceRefusal`):
+
+1. `MANAGE_ROLES` in the space (`viewerReadsPermissionData`), as before.
+2. `VIEW_CHANNEL` in that place: for a channel `computePermissions` with the
+   channel, for a category `computeCategoryPermissions` (the rights in the
+   space with the category's own overrides on them). Missing it answers
+   `403 missing_permission` with `permission: 'VIEW_CHANNEL'`.
+
+Until 1.42.0 the first alone was enough. A moderator could write an override
+on themselves into a channel hidden from their own roles and then read,
+change and delete it. Found in the security audit of 2026-11-14, with every
+case in `routes/securityAudit.regressions.test.ts`.
+
+**Whoever changes who sees a place stays in it** (`keepActorInSight`). The
+Private switch is @everyone's View Channels deny, and a moderator whom no
+allowed role lets in would hide the channel from themselves and, by the rule
+above, never get it back. So when a write leaves its own writer without sight
+of the place, the same transaction writes an override on them that allows
+View Channels: what they held there a moment ago, and nothing more. It is in
+the audit log as its own `override_update`. The owner, instance admins and
+`ADMINISTRATOR` holders see everything and get no such row.
+
+An override on a member names a member of the space (`400 member_not_found`
+otherwise): before, any text of any length was stored as the id of one. A row
+left from before can still be deleted. When someone leaves, is kicked or
+banned, the overrides naming them go with the membership (spaces.md, "Leave /
+Kick").
+
 The rule is `roleBitsChangeRefusal` / `overrideChangeRefusal` in
 `packages/shared/src/permissions.ts`, used by the routes and by the client.
 The client reads "held" from `spacePermissions` (the `myPermissions` the
@@ -590,8 +632,8 @@ and category Permissions tabs, and every one of those needs `MANAGE_ROLES`
 | Viewer | Roles | Member rows' roles | Override rows | Own permissions |
 |---|---|---|---|---|
 | Not a member (explore, invite preview, directory, join previews) | none | none | none | none |
-| Member without `MANAGE_ROLES` (a `MANAGE_CHANNELS` holder and a member whose role has overrides included) | every role: `id`, `spaceId`, `name`, `color`, `position`, `isEveryone`, `createdAt`; no `permissions` field | display fields only | refused (`403 missing_permission`) | `myPermissions` on the space and on each channel it can see. `isPrivate` comes on channels and categories in `GET /api/spaces/:id`, on channels only in `ready`, and on neither in the `public-join` answer and `join_request_accepted` |
-| Member who holds `MANAGE_ROLES` in the space (the owner, instance admins and `ADMINISTRATOR` holders hold it) | every role with its display fields and `permissions` | display fields only | `GET /channels/:id/overrides`, `GET /categories/:id/overrides` | the same |
+| Member without `MANAGE_ROLES` (a `MANAGE_CHANNELS` holder and a member whose role has overrides included) | every role: `id`, `spaceId`, `name`, `color`, `position`, `isEveryone`, `createdAt`; no `permissions` field | display fields only | refused (`403 missing_permission`) | `myPermissions` on the space and on each channel it can see. `isPrivate` comes on channels and categories in `GET /api/spaces/:id`, on channels only in `ready`, and on categories in the `public-join` answer and `join_request_accepted`, which leave out a private category the new member has no channel in (`shownCategories`) |
+| Member who holds `MANAGE_ROLES` in the space (the owner, instance admins and `ADMINISTRATOR` holders hold it) | every role with its display fields and `permissions` | display fields only | `GET /channels/:id/overrides`, `GET /categories/:id/overrides`, for a channel or category they see ("Who may set overrides") | the same |
 
 `MANAGE_ROLES` counts at space level only: a member whose role is allowed it
 by an override on one channel holds it on that channel (it shows in that

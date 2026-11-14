@@ -72,9 +72,11 @@ export function removeUnusedWebhookAccounts(): number {
 }
 
 const SECRET_PATH = /^(\/api\/webhooks\/[^/]+)\/(?!rotate$)[^/]+$/;
+/** The voice overlay's page and what it asks (docs/systems/voice-overlay.md): its address is its secret. */
+const OVERLAY_PATH = /^((?:\/api)?\/overlay\/voice)\/[^/]+$/;
 
-/** A request's path as the log may see it: a webhook's address holds its secret. */
+/** A request's path as the log may see it: a webhook's address holds its secret, and so does a voice overlay's. */
 export function pathForLog(url: string): string {
   const path = url.split('?')[0] ?? '';
-  return path.replace(SECRET_PATH, '$1/[token]');
+  return path.replace(SECRET_PATH, '$1/[token]').replace(OVERLAY_PATH, '$1/[secret]');
 }

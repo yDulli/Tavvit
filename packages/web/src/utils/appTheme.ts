@@ -18,10 +18,12 @@ import { applyLook, clearLook, DEFAULT_LOOK, type LookSettings } from './appeara
  * are then lifted just far enough to stay readable on the lifted surfaces. A
  * test checks the ends of every range.
  *
- * The default, Carbon (the graphite of globals.css, a little cool), adds
- * nothing: the colours in globals.css stay in force. The rest of how the app
- * looks (shape, messages, typeface, light) is in appearanceOptions.ts;
- * `applyAppearance` puts both on the page.
+ * The default, Carbon (the black of globals.css, the "Schwarzlicht" look), adds
+ * nothing: the colours in globals.css stay in force. Its canvas is pure black,
+ * which has no luminance to scale, so the canvas stays black in every theme and
+ * a theme colours what stands on it: the wells, the frames, the lines. The rest
+ * of how the app looks (shape, messages, typeface, light) is in
+ * appearanceOptions.ts; `applyAppearance` puts both on the page.
  */
 
 export interface SurfaceSettings {
@@ -37,9 +39,8 @@ export interface SurfaceSettings {
 export const HUE_RANGE = SURFACE_RANGES.hue;
 export const STRENGTH_RANGE = SURFACE_RANGES.strength;
 /**
- * Depth stops at 4: graphite is already lighter than the old near-black, and
- * four steps up its floating panel is as light as five steps once were, the
- * most that still keeps the primary text at 9:1 on it.
+ * Depth stops at 4: four steps up, the floating panel is two and a half times as
+ * bright as shipped, and the primary text still stands at well over 9:1 on it.
  */
 export const DEPTH_RANGE = SURFACE_RANGES.depth;
 
@@ -58,35 +59,40 @@ export const THEME_PRESETS: Record<Exclude<ThemeId, 'carbon'>, SurfaceSettings> 
 };
 
 /**
- * Where Carbon sits, for a custom theme to start from and for its swatch: a
- * blue-grey at low strength reproduces the shipped surfaces to within one
- * step of a channel.
+ * Where Carbon sits, for a custom theme to start from and for its swatch: grey
+ * at no strength reproduces the shipped surfaces exactly.
  */
-export const CARBON_SETTINGS: SurfaceSettings = { hue: 226, strength: 11, depth: 0 };
+export const CARBON_SETTINGS: SurfaceSettings = { hue: 0, strength: 0, depth: 0 };
 
 /**
- * The surfaces as shipped (globals.css). A theme at depth 0 is exactly as
- * bright as these and differs only in colour. Their order is the layout's.
+ * The surfaces as shipped (globals.css; carbonSync.test.ts holds the two together).
+ * A theme at depth 0 is exactly as bright as these and differs only in colour.
+ * Their order is the layout's: the canvas (the page and the window), ink a breath
+ * above it (the sidebar, the people column, fields), the panel, a control raised
+ * on it, and what floats.
  */
 export const CARBON_SURFACES = {
-  '--bg-base': [13, 14, 17],
-  '--bg-channel': [17, 18, 22],
-  '--bg-chat': [21, 22, 27],
-  '--bg-members': [18, 19, 23],
-  '--bg-elevated': [30, 31, 37],
-  '--bg-input': [12, 13, 16],
-  '--border-hard': [35, 36, 43],
-  '--border-soft': [50, 51, 60],
-  '--interactive-muted': [78, 80, 92],
+  '--bg-base': [0, 0, 0],
+  '--bg-chat': [0, 0, 0],
+  '--bg-channel': [5, 5, 5],
+  '--bg-members': [5, 5, 5],
+  '--bg-input': [5, 5, 5],
+  '--bg-panel': [11, 11, 11],
+  '--bg-raised': [20, 20, 20],
+  '--bg-elevated': [29, 29, 29],
+  '--border-faint': [23, 23, 23],
+  '--border-hard': [41, 41, 41],
+  '--border-soft': [64, 64, 64],
+  '--interactive-muted': [110, 110, 110],
 } as const satisfies Record<string, Rgb>;
 
 type SurfaceToken = keyof typeof CARBON_SURFACES;
 
 /** The quieter text colours as shipped. */
 const TEXT_BASES = {
-  '--text-secondary': [172, 175, 186],
-  '--text-tertiary': [141, 144, 156],
-  '--text-category': [150, 153, 166],
+  '--text-secondary': [168, 168, 168],
+  '--text-tertiary': [140, 140, 140],
+  '--text-category': [140, 140, 140],
 } as const satisfies Record<string, Rgb>;
 
 type TextToken = keyof typeof TEXT_BASES;
@@ -102,7 +108,7 @@ export const SURFACE_VARIABLES = [
 ] as const;
 
 /** The colour of the browser's own chrome with the default surfaces (`--bg-base`). */
-export const DEFAULT_FRAME_COLOR = '#0d0e11';
+export const DEFAULT_FRAME_COLOR = '#000000';
 
 /** Saturation, in percent, that a strength of 100 gives. */
 const MAX_SATURATION = 85;

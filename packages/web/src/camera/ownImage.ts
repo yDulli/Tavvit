@@ -24,7 +24,7 @@ export const OWN_IMAGE_MAX_SIDE = 2560;
 export const OWN_IMAGE_MAX_BYTES = 25 * 1024 * 1024;
 
 /** What shows through where a picture is transparent: the app's content surface. */
-const BACKDROP_FILL = '#15161b';
+const BACKDROP_FILL = '#0b0b0b';
 
 export type OwnImageProblem = 'tooLarge' | 'notAnImage' | 'notKept';
 

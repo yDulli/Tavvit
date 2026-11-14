@@ -12,7 +12,7 @@ export const CORNERS = ['sharp', 'standard', 'round'] as const;
 export const MESSAGE_STYLES = ['rows', 'lines', 'bubbles'] as const;
 export const DENSITIES = ['compact', 'cozy', 'spacious'] as const;
 export const AVATAR_SHAPES = ['rounded', 'circle', 'square'] as const;
-export const FONTS = ['geist', 'plexSans', 'inter', 'grotesk', 'mono', 'system'] as const;
+export const FONTS = ['outfit', 'geist', 'plexSans', 'inter', 'grotesk', 'mono', 'system'] as const;
 export const SIDEBAR_WIDTHS = ['narrow', 'standard', 'wide'] as const;
 export const CONTRASTS = ['standard', 'high'] as const;
 export const LIGHTS = ['on', 'off'] as const;
@@ -30,8 +30,11 @@ export type Light = (typeof LIGHTS)[number];
 export type StatusPalette = (typeof STATUS_PALETTES)[number];
 export type TimeFormat = (typeof TIME_FORMATS)[number];
 
-/** How much every radius is multiplied by, per corner option (`--radius-scale`). */
-export const CORNER_SCALE: Record<Corners, number> = { sharp: 0, standard: 1, round: 2.2 };
+/**
+ * How much every radius is multiplied by, per corner option (`--radius-scale`). Standard is
+ * Showomat's shape (pills and 24px frames); sharp squares everything, pills included.
+ */
+export const CORNER_SCALE: Record<Corners, number> = { sharp: 0, standard: 1, round: 1.5 };
 
 export interface LookSettings {
   corners: Corners;
@@ -52,7 +55,7 @@ export const DEFAULT_LOOK: LookSettings = {
   messageStyle: 'rows',
   density: 'cozy',
   avatarShape: 'rounded',
-  font: 'geist',
+  font: 'outfit',
   sidebarWidth: 'standard',
   contrast: 'standard',
   light: 'on',

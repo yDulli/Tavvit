@@ -16,10 +16,11 @@ import { Icon } from '../ui/Icon';
 type DevicePanel = 'input' | 'output';
 
 /**
- * The right end of the top bar: the microphone and the headphones (each with
- * the menu of its devices), the settings, and who you are. Muting and deafening
- * are reached from anywhere in the app, in or out of a call, which is why they
- * live here and not in the voice panel.
+ * The foot of the sidebar (Evolve's account area): who you are, then the
+ * microphone and the headphones (each with the menu of its devices, which opens
+ * upward) and the settings. Muting and deafening are reached from anywhere in
+ * the app, in or out of a call, which is why they live here and not in the
+ * voice panel.
  *
  * A mute a moderator imposed (space mute, space deafen, or the voice
  * permission withheld) shows in amber and cannot be lifted from here.
@@ -103,8 +104,10 @@ export function UserControls() {
     : isDeafened ? t('spaces:sidebar.userArea.undeafen') : t('spaces:sidebar.userArea.deafen');
 
   return (
-    <div ref={panelRef} className="relative flex h-full flex-shrink-0 items-center gap-1 pr-2">
-      <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border-hard" />
+    <div ref={panelRef} className="account-bar relative flex flex-shrink-0 items-center gap-0.5 border-t border-border-hard px-2 py-2">
+      <Identity
+        onOpen={(rect) => openUserProfile(user, '', rect, 'right')}
+      />
 
       <SwitchGroup
         icon={micOff ? 'mic-off' : 'mic'}
@@ -128,20 +131,14 @@ export function UserControls() {
       <button
         type="button"
         onClick={() => openSettings()}
-        className="icon-btn icon-btn-lg"
+        className="icon-btn"
         aria-label={t('common:labels.settings')}
       >
-        <Icon name="settings" size={18} />
+        <Icon name="settings" size={16} />
       </button>
 
-      <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border-hard" />
-
-      <Identity
-        onOpen={(rect) => openUserProfile(user, '', rect, 'bottom')}
-      />
-
       {openPanel !== null && (
-        <div className="absolute right-2 top-full z-[150] mt-1.5 w-[320px] overflow-hidden rounded-lg glass animate-slide-up">
+        <div className="absolute bottom-full left-2 z-[150] mb-1.5 w-[300px] overflow-hidden rounded-lg glass">
           <DeviceMenu kind={openPanel} onSettings={() => openSettings('voice')} />
         </div>
       )}
@@ -168,7 +165,7 @@ function SwitchGroup({ icon, title, tone, onToggle, menuTitle, menuOpen, onMenu 
     ? 'text-accent-amber cursor-not-allowed'
     : tone === 'off' ? 'text-txt-danger' : 'text-txt-tertiary hover:text-txt-primary';
   return (
-    <div className={`flex h-8 items-stretch rounded-md transition-colors ${
+    <div className={`flex h-7 flex-shrink-0 items-stretch rounded-md transition-colors ${
       tone === 'off' ? 'bg-accent-rose/[0.12]' : menuOpen ? 'bg-interactive-selected' : 'hover:bg-interactive-hover'
     }`}>
       <button
@@ -176,9 +173,9 @@ function SwitchGroup({ icon, title, tone, onToggle, menuTitle, menuOpen, onMenu 
         type="button"
         onClick={onToggle}
         aria-label={title}
-        className={`flex w-8 items-center justify-center rounded-l-md transition-colors active:bg-interactive-active ${toneClass}`}
+        className={`flex w-7 items-center justify-center rounded-l-md transition-colors active:bg-interactive-active ${toneClass}`}
       >
-        <Icon name={icon} size={18} />
+        <Icon name={icon} size={16} />
       </button>
       <button
         data-tooltip=""
@@ -186,9 +183,9 @@ function SwitchGroup({ icon, title, tone, onToggle, menuTitle, menuOpen, onMenu 
         onClick={onMenu}
         aria-expanded={menuOpen}
         aria-label={menuTitle}
-        className={`flex w-5 items-center justify-center rounded-r-md transition-colors active:bg-interactive-active ${menuOpen ? 'text-txt-primary' : 'text-txt-tertiary hover:text-txt-primary'}`}
+        className={`flex w-3.5 items-center justify-center rounded-r-md transition-colors active:bg-interactive-active ${menuOpen ? 'text-txt-primary' : 'text-txt-tertiary/60 hover:text-txt-primary'}`}
       >
-        <Icon name="chevron-down" size={12} strokeWidth={2.2} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+        <Icon name="chevron-up" size={11} strokeWidth={2.2} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
       </button>
     </div>
   );
@@ -206,12 +203,12 @@ function Identity({ onOpen }: { onOpen: (rect: DOMRect) => void }) {
       type="button"
       onClick={(e) => onOpen(e.currentTarget.getBoundingClientRect())}
       aria-label={name}
-      className="group flex h-8 min-w-0 max-w-[200px] items-center gap-2 rounded-md pl-1 pr-2 text-left transition-colors hover:bg-interactive-hover active:bg-interactive-active compact:px-0.5"
+      className="group flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-md pl-1 pr-1.5 text-left transition-colors hover:bg-interactive-hover active:bg-interactive-active"
     >
       <ProfileAvatar src={user.avatar} name={name} size={28} status={shownStatus} user={user} origin="" />
-      <span className="min-w-0 compact:hidden">
+      <span className="min-w-0">
         <span className="block truncate text-ui font-medium leading-tight text-txt-primary">{name}</span>
-        <span className="block truncate font-mono text-label leading-tight text-txt-tertiary group-hover:text-txt-secondary">@{user.username}</span>
+        <span className="block truncate font-mono text-2xs leading-tight text-txt-tertiary group-hover:text-txt-secondary">@{user.username}</span>
       </span>
     </button>
   );

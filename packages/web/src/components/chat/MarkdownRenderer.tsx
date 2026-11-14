@@ -1,5 +1,8 @@
 import { ExternalImage } from '../ui/ExternalMedia';
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { copyText } from '../../utils/clipboard';
+import { Icon } from '../ui/Icon';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Highlight, themes } from 'prism-react-renderer';
@@ -148,7 +151,8 @@ const codeTheme = {
   ...themes.oneDark,
   plain: {
     ...themes.oneDark.plain,
-    backgroundColor: 'rgb(var(--bg-input))',
+    // The frame (`.md-code-block`) paints the ground; the code lies on it.
+    backgroundColor: 'transparent',
     color: 'rgb(var(--text-message))',
   },
 };
@@ -158,33 +162,75 @@ const codeTheme = {
 const REMARK_PLUGINS = [remarkGfm, remarkDefaultCodeLang, remarkEmojiShortcodes, remarkSpoilers];
 const REHYPE_PLUGINS = [rehypeListSeparators];
 
+/**
+ * A code block in its frame: a strip with the language it is written in and a button that copies
+ * the code, over the code itself. The copy button says what happened in its own words for a
+ * moment, and a refusal of the browser in the same place.
+ */
+function CodeFrame({ language, code, children }: { language: string; code: string; children: React.ReactNode }) {
+  const { t } = useTranslation('common');
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  useEffect(() => {
+    if (copyState === 'idle') return;
+    const timer = setTimeout(() => setCopyState('idle'), 1600);
+    return () => clearTimeout(timer);
+  }, [copyState]);
+  const copy = async () => setCopyState(await copyText(code) ? 'copied' : 'failed');
+  return (
+    <div className="md-code-block">
+      <div className="md-code-head">
+        <span className="label-mono truncate">{language === 'text' ? '' : language}</span>
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="md-code-copy"
+          data-state={copyState}
+          aria-live="polite"
+        >
+          <Icon name={copyState === 'copied' ? 'check' : 'copy'} size={13} />
+          <span>
+            {copyState === 'copied'
+              ? t('actions.copied')
+              : copyState === 'failed' ? t('contextMenu.clipboardFailed') : t('actions.copy')}
+          </span>
+        </button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function CodeBlock({ language, code }: { language: string; code: string }) {
   // 'text' means a bare fenced block with no language — render without highlighting
   if (language === 'text') {
     return (
-      <pre className="md-code-block scrollbar-thin">
-        <code>{code}</code>
-      </pre>
+      <CodeFrame language={language} code={code}>
+        <pre className="md-code-body scrollbar-thin">
+          <code>{code}</code>
+        </pre>
+      </CodeFrame>
     );
   }
 
   return (
-    <Highlight theme={codeTheme} code={code} language={language}>
-      {({ style, tokens, getLineProps, getTokenProps }) => (
-        <pre className="md-code-block scrollbar-thin" style={style}>
-          {tokens.map((line, i) => {
-            const lineProps = getLineProps({ line });
-            return (
-              <div key={i} {...lineProps} style={{ ...lineProps.style, minHeight: '1.5em' }}>
-                {line.map((token, key) => (
-                  <span key={key} {...getTokenProps({ token })} />
-                ))}
-              </div>
-            );
-          })}
-        </pre>
-      )}
-    </Highlight>
+    <CodeFrame language={language} code={code}>
+      <Highlight theme={codeTheme} code={code} language={language}>
+        {({ style, tokens, getLineProps, getTokenProps }) => (
+          <pre className="md-code-body scrollbar-thin" style={style}>
+            {tokens.map((line, i) => {
+              const lineProps = getLineProps({ line });
+              return (
+                <div key={i} {...lineProps} style={{ ...lineProps.style, minHeight: '1.5em' }}>
+                  {line.map((token, key) => (
+                    <span key={key} {...getTokenProps({ token })} />
+                  ))}
+                </div>
+              );
+            })}
+          </pre>
+        )}
+      </Highlight>
+    </CodeFrame>
   );
 }
 

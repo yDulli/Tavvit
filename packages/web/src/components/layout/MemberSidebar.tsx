@@ -233,14 +233,20 @@ export function MemberSidebar() {
           ))}
         </div>
       ) : (
-      <div className="p-3">
+      <>
+      {/* The column's head (Evolve's inspector): who is in this space, and how many. */}
+      <div className="side-panel-head">
+        <span className="text-ui font-medium text-txt-primary">{t('common:labels.members')}</span>
+        <span className="font-mono text-meta tabular text-txt-tertiary">{formatNumber(roleGroups.reduce((sum, group) => sum + group.members.length, 0) + offlineMembers.length)}</span>
+      </div>
+      <div className="px-2.5 pb-3 pt-3">
         {/* Role-based groups */}
         {roleGroups.map((group) => (
           <div key={group.key} className="mb-4">
             {group.kind === 'owner' && space ? (
               <OwnerTitleHeading key={space.id} space={space} count={group.members.length} />
             ) : (
-              <h3 className="label-mono px-2 mb-1">
+              <h3 className="label-mono px-2 mb-1.5">
                 {groupHeading(group.kind, group.label)} — {formatNumber(group.members.length)}
               </h3>
             )}
@@ -251,13 +257,14 @@ export function MemberSidebar() {
         {/* Offline */}
         {offlineMembers.length > 0 && (
           <div>
-            <h3 className="label-mono px-2 mb-1">
+            <h3 className="label-mono px-2 mb-1.5">
               {t('common:states.offline')} — {formatNumber(offlineMembers.length)}
             </h3>
             {offlineMembers.map((m) => renderMember(m, true))}
           </div>
         )}
       </div>
+      </>
       )}
     </SidePanel>
     </>

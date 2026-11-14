@@ -31,7 +31,7 @@ export async function drawSocialCard(browser) {
     await page.evaluate(() => document.fonts.ready);
     await page.waitForFunction(() => [...document.images].every((image) => image.complete && image.naturalWidth > 0));
     const fonts = await page.evaluate(() => [...document.fonts].filter((font) => font.status === 'loaded').map((font) => font.family));
-    if (!fonts.includes('Geist')) throw new Error('The card\'s type did not load.');
+    if (!fonts.includes('Outfit')) throw new Error('The card\'s type did not load.');
     const png = await page.screenshot({ type: 'png' });
     const jpeg = await sharp(png).jpeg({ quality: 88, mozjpeg: true, chromaSubsampling: '4:4:4' }).toBuffer();
     if (jpeg.length > MAX_BYTES) throw new Error(`The card is ${Math.round(jpeg.length / 1024)} KB, over ${MAX_BYTES / 1024} KB.`);

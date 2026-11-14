@@ -458,5 +458,278 @@
     "ok": "Alles läuft",
     "down": "Gerade hakt etwas",
     "version": "Stand {{version}}"
+  },
+  "home": {
+    "strip": {
+      "spaces": "Spaces für jede Gruppe",
+      "tags": "Tags ab zwei Buchstaben",
+      "permissions_one": "{{count}} Berechtigung pro Rolle",
+      "permissions_other": "{{count}} Berechtigungen pro Rolle",
+      "languages_one": "{{count}} Sprache",
+      "languages_other": "{{count}} Sprachen",
+      "clean": "Keine Werbung, keine Tracker"
+    },
+    "hero": {
+      "label": "Ein Zuhause für deine Community",
+      "title": "Deine Community.\nDein Space.",
+      "accent": "Deine Regeln.",
+      "lead": "Tavvit gibt deiner Gruppe einen eigenen Ort: Kanäle für jedes Thema, Sprachkanäle, die offen bleiben, und Rollen und Regeln, die du selbst festlegst.",
+      "more": "Sieh, was drin ist"
+    },
+    "stats": {
+      "permissions": "Berechtigungen pro Rolle",
+      "zero": "Anzeigen, und keine Tracker"
+    },
+    "scene": {
+      "about": "Späte Abende, Koop-Spiele und schlechte Filme.",
+      "members_one": "{{count}} Mitglied",
+      "members_other": "{{count}} Mitglieder",
+      "online_one": "{{count}} online",
+      "online_other": "{{count}} online",
+      "talking_one": "{{count}} im Gespräch",
+      "talking_other": "{{count}} im Gespräch",
+      "speaking": "{{name}} spricht",
+      "owner": "Besitzer",
+      "message": "Ich bin dabei. Wer bringt die Snacks mit?",
+      "poll": "Hat der letzte Patch die Tanks ruiniert?",
+      "skill": "Skill-Problem",
+      "little": "Ein bisschen",
+      "completely": "Komplett",
+      "raid": "Samstags-Raid",
+      "when": "Sa., 20:00",
+      "going_one": "{{count}} kommt",
+      "going_other": "{{count}} kommen",
+      "events": "Termine",
+      "label": "Night Shift, ein Demo-Space mit ausgedachten Leuten",
+      "rooms": "Räume von Night Shift"
+    },
+    "marquee": "Was drin ist",
+    "tags": {
+      "kicker": "Dein Space",
+      "title": "Ein Tag, den\ndeine Leute tragen.",
+      "body": "Gib deinem Space einen Tag aus zwei bis vier Buchstaben neben einem Symbol. Mitglieder tragen ihn neben ihrem Namen, in jedem Space, in dem sie schreiben. Dazu eine Einladungsadresse aus Wörtern und deine eigenen Farben.",
+      "items": {
+        "tag": {
+          "title": "Ein Tag",
+          "body": "Zwei bis vier Buchstaben oder Ziffern neben einem Symbol"
+        },
+        "address": {
+          "title": "Eine Adresse",
+          "body": "/join/dein-space statt eines zufälligen Codes"
+        },
+        "look": {
+          "title": "Ein Look",
+          "body": "Die Farben deines Space, für alle darin"
+        }
+      },
+      "worn": "Neben dem Namen getragen",
+      "address": "Deine Einladungsadresse",
+      "try": "Probier es aus",
+      "yourTag": "Dein Tag",
+      "symbol": "Symbol",
+      "symbols": {
+        "moon": "Mond",
+        "book": "Buch",
+        "wrench": "Schraubenschlüssel",
+        "film": "Filmklappe",
+        "music": "Musik",
+        "sparkle": "Stern"
+      },
+      "ruleTag": "2 bis 4 Buchstaben oder Ziffern",
+      "ruleAddress": "3 bis 32 Kleinbuchstaben, Ziffern oder Bindestriche"
+    },
+    "inside": {
+      "kicker": "Drinnen",
+      "title": "Alles, was eine Gruppe macht.\nAn einem Ort.",
+      "label": "Teile von Tavvit",
+      "tabs": {
+        "talk": {
+          "tab": "Schreiben",
+          "title": "Schreib es dorthin, wo es hingehört.",
+          "body": "Kanäle für das Gespräch des Tages, Threads für den Nebenstrang, Foren für das, was bleiben soll. Antworte genau auf die eine Nachricht, reagiere, stimm ab und pinne an, wonach alle immer wieder fragen."
+        },
+        "voice": {
+          "tab": "Sprache",
+          "title": "Räume, die offen bleiben.",
+          "body": "Sieh, wer in einem Sprachkanal ist, bevor du reingehst, und geh, ohne ihn für die anderen zu beenden. Teile deinen Bildschirm, schaut gemeinsam ein Video, spiel einen Sound vom Soundboard."
+        },
+        "plan": {
+          "tab": "Planen",
+          "title": "Pünktlich zusammen.",
+          "body": "Termine mit einem Raum, einer Erinnerung und einem Platz in deinem Kalender. Eine Begrüßungsseite mit Regeln an der Tür und Ankündigungskanäle, denen andere Spaces folgen können."
+        },
+        "order": {
+          "tab": "Ordnung halten",
+          "title": "Regeln, die halten.",
+          "body": "Dreißig Berechtigungen pro Rolle, je Kategorie oder Kanal änderbar. Filter stoppen Wörter, Links und Einladungen, bevor sie gepostet werden, und jede Entscheidung landet im Audit-Log."
+        }
+      },
+      "watching": "Gemeinsam schauen",
+      "thread": "Kampfnotizen",
+      "replies_one": "{{count}} Antwort",
+      "replies_other": "{{count}} Antworten",
+      "reply": "genau das haben wir gebraucht.",
+      "first": "Ich hab was für Samstag gebaut. Schadenszahlen nach Klasse.",
+      "soon": "In 4 Tagen",
+      "date": "14. Nov., 20:00 bis 23:00",
+      "join": "Zur Lounge",
+      "calendar": "Zum Kalender",
+      "post": "Erste Woche hier? Fang damit an",
+      "postTags": "Neue Spieler",
+      "rolesTitle": "Rollen",
+      "granted_one": "{{count}} Berechtigung",
+      "granted_other": "{{count}} Berechtigungen",
+      "log": {
+        "one": "hat die Rollen von Sam geändert",
+        "two": "hat den Thread Kampfnotizen gestartet",
+        "three": "hat den Termin Samstags-Raid angekündigt"
+      },
+      "switch": {
+        "send": "Nachrichten senden",
+        "pin": "Nachrichten anpinnen",
+        "ban": "Mitglieder sperren",
+        "attach": "Dateien anhängen",
+        "kick": "Mitglieder entfernen"
+      },
+      "vote": "Stimm ab, um die Ergebnisse zu sehen",
+      "voted_one": "{{count}} Stimme, deine eingeschlossen",
+      "voted_other": "{{count}} Stimmen, deine eingeschlossen",
+      "mute": "Stummschalten",
+      "unmute": "Stummschaltung aufheben",
+      "share": "Bildschirm teilen",
+      "going": "Ich komme",
+      "goingYes": "Du bist dabei",
+      "remind": "Erinnere mich",
+      "reminded": "Erinnerung gesetzt",
+      "you": "Du"
+    },
+    "moving": {
+      "kicker": "Einzug",
+      "title": "Bring deinen\nServer mit.",
+      "body": "Füge eine Discord-Servervorlage ein, und Tavvit legt Rollen, Kategorien, Kanäle und Berechtigungen an. Mit einem eigenen Bot kommen auch Emojis und Sticker mit.",
+      "note": "Nachrichten und Mitglieder bleiben zurück: Deine Leute kommen mit einem Einladungslink.",
+      "from": "Aus der Vorlage",
+      "bot": "Mit deinem Bot",
+      "to": "Dein Space",
+      "items": {
+        "roles": "Rollen",
+        "categories": "Kategorien",
+        "channels": "Kanäle",
+        "permissions": "Berechtigungen",
+        "emoji": "Emojis",
+        "stickers": "Sticker"
+      },
+      "help": "So funktioniert der Umzug"
+    },
+    "identity": {
+      "kicker": "Profile",
+      "title": "Zeig dich,\nwie du bist.",
+      "body": "Ein Banner, eine Bio, deine Pronomen. Dazu ein Rahmen um dein Bild, ein Effekt über deiner Karte, ein Namensschild in Listen und eine Schrift für deinen Namen, von Tavvit gemacht oder von der Community gezeichnet.",
+      "chips": {
+        "frames": "Rahmen",
+        "effects": "Effekte",
+        "nameplates": "Namensschilder",
+        "names": "Namensstile",
+        "badges": "Abzeichen",
+        "themes": "Profil-Themes",
+        "perSpace": "Ein Profil je Space",
+        "community": "Von der Community gemacht"
+      },
+      "bio": {
+        "jonas": "Tagsüber Backend, nachts schlecht in Tetris.",
+        "mara": "Leitet die Samstags-Raids. Erst Kaffee.",
+        "lena": "Mod-Team. Seid nett zueinander."
+      },
+      "message": "Nachricht senden",
+      "try": "Probier es an",
+      "frame": "Rahmen",
+      "colour": "Farbe",
+      "frames": {
+        "laurel": "Lorbeer",
+        "headphones": "Kopfhörer",
+        "halo": "Engel",
+        "none": "Keiner"
+      },
+      "tones": {
+        "lavender": "Lavendel",
+        "sky": "Himmelblau",
+        "mint": "Mint",
+        "amber": "Bernstein",
+        "peach": "Pfirsich",
+        "rose": "Rosé",
+        "coral": "Koralle"
+      }
+    },
+    "scenes": {
+      "kicker": "Für jede Gruppe",
+      "title": "Eine App.\nJede Crew.",
+      "items": {
+        "gaming": {
+          "title": "Gaming-Crews",
+          "body": "Sprachkanäle, die den ganzen Abend offen bleiben, ein Soundboard, Termine für den Raid-Abend und Videos zum gemeinsamen Schauen.",
+          "tags": {
+            "a": "Sprachkanäle",
+            "b": "Soundboard",
+            "c": "Termine",
+            "d": "Gemeinsam schauen"
+          }
+        },
+        "creators": {
+          "title": "Creator",
+          "body": "Ein Tag, den deine Zuschauer tragen, ein Overlay für OBS, der Streamer-Modus und dein Twitch-Konto in deinem Profil.",
+          "tags": {
+            "a": "Space-Tags",
+            "b": "OBS-Overlay",
+            "c": "Streamer-Modus",
+            "d": "Twitch"
+          },
+          "link": "Für Creator"
+        },
+        "developers": {
+          "title": "Entwickler",
+          "body": "Bots mit Slash-Befehlen, eingehende Webhooks und eine HTTP- und WebSocket-API mit öffentlicher Doku.",
+          "tags": {
+            "a": "Bots",
+            "b": "Slash-Befehle",
+            "c": "Webhooks",
+            "d": "API"
+          },
+          "link": "Entwickler-Doku"
+        },
+        "clubs": {
+          "title": "Vereine und Kurse",
+          "body": "Foren, die die Antworten behalten, Threads, Umfragen, eine Begrüßungsseite mit Regeln und Rollen für alle, die es leiten.",
+          "tags": {
+            "a": "Foren",
+            "b": "Threads",
+            "c": "Umfragen",
+            "d": "Rollen"
+          }
+        }
+      }
+    },
+    "bot": {
+      "done": "Der nächtliche Build ist fertig.",
+      "card": "Build erfolgreich",
+      "detail": "Alle Prüfungen sind grün, und die Fixes sind auf Staging live.",
+      "tests": "Tests",
+      "testsValue": "412 bestanden",
+      "coverage": "Abdeckung",
+      "took": "Dauer",
+      "tookValue": "3 Min. 12 Sek.",
+      "mark": "Bot"
+    },
+    "closing": {
+      "title": "Mach Platz\nfür deine Leute.",
+      "address": "Die Adresse deines Space"
+    },
+    "motion": {
+      "pause": "Bewegung anhalten",
+      "play": "Bewegung abspielen"
+    },
+    "code": {
+      "copy": "Kopieren",
+      "copied": "Kopiert"
+    }
   }
 }

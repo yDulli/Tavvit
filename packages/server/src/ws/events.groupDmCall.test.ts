@@ -51,6 +51,7 @@ import {
   handleDmCallEndForTest as end,
   handleClientEvent,
   registerCallRelayHooks,
+  _resetCallStartLimit,
 } from './events.js';
 import {
   processDmCallAcceptEvent,
@@ -200,6 +201,8 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  // Each case places its own calls; the limit on calls a minute counts across them otherwise.
+  _resetCallStartLimit();
   sqlite = new Database(':memory:');
   testDb = drizzle(sqlite, { schema });
   applyMigrations(sqlite);
@@ -417,6 +420,27 @@ describe('group call: end and decline', () => {
     expect(connectionManager.getRoom(GROUP)).toBeUndefined();
     expect(received('bob', 'dm_call_ended')).toHaveLength(1);
     expect(received('carol', 'dm_call_ended')).toHaveLength(1);
+  });
+
+  // Started and ended over and over, a call rang everyone in the conversation once a second, on
+  // every device and as an urgent push, for as long as its caller liked (security audit, 2026-11-14).
+  it('lets one person place a few calls a minute in a conversation, and no more', async () => {
+    for (let placed = 0; placed < 4; placed += 1) {
+      await start({ dmChannelId: GROUP }, 'alice', 'alice', ws('alice'));
+      await end({ dmChannelId: GROUP }, 'alice');
+    }
+    clearReceived();
+
+    await start({ dmChannelId: GROUP }, 'alice', 'alice', ws('alice'));
+
+    expect(connectionManager.getRoom(GROUP)).toBeUndefined();
+    expect(received('alice', 'error')).toEqual([expect.objectContaining({ code: 'rate_limited', dmChannelId: GROUP })]);
+    expect(received('bob', 'dm_call_incoming')).toEqual([]);
+    // Another conversation, and another person in this one, are not held to it.
+    await start({ dmChannelId: ONE_ON_ONE }, 'alice', 'alice', ws('alice'));
+    expect(connectionManager.getRoom(ONE_ON_ONE)).toBeDefined();
+    await start({ dmChannelId: GROUP }, 'bob', 'bob', ws('bob'));
+    expect(connectionManager.getRoom(GROUP)).toBeDefined();
   });
 
   it('ends a call nobody joined when the ringing times out', async () => {

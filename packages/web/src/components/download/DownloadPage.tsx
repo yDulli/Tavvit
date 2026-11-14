@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { DesktopDownload } from './DesktopDownload';
+import { LightField } from '../ui/LightField';
 
 /**
  * `/download`: the desktop app's page, open to everyone, signed in or not.
@@ -16,7 +17,7 @@ export function DownloadPage(): React.JSX.Element {
 
   return (
     <div className="stage-light relative isolate h-full overflow-y-auto bg-surface-base">
-      <div aria-hidden="true" className="hero-light" />
+      <LightField intensity="hero" className="light-field-window" />
       <header className="flex h-16 items-center justify-between px-4 desktop:px-6">
         {/* Plain link for a visitor: the product page at `/` is not one of the app's routes. */}
         <a href="/" className="flex items-center gap-2.5">

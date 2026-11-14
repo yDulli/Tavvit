@@ -40,6 +40,8 @@ export function activeHomeNavItem(pathname: string, currentChannelId: string | n
   if (pathname === HOME_ROUTES.friends) return 'friends';
   if (pathname === HOME_ROUTES.explore) return 'explore';
   if (pathname === HOME_ROUTES.about) return 'about';
+  // The admin console and the studio are pages of their own beside Home, not Home itself.
+  if (pathname === '/admin' || pathname.startsWith('/admin/') || pathname === '/studio') return null;
   if (currentChannelId === null) return 'home';
   return null;
 }

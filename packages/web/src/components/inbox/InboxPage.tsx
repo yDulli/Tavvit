@@ -23,6 +23,8 @@ import { ChannelIcon } from '../ui/ChannelIcon';
 import { Icon, type IconName } from '../ui/Icon';
 import { CountBadge } from '../ui/CountBadge';
 import { InlineMessageText } from '../chat/InlineMessageText';
+import { PageHeader } from '../ui/PageHeader';
+import { TopbarActions } from '../layout/TopbarSlots';
 import { MemberListToggleButton } from '../layout/MemberListToggleButton';
 import { UnreadBadge } from './UnreadBadge';
 import { useConversationContextMenu } from '../layout/conversationMenu/useConversationContextMenu';
@@ -323,42 +325,48 @@ export function InboxPage({ showTopBar = true }: { showTopBar?: boolean }) {
       role="tab"
       aria-selected={tab === id}
       onClick={() => setTab(id)}
-      className={`relative flex items-center gap-1.5 px-2 text-ui font-medium transition-colors ${
+      className={showTopBar ? 'page-tab' : `relative flex items-center gap-1.5 px-2 text-ui font-medium transition-colors ${
         tab === id ? 'text-txt-primary' : 'text-txt-tertiary hover:text-txt-secondary'
       }`}
     >
       {label}
       {count > 0 && <CountBadge count={count} muted={tone === 'muted'} />}
-      {tab === id && <span aria-hidden="true" className="absolute inset-x-2 -bottom-px h-[2px] bg-accent-primary" />}
+      {!showTopBar && tab === id && <span aria-hidden="true" className="absolute inset-x-2 -bottom-px h-[2px] bg-accent-primary" />}
+    </button>
+  );
+
+  const tabs = (
+    <div role="tablist" className={showTopBar ? 'page-tabs' : 'flex items-stretch gap-1'}>
+      {tabButton('unread', t('home:inbox.tabs.unread'), conversations.length, 'muted')}
+      {tabButton('mentions', t('home:inbox.tabs.mentions'), unreadMentionCount, 'accent')}
+      {tabButton('saved', t('home:inbox.tabs.saved'), 0, 'muted')}
+      {hasKeywords && tabButton('keywords', t('home:inbox.tabs.keywords'), 0, 'muted')}
+    </div>
+  );
+  const markAllButton = tab === 'unread' && conversations.length > 0 && (
+    <button type="button" onClick={() => { void markAll(); }} disabled={markingAll} className={showTopBar ? 'btn-outline' : 'btn-quiet btn-sm'}>
+      <Icon name="check" size={14} />
+      {markingAll ? t('home:inbox.markingAll') : t('home:inbox.markAll')}
     </button>
   );
 
   return (
     <div className="lit-phone flex h-full min-w-0 flex-1 flex-col bg-surface-chat desktop:bg-transparent">
-      <div className={`flex items-stretch gap-4 border-b border-border-hard ${showTopBar ? 'panel-bar px-4' : 'h-11 flex-shrink-0 px-3'}`}>
-        {showTopBar && (
-          <div className="flex items-center gap-2">
-            <Icon name="bell" size={17} className="text-txt-tertiary" />
-            <span className="text-lead font-semibold tracking-[-0.01em] text-txt-primary">{t('home:inbox.title')}</span>
-          </div>
-        )}
-        {showTopBar && <div aria-hidden="true" className="my-auto h-4 w-px bg-border-soft" />}
-        <div role="tablist" className="flex items-stretch gap-1">
-          {tabButton('unread', t('home:inbox.tabs.unread'), conversations.length, 'muted')}
-          {tabButton('mentions', t('home:inbox.tabs.mentions'), unreadMentionCount, 'accent')}
-          {tabButton('saved', t('home:inbox.tabs.saved'), 0, 'muted')}
-          {hasKeywords && tabButton('keywords', t('home:inbox.tabs.keywords'), 0, 'muted')}
+      {showTopBar ? (
+        <>
+          <TopbarActions>
+            <MemberListToggleButton />
+          </TopbarActions>
+          <PageHeader eyebrow={t('home:nav.home')} title={t('home:inbox.title')} actions={markAllButton || undefined}>
+            {tabs}
+          </PageHeader>
+        </>
+      ) : (
+        <div className="flex h-11 flex-shrink-0 items-stretch gap-4 border-b border-border-hard px-3">
+          {tabs}
+          <div className="ml-auto flex items-center gap-1">{markAllButton}</div>
         </div>
-        <div className="ml-auto flex items-center gap-1">
-          {tab === 'unread' && conversations.length > 0 && (
-            <button type="button" onClick={() => { void markAll(); }} disabled={markingAll} className="btn-quiet btn-sm">
-              <Icon name="check" size={14} />
-              {markingAll ? t('home:inbox.markingAll') : t('home:inbox.markAll')}
-            </button>
-          )}
-          {showTopBar && <MemberListToggleButton />}
-        </div>
-      </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[880px] px-2 py-3 desktop:px-4 desktop:py-4">

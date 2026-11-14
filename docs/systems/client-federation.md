@@ -743,3 +743,7 @@ Client-side and S2S federation serve different purposes:
 3. User joins Spaces on the remote instance (client-side — API calls go directly to remote)
 4. User sends DMs — DM writes go to whichever instance delivered the channel (determined by `channelOriginMap`). S2S relay distributes messages, reactions, read states, and membership changes to all peer instances. DM calls remain home-only (gated for federated users).
 5. Friend requests and discovery work across instances (client loads friends from all connected instances, S2S relays friend events)
+
+## Rows for people elsewhere, named by a client
+
+The conversation routes take a `homeUserId` and `homeInstance` and resolve them through `resolveRemoteIdentityForClient`. It makes a new row only with federation enabled and for a home that is an instance's address (`canonicalRemoteOrigin`): with federation off there is no elsewhere, and what a client sends as a home was any text of any length, kept as the row's name, so any account could fill the users table a megabyte a row. Rows that exist are still found either way.

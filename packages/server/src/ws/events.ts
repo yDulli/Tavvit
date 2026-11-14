@@ -40,7 +40,8 @@ import { memberActionRefusal, recordSlowmodePost, spaceMessageRefusal } from '..
 import { recordMessageDeleteAudit } from '../utils/auditLog.js';
 import { isPollMessage } from '../utils/polls.js';
 import { pushDmCall } from '../utils/pushDelivery.js';
-import { evictFromLiveKitRoom } from '../utils/livekitEviction.js';
+import { evictFromLiveKitRoom, evictFromLiveKitRooms } from '../utils/livekitEviction.js';
+import { createFixedWindowLimit } from '../utils/fixedWindowLimit.js';
 import { applySpaceVoiceGrant, applyVoiceGrants, spaceVoiceGrant, type VoiceGrant } from '../utils/livekitGrants.js';
 
 /**
@@ -1459,6 +1460,14 @@ function handleMarkUnread(event: Record<string, unknown>, userId: string, isFede
 
 // ─── DM Call Handlers (Unified Room API) ───────────────────────────────────
 
+/** Calls one person starts in one conversation: four in a minute. */
+const callStartLimit = createFixedWindowLimit({ max: 4, windowMs: 60_000 });
+
+/** Tests only. */
+export function _resetCallStartLimit(): void {
+  callStartLimit.reset();
+}
+
 /**
  * Refuse a `dm_call_start` or `dm_call_accept` on the socket that sent it.
  * Only that socket set a calling or joined state, and another session of the
@@ -1517,6 +1526,14 @@ async function handleDmCallStart(event: Record<string, unknown>, userId: string,
       return;
     }
     connectionManager.clearFederatedCall(fedCall.federatedId);
+  }
+
+  // A new call rings everyone in the conversation, on every device and as an urgent push. A few
+  // a minute is more than anyone places by hand; started and ended over and over it was a way to
+  // ring the others once a second for as long as one liked.
+  if (!callStartLimit.consume(`${userId}:${dmChannelId}`)) {
+    refuseDmCall(ws, 'rate_limited', dmChannelId);
+    return;
   }
 
   // Leave current room if in one, and any call hosted on a peer
@@ -2630,6 +2647,11 @@ function disconnectFromSpaceVoice(spaceId: string, channelId: string, userId: st
  * Answers whether they were.
  */
 export function disconnectMemberFromSpaceVoice(spaceId: string, userId: string): boolean {
+  // Out of every call of the space at LiveKit itself, seated here or not: a token is handed out
+  // before the socket hears of a join, so a client can sit in a call this server never saw them
+  // enter, and a kick, a ban or a timeout must end that as well (utils/livekitEviction.ts).
+  evictFromLiveKitRooms(userId, getDb().select({ id: schema.channels.id }).from(schema.channels)
+    .where(and(eq(schema.channels.spaceId, spaceId), eq(schema.channels.type, 'voice'))).all().map((channel) => channel.id));
   const current = connectionManager.getUserRoom(userId);
   if (!current || current.room.roomType !== 'space') return false;
   if ((current.room.metadata as SpaceRoomMeta).spaceId !== spaceId) return false;

@@ -154,7 +154,7 @@ describe('what a visitor loads', () => {
   });
 
   it('holds its assets beside it', () => {
-    for (const asset of ['docs.css', 'docs.js', 'example-bot.mjs', 'search-index.json']) {
+    for (const asset of ['docs.css', 'docs.js', 'grain.svg', 'example-bot.mjs', 'search-index.json']) {
       expect(fs.existsSync(path.join(site, 'assets', asset)), asset).toBe(true);
     }
   });

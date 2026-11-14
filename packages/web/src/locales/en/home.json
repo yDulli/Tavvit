@@ -49,7 +49,12 @@
     "mentions_one": "{{count}} unread mention",
     "mentions_other": "{{count}} unread mentions",
     "showAll": "Show all",
-    "showFewer": "Show fewer"
+    "showFewer": "Show fewer",
+    "columns": {
+      "space": "Space",
+      "unread": "Unread",
+      "voice": "Voice"
+    }
   },
   "about": {
     "title": "About Tavvit",

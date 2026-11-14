@@ -10,8 +10,9 @@ interface ToggleProps {
 }
 
 /**
- * An on/off switch: a small track with square-ish corners (5px, like a button)
- * and a round thumb, violet while on and the muted control grey while off.
+ * An on/off switch: a small capsule track on the ink well, edged by the strong line, that fills
+ * with the signal when on (white, with a black thumb; an accent a person chose, with a white one);
+ * off, the thumb is the quiet grey. It springs across.
  */
 export function Toggle({ enabled, onChange, disabled, ariaLabel }: ToggleProps) {
   return (
@@ -22,20 +23,20 @@ export function Toggle({ enabled, onChange, disabled, ariaLabel }: ToggleProps) 
       aria-label={ariaLabel}
       onClick={() => onChange(!enabled)}
       disabled={disabled}
-      className={`toggle-track relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-md ${
-        enabled ? 'bg-accent-primary' : 'bg-interactive-muted'
+      className={`toggle-track relative inline-flex h-[18px] w-8 flex-shrink-0 items-center rounded-full border ${
+        enabled ? 'border-accent-soft bg-accent-primary' : 'border-border-soft bg-surface-input'
       } ${
         disabled
           ? 'cursor-not-allowed opacity-50'
           : enabled
-            ? 'hover:bg-accent-primary-hover active:bg-accent-primary-active'
-            : 'hover:bg-interactive-muted/80 active:bg-interactive-muted/60'
+            ? 'hover:bg-accent-primary-hover'
+            : 'hover:border-interactive-muted'
       }`}
     >
       <span
         aria-hidden="true"
-        className={`toggle-thumb inline-block h-3.5 w-3.5 rounded-full bg-white ${
-          enabled ? 'translate-x-[19px]' : 'translate-x-[3px]'
+        className={`toggle-thumb inline-block h-3 w-3 rounded-full ${
+          enabled ? 'translate-x-[15px] bg-on-accent' : 'translate-x-[2px] bg-txt-tertiary'
         }`}
       />
     </button>

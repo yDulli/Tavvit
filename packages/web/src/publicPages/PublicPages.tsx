@@ -15,35 +15,41 @@ function PageFrame({ current, title, lead, children }: { current: PublicPagePath
   const { t } = useTranslation('status');
   // The page's name with the product's, as the website's HTML has it (site/seo.ts).
   useEffect(() => { document.title = `${title} · ${PRODUCT_NAME}`; }, [title]);
+  // The product page's frame: a bar of mono links over the light the app stands on, a title in the
+  // display face, and what the page holds arriving under it.
   return (
-    <div className="flex min-h-screen flex-col bg-surface-base text-txt-primary">
-      <header className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border-soft px-4 py-3 desktop:px-6">
-        <a href="/" aria-label={t('frame.home')} className="flex items-center gap-2 text-ui font-semibold text-txt-primary">
-          <img src="/icons/logo-mark.svg" alt="" className="h-5 w-5" />
-          Tavvit{/* i18n-check: allow-literal (the name of the product) */}
-        </a>
-        <nav className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-ui">
-          {FRAME_LINKS.map((link) => (
-            <a
-              key={link}
-              href={`/${link}`}
-              aria-current={current === `/${link}` ? 'page' : undefined}
-              className={current === `/${link}` ? 'text-txt-primary' : 'text-txt-secondary transition-colors hover:text-txt-primary'}
-            >
-              {t(`frame.${link}`)}
-            </a>
-          ))}
-        </nav>
+    <div className="flex min-h-screen flex-col text-txt-primary">
+      <header className="sticky top-0 z-10 border-b border-white/[0.07] bg-surface-base/75 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-4">
+          <a href="/" aria-label={t('frame.home')} className="flex items-center gap-2.5 text-body font-semibold tracking-[-0.02em] text-txt-primary">
+            <img src="/icons/logo-mark.svg" alt="" className="h-5 w-5" />
+            Tavvit{/* i18n-check: allow-literal (the name of the product) */}
+          </a>
+          <nav className="ml-auto flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-label uppercase tracking-[0.14em]">
+            {FRAME_LINKS.map((link) => (
+              <a
+                key={link}
+                href={`/${link}`}
+                aria-current={current === `/${link}` ? 'page' : undefined}
+                className={current === `/${link}` ? 'text-txt-primary' : 'text-txt-tertiary transition-colors hover:text-txt-primary'}
+              >
+                {t(`frame.${link}`)}
+              </a>
+            ))}
+          </nav>
+        </div>
       </header>
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 desktop:py-12">
-        <h1 className="page-title">{title}</h1>
-        <p className="mt-2 text-lead text-txt-secondary">{lead}</p>
-        <div className="mt-8">{children}</div>
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-14">
+        <h1 className="page-title display-title">{title}</h1>
+        <p className="mt-4 text-lead leading-relaxed text-txt-secondary">{lead}</p>
+        <div className="rise-in mt-10">{children}</div>
       </main>
-      <footer className="flex flex-wrap justify-center gap-x-4 gap-y-1 border-t border-border-soft px-4 py-5 text-meta text-txt-tertiary">
-        {LEGAL_LINKS.map((link) => (
-          <a key={link} href={`/${link}`} className="transition-colors hover:text-txt-secondary">{t(`frame.${link}`)}</a>
-        ))}
+      <footer className="border-t border-white/[0.07]">
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap gap-x-6 gap-y-2 px-4 py-6 font-mono text-label uppercase tracking-[0.12em] text-txt-tertiary">
+          {LEGAL_LINKS.map((link) => (
+            <a key={link} href={`/${link}`} className="transition-colors hover:text-txt-primary">{t(`frame.${link}`)}</a>
+          ))}
+        </div>
       </footer>
     </div>
   );

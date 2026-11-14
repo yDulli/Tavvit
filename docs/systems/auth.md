@@ -843,7 +843,7 @@ Before an account is created, the browser solves a small task: find a nonce so t
 
 **What it is for.** It stops a script that does not run a browser and costs a person a moment, with nothing sent to anyone else: no captcha service, no cookie, no data. Someone who sets out to pay the price still can, on their own hardware far faster than a phone. Rate limits, sign-up rules and confirmed addresses are for them. `crypto.subtle` needs https, so a page on plain http cannot answer and the server says `signup_challenge_failed`; turn the check off there.
 
-The level is set in the admin console, under sign-up rules (`signup_challenge_update` in the audit log). `DISABLE_RATE_LIMITS` turns it off with the rate limits, for test harnesses.
+The level is set in the admin console, under sign-up rules (`signup_challenge_update` in the audit log). `DISABLE_RATE_LIMITS` turns it off with the rate limits, for test harnesses, and like them not in production (`rateLimitsDisabled`, `utils/rateLimitSwitch.ts`): until 1.42.0 the task read the variable by itself and was switched off there too.
 
 ## Accounts that are not people
 

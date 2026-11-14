@@ -38,6 +38,62 @@ export function evictFromLiveKitRoom(userId: string, roomName: string): void {
   })();
 }
 
+/**
+ * Puts someone out of each of these rooms that exists on this instance's LiveKit, whether or not
+ * the socket ever heard of them being there: a token is handed out before `voice_join` is sent,
+ * so a client that takes the token and never says so sits in the call unseen. Kicking, banning or
+ * timing a member out ends that too (ws/events.ts, disconnectMemberFromSpaceVoice), as leaving
+ * or being removed from a group conversation does (routes/dm.ts). One listing of the rooms, then
+ * only those that are open.
+ */
+export function evictFromLiveKitRooms(userId: string, roomNames: readonly string[]): void {
+  const { apiUrl, url, apiKey, apiSecret } = config.livekit;
+  const host = apiUrl ?? url;
+  if (!host || !apiKey || !apiSecret || roomNames.length === 0) return;
+
+  void (async () => {
+    try {
+      const account = getDb().select({ homeUserId: schema.users.homeUserId }).from(schema.users).where(eq(schema.users.id, userId)).get();
+      // A person from elsewhere is in a conversation's call under the id their home gave them.
+      const prefixes = [`${userId}:`, ...(account?.homeUserId ? [`${account.homeUserId}:`] : [])];
+      const client = new RoomServiceClient(host, apiKey, apiSecret);
+      for (const room of await client.listRooms([...roomNames])) {
+        for (const participant of await client.listParticipants(room.name)) {
+          if (prefixes.some((prefix) => participant.identity.startsWith(prefix))) {
+            await client.removeParticipant(room.name, participant.identity);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[livekit] Could not put ${userId} out of ${roomNames.length} room(s): ${(err as Error).message}`);
+    }
+  })();
+}
+
+/**
+ * Puts one participant out of a room by its whole identity: the hidden one of a voice overlay
+ * whose link was replaced, taken away, or whose maker may no longer stream there
+ * (utils/voiceOverlays.ts). It only ever learned who speaks, and must not go on learning it.
+ */
+export function evictIdentityFromLiveKitRoom(roomName: string, identity: string): void {
+  const { apiUrl, url, apiKey, apiSecret } = config.livekit;
+  const host = apiUrl ?? url;
+  if (!host || !apiKey || !apiSecret) return;
+
+  void (async () => {
+    try {
+      const client = new RoomServiceClient(host, apiKey, apiSecret);
+      for (const room of await client.listRooms([roomName])) {
+        for (const participant of await client.listParticipants(room.name)) {
+          if (participant.identity === identity) await client.removeParticipant(room.name, participant.identity);
+        }
+      }
+    } catch (err) {
+      console.warn(`[livekit] Could not end an overlay's connection to ${roomName}: ${(err as Error).message}`);
+    }
+  })();
+}
+
 export function evictFromLiveKit(userId: string): void {
   const { apiUrl, url, apiKey, apiSecret } = config.livekit;
   const host = apiUrl ?? url;

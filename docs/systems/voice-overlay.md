@@ -66,6 +66,11 @@ The privacy draft says that names, pictures, mute state and who speaks can be se
 link, that the channel shows it, and what is stored (the hash, the maker, the last use). No sound or
 picture goes through it ([legal.md](legal.md)).
 
+## When a link ends
+
+- **A link taken away ends its connection.** Replacing or deleting a link, and the first refusal after its maker lost the right to stream there, put the hidden participant `overlay:<id>` out of the call at LiveKit (`evictIdentityFromLiveKitRoom`). Before, a page that stayed connected went on learning who was in the call and who spoke.
+- **The secret is not in the request log.** `pathForLog` (`utils/webhookAccounts.ts`) writes `/api/overlay/voice/[secret]`; the page asks every few seconds, and the log held the secret in clear while the database holds only its hash.
+
 ## Known limits
 
 - Who speaks needs voice (LiveKit) running; without it the page shows who is in the channel only.

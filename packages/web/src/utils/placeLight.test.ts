@@ -32,10 +32,9 @@ describe('the light of a colour', () => {
 });
 
 describe('a band in a colour', () => {
-  it('runs from its light through the colour into a deeper shade', () => {
+  it('is the colour itself, a little deeper at its foot, with no light of its own', () => {
     const fill = bannerFill('#26765a');
-    expect(fill).toContain(lightFromColor('#26765a')!);
-    expect(fill).toContain('#26765a');
-    expect(fill).toMatch(/^radial-gradient\(/);
+    expect(fill).toMatch(/^linear-gradient\(180deg, #26765a 0%, /);
+    expect(fill).not.toContain(lightFromColor('#26765a')!);
   });
 });

@@ -14,8 +14,10 @@ interface CountBadgeProps {
    * the count in its own name.
    */
   label?: string;
-  /** The neutral colour, for a place whose notifications are muted. */
+  /** The neutral colour: a count of activity, or of a place whose notifications are muted. */
   muted?: boolean;
+  /** Quieter than neutral, an outline only: a muted place where the neutral count is the rule. */
+  quiet?: boolean;
   /**
    * `inline` runs in a line (a tab, a row); `corner` sits on the top-right
    * corner of an icon button or a tile, which must be `relative`, cut out from
@@ -30,8 +32,10 @@ interface CountBadgeProps {
  * The number is for the eye; `label`, when given, is what assistive technology
  * reads, so the figures are hidden from it.
  */
-export function CountBadge({ count, label, muted = false, placement = 'inline' }: CountBadgeProps): React.JSX.Element {
-  const tone = muted ? 'count-badge count-badge-muted' : 'count-badge';
+export function CountBadge({ count, label, muted = false, quiet = false, placement = 'inline' }: CountBadgeProps): React.JSX.Element {
+  const tone = quiet
+    ? 'count-badge count-badge-muted count-badge-quiet'
+    : muted ? 'count-badge count-badge-muted' : 'count-badge';
   const bumps = useBump(count);
   const figures = (
     <span

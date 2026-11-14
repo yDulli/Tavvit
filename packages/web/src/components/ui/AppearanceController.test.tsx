@@ -56,7 +56,7 @@ describe('AppearanceController', () => {
     expect(root().dataset.messageStyle).toBe('lines');
     expect(root().dataset.avatar).toBe('circle');
     expect(root().dataset.links).toBe('underline');
-    expect(prop('--radius-scale')).toBe('2.2');
+    expect(prop('--radius-scale')).toBe('1.5');
     unmount();
     expect(root().dataset.messageStyle).toBeUndefined();
     expect(root().dataset.links).toBeUndefined();

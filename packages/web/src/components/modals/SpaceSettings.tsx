@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useFormatters } from '../../i18n/formatters';
 import { describeError } from '../../i18n/errors';
 import { Modal } from '../ui/Modal';
-import { Icon } from '../ui/Icon';
+import { Icon, type IconName } from '../ui/Icon';
 import { SlidingMark } from '../ui/SlidingMark';
 import { useUIStore } from '../../stores/uiStore';
 import { useSpaceStore } from '../../stores/spaceStore';
@@ -698,6 +698,27 @@ function JoinRequestsSection({ spaceId, origin, onCountChange }: { spaceId: stri
   );
 }
 
+/** The mark of each space settings tab in the navigation. */
+const SPACE_TAB_ICONS: Record<SpaceSettingsTab, IconName> = {
+  you: 'user',
+  overview: 'info',
+  access: 'lock',
+  invites: 'link',
+  discovery: 'compass',
+  verification: 'shield',
+  moderation: 'flag',
+  welcome: 'star',
+  tag: 'tag',
+  look: 'palette',
+  sounds: 'music',
+  emoji: 'smile',
+  discord: 'download',
+  members: 'users',
+  roles: 'crown',
+  bans: 'x',
+  audit: 'list',
+};
+
 export function SpaceSettingsModal() {
   const { t } = useTranslation(['spaces', 'common']);
   const activeModal = useUIStore((s) => s.activeModal);
@@ -783,8 +804,8 @@ export function SpaceSettingsModal() {
     if (isMobile) setMobileView('content');
   };
 
-  // One `.nav-item` per tab under a mono label per section; the open one is a
-  // step lighter with the violet edge. On the phone the rows are taller, for
+  // One `.nav-item` per tab, with its icon, under a mono label per section; the open one is a
+  // step lighter with the ultraviolet edge. On the phone the rows are taller, for
   // a thumb.
   const renderNav = (layout: 'desktop' | 'mobile'): ReactNode =>
     SPACE_SETTINGS_NAV.map(({ group, tabs }, index) => {
@@ -802,6 +823,7 @@ export function SpaceSettingsModal() {
               data-active={tab === entry}
               aria-current={tab === entry ? 'page' : undefined}
             >
+              <Icon name={SPACE_TAB_ICONS[entry]} size={16} className={`flex-shrink-0 ${tab === entry ? 'text-txt-primary' : 'text-txt-tertiary'}`} />
               <span className="min-w-0 flex-1 truncate">{tabLabels[entry]}</span>
               {entry === 'access' && pendingRequests > 0 && <CountBadge count={pendingRequests} />}
               {layout === 'mobile' && <Icon name="chevron-right" size={15} className="flex-shrink-0 text-txt-tertiary" />}

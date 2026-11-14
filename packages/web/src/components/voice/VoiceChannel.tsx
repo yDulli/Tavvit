@@ -15,7 +15,7 @@ import { Icon } from '../ui/Icon';
 
 const EMPTY_VOICE_USERS: string[] = [];
 
-function VoiceChannelTimer({ observation }: { observation: VoiceChannelElapsed }) {
+export function VoiceChannelTimer({ observation }: { observation: VoiceChannelElapsed }) {
   const { t } = useTranslation('voice');
   const { formatDuration } = useFormatters();
   const now = useSharedSecondBeat();

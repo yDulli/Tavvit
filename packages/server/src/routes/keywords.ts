@@ -26,6 +26,10 @@ export async function keywordRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     const asked = request.body?.keywords;
     if (!Array.isArray(asked)) return sendError(reply, 400, 'validation_failed', { field: 'keywords' });
+    // Before the list is read at all: each word below is compared with every word kept so far, and
+    // a list of a hundred thousand held the whole server for seconds. Twice the limit leaves room
+    // for the same word sent more than once.
+    if (asked.length > KEYWORD_LIMITS.MAX * 2) return sendError(reply, 400, 'keyword_limit_reached', { max: KEYWORD_LIMITS.MAX });
     const words: string[] = [];
     for (const item of asked) {
       const word = cleanKeyword(item);

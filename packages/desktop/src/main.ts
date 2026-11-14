@@ -351,12 +351,12 @@ function createWindow(): void {
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     ...(process.platform !== 'darwin' ? {
       titleBarOverlay: {
-        color: '#0d0e11',
-        symbolColor: '#edeef2',
+        color: '#000000',
+        symbolColor: '#f2f2f2',
         height: 32,
       },
     } : {}),
-    backgroundColor: '#0d0e11',
+    backgroundColor: '#000000',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

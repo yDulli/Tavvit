@@ -1,4 +1,6 @@
 import { getDb, schema } from '../db/index.js';
+import { config } from '../config.js';
+import { canonicalRemoteOrigin } from './replicatedInstances.js';
 import { resolveOrCreateReplicatedUser } from '../routes/federation.js';
 import { applyHomeProfile, homeProfileFromAnswer } from '../routes/federation/profile.js';
 import { resolveRelayActor } from '../routes/federation/identity.js';
@@ -161,6 +163,12 @@ export async function resolveRemoteIdentityForClient(
   // home cannot be asked: the row gets the id name, and the DM's first message
   // starts the peering, whose activation renames the row (backfill).
   if (!SNOWFLAKE_ID.test(homeUserId)) return null;
+  // A row for someone elsewhere is made only where there is an elsewhere: with federation off no
+  // instance is ever asked or told about it, and the row would be an account nobody can be. And
+  // only for a home that is an instance's address: what a client sends as one is otherwise any
+  // text of any length, kept as the row's name. Without these two, any account could fill the
+  // users table through the conversation routes, a megabyte a row.
+  if (!config.federation.enabled || canonicalRemoteOrigin(homeInstance) === null) return null;
   const peerOrigin = activePeerOriginForHome(homeInstance, db);
   if (!peerOrigin) return resolveOrCreateReplicatedUser(homeUserId, homeInstance, db);
   const answer = await askHome(peerOrigin, homeUserId);

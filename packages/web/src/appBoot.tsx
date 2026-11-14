@@ -54,23 +54,23 @@ class ErrorBoundary extends React.Component<
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#0d0e11',
-          color: '#edeef2',
+          backgroundColor: '#000000',
+          color: '#f2f2f2',
           flexDirection: 'column',
           gap: '16px',
           padding: '24px',
         }}>
           <h1 style={{ fontSize: '20px', fontWeight: 600, letterSpacing: '-0.01em' }}>{i18n.t('common:crash.title')}</h1>
-          <p style={{ color: '#acafba', maxWidth: '480px', textAlign: 'center' }}>{this.state.error?.message}</p>
+          <p style={{ color: '#a8a8a8', maxWidth: '480px', textAlign: 'center' }}>{this.state.error?.message}</p>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={() => this.setState({ hasError: false, error: null })}
               style={{
-                padding: '8px 16px',
-                backgroundColor: '#7466e8',
-                color: 'white',
+                padding: '8px 18px',
+                backgroundColor: '#f2f2f2',
+                color: '#000000',
                 border: 'none',
-                borderRadius: '5px',
+                borderRadius: '999px',
                 cursor: 'pointer',
                 fontSize: '13px',
                 fontWeight: 500,
@@ -81,11 +81,11 @@ class ErrorBoundary extends React.Component<
             <button
               onClick={() => window.location.reload()}
               style={{
-                padding: '8px 16px',
+                padding: '8px 18px',
                 backgroundColor: 'transparent',
-                color: '#acafba',
-                border: '1px solid #3a3b44',
-                borderRadius: '5px',
+                color: '#a8a8a8',
+                border: '1px solid #292929',
+                borderRadius: '999px',
                 cursor: 'pointer',
                 fontSize: '13px',
                 fontWeight: 500,
@@ -100,7 +100,7 @@ class ErrorBoundary extends React.Component<
               onToggle={(e) => this.setState({ showStack: (e.target as HTMLDetailsElement).open })}
               style={{ maxWidth: '600px', width: '100%', marginTop: '8px' }}
             >
-              <summary style={{ color: '#acafba', cursor: 'pointer', fontSize: '13px' }}>
+              <summary style={{ color: '#a8a8a8', cursor: 'pointer', fontSize: '13px' }}>
                 {i18n.t('common:crash.details')}
               </summary>
               <pre style={{

@@ -11,13 +11,22 @@
 import { deriveAccentScale, parseHexColor, type Rgb } from '@backspace/shared/src/color.js';
 import { DEFAULT_INSTANCE_NAME } from '@backspace/shared/src/constants.js';
 
-/** The CSS variables the accent drives. They hold space-separated channels ("116 67 252"). */
+/**
+ * The CSS variables the accent drives. They hold space-separated channels ("116 67 252").
+ * `--on-accent` is what is written on the accent's fill: the stylesheet's own signal is white and
+ * carries black, an accent chosen here is one white text reads on (`accentColorProblem`), so it
+ * carries white.
+ */
 export const ACCENT_VARIABLES = [
   '--accent-primary',
   '--accent-primary-hover',
   '--accent-primary-active',
   '--accent-primary-soft',
+  '--on-accent',
 ] as const;
+
+/** White, as channels: the text on an accent a person, a space or an instance chose. */
+export const ON_CHOSEN_ACCENT = '255 255 255';
 
 function channels(rgb: Rgb): string {
   return rgb.map((c) => Math.round(c)).join(' ');
@@ -36,6 +45,7 @@ export function accentVariables(accent: string | null | undefined): Record<(type
     '--accent-primary-hover': channels(scale.hover),
     '--accent-primary-active': channels(scale.active),
     '--accent-primary-soft': channels(scale.soft),
+    '--on-accent': ON_CHOSEN_ACCENT,
   };
 }
 

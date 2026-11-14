@@ -1101,7 +1101,8 @@
     },
     "dmUnreadMessages_one": "{{count}} unread direct message",
     "dmUnreadMessages_other": "{{count}} unread direct messages",
-    "dmUnreadMessagesOver99": "More than 99 unread direct messages"
+    "dmUnreadMessagesOver99": "More than 99 unread direct messages",
+    "places": "Places"
   },
   "channels": {
     "loading": "Loading channels",

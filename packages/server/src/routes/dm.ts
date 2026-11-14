@@ -7,6 +7,8 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { eq, and, or, inArray, isNull } from 'drizzle-orm';
 import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
+import { dmCallRoomName } from './livekit.js';
+import { evictFromLiveKitRooms } from '../utils/livekitEviction.js';
 import { insertDmMember, reopenClosedDmMembers, setDmMemberClosed } from '../utils/dmMemberClosed.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
@@ -448,6 +450,11 @@ export function ensureOneOnOneDmChannel(
  * No-op if the user isn't currently in this DM's voice room.
  */
 function evictUserFromDmVoiceRoom(channelId: string, userId: string): void {
+  // Out of the call at LiveKit itself, whatever this server knows of them being in it: someone
+  // who left or was removed must not go on hearing a conversation they are no longer part of.
+  const federatedId = getDb().select({ federatedId: schema.dmChannels.federatedId }).from(schema.dmChannels)
+    .where(eq(schema.dmChannels.id, channelId)).get()?.federatedId ?? null;
+  evictFromLiveKitRooms(userId, [dmCallRoomName(channelId, federatedId)]);
   const userRoom = connectionManager.getUserRoom(userId);
   if (userRoom && userRoom.roomId === channelId) {
     const left = connectionManager.leaveCurrentRoom(userId);

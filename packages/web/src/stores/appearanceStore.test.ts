@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DEFAULT_APPEARANCE, CARBON_SETTINGS } from '../utils/appTheme';
-import { appearanceSettingsOf, normalizeAppearance, useAppearanceStore } from './appearanceStore';
+import { APPEARANCE_VERSION, appearanceSettingsOf, migrateAppearance, normalizeAppearance, useAppearanceStore } from './appearanceStore';
 
 beforeEach(() => {
   localStorage.clear();
@@ -99,7 +99,27 @@ describe('the store', () => {
     useAppearanceStore.getState().setLook({ font: 'inter' });
     useAppearanceStore.getState().reset();
     expect(useAppearanceStore.getState().theme).toBe('carbon');
-    expect(useAppearanceStore.getState().font).toBe('geist');
+    expect(useAppearanceStore.getState().font).toBe('outfit');
     expect(useAppearanceStore.getState().accent).toBeNull();
+  });
+});
+
+// Until the look changed, Geist was the default and so stood in everyone's stored settings,
+// chosen or not. What a device kept from then moves to the new default with the look.
+describe('migrateAppearance', () => {
+  it('moves the old default typeface to the new one, and keeps every other choice', () => {
+    expect(migrateAppearance({ font: 'geist', corners: 'round', theme: 'clay' }, 0)).toEqual({ font: DEFAULT_APPEARANCE.font, corners: 'round', theme: 'clay' });
+    expect(DEFAULT_APPEARANCE.font).toBe('outfit');
+  });
+
+  it('leaves a typeface someone picked as it is', () => {
+    expect(migrateAppearance({ font: 'inter' }, 0)).toEqual({ font: 'inter' });
+    expect(migrateAppearance({ font: 'mono', theme: 'plum' }, 0)).toEqual({ font: 'mono', theme: 'plum' });
+  });
+
+  it('touches nothing stored by this version or later, and nothing that is not settings', () => {
+    expect(migrateAppearance({ font: 'geist' }, APPEARANCE_VERSION)).toEqual({ font: 'geist' });
+    expect(migrateAppearance(null, 0)).toBeNull();
+    expect(migrateAppearance('nope', 0)).toBe('nope');
   });
 });

@@ -4,6 +4,28 @@
   "note": "Neu in {{version}}: {{title}}",
   "noteClose": "Schließen",
   "versions": {
+    "1.42.1": {
+      "title": "Sicherer",
+      "items": {
+        "hidden": "Rollen verwalten öffnet keinen versteckten Kanal mehr: Die Rechte eines Kanals ändert nur, wer ihn sehen kann. Wer einen Kanal privat stellt, bleibt darin.",
+        "roles": "Wer einen Space verlässt oder daraus entfernt wird, verliert dort seine Rollen. Wer wieder beitritt, fängt neu an.",
+        "voice": "Wer aus einem Space oder einer Gruppenunterhaltung entfernt wird, ist sofort aus dem Anruf, und niemand sitzt ungesehen in einem Sprachkanal.",
+        "photos": "Ein hochgeladenes Foto verrät nicht mehr, wo es aufgenommen wurde: Ort, Zeit und Gerät werden aus JPEG-Bildern entfernt, das Bild selbst bleibt unverändert.",
+        "calls": "In einer Unterhaltung lässt sich ein Anruf ein paar Mal pro Minute starten, nicht immer wieder.",
+        "landing": "Auf dem Handy zeigt die Seite für Besucher ihre Karten, sobald du sie erreichst, statt einen Moment später.",
+        "operators": "Wer eine Instanz betreibt, sollte aktualisieren. Nach dem Update entfernt der Server Rollen, die Leute zurückgelassen haben, die früher gegangen sind; sonst ist nichts zu tun."
+      }
+    },
+    "1.42.0": {
+      "title": "Ein neuer Look",
+      "items": {
+        "look": "Tavvit sieht neu aus: Schwarz, Weiß und Licht. Buttons und Felder sind rund, Flächen sind Rahmen mit Licht aus der Ecke, und die Schriften sind Outfit und JetBrains Mono. Dein Theme, deine Akzentfarbe und alle anderen Einstellungen bleiben, wie sie sind; hast du nie eine Schrift gewählt, bekommst du die neue.",
+        "window": "Das Fenster ist neu aufgeteilt: Deine Spaces sind Kacheln oben in der Seitenleiste, die Leiste über einer Seite sagt, wo du bist, und Start, Posteingang, Freunde und Entdecken beginnen jeweils mit einem Kopf.",
+        "home": "Start beginnt mit einer Begrüßung, zeigt auf einen Blick, was ungelesen ist und wer online ist, und deine Spaces als Karten.",
+        "light": "Hinter dem Anfang einer Seite bewegt sich etwas Licht, und es folgt dem Mauszeiger. Einstellungen, Darstellung, Licht schaltet es aus, und „Bewegung reduzieren“ hält es still.",
+        "pages": "Die Seite für Besucher und die Entwickler-Doku tragen denselben Look, und die Seite für Besucher gibt es in allen fünf Sprachen."
+      }
+    },
     "1.41.4": {
       "title": "Stabiler und schneller",
       "items": {

@@ -13,6 +13,8 @@ import { useFederationStore } from '../../stores/federationStore';
 import { useFederationEnabled } from '../../hooks/useFederationEnabled';
 import { Avatar } from '../ui/Avatar';
 import { MemberListToggleButton } from '../layout/MemberListToggleButton';
+import { PageHeader } from '../ui/PageHeader';
+import { TopbarActions } from '../layout/TopbarSlots';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Icon, type IconName } from '../ui/Icon';
 import { useFriendBuckets } from '../../hooks/useFriendBuckets';
@@ -123,7 +125,7 @@ interface FriendsPageProps {
 }
 
 export function FriendsPage({ mobile }: FriendsPageProps) {
-  const { t } = useTranslation(['social', 'common']);
+  const { t } = useTranslation(['social', 'common', 'home']);
   // `?view=add` and `?view=pending` open the page on that view (the Home page
   // and the activity column link here so); the parameter is dropped once read,
   // so a reload or a later visit opens on the online list.
@@ -296,37 +298,39 @@ export function FriendsPage({ mobile }: FriendsPageProps) {
           <h1 className={BAR_TITLE}>{t('common:labels.friends')}</h1>
         </header>
       ) : (
-        <div className="panel-bar px-4 flex items-stretch gap-4">
-          <div className="flex items-center gap-2">
-            <Icon name="users" size={17} className="text-txt-tertiary" />
-            <span className="text-lead font-semibold tracking-[-0.01em] text-txt-primary">{t('common:labels.friends')}</span>
-          </div>
-          <div aria-hidden="true" className="my-auto h-4 w-px bg-border-soft" />
-          <div role="tablist" className="flex items-stretch gap-1">
-            <TabButton active={activeTab === 'online'} onClick={() => setActiveTab('online')}>{t('common:states.online')}</TabButton>
-            <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>{t('social:tabs.all')}</TabButton>
-            <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
-              {t('social:tabs.pending')}
-              {(pendingIncoming.length > 0) && (
-                <span className="count-badge ml-1.5">
-                  {pendingIncoming.length > 99 ? '99+' : pendingIncoming.length}
-                </span>
-              )}
-            </TabButton>
-          </div>
-          <div className="ml-auto flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab('add')}
-              aria-pressed={activeTab === 'add'}
-              className={activeTab === 'add' ? 'btn-quiet btn-sm bg-interactive-selected text-txt-primary' : 'btn-primary btn-sm'}
-            >
-              <Icon name="user-plus" size={14} />
-              {t('social:tabs.add')}
-            </button>
+        <>
+          <TopbarActions>
             <MemberListToggleButton />
-          </div>
-        </div>
+          </TopbarActions>
+          <PageHeader
+            eyebrow={t('home:nav.home')}
+            title={t('common:labels.friends')}
+            actions={(
+              <button
+                type="button"
+                onClick={() => setActiveTab('add')}
+                aria-pressed={activeTab === 'add'}
+                className={activeTab === 'add' ? 'btn-outline' : 'btn-primary'}
+              >
+                <Icon name="user-plus" size={14} />
+                {t('social:tabs.add')}
+              </button>
+            )}
+          >
+            <div role="tablist" className="page-tabs">
+              <TabButton active={activeTab === 'online'} onClick={() => setActiveTab('online')}>{t('common:states.online')}</TabButton>
+              <TabButton active={activeTab === 'all'} onClick={() => setActiveTab('all')}>{t('social:tabs.all')}</TabButton>
+              <TabButton active={activeTab === 'pending'} onClick={() => setActiveTab('pending')}>
+                {t('social:tabs.pending')}
+                {(pendingIncoming.length > 0) && (
+                  <span className="count-badge">
+                    {pendingIncoming.length > 99 ? '99+' : pendingIncoming.length}
+                  </span>
+                )}
+              </TabButton>
+            </div>
+          </PageHeader>
+        </>
       )}
 
       {/* Mobile tab bar */}
@@ -740,12 +744,9 @@ function TabButton({ children, active, onClick }: { children: React.ReactNode, a
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`relative flex items-center px-2 text-ui font-medium transition-colors ${
-        active ? 'text-txt-primary' : 'text-txt-tertiary hover:text-txt-secondary'
-      }`}
+      className="page-tab"
     >
       {children}
-      {active && <span aria-hidden className="absolute inset-x-2 -bottom-px h-[2px] bg-accent-primary" />}
     </button>
   );
 }

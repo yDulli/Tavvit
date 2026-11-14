@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { hasStoredSession } from '../landing/entry';
 import { LegalLinks } from './legal/LegalLinks';
 import { Icon } from './ui/Icon';
+import { LightField } from './ui/LightField';
 
 /**
  * An address no route knows. Someone signed in gets back to the app; a visitor
@@ -12,7 +13,7 @@ export function NotFoundPage() {
   const signedIn = hasStoredSession();
   return (
     <div className="stage-light relative isolate h-full overflow-y-auto flex flex-col items-center bg-surface-base px-4 py-6">
-      <div aria-hidden="true" className="hero-light" />
+      <LightField intensity="hero" className="light-field-window" />
       <a href="/" className="flex w-fit items-center gap-2.5 self-start">
         <img src="/icons/logo-mark.svg" alt="" className="h-6 w-6" />
         <span className="text-lead font-semibold tracking-[-0.01em] text-txt-primary">{t('appName')}</span>

@@ -2,7 +2,7 @@
 
 The public pages at `/developers` and `/developers/docs/<page>`: what someone writing a bot or a webhook reads. They say how to use the API. How it works and what must stay true is in [bots.md](bots.md) and [webhooks.md](webhooks.md). The portal at `/developers/bots` is part of the app and is described in bots.md.
 
-**Files:** `packages/web/developers/` (`pages.mjs`, `content/*.md`, `reference.mjs`, `build.mjs`, `plugin.mjs`, `assets/docs.css`, `assets/docs.js`, `example-bot.mjs`, `build.test.ts`), `packages/server/src/utils/developerDocs.ts`, `packages/web/vite.config.ts`.
+**Files:** `packages/web/developers/` (`pages.mjs`, `content/*.md`, `reference.mjs`, `build.mjs`, `plugin.mjs`, `assets/docs.css`, `assets/docs.js`, `assets/grain.svg`, `example-bot.mjs`, `build.test.ts`), `packages/server/src/utils/developerDocs.ts`, `packages/web/vite.config.ts`.
 
 ## What they are
 
@@ -10,11 +10,20 @@ Plain HTML, made while the web client is built. No app bundle, so a page is smal
 
 **In English only,** as developer docs usually are, and as the default language is. The portal in the app is in the five languages.
 
+## How they look
+
+The look of the app and the product page (design-system.md, "Schwarzlicht"), in a stylesheet of their own (`assets/docs.css`), because these pages load no app: pure black with film grain, Outfit and JetBrains Mono from `/fonts`, pills, frames lit from their corner, mono labels behind a turning spark.
+
+- **The start page** opens with the name in chrome (`chromeWord` in `build.mjs`: each letter stands in the page once, and the stylesheet paints the metal face from `data-letter`) over a hollow "Developers", the headline rising out of a clip, the lead and the two ways on. Then the four parts as frames that catch the pointer's light, a band of words that runs across the page (there twice, so it has no seam, and hidden from assistive technology), the example in a window frame and what one can count on as numbered rows.
+- **A docs page** opens with its section as the eyebrow, its title rising out of a clip and the line about it, over a quiet band of light; code and tables stand in frames, the page before and the page after are two cards.
+- **What moves is decoration**, and `docs.js` adds it last, each part on its own, so a browser that cannot draw one still has the search and everything else: the light threads behind a page's opening (a canvas in each `data-light` host, as the app's `ui/LightField.tsx`), a ring of light that trails a mouse and tells a frame marked `data-glare` where the pointer is, and what is below the first screen rising into view (`data-reveal`; what is already in sight is left alone, and without the script it is simply there). None of it runs under `prefers-reduced-motion`, where the stylesheet also stops every animation; forced colours turn the chrome and the hollow words into plain text.
+- **The policy holds.** Nothing is inline: the letters' angles and the glints' places are rules of the stylesheet (`:nth-child`), the grain is a file beside it (`assets/grain.svg`, since `img-src 'self'` takes no `data:` picture), and the script moves things through the style object of an element (`element.style.setProperty`), which the policy allows, never by writing a `style` attribute.
+
 Every instance serves its own copy, so they describe the version it runs and name its address.
 
 ## How they are made
 
-`build.mjs` turns each `content/<page>.md` into `dist/developers/docs/<page>.html`, and adds `home.html`, `assets/search-index.json` and the assets. It uses what the client already depends on (`react-markdown`, `remark-gfm`, `prism-react-renderer`, `react-dom/server`), so it adds no dependency.
+`build.mjs` turns each `content/<page>.md` into `dist/developers/docs/<page>.html`, and adds `home.html`, `assets/search-index.json` and the assets. It uses what the client already depends on (`react-markdown`, `remark-gfm`, `prism-react-renderer`, `react-dom/server`), so it adds no dependency. While developing, `/developers` is answered by the API server from the last build's `dist/developers` (`vite.config.ts` proxies it), so after a change run `node packages/web/developers/build.mjs packages/web/dist/developers`; a new file among the assets needs the server restarted once, because the static handler lists its files when it starts.
 
 `vite.config.ts` runs it through the plugin in `plugin.mjs`, once the bundle is written, in a process of its own: Node reads the shared package's TypeScript as it is, which Vite's bundling of its config would not. This folder is outside the client's `tsconfig`, which has no Node types to rely on in the Docker build. So `vite build`, `pnpm build`, the release check and the Docker image all make the docs, and a page that cannot be made fails the build. To look at them alone: `node packages/web/developers/build.mjs <folder>`.
 

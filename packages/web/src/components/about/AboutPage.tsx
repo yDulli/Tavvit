@@ -2,8 +2,8 @@ import React, { type JSX } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHomeInstanceInfo } from '../../hooks/useHomeInstanceInfo';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { TopbarActions } from '../layout/TopbarSlots';
 import { MemberListToggleButton } from '../layout/MemberListToggleButton';
-import { Icon } from '../ui/Icon';
 import { DesktopDownload } from '../download/DesktopDownload';
 import { LegalLinks } from '../legal/LegalLinks';
 import { NoticeBody } from '../legal/LegalController';
@@ -31,13 +31,9 @@ export function AboutPage({ showTopBar = true }: { showTopBar?: boolean }): JSX.
   return (
     <div className="lit-phone flex h-full min-w-0 flex-1 flex-col bg-surface-chat desktop:bg-transparent">
       {showTopBar && (
-        <div className="panel-bar flex items-center gap-2 px-4">
-          <Icon name="info" size={17} className="text-txt-tertiary" />
-          <span className="text-lead font-semibold tracking-[-0.01em] text-txt-primary">{t('home:nav.about')}</span>
-          <div className="ml-auto flex items-center gap-1">
-            <MemberListToggleButton />
-          </div>
-        </div>
+        <TopbarActions>
+          <MemberListToggleButton />
+        </TopbarActions>
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto">

@@ -95,6 +95,7 @@ function lookStyle(look: Look | undefined): CssVars | undefined {
     '--bg-elevated': triplet(lighter(surface, 0.07)),
     '--bg-input': triplet(darker(surface, 0.62)),
     '--accent-primary': triplet(accent),
+    '--on-accent': '255 255 255',
     '--accent-primary-hover': triplet(darker(accent, 0.88)),
     '--violet': triplet(accent),
     '--violet-soft': triplet(lighter(accent, 0.3)),

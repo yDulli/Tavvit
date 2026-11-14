@@ -42,7 +42,8 @@
     "previous": "上一页",
     "next": "下一页",
     "preview": "预览",
-    "logIn": "登录"
+    "logIn": "登录",
+    "searchOrJump": "搜索或跳转到…"
   },
   "states": {
     "loading": "正在加载…",
@@ -83,7 +84,8 @@
     "noMembersFound": "未找到成员",
     "or": "或",
     "nameAZ": "按名称 (A-Z)",
-    "adminConsole": "管理控制台"
+    "adminConsole": "管理控制台",
+    "whereYouAre": "当前位置"
   },
   "time": {
     "today": "今天 {{time}}",

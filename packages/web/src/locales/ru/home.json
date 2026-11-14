@@ -57,7 +57,12 @@
     "mentions_many": "{{count}} непрочитанных упоминаний",
     "mentions_other": "{{count}} непрочитанного упоминания",
     "showAll": "Показать все",
-    "showFewer": "Показать меньше"
+    "showFewer": "Показать меньше",
+    "columns": {
+      "space": "Пространство",
+      "unread": "Непрочитанное",
+      "voice": "Голос"
+    }
   },
   "about": {
     "title": "Об Tavvit",

@@ -1101,7 +1101,8 @@
     },
     "dmUnreadMessages_one": "{{count}} ungelesene Direktnachricht",
     "dmUnreadMessages_other": "{{count}} ungelesene Direktnachrichten",
-    "dmUnreadMessagesOver99": "Mehr als 99 ungelesene Direktnachrichten"
+    "dmUnreadMessagesOver99": "Mehr als 99 ungelesene Direktnachrichten",
+    "places": "Orte"
   },
   "channels": {
     "loading": "Kanäle werden geladen",

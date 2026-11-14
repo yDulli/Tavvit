@@ -22,6 +22,7 @@ import { InstanceBranding } from './components/ui/InstanceBranding';
 import { AppearanceController } from './components/ui/AppearanceController';
 import { ScreenShareSetup } from './components/voice/ScreenShareSetup';
 import { TooltipLayer } from './components/ui/TooltipLayer';
+import { PointerAura } from './components/ui/PointerAura';
 import { ContextMenuRenderer } from './components/ui/ContextMenuRenderer';
 import { useAuthStore } from './stores/authStore';
 import { isElectron } from './platform/platform';
@@ -81,6 +82,8 @@ export function App() {
         <ContextMenuRenderer />
         {/* One tooltip for the whole app: the name of every icon-only control (ui/TooltipLayer.tsx). */}
         <TooltipLayer />
+        {/* The ring of light that trails the pointer (ui/PointerAura.tsx): once, for every page. */}
+        <PointerAura />
         <LegalController />
         <MailLanguageController />
         <MfaPromptDialog />

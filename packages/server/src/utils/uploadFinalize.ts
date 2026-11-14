@@ -15,6 +15,7 @@ import {
 } from './thumbnail.js';
 import { extractExtension } from './tusHooks.js';
 import { storedUploadName } from './uploadNames.js';
+import { stripJpegMetadata } from './pictureMetadata.js';
 import { mimetypeFromFilename } from './uploadTypes.js';
 
 
@@ -50,6 +51,17 @@ export async function finalizeUpload(upload: FinishedUpload): Promise<Attachment
   fs.mkdirSync(config.uploadDir, { recursive: true });
 
   const mimetype = mimetypeFromFilename(originalName);
+
+  // A photo says where and with what it was taken. That goes before the file can be fetched by
+  // anyone, without touching the picture itself (utils/pictureMetadata.ts).
+  let rewritten = false;
+  if (mimetype === 'image/jpeg') {
+    try {
+      rewritten = await stripJpegMetadata(srcPath);
+    } catch (err) {
+      console.error('[files] A photo kept its metadata, it could not be written anew:', err instanceof Error ? err.message : 'unknown error');
+    }
+  }
 
   // ── Media processing (on the still-staging file) ─────────────────────
   // Wrapped defensively: any failure here must not abort the upload —
@@ -136,7 +148,7 @@ export async function finalizeUpload(upload: FinishedUpload): Promise<Attachment
     }
   }
 
-  const size = upload.size ?? fs.statSync(dstPath).size;
+  const size = rewritten ? fs.statSync(dstPath).size : upload.size ?? fs.statSync(dstPath).size;
   const now = Date.now();
 
   // ── Insert attachments row ───────────────────────────────────────────

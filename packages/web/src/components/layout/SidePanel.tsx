@@ -42,7 +42,7 @@ export function SidePanel({ children, className = '', ...rest }: SidePanelProps)
     <div
       {...rest}
       ref={panelRef}
-      className={`w-[var(--sidebar-width)] flex-shrink-0 select-none hidden desktop:block border-l border-border-hard bg-surface-members lit compact:absolute compact:bottom-0 compact:right-0 compact:top-[var(--topbar-height)] compact:z-[120] compact:shadow-elevation-high ${className}`}
+      className={`side-panel w-[var(--sidebar-width)] flex-shrink-0 select-none hidden desktop:block border-l border-border-hard bg-surface-members compact:absolute compact:bottom-0 compact:right-0 compact:top-0 compact:z-[120] compact:shadow-elevation-high ${className}`}
     >
       <div className="h-full overflow-y-auto no-scrollbar">
         {children}

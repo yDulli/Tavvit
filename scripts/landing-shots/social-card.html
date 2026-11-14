@@ -2,77 +2,101 @@
 <!--
   The picture a link to Tavvit previews with (packages/web/public/social-card.jpg), drawn by
   card.mjs at 1200x630. Built from the product page's own material (src/landing/landing.css):
-  the frame tone, the light from above in the accent with its grain, the rings of the logo, the
-  display type with its ink, and the real window in its frame. The words are the page's: what may
-  be said is landing.md's rule (no price, nothing about hosting it yourself, no other app by name).
-  It names no address, because every server sends this picture.
+  pure black with its grain, the field of light threads, the display type with its second line in
+  polished metal, a mono label behind the spark, and the real window in a frame. The words are the
+  page's: what may be said is landing.md's rule (no price, nothing about hosting it yourself, no
+  other app by name). It names no address, because every server sends this picture.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <title>Tavvit social card</title>
 <style>
-  @font-face { font-family: Geist; src: url(../../packages/web/public/fonts/Geist-Latin.woff2) format('woff2'); font-weight: 100 900; font-style: normal; }
-  @font-face { font-family: 'Geist Mono'; src: url(../../packages/web/public/fonts/GeistMono-Latin.woff2) format('woff2'); font-weight: 100 900; font-style: normal; }
+  @font-face { font-family: Outfit; src: url(../../packages/web/public/fonts/Outfit-Latin.woff2) format('woff2'); font-weight: 100 900; font-style: normal; }
+  @font-face { font-family: 'JetBrains Mono'; src: url(../../packages/web/public/fonts/JetBrainsMono-Latin.woff2) format('woff2'); font-weight: 100 800; font-style: normal; }
   :root {
-    --bg-base: 13 14 17;
-    --bg-chat: 21 22 27;
-    --accent: 116 102 232;
-    --text-primary: 237 238 242;
-    --text-secondary: 172 175 186;
-    --text-category: 150 153 166;
-    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .03 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --text-primary: 242 242 242;
+    --text-secondary: 168 168 168;
+    --text-category: 140 140 140;
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 1200px; height: 630px; overflow: hidden; background: rgb(var(--bg-base)); }
-  body { position: relative; font-family: Geist, system-ui, sans-serif; color: rgb(var(--text-primary)); -webkit-font-smoothing: antialiased; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; background: #000; }
+  body { position: relative; font-family: Outfit, system-ui, sans-serif; color: rgb(var(--text-primary)); -webkit-font-smoothing: antialiased; }
 
-  /* The light of the opening: a bloom from above in the accent, behind everything, fading down. */
-  .light {
-    position: absolute; inset: 0;
-    background-image:
-      var(--grain),
-      radial-gradient(50% 56% at 76% 0%, rgb(var(--accent) / .42) 0%, rgb(var(--accent) / .13) 48%, transparent 76%),
-      radial-gradient(34% 40% at 6% 4%, rgb(var(--accent) / .11) 0%, transparent 70%);
-    background-size: 220px, auto, auto;
-    background-repeat: repeat, no-repeat, no-repeat;
-    -webkit-mask-image: linear-gradient(180deg, #000 52%, transparent 100%);
-    mask-image: linear-gradient(180deg, #000 52%, transparent 100%);
-  }
-  /* The rings of the app's openings, which are the ring of the logo. */
-  .rings { position: absolute; top: -430px; right: -210px; width: 940px; height: 940px; border-radius: 50%; border: 1px solid rgb(255 255 255 / .07); outline: 1px solid rgb(255 255 255 / .045); outline-offset: -190px; }
+  /* One wide glow far behind everything, so the black is never a hole. */
+  .glow { position: absolute; inset: 0; background: radial-gradient(56% 62% at 78% 0%, rgb(255 255 255 / .16) 0%, rgb(255 255 255 / .05) 46%, transparent 76%); }
+  /* The field of light threads of the page's opening, as one still frame (the script below draws it). */
+  #threads { position: absolute; inset: 0; width: 1200px; height: 630px; -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 58%, #000 30%, transparent 82%); mask-image: radial-gradient(ellipse 90% 80% at 50% 58%, #000 30%, transparent 82%); }
+  /* Film grain over the whole card. */
+  .grain { position: absolute; inset: 0; z-index: 5; background: var(--grain) 0 0 / 240px 240px; opacity: .07; mix-blend-mode: overlay; pointer-events: none; }
 
-  .copy { position: absolute; left: 72px; top: 66px; width: 528px; height: 500px; display: flex; flex-direction: column; }
-  .brand { display: flex; align-items: center; gap: 14px; font-size: 31px; font-weight: 600; letter-spacing: -.02em; }
+  .copy { position: absolute; left: 72px; top: 62px; width: 540px; height: 506px; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 14px; font-size: 31px; font-weight: 600; letter-spacing: -.03em; }
   .brand img { width: 46px; height: 46px; }
-  h1 {
-    margin-top: 80px; font-size: 76px; font-weight: 680; line-height: .96; letter-spacing: -.05em; padding-bottom: .08em;
-    color: rgb(var(--text-primary));
-    background-image: linear-gradient(180deg, rgb(var(--text-primary)) 38%, color-mix(in srgb, rgb(var(--text-primary)) 72%, rgb(var(--bg-chat))) 100%);
+  h1 { margin-top: 74px; font-size: 80px; font-weight: 600; line-height: .94; letter-spacing: -.045em; padding-bottom: .08em; }
+  /* The second line in polished metal. */
+  h1 span {
+    display: block;
+    background-image: linear-gradient(100deg, #7a7a7a 0%, #ffffff 16%, #a2a2a2 34%, #f6f6f6 52%, #6a6a6a 68%, #ffffff 86%, #b0b0b0 100%);
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   }
   .lead { margin-top: 24px; font-size: 24px; line-height: 1.42; color: rgb(var(--text-secondary)); }
-  .label { margin-top: auto; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: rgb(var(--text-category)); }
-  .label span { display: inline-block; width: 4px; height: 4px; margin: 0 12px 3px; border-radius: 50%; background: rgb(var(--text-category) / .7); }
+  .label { display: flex; align-items: center; margin-top: auto; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 14px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: rgb(var(--text-secondary)); }
+  /* The spark that stands before a label, and between two. */
+  .label i { width: 11px; height: 11px; margin-right: 14px; background: #fff; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+  .label i + b { font-weight: 500; }
+  .label b + i { margin-left: 18px; background: rgb(var(--text-category)); }
 
-  /* The real window, as the page's opening shows it: a frame that floats, cut by the card's edge. */
+  /* The real window in a frame that floats, cut by the card's edge. */
   .window {
-    position: absolute; left: 652px; top: 120px; width: 900px; height: 560px; border-radius: 10px; overflow: hidden;
-    background: rgb(var(--bg-chat));
-    box-shadow: 0 0 0 1px rgb(255 255 255 / .14), 0 50px 110px -40px rgb(0 0 0 / .9), 0 18px 40px -24px rgb(0 0 0 / .7);
+    position: absolute; left: 652px; top: 118px; width: 900px; height: 560px; border-radius: 24px; overflow: hidden;
+    background: #000;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / .2), 0 0 90px -18px rgb(255 255 255 / .3), 0 50px 110px -40px rgb(0 0 0 / .95);
   }
   .window img { display: block; width: 1100px; height: auto; }
 </style>
 </head>
 <body>
-  <div class="light"></div>
-  <div class="rings"></div>
+  <div class="glow"></div>
+  <canvas id="threads" width="1200" height="630"></canvas>
   <div class="copy">
     <div class="brand"><img src="../../packages/web/public/icons/mark.svg" alt=""><span>Tavvit</span></div>
-    <h1>Make room<br>for your people.</h1>
+    <h1>Make room<span>for your people.</span></h1>
     <p class="lead">Channels, voice and screen sharing in a place of your own, for your friends and your community.</p>
-    <p class="label">No ads<span></span>No trackers</p>
+    <p class="label"><i></i><b>No ads</b><i></i><b>No trackers</b></p>
   </div>
   <div class="window"><img src="../../packages/web/src/landing/assets/window.webp" alt=""></div>
+  <div class="grain"></div>
+  <script>
+    // One still frame of the page's light field (src/landing/light.tsx): bands of fine threads.
+    const pen = document.getElementById('threads').getContext('2d');
+    const width = 1200;
+    const height = 630;
+    const bands = [
+      { y: 0.52, amplitude: 0.11, light: '242 242 242', phase: 0.9 },
+      { y: 0.68, amplitude: 0.08, light: '158 158 158', phase: 2.6 },
+      { y: 0.34, amplitude: 0.07, light: '242 242 242', phase: 4.4 },
+    ];
+    pen.globalCompositeOperation = 'lighter';
+    for (const band of bands) {
+      for (let thread = 0; thread < 22; thread += 1) {
+        const offset = thread / 21 - 0.5;
+        pen.strokeStyle = `rgb(${band.light} / ${(0.17 * Math.exp(-(offset * offset) * 10)).toFixed(3)})`;
+        pen.lineWidth = 1;
+        pen.beginPath();
+        for (let x = -8; x <= width + 8; x += 6) {
+          const u = x / width;
+          const y = band.y * height
+            + offset * band.amplitude * height * 1.6
+            + band.amplitude * height * Math.sin(u * 5.2 + band.phase + offset * 1.4)
+            + band.amplitude * height * 0.45 * Math.sin(u * 11.5 + band.phase * 1.7 - offset * 2.2);
+          if (x < 0) pen.moveTo(x, y);
+          else pen.lineTo(x, y);
+        }
+        pen.stroke();
+      }
+    }
+  </script>
 </body>
 </html>

@@ -384,10 +384,22 @@ describe('channel overrides: only bits the actor holds can be switched', () => {
 
   it('deletes an override that only holds bits the actor holds', async () => {
     as('owner');
-    expect((await putChannelOverride(SPACE_ID, 0n, PermissionBits.VIEW_CHANNEL)).statusCode).toBe(200);
+    expect((await putChannelOverride(SPACE_ID, PermissionBits.SEND_MESSAGES, 0n)).statusCode).toBe(200);
     as('lead');
     expect((await deleteChannelOverride(SPACE_ID)).statusCode).toBe(200);
     expect(channelOverride(SPACE_ID)).toBeUndefined();
+  });
+
+  // The channel's own overrides count: a channel hidden from the actor is not theirs to open, though
+  // they hold VIEW_CHANNEL in the space (permissions.md, "Who may set overrides"; security audit, 2026-11-14).
+  it('does not delete what hides a channel from the actor', async () => {
+    as('owner');
+    expect((await putChannelOverride(SPACE_ID, 0n, PermissionBits.VIEW_CHANNEL)).statusCode).toBe(200);
+    as('lead');
+    const res = await deleteChannelOverride(SPACE_ID);
+    expect(res.statusCode).toBe(403);
+    expect(res.json<{ code: string }>().code).toBe('missing_permission');
+    expect(channelOverride(SPACE_ID)).toBeDefined();
   });
 
   it('lets an ADMINISTRATOR holder switch any bit', async () => {
@@ -514,9 +526,11 @@ describe('overrides follow the role hierarchy (review probe P2)', () => {
 
   it('allows overrides on @everyone, lower roles, lower members and oneself', async () => {
     as('mod');
+    // Oneself first: what an override gives must be held in the channel, and once @everyone may
+    // not write there, neither may the moderator, who then has no writing to hand out.
+    expect((await putMemberOverride('mod', PermissionBits.SEND_MESSAGES, 0n)).statusCode).toBe(200);
     expect((await putChannelOverride(SPACE_ID, 0n, PermissionBits.SEND_MESSAGES)).statusCode).toBe(200);
     expect((await putMemberOverride('alt', 0n, PermissionBits.SEND_MESSAGES)).statusCode).toBe(200);
-    expect((await putMemberOverride('mod', PermissionBits.SEND_MESSAGES, 0n)).statusCode).toBe(200);
     as('lead');
     expect((await putChannelOverride('r-admin', 0n, PermissionBits.SEND_MESSAGES)).statusCode).toBe(200);
     expect((await putCategoryOverride('r-mod', 0n, PermissionBits.SEND_MESSAGES)).statusCode).toBe(200);

@@ -28,14 +28,14 @@ import {
 
 // The text colours from globals.css.
 const TEXT = {
-  primary: [237, 238, 242] as Rgb,
-  message: [225, 227, 233] as Rgb,
-  secondary: [172, 175, 186] as Rgb,
-  tertiary: [141, 144, 156] as Rgb,
+  primary: [242, 242, 242] as Rgb,
+  message: [228, 228, 228] as Rgb,
+  secondary: [168, 168, 168] as Rgb,
+  tertiary: [140, 140, 140] as Rgb,
 };
 
-/** The quietest text on the shipped floating panel (globals.css: --bg-elevated 30 31 37). */
-const CARBON_ELEVATED_TERTIARY = contrastRatio(TEXT.tertiary, [30, 31, 37]);
+/** The quietest text on the shipped floating panel (globals.css: --bg-elevated 29 29 29). */
+const CARBON_ELEVATED_TERTIARY = contrastRatio(TEXT.tertiary, [29, 29, 29]);
 
 /** Every combination of the ends of the three ranges, with a few hues in between. */
 function corners(): SurfaceSettings[] {
@@ -82,16 +82,28 @@ describe('normalizeSurface', () => {
 });
 
 describe('the surfaces a theme makes', () => {
-  it('keep the layout\'s order at every point: frame darkest, content lighter, floating panels lightest', () => {
+  it('keep the layout\'s order at every point: the canvas darkest, ink a breath above it, then the panel, a raised control and what floats', () => {
     for (const settings of corners()) {
       const lum = (token: Parameters<typeof surfaceChannels>[1]) => {
         const [r, g, b] = surfaceChannels(settings, token);
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
       };
-      expect(lum('--bg-base'), JSON.stringify(settings)).toBeLessThanOrEqual(lum('--bg-channel'));
-      expect(lum('--bg-channel'), JSON.stringify(settings)).toBeLessThanOrEqual(lum('--bg-chat'));
-      expect(lum('--bg-chat'), JSON.stringify(settings)).toBeLessThanOrEqual(lum('--bg-elevated'));
-      expect(lum('--bg-input'), JSON.stringify(settings)).toBeLessThanOrEqual(lum('--bg-chat'));
+      const where = JSON.stringify(settings);
+      expect(lum('--bg-base'), where).toBe(lum('--bg-chat'));
+      expect(lum('--bg-chat'), where).toBeLessThanOrEqual(lum('--bg-channel'));
+      expect(lum('--bg-channel'), where).toBe(lum('--bg-members'));
+      expect(lum('--bg-input'), where).toBeLessThanOrEqual(lum('--bg-panel'));
+      expect(lum('--bg-channel'), where).toBeLessThanOrEqual(lum('--bg-panel'));
+      expect(lum('--bg-panel'), where).toBeLessThanOrEqual(lum('--bg-raised'));
+      expect(lum('--bg-raised'), where).toBeLessThanOrEqual(lum('--bg-elevated'));
+    }
+  });
+
+  it('leave the canvas black in every theme: black has no brightness to scale', () => {
+    for (const settings of [...corners(), ...Object.values(THEME_PRESETS)]) {
+      expect(surfaceChannels(settings, '--bg-base'), JSON.stringify(settings)).toEqual([0, 0, 0]);
+      expect(surfaceChannels(settings, '--bg-chat'), JSON.stringify(settings)).toEqual([0, 0, 0]);
+      expect(frameColor(settings)).toBe('#000000');
     }
   });
 
@@ -119,12 +131,12 @@ describe('the surfaces a theme makes', () => {
   it('leave the quiet text alone where Carbon already reads well, and lift it only as far as needed', () => {
     const lifted = surfaceVariables({ ...CARBON_SETTINGS, depth: DEPTH_RANGE.max });
     const calm = surfaceVariables({ ...CARBON_SETTINGS, depth: DEPTH_RANGE.min });
-    expect(calm['--text-tertiary']).toBe('141 144 156');
+    expect(calm['--text-tertiary']).toBe('140 140 140');
     const [r, g, b] = lifted['--text-tertiary'].split(' ').map(Number);
-    expect(r).toBeGreaterThan(141);
+    expect(r).toBeGreaterThan(140);
     expect(r).toBeLessThan(255);
-    expect(g).toBeGreaterThan(144);
-    expect(b).toBeGreaterThan(156);
+    expect(g).toBeGreaterThan(140);
+    expect(b).toBeGreaterThan(140);
   });
 
   it('keep borders visible against the surface they sit on', () => {
@@ -135,17 +147,18 @@ describe('the surfaces a theme makes', () => {
   });
 
   it('are grey at no strength and coloured at full strength', () => {
-    const grey = surfaceChannels({ hue: 100, strength: 0, depth: 0 }, '--bg-chat');
+    const grey = surfaceChannels({ hue: 100, strength: 0, depth: 0 }, '--bg-elevated');
     expect(new Set(grey).size).toBe(1);
-    const coloured = surfaceChannels({ hue: 100, strength: 100, depth: 0 }, '--bg-chat');
+    const coloured = surfaceChannels({ hue: 100, strength: 100, depth: 0 }, '--bg-elevated');
     expect(new Set(coloured).size).toBeGreaterThan(1);
   });
 
-  it('get lighter with depth and never reach black', () => {
-    const at = (depth: number) => surfaceChannels({ hue: 240, strength: 26, depth }, '--bg-base');
+  it('get lighter with depth, and what stands on the canvas never reaches black', () => {
+    const at = (depth: number) => surfaceChannels({ hue: 240, strength: 26, depth }, '--bg-elevated');
     expect(at(DEPTH_RANGE.max)[2]).toBeGreaterThan(at(0)[2]);
     expect(at(DEPTH_RANGE.min)[2]).toBeLessThan(at(0)[2]);
     expect(at(DEPTH_RANGE.min).some((c) => c > 0)).toBe(true);
+    expect(surfaceChannels({ hue: 240, strength: 26, depth: DEPTH_RANGE.min }, '--bg-panel').some((c) => c > 0)).toBe(true);
   });
 
   it('come out as channel triples (the floating layers follow --bg-elevated in the stylesheet)', () => {
@@ -155,15 +168,18 @@ describe('the surfaces a theme makes', () => {
     expect(SURFACE_VARIABLES).not.toContain('--glass-bg');
   });
 
-  it('land close to the shipped Carbon at its own point', () => {
-    const chat = surfaceChannels(CARBON_SETTINGS, '--bg-chat');
-    // globals.css says 21 22 27.
-    chat.forEach((channel, i) => expect(Math.abs(channel - [21, 22, 27][i]!)).toBeLessThanOrEqual(3));
-    // The browser's chrome with no theme set is the shipped frame, --bg-base 13 14 17.
-    const frame = [1, 3, 5].map((at) => parseInt(DEFAULT_FRAME_COLOR.slice(at, at + 2), 16));
-    expect(frame).toEqual([13, 14, 17]);
-    const carbonFrame = [1, 3, 5].map((at) => parseInt(frameColor(CARBON_SETTINGS).slice(at, at + 2), 16));
-    carbonFrame.forEach((channel, i) => expect(Math.abs(channel - frame[i]!)).toBeLessThanOrEqual(3));
+  it('land on the shipped Carbon at its own point', () => {
+    // globals.css says: the floating panel 29 29 29, the panel 11 11 11, the hairline 41 41 41.
+    const near = (token: Parameters<typeof surfaceChannels>[1], shipped: number) =>
+      surfaceChannels(CARBON_SETTINGS, token).forEach((channel) => expect(Math.abs(channel - shipped), token).toBeLessThanOrEqual(1));
+    near('--bg-elevated', 29);
+    near('--bg-panel', 11);
+    near('--bg-channel', 5);
+    near('--border-hard', 41);
+    expect(surfaceChannels(CARBON_SETTINGS, '--bg-chat')).toEqual([0, 0, 0]);
+    // The browser's chrome with no theme set is the shipped frame, --bg-base 0 0 0.
+    expect(DEFAULT_FRAME_COLOR).toBe('#000000');
+    expect(frameColor(CARBON_SETTINGS)).toBe(DEFAULT_FRAME_COLOR);
   });
 });
 

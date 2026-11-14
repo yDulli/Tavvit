@@ -170,7 +170,7 @@ function AddInstanceFlow({ onDone }: { onDone: () => void }) {
             <button
               onClick={handleProbe}
               disabled={isLoading || !url.trim()}
-              className="px-4 py-2 bg-accent-primary hover:bg-accent-primary/80 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+              className="btn-primary"
             >
               {isLoading ? t('federation:connections.add.probing') : t('federation:connections.add.connect')}
             </button>

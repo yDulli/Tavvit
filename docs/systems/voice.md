@@ -370,6 +370,13 @@ Three independent muting mechanisms:
 
 A connected client is not asked again by LiveKit, so leaving the room in this server's own state does not end the call there. `evictFromLiveKit` (`utils/livekitEviction.ts`) tells LiveKit, and looks through every room, since a client may hold a token and be in a call without having told the socket. It runs for a suspension and a deleted account (`forceDisconnectUser`), and when a session ends if that session held the call, or no device of theirs is left (`closeSessionSockets`): LiveKit knows a person and not a session, so a call on another device goes on. It never holds up what asked for it, and a failure is logged. A call hosted by another instance is that instance's to end.
 
+**A token comes before the join.** `POST /api/livekit/token` is asked first and `voice_join` is sent once LiveKit is connected, so a client that takes the token and never says so, or sends `voice_leave` and stays connected, sits in a call in which nobody sees it: no moderator can disconnect, move or mute it, and losing the right to be there changes nothing for it. Two things hold LiveKit to what this server knows (security audit, 2026-11-14):
+
+- **At the moment access ends.** `disconnectMemberFromSpaceVoice` (kick, ban, timeout) puts the person out of every voice channel of the space at LiveKit, seated or not (`evictFromLiveKitRooms`: one listing of the rooms, then only those that are open). Leaving or being removed from a group conversation does the same for its call (`evictUserFromDmVoiceRoom`, `routes/dm.ts`).
+- **Every half minute** (`utils/livekitReconcile.ts`, started from `index.ts` only with LiveKit configured). Each open room that is a space's voice channel is read; a participant this server does not have in the room, or who no longer holds `VIEW_CHANNEL` and `CONNECT` there, is noted, and put out if still so at the next look. Two looks, because joining goes token, LiveKit, then `voice_join`, and a dropped socket keeps its seat for the reconnect grace (60 s): neither lasts two looks. A conversation's call (`dm-`, `fed:`) and the overlay's hidden participant (`overlay:`) are left alone.
+
+Not testable without a LiveKit server, which the development machine does not have: the rule is tested against a stand-in (`utils/livekitReconcile.test.ts`), the calls to LiveKit themselves are not.
+
 The server reaches LiveKit at `LIVEKIT_API_URL`, which `docker-compose.yml` sets to `http://host.docker.internal:7880`, the way Caddy reaches it. The public `LIVEKIT_URL` has a path (`/livekit`) that LiveKit's client drops.
 
 ### Move & Disconnect

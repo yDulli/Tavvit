@@ -9,6 +9,7 @@ import { useFormatters } from '../../i18n/formatters';
 import { useLegalStore } from '../../stores/legalStore';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Icon } from '../ui/Icon';
+import { LightField } from '../ui/LightField';
 import { LegalLinks } from './LegalLinks';
 import { ReportForm } from './ReportForm';
 import { hasStoredSession } from '../../landing/entry';
@@ -55,7 +56,7 @@ function LegalShell({ title, children }: { title: string; children: React.ReactN
   };
   return (
     <div className="lit relative isolate h-full overflow-y-auto bg-surface-base">
-      <div aria-hidden="true" className="hero-light" />
+      <LightField intensity="quiet" className="light-field-top" />
       <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-5 py-8">
         <header className="mb-8 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
@@ -68,7 +69,7 @@ function LegalShell({ title, children }: { title: string; children: React.ReactN
           </button>
         </header>
         <main className="flex-1">
-          <h1 className="display-title ink mb-8">{title}</h1>
+          <h1 className="display-title ink kinetic mb-8 pb-1">{title}</h1>
           {children}
         </main>
         <footer className="mt-10 border-t border-border-hard pt-4">

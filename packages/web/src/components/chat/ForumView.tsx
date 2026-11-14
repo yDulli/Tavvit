@@ -85,7 +85,7 @@ function PostRow({ post, tags, origin, active, unread }: {
         type="button"
         onClick={() => openThreadView(post.id, post.parentChannelId)}
         aria-current={active ? 'true' : undefined}
-        className={`surface-card lift flex w-full gap-3 rounded-lg p-3.5 text-left ${active ? '!border-accent-primary' : ''}`}
+        className={`forum-row flex w-full gap-3 px-4 py-3.5 text-left ${active ? 'forum-row-open' : ''}`}
       >
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
@@ -272,7 +272,7 @@ export function ForumView({ channel }: { channel: Channel }) {
           </div>
         ) : (
           <div className="mx-auto w-full max-w-4xl p-3 desktop:p-5">
-            <ul className="stagger flex flex-col gap-2">
+            <ul className="stagger surface-card divide-y divide-border-faint overflow-hidden rounded-lg">
               {posts.map((post) => (
                 <PostRow
                   key={post.id}

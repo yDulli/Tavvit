@@ -249,6 +249,18 @@ describe('following', () => {
     expect(followers()).toEqual([OTHER]);
     expect((await app.inject({ method: 'PUT', url: `/api/threads/${id}/follow`, headers: headers(OUTSIDER) })).statusCode).toBe(403);
   });
+
+  // Unfollowing answered with the thread's name, its channel and its last message to anyone who knew the id.
+  it('tells someone who cannot read a thread nothing about it when they unfollow', async () => {
+    const { id } = (await start('m1', MEMBER, { name: 'Raid plans' })).json();
+    const res = await app.inject({ method: 'DELETE', url: `/api/threads/${id}/follow`, headers: headers(OUTSIDER) });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ id });
+    expect(res.body).not.toContain('Raid plans');
+    // Someone who can read it still gets what it is.
+    const own = await app.inject({ method: 'DELETE', url: `/api/threads/${id}/follow`, headers: headers(MEMBER) });
+    expect(own.json()).toMatchObject({ id, name: 'Raid plans', following: false });
+  });
 });
 
 describe('renaming and deleting', () => {

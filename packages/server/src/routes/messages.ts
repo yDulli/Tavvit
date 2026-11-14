@@ -6,6 +6,7 @@ import { parseWaveform } from '@backspace/shared/src/voiceMessages.js';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { eq, and, inArray } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
+import { MAX_ATTACHMENTS_PER_MESSAGE } from '@backspace/shared/src/constants.js';
 import { authenticate } from '../utils/auth.js';
 import { generateSnowflake } from '../utils/snowflake.js';
 import { hasPermission, getChannelSpaceId, PermissionBits } from '../utils/permissions.js';
@@ -225,6 +226,17 @@ function cardsFromBot(
     if (!attachmentIds.includes(id)) return { status: 400, code: 'cards_invalid', details: { field: 'imageAttachmentId' } };
   }
   return cleaned;
+}
+
+/**
+ * Whether what a request sent as its attachments is a list a message can carry at all: ids as
+ * text, each once, no more than MAX_ATTACHMENTS_PER_MESSAGE. Checked before any of them is looked up.
+ */
+export function isAttachmentList(value: unknown): value is string[] {
+  return Array.isArray(value)
+    && value.length <= MAX_ATTACHMENTS_PER_MESSAGE
+    && value.every((id) => typeof id === 'string')
+    && new Set(value).size === value.length;
 }
 
 /** Why these uploads cannot go on a message of this person's, or null when they can. */
@@ -483,6 +495,10 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
     // taking SEND_MESSAGES away, and nobody should post into a room they cannot see.
     if (!hasPermission(request.userId, spaceId, PermissionBits.VIEW_CHANNEL | PermissionBits.SEND_MESSAGES, id)) {
       return sendError(reply, 403, 'missing_permission', { permission: 'SEND_MESSAGES' });
+    }
+
+    if (attachmentIds !== undefined && attachmentIds !== null && !isAttachmentList(attachmentIds)) {
+      return sendError(reply, 400, 'attachment_invalid');
     }
 
     if (attachmentIds && attachmentIds.length > 0 &&

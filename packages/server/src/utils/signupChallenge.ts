@@ -8,6 +8,7 @@ import {
 } from '@backspace/shared/src/signupChallenge.js';
 import { config } from '../config.js';
 import { getDb, schema } from '../db/index.js';
+import { rateLimitsDisabled } from './rateLimitSwitch.js';
 
 const TTL_MS = 10 * 60_000;
 const NONCE_MAX_LENGTH = 32;
@@ -18,9 +19,14 @@ const spent = new Map<string, number>();
 const signatureOf = (salt: string, bits: number): string =>
   createHmac('sha256', config.jwtSecret).update(`signup-challenge:${salt}:${bits}`).digest('hex');
 
-/** What this instance asks of a new account. A harness that turns the rate limits off turns this off with them. */
+/**
+ * What this instance asks of a new account. A harness that turns the rate limits off turns this off
+ * with them, by the same switch and so with the same exception: a server in production ignores it
+ * (utils/rateLimitSwitch.ts). Read here on its own it was honoured there too, and a line copied
+ * from a test setup took the task away from every sign-up.
+ */
 export function signupChallengeLevel(): SignupChallengeLevel {
-  if (process.env.DISABLE_RATE_LIMITS === '1' || process.env.DISABLE_RATE_LIMITS === 'true') return 'off';
+  if (rateLimitsDisabled()) return 'off';
   const row = getDb().select({ level: schema.instanceSettings.signupChallenge }).from(schema.instanceSettings).get();
   return isSignupChallengeLevel(row?.level) ? row.level : 'off';
 }

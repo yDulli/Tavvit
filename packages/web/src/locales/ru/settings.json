@@ -314,6 +314,7 @@
       "label": "Шрифт",
       "description": "Шрифт всего приложения. Китайский текст всегда использует системный.",
       "options": {
+        "outfit": "Outfit",
         "geist": "Geist",
         "plexSans": "Plex",
         "inter": "Inter",

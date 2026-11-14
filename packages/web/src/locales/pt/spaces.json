@@ -1115,7 +1115,8 @@
     "dmUnreadMessages_one": "{{count}} mensagem direta não lida",
     "dmUnreadMessages_many": "{{count}} mensagens diretas não lidas",
     "dmUnreadMessages_other": "{{count}} mensagens diretas não lidas",
-    "dmUnreadMessagesOver99": "Mais de 99 mensagens diretas não lidas"
+    "dmUnreadMessagesOver99": "Mais de 99 mensagens diretas não lidas",
+    "places": "Lugares"
   },
   "channels": {
     "loading": "Carregando canais",

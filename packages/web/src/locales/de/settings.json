@@ -314,6 +314,7 @@
       "label": "Schrift",
       "description": "Die Schrift der ganzen App. Chinesischer Text nutzt immer die des Systems.",
       "options": {
+        "outfit": "Outfit",
         "geist": "Geist",
         "plexSans": "Plex",
         "inter": "Inter",

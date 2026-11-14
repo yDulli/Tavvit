@@ -27,8 +27,8 @@ export function SettingsPage({ title, intro, children }: {
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="space-y-4">
+      <div className="pb-2">
         <h2 className="page-title">{title}</h2>
         {intro && <p className="mt-1.5 text-ui leading-relaxed text-txt-secondary">{intro}</p>}
       </div>
@@ -50,18 +50,20 @@ export function SettingsSection({ title, aside, lead, description, tone = 'neutr
   flush?: boolean;
   children: React.ReactNode;
 }): React.JSX.Element {
+  // Evolve's panel: the title in the head row with anything small at its end, then what the
+  // section holds. A preview (`lead`) stands under the head, on the panel, before the controls.
   return (
-    <section>
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h3 className="label-mono">{title}</h3>
-        {aside}
+    <section
+      className={`surface-card overflow-hidden rounded-lg ${
+        tone === 'danger' ? '!border-txt-danger/25 bg-txt-danger/[0.04]' : ''
+      }`}
+    >
+      <div className="panel-head">
+        <h3 className={`panel-head-title ${tone === 'danger' ? '!text-txt-danger' : ''}`}>{title}</h3>
+        {aside && <div className="ml-auto flex flex-shrink-0 items-center">{aside}</div>}
       </div>
-      {lead && <div className="mb-3">{lead}</div>}
-      <div
-        className={`surface-card rounded-lg ${flush ? 'overflow-hidden' : 'space-y-5 p-4'} ${
-          tone === 'danger' ? 'border-accent-rose/25 bg-accent-rose/[0.04]' : ''
-        }`}
-      >
+      {lead && <div className="border-b border-border-hard p-4">{lead}</div>}
+      <div className={flush ? '' : 'space-y-5 p-4'}>
         {description && (
           <p className={`text-meta leading-relaxed text-txt-tertiary ${flush ? 'border-b border-border-hard px-4 py-3' : ''}`}>
             {description}

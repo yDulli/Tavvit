@@ -1,8 +1,64 @@
 /* ── Typefaces ──
- * Geist is the interface, Geist Mono the instrument labels (times, counts,
- * section names). IBM Plex Sans, Inter and Space Grotesk are there for people
- * who pick them (Settings, Appearance); Inter is also the fallback for the few
- * glyphs Geist does not draw. Han comes from the platform (see :lang(zh) below). */
+ * Outfit is the interface and every title, JetBrains Mono the labels (times, counts,
+ * section names): the faces of the "Schwarzlicht" look. Outfit draws Latin only, so
+ * Geist stands behind it for Cyrillic. Geist, IBM Plex Sans, Inter and Space Grotesk
+ * are also there for people who pick them (Settings, Appearance); Inter is the
+ * fallback for the few glyphs none of them draws. Han comes from the platform (see
+ * :lang(zh) below). */
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-Latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('/fonts/Outfit-LatinExt.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Latin.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-LatinExt.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Cyrillic.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-CyrillicExt.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
 @font-face {
   font-family: 'Geist';
   src: url('/fonts/Geist-Latin.woff2') format('woff2');
@@ -151,13 +207,48 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The display face: Unbounded at 600, the same files as the "wide" name style (styles/nameFonts.css).
+   Every title of the app and of the website is set in it (`--font-display`). */
+@font-face {
+  font-family: 'Tavvit Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/names/Unbounded-Latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Tavvit Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/names/Unbounded-LatinExt.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Tavvit Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/names/Unbounded-Cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Tavvit Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/names/Unbounded-CyrillicExt.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+
 /* The colour of the light on a lit panel (`.lit`). Typed, so it can be faded from
    one place's colour to the next, and not inherited, so that fade repaints the
    panels and leaves the page under them alone. */
 @property --place-color {
   syntax: '<color>';
   inherits: false;
-  initial-value: rgb(116 102 232);
+  initial-value: rgb(242 242 242);
 }
 
 @layer base {
@@ -171,35 +262,40 @@
     --app-dvh: calc(1dvh / var(--interface-scale));
     --app-vw: calc(1vw / var(--interface-scale));
 
-    /* ═══ TAVVIT · GRAPHITE ══════════════════════════════════════════════
-     * A tool that feels expensive. Deep graphite surfaces, a little cool, told
-     * apart by a step in tone and a 1px hairline, with light falling on them
-     * from above: soft, ambient, in the colour of the place you are in, and
-     * never on the text itself. What floats has a lit top edge and a deep
-     * shadow. One signal colour, a quiet violet, marks what is selected or
-     * active, the one main action of a form and the count of what is unread.
-     * The logo is not part of the signal: it stays white, never violet. Labels,
-     * times and counts are set in Geist Mono, like the markings on an instrument.
+    /* ═══ TAVVIT · SCHWARZLICHT ══════════════════════════════════════════
+     * The look of Showomat, the owner's other product: pure black, white ink,
+     * greys between them. White is the one signal: the main action, what is
+     * selected or on, the count of what waits for you, the keyboard's focus.
+     * Colour is information only (presence, outcomes, a person's or a space's
+     * own colours). Controls are pills, panels are frames with a faint light
+     * from their top-left corner, labels are JetBrains Mono capitals, titles
+     * are Outfit at 600, set very tight. Film grain lies over everything and a
+     * soft ring of light trails the pointer.
      *
      * Everything that is a colour is an RGB channel triple so Tailwind can add
      * opacity. The token names are the upstream design system's, so every
      * component and the colour-token test keep working.
      */
 
-    /* ── Surfaces, five layers, each a step in tone from the one it touches:
-     * the app's frame, the navigation and sidebars, the main content, the
-     * secondary panels beside it (member list, side panels), and what floats. ── */
-    --bg-base: 13 14 17;
-    --bg-channel: 17 18 22;
-    --bg-chat: 21 22 27;
-    --bg-members: 18 19 23;
-    --bg-elevated: 30 31 37;
-    --bg-input: 12 13 16;
-    --bg-overlay: rgba(0, 0, 0, 0.62);
+    /* ── Surfaces: the canvas is black (the page, the topbar), ink is a well a breath above it
+     * (the sidebar, the people column, fields), the panel is a frame on the canvas, raised is a
+     * control on a panel, and what floats is the lightest tone. Each is told apart from the next
+     * by a hairline first and a step in tone second. ── */
+    --bg-base: 0 0 0;
+    --bg-channel: 5 5 5;
+    --bg-chat: 0 0 0;
+    --bg-members: 5 5 5;
+    --bg-elevated: 29 29 29;
+    --bg-input: 5 5 5;
+    --bg-panel: 11 11 11;
+    --bg-raised: 20 20 20;
+    --bg-overlay: rgba(0, 0, 0, 0.8);
 
-    /* ── Borders: hairlines (hard parts two surfaces, soft edges a control) ── */
-    --border-hard: 35 36 43;
-    --border-soft: 50 51 60;
+    /* ── Lines: faint inside a panel, the hairline between two surfaces, the strong edge of a
+     * control or of what floats ── */
+    --border-faint: 23 23 23;
+    --border-hard: 41 41 41;
+    --border-soft: 64 64 64;
 
     /* ── Accent family: the colours of avatars, badges and folders ── */
     --accent-mint: 92 196 145;
@@ -210,49 +306,56 @@
     --accent-rose: 232 110 140;
     --accent-coral: 236 120 80;
 
-    /* ── The signal: violet (#7466e8, the shared DEFAULT_ACCENT_COLOR). White
-     * text on it is 4.4:1; `soft` is the shade for violet text and icons on
-     * the panels (5.4:1 on --bg-elevated). The instance accent (Settings,
-     * Instance) and the person's own (Settings, Appearance) override these
-     * four at runtime. ── */
-    --accent-primary: 116 102 232;
-    --accent-primary-hover: 102 90 204;
-    --accent-primary-active: 88 78 176;
-    --accent-primary-soft: 150 140 245;
+    /* ── The signal: white, the only accent, a signal and never decoration. `primary` is a fill,
+     * `--on-accent` what is written on that fill (black on white), `soft` the signal as a line, a
+     * mark, text and the focus ring. The instance accent (Admin console) and the person's own
+     * (Settings, Appearance) override the four at runtime; such a colour is checked to carry white
+     * text, so `--on-accent` turns white with it (utils/instanceBranding.ts). ── */
+    --accent-primary: 242 242 242;
+    --accent-primary-hover: 255 255 255;
+    --accent-primary-active: 214 214 214;
+    --accent-primary-soft: 242 242 242;
+    --on-accent: 0 0 0;
 
-    /* ── Text: a cool off-white down to a quiet grey (tertiary 4.8:1 on --bg-elevated,
-     * the small labels in --text-category over 6:1 on the sidebars) ── */
-    --text-primary: 237 238 242;
-    --text-secondary: 172 175 186;
-    --text-tertiary: 141 144 156;
-    --text-category: 150 153 166;
-    --text-message: 225 227 233;
-    --text-link: 158 148 255;
-    --text-positive: 92 196 128;
-    --text-warning: 232 176 64;
-    --text-danger: 240 98 84;
+    /* ── Type: white ink down to a quiet grey (tertiary and the mono labels 5:1 on the floating
+     * tone, more on every darker surface). A link is white and underlined: colour is not spent
+     * on it. ── */
+    --text-primary: 242 242 242;
+    --text-secondary: 168 168 168;
+    --text-tertiary: 140 140 140;
+    --text-category: 140 140 140;
+    --text-message: 228 228 228;
+    --text-link: 255 255 255;
+    --text-positive: 69 214 160;
+    --text-warning: 247 184 79;
+    --text-danger: 242 122 122;
+    /* Red as a fill (a destructive button, a field that is wrong), with white words on it. */
+    --danger-fill: 207 48 48;
+    --danger-fill-hover: 185 41 41;
 
-    /* ── Interactive: hover is a veil, selected is a step lighter; the violet
-     * of a selected row is its edge (.nav-item), never its fill ── */
+    /* ── Interactive: hover is a faint veil, selected a step lighter; the white of a selected
+     * row is its edge (.nav-item), never its fill ── */
     --interactive-hover: rgba(255, 255, 255, 0.05);
-    --interactive-active: rgba(255, 255, 255, 0.1);
-    --interactive-selected: rgba(255, 255, 255, 0.075);
-    --interactive-row: rgba(255, 255, 255, 0.025);
-    --interactive-muted: 78 80 92;
+    --interactive-active: rgba(255, 255, 255, 0.11);
+    --interactive-selected: rgba(255, 255, 255, 0.08);
+    --interactive-row: rgba(255, 255, 255, 0.03);
+    --interactive-muted: 110 110 110;
 
-    /* ── Status ── */
-    --status-online: 76 186 112;
-    --status-idle: 230 167 58;
-    --status-dnd: 232 72 64;
-    --status-offline: 92 91 86;
+    /* ── Status: functional only ── */
+    --status-online: 41 188 135;
+    --status-idle: 245 165 36;
+    --status-dnd: 207 48 48;
+    --status-offline: 92 92 92;
     /* Streaming now (a `streaming` activity): a purple of its own, apart from the accent's violet. */
     --status-streaming: 139 92 220;
 
-    /* ── Shape. Small radii, multiplied by `--radius-scale` (Settings,
-     * Appearance), so one number sharpens or softens the whole app. ── */
+    /* ── Shape. Controls are pills (`--radius-pill`), panels and dialogs are frames with a wide
+     * corner; every radius is multiplied by `--radius-scale` (Settings, Appearance), so one number
+     * sharpens or softens the whole app, pills included. ── */
     --radius-scale: 1;
-    --sidebar-width: 248px;
-    --topbar-height: 48px;
+    --radius-pill: calc(999px * var(--radius-scale));
+    --sidebar-width: 256px;
+    --topbar-height: 56px;
 
     /* ── Rhythm: how far apart messages sit, how round an avatar is ── */
     --msg-gap: 0.875rem;
@@ -262,25 +365,50 @@
     /* ── Floating layers: an opaque surface with a little more light at its top,
      * a hairline, a lit top edge and a deep shadow that lifts it off the page.
      * Nothing that sits in the page casts one. ── */
-    --shadow-popover: 0 18px 44px -14px rgb(0 0 0 / 0.8), 0 4px 12px rgb(0 0 0 / 0.4);
-    --shadow-modal: 0 50px 110px -30px rgb(0 0 0 / 0.9), 0 10px 30px rgb(0 0 0 / 0.45);
-    --float-edge: inset 0 1px 0 rgb(255 255 255 / 0.07);
-    --float-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.035), rgb(255 255 255 / 0) 120px);
+    --shadow-popover: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.06);
+    --shadow-modal: 0 40px 90px -30px rgb(0 0 0 / 0.95), 0 4px 12px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.08);
+    --shadow-raised: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.4);
+    /* A lit key: the main action glows like a console button under the pointer. */
+    --shadow-glow: 0 0 0 1px rgb(255 255 255 / 0.5), 0 12px 44px -10px rgb(255 255 255 / 0.55);
+    --float-edge: inset 0 1px 0 rgb(255 255 255 / 0.06);
+    --float-sheen: none;
+    /* What floats is opaque (the overlay tone, the panel tone for a dialog), edged by the strong
+     * line and lifted by its shadow. The upstream names survive; nothing here is glass. */
     --glass-bg: rgb(var(--bg-elevated));
-    --glass-modal-bg: rgb(var(--bg-elevated));
+    --glass-modal-bg: rgb(var(--bg-panel));
     --glass-border: rgb(var(--border-soft));
-    --glass-highlight: transparent;
+    --glass-highlight: rgb(255 255 255 / 0.06);
+    --glass-blur: none;
+    /* A frame (a panel, a dialog): near-black, running darker towards its far corner, with a faint
+     * light from its top-left one. `--frame-light` is that light alone, switched off with the rest. */
+    --frame-light: radial-gradient(120% 90% at 0 0, rgb(255 255 255 / 0.07), transparent 55%);
+    --frame-bg: linear-gradient(160deg, rgb(var(--bg-raised)), rgb(var(--bg-input)));
+    /* The panes of the desktop frame: nearly opaque graphite over the light, parted by a narrow
+       gutter of the frame, each edged by a hairline that is a touch brighter along its top. */
+    --panel-bg-alpha: 0.86;
+    --panel-gap: 6px;
+    --panel-radius: calc(24px * var(--radius-scale));
+    --pane-border: rgb(255 255 255 / 0.065);
+    --pane-highlight: rgb(255 255 255 / 0.045);
 
     /* ── Type ── */
-    --font-ui: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+    --font-ui: 'Outfit', 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+    /* Titles are set in the interface face at 600 and very tight (−0.045em), as on Showomat. */
+    --font-display: var(--font-ui);
+    --tracking-display: -0.045em;
+    --tracking-label: 0.14em;
 
     /* ── Notification counts carry the signal colour ── */
-    --notification: 116 102 232;
+    --notification: 242 242 242;
 
-    /* ── Motion: one curve that eases out long, one that springs past the end
-     * and settles, four lengths. `reduce` in the settings cuts them all down. ── */
+    /* ── Motion: one curve that eases out long (reveals, entrances), one for state changes, one
+     * that springs past the end and settles, four lengths. `reduce` in the settings cuts them
+     * all down. ── */
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    /* The long ease of a pill's rising fill. */
+    --ease-expo: cubic-bezier(0.19, 1, 0.22, 1);
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --dur-fast: 120ms;
     --dur-base: 200ms;
@@ -290,6 +418,7 @@
     /* ── Light: the colour of the place (AmbientLight sets it), and a fine grain
      * that keeps dark gradients from banding. ── */
     --place-target: rgb(var(--accent-primary));
+    --grain-film: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .03 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
@@ -304,6 +433,9 @@
    * data attribute, set on <html> by AppearanceController; the previews in the
    * settings set the same attributes on themselves, so the CSS is the one place
    * that knows what a choice means. */
+  [data-font='outfit'] {
+    --font-ui: 'Outfit', 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
   [data-font='geist'] {
     --font-ui: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   }
@@ -317,7 +449,7 @@
     --font-ui: 'Space Grotesk', 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   }
   [data-font='mono'] {
-    --font-ui: 'Geist Mono', 'Geist', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    --font-ui: 'JetBrains Mono', 'Geist Mono', 'Geist', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   }
   [data-font='system'] {
     --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
@@ -327,14 +459,19 @@
      beat any rule here. The text of high contrast has to win over them, or the
      setting would only reach the borders on every theme but Carbon. */
   html[data-contrast='high'] {
-    --text-secondary: 206 208 216 !important;
-    --text-tertiary: 182 185 196 !important;
-    --text-category: 188 191 202 !important;
-    --text-message: 243 244 247 !important;
-    --border-hard: 72 74 85;
-    --border-soft: 96 98 112;
-    --interactive-muted: 112 115 130;
-    --glass-border: rgb(118 121 136);
+    --text-secondary: 210 210 210 !important;
+    --text-tertiary: 186 186 186 !important;
+    --text-category: 190 190 190 !important;
+    --text-message: 246 246 246 !important;
+    --border-hard: 78 78 78;
+    --border-soft: 110 110 110;
+    --interactive-muted: 140 140 140;
+    --glass-border: rgb(128 128 128);
+    --frame-light: none;
+    --glass-bg: rgb(var(--bg-elevated));
+    --glass-modal-bg: rgb(var(--bg-elevated));
+    --glass-blur: none;
+    --panel-bg-alpha: 1;
   }
 
   /* A status palette that does not rely on telling red from green. */
@@ -342,7 +479,7 @@
     --status-online: 70 170 255;
     --status-idle: 255 214 80;
     --status-dnd: 255 140 40;
-    --status-offline: 120 119 112;
+    --status-offline: 120 120 120;
     --status-streaming: 196 128 255;
   }
 
@@ -379,8 +516,12 @@
     outline-offset: 0;
   }
 
+  /* The display face (Unbounded) belongs to the openings of pages: `.display-title` and
+     `.page-title` name it themselves. A heading in a bar, a dialog, a card or a row stays in the
+     interface face, set tight, so a wide face never sits in a 48px bar beside icons. */
+
   ::selection {
-    background: rgb(var(--accent-primary) / 0.4);
+    background: rgb(var(--accent-primary) / 0.24);
     color: rgb(var(--text-primary));
   }
 
@@ -390,6 +531,36 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  /* The app stands on its canvas: black, the sidebar and the people column a breath above it
+     (ink), the panels as frames. The product page brings its own ground, and the voice overlay is
+     laid over a stream's picture. */
+  html:not(:has(#lp)):not(.voice-overlay-page) {
+    background-color: rgb(var(--bg-base));
+  }
+
+  /* Film grain over the whole window, as on Showomat: it keeps the blacks from reading as a hole in
+     the screen. It takes no pointer, and goes with every other light (Settings, Appearance, Light;
+     higher contrast; forced colours). The voice overlay is drawn over a stream and has none. */
+  html:not(.voice-overlay-page) body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 2147482000;
+    pointer-events: none;
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+    background-image: var(--grain-film);
+  }
+  html[data-light='off'] body::after,
+  html[data-contrast='high'] body::after {
+    display: none;
+  }
+  @media (forced-colors: active) {
+    html body::after {
+      display: none;
+    }
   }
 
   /* The product page (landing/) is a document that scrolls as a whole, where the
@@ -451,7 +622,7 @@
      lightens to the muted control colour under the pointer. */
   ::-webkit-scrollbar-thumb {
     background-color: rgb(var(--border-soft));
-    border-radius: 4px;
+    border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
@@ -469,8 +640,8 @@
   }
 
   /* Check boxes and radio buttons, drawn in the app's own terms: a sunken box
-     edged like a field, violet while on. A size or margin utility beside them
-     still wins, these sit in the base layer. */
+     edged like a field, the signal (white, with a black mark) while on. A size or
+     margin utility beside them still wins, these sit in the base layer. */
   input[type='checkbox'],
   input[type='radio'] {
     appearance: none;
@@ -485,7 +656,7 @@
     transition: background-color 100ms ease, border-color 100ms ease;
   }
   input[type='checkbox'] {
-    border-radius: calc(3px * var(--radius-scale));
+    border-radius: calc(5px * var(--radius-scale));
   }
   input[type='radio'] {
     border-radius: 9999px;
@@ -504,8 +675,8 @@
     width: 9px;
     height: 5px;
     margin-top: -2px;
-    border-bottom: 1.5px solid #fff;
-    border-left: 1.5px solid #fff;
+    border-bottom: 1.5px solid rgb(var(--on-accent));
+    border-left: 1.5px solid rgb(var(--on-accent));
     transform: rotate(-45deg);
   }
   input[type='radio']:checked::before {
@@ -513,7 +684,7 @@
     width: 6px;
     height: 6px;
     border-radius: 9999px;
-    background-color: #fff;
+    background-color: rgb(var(--on-accent));
   }
   input[type='checkbox']:disabled,
   input[type='radio']:disabled {
@@ -550,7 +721,7 @@
     max-width: min(100%, 440px);
     align-items: center;
     gap: 0.5rem;
-    border-radius: calc(5px * var(--radius-scale));
+    border-radius: var(--radius-pill);
     border: 1px solid rgb(var(--border-hard));
     background-color: rgb(var(--bg-input));
     padding: 0.25rem 0.625rem;
@@ -570,7 +741,7 @@
     align-items: center;
     gap: 0.5rem;
     overflow: hidden;
-    border-radius: calc(5px * var(--radius-scale));
+    border-radius: calc(14px * var(--radius-scale));
     border: 1px solid rgb(var(--border-hard));
     background-color: rgb(var(--bg-input));
     padding: 0.4375rem 0.625rem;
@@ -612,10 +783,10 @@
     width: 1rem;
     align-items: center;
     justify-content: center;
-    border-radius: calc(3px * var(--radius-scale));
+    border-radius: calc(5px * var(--radius-scale));
     border: 1px solid rgb(var(--border-soft));
     background-color: rgb(var(--bg-input));
-    color: rgb(255 255 255);
+    color: rgb(var(--on-accent));
   }
   .msg-pick[data-picked='true'] {
     border-color: rgb(var(--accent-primary));
@@ -624,7 +795,7 @@
 
   /* A spoiler: covered until a reader asks. The cover is drawn by the reader's own client. */
   .spoiler {
-    border-radius: calc(3px * var(--radius-scale));
+    border-radius: calc(5px * var(--radius-scale));
     padding: 0 2px;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
@@ -656,7 +827,7 @@
     min-height: 96px;
     min-width: 160px;
     overflow: hidden;
-    border-radius: calc(8px * var(--radius-scale));
+    border-radius: calc(16px * var(--radius-scale));
     border: 1px solid rgb(var(--border-hard));
     background-color: rgb(var(--bg-input));
   }
@@ -669,7 +840,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border-radius: calc(4px * var(--radius-scale));
+    border-radius: var(--radius-pill);
     padding: 2px 8px;
     font-size: 12px;
     font-weight: 500;
@@ -686,9 +857,61 @@
     font-size: 11px;
     font-weight: 500;
     line-height: 1.3;
-    letter-spacing: 0.05em;
+    letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: rgb(var(--text-category));
+  }
+  /* A mono label that opens a section, with Showomat's turning four-point spark before it. */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1rem;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: rgb(var(--text-secondary));
+  }
+  .eyebrow::before {
+    content: '';
+    width: 9px;
+    height: 9px;
+    flex: none;
+    background: linear-gradient(135deg, #7df9ff, #ffffff 45%, #ff9de2);
+    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+    animation: sparkTurn 3.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+  @keyframes sparkTurn {
+    0%, 100% { transform: rotate(0deg) scale(1); opacity: 1; }
+    50% { transform: rotate(90deg) scale(0.7); opacity: 0.55; }
+  }
+  /* Polished metal for the largest words of a page (the wordmark, a hero's title). */
+  .chrome-text {
+    background-image: linear-gradient(100deg, #6f6f6f 0%, #ffffff 14%, #9a9a9a 28%, #f6f6f6 42%, #5e5e5e 55%, #ffffff 70%, #a8a8a8 84%, #6f6f6f 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: chromeSheen 9s linear infinite;
+  }
+  @keyframes chromeSheen {
+    from { background-position: 0% 50%; }
+    to { background-position: 200% 50%; }
+  }
+  html[data-contrast='high'] .chrome-text {
+    background-image: none;
+    color: rgb(var(--text-primary));
+    -webkit-text-fill-color: currentColor;
+  }
+  @media (forced-colors: active) {
+    .chrome-text {
+      background-image: none;
+      color: CanvasText;
+      -webkit-text-fill-color: currentColor;
+    }
   }
 
   /* The name of a form field, above it: sentence case, one size everywhere. */
@@ -738,86 +961,50 @@
      it holds on every theme, and where colours are the reader's it is plain text. */
   .ink {
     color: rgb(var(--text-primary));
-    background-image: linear-gradient(180deg, rgb(var(--text-primary)) 38%, color-mix(in srgb, rgb(var(--text-primary)) 72%, rgb(var(--bg-chat))) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  html[data-contrast='high'] .ink {
-    background-image: none;
-    -webkit-text-fill-color: currentColor;
-  }
-  @media (forced-colors: active) {
-    .ink {
-      background-image: none;
-      -webkit-text-fill-color: currentColor;
-    }
   }
 
   /* The title of a page or a settings panel: one size everywhere. */
   .page-title {
-    font-size: 20px;
-    font-weight: 650;
-    line-height: 1.25;
-    letter-spacing: -0.025em;
-    padding-bottom: 0.05em;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.035em;
     color: rgb(var(--text-primary));
-    background-image: linear-gradient(180deg, rgb(var(--text-primary)) 38%, color-mix(in srgb, rgb(var(--text-primary)) 72%, rgb(var(--bg-chat))) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  html[data-contrast='high'] .page-title {
-    background-image: none;
-    -webkit-text-fill-color: currentColor;
-  }
-  @media (forced-colors: active) {
-    .page-title {
-      background-image: none;
-      -webkit-text-fill-color: currentColor;
-    }
   }
 
   /* The large title that opens a page of its own (Home, Explore, the sign-in): the
      product page's type, at the size of a window. */
   .display-title {
-    font-size: clamp(2rem, calc(3.2 * var(--app-vw)), 3.25rem);
-    font-weight: 680;
-    line-height: 1.05;
-    letter-spacing: -0.045em;
-    padding-bottom: 0.08em;
+    /* Showomat's page title: Outfit at 600, set very tight, a line height near 1. */
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: var(--tracking-display);
     text-wrap: balance;
   }
   /* The same, for a page with next to nothing else on it. */
   .display-hero {
-    font-size: clamp(2.5rem, calc(5.6 * var(--app-vw)), 5.25rem);
-    line-height: 0.98;
-    letter-spacing: -0.05em;
+    font-size: clamp(2.75rem, calc(5.4 * var(--app-vw)), 5.75rem);
+    line-height: 0.92;
+    letter-spacing: var(--tracking-display);
   }
   :root:lang(zh) .display-title,
   :root:lang(zh) .page-title {
+    font-family: inherit;
     letter-spacing: 0;
     line-height: 1.15;
   }
 
   /* ── Light ──
-   * The panels of the frame share one field of light: it is anchored to the
-   * window, not to each panel, so it runs across them unbroken while each keeps its
-   * own tone, and it sits behind their content, so text is never tinted. A place
-   * has a colour (a space's, the person you are talking to, the accent at home) and
-   * the field fades over when you move. Off with higher contrast, for people who
-   * switch it off (Settings, Appearance), and where the reader sets the colours. */
+   * Evolve's surfaces are flat: the canvas, the ink and the panels are told apart by tone and
+   * hairlines alone. `.lit` stays as the hook AmbientLight's colour is read through (a place's
+   * colour still reaches the pages outside the app and the opening of a page), and paints nothing
+   * on the panels of the app itself. */
   .lit,
   html[data-viewport='mobile'] .lit-phone {
     --place-color: var(--place-target);
-    background-image:
-      var(--grain),
-      radial-gradient(62% 68% at 84% -10%, color-mix(in srgb, var(--place-color) 36%, transparent) 0%, color-mix(in srgb, var(--place-color) 13%, transparent) 46%, transparent 74%),
-      radial-gradient(38% 50% at 10% -8%, color-mix(in srgb, var(--place-color) 13%, transparent) 0%, transparent 74%);
-    background-size: 220px, auto, auto;
-    background-repeat: repeat, no-repeat, no-repeat;
-    background-attachment: fixed;
-    transition: --place-color var(--dur-slower) var(--ease-out);
   }
   /* The light of the pages outside the app (signing in, an invite, the download).
      It is the ground of the whole page, and it is stronger, because
@@ -825,19 +1012,17 @@
   .stage-light {
     background-image:
       var(--grain),
-      radial-gradient(46% 42% at 88% 6%, rgb(var(--accent-primary) / 0.72) 0%, rgb(var(--accent-primary) / 0.26) 46%, transparent 74%),
-      radial-gradient(48% 36% at 64% 84%, rgb(var(--accent-primary) / 0.34) 0%, rgb(var(--accent-primary) / 0.1) 50%, transparent 76%),
-      radial-gradient(30% 36% at 100% 46%, rgb(var(--accent-primary-soft) / 0.28) 0%, transparent 70%),
-      radial-gradient(38% 30% at 6% 0%, rgb(255 255 255 / 0.05) 0%, transparent 72%);
-    background-size: 220px, auto, auto, auto, auto;
-    background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+      radial-gradient(52% 46% at 86% -4%, color-mix(in srgb, var(--place-target) 20%, transparent) 0%, transparent 72%),
+      radial-gradient(40% 34% at 6% 0%, rgb(255 255 255 / 0.05) 0%, transparent 72%);
+    background-size: 220px, auto, auto;
+    background-repeat: repeat, no-repeat, no-repeat;
     background-attachment: fixed;
   }
   /* A panel inside a dialog: the dialog is a room of its own, lit from its far corner. */
   .panel-light {
     background-image:
       var(--grain),
-      radial-gradient(70% 320px at 84% 0%, rgb(var(--accent-primary) / 0.13), rgb(var(--accent-primary) / 0) 100%);
+      radial-gradient(70% 320px at 84% 0%, rgb(var(--accent-primary) / 0.07), rgb(var(--accent-primary) / 0) 100%);
     background-size: 220px, auto;
     background-repeat: repeat, no-repeat;
   }
@@ -864,6 +1049,7 @@
      It goes first in what scrolls, which is `relative isolate`, so it
      scrolls away with the opening and never makes the page wider. */
   .hero-light {
+    display: none;
     position: absolute;
     z-index: -1;
     inset: 0 0 auto 0;
@@ -892,7 +1078,6 @@
     height: 640px;
     border-radius: 9999px;
     border: 1px solid rgb(255 255 255 / 0.055);
-    background: radial-gradient(closest-side, color-mix(in srgb, var(--place-target) 42%, transparent) 0%, color-mix(in srgb, var(--place-target) 12%, transparent) 62%, transparent 100%);
   }
   html[data-light='off'] .hero-light,
   html[data-contrast='high'] .hero-light {
@@ -902,6 +1087,179 @@
     .hero-light {
       display: none;
     }
+  }
+
+  /* ── The light of the app (ui/LightField.tsx, ui/PointerAura.tsx, ui/ChromeWord.tsx) ──
+   * The same light as on Showomat: a field of flowing threads behind the opening of a page, a ring
+   * that trails the pointer, the product's name in chrome. It is switched off with every other
+   * light (Settings, Appearance, Light), under higher contrast and in forced colours, and stands
+   * still with Reduce motion. */
+  .light-field {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 55%, #000 35%, transparent 80%);
+    mask-image: radial-gradient(ellipse 85% 75% at 50% 55%, #000 35%, transparent 80%);
+  }
+  /* Behind a page's title the light runs along the far side, clear of the words. */
+  .light-field[data-intensity='quiet'] {
+    -webkit-mask-image: linear-gradient(90deg, transparent 8%, #000 55%, #000 82%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 8%, #000 55%, #000 82%, transparent 100%);
+  }
+  /* The pages outside the app are as tall as the window: their light stays with the window. */
+  .light-field-window {
+    position: fixed;
+  }
+  /* A page with no header of its own (a legal text, the bot portal) has the light across its top. */
+  .light-field-top {
+    inset: 0 0 auto 0;
+    height: 340px;
+  }
+  .pointer-aura {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 2147483000;
+    width: 34px;
+    height: 34px;
+    border: 1.5px solid rgb(255 255 255 / 0.7);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgb(255 255 255 / 0.16), transparent 70%);
+    box-shadow: 0 0 24px 4px rgb(255 255 255 / 0.18);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms var(--ease-out), border-color 220ms var(--ease-out), background-color 220ms var(--ease-out);
+    mix-blend-mode: screen;
+    will-change: transform;
+  }
+  .pointer-aura[data-active='true'] {
+    border-color: rgb(255 255 255 / 0.95);
+    background-color: rgb(255 255 255 / 0.08);
+  }
+  html[data-light='off'] .light-field,
+  html[data-contrast='high'] .light-field,
+  html[data-light='off'] .pointer-aura,
+  html[data-contrast='high'] .pointer-aura,
+  html[data-motion='reduce'] .pointer-aura,
+  html[data-viewport='mobile'] .pointer-aura {
+    display: none;
+  }
+  @media (hover: none), (pointer: coarse) {
+    .pointer-aura {
+      display: none;
+    }
+  }
+  @media (forced-colors: active) {
+    .light-field,
+    .pointer-aura {
+      display: none;
+    }
+  }
+
+  /* The product's name in polished, extruded chrome. */
+  .chrome-word {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .chrome-letter {
+    position: relative;
+    display: inline-block;
+    transform: translateY(var(--lift)) rotate(var(--tilt)) skewX(-4deg);
+    animation: chromeRise 1100ms var(--ease-expo) backwards;
+    animation-delay: calc(var(--i) * 70ms + 80ms);
+  }
+  @keyframes chromeRise {
+    from { opacity: 0; transform: translateY(0.5em) rotate(calc(var(--tilt) * 3)) skewX(-4deg) scale(0.86); }
+    to { opacity: 1; transform: translateY(var(--lift)) rotate(var(--tilt)) skewX(-4deg); }
+  }
+  .chrome-letter-body {
+    display: block;
+    color: #1c1c1c;
+    text-shadow:
+      0.006em 0.006em 0 #8c8c8c,
+      0.012em 0.012em 0 #7c7c7c,
+      0.018em 0.018em 0 #6c6c6c,
+      0.024em 0.024em 0 #5e5e5e,
+      0.030em 0.030em 0 #505050,
+      0.036em 0.036em 0 #444444,
+      0.042em 0.042em 0 #383838,
+      0.048em 0.048em 0 #2e2e2e,
+      0.054em 0.054em 0 #262626,
+      0.060em 0.060em 0 #1e1e1e,
+      0.066em 0.066em 0 #181818,
+      0.072em 0.072em 0 #121212,
+      0.09em 0.13em 0.2em rgb(0 0 0 / 0.9);
+  }
+  /* The metal face, painted over the body from the same letter (`data-letter`): the word stands
+     in the page's text once. */
+  .chrome-letter-body::after {
+    content: attr(data-letter);
+    position: absolute;
+    inset: 0;
+    text-shadow: none;
+    background-image: linear-gradient(170deg, #ffffff 0%, #f4f4f4 22%, #9b9b9b 38%, #ffffff 50%, #cfcfcf 62%, #6b6b6b 78%, #f0f0f0 100%);
+    background-size: 100% 220%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: chromeFace 7s ease-in-out infinite alternate;
+  }
+  @keyframes chromeFace {
+    from { background-position: 50% 0%; }
+    to { background-position: 50% 100%; }
+  }
+  .chrome-glint {
+    position: absolute;
+    width: 0.42em;
+    height: 0.42em;
+    margin: -0.21em 0 0 -0.21em;
+    background: radial-gradient(circle, #ffffff 0%, rgb(255 255 255 / 0.9) 18%, transparent 60%);
+    clip-path: polygon(50% 0, 56% 44%, 100% 50%, 56% 56%, 50% 100%, 44% 56%, 0 50%, 44% 44%);
+    filter: drop-shadow(0 0 0.08em #ffffff);
+    animation: chromeGlint 4.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes chromeGlint {
+    0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+    45%, 55% { transform: scale(1) rotate(45deg); opacity: 1; }
+  }
+  html[data-contrast='high'] .chrome-letter-body::after,
+  html[data-contrast='high'] .chrome-glint {
+    display: none;
+  }
+  html[data-contrast='high'] .chrome-letter-body {
+    color: rgb(var(--text-primary));
+    text-shadow: none;
+  }
+  @media (forced-colors: active) {
+    .chrome-letter-body::after,
+    .chrome-glint {
+      display: none;
+    }
+    .chrome-letter-body {
+      color: CanvasText;
+      text-shadow: none;
+    }
+  }
+
+  /* The title that opens a page rises out of a clip, once. */
+  .kinetic {
+    animation: kineticRise 900ms var(--ease-expo) backwards;
+  }
+  @keyframes kineticRise {
+    from { clip-path: inset(0 0 100% 0); transform: translateY(45%); }
+    to { clip-path: inset(-10% -10% -20% -10%); transform: none; }
   }
 
   /* A banner painted by the app, not a picture: grain over it and a shade toward what
@@ -961,11 +1319,27 @@
 
   /* The number of a stat tile: proportional figures, they read better large. */
   .stat-value {
-    font-size: 28px;
-    font-weight: 620;
-    line-height: 1.1;
-    letter-spacing: -0.03em;
+    width: fit-content;
+    padding-bottom: 0.06em;
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: var(--tracking-display);
     color: rgb(var(--text-primary));
+    background-image: linear-gradient(175deg, #ffffff 0%, #f2f2f2 30%, #8f8f8f 52%, #ffffff 64%, #b9b9b9 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  html[data-contrast='high'] .stat-value {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+  @media (forced-colors: active) {
+    .stat-value {
+      background-image: none;
+      -webkit-text-fill-color: currentColor;
+    }
   }
 
   /* The marks of a chart (admin/DayChart.tsx): thin, rounded at their free end, with a ring
@@ -973,7 +1347,7 @@
   .chart-column {
     width: 100%;
     max-width: 24px;
-    border-radius: calc(4px * var(--radius-scale)) calc(4px * var(--radius-scale)) 0 0;
+    border-radius: calc(6px * var(--radius-scale)) calc(6px * var(--radius-scale)) 0 0;
     background-color: rgb(var(--accent-primary));
     transition: filter var(--dur-fast) ease;
   }
@@ -1006,10 +1380,10 @@
     line-height: 1.4;
     color: rgb(var(--text-primary));
     background-color: rgb(var(--bg-channel));
-    background-image: linear-gradient(90deg, rgb(var(--accent-primary) / 0.3), rgb(var(--accent-primary) / 0.1));
+    box-shadow: inset 0 0 0 999px rgb(var(--accent-primary) / 0.16), inset 0 -1px 0 rgb(var(--accent-primary) / 0.4);
   }
   .announcement-warning {
-    background-image: linear-gradient(90deg, rgb(var(--accent-amber) / 0.3), rgb(var(--accent-amber) / 0.1));
+    box-shadow: inset 0 0 0 999px rgb(var(--accent-amber) / 0.18), inset 0 -1px 0 rgb(var(--accent-amber) / 0.45);
   }
 
   /* ── Bars ──
@@ -1053,6 +1427,39 @@
     }
   }
 
+  /* ── Arrivals ──
+   * What a person opens comes up gently, once: a settings tab's panel (remounted per tab), and the
+   * cards of a grid one after another. `backwards`, so once there nothing holds a card's transform
+   * (a card that rises under the pointer still can). Reduce motion stops it with everything else. */
+  .glass-modal .panel-light.overflow-y-auto > div > *,
+  .card-grid > *,
+  .rise-in > * {
+    animation: riseIn var(--dur-slower) var(--ease-out) backwards;
+  }
+  /* The same for one thing by itself, on the long curve: what opens a page (its eyebrow, the
+     line about it, its actions), each a beat after the one before. */
+  .rise {
+    animation: riseIn 900ms var(--ease-expo) backwards;
+  }
+  .rise-2 { animation-delay: 120ms; }
+  .rise-3 { animation-delay: 200ms; }
+  .rise-4 { animation-delay: 280ms; }
+  .card-grid > :nth-child(2), .rise-in > :nth-child(2) { animation-delay: 45ms; }
+  .card-grid > :nth-child(3), .rise-in > :nth-child(3) { animation-delay: 90ms; }
+  .card-grid > :nth-child(4), .rise-in > :nth-child(4) { animation-delay: 135ms; }
+  .card-grid > :nth-child(5), .rise-in > :nth-child(5) { animation-delay: 180ms; }
+  .card-grid > :nth-child(6), .rise-in > :nth-child(6) { animation-delay: 225ms; }
+  .card-grid > :nth-child(n + 7), .rise-in > :nth-child(n + 7) { animation-delay: 270ms; }
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(22px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* A dialog's own panes are glass on its glass: the frosted dialog shows through them. */
+  .glass-modal .panel-light.bg-surface-chat {
+    background-color: rgb(var(--bg-chat) / 0.5);
+  }
+
   /* The top bar's strip of tabs scrolls sideways when they do not fit. Its last
      few pixels fade out, so a tab cut off at the edge reads as more to scroll to
      and not as a broken tab; the padding keeps the last one clear of the fade
@@ -1066,20 +1473,67 @@
     mask-image: linear-gradient(to right, transparent, #000 16px, #000 calc(100% - 16px), transparent);
   }
 
-  /* A card: a step lighter than what it sits on, edged by a hairline. Its
-     corner comes from the caller (`rounded-lg`, 6px, for cards and tiles). */
+  /* A panel is a frame, as on Showomat: near-black, running darker towards its far corner, edged
+     by a hairline, with a faint light from its top-left corner and a lit top edge. Its corner
+     comes from the caller (`rounded-lg`, 24px). The light goes with every other light. */
   .surface-card {
-    background-color: rgb(255 255 255 / 0.018);
-    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.022), rgb(255 255 255 / 0) 70%);
+    border-radius: calc(24px * var(--radius-scale));
+    background-color: rgb(var(--bg-panel));
+    background-image: var(--frame-light), linear-gradient(160deg, rgb(255 255 255 / 0.035), rgb(0 0 0 / 0.28));
     border: 1px solid rgb(var(--border-hard));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+    box-shadow: inset 0 1px rgb(255 255 255 / 0.08);
+    transition: border-color var(--dur-base) var(--ease-standard), background-color var(--dur-base) var(--ease-standard);
+  }
+  /* A frame catches a little of the pointer's light (utils/pointerLight.ts says where it is). */
+  .surface-card:hover:where(:not(.tinted-card)) {
+    background-image:
+      radial-gradient(360px circle at var(--pointer-x, 50%) var(--pointer-y, 0%), rgb(255 255 255 / 0.055), transparent 65%),
+      var(--frame-light),
+      linear-gradient(160deg, rgb(255 255 255 / 0.035), rgb(0 0 0 / 0.28));
+  }
+  html[data-light='off'] .surface-card,
+  html[data-light='off'] .surface-card:hover {
+    background-image: none;
+  }
+  @media (forced-colors: active) {
+    .surface-card {
+      background-image: none;
+    }
+  }
+  /* A panel you can act on (a button or link that is one) answers the pointer with its edge. */
+  .surface-card:where(button, a, [role='button']):where(:not(.tinted-card, .spotlight)):hover {
+    border-color: rgb(var(--border-soft));
+  }
+  /* The row at the head of a panel: its title, a quiet line about it, its actions at the end. */
+  .panel-head {
+    display: flex;
+    min-height: 52px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgb(var(--border-faint));
+  }
+  .panel-head-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: rgb(var(--text-primary));
+  }
+  .panel-head-meta {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: rgb(var(--text-tertiary));
+  }
+  html[data-contrast='high'] .surface-card {
+    border-color: rgb(var(--border-soft));
   }
   /* A place as a tile or a banner: lit from a corner in its own colour (`--tile`). After
      `.surface-card`, whose sheen it repeats, so that on a card both carry the tint wins. */
   .tinted-card {
-    background-image:
-      radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--tile) 19%, transparent) 0%, transparent 62%),
-      linear-gradient(180deg, rgb(255 255 255 / 0.022), rgb(255 255 255 / 0) 70%);
+    background-image: radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--tile) 16%, transparent) 0%, transparent 62%);
   }
 
   /* The panel the text of a profile stands on when its theme fills the whole card (`full`,
@@ -1087,7 +1541,7 @@
      however bright the person's colours around it. */
   .profile-panel {
     background-color: rgb(0 0 0 / 0.55);
-    border-radius: calc(6px * var(--radius-scale));
+    border-radius: calc(16px * var(--radius-scale));
   }
   html[data-contrast='high'] .profile-panel {
     background-color: rgb(0 0 0 / 0.75);
@@ -1107,11 +1561,8 @@
   }
   .lift:hover:where(:not(:disabled)) {
     transform: translateY(-2px);
-    border-color: rgb(var(--border-soft));
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.06),
-      0 22px 44px -22px rgb(0 0 0 / 0.9),
-      0 0 70px -26px color-mix(in srgb, var(--tile, rgb(var(--accent-primary))) 70%, transparent);
+    border-color: rgb(255 255 255 / 0.16);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 18px 36px -24px rgb(0 0 0 / 0.9);
   }
   .lift:active:where(:not(:disabled)) {
     transform: translateY(0) scale(0.995);
@@ -1156,13 +1607,14 @@
     min-width: 0;
     height: 32px;
     padding: 0 10px;
-    border-radius: calc(5px * var(--radius-scale));
+    letter-spacing: -0.01em;
+    border-radius: calc(16px * var(--radius-scale));
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 400;
     line-height: 1.25;
     text-align: left;
     color: rgb(var(--text-secondary));
-    transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+    transition: background-color 150ms var(--ease-standard), color 150ms var(--ease-standard);
   }
   .nav-item:hover:where(:not(:disabled, [aria-disabled='true'])) {
     background-color: var(--interactive-hover);
@@ -1173,27 +1625,28 @@
   }
   .nav-item[data-unread='true'] {
     color: rgb(var(--text-primary));
-    font-weight: 600;
+    font-weight: 500;
   }
   .nav-item[data-active='true'],
   .nav-item[aria-current='page'] {
     background-color: var(--interactive-selected);
-    background-image: linear-gradient(90deg, rgb(var(--accent-primary) / 0.14), rgb(var(--accent-primary) / 0) 70%);
     color: rgb(var(--text-primary));
   }
+  /* The ultraviolet edge of the selected row stands on the column's own edge (Evolve's nav), so a
+     list inside the sidebar (`.sidebar-nav`, 10px in) reaches out to it; elsewhere it is the row's. */
   .nav-item[data-active='true']::before,
   .nav-item[aria-current='page']::before {
     content: '';
     position: absolute;
-    left: 0;
-    top: 50%;
-    height: 16px;
-    max-height: calc(100% - 8px);
+    left: var(--nav-edge, 0px);
+    top: 6px;
+    bottom: 6px;
     width: 2px;
-    transform: translateY(-50%);
-    border-radius: 0 1px 1px 0;
-    background-color: rgb(var(--accent-primary));
-    box-shadow: 0 0 10px rgb(var(--accent-primary) / 0.9);
+    border-radius: 0 2px 2px 0;
+    background-color: rgb(var(--accent-primary-soft));
+  }
+  .sidebar-nav {
+    --nav-edge: -10px;
   }
 
   /* ── The mark that slides ──
@@ -1243,38 +1696,38 @@
   .active-line {
     border-radius: 1px 1px 0 0;
     background-color: rgb(var(--accent-primary));
-    box-shadow: 0 0 12px rgb(var(--accent-primary) / 0.85), 0 -6px 18px rgb(var(--accent-primary) / 0.28);
   }
-  /* A lit row behind a list's active row, with its violet edge. */
+  /* A lit row behind a list's active row, with its ultraviolet edge. */
   .sliding-mark-row {
-    border-radius: calc(5px * var(--radius-scale));
+    border-radius: calc(16px * var(--radius-scale));
     background-color: var(--interactive-selected);
-    background-image: linear-gradient(90deg, rgb(var(--accent-primary) / 0.14), rgb(var(--accent-primary) / 0) 70%);
   }
   .sliding-mark-row::before {
     content: '';
     position: absolute;
-    left: 0;
-    top: 50%;
-    height: 16px;
-    max-height: calc(100% - 8px);
+    left: var(--nav-edge, 0px);
+    top: 6px;
+    bottom: 6px;
     width: 2px;
-    transform: translateY(-50%);
-    border-radius: 0 1px 1px 0;
-    background-color: rgb(var(--accent-primary));
-    box-shadow: 0 0 10px rgb(var(--accent-primary) / 0.9);
+    border-radius: 0 2px 2px 0;
+    background-color: rgb(var(--accent-primary-soft));
   }
-  /* A line under the tab you are on, and the light it throws upward. */
+  /* A line under the tab you are on: the type's own colour, as Evolve's tabs underline. */
   .sliding-mark-line {
-    border-radius: 1px 1px 0 0;
+    border-radius: 999px;
     background-color: rgb(var(--accent-primary));
-    box-shadow: 0 0 12px rgb(var(--accent-primary) / 0.85), 0 -6px 18px rgb(var(--accent-primary) / 0.28);
   }
-  /* The fill behind the chosen part of a control. */
+  /* The raised part of a segmented control, behind the chosen option. */
   .sliding-mark-pill {
-    border-radius: calc(4px * var(--radius-scale));
-    background-color: var(--interactive-selected);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 3px rgb(0 0 0 / 0.4);
+    border-radius: var(--radius-pill);
+    border: 1px solid rgb(var(--border-soft));
+    background-color: rgb(var(--bg-raised));
+    box-shadow: var(--shadow-raised);
+  }
+  /* The ring round the tile of the place you are in (the dock). */
+  .sliding-mark-tile {
+    border-radius: calc(17px * var(--radius-scale));
+    box-shadow: inset 0 0 0 1.5px rgb(var(--accent-primary-soft)), 0 0 18px -4px rgb(255 255 255 / 0.35);
   }
 
   /* ── Content rows ──
@@ -1286,9 +1739,9 @@
     gap: 12px;
     min-width: 0;
     padding: 8px 10px;
-    border-radius: calc(6px * var(--radius-scale));
+    border-radius: calc(16px * var(--radius-scale));
     text-align: left;
-    transition: background-color 100ms ease;
+    transition: background-color 100ms ease, transform var(--dur-base) var(--ease-out);
   }
   .list-row:hover:where(:not(:disabled, [aria-disabled='true'])) {
     background-color: var(--interactive-hover);
@@ -1325,20 +1778,21 @@
     justify-content: center;
     width: 28px;
     height: 28px;
-    border-radius: calc(5px * var(--radius-scale));
+    border-radius: var(--radius-pill);
     color: rgb(var(--text-tertiary));
-    transition: background-color 100ms ease, color 100ms ease;
+    transition: background-color 150ms var(--ease-standard), color 150ms var(--ease-standard), transform 150ms var(--ease-standard);
   }
   .icon-btn-lg {
     width: 32px;
     height: 32px;
   }
   .icon-btn:hover:where(:not(:disabled)) {
-    background-color: var(--interactive-hover);
+    background-color: rgb(255 255 255 / 0.09);
     color: rgb(var(--text-primary));
   }
   .icon-btn:active:where(:not(:disabled)) {
     background-color: var(--interactive-active);
+    transform: translateY(1px);
   }
   .icon-btn[data-active='true'] {
     background-color: var(--interactive-selected);
@@ -1360,8 +1814,8 @@
     gap: 1px;
     padding: 1px;
     border: 1px solid rgb(255 255 255 / 0.07);
-    border-radius: calc(6px * var(--radius-scale));
-    background-color: rgb(16 17 21 / 0.72);
+    border-radius: var(--radius-pill);
+    background-color: rgb(11 11 11 / 0.72);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045);
   }
   html[data-contrast='high'] .badge-strip {
@@ -1374,7 +1828,7 @@
     align-items: center;
     justify-content: center;
     padding: 3px;
-    border-radius: calc(4px * var(--radius-scale));
+    border-radius: var(--radius-pill);
     cursor: pointer;
     transition: background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-spring);
   }
@@ -1404,7 +1858,7 @@
     display: flex;
     width: 236px;
     overflow: hidden;
-    border-radius: calc(6px * var(--radius-scale));
+    border-radius: calc(16px * var(--radius-scale));
   }
   .badge-stage {
     position: relative;
@@ -1415,7 +1869,7 @@
     justify-content: center;
     overflow: hidden;
     border-right: 1px solid rgb(var(--border-hard));
-    background-color: rgb(16 17 21);
+    background-color: rgb(11 11 11);
     background-image: var(--grain);
     background-size: 220px;
   }
@@ -1453,7 +1907,7 @@
     height: 16px;
     align-items: stretch;
     overflow: hidden;
-    border-radius: calc(4px * var(--radius-scale));
+    border-radius: var(--radius-pill);
     background-color: rgb(var(--bg-elevated) / 0.94);
     box-shadow: inset 0 0 0 1px rgb(var(--text-primary) / 0.1), inset 0 1px 0 rgb(var(--text-primary) / 0.07);
     color: rgb(var(--text-primary));
@@ -1515,7 +1969,7 @@
     align-items: center;
     justify-content: center;
     aspect-ratio: 1;
-    border-radius: calc(5px * var(--radius-scale));
+    border-radius: calc(10px * var(--radius-scale));
     color: rgb(var(--text-tertiary));
     transition: background-color 100ms ease, color 100ms ease;
   }
@@ -1536,10 +1990,10 @@
 
   /* A switch: its thumb goes a little past where it stops, and comes back. */
   .toggle-track {
-    transition: background-color var(--dur-base) ease;
+    transition: background-color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
   }
   .toggle-thumb {
-    transition: transform var(--dur-slow) var(--ease-spring);
+    transition: transform var(--dur-slow) var(--ease-spring), background-color var(--dur-base) var(--ease-standard);
   }
 
   /* ── Counts and keys ──
@@ -1554,26 +2008,47 @@
     justify-content: center;
     height: 16px;
     min-width: 16px;
-    padding: 0 4px;
-    border-radius: calc(4px * var(--radius-scale));
+    padding: 0 5px;
+    border-radius: var(--radius-pill);
     font-family: var(--font-mono);
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 1;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
   .count-badge {
     background-color: rgb(var(--accent-primary));
-    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0));
-    box-shadow: 0 0 12px -2px rgb(var(--accent-primary) / 0.7);
-    color: #fff;
+    color: rgb(var(--on-accent));
+    font-weight: 600;
+    /* A count that appears springs into place, so a new unread is felt as well as seen. */
+    animation: badgeIn var(--dur-slow) var(--ease-spring) backwards;
   }
+  @keyframes badgeIn {
+    from { transform: scale(0.4); opacity: 0; }
+    to { transform: none; opacity: 1; }
+  }
+  /* A count of activity (Evolve's nav counts): the figures alone, in mono, quiet. On a tile's
+     corner it keeps a small plate, so it reads over a picture. */
   .count-badge-muted {
-    background-color: rgb(255 255 255 / 0.1);
+    min-width: 0;
+    padding: 0 2px;
+    background-color: transparent;
     background-image: none;
     box-shadow: none;
+    color: rgb(var(--text-tertiary));
+  }
+  .ring-2.count-badge-muted {
+    min-width: 16px;
+    padding: 0 4px;
+    background-color: rgb(var(--bg-raised));
     color: rgb(var(--text-secondary));
+  }
+  /* A muted place among neutral counts: an outline, the figures a step quieter. */
+  .count-badge-quiet {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+    color: rgb(var(--text-tertiary));
   }
 
   /* A key of a keyboard shortcut. */
@@ -1581,14 +2056,17 @@
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
-    height: 18px;
-    padding: 0 5px;
+    justify-content: center;
+    height: 20px;
+    min-width: 20px;
+    padding: 0 4px;
     border: 1px solid rgb(var(--border-soft));
-    border-radius: calc(3px * var(--radius-scale));
+    border-radius: calc(6px * var(--radius-scale));
+    background-color: rgb(var(--bg-raised));
     font-family: var(--font-mono);
     font-size: 10px;
     line-height: 1;
-    color: rgb(var(--text-tertiary));
+    color: rgb(var(--text-secondary));
     white-space: nowrap;
   }
 
@@ -1605,45 +2083,44 @@
     padding: 28px 16px;
     text-align: center;
   }
+  /* The icon stands in a small square well with a dashed edge (Evolve's technical marks), with a
+     single ultraviolet point at its corner: something belongs here and is not here yet. */
   .empty-state-icon {
     position: relative;
     display: flex;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    margin-bottom: 10px;
-    border: 1px solid rgb(var(--border-soft));
-    border-radius: 9999px;
-    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0));
-    color: rgb(var(--text-secondary));
+    width: 44px;
+    height: 44px;
+    margin-bottom: 12px;
+    border: 1px dashed rgb(var(--border-soft));
+    border-radius: calc(14px * var(--radius-scale));
+    background-color: rgb(var(--bg-channel));
+    color: rgb(var(--text-tertiary));
   }
-  .empty-state-icon::before,
   .empty-state-icon::after {
     content: '';
     position: absolute;
-    border-radius: inherit;
-    border: 1px solid rgb(255 255 255 / 0.05);
-    pointer-events: none;
-  }
-  .empty-state-icon::before {
-    inset: -11px;
-  }
-  .empty-state-icon::after {
-    inset: -24px;
-    border-color: rgb(255 255 255 / 0.03);
+    right: -3px;
+    top: -3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background-color: rgb(var(--accent-primary-soft));
+    box-shadow: 0 0 0 2px rgb(var(--bg-chat));
   }
   .empty-state-title {
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 450;
     line-height: 1.35;
+    letter-spacing: -0.01em;
     color: rgb(var(--text-primary));
   }
   .empty-state-body {
-    max-width: 320px;
+    max-width: 340px;
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 1.55;
     color: rgb(var(--text-secondary));
   }
 
@@ -1662,18 +2139,49 @@
    * the shadow stay consistent. Their corners are small (`rounded-lg` for menus,
    * cards and dialogs, `rounded-md` for a tooltip).
    */
+  /* Glass is a layer of its own behind what the surface holds (`::before`). A `backdrop-filter`
+     on the element itself would make it the frame of anything fixed inside it (an image cropper
+     in a dialog, a sheet), which would then open inside the dialog instead of over the window. */
+  .glass,
+  .glass-bubble,
+  .action-bar,
+  .glass-modal {
+    position: relative;
+    isolation: isolate;
+  }
+  .glass::before,
+  .glass-bubble::before,
+  .action-bar::before,
+  .glass-modal::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background-color: var(--glass-bg);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+  }
+  /* A dialog is a frame: the light from its top-left corner, darker towards the far one. */
+  .glass-modal::before {
+    background-image: var(--frame-light), linear-gradient(160deg, rgb(255 255 255 / 0.035), rgb(0 0 0 / 0.28));
+  }
+  html[data-light='off'] .glass-modal::before {
+    background-image: none;
+  }
+
+  /* What floats arrives from a few pixels off and a hair smaller, in under a fifth of a second. It
+     moves through the separate `translate` and `scale` properties, so a layer centred with a
+     transform utility (a chart's tooltip, the viewer's arrows) keeps its place while it arrives. */
   .glass {
-    background-color: rgb(var(--bg-elevated));
-    background-image: var(--float-sheen);
-    border: 1px solid rgb(var(--border-soft));
-    box-shadow: var(--float-edge), var(--shadow-popover);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-popover);
+    animation: floatIn var(--dur-base) var(--ease-out) backwards;
   }
 
   .glass-bubble {
-    background-color: rgb(var(--bg-elevated));
-    background-image: var(--float-sheen);
-    border: 1px solid rgb(var(--border-soft));
-    box-shadow: var(--float-edge), var(--shadow-popover);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-popover);
   }
 
   /* The bar that carries a form's actions (Cancel / Save, Cancel / Create):
@@ -1683,80 +2191,78 @@
     display: flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.3125rem 0.3125rem 0.3125rem 0.5rem;
-    background-color: rgb(var(--bg-elevated));
-    background-image: var(--float-sheen);
-    border: 1px solid rgb(var(--border-soft));
-    border-radius: calc(6px * var(--radius-scale));
-    box-shadow: var(--float-edge), var(--shadow-popover);
+    padding: 0.375rem 0.375rem 0.375rem 0.75rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-popover);
   }
 
-  /* Buttons. One geometry (32px tall, 13px medium text, a 5px corner, never a
-     capsule) in these weights: the accent fill for the one thing a form is for,
-     lit from above and glowing a little; a quiet text button beside it; an
-     outlined one for a secondary action that should still read as a button; the
-     danger fill for an action that destroys something; and white (`.btn-hero`)
-     for the one call to action on an opening page, as on the product page.
-     `.btn-sm` (28px) is the same button for a row or a toolbar. */
+  /* Buttons are pills, as on Showomat. One geometry (32px tall, 13px medium text) in these weights:
+     white for the one thing a form or a page is for, which glows a little under the pointer; a
+     hairline pill for a secondary action, which fills white and turns its words black; a quiet
+     one (the words alone); red for an action that destroys something. Under the pointer a fill
+     rises from the foot of the pill: a background that grows, so nothing is clipped and `::before`
+     stays free for the ring of a busy button. `.btn-sm` (28px) is the same button for a row or a
+     toolbar, `.btn-lg` (40px) for the openings of pages. */
   .btn-primary,
   .btn-quiet,
   .btn-outline,
   .btn-danger,
   .btn-hero {
+    --pill-fill: #ffffff;
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    gap: 0.375rem;
+    gap: 0.4375rem;
     height: 2rem;
-    padding: 0 0.75rem;
-    border-radius: calc(5px * var(--radius-scale));
+    padding: 0 0.9375rem;
+    border-radius: var(--radius-pill);
+    background-image: linear-gradient(var(--pill-fill), var(--pill-fill));
+    background-repeat: no-repeat;
+    background-position: 50% 100%;
+    background-size: 100% 0%;
     font-size: 13px;
     font-weight: 500;
     line-height: 1;
+    letter-spacing: -0.01em;
     white-space: nowrap;
     transition:
-      background-color var(--dur-fast) ease,
-      color var(--dur-fast) ease,
-      border-color var(--dur-fast) ease,
-      box-shadow var(--dur-base) ease,
-      transform var(--dur-base) var(--ease-out);
+      background-size 600ms var(--ease-expo),
+      background-color 200ms var(--ease-standard),
+      color 300ms var(--ease-expo),
+      border-color 300ms var(--ease-expo),
+      box-shadow 300ms var(--ease-standard),
+      transform 150ms var(--ease-standard);
   }
+  .btn-primary:hover:where(:not(:disabled, [aria-busy='true'])),
+  .btn-quiet:hover:where(:not(:disabled, [aria-busy='true'])),
+  .btn-outline:hover:where(:not(:disabled, [aria-busy='true'])),
+  .btn-danger:hover:where(:not(:disabled, [aria-busy='true'])),
+  .btn-hero:hover:where(:not(:disabled, [aria-busy='true'])) {
+    background-size: 100% 102%;
+  }
+  /* A press settles the button a pixel, as a key goes down. */
   .btn-primary:active:where(:not(:disabled)),
   .btn-quiet:active:where(:not(:disabled)),
   .btn-outline:active:where(:not(:disabled)),
   .btn-danger:active:where(:not(:disabled)),
   .btn-hero:active:where(:not(:disabled)) {
-    transform: scale(0.98);
-    transition-duration: var(--dur-fast);
+    transform: translateY(1px);
   }
-  .btn-primary {
-    --btn-glow: var(--accent-primary);
-    background-color: rgb(var(--accent-primary));
-    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 6px 18px -8px rgb(var(--btn-glow) / 0.8);
-    color: #fff;
+  /* The one thing a form is for, and the call to action of an opening page: white, with black
+     words. It stays white whatever accent a person or an instance chose. */
+  .btn-primary,
+  .btn-hero {
+    background-color: rgb(var(--text-primary));
+    color: rgb(var(--bg-base));
   }
-  .btn-primary:hover:where(:not(:disabled)) {
-    background-color: rgb(var(--accent-primary-hover));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.24), 0 10px 26px -8px rgb(var(--btn-glow));
-  }
-  .btn-primary:active:where(:not(:disabled)) {
-    background-color: rgb(var(--accent-primary-active));
+  .btn-primary:hover:where(:not(:disabled, [aria-busy='true'])),
+  .btn-hero:hover:where(:not(:disabled, [aria-busy='true'])) {
+    box-shadow: var(--shadow-glow);
   }
   .btn-hero {
-    background-color: #fff;
-    color: #101114;
     font-weight: 600;
-    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2), 0 10px 34px -8px rgb(var(--accent-primary) / 0.75);
-  }
-  .btn-hero:hover:where(:not(:disabled)) {
-    background-color: rgb(232 233 240);
-    transform: translateY(-1px);
-    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.28), 0 14px 40px -8px rgb(var(--accent-primary));
-  }
-  .btn-hero:active:where(:not(:disabled)) {
-    background-color: rgb(216 217 226);
   }
   .btn-hero:disabled {
     opacity: 0.55;
@@ -1780,46 +2286,40 @@
     border-radius: 9999px;
     animation: busyRing 0.7s linear infinite;
   }
+  /* Ghost: the words alone until the pointer is on them; then a quiet fill rises. */
   .btn-quiet {
+    --pill-fill: rgb(var(--bg-elevated));
     color: rgb(var(--text-secondary));
   }
-  .btn-quiet:hover:where(:not(:disabled)) {
-    background-color: var(--interactive-hover);
+  .btn-quiet:hover:where(:not(:disabled, [aria-busy='true'])) {
     color: rgb(var(--text-primary));
   }
-  .btn-quiet:active:where(:not(:disabled)) {
-    background-color: var(--interactive-active);
-  }
+  /* Secondary: a hairline pill on the panel tone. Under the pointer it fills white, its edge turns
+     white and what it holds turns black (an icon or a mark inside it follows). */
   .btn-outline {
-    border: 1px solid rgb(var(--border-soft));
-    background-color: rgb(255 255 255 / 0.018);
+    --pill-fill: rgb(var(--text-primary));
+    border: 1px solid rgb(var(--border-hard));
+    background-color: rgb(var(--bg-panel));
     color: rgb(var(--text-primary));
   }
-  .btn-outline:hover:where(:not(:disabled)) {
-    background-color: var(--interactive-hover);
-    border-color: rgb(var(--interactive-muted));
+  .btn-outline:hover:where(:not(:disabled, [aria-busy='true'])) {
+    border-color: rgb(var(--text-primary));
+    color: rgb(var(--bg-base));
   }
-  .btn-outline:active:where(:not(:disabled)) {
-    background-color: var(--interactive-active);
+  .btn-outline:hover:not(:disabled, [aria-busy='true']) > :is(svg, span, kbd):not(.count-badge, .count-badge-muted) {
+    color: inherit;
   }
-  /* A deeper rose than --accent-rose, so white text on it reads at 4.7:1. */
+  /* Danger: red, with white words. */
   .btn-danger {
-    background-color: rgb(205 62 94);
-    background-image: linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 6px 18px -8px rgb(205 62 94 / 0.8);
-    color: #fff;
-  }
-  .btn-danger:hover:where(:not(:disabled)) {
-    background-color: rgb(184 52 82);
-  }
-  .btn-danger:active:where(:not(:disabled)) {
-    background-color: rgb(163 45 72);
+    --pill-fill: rgb(var(--danger-fill-hover));
+    background-color: rgb(var(--danger-fill));
+    color: #ffffff;
   }
   .btn-primary:disabled,
   .btn-quiet:disabled,
   .btn-outline:disabled,
   .btn-danger:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
   .btn-primary:focus-visible,
@@ -1851,17 +2351,17 @@
     border-radius: 9999px;
     animation: busyRing 0.7s linear infinite;
   }
-  /* The large one, for the product page's calls to action. */
+  /* The large one, for the calls to action of a page. */
   .btn-lg {
     gap: 0.5rem;
     height: 2.5rem;
-    padding: 0 1rem;
+    padding: 0 1.25rem;
     font-size: 14px;
   }
   .btn-sm {
-    gap: 0.3125rem;
+    gap: 0.375rem;
     height: 1.75rem;
-    padding: 0 0.625rem;
+    padding: 0 0.75rem;
     font-size: 12px;
   }
 
@@ -1874,7 +2374,7 @@
     height: 20px;
     appearance: none;
     background: transparent;
-    border-radius: calc(5px * var(--radius-scale));
+    border-radius: var(--radius-pill);
     cursor: pointer;
   }
   .range-slider::-webkit-slider-runnable-track {
@@ -1894,6 +2394,7 @@
     margin-top: -5px;
     border-radius: 9999px;
     background-color: #fff;
+    box-shadow: 0 0 0 2px rgb(var(--bg-base));
     transition: box-shadow 100ms ease;
   }
   .range-slider::-moz-range-thumb {
@@ -1902,19 +2403,20 @@
     border: 0;
     border-radius: 9999px;
     background-color: #fff;
+    box-shadow: 0 0 0 2px rgb(var(--bg-base));
     transition: box-shadow 100ms ease;
   }
   .range-slider:hover:where(:not(:disabled))::-webkit-slider-thumb {
-    box-shadow: 0 0 0 4px var(--interactive-selected);
+    box-shadow: 0 0 0 2px rgb(var(--bg-base)), 0 0 0 5px rgb(255 255 255 / 0.18);
   }
   .range-slider:hover:where(:not(:disabled))::-moz-range-thumb {
-    box-shadow: 0 0 0 4px var(--interactive-selected);
+    box-shadow: 0 0 0 2px rgb(var(--bg-base)), 0 0 0 5px rgb(255 255 255 / 0.18);
   }
   .range-slider:active:where(:not(:disabled))::-webkit-slider-thumb {
-    box-shadow: 0 0 0 5px var(--interactive-active);
+    box-shadow: 0 0 0 2px rgb(var(--bg-base)), 0 0 0 6px rgb(255 255 255 / 0.28);
   }
   .range-slider:active:where(:not(:disabled))::-moz-range-thumb {
-    box-shadow: 0 0 0 5px var(--interactive-active);
+    box-shadow: 0 0 0 2px rgb(var(--bg-base)), 0 0 0 6px rgb(255 255 255 / 0.28);
   }
   /* For the keyboard the thumb takes the ring: it is what the arrow keys move. */
   .range-slider:focus-visible {
@@ -1936,55 +2438,95 @@
      positioned card. The colour is opaque, so a card that paints its own image
      on top (a person's profile theme) never lets the page show through. */
   .glass-modal {
-    position: relative;
-    background-color: rgb(var(--bg-elevated));
-    background-image: var(--float-sheen);
-    border: 1px solid rgb(var(--border-soft));
-    box-shadow: var(--float-edge), var(--shadow-modal), 0 0 170px -34px rgb(var(--accent-primary) / 0.3);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-modal);
+  }
+  .glass-modal::before {
+    background-color: var(--glass-modal-bg);
   }
 
   /* What lies behind a dialog: dimmed and out of focus, so the dialog is the one
      sharp thing on the screen. A phone keeps the dimming alone, the blur costs it
      frames. */
   .modal-scrim {
-    background-color: rgb(0 0 0 / 0.5);
-    -webkit-backdrop-filter: blur(10px) saturate(1.1);
-    backdrop-filter: blur(10px) saturate(1.1);
+    background-color: rgb(0 0 0 / 0.8);
     animation: fadeIn var(--dur-base) ease-out backwards;
-  }
-  html[data-viewport='mobile'] .modal-scrim {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 
   .glass-pill {
-    background-color: rgb(255 255 255 / 0.035);
-    border: 1px solid rgb(var(--border-soft));
-    transition: background-color 0.12s ease, border-color 0.12s ease;
+    background-color: rgb(var(--bg-raised));
+    border: 1px solid rgb(var(--border-hard));
+    transition: background-color 150ms var(--ease-standard), border-color 150ms var(--ease-standard), transform var(--dur-base) var(--ease-spring);
   }
   .glass-pill:hover {
-    background-color: rgb(255 255 255 / 0.07);
+    background-color: rgb(var(--bg-elevated));
     border-color: rgb(var(--interactive-muted));
   }
-  /* The viewer's own reaction: the signal colour, not a second one. */
+  .glass-pill:active {
+    transform: scale(0.94);
+    transition-duration: var(--dur-fast);
+  }
+  /* The viewer's own reaction: the signal as a tint with its line, not a second colour. */
   .glass-pill-mine {
-    background-color: rgb(var(--accent-primary) / 0.12);
-    border-color: rgb(var(--accent-primary) / 0.6);
+    background-color: rgb(var(--accent-primary-soft) / 0.14);
+    border-color: rgb(var(--accent-primary-soft) / 0.6);
   }
   .glass-pill-mine:hover {
-    background-color: rgb(var(--accent-primary) / 0.2);
+    background-color: rgb(var(--accent-primary-soft) / 0.22);
+    border-color: rgb(var(--accent-primary-soft));
   }
 
-  /* ── The composer ── */
+  /* A squared label (Evolve's tag): mono capitals in a small box. `tag-dashed` marks what is not
+     a measurement or not live; the tones are for status only. */
+  .tag {
+    display: inline-flex;
+    height: 20px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+    border: 1px solid rgb(var(--border-hard));
+    border-radius: var(--radius-pill);
+    background-color: rgb(var(--bg-raised));
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: rgb(var(--text-secondary));
+  }
+  .tag-uv {
+    border-color: rgb(var(--accent-primary-soft) / 0.32);
+    background-color: rgb(var(--accent-primary-soft) / 0.08);
+    color: rgb(var(--text-primary));
+  }
+  .tag-dashed {
+    border-style: dashed;
+    border-color: rgb(var(--interactive-muted));
+    background-color: transparent;
+    color: rgb(var(--text-tertiary));
+  }
+
+  /* ── The composer ──
+   * A writing surface that floats over the end of the conversation. It is where the caret lives
+   * most of the time, so having focus is not news: its edge brightens and its top catches a
+   * little more light, and the violet stays for what is on. */
   .composer-capsule {
-    transition: border-color var(--dur-base) ease, box-shadow var(--dur-slow) var(--ease-out);
+    transition: border-color var(--dur-base) var(--ease-standard), box-shadow var(--dur-slow) var(--ease-out);
+  }
+  .composer-capsule::before {
+    background-color: rgb(var(--bg-panel));
   }
   .composer-capsule:hover {
     border-color: rgb(var(--interactive-muted));
   }
   .composer-capsule:focus-within {
-    border-color: rgb(var(--accent-primary) / 0.65);
-    box-shadow: var(--float-edge), 0 0 0 1px rgb(var(--accent-primary) / 0.22), 0 14px 46px -14px rgb(var(--accent-primary) / 0.55);
+    border-color: rgb(var(--accent-primary-soft) / 0.7);
+    box-shadow: 0 0 0 3px rgb(var(--accent-primary-soft) / 0.1), var(--shadow-popover);
+  }
+  html[data-contrast='high'] .composer-capsule:focus-within {
+    border-color: rgb(var(--accent-primary-soft));
   }
   /* A long name in the placeholder runs off the field's edge: the field is one
      line tall until there is a draft, and a second line of hint would be cut in half. */
@@ -2023,11 +2565,11 @@
   /* A message that reaches you carries the signal colour, the same one as the
      count of mentions that led you to it. */
   .msg-row[data-mentioned='true'] {
-    background-color: rgb(var(--accent-primary) / 0.07);
-    box-shadow: inset 2px 0 0 rgb(var(--accent-primary));
+    background-color: rgb(var(--accent-primary-soft) / 0.07);
+    box-shadow: inset 2px 0 0 rgb(var(--accent-primary-soft));
   }
   .msg-row[data-mentioned='true']:hover {
-    background-color: rgb(var(--accent-primary) / 0.11);
+    background-color: rgb(var(--accent-primary-soft) / 0.1);
   }
   .msg-first {
     margin-top: var(--msg-gap);
@@ -2086,7 +2628,7 @@
     min-width: 0;
     max-width: min(44rem, 100%);
     padding: 0.4rem 0.75rem 0.5rem;
-    border-radius: calc(8px * var(--radius-scale));
+    border-radius: calc(18px * var(--radius-scale));
     background-color: rgb(var(--bg-elevated));
     border: 1px solid rgb(var(--border-hard));
     transition: border-color 0.12s ease;
@@ -2105,7 +2647,7 @@
     border-color: rgb(var(--border-soft));
   }
   html[data-message-style='bubbles'] .msg-row[data-first='true'] .msg-body {
-    border-top-left-radius: calc(2px * var(--radius-scale));
+    border-top-left-radius: calc(6px * var(--radius-scale));
   }
   html[data-message-style='bubbles'] .msg-row[data-mentioned='true'] .msg-body {
     border-color: rgb(var(--accent-primary) / 0.7);
@@ -2123,13 +2665,13 @@
   html[data-message-style='bubbles'] .msg-row[data-own='true'] .msg-body {
     background-color: rgb(var(--accent-primary) / 0.1);
     border-color: rgb(var(--accent-primary) / 0.32);
-    border-top-left-radius: calc(8px * var(--radius-scale));
+    border-top-left-radius: calc(18px * var(--radius-scale));
   }
   html[data-message-style='bubbles'] .msg-row[data-own='true']:hover .msg-body {
     border-color: rgb(var(--accent-primary) / 0.5);
   }
   html[data-message-style='bubbles'] .msg-row[data-own='true'][data-first='true'] .msg-body {
-    border-top-right-radius: calc(2px * var(--radius-scale));
+    border-top-right-radius: calc(6px * var(--radius-scale));
   }
   /* The hover toolbar hangs from the edge the bubble hugs and opens toward the
      middle of the conversation: from the left for theirs, from the right for
@@ -2220,7 +2762,7 @@
     color: rgb(var(--text-tertiary));
   }
   .msg-translation-action {
-    border-radius: calc(3px * var(--radius-scale));
+    border-radius: calc(6px * var(--radius-scale));
     color: rgb(var(--text-secondary));
     transition: color var(--dur-fast) ease;
   }
@@ -2240,32 +2782,42 @@
   }
 
   /* ── Input Tiers ──
-   * A sunken field edged by a soft hairline, which lightens under the pointer
-   * and turns violet with a faint ring while the field has focus. The corner
-   * is the buttons' (5px), so a field and its button line up. */
+   * A field is a pill, as on Showomat: a black well edged by a hairline, which
+   * lightens under the pointer and turns white with a faint ring while the field
+   * has focus. A field of several lines keeps a soft corner instead. */
   .input-standard {
-    @apply bg-surface-input rounded-md px-3 py-2 text-sm text-txt-primary
+    @apply bg-surface-input px-4 py-2 text-sm text-txt-primary
            placeholder:text-txt-tertiary outline-none
-           border border-border-soft
-           hover:border-interactive-muted
-           focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/40;
-    transition: border-color var(--dur-fast) ease, box-shadow var(--dur-base) var(--ease-out);
+           border border-border-hard;
+    border-radius: var(--radius-pill);
+    transition: border-color 200ms var(--ease-standard), box-shadow var(--dur-base) var(--ease-out);
+  }
+  .input-standard:hover:where(:not(:disabled, :focus)),
+  .input-search:hover:where(:not(:disabled, :focus)),
+  .input-danger:hover:where(:not(:disabled, :focus)) {
+    border-color: rgb(var(--interactive-muted));
   }
   .input-standard:focus,
   .input-search:focus {
-    box-shadow: 0 0 0 1px rgb(var(--accent-primary) / 0.4), 0 6px 24px -10px rgb(var(--accent-primary) / 0.5);
+    border-color: rgb(var(--accent-primary-soft));
+    box-shadow: 0 0 0 3px rgb(var(--accent-primary-soft) / 0.12);
   }
   .input-search {
-    @apply bg-surface-input rounded-md px-3 py-1.5 text-sm text-txt-primary
+    @apply bg-surface-input px-4 py-1.5 text-sm text-txt-primary
            placeholder:text-txt-tertiary outline-none
-           border border-border-soft
-           hover:border-interactive-muted
-           focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/40;
-    transition: border-color var(--dur-fast) ease, box-shadow var(--dur-base) var(--ease-out);
+           border border-border-hard;
+    border-radius: var(--radius-pill);
+    transition: border-color 200ms var(--ease-standard), box-shadow var(--dur-base) var(--ease-out);
+  }
+  textarea.input-standard,
+  textarea.input-search,
+  textarea.input-danger,
+  select[multiple].input-standard {
+    border-radius: calc(14px * var(--radius-scale));
   }
   .input-standard[aria-invalid='true'],
   .input-search[aria-invalid='true'] {
-    border-color: rgb(var(--accent-rose));
+    border-color: rgb(var(--danger-fill));
   }
   .input-standard:disabled,
   .input-search:disabled,
@@ -2278,11 +2830,11 @@
   select.input-search,
   select.input-danger {
     appearance: none;
-    padding-right: 1.75rem;
+    padding-right: 2rem;
     cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23989aa6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238c8c8c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 0.5rem center;
+    background-position: right 0.75rem center;
     background-size: 14px 14px;
   }
   .input-embedded {
@@ -2290,12 +2842,15 @@
            placeholder:text-txt-tertiary outline-none;
   }
   .input-danger {
-    @apply bg-surface-input rounded-md px-3 py-2 text-sm text-txt-primary
+    @apply bg-surface-input px-4 py-2 text-sm text-txt-primary
            placeholder:text-txt-tertiary outline-none
-           border border-border-soft
-           hover:border-interactive-muted
-           focus:border-accent-rose focus:ring-1 focus:ring-accent-rose/40
+           border border-border-hard
+           focus:border-txt-danger/60
            transition-colors;
+    border-radius: var(--radius-pill);
+  }
+  .input-danger:focus {
+    box-shadow: 0 0 0 3px rgb(var(--text-danger) / 0.14);
   }
 
   /* iOS Safari auto-zooms on input focus when computed font-size is below
@@ -2349,6 +2904,345 @@
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   }
 
+  /* ── The desktop shell (Evolve's frame, layout/AppLayout.tsx) ──
+   * The sidebar on ink, full height: the server's head, the dock of places, the search, the
+   * place's navigation, who you are. The page column: the topbar over the page and its people. */
+  .app-topbar {
+    background-color: rgb(var(--bg-base));
+  }
+  /* The bar's own breadcrumb stands only while the page has handed it none of its own. */
+  .topbar-lead:has(.topbar-slot:not(:empty)) .topbar-default {
+    display: none;
+  }
+  .topbar-actions:empty + .topbar-divider {
+    display: none;
+  }
+  .crumb {
+    border-radius: var(--radius-pill);
+    transition: color 150ms var(--ease-standard);
+  }
+  .crumb:hover {
+    color: rgb(var(--text-primary));
+  }
+
+  /* The tabs under a page's title (Evolve's tabs): the type's own colour when chosen, with a
+     1px line under it on the header's hairline; a count beside a tab in a small box. */
+  .page-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .page-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .page-tab {
+    position: relative;
+    display: inline-flex;
+    height: 40px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: rgb(var(--text-secondary));
+    transition: color 150ms var(--ease-standard);
+  }
+  .page-tab:hover {
+    color: rgb(var(--text-primary));
+  }
+  .page-tab[aria-selected='true'],
+  .page-tab[aria-current='page'] {
+    color: rgb(var(--text-primary));
+  }
+  .page-tab[aria-selected='true']::after,
+  .page-tab[aria-current='page']::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 999px;
+    background-color: rgb(var(--accent-primary));
+  }
+  .page-tab:focus-visible {
+    outline-offset: -2px;
+  }
+
+  /* The head of the people column (Evolve's inspector): what it holds and how many, in a row
+     whose height matches the panels' heads. */
+  .side-panel-head {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 18px;
+    border-bottom: 1px solid rgb(var(--border-hard));
+  }
+
+  /* "Search or jump to…": a field-shaped button that opens the quick switcher. */
+  .sidebar-search {
+    display: flex;
+    width: 100%;
+    height: 32px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 6px 0 12px;
+    border: 1px solid rgb(var(--border-hard));
+    border-radius: var(--radius-pill);
+    background-color: rgb(var(--bg-panel));
+    letter-spacing: -0.01em;
+    font-size: 13px;
+    color: rgb(var(--text-tertiary));
+    transition: border-color 150ms var(--ease-standard), color 150ms var(--ease-standard);
+  }
+  .sidebar-search:hover {
+    border-color: rgb(var(--border-soft));
+    color: rgb(var(--text-secondary));
+  }
+
+  /* The dock: Home, the spaces and their folders as tiles, the ways to more at its end. A tile
+     is 44px: large enough to tell the places apart by their pictures, four to a row of the
+     sidebar (three in the narrow one, five in the wide one). */
+  .dock-tile {
+    position: relative;
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: calc(14px * var(--radius-scale));
+    color: rgb(var(--text-secondary));
+    transition: transform var(--dur-base) var(--ease-spring), opacity 150ms var(--ease-standard), color 150ms var(--ease-standard), background-color 150ms var(--ease-standard);
+  }
+  .dock-tile:hover {
+    transform: translateY(-2px);
+    color: rgb(var(--text-primary));
+  }
+  .dock-tile:active {
+    transform: translateY(0) scale(0.94);
+    transition-duration: var(--dur-fast);
+  }
+  .dock-tile-home {
+    border: 1px solid rgb(var(--border-soft));
+    background-color: rgb(var(--bg-raised));
+    box-shadow: var(--shadow-raised);
+  }
+  .dock-tile-action {
+    border: 1px dashed rgb(var(--border-soft));
+    color: rgb(var(--text-tertiary));
+  }
+  .dock-tile-action:hover {
+    border-color: rgb(var(--text-primary));
+    background-color: rgb(255 255 255 / 0.06);
+    color: rgb(var(--text-primary));
+  }
+  .dock-tile-active {
+    color: rgb(var(--text-primary));
+  }
+  .dock-tile-merge {
+    box-shadow: 0 0 0 2px rgb(var(--accent-primary-soft));
+  }
+  .dock-mark {
+    border-radius: calc(17px * var(--radius-scale));
+    box-shadow: inset 0 0 0 1.5px rgb(var(--accent-primary-soft));
+  }
+  .dock-tile:focus-visible {
+    outline-offset: 3px;
+  }
+
+  /* ── Home (home/HomePage.tsx) ──
+   * Its opening (home/HomeHero.tsx): the greeting at the size of a title page over the field of
+   * light, with the page's figures as tiles beside it. Home is where everyone lands, so it is the
+   * one page of the app that opens as large as the pages outside it. */
+  .home-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-bottom: 1px solid rgb(var(--border-hard));
+  }
+  .home-greeting {
+    font-size: clamp(2.5rem, calc(4.4 * var(--app-vw)), 4.5rem);
+    line-height: 0.96;
+  }
+  html[data-viewport='mobile'] .home-greeting {
+    font-size: clamp(2.125rem, calc(9.5 * var(--app-vw)), 3rem);
+  }
+  /* The figures: two by two beside the greeting, a row of four under it in a narrower window. */
+  .home-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 172px));
+    gap: 10px;
+  }
+  html[data-width='compact'] .home-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  html[data-viewport='mobile'] .home-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* A figure of the page: its name in mono, the number in polished metal, the way to what it counts.
+     Glass, so the light behind the opening still shows through it. */
+  .stat-tile {
+    display: flex;
+    width: 100%;
+    min-height: 108px;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 14px 12px 16px;
+    border-radius: calc(20px * var(--radius-scale));
+    background-color: rgb(var(--bg-panel) / 0.72);
+    text-align: left;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    transition: border-color var(--dur-base) var(--ease-standard), transform var(--dur-slow) var(--ease-expo), box-shadow var(--dur-slow) var(--ease-out);
+  }
+  button.stat-tile:hover {
+    border-color: rgb(var(--interactive-muted));
+    transform: translateY(-2px);
+    box-shadow: inset 0 1px rgb(255 255 255 / 0.08), 0 18px 40px -22px rgb(255 255 255 / 0.28);
+  }
+  button.stat-tile:active {
+    transform: scale(0.98);
+    transition-duration: var(--dur-fast);
+  }
+  /* A figure with nothing to count steps back, so the ones that say something stand out. */
+  .stat-value[data-empty='true'] {
+    opacity: 0.38;
+  }
+  html[data-contrast='high'] .stat-tile {
+    background-color: rgb(var(--bg-panel));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* The arrow of a way onward in its round chip: it turns up and fills with the signal when what
+     it stands in (`.go-host`) is pointed at or focused. */
+  .go-chip {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    place-items: center;
+    border: 1px solid rgb(var(--border-soft));
+    border-radius: 9999px;
+    color: rgb(var(--text-secondary));
+    transition: transform 500ms var(--ease-expo), background-color 300ms var(--ease-standard), color 300ms var(--ease-standard), border-color 300ms var(--ease-standard);
+  }
+  .go-host:hover .go-chip,
+  .go-host:focus-visible .go-chip {
+    transform: rotate(-45deg);
+    border-color: rgb(var(--accent-primary));
+    background-color: rgb(var(--accent-primary));
+    color: rgb(var(--on-accent));
+  }
+
+  /* In the white button the chip is its dark counterpart, as on the product page. */
+  .btn-hero .go-chip {
+    width: 26px;
+    height: 26px;
+    margin-right: -7px;
+    border-color: transparent;
+    background-color: rgb(var(--bg-base));
+    color: rgb(var(--text-primary));
+  }
+  .btn-hero.go-host:hover .go-chip,
+  .btn-hero.go-host:focus-visible .go-chip {
+    border-color: transparent;
+    background-color: rgb(var(--bg-base));
+    color: rgb(var(--text-primary));
+  }
+
+  /* A space on Home (home/HomeSpaceCard.tsx): a frame lit from its corner in the space's own
+     colour, its picture and what is waiting there at the top, its name and what it is about, and
+     at its foot who is talking in its voice channels. */
+  .home-spaces {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 248px), 1fr));
+    gap: 14px;
+  }
+  .home-space {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 196px;
+    flex-direction: column;
+    padding: 18px 18px 14px;
+    border-radius: calc(24px * var(--radius-scale));
+    text-align: left;
+  }
+  .home-space-name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.12;
+    letter-spacing: -0.04em;
+    color: rgb(var(--text-primary));
+  }
+  .home-space-foot {
+    display: flex;
+    min-height: 28px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid rgb(var(--border-faint));
+  }
+  /* The tile that stands where a space could be: a dashed edge, the two ways to one. */
+  .home-space-new {
+    border: 1px dashed rgb(var(--border-soft));
+    background: none;
+    box-shadow: none;
+  }
+
+  /* A post of a forum: a row of the forum's one panel, lit under the pointer; the one open beside
+     the list carries the ultraviolet edge. */
+  .forum-row {
+    position: relative;
+    transition: background-color 150ms var(--ease-standard);
+  }
+  .forum-row:hover {
+    background-color: rgb(255 255 255 / 0.025);
+  }
+  .forum-row:active {
+    background-color: var(--interactive-active);
+  }
+  .forum-row:focus-visible {
+    outline-offset: -2px;
+  }
+  .forum-row-open {
+    background-color: rgb(var(--accent-primary-soft) / 0.06);
+    box-shadow: inset 2px 0 0 rgb(var(--accent-primary-soft));
+  }
+
+  /* A space at the head of its channels: its banner as a band, its name under it. */
+  .space-head {
+    margin-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid rgb(var(--border-hard));
+    border-radius: calc(20px * var(--radius-scale));
+    background-color: rgb(var(--bg-panel));
+  }
+  .space-head-banner {
+    position: relative;
+    aspect-ratio: 16 / 7;
+    overflow: hidden;
+    border-bottom: 1px solid rgb(var(--border-hard));
+  }
+  .space-head-banner > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   /* ── Watching together ──
    * The video of a call (docs/systems/watch-together.md). On the stage its
    * bars sit above and below the picture, clear of what the provider draws in
@@ -2376,7 +3270,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.25rem;
-    border-radius: calc(5px * var(--radius-scale));
+    border-radius: var(--radius-pill);
     padding: 0 0.375rem;
     color: rgb(255 255 255 / 0.85);
     background-color: rgb(0 0 0 / 0.45);
@@ -2397,7 +3291,7 @@
     width: 28px;
     align-items: center;
     justify-content: center;
-    border-radius: calc(5px * var(--radius-scale));
+    border-radius: var(--radius-pill);
     font-size: 16px;
     line-height: 1;
     transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-spring);
@@ -2482,9 +3376,9 @@ html[data-motion='reduce'] .watch-reaction-btn:active {
  * a theme changes and which are written with spaces, are set inside its shadow
  * root (`PICKER_SHADOW_CSS` in chat/EmojiPicker.tsx). */
 .emoji-picker-wrapper em-emoji-picker {
-  --rgb-background: 30, 31, 37;
-  --rgb-input: 12, 13, 16;
-  --rgb-color: 225, 227, 233;
+  --rgb-background: 29, 29, 29;
+  --rgb-input: 5, 5, 5;
+  --rgb-color: 242, 242, 242;
   --color-border: rgba(255, 255, 255, 0.08);
   --color-border-over: rgba(255, 255, 255, 0.14);
   --rgb-accent: var(--accent-primary);
@@ -2533,6 +3427,11 @@ html[data-motion='reduce'] .watch-reaction-btn:active {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes floatIn {
+  from { opacity: 0; translate: 0 -3px; scale: 0.985; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
 }
 
 @keyframes slideUp {
@@ -2609,7 +3508,7 @@ html[data-motion='reduce'] .watch-reaction-btn:active {
 
 /* What opens a page comes up one after the other. */
 @keyframes rise {
-  from { transform: translateY(10px); opacity: 0; }
+  from { transform: translateY(24px); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
 .rise-in {
@@ -2711,17 +3610,17 @@ html[data-motion='reduce'] .watch-reaction-btn:active {
 .skeleton {
   background: linear-gradient(90deg,
     rgba(255,255,255,0.04) 0%,
-    rgba(255,255,255,0.08) 40%,
+    rgba(255,255,255,0.09) 40%,
     rgba(255,255,255,0.04) 80%
   );
   background-size: 400px 100%;
   animation: shimmer 1.8s ease-in-out infinite;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .skeleton-circle { border-radius: 50%; }
-.skeleton-bar    { height: 12px; border-radius: calc(3px * var(--radius-scale)); }
-.skeleton-block  { border-radius: calc(6px * var(--radius-scale)); }
+.skeleton-bar    { height: 12px; border-radius: calc(6px * var(--radius-scale)); }
+.skeleton-block  { border-radius: calc(14px * var(--radius-scale)); }
 
 /* Jump-to-message flash: the row a search result or a reply preview jumped to.
    MessageList adds the class and removes it on animationend. */
@@ -2765,6 +3664,9 @@ html[data-motion='reduce'] .watch-reaction-btn:active {
   .typing-dot { animation: none; opacity: 0.7; }
   .skeleton { animation: none; }
   .modal-panel, .sheet-panel, .rise-in, .stagger > *, .bump, .msg-new, .animate-pop, .animate-slide-up, .animate-toast { animation: none; }
+  .kinetic, .rise, .rise-in > *, .chrome-letter, .chrome-letter-body::after, .chrome-glint, .chrome-text, .eyebrow::before { animation: none; }
+  .go-chip, .stat-tile { transition: none; }
+  .btn-primary, .btn-quiet, .btn-outline, .btn-danger, .btn-hero { transition: none; }
   .lit, .lit-phone, .panel-bar-over { transition: none; }
   .lift:hover:where(:not(:disabled)), .btn-hero:hover:where(:not(:disabled)) { transform: none; }
 }
@@ -2822,18 +3724,68 @@ html[data-motion='reduce'] .watch-reaction-btn:active {
   box-decoration-break: clone;
   padding: 1px 5px;
   border: 1px solid rgb(var(--border-hard));
-  border-radius: calc(4px * var(--radius-scale));
+  border-radius: calc(6px * var(--radius-scale));
   background-color: rgb(var(--bg-input));
   font-family: var(--font-mono);
   font-size: 0.875em;
   color: rgb(var(--text-primary));
 }
+/* A code block: a frame on the sunken surface, with a strip at its head that names the language
+   and copies the code, and the code under it. The strip is set in fixed sizes, so it stays one
+   size while the code follows the chat text size. */
 .md-code-block {
-  overflow-x: auto;
-  padding: 8px 12px;
+  max-width: min(100%, 760px);
+  overflow: hidden;
   border: 1px solid rgb(var(--border-hard));
-  border-radius: calc(6px * var(--radius-scale));
+  border-radius: calc(14px * var(--radius-scale));
   background-color: rgb(var(--bg-input));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+}
+.md-code-head {
+  display: flex;
+  height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 0 12px;
+  border-bottom: 1px solid rgb(var(--border-hard));
+  background-color: rgb(255 255 255 / 0.02);
+  white-space: normal;
+}
+.md-code-copy {
+  display: inline-flex;
+  height: 22px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  color: rgb(var(--text-tertiary));
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, transform var(--dur-base) var(--ease-spring);
+}
+.md-code-copy:hover {
+  background-color: var(--interactive-hover);
+  color: rgb(var(--text-primary));
+}
+.md-code-copy:active {
+  background-color: var(--interactive-active);
+  transform: scale(0.94);
+}
+.md-code-copy[data-state='copied'] {
+  color: rgb(var(--text-positive));
+}
+.md-code-copy[data-state='failed'] {
+  color: rgb(var(--text-danger));
+}
+.md-code-copy[data-state='copied'] svg {
+  animation: bump var(--dur-slow) var(--ease-spring) backwards;
+}
+.md-code-body {
+  overflow-x: auto;
+  padding: 10px 12px;
   font-family: var(--font-mono);
   font-size: 0.875em;
   line-height: 1.5;
@@ -2856,7 +3808,7 @@ html[data-motion='reduce'] .watch-reaction-btn:active {
 
 /* The player of an audio file: a sunken strip like a field, not the browser's capsule. */
 audio::-webkit-media-controls-enclosure {
-  border-radius: calc(5px * var(--radius-scale));
+  border-radius: var(--radius-pill);
   background-color: rgb(var(--bg-input));
 }
 

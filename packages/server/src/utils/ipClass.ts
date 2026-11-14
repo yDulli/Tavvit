@@ -129,7 +129,22 @@ export function classifyAddress(ip: string): AddressClass {
   if (groups.every(g => g === 0)) return 'unspecified';
   if (groups.slice(0, 7).every(g => g === 0) && groups[7] === 1) return 'loopback';
 
+  // An IPv4 address carried inside an IPv6 one is the IPv4 address it reaches: NAT64 (64:ff9b::/96,
+  // RFC 6052) and 6to4 (2002::/16, RFC 3056) hand the packet on to it, so `64:ff9b::7f00:1` is this
+  // machine wherever such a gateway stands in the way. Classed by what it carries.
+  if (groups[0] === 0x64 && groups[1] === 0xff9b && groups.slice(2, 6).every(g => g === 0)) {
+    return classifyIpv4([groups[6]! >> 8, groups[6]! & 0xff, groups[7]! >> 8, groups[7]! & 0xff]);
+  }
+  if (groups[0] === 0x2002) {
+    const carried = classifyIpv4([groups[1]! >> 8, groups[1]! & 0xff, groups[2]! >> 8, groups[2]! & 0xff]);
+    if (carried !== 'public') return carried;
+  }
+
   const first = groups[0]!;
+  // ::/8 holds nothing routable besides the two addresses above: the IPv4-compatible form
+  // (`::7f00:1`, deprecated by RFC 4291) and the mapped form written out in full both sit here.
+  if ((first & 0xff00) === 0) return 'reserved';
+  if (first === 0x2001 && groups[1] === 0xdb8) return 'reserved'; // documentation
   if ((first & 0xfe00) === 0xfc00) return 'private';      // fc00::/7
   if ((first & 0xffc0) === 0xfe80) return 'link-local';   // fe80::/10
   if ((first & 0xff00) === 0xff00) return 'multicast';    // ff00::/8

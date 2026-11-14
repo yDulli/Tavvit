@@ -6,6 +6,13 @@
 
 What is not in these docs is not promised, and is closed to a bot's token anyway.
 
+## 1.42.1
+
+- A message carries at most 50 attachments, each id once: 400 `attachment_invalid` otherwise. Nothing changes for a message with fewer.
+- A JPEG a bot uploads is kept without what it says about its taking (Exif, XMP, IPTC, comments); the picture is not encoded again, and the attachment's `size` is the size kept.
+- `DELETE /api/spaces/:id/members/:uid` takes the member's roles with the membership. Someone who joins again holds none of them.
+- The socket closes with 1008 after 200 frames in a row that were refused (not JSON, or over the limit), and answers `ping` at most 20 times in ten seconds. A bot that sends one ping in fifteen seconds and stays within its limits notices nothing.
+
 ## 1.41.4
 
 - A `POST`, `PUT`, `PATCH` or `DELETE` with no body, or with the JSON `null` for one, is read as an empty object and answered by the route's own check of its fields: 400 with that check's code. Some routes answered it 500.

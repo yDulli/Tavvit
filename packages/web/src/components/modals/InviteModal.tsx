@@ -175,7 +175,7 @@ function InviteSelectFriendRow({
           }`}
         >
           {isSelected && (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-white" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-on-accent" aria-hidden="true">
               <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}

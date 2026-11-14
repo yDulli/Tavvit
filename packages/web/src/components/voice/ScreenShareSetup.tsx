@@ -784,7 +784,7 @@ function SourceCard({ source, selected, onClick, onDoubleClick }: {
           draggable={false}
         />
         {selected && (
-          <div className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded bg-accent-primary text-white">
+          <div className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent-primary text-on-accent">
             <Icon name="check" size={14} strokeWidth={2.25} />
           </div>
         )}

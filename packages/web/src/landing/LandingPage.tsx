@@ -8,9 +8,21 @@ import { availableLanguages, isSupportedLanguage } from '../i18n/languages';
 import { EXAMPLE_ROUTE, exampleRequest } from './example';
 import { LANDING_FIGURES } from './figures';
 import { chooseLandingLanguage } from './i18n';
-import { LANDING_IMAGES } from './images';
-import { Glyph, Img, Lines, LogoLines, MainButton, pad, type CssVars, type FeatureItem } from './parts';
-import { Stage } from './Stage';
+import { ChromeWord, LightField, PointerAura } from './light';
+import { Glyph, Lines, bringIntoView, nextChoice, pad, type CssVars, type FeatureItem, type GlyphName } from './parts';
+import {
+  AddressCard,
+  BotMessage,
+  HeroScene,
+  MotionContext,
+  MovingVisual,
+  OrderVisual,
+  PlanVisual,
+  ProfileShowcase,
+  TagMaker,
+  TalkVisual,
+  VoiceVisual,
+} from './visuals';
 
 /**
  * The public product page, shown at `/` to a visitor who is not signed in (landing/entry.ts), and
@@ -18,57 +30,43 @@ import { Stage } from './Stage';
  * own stylesheet (landing.css): its links are ordinary links, because every one of them leads out of
  * this small bundle and into the app (or to a file).
  *
- * Its idea is the plan (docs/systems/landing.md, "The idea"): Tavvit gives a group a place of its own,
- * and the page is a set of drawn sheets for one, numbered as a drawing set is. The opening draws a space
- * as a floor plan whose rooms are its channels, lit from above in their own colours; further on, the
- * same plan shows each part of a place beside the real screens of the app. Everything is built from the
- * app's own material (docs/systems/design-system.md), and what it says stays true: a feature named here
- * exists in the app, and nothing promises federation, native phone apps or end-to-end encryption.
+ * "Schwarzlicht" (docs/systems/landing.md, "Design"), the look of Showomat: pure black and white ink,
+ * the name in polished chrome over a field of flowing light threads, headlines that rise out of a
+ * clip, mono labels behind a turning spark, pills whose fill rises, frames with a faint light from
+ * their corner, a ring of light that trails the pointer. No picture of the app: the page draws the
+ * things a group has in Tavvit (a space, its tag, a voice room, a profile) as objects.
+ * What it says stays true: a feature named here exists in the app, and nothing promises federation,
+ * native phone apps or end-to-end encryption.
  */
 
-/**
- * The keys on the window inside, each on an empty patch of the picture beside the thing it names, and
- * the part of the window each one names (`part`), all as shares of the window's width and height.
- * They belong to this `window.webp`: when `scripts/landing-shots` retakes it, look at them again.
- */
-const WINDOW_KEYS = [
-  { key: 'spaces', x: 52.7, y: 2.6, part: { x: 6.6, y: 0.6, w: 45.2, h: 4.4 } },
-  { key: 'channels', x: 14.3, y: 31.9, part: { x: 0, y: 5.3, w: 17.2, h: 94.7 } },
-  { key: 'conversation', x: 78, y: 25, part: { x: 17.2, y: 5.3, w: 65.6, h: 94.7 } },
-  { key: 'members', x: 95.5, y: 7.5, part: { x: 82.8, y: 5.3, w: 17.2, h: 94.7 } },
-] as const;
+/** Each language's list of what changed, fetched when needed: the page's script does not carry them. */
+const CHANGELOGS = import.meta.glob<{ versions: Record<string, { title: string }> }>('../locales/*/changelog.json', { import: 'default' });
 
-type WindowKey = (typeof WINDOW_KEYS)[number]['key'];
-type WindowPart = (typeof WINDOW_KEYS)[number]['part'];
+/** Where the visitor's choice to stop the page's motion is kept, in this browser only. */
+const MOTION_KEY = 'tavvit.landing.motion';
 
-/** The part of the window a point is in, as shares of the window's width and height; null between parts. */
-function partAt(x: number, y: number): WindowKey | null {
-  return WINDOW_KEYS.find(({ part }) => x >= part.x && x <= part.x + part.w && y >= part.y && y <= part.y + part.h)?.key ?? null;
-}
+/** The band of what is inside, from the index of features (`features.items`), which every language has. */
+const MARQUEE: readonly FeatureItem[] = [
+  'threads', 'voiceChannels', 'screen', 'polls', 'events', 'soundboard', 'roles', 'overrides', 'voiceMessages',
+  'emoji', 'audit', 'webhooks', 'commands', 'saved', 'noise', 'welcome', 'push', 'windows',
+];
 
-/**
- * The house's figures: every number is the app's own. None of ads and trackers is the code as it is
- * (docs/systems/legal.md); the rest are the app's lists and limits (`figures.ts`).
- */
-const FIGURES = [
-  { key: 'ads', value: 0 },
-  { key: 'trackers', value: 0 },
-  { key: 'languages', value: availableLanguages.length },
-  { key: 'themes', value: LANDING_FIGURES.themes },
-  { key: 'group', value: LANDING_FIGURES.group },
-  { key: 'characters', value: LANDING_FIGURES.characters },
-] as const;
+/** The parts of the app, one tab each, with the lines of the index that belong to it. */
+const TABS = [
+  { key: 'talk', points: ['replies', 'threads', 'polls', 'voiceMessages', 'files', 'search'] },
+  { key: 'voice', points: ['voiceChannels', 'screen', 'noise', 'soundboard', 'calls', 'ptt'] },
+  { key: 'plan', points: ['events', 'welcome', 'saved', 'keywords'] },
+  { key: 'order', points: ['roles', 'overrides', 'automod', 'bans', 'audit', 'reports'] },
+] as const satisfies readonly { key: string; points: readonly FeatureItem[] }[];
 
-/** The sheets of the set, in their order: the number each one carries in its head. */
-const SHEETS = {
-  inside: 2,
-  developers: 3,
-  privacy: 4,
-  anywhere: 5,
-  community: 6,
-  features: 7,
-  questions: 8,
-} as const;
+type TabKey = (typeof TABS)[number]['key'];
+
+const TAB_VISUALS: Record<TabKey, () => React.JSX.Element> = {
+  talk: TalkVisual,
+  voice: VoiceVisual,
+  plan: PlanVisual,
+  order: OrderVisual,
+};
 
 /** The width of a heading's widest line of text. */
 function widestLine(heading: HTMLElement): number {
@@ -123,7 +121,7 @@ function useFitHeadings(root: React.RefObject<HTMLDivElement>, language: string)
 }
 
 /**
- * Lets each part of a sheet arrive once, when it first comes into view: the stylesheet holds a
+ * Lets each part of a section arrive once, as it is about to come into view: the stylesheet holds a
  * `[data-arrive]` element at the first frame of its animation until `data-in` lets it play, and
  * only while the page says it can watch the viewport, so nothing is ever hidden for good.
  *
@@ -142,13 +140,18 @@ function useArrivals(root: React.RefObject<HTMLDivElement>, prerendered: boolean
       }
     }
     element.setAttribute('data-arrivals', 'on');
+    // A part starts on its way a quarter of a screen before it comes into view, so it stands
+    // where it belongs by the time it is looked at: waiting until it was already on screen left a
+    // phone, where a flick scrolls a screen at a time, showing empty room where a card was still
+    // to appear. One scrolled past before anything could be told (a long flick) just stands there.
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        entry.target.setAttribute('data-in', 'true');
+        const passed = !entry.isIntersecting && entry.boundingClientRect.bottom < 0;
+        if (!entry.isIntersecting && !passed) continue;
+        entry.target.setAttribute('data-in', passed ? 'shown' : 'true');
         observer.unobserve(entry.target);
       }
-    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.05 });
+    }, { rootMargin: '0px 0px 25% 0px', threshold: 0 });
     // Every part that has not arrived, now and whenever the page changes: a change of language
     // mounts what it translates anew, and a part nobody watched would stay at its first frame.
     const watch = () => {
@@ -165,15 +168,86 @@ function useArrivals(root: React.RefObject<HTMLDivElement>, prerendered: boolean
   }, [root, prerendered]);
 }
 
-/** Whether the page has moved under the nav, which then draws its hairline. */
-function useScrolled(): boolean {
+/**
+ * The light a glass card catches from the pointer: `.lp-spotlight` draws it where `--mx`/`--my` say.
+ * A mouse only; a touch scrolls.
+ */
+function useSpotlight(root: React.RefObject<HTMLDivElement>): void {
+  useEffect(() => {
+    const element = root.current;
+    if (!element) return undefined;
+    const move = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || !(event.target instanceof Element)) return;
+      const card = event.target.closest<HTMLElement>('.lp-spotlight');
+      if (!card) return;
+      const box = card.getBoundingClientRect();
+      card.style.setProperty('--mx', `${event.clientX - box.left}px`);
+      card.style.setProperty('--my', `${event.clientY - box.top}px`);
+    };
+    element.addEventListener('pointermove', move, { passive: true });
+    return () => element.removeEventListener('pointermove', move);
+  }, [root]);
+}
+
+/**
+ * Whether the page moves. It does, unless the system asks for less motion or the visitor paused it
+ * with the footer's switch, a choice this browser keeps. Nothing that matters ever depends on it.
+ */
+function useMotion(): { paused: boolean; moving: boolean; toggle: () => void } {
+  const [paused, setPaused] = useState(false);
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(MOTION_KEY) === 'off') setPaused(true);
+    } catch {
+      // Storage refused: the page moves, as it would for anyone.
+    }
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const read = () => setReduced(query.matches);
+    read();
+    // An older browser's query has no `addEventListener`; the setting is then read once.
+    query.addEventListener?.('change', read);
+    return () => query.removeEventListener?.('change', read);
+  }, []);
+  const toggle = () => setPaused((now) => {
+    const next = !now;
+    try {
+      window.localStorage.setItem(MOTION_KEY, next ? 'off' : 'on');
+    } catch {
+      // Kept for this visit only.
+    }
+    return next;
+  });
+  return { paused, moving: !paused && !reduced, toggle };
+}
+
+/**
+ * Whether the page has moved under the nav, which then sits a little more solid, and how far it has
+ * been read: a share written straight onto the nav (`--read`) once a frame, so scrolling renders nothing.
+ */
+function useScrolled(nav: React.RefObject<HTMLElement>): boolean {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const read = () => setScrolled(window.scrollY > 8);
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      setScrolled(window.scrollY > 8);
+      const room = document.documentElement.scrollHeight - window.innerHeight;
+      nav.current?.style.setProperty('--read', room > 0 ? (window.scrollY / room).toFixed(4) : '0');
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(read);
+    };
     read();
-    window.addEventListener('scroll', read, { passive: true });
-    return () => window.removeEventListener('scroll', read);
-  }, []);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [nav]);
   return scrolled;
 }
 
@@ -226,117 +300,310 @@ function LanguagePicker({ id, className, label }: { id: string; className: strin
   );
 }
 
+/** The light far behind the page: one wide glow above it, so the black is never a hole. It takes no clicks. */
+function Ambient(): React.JSX.Element {
+  return (
+    <div className="lp-ambient" aria-hidden="true">
+      <i className="lp-ambient-glow" />
+    </div>
+  );
+}
+
+/** The strip over everything: what Tavvit is, in a few facts of its own. */
+function Strip({ version }: { version: string | null }): React.JSX.Element {
+  const { t } = useTranslation('landing');
+  const facts = [
+    t('home.strip.tags'),
+    t('home.strip.permissions', { count: LANDING_FIGURES.permissions }),
+    t('home.strip.languages', { count: availableLanguages.length }),
+    t('home.strip.clean'),
+  ];
+  return (
+    <div className="lp-strip">
+      <div className="lp-wrap lp-strip-in">
+        <p className="lp-strip-name">“{PRODUCT_NAME}” <span>{t('home.hero.label')}</span></p>
+        <ul>{facts.map((fact) => <li key={fact}>{fact}</li>)}</ul>
+        {version && <a className="lp-strip-version" href="/changelog">{t('life.version', { version })}</a>}
+      </div>
+    </div>
+  );
+}
+
 function Nav({ registrationOpen }: { registrationOpen: boolean }): React.JSX.Element {
   const { t } = useTranslation('landing');
-  const scrolled = useScrolled();
+  const nav = useRef<HTMLElement>(null);
+  const scrolled = useScrolled(nav);
   return (
-    <header className="lp-nav" data-scrolled={scrolled ? 'true' : 'false'}>
-      <div className="lp-wrap lp-nav-in">
+    <header ref={nav} className="lp-nav" data-scrolled={scrolled ? 'true' : 'false'}>
+      <div className="lp-wrap lp-nav-bar">
+        <span className="lp-nav-read" aria-hidden="true" />
         <a className="lp-brand" href="/">
           <img src="/icons/logo-mark.svg" alt="" width={20} height={20} />
           <span>{PRODUCT_NAME}</span>
         </a>
         <nav className="lp-nav-links" aria-label={t('nav.label')}>
-          <a className="lp-nav-link lp-hide-phone" href="#features">{t('nav.features')}</a>
-          <a className="lp-nav-link lp-hide-phone" href="/download">{t('nav.download')}</a>
-          <a className="lp-nav-link lp-hide-phone" href="/developers">{t('nav.developers')}</a>
-          <a className="lp-nav-link lp-hide-phone" href="/help">{t('nav.help')}</a>
-          <div className="lp-nav-right">
-            <LanguagePicker id="landing-language-top" className="lp-nav-language lp-hide-phone" label={t('footer.language')} />
-            <a className="lp-nav-link" href="/login">{t('nav.login')}</a>
-            {/* An outline: the one white button of the opening is its own. */}
-            {registrationOpen && <a className="lp-btn lp-btn-quiet lp-btn-sm lp-nav-cta" href="/register">{t('nav.register')}</a>}
-          </div>
+          <a href="#features">{t('nav.features')}</a>
+          <a href="/download">{t('nav.download')}</a>
+          <a href="/developers">{t('nav.developers')}</a>
+          <a href="/help">{t('nav.help')}</a>
         </nav>
+        <div className="lp-nav-right">
+          <LanguagePicker id="landing-language-top" className="lp-nav-language" label={t('footer.language')} />
+          <a className="lp-nav-login" href="/login">{t('nav.login')}</a>
+          {registrationOpen && <a className="lp-btn lp-btn-primary" href="/register">{t('nav.register')}</a>}
+        </div>
       </div>
     </header>
   );
 }
 
-/**
- * A sheet's head, as a drawing set carries one: a hairline, the sheet's number and name in Mono, and
- * the heading with its lead. Its parts arrive once, as everything below does.
- */
-function SheetHead({ sheet, name, headingId, title, lead, className = '' }: { sheet: number; name: string; headingId: string; title: string; lead?: string; className?: string }): React.JSX.Element {
-  const { t } = useTranslation('landing');
+/** The newest line of `/changelog`, in the page's language. Its room stays reserved while it loads, so nothing jumps. */
+function News(): React.JSX.Element {
+  const { t, i18n } = useTranslation('landing');
+  const language = i18n.resolvedLanguage ?? i18n.language;
+  const [title, setTitle] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void CHANGELOGS[`../locales/${language}/changelog.json`]?.()
+      .then((catalog) => {
+        const newest = Object.values(catalog.versions)[0];
+        if (live && newest) setTitle(newest.title);
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [language]);
   return (
-    <header className={`lp-sheet-head ${className}`} data-arrive="">
-      <p className="lp-sheet-meta">
-        <span className="lp-mono">{t('plan.block.sheet')} {pad(sheet)}</span>
-        <span className="lp-label">{name}</span>
-      </p>
-      <h2 id={headingId} className="lp-h2 lp-ink"><Lines text={title} /></h2>
-      {lead && <p className="lp-lead">{lead}</p>}
+    <a className="lp-news" href="/changelog" style={title ? undefined : { visibility: 'hidden' }}>
+      <span className="lp-news-label">{t('news.label')}</span>
+      <span className="lp-news-title">{title}</span>
+      <Glyph name="arrow" />
+    </a>
+  );
+}
+
+function Hero({ registrationOpen, chat }: { registrationOpen: boolean; chat: ServiceState | null }): React.JSX.Element {
+  const { t } = useTranslation('landing');
+  const known = chat === 'ok' || chat === 'down';
+  return (
+    <section className="lp-hero" aria-labelledby="landing-title">
+      <LightField />
+      <div className="lp-wrap lp-hero-in">
+        <p className="lp-hero-meta lp-rise" style={{ '--i': 0 } as CssVars}>
+          <a className="lp-status" href="/status" data-state={known ? chat : undefined} style={known ? undefined : { visibility: 'hidden' }}>
+            <i aria-hidden="true" />
+            {chat === 'down' ? t('life.down') : t('life.ok')}
+          </a>
+          <News />
+        </p>
+        {/* The name fills the first screen, in chrome; the heading under it says what it is. */}
+        <div className="lp-hero-word"><ChromeWord word={PRODUCT_NAME} /></div>
+        <div className="lp-hero-row">
+          <h1 id="landing-title" className="lp-hero-title">
+            <Lines text={t('home.hero.title')} />
+            {'\n'}
+            <span className="lp-line lp-hero-accent">{t('home.hero.accent')}</span>
+          </h1>
+          <div className="lp-hero-side lp-rise" style={{ '--i': 4 } as CssVars}>
+            <p className="lp-hero-lead">{t('home.hero.lead')}</p>
+            <div className="lp-actions lp-hero-actions">
+              <a className="lp-btn lp-btn-primary lp-btn-lg" href={registrationOpen ? '/register' : '/login'}>
+                {registrationOpen ? t('nav.register') : t('nav.login')}
+                <Glyph name="arrow" />
+              </a>
+              {/* The one desktop app there is, on Windows; everyone else is shown what is inside.
+                  Both are in the page's HTML and the stylesheet shows one (`data-lp-os`, set before the first paint). */}
+              <a className="lp-arrow-link lp-for-windows" href="/download"><Glyph name="download" />{t('anywhere.desktop.link')}</a>
+              <a className="lp-arrow-link lp-not-windows" href="#features">{t('home.hero.more')}<Glyph name="down" /></a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <HeroScene />
+    </section>
+  );
+}
+
+/** What is inside, passing by. It stops under the pointer, without motion, and for the footer's switch. */
+function Marquee(): React.JSX.Element {
+  const { t } = useTranslation('landing');
+  const items = MARQUEE.map((key) => t(`features.items.${key}`));
+  const row = (copy: boolean) => (
+    <ul className="lp-marquee-row" aria-hidden={copy || undefined}>
+      {items.map((item) => <li key={item}>{item}<span aria-hidden="true">✦</span></li>)}
+    </ul>
+  );
+  return (
+    <section className="lp-marquee" aria-label={t('home.marquee')}>
+      <div className="lp-marquee-track">
+        {row(false)}
+        {row(true)}
+      </div>
+    </section>
+  );
+}
+
+/** A section's head: its number and name in Mono, the heading with its light, the lead. */
+function Head({ index, kicker, id, title, body, center = false }: { index: number; kicker: string; id: string; title: string; body?: string; center?: boolean }): React.JSX.Element {
+  return (
+    <header className={`lp-head${center ? ' lp-head-center' : ''}`} data-arrive="">
+      <p className="lp-kicker"><span>{pad(index)}</span>{kicker}</p>
+      <h2 id={id} className="lp-h2"><Lines text={title} /></h2>
+      {body && <p className="lp-lead">{body}</p>}
     </header>
   );
 }
 
-/** Short points on a hairline grid, each a title and a sentence. Keyed by the catalog's key, which a change of language keeps. */
-function Points({ points, className = '' }: { points: readonly { key: string; title: string; body: string }[]; className?: string }): React.JSX.Element {
+function Tags(): React.JSX.Element {
+  const { t } = useTranslation('landing');
+  const items = (['tag', 'address', 'look'] as const).map((key) => ({
+    key,
+    title: t(`home.tags.items.${key}.title`),
+    body: t(`home.tags.items.${key}.body`),
+  }));
   return (
-    <div className={`lp-grid ${className}`}>
-      {points.map((point, index) => (
-        <div key={point.key} data-arrive="" style={{ '--i': index } as CssVars}>
-          <h3 className="lp-cell-title">{point.title}</h3>
-          <p className="lp-cell-body">{point.body}</p>
+    <section className="lp-section" aria-labelledby="landing-tags">
+      <div className="lp-wrap lp-split">
+        <div className="lp-split-copy">
+          <Head index={1} kicker={t('home.tags.kicker')} id="landing-tags" title={t('home.tags.title')} body={t('home.tags.body')} />
+          <ol className="lp-numbered">
+            {items.map((item, index) => (
+              <li key={item.key} data-arrive="" style={{ '--i': index } as CssVars}>
+                <span className="lp-numbered-n">{index + 1}</span>
+                <b>{item.title}</b>
+                <span>{item.body}</span>
+              </li>
+            ))}
+          </ol>
         </div>
-      ))}
-    </div>
+        <TagMaker />
+      </div>
+    </section>
   );
 }
 
-/**
- * Inside the place: the same space in the app, the real window, with four keys on it and the legend
- * that answers them. Pointing at a part lights it.
- */
+/** The parts of the app as tabs: arrow keys move between them, as a tab list's do. */
 function Inside(): React.JSX.Element {
   const { t } = useTranslation('landing');
-  // The part of the window pointed at, and where its light stands: it keeps its place while it fades.
-  const [lit, setLit] = useState<WindowKey | null>(null);
-  const [spot, setSpot] = useState<WindowPart>(WINDOW_KEYS[2].part);
-  const light = (key: WindowKey | null) => {
-    setLit(key);
-    const mark = WINDOW_KEYS.find((entry) => entry.key === key);
-    if (mark) setSpot(mark.part);
-  };
-  // Only a mouse points: a touch on the picture is a scroll, and the legend says the same in words.
-  const onWindowPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== 'mouse') return;
-    const box = event.currentTarget.getBoundingClientRect();
-    light(partAt(((event.clientX - box.left) / box.width) * 100, ((event.clientY - box.top) / box.height) * 100));
-  };
-  const spotStyle = { '--x': `${spot.x}%`, '--y': `${spot.y}%`, '--w': `${spot.w}%`, '--h': `${spot.h}%` } as CssVars;
+  const [active, setActive] = useState(0);
+  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   return (
-    <section aria-labelledby="landing-inside" className="lp-sheet lp-inside">
+    <section id="features" className="lp-section" aria-labelledby="landing-inside">
       <div className="lp-wrap">
-        <SheetHead sheet={SHEETS.inside} name={t('inside.label')} headingId="landing-inside" title={t('inside.title')} lead={t('inside.body')} className="lp-sheet-head-split" />
-        <figure className="lp-inside-stage lp-desk-only" data-arrive="">
-          <div className="lp-frame lp-window" onPointerMove={onWindowPointer} onPointerLeave={() => light(null)}>
-            <Img image={LANDING_IMAGES.window} alt={t('hero.alt')} />
-            <div className="lp-spot" data-on={lit ? 'true' : undefined} style={spotStyle} aria-hidden="true" />
-            {/* The keys stand on the picture and take no clicks; the legend beside it answers them. */}
-            <div className="lp-key-layer" aria-hidden="true">
-              {WINDOW_KEYS.map((mark, index) => (
-                <span key={mark.key} className="lp-mark" data-on={lit === mark.key ? 'true' : undefined} style={{ left: `${mark.x}%`, top: `${mark.y}%` }}>{index + 1}</span>
-              ))}
-            </div>
-          </div>
-          <figcaption className="lp-legend">
-            {WINDOW_KEYS.map((mark, index) => (
-              <div
-                key={mark.key}
-                data-on={lit === mark.key ? 'true' : undefined}
-                onPointerEnter={(event) => { if (event.pointerType === 'mouse') light(mark.key); }}
-                onPointerLeave={() => light(null)}
-              >
-                <p className="lp-legend-title"><span className="lp-mark">{index + 1}</span>{t(`hero.keys.${mark.key}.title`)}</p>
-                <p className="lp-legend-body">{t(`hero.keys.${mark.key}.body`)}</p>
+        <Head index={2} kicker={t('home.inside.kicker')} id="landing-inside" title={t('home.inside.title')} center />
+        <div className="lp-tabs lp-glass" role="tablist" aria-label={t('home.inside.label')} data-arrive="">
+          {TABS.map((tab, index) => (
+            <button
+              key={tab.key}
+              ref={(element) => { tabs.current[index] = element; }}
+              type="button"
+              role="tab"
+              id={`lp-tab-${tab.key}`}
+              aria-selected={index === active}
+              aria-controls={`lp-panel-${tab.key}`}
+              tabIndex={index === active ? 0 : -1}
+              className="lp-tab"
+              onClick={() => setActive(index)}
+              onKeyDown={(event) => {
+                const next = nextChoice(event.key, active, TABS.length);
+                if (next === null) return;
+                event.preventDefault();
+                setActive(next);
+                bringIntoView(tabs.current[next] ?? undefined);
+              }}
+            >
+              <span className="lp-tab-n">{pad(index + 1)}</span>
+              {t(`home.inside.tabs.${tab.key}.tab`)}
+            </button>
+          ))}
+        </div>
+        {TABS.map((tab, index) => {
+          const Visual = TAB_VISUALS[tab.key];
+          return (
+            <div
+              key={tab.key}
+              role="tabpanel"
+              id={`lp-panel-${tab.key}`}
+              aria-labelledby={`lp-tab-${tab.key}`}
+              hidden={index !== active}
+              className="lp-panel lp-glass"
+            >
+              <div className="lp-panel-copy">
+                <h3 className="lp-h3">{t(`home.inside.tabs.${tab.key}.title`)}</h3>
+                <p className="lp-body">{t(`home.inside.tabs.${tab.key}.body`)}</p>
+                <ul className="lp-points">
+                  {tab.points.map((point) => <li key={point}><Glyph name="check" />{t(`features.items.${point}`)}</li>)}
+                </ul>
               </div>
-            ))}
-          </figcaption>
-        </figure>
-        <div className="lp-inside-phone lp-phone-only" data-arrive="">
-          <div className="lp-device"><Img image={LANDING_IMAGES.phoneChannels} alt={t('inside.alt')} /></div>
+              <div className="lp-panel-visual"><Visual /></div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function Moving({ registrationOpen }: { registrationOpen: boolean }): React.JSX.Element {
+  const { t } = useTranslation('landing');
+  return (
+    <section className="lp-section" aria-labelledby="landing-moving">
+      <div className="lp-wrap lp-split lp-split-flip">
+        <div className="lp-split-copy">
+          <Head index={3} kicker={t('home.moving.kicker')} id="landing-moving" title={t('home.moving.title')} body={t('home.moving.body')} />
+          <p className="lp-note" data-arrive="">{t('home.moving.note')}</p>
+          <div className="lp-actions" data-arrive="">
+            {registrationOpen && <a className="lp-btn lp-btn-primary" href="/register">{t('nav.register')}<Glyph name="arrow" /></a>}
+            <a className="lp-arrow-link" href="/help">{t('home.moving.help')}<Glyph name="arrow" /></a>
+          </div>
+        </div>
+        <MovingVisual />
+      </div>
+    </section>
+  );
+}
+
+function Identity(): React.JSX.Element {
+  const { t } = useTranslation('landing');
+  const chips = ['frames', 'effects', 'nameplates', 'names', 'badges', 'themes', 'perSpace', 'community'] as const;
+  return (
+    <section className="lp-section lp-identity" aria-labelledby="landing-identity">
+      <div className="lp-identity-light" aria-hidden="true" />
+      <div className="lp-wrap">
+        <Head index={4} kicker={t('home.identity.kicker')} id="landing-identity" title={t('home.identity.title')} body={t('home.identity.body')} center />
+        <ProfileShowcase />
+        <ul className="lp-chips" data-arrive="">
+          {chips.map((chip) => <li key={chip}>{t(`home.identity.chips.${chip}`)}</li>)}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function Scenes(): React.JSX.Element {
+  const { t } = useTranslation('landing');
+  const tags = ['a', 'b', 'c', 'd'] as const;
+  const scenes = [
+    { key: 'gaming', link: null },
+    { key: 'creators', link: { href: '/creators', label: t('home.scenes.items.creators.link') } },
+    { key: 'developers', link: { href: '/developers', label: t('home.scenes.items.developers.link') } },
+    { key: 'clubs', link: null },
+  ] as const;
+  return (
+    <section className="lp-section" aria-labelledby="landing-scenes">
+      <div className="lp-wrap">
+        <Head index={5} kicker={t('home.scenes.kicker')} id="landing-scenes" title={t('home.scenes.title')} />
+        <div className="lp-scenes">
+          {scenes.map((scene, index) => (
+            <article key={scene.key} className="lp-scene-card lp-glass lp-spotlight" data-arrive="" data-tilt="" style={{ '--i': index } as CssVars}>
+              <p className="lp-scene-n">{pad(index + 1)}</p>
+              <h3 className="lp-h3">{t(`home.scenes.items.${scene.key}.title`)}</h3>
+              <p className="lp-body">{t(`home.scenes.items.${scene.key}.body`)}</p>
+              <ul className="lp-tags">
+                {tags.map((tag) => <li key={tag}>{t(`home.scenes.items.${scene.key}.tags.${tag}`)}</li>)}
+              </ul>
+              {scene.link && <a className="lp-link" href={scene.link.href}>{scene.link.label}<Glyph name="arrow" /></a>}
+            </article>
+          ))}
         </div>
       </div>
     </section>
@@ -360,83 +627,99 @@ function ExampleCode({ code }: { code: string }): React.JSX.Element {
   );
 }
 
-/** The workshop: what a program can do in a place, with the one request a bot really sends. */
+/** Copies text to the clipboard and says so for a moment; quietly does nothing where the browser refuses. */
+function CopyButton({ text }: { text: string }): React.JSX.Element {
+  const { t } = useTranslation('landing');
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return undefined;
+    const timer = window.setTimeout(() => setCopied(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      className="lp-copy"
+      data-copied={copied ? 'true' : undefined}
+      onClick={() => {
+        void navigator.clipboard?.writeText(text).then(() => setCopied(true)).catch(() => {});
+      }}
+    >
+      <Glyph name={copied ? 'check' : 'template'} />
+      <span aria-live="polite">{copied ? t('home.code.copied') : t('home.code.copy')}</span>
+    </button>
+  );
+}
+
+/** The workshop: what a program can do in a space, with the one request a bot really sends. */
 function Developers(): React.JSX.Element {
   const { t } = useTranslation('landing');
   const origin = usePageOrigin();
   const lines = exampleRequest(origin).split('\n');
-  const points = [
-    { key: 'api', title: t('developers.points.api.title'), body: t('developers.points.api.body') },
-    { key: 'commands', title: t('developers.points.commands.title'), body: t('developers.points.commands.body') },
-    { key: 'rights', title: t('developers.points.rights.title'), body: t('developers.points.rights.body') },
+  const points: readonly { key: string; icon: GlyphName }[] = [
+    { key: 'api', icon: 'globe' },
+    { key: 'commands', icon: 'bot' },
+    { key: 'rights', icon: 'shield' },
   ];
   return (
-    <section aria-labelledby="landing-developers" className="lp-sheet lp-workshop">
+    <section className="lp-section" aria-labelledby="landing-developers">
       <div className="lp-wrap">
-        <SheetHead sheet={SHEETS.developers} name={t('chapters.developers')} headingId="landing-developers" title={t('developers.title')} lead={t('developers.body')} className="lp-sheet-head-split" />
-        <div className="lp-workshop-stage">
-          <figure className="lp-code" data-arrive="">
+        <Head index={6} kicker={t('chapters.developers')} id="landing-developers" title={t('developers.title')} body={t('developers.body')} />
+        <div className="lp-build">
+          <figure className="lp-code lp-glass" data-arrive="">
             <figcaption>
+              <span className="lp-code-dots" aria-hidden="true"><i /><i /><i /></span>
               <span className="lp-code-method">{EXAMPLE_ROUTE.method}</span>
-              {EXAMPLE_ROUTE.path}
+              <span className="lp-code-path">{EXAMPLE_ROUTE.path}</span>
+              <CopyButton text={lines.join('\n')} />
             </figcaption>
             <div className="lp-code-body">
-              <ol className="lp-code-gutter lp-mono" aria-hidden="true">{lines.map((_, index) => <li key={index}>{index + 1}</li>)}</ol>
+              <ol className="lp-code-gutter" aria-hidden="true">{lines.map((_, index) => <li key={index}>{index + 1}</li>)}</ol>
               <pre><ExampleCode code={lines.join('\n')} /></pre>
             </div>
           </figure>
-          <div className="lp-frame lp-dev-card" data-arrive="" style={{ '--i': 1 } as CssVars}><Img image={LANDING_IMAGES.botCard} alt={t('developers.alt')} /></div>
+          <div data-arrive="" style={{ '--i': 1 } as CssVars}><BotMessage /></div>
         </div>
-        <Points className="lp-three lp-under" points={points} />
-        <div className="lp-actions"><a className="lp-btn lp-btn-quiet" href="/developers">{t('developers.link')}<Glyph name="arrow" /></a></div>
+        <div className="lp-cells lp-cells-3">
+          {points.map((point, index) => (
+            <div key={point.key} className="lp-cell lp-glass lp-spotlight" data-arrive="" style={{ '--i': index } as CssVars}>
+              <span className="lp-cell-icon"><Glyph name={point.icon} /></span>
+              <h3 className="lp-cell-title">{t(`developers.points.${point.key as 'api' | 'commands' | 'rights'}.title`)}</h3>
+              <p className="lp-cell-body">{t(`developers.points.${point.key as 'api' | 'commands' | 'rights'}.body`)}</p>
+            </div>
+          ))}
+        </div>
+        <div className="lp-actions" data-arrive=""><a className="lp-arrow-link" href="/developers">{t('developers.link')}<Glyph name="arrow" /></a></div>
       </div>
     </section>
   );
 }
 
-/**
- * The house rules: what Tavvit will not do, said as large as the opening, then the facts as a
- * specification, the app's own numbers beside what protects an account.
- */
-function Privacy({ twoFactor }: { twoFactor: boolean }): React.JSX.Element {
+/** The house rules: what Tavvit will not do, said as large as the opening, then what protects an account. */
+function Rules({ twoFactor }: { twoFactor: boolean }): React.JSX.Element {
   const { t } = useTranslation('landing');
-  const points = [
-    ...(twoFactor ? [{ key: 'twoFactor', title: t('privacy.points.twoFactor.title'), body: t('privacy.points.twoFactor.body') }] : []),
-    { key: 'devices', title: t('privacy.points.devices.title'), body: t('privacy.points.devices.body') },
-    { key: 'data', title: t('privacy.points.data.title'), body: t('privacy.points.data.body') },
-    { key: 'contact', title: t('privacy.points.contact.title'), body: t('privacy.points.contact.body') },
+  const points: readonly { key: 'twoFactor' | 'devices' | 'data' | 'contact'; icon: GlyphName }[] = [
+    ...(twoFactor ? [{ key: 'twoFactor' as const, icon: 'lock' as const }] : []),
+    { key: 'devices', icon: 'screen' },
+    { key: 'data', icon: 'download' },
+    { key: 'contact', icon: 'people' },
   ];
   return (
-    <section aria-labelledby="landing-privacy" className="lp-sheet lp-band lp-rules">
-      <div className="lp-light" aria-hidden="true" />
+    <section className="lp-section lp-rules" aria-labelledby="landing-rules">
+      <div className="lp-rules-light" aria-hidden="true" />
       <div className="lp-wrap">
-        <header className="lp-sheet-head" data-arrive="">
-          <p className="lp-sheet-meta">
-            <span className="lp-mono">{t('plan.block.sheet')} {pad(SHEETS.privacy)}</span>
-            <span className="lp-label">{t('chapters.privacy')}</span>
-          </p>
-          <h2 id="landing-privacy" className="lp-display lp-ink"><Lines text={t('privacy.title')} /></h2>
-          <p className="lp-lead">{t('privacy.body')}</p>
-        </header>
-        <div className="lp-spec" data-arrive="">
-          <dl className="lp-spec-figures">
-            {FIGURES.map((figure) => (
-              <div key={figure.key}>
-                <dt>{t(`figures.${figure.key}`)}</dt>
-                <dd className="lp-mono">{t('figures.value', { value: figure.value })}</dd>
-              </div>
-            ))}
-          </dl>
-          <dl className="lp-spec-points">
-            {points.map((point) => (
-              <div key={point.key}>
-                <dt>{point.title}</dt>
-                <dd>{point.body}</dd>
-              </div>
-            ))}
-          </dl>
+        <p className="lp-kicker lp-kicker-center" data-arrive=""><span>{pad(7)}</span>{t('chapters.privacy')}</p>
+        <h2 id="landing-rules" className="lp-display" data-arrive=""><Lines text={t('privacy.title')} /></h2>
+        <p className="lp-lead lp-rules-lead" data-arrive="">{t('privacy.body')}</p>
+        <div className={`lp-cells ${points.length === 4 ? 'lp-cells-4' : 'lp-cells-3'}`}>
+          {points.map((point, index) => (
+            <div key={point.key} className="lp-cell lp-glass lp-spotlight" data-arrive="" style={{ '--i': index } as CssVars}>
+              <span className="lp-cell-icon"><Glyph name={point.icon} /></span>
+              <h3 className="lp-cell-title">{t(`privacy.points.${point.key}.title`)}</h3>
+              <p className="lp-cell-body">{t(`privacy.points.${point.key}.body`)}</p>
+            </div>
+          ))}
         </div>
-        <p className="lp-figures-note" data-arrive="">{t('figures.note')}</p>
       </div>
     </section>
   );
@@ -491,79 +774,21 @@ function PhoneCode(): React.JSX.Element {
 function Anywhere(): React.JSX.Element {
   const { t } = useTranslation('landing');
   return (
-    <section aria-labelledby="landing-anywhere" className="lp-sheet lp-anywhere">
-      <div className="lp-wrap lp-anywhere-grid">
-        <div>
-          <SheetHead sheet={SHEETS.anywhere} name={t('chapters.anywhere')} headingId="landing-anywhere" title={t('anywhere.title')} />
-          <div className="lp-anywhere-copy" data-arrive="">
-            <div>
-              <p className="lp-body">{t('anywhere.desktop.body')}</p>
-              <a className="lp-link" href="/download">{t('anywhere.desktop.link')}<Glyph name="download" /></a>
-            </div>
-            <div>
-              <p className="lp-body">{t('anywhere.phone.body')}</p>
-              <PhoneCode />
-            </div>
-          </div>
-        </div>
-        <div className="lp-anywhere-stage" data-arrive="" style={{ '--i': 1 } as CssVars}>
-          <div className="lp-device"><Img image={LANDING_IMAGES.phone} alt={t('anywhere.phone.alt')} /></div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/** Moving in: a place to find on Explore, or one of your own in three steps, drawn along a dimension line. */
-function Community(): React.JSX.Element {
-  const { t } = useTranslation('landing');
-  const steps = (['one', 'two', 'three'] as const).map((key) => ({ key, title: t(`moving.${key}.title`), body: t(`moving.${key}.body`) }));
-  return (
-    <section aria-labelledby="landing-community" className="lp-sheet lp-band lp-moving">
+    <section className="lp-section" aria-labelledby="landing-anywhere">
       <div className="lp-wrap">
-        <SheetHead sheet={SHEETS.community} name={t('chapters.community')} headingId="landing-community" title={t('community.title')} lead={t('community.body')} className="lp-sheet-head-split" />
-        <div className="lp-frame lp-window lp-community-shot" data-arrive=""><Img image={LANDING_IMAGES.community} alt={t('community.alt')} /></div>
-        <h3 className="lp-moving-title" data-arrive="">{t('moving.title')}</h3>
-        <ol className="lp-steps">
-          {steps.map((step, index) => (
-            <li key={step.key} data-arrive="" style={{ '--i': index } as CssVars}>
-              <span className="lp-step-n lp-mono">{pad(index + 1)}</span>
-              <h4 className="lp-cell-title">{step.title}</h4>
-              <p className="lp-cell-body">{step.body}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-/** The menu: everything in the app, as an index at the back of the set. */
-function FeatureTable({ twoFactor }: { twoFactor: boolean }): React.JSX.Element {
-  const { t } = useTranslation('landing');
-  const rows: readonly { key: string; name: string; items: readonly FeatureItem[] }[] = [
-    { key: 'messages', name: t('features.groups.messages'), items: ['replies', 'emoji', 'files', 'links', 'search', 'unread', 'voiceMessages', 'pins', 'forward', 'saved', 'keywords'] },
-    { key: 'voice', name: t('features.groups.voice'), items: ['voiceChannels', 'video', 'screen', 'calls', 'noise', 'ptt', 'soundboard'] },
-    { key: 'spaces', name: t('features.groups.spaces'), items: ['categories', 'roles', 'overrides', 'invites', 'listing', 'spaceProfiles'] },
-    { key: 'community', name: t('features.groups.community'), items: ['threads', 'events', 'polls', 'welcome', 'template'] },
-    { key: 'moderation', name: t('features.groups.moderation'), items: ['bans', 'automod', 'slow', 'audit', 'voiceMod', 'reports'] },
-    { key: 'yours', name: t('features.groups.yours'), items: ['themes', 'styles', 'density', 'contrast', 'languages'] },
-    { key: 'account', name: t('features.groups.account'), items: [...(twoFactor ? ['twoFactor' as const] : []), 'devices', 'export', 'deleteAccount', 'contactRules', 'blocking'] },
-    { key: 'developers', name: t('features.groups.developers'), items: ['botApi', 'commands', 'cards', 'webhooks', 'portal', 'docs'] },
-    { key: 'everywhere', name: t('features.groups.everywhere'), items: ['browser', 'windows', 'games', 'phone', 'push'] },
-  ];
-  return (
-    <section id="features" aria-labelledby="landing-all" className="lp-sheet lp-index-sheet">
-      <div className="lp-wrap">
-        <SheetHead sheet={SHEETS.features} name={t('chapters.features')} headingId="landing-all" title={t('features.title')} />
-        <dl className="lp-index">
-          {rows.map((row, index) => (
-            <div key={row.key} data-arrive="" style={{ '--i': index % 3 } as CssVars}>
-              <dt><span className="lp-mono">{pad(index + 1)}</span>{row.name}</dt>
-              <dd><ul>{row.items.map((item) => <li key={item}>{t(`features.items.${item}`)}</li>)}</ul></dd>
-            </div>
-          ))}
-        </dl>
+        <Head index={8} kicker={t('chapters.anywhere')} id="landing-anywhere" title={t('anywhere.title')} />
+        <div className="lp-devices">
+          <article className="lp-device lp-glass lp-spotlight" data-arrive="" data-tilt="">
+            <span className="lp-device-icon"><Glyph name="windows" /></span>
+            <p className="lp-body">{t('anywhere.desktop.body')}</p>
+            <a className="lp-link" href="/download">{t('anywhere.desktop.link')}<Glyph name="download" /></a>
+          </article>
+          <article className="lp-device lp-glass lp-spotlight" data-arrive="" data-tilt="" style={{ '--i': 1 } as CssVars}>
+            <span className="lp-device-icon"><Glyph name="phone" /></span>
+            <p className="lp-body">{t('anywhere.phone.body')}</p>
+            <PhoneCode />
+          </article>
+        </div>
       </div>
     </section>
   );
@@ -578,15 +803,15 @@ function Questions(): React.JSX.Element {
     a: t(`questions.items.${key}.a`),
   }));
   return (
-    <section aria-labelledby="landing-questions" className="lp-sheet lp-band lp-questions">
-      <div className="lp-wrap lp-questions-grid">
+    <section className="lp-section" aria-labelledby="landing-questions">
+      <div className="lp-wrap lp-questions">
         <div>
-          <SheetHead sheet={SHEETS.questions} name={t('chapters.questions')} headingId="landing-questions" title={t('questions.title')} />
-          <div className="lp-actions lp-questions-more" data-arrive=""><a className="lp-btn lp-btn-quiet" href="/help">{t('questions.more')}<Glyph name="arrow" /></a></div>
+          <Head index={9} kicker={t('chapters.questions')} id="landing-questions" title={t('questions.title')} />
+          <div className="lp-actions" data-arrive=""><a className="lp-arrow-link" href="/help">{t('questions.more')}<Glyph name="arrow" /></a></div>
         </div>
         <div className="lp-faq" data-arrive="">
           {questions.map((question, index) => (
-            <details key={question.key} open={index === 0}>
+            <details key={question.key} className="lp-glass" open={index === 0}>
               <summary>
                 {question.q}
                 <Glyph name="plus" />
@@ -600,41 +825,51 @@ function Questions(): React.JSX.Element {
   );
 }
 
-function FinalCall({ registrationOpen }: { registrationOpen: boolean }): React.JSX.Element {
+function Closing({ registrationOpen }: { registrationOpen: boolean }): React.JSX.Element {
   const { t } = useTranslation('landing');
   return (
-    <section aria-labelledby="landing-cta" className="lp-final">
-      <div className="lp-light" aria-hidden="true" />
-      <LogoLines />
+    <section className="lp-section lp-closing" aria-labelledby="landing-cta">
       <div className="lp-wrap">
-        <h2 id="landing-cta" className="lp-display lp-ink" data-arrive="">{t('cta.title')}</h2>
-        <p className="lp-lead" data-arrive="">{registrationOpen ? t('cta.body') : t('cta.closed')}</p>
-        <div className="lp-actions" data-arrive="">
-          {registrationOpen && <MainButton href="/register">{t('cta.register')}</MainButton>}
-          {registrationOpen
-            ? <a className="lp-btn lp-btn-quiet lp-btn-lg" href="/login">{t('cta.login')}</a>
-            : <MainButton href="/login">{t('cta.login')}</MainButton>}
+        <div className="lp-closing-box" data-arrive="">
+          <div className="lp-closing-grid" aria-hidden="true" />
+          <div className="lp-closing-copy">
+            <h2 id="landing-cta" className="lp-display"><Lines text={t('home.closing.title')} /></h2>
+            <p className="lp-lead">{registrationOpen ? t('cta.body') : t('cta.closed')}</p>
+            <div className="lp-actions">
+              {registrationOpen && <a className="lp-btn lp-btn-primary lp-btn-lg" href="/register">{t('cta.register')}<Glyph name="arrow" /></a>}
+              {registrationOpen
+                ? <a className="lp-arrow-link" href="/login">{t('cta.login')}<Glyph name="arrow" /></a>
+                : <a className="lp-btn lp-btn-primary lp-btn-lg" href="/login">{t('cta.login')}<Glyph name="arrow" /></a>}
+            </div>
+          </div>
+          <div className="lp-closing-side" aria-hidden="true"><AddressCard label={t('home.closing.address')} /></div>
         </div>
       </div>
     </section>
   );
 }
 
-function Footer({ sourceUrl, version, chat }: { sourceUrl: string | null; version: string | null; chat: ServiceState | null }): React.JSX.Element {
+function Footer({ sourceUrl, version, chat, motion }: {
+  sourceUrl: string | null;
+  version: string | null;
+  chat: ServiceState | null;
+  motion: { paused: boolean; toggle: () => void };
+}): React.JSX.Element {
   const { t } = useTranslation('landing');
   return (
     <footer className="lp-footer">
       <div className="lp-wrap">
         <div className="lp-footer-grid">
-          <div>
+          <div className="lp-footer-brand">
             <a className="lp-brand" href="/">
               <img src="/icons/logo-mark.svg" alt="" width={20} height={20} loading="lazy" />
               <span>{PRODUCT_NAME}</span>
             </a>
+            <p className="lp-closer">{t('closer')}</p>
             <div className="lp-footer-language">
-              <label htmlFor="landing-language" className="field-label">{t('footer.language')}</label>
+              <label htmlFor="landing-language" className="lp-footer-title">{t('footer.language')}</label>
               {/* 16px on a phone: Safari zooms into a smaller field on focus, and the app's rule for that does not run on this page. */}
-              <LanguagePicker id="landing-language" className="input-search w-full max-md:text-base" />
+              <LanguagePicker id="landing-language" className="lp-select" />
             </div>
           </div>
           <nav aria-label={t('footer.product')}>
@@ -669,7 +904,10 @@ function Footer({ sourceUrl, version, chat }: { sourceUrl: string | null; versio
             </a>
           )}
           {version && <a className="lp-mono" href="/changelog">{t('life.version', { version })}</a>}
-          <p className="lp-closer">{t('closer')}</p>
+          <button type="button" className="lp-motion" aria-pressed={motion.paused} onClick={motion.toggle}>
+            <Glyph name={motion.paused ? 'play' : 'pause'} />
+            {motion.paused ? t('home.motion.play') : t('home.motion.pause')}
+          </button>
         </div>
       </div>
     </footer>
@@ -686,8 +924,10 @@ export function LandingPage({ prerendered = false }: { prerendered?: boolean }):
   const root = useRef<HTMLDivElement>(null);
   // Asked once, for the opening and the footer.
   const chat = useChatState();
+  const motion = useMotion();
   useFitHeadings(root, i18n.resolvedLanguage ?? i18n.language);
   useArrivals(root, prerendered);
+  useSpotlight(root);
 
   useEffect(() => {
     document.title = t('meta.title');
@@ -712,20 +952,28 @@ export function LandingPage({ prerendered = false }: { prerendered?: boolean }):
   const twoFactor = info?.twoFactor !== false;
 
   return (
-    <div id="lp" ref={root}>
-      <Nav registrationOpen={registrationOpen} />
-      <main>
-        <Stage registrationOpen={registrationOpen} chat={chat} version={version} />
-        <Inside />
-        <Developers />
-        <Privacy twoFactor={twoFactor} />
-        <Anywhere />
-        <Community />
-        <FeatureTable twoFactor={twoFactor} />
-        <Questions />
-        <FinalCall registrationOpen={registrationOpen} />
-      </main>
-      <Footer sourceUrl={sourceUrl} version={version} chat={chat} />
-    </div>
+    <MotionContext.Provider value={motion.moving}>
+      <div id="lp" ref={root} data-motion={motion.paused ? 'off' : 'on'}>
+        <Ambient />
+        <PointerAura />
+        <Strip version={version} />
+        <Nav registrationOpen={registrationOpen} />
+        <main>
+          <Hero registrationOpen={registrationOpen} chat={chat} />
+          <Marquee />
+          <Tags />
+          <Inside />
+          <Moving registrationOpen={registrationOpen} />
+          <Identity />
+          <Scenes />
+          <Developers />
+          <Rules twoFactor={twoFactor} />
+          <Anywhere />
+          <Questions />
+          <Closing registrationOpen={registrationOpen} />
+        </main>
+        <Footer sourceUrl={sourceUrl} version={version} chat={chat} motion={motion} />
+      </div>
+    </MotionContext.Provider>
   );
 }

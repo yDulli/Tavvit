@@ -458,5 +458,278 @@
     "ok": "All systems running",
     "down": "Something is down right now",
     "version": "Version {{version}}"
+  },
+  "home": {
+    "strip": {
+      "spaces": "Spaces for every group",
+      "tags": "Tags from two letters",
+      "permissions_one": "{{count}} permission per role",
+      "permissions_other": "{{count}} permissions per role",
+      "languages_one": "{{count}} language",
+      "languages_other": "{{count}} languages",
+      "clean": "No ads, no trackers"
+    },
+    "hero": {
+      "label": "A home for your community",
+      "title": "Your community.\nYour space.",
+      "accent": "Your rules.",
+      "lead": "Tavvit gives your group a place of its own: channels for every topic, voice rooms that stay open, and roles and rules you set yourself.",
+      "more": "See what's inside"
+    },
+    "stats": {
+      "permissions": "permissions per role",
+      "zero": "ads, and no trackers"
+    },
+    "scene": {
+      "about": "Late nights, co-op games and bad movies.",
+      "members_one": "{{count}} member",
+      "members_other": "{{count}} members",
+      "online_one": "{{count}} online",
+      "online_other": "{{count}} online",
+      "talking_one": "{{count}} talking",
+      "talking_other": "{{count}} talking",
+      "speaking": "{{name}} is speaking",
+      "owner": "Owner",
+      "message": "Count me in. Who brings the snacks?",
+      "poll": "Did the last patch ruin tanks?",
+      "skill": "Skill issue",
+      "little": "A little",
+      "completely": "Completely",
+      "raid": "Saturday raid",
+      "when": "Sat, 20:00",
+      "going_one": "{{count}} going",
+      "going_other": "{{count}} going",
+      "events": "Events",
+      "label": "Night Shift, a demo space with invented people",
+      "rooms": "Rooms of Night Shift"
+    },
+    "marquee": "What's inside",
+    "tags": {
+      "kicker": "Your space",
+      "title": "A tag your\npeople wear.",
+      "body": "Give your space a tag of two to four letters beside a symbol. Members wear it next to their name in every space they write in. Add an invite address in words, and your own colours.",
+      "items": {
+        "tag": {
+          "title": "A tag",
+          "body": "Two to four letters or digits, beside a symbol"
+        },
+        "address": {
+          "title": "An address",
+          "body": "/join/your-space instead of a random code"
+        },
+        "look": {
+          "title": "A look",
+          "body": "Your space's colours, for everyone inside"
+        }
+      },
+      "worn": "Worn beside the name",
+      "address": "Your invite address",
+      "try": "Try it",
+      "yourTag": "Your tag",
+      "symbol": "Symbol",
+      "symbols": {
+        "moon": "Moon",
+        "book": "Book",
+        "wrench": "Wrench",
+        "film": "Film",
+        "music": "Music",
+        "sparkle": "Star"
+      },
+      "ruleTag": "2 to 4 letters or digits",
+      "ruleAddress": "3 to 32 small letters, digits or hyphens"
+    },
+    "inside": {
+      "kicker": "Inside",
+      "title": "Everything a group does.\nIn one place.",
+      "label": "Parts of Tavvit",
+      "tabs": {
+        "talk": {
+          "tab": "Talk",
+          "title": "Write it where it belongs.",
+          "body": "Channels for the talk of the day, threads for the tangent, forums for what should stay. Reply to the exact message, react, vote, and pin what everyone keeps asking for."
+        },
+        "voice": {
+          "tab": "Voice",
+          "title": "Rooms that stay open.",
+          "body": "See who is in a voice channel before you walk in, and leave without ending it for anyone. Share a screen, watch a video together, play a sound from the soundboard."
+        },
+        "plan": {
+          "tab": "Plan",
+          "title": "Meet on time.",
+          "body": "Events with a room, a reminder and a place in your calendar. A welcome page with rules at the door, and announcement channels other spaces can follow."
+        },
+        "order": {
+          "tab": "Keep order",
+          "title": "Rules that hold.",
+          "body": "Thirty permissions per role, changed per category or channel. Filters stop words, links and invites before they are posted, and every decision lands in the audit log."
+        }
+      },
+      "watching": "Watching together",
+      "thread": "Fight notes",
+      "replies_one": "{{count}} reply",
+      "replies_other": "{{count}} replies",
+      "reply": "this is exactly what we needed.",
+      "first": "I made a thing for Saturday. Damage numbers by class.",
+      "soon": "In 4 days",
+      "date": "Nov 14, 8:00 PM to 11:00 PM",
+      "join": "Join the lounge",
+      "calendar": "Add to calendar",
+      "post": "First week here? Start with this",
+      "postTags": "New players",
+      "rolesTitle": "Roles",
+      "granted_one": "{{count}} permission",
+      "granted_other": "{{count}} permissions",
+      "log": {
+        "one": "changed the roles of Sam",
+        "two": "started the thread Fight notes",
+        "three": "announced the event Saturday raid"
+      },
+      "switch": {
+        "send": "Send messages",
+        "pin": "Pin messages",
+        "ban": "Ban members",
+        "attach": "Attach files",
+        "kick": "Kick members"
+      },
+      "vote": "Vote to see the results",
+      "voted_one": "{{count}} vote, yours included",
+      "voted_other": "{{count}} votes, yours included",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "share": "Share your screen",
+      "going": "Going",
+      "goingYes": "You're going",
+      "remind": "Remind me",
+      "reminded": "Reminder set",
+      "you": "You"
+    },
+    "moving": {
+      "kicker": "Moving in",
+      "title": "Bring your\nserver across.",
+      "body": "Paste a Discord server template and Tavvit sets up its roles, categories, channels and permissions. With a bot of your own, its emoji and stickers come along too.",
+      "note": "Messages and members stay behind: your people join with one invite link.",
+      "from": "From the template",
+      "bot": "With your bot",
+      "to": "Your space",
+      "items": {
+        "roles": "Roles",
+        "categories": "Categories",
+        "channels": "Channels",
+        "permissions": "Permissions",
+        "emoji": "Emoji",
+        "stickers": "Stickers"
+      },
+      "help": "How moving works"
+    },
+    "identity": {
+      "kicker": "Profiles",
+      "title": "Show up\nas yourself.",
+      "body": "A banner, a bio, your pronouns. Then a frame around your picture, an effect across your card, a nameplate in lists and a typeface for your name, made by Tavvit or drawn by the community.",
+      "chips": {
+        "frames": "Frames",
+        "effects": "Effects",
+        "nameplates": "Nameplates",
+        "names": "Name styles",
+        "badges": "Badges",
+        "themes": "Profile themes",
+        "perSpace": "A profile per space",
+        "community": "Made by the community"
+      },
+      "bio": {
+        "jonas": "Backend by day, bad at Tetris by night.",
+        "mara": "Runs the Saturday raids. Coffee first.",
+        "lena": "Mod team. Be nice to each other."
+      },
+      "message": "Send message",
+      "try": "Try it on",
+      "frame": "Frame",
+      "colour": "Colour",
+      "frames": {
+        "laurel": "Laurel",
+        "headphones": "Headphones",
+        "halo": "Angel",
+        "none": "None"
+      },
+      "tones": {
+        "lavender": "Lavender",
+        "sky": "Sky",
+        "mint": "Mint",
+        "amber": "Amber",
+        "peach": "Peach",
+        "rose": "Rose",
+        "coral": "Coral"
+      }
+    },
+    "scenes": {
+      "kicker": "For every group",
+      "title": "One app.\nEvery crew.",
+      "items": {
+        "gaming": {
+          "title": "Gaming crews",
+          "body": "Voice rooms that stay open all evening, a soundboard, events for raid night and videos to watch together.",
+          "tags": {
+            "a": "Voice rooms",
+            "b": "Soundboard",
+            "c": "Events",
+            "d": "Watch together"
+          }
+        },
+        "creators": {
+          "title": "Creators",
+          "body": "A tag your viewers wear, an overlay for OBS, streamer mode, and your Twitch account on your profile.",
+          "tags": {
+            "a": "Space tags",
+            "b": "OBS overlay",
+            "c": "Streamer mode",
+            "d": "Twitch"
+          },
+          "link": "For creators"
+        },
+        "developers": {
+          "title": "Developers",
+          "body": "Bots with slash commands, incoming webhooks, and an HTTP and WebSocket API with public docs.",
+          "tags": {
+            "a": "Bots",
+            "b": "Slash commands",
+            "c": "Webhooks",
+            "d": "API"
+          },
+          "link": "Developer docs"
+        },
+        "clubs": {
+          "title": "Clubs and classes",
+          "body": "Forums that keep the answers, threads, polls, a welcome page with rules, and roles for whoever runs it.",
+          "tags": {
+            "a": "Forums",
+            "b": "Threads",
+            "c": "Polls",
+            "d": "Roles"
+          }
+        }
+      }
+    },
+    "bot": {
+      "done": "The nightly build is done.",
+      "card": "Build passed",
+      "detail": "All checks are green, and the fixes are live on staging.",
+      "tests": "Tests",
+      "testsValue": "412 passed",
+      "coverage": "Coverage",
+      "took": "Took",
+      "tookValue": "3 min 12 s",
+      "mark": "Bot"
+    },
+    "closing": {
+      "title": "Make room\nfor your people.",
+      "address": "Your space's address"
+    },
+    "motion": {
+      "pause": "Pause motion",
+      "play": "Play motion"
+    },
+    "code": {
+      "copy": "Copy",
+      "copied": "Copied"
+    }
   }
 }

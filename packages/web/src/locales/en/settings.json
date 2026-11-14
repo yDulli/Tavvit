@@ -314,6 +314,7 @@
       "label": "Typeface",
       "description": "The type the whole app is set in. Chinese text always uses the system's.",
       "options": {
+        "outfit": "Outfit",
         "geist": "Geist",
         "plexSans": "Plex",
         "inter": "Inter",

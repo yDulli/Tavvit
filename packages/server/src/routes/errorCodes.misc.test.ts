@@ -208,6 +208,16 @@ describe('upload, gif and util routes send error codes', () => {
     expect(res.json()).toMatchObject({ code: 'file_not_found', error: 'File not found' });
   });
 
+  // A folder has a name too. Read as a file it was a server error, with a line in the log for
+  // every request, from anyone (security audit, 2026-11-14).
+  it('serving a name that is a folder, or the upload directory itself', async () => {
+    fs.mkdirSync(path.join(state.uploadDir, '.tus'));
+    for (const name of ['.tus', '..', '%2e%2e', '.']) {
+      const res = await app.inject({ method: 'GET', url: `/api/uploads/${name}` });
+      expect(res.statusCode, name).toBe(404);
+    }
+  });
+
   it('gif search without a query', async () => {
     state.dbRow = { gifApiKey: 'klipy-key' };
     const res = await app.inject({ method: 'GET', url: '/api/gif/search', headers: auth });

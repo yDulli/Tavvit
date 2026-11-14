@@ -45,7 +45,12 @@
     "peopleInVoice_other": "{{count}} 人在语音中",
     "mentions_other": "{{count}} 条未读提及",
     "showAll": "显示全部",
-    "showFewer": "收起"
+    "showFewer": "收起",
+    "columns": {
+      "space": "空间",
+      "unread": "未读",
+      "voice": "语音"
+    }
   },
   "about": {
     "title": "关于 Tavvit",

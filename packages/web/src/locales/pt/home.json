@@ -53,7 +53,12 @@
     "mentions_many": "{{count}} menções não lidas",
     "mentions_other": "{{count}} menções não lidas",
     "showAll": "Mostrar todos",
-    "showFewer": "Mostrar menos"
+    "showFewer": "Mostrar menos",
+    "columns": {
+      "space": "Espaço",
+      "unread": "Não lidas",
+      "voice": "Voz"
+    }
   },
   "about": {
     "title": "Sobre o Tavvit",

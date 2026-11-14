@@ -465,5 +465,287 @@
     "ok": "Tudo funcionando",
     "down": "Algo está fora do ar agora",
     "version": "Versão {{version}}"
+  },
+  "home": {
+    "strip": {
+      "spaces": "Espaços para todo grupo",
+      "tags": "Tags a partir de duas letras",
+      "permissions_one": "{{count}} permissão por cargo",
+      "permissions_many": "{{count}} permissões por cargo",
+      "permissions_other": "{{count}} permissões por cargo",
+      "languages_one": "{{count}} idioma",
+      "languages_many": "{{count}} idiomas",
+      "languages_other": "{{count}} idiomas",
+      "clean": "Sem anúncios, sem rastreadores"
+    },
+    "hero": {
+      "label": "Uma casa para a sua comunidade",
+      "title": "Sua comunidade.\nSeu espaço.",
+      "accent": "Suas regras.",
+      "lead": "O Tavvit dá ao seu grupo um lugar só dele: canais para cada assunto, salas de voz que ficam abertas, e cargos e regras que você mesmo define.",
+      "more": "Veja o que tem dentro"
+    },
+    "stats": {
+      "permissions": "permissões por cargo",
+      "zero": "anúncios, e nenhum rastreador"
+    },
+    "scene": {
+      "about": "Madrugadas, jogos cooperativos e filmes ruins.",
+      "members_one": "{{count}} membro",
+      "members_many": "{{count}} membros",
+      "members_other": "{{count}} membros",
+      "online_one": "{{count}} online",
+      "online_many": "{{count}} online",
+      "online_other": "{{count}} online",
+      "talking_one": "{{count}} conversando",
+      "talking_many": "{{count}} conversando",
+      "talking_other": "{{count}} conversando",
+      "speaking": "{{name}} está falando",
+      "owner": "Dono",
+      "message": "Pode contar comigo. Quem leva os lanches?",
+      "poll": "O último patch acabou com os tanques?",
+      "skill": "Falta de habilidade",
+      "little": "Um pouco",
+      "completely": "Completamente",
+      "raid": "Raid de sábado",
+      "when": "Sáb., 20:00",
+      "going_one": "{{count}} vai",
+      "going_many": "{{count}} vão",
+      "going_other": "{{count}} vão",
+      "events": "Eventos",
+      "label": "Night Shift, um espaço de demonstração com pessoas inventadas",
+      "rooms": "Salas do Night Shift"
+    },
+    "marquee": "O que tem dentro",
+    "tags": {
+      "kicker": "Seu espaço",
+      "title": "Uma tag que a\nsua turma usa.",
+      "body": "Dê ao seu espaço uma tag de duas a quatro letras ao lado de um símbolo. Os membros a usam ao lado do nome em todo espaço em que escrevem. Some a isso um endereço de convite em palavras e as suas próprias cores.",
+      "items": {
+        "tag": {
+          "title": "Uma tag",
+          "body": "De duas a quatro letras ou dígitos, ao lado de um símbolo"
+        },
+        "address": {
+          "title": "Um endereço",
+          "body": "/join/seu-espaco em vez de um código aleatório"
+        },
+        "look": {
+          "title": "Um visual",
+          "body": "As cores do seu espaço, para todos lá dentro"
+        }
+      },
+      "worn": "Usada ao lado do nome",
+      "address": "Seu endereço de convite",
+      "try": "Experimente",
+      "yourTag": "Sua tag",
+      "symbol": "Símbolo",
+      "symbols": {
+        "moon": "Lua",
+        "book": "Livro",
+        "wrench": "Chave inglesa",
+        "film": "Claquete",
+        "music": "Música",
+        "sparkle": "Estrela"
+      },
+      "ruleTag": "De 2 a 4 letras ou dígitos",
+      "ruleAddress": "De 3 a 32 letras minúsculas, dígitos ou hifens"
+    },
+    "inside": {
+      "kicker": "Por dentro",
+      "title": "Tudo o que um grupo faz.\nEm um só lugar.",
+      "label": "Partes do Tavvit",
+      "tabs": {
+        "talk": {
+          "tab": "Conversar",
+          "title": "Escreva onde faz sentido.",
+          "body": "Canais para a conversa do dia, tópicos para o desvio de assunto, fóruns para o que deve ficar. Responda à mensagem exata, reaja, vote e fixe o que todo mundo vive perguntando."
+        },
+        "voice": {
+          "tab": "Voz",
+          "title": "Salas que ficam abertas.",
+          "body": "Veja quem está em um canal de voz antes de entrar, e saia sem encerrá-lo para ninguém. Compartilhe a tela, assista a um vídeo junto, toque um som do soundboard."
+        },
+        "plan": {
+          "tab": "Planejar",
+          "title": "Chegue na hora.",
+          "body": "Eventos com uma sala, um lembrete e um lugar no seu calendário. Uma página de boas-vindas com regras na porta, e canais de anúncios que outros espaços podem seguir."
+        },
+        "order": {
+          "tab": "Manter a ordem",
+          "title": "Regras que valem.",
+          "body": "Trinta permissões por cargo, alteradas por categoria ou canal. Filtros barram palavras, links e convites antes de serem publicados, e cada decisão vai para o registro de auditoria."
+        }
+      },
+      "watching": "Assistindo junto",
+      "thread": "Notas da luta",
+      "replies_one": "{{count}} resposta",
+      "replies_many": "{{count}} respostas",
+      "replies_other": "{{count}} respostas",
+      "reply": "era exatamente disso que a gente precisava.",
+      "first": "Fiz uma coisa para sábado. Números de dano por classe.",
+      "soon": "Em 4 dias",
+      "date": "14 de nov., 20:00 às 23:00",
+      "join": "Entrar na lounge",
+      "calendar": "Adicionar ao calendário",
+      "post": "Primeira semana aqui? Comece por isto",
+      "postTags": "Novos jogadores",
+      "rolesTitle": "Cargos",
+      "granted_one": "{{count}} permissão",
+      "granted_many": "{{count}} permissões",
+      "granted_other": "{{count}} permissões",
+      "log": {
+        "one": "alterou os cargos de Sam",
+        "two": "iniciou o tópico Notas da luta",
+        "three": "anunciou o evento Raid de sábado"
+      },
+      "switch": {
+        "send": "Enviar mensagens",
+        "pin": "Fixar mensagens",
+        "ban": "Banir membros",
+        "attach": "Anexar arquivos",
+        "kick": "Expulsar membros"
+      },
+      "vote": "Vote para ver os resultados",
+      "voted_one": "{{count}} voto, contando o seu",
+      "voted_many": "{{count}} votos, contando o seu",
+      "voted_other": "{{count}} votos, contando o seu",
+      "mute": "Silenciar",
+      "unmute": "Reativar microfone",
+      "share": "Compartilhar tela",
+      "going": "Eu vou",
+      "goingYes": "Você vai",
+      "remind": "Lembrar-me",
+      "reminded": "Lembrete criado",
+      "you": "Você"
+    },
+    "moving": {
+      "kicker": "Mudança",
+      "title": "Traga o seu\nservidor.",
+      "body": "Cole um modelo de servidor do Discord e o Tavvit cria os cargos, categorias, canais e permissões. Com um bot seu, os emojis e as figurinhas vêm junto.",
+      "note": "Mensagens e membros ficam para trás: a sua turma entra com um link de convite.",
+      "from": "Do modelo",
+      "bot": "Com o seu bot",
+      "to": "Seu espaço",
+      "items": {
+        "roles": "Cargos",
+        "categories": "Categorias",
+        "channels": "Canais",
+        "permissions": "Permissões",
+        "emoji": "Emojis",
+        "stickers": "Figurinhas"
+      },
+      "help": "Como funciona a mudança"
+    },
+    "identity": {
+      "kicker": "Perfis",
+      "title": "Apareça\ndo seu jeito.",
+      "body": "Um banner, uma bio, os seus pronomes. Depois, uma moldura em volta da sua foto, um efeito sobre o seu cartão, uma placa de nome nas listas e uma fonte para o seu nome, feitos pelo Tavvit ou desenhados pela comunidade.",
+      "chips": {
+        "frames": "Molduras",
+        "effects": "Efeitos",
+        "nameplates": "Placas de nome",
+        "names": "Estilos de nome",
+        "badges": "Insígnias",
+        "themes": "Temas de perfil",
+        "perSpace": "Um perfil por espaço",
+        "community": "Feito pela comunidade"
+      },
+      "bio": {
+        "jonas": "Backend de dia, ruim no Tetris à noite.",
+        "mara": "Organiza as raids de sábado. Café primeiro.",
+        "lena": "Equipe de moderação. Sejam legais uns com os outros."
+      },
+      "message": "Enviar mensagem",
+      "try": "Experimente em você",
+      "frame": "Moldura",
+      "colour": "Cor",
+      "frames": {
+        "laurel": "Louros",
+        "headphones": "Fones de ouvido",
+        "halo": "Anjo",
+        "none": "Nenhuma"
+      },
+      "tones": {
+        "lavender": "Lavanda",
+        "sky": "Céu",
+        "mint": "Menta",
+        "amber": "Âmbar",
+        "peach": "Pêssego",
+        "rose": "Rosa",
+        "coral": "Coral"
+      }
+    },
+    "scenes": {
+      "kicker": "Para todo grupo",
+      "title": "Um app.\nToda turma.",
+      "items": {
+        "gaming": {
+          "title": "Turmas de jogo",
+          "body": "Salas de voz que ficam abertas a noite toda, um soundboard, eventos para a noite de raid e vídeos para assistir junto.",
+          "tags": {
+            "a": "Salas de voz",
+            "b": "Soundboard",
+            "c": "Eventos",
+            "d": "Assistir junto"
+          }
+        },
+        "creators": {
+          "title": "Criadores",
+          "body": "Uma tag que o seu público usa, um overlay para o OBS, o modo streamer e a sua conta da Twitch no perfil.",
+          "tags": {
+            "a": "Tags de espaço",
+            "b": "Overlay do OBS",
+            "c": "Modo streamer",
+            "d": "Twitch"
+          },
+          "link": "Para criadores"
+        },
+        "developers": {
+          "title": "Desenvolvedores",
+          "body": "Bots com comandos de barra, webhooks de entrada e uma API HTTP e WebSocket com documentação pública.",
+          "tags": {
+            "a": "Bots",
+            "b": "Comandos de barra",
+            "c": "Webhooks",
+            "d": "API"
+          },
+          "link": "Documentação para desenvolvedores"
+        },
+        "clubs": {
+          "title": "Clubes e turmas",
+          "body": "Fóruns que guardam as respostas, tópicos, enquetes, uma página de boas-vindas com regras e cargos para quem toca o grupo.",
+          "tags": {
+            "a": "Fóruns",
+            "b": "Tópicos",
+            "c": "Enquetes",
+            "d": "Cargos"
+          }
+        }
+      }
+    },
+    "bot": {
+      "done": "O build noturno terminou.",
+      "card": "Build aprovado",
+      "detail": "Todas as verificações estão verdes, e as correções já estão no staging.",
+      "tests": "Testes",
+      "testsValue": "412 aprovados",
+      "coverage": "Cobertura",
+      "took": "Levou",
+      "tookValue": "3 min e 12 s",
+      "mark": "Bot"
+    },
+    "closing": {
+      "title": "Abra espaço\npara a sua turma.",
+      "address": "O endereço do seu espaço"
+    },
+    "motion": {
+      "pause": "Pausar movimento",
+      "play": "Retomar movimento"
+    },
+    "code": {
+      "copy": "Copiar",
+      "copied": "Copiado"
+    }
   }
 }

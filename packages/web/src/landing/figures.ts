@@ -11,4 +11,6 @@ export const LANDING_FIGURES = {
   group: 10,
   /** `MAX_MESSAGE_LENGTH` in `@backspace/shared`. */
   characters: 4000,
+  /** The permissions a role can grant: the bits of `Permissions` in `@backspace/shared/src/permissions.ts`. */
+  permissions: 30,
 } as const;

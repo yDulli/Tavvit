@@ -60,6 +60,19 @@ export function normalizeAppearance(stored: unknown): AppearanceSettings {
   };
 }
 
+/**
+ * The version of what is kept. 1: the "Schwarzlicht" look, whose face is Outfit. A device that
+ * still holds the face that was the default before (Geist, which nobody had to choose) takes the
+ * new default with it; every other choice stays as the person made it.
+ */
+export const APPEARANCE_VERSION = 1;
+
+export function migrateAppearance(stored: unknown, version: number): unknown {
+  if (version >= APPEARANCE_VERSION || typeof stored !== 'object' || stored === null) return stored;
+  const kept = stored as Record<string, unknown>;
+  return kept.font === 'geist' ? { ...kept, font: DEFAULT_APPEARANCE.font } : kept;
+}
+
 /** The look settings out of a state, nothing else. */
 function lookOf(state: LookSettings): LookSettings {
   return {
@@ -113,6 +126,8 @@ export const useAppearanceStore = create<AppearanceState>()(persist(
   }),
   {
     name: 'orbit-appearance',
+    version: APPEARANCE_VERSION,
+    migrate: (stored, version) => migrateAppearance(stored, version),
     partialize: (state) => appearanceSettingsOf(state),
     merge: (stored, current) => ({ ...current, ...normalizeAppearance(stored) }),
   },

@@ -8,7 +8,8 @@ import { isCompactViewport, isMobileViewport } from '../../platform/interfaceSca
 import { useMatch, useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
-import { TopBar } from './TopBar';
+import { AppTopbar } from './AppTopbar';
+import { TopbarSlotProvider } from './TopbarSlots';
 import { ChannelSidebar } from './ChannelSidebar';
 import { MainContent } from './MainContent';
 import { AdminConsole, LookStudio, SettingsPanelSuspense } from '../modals/lazySettingsPanels';
@@ -468,10 +469,7 @@ export function AppLayout() {
         <CreateCategoryModal />
         <InviteModal />
         <ReportModal />
-      <ForwardMessageModal />
-      <CreatePollModal />
         <ForwardMessageModal />
-      <CreatePollModal />
         <CreatePollModal />
         {/* UserSettings is a pushed screen on mobile (MobileSettingsScreen), not a modal */}
         <SpaceSettingsModal />
@@ -508,40 +506,42 @@ export function AppLayout() {
   }
 
   // ── Desktop layout ──
-  // The top bar holds every place (Home and the spaces, as tabs) and the
-  // person's own controls; under it sit the channel column, the conversation
-  // and the people on the right, parted by hairlines, with one light across them.
+  // Evolve's frame: the sidebar runs the full height on the left (the server, the dock of places,
+  // the search, the place's own navigation, who you are); beside it the page column, the topbar
+  // with where you are and what you can do over the page itself and, on the right, its people.
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-surface-base">
+    <TopbarSlotProvider>
+    <div className="app-shell h-full flex flex-col overflow-hidden bg-surface-base">
       <AmbientLight />
       <ConnectionBanner connected={homeConnected} />
       <EmailPromptBar />
       <AnnouncementBar />
       <QuickSwitcher />
-      <TopBar />
 
-      <div className="relative flex min-h-0 flex-1">
-        {inAdminConsole ? (
-          <SettingsPanelSuspense><AdminConsole /></SettingsPanelSuspense>
-        ) : inStudio ? (
-          // The studio beside the real sidebar: what is shaped shows on the app itself.
-          <>
-            <ChannelSidebar />
-            <main className="lit flex min-w-0 min-h-0 flex-1 bg-surface-chat">
-              <SettingsPanelSuspense><LookStudio /></SettingsPanelSuspense>
-            </main>
-          </>
-        ) : (
-          <>
-            <ChannelSidebar />
-            <main className="lit flex min-w-0 min-h-0 flex-1 bg-surface-chat">
-              <PlaceStage>
-                {eventsPage && spaceId ? <SpaceEventsPage spaceId={spaceId} /> : <MainContent />}
-              </PlaceStage>
-            </main>
-            {threadOpen && !eventsPage ? <ThreadPanel /> : <RightPanel />}
-          </>
-        )}
+      <div className="app-shell-row relative flex min-h-0 flex-1">
+        <ChannelSidebar />
+        <div className="app-page relative flex min-w-0 min-h-0 flex-1 flex-col">
+          <AppTopbar />
+          <div className="relative flex min-h-0 flex-1">
+            {inAdminConsole ? (
+              <SettingsPanelSuspense><AdminConsole /></SettingsPanelSuspense>
+            ) : inStudio ? (
+              // The studio beside the real sidebar: what is shaped shows on the app itself.
+              <main className="flex min-w-0 min-h-0 flex-1 bg-surface-chat">
+                <SettingsPanelSuspense><LookStudio /></SettingsPanelSuspense>
+              </main>
+            ) : (
+              <>
+                <main className="flex min-w-0 min-h-0 flex-1 bg-surface-chat">
+                  <PlaceStage>
+                    {eventsPage && spaceId ? <SpaceEventsPage spaceId={spaceId} /> : <MainContent />}
+                  </PlaceStage>
+                </main>
+                {threadOpen && !eventsPage ? <ThreadPanel /> : <RightPanel />}
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Modals */}
@@ -585,5 +585,6 @@ export function AppLayout() {
           update toast. */}
       <ToastContainer />
     </div>
+    </TopbarSlotProvider>
   );
 }
